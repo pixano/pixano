@@ -74,7 +74,10 @@ SPECS: dict[str, dict] = {
         "schema": {
             "views": {"image": {"kind": "image"}, "text": {"kind": "text"}},
             "entity": {"attrs": {"name": "str"}},
-            "annotations": ["bbox", "text_span"],
+            "annotations": {
+                "bbox": {"attrs": {"annotator": "str"}},
+                "text_span": {"attrs": {"role": "str"}},
+            },
         },
     },
     "lerobot_window": {
@@ -228,3 +231,13 @@ class TestGoldenCorporaImport:
         dataset, _ = case.run_import(tmp_path / "data")
         case.assert_counts(dataset)
         case.assert_storage_mode(dataset, "embedded")
+
+    def test_annotation_attrs_are_imported(self, tmp_path: Path):
+        case = _case("mel", tmp_path / "src")
+        dataset, _ = case.run_import(tmp_path / "data")
+        bboxes = dataset.get_data("bboxes")
+        text_spans = dataset.get_data("text_spans")
+        assert len(bboxes) == 1
+        assert len(text_spans) == 1
+        assert bboxes[0].annotator == "alice"
+        assert text_spans[0].role == "title"

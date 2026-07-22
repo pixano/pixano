@@ -107,6 +107,7 @@ class ExportRequestIO(BaseModel):
     destination: str
     format: str = "pixano_jsonl"
     media: Literal["files", "uris"] = "files"
+    options: dict[str, Any] = Field(default_factory=dict)
 
 
 class JobResponse(BaseModel):
@@ -281,7 +282,7 @@ def start_export(request: ExportRequestIO, settings: Annotated[Settings, Depends
     dataset_dir = settings.library_dir / to_snake_case(request.dataset)  # type: ignore[operator]
     if not dataset_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Dataset '{request.dataset}' not found in the library.")
-    job = runner.submit_export(str(dataset_dir), request.destination, request.format, request.media)
+    job = runner.submit_export(str(dataset_dir), request.destination, request.format, request.media, request.options)
     return _job_response(job)
 
 

@@ -978,13 +978,19 @@ class PixanoJsonlImporter(DatasetImporter):
                     else bool(line.defaults.bbox.is_normalized)
                 ),
                 confidence=annotation.confidence,
+                **annotation.attrs,
             )
         if annotation.kind == "mask":
             schema = context.slot_schema("mask")
             if schema is None:
                 raise MetadataError("mask annotation but no mask slot in the schema.", line.provenance)
             if annotation.rle is not None:
-                return schema(**per_frame, size=annotation.rle.size, counts=annotation.rle.counts.encode("utf-8"))
+                return schema(
+                    **per_frame,
+                    size=annotation.rle.size,
+                    counts=annotation.rle.counts.encode("utf-8"),
+                    **annotation.attrs,
+                )
             view_row = view_rows.get(annotation.view or context.single_view or "")
             height = getattr(view_row, "height", 0) if view_row is not None else 0
             width = getattr(view_row, "width", 0) if view_row is not None else 0
@@ -1000,20 +1006,28 @@ class PixanoJsonlImporter(DatasetImporter):
             from pixano.schemas import CompressedRLE
 
             rle = CompressedRLE.from_polygons(polygons, height=height, width=width)
-            return schema(**per_frame, size=rle.size, counts=rle.counts)
+            return schema(**per_frame, size=rle.size, counts=rle.counts, **annotation.attrs)
         if annotation.kind == "keypoints":
             schema = context.slot_schema("keypoint")
             if schema is None:
                 raise MetadataError("keypoints annotation but no keypoint slot in the schema.", line.provenance)
             return schema(
-                **per_frame, template_id=annotation.template_id, coords=annotation.coords, states=annotation.states
+                **per_frame,
+                template_id=annotation.template_id,
+                coords=annotation.coords,
+                states=annotation.states,
+                **annotation.attrs,
             )
         if annotation.kind == "multi_path":
             schema = context.slot_schema("multi_path")
             if schema is None:
                 raise MetadataError("multi_path annotation but no multi_path slot in the schema.", line.provenance)
             return schema(
-                **per_frame, coords=annotation.coords, num_points=annotation.num_points, is_closed=annotation.is_closed
+                **per_frame,
+                coords=annotation.coords,
+                num_points=annotation.num_points,
+                is_closed=annotation.is_closed,
+                **annotation.attrs,
             )
         if annotation.kind == "text_span":
             schema = context.slot_schema("text_span")
@@ -1024,6 +1038,7 @@ class PixanoJsonlImporter(DatasetImporter):
                 mention=annotation.mention,
                 spans_start=annotation.spans_start,
                 spans_end=annotation.spans_end,
+                **annotation.attrs,
             )
         if annotation.kind == "classification":
             schema = context.slot_schema("classification")
@@ -1035,6 +1050,7 @@ class PixanoJsonlImporter(DatasetImporter):
                 **per_frame,
                 labels=annotation.labels,
                 confidences=annotation.confidences or [1.0] * len(annotation.labels),
+                **annotation.attrs,
             )
         return None
 

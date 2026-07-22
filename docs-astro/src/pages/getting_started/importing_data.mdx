@@ -1,28 +1,29 @@
 ---
 layout: ../../layouts/DocsLayout.astro
-title: "Importing Data"
+title: "Importing and Exporting Data"
 section: getting_started
 ---
-import Callout from '../../components/Callout.astro'
-import PrevNext from '../../components/PrevNext.astro'
 
-# Importing Data
+import Callout from "../../components/Callout.astro";
+import PrevNext from "../../components/PrevNext.astro";
 
-Pixano 0.8 imports datasets from plain files — no Python required. You describe your data in a JSONL file, describe your schema in a YAML file, and run one command. This page is the reference for that format.
+# Importing and Exporting Data
+
+Pixano 0.8 imports and exports datasets as plain files — no Python required. You describe your data in a JSONL file, describe your schema in a YAML file, and run one command. This page covers both the import and export formats.
 
 <Callout type="info" title="What you'll learn">
 
-- The folder layout Pixano imports from
-- The `metadata.jsonl` line format (JSONL v2): views, entities, annotations, conversations
-- The `dataset.yaml` schema spec
-- How media storage works: embedded by default, URIs for datalake data
+- **Importing**: the folder layout, the `metadata.jsonl` line format (JSONL v2), the `dataset.yaml` schema spec, and media storage options
+- **Exporting**: how to export a dataset, including record base fields with `--include-record-field`
 - The CLI: `import`, `export`, `formats`, and `migrate-jsonl`
 
 </Callout>
 
-## The folder layout
+## Importing Data
 
-A Pixano source is a folder with one subfolder per split. Each split holds a `metadata.jsonl` file (one JSON object per line, one line per sample) and the media it references:
+A Pixano source is a folder with one subfolder per split. Each split holds a `metadata.jsonl` file (one JSON object per line, one line per sample) and the media it references.
+
+### The folder layout
 
 ```
 my_dataset/
@@ -49,105 +50,143 @@ A split folder containing only images (no `metadata.jsonl`) imports as an unlabe
 
 </Callout>
 
-## The line format (JSONL v2)
+### The line format (JSONL v2)
 
 Every line is one sample: its views (media), its entities (annotated objects), and optionally conversations (VQA). The format is **strict**: unknown keys are errors with did-you-mean suggestions, and nothing is guessed from value shapes. What you write is what you get.
 
 A minimal detection sample:
 
 ```json
-{"views": {"image": "images/000042.jpg"},
- "entities": [
-   {"attrs": {"category": "dog"},
-    "annotations": [
-      {"kind": "bbox", "coords": [0.132, 0.28, 0.41, 0.55], "format": "xywh", "is_normalized": true}
-    ]}
- ]}
+{
+  "views": { "image": "images/000042.jpg" },
+  "entities": [
+    {
+      "attrs": { "category": "dog" },
+      "annotations": [
+        {
+          "kind": "bbox",
+          "coords": [0.132, 0.28, 0.41, 0.55],
+          "format": "xywh",
+          "is_normalized": true
+        }
+      ]
+    }
+  ]
+}
 ```
 
-### The header line (optional)
+#### The header line (optional)
 
 The first line may declare the format version and file-scoped defaults, so per-annotation boilerplate disappears:
 
 ```json
-{"$pixano": "jsonl/2", "defaults": {"bbox": {"format": "xywh", "is_normalized": true}, "source": {"type": "model", "name": "yolo-x"}}}
+{
+  "$pixano": "jsonl/2",
+  "defaults": {
+    "bbox": { "format": "xywh", "is_normalized": true },
+    "source": { "type": "model", "name": "yolo-x" }
+  }
+}
 ```
 
 With bbox defaults declared, annotations can omit `format`/`is_normalized`. Without them, both are **required** on every bbox — Pixano never infers normalization from value ranges.
 
-### Views
+#### Views
 
 Views are declared in `dataset.yaml` (name + kind) and referenced by name on each line. The payload shape depends on the declared kind:
 
-| Kind | Payload |
-|------|---------|
-| `image` | `"path.jpg"` shorthand, or `{"uri": …, "width": …, "height": …}` |
-| `video` | `{"uri": …, "fps": …, "from_timestamp": …, "to_timestamp": …}` — a **time window** into a media file |
-| `sequence_frames` | `{"frames": [{"uri": …, "frame_index": …}, …]}` or `{"frame_pattern": "frames/x/*.jpg", "fps": 24}` |
-| `text` | `{"content": "inline text"}` or `{"uri": "doc.txt"}` — exactly one |
-| `point_cloud` | `{"uri": "scan.ply"}` |
+| Kind              | Payload                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `image`           | `"path.jpg"` shorthand, or `{"uri": …, "width": …, "height": …}`                                     |
+| `video`           | `{"uri": …, "fps": …, "from_timestamp": …, "to_timestamp": …}` — a **time window** into a media file |
+| `sequence_frames` | `{"frames": [{"uri": …, "frame_index": …}, …]}` or `{"frame_pattern": "frames/x/*.jpg", "fps": 24}`  |
+| `text`            | `{"content": "inline text"}` or `{"uri": "doc.txt"}` — exactly one                                   |
+| `point_cloud`     | `{"uri": "scan.ply"}`                                                                                |
 
-### Annotation kinds
+#### Annotation kinds
 
 Annotations live in a flat list under each entity, discriminated by `"kind"`. Payload keys are exactly the Pixano schema field names, so the format is self-documenting:
 
-| Kind | Payload keys |
-|------|--------------|
-| `bbox` | `coords` (4), `format` (`xywh`/`xyxy`), `is_normalized`, `confidence` |
-| `mask` | `rle: {size, counts}` **or** `polygons` (hand-authorable; converted at import) |
-| `keypoints` | `template_id`, `coords` (2 per point), `states` |
-| `multi_path` | `coords`, `num_points`, `is_closed` |
-| `text_span` | `mention`, `spans_start`, `spans_end` |
-| `classification` | `labels`, `confidences` |
+| Kind             | Payload keys                                                                   |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `bbox`           | `coords` (4), `format` (`xywh`/`xyxy`), `is_normalized`, `confidence`          |
+| `mask`           | `rle: {size, counts}` **or** `polygons` (hand-authorable; converted at import) |
+| `keypoints`      | `template_id`, `coords` (2 per point), `states`                                |
+| `multi_path`     | `coords`, `num_points`, `is_closed`                                            |
+| `text_span`      | `mention`, `spans_start`, `spans_end`                                          |
+| `classification` | `labels`, `confidences`                                                        |
 
 On multi-view datasets every annotation carries `"view": "<name>"`; single-view datasets can omit it. Per-frame annotations on video/sequence views add `"frame_index"`. The kinds `bbox3d`, `keypoints3d`, and `relation` are reserved for a future release — using them today produces a clear "reserved kind" error, not a typo message.
 
-### Tracking: tracklets and per-frame state
+#### Tracking: tracklets and per-frame state
 
 For video, entities can carry explicit tracklets and per-frame states:
 
 ```json
-{"views": {"camera": {"uri": "videos/bear.mp4", "fps": 30}},
- "entities": [
-   {"attrs": {"category": "bear"},
-    "tracklets": [{"view": "camera", "start_timestep": 0, "end_timestep": 120}],
-    "states": [{"frame_index": 12, "attrs": {"occluded": true}}],
-    "annotations": [
-      {"kind": "bbox", "frame_index": 12, "coords": [0.1, 0.1, 0.2, 0.3]}
-    ]}
- ]}
+{
+  "views": { "camera": { "uri": "videos/bear.mp4", "fps": 30 } },
+  "entities": [
+    {
+      "attrs": { "category": "bear" },
+      "tracklets": [
+        { "view": "camera", "start_timestep": 0, "end_timestep": 120 }
+      ],
+      "states": [{ "frame_index": 12, "attrs": { "occluded": true } }],
+      "annotations": [
+        { "kind": "bbox", "frame_index": 12, "coords": [0.1, 0.1, 0.2, 0.3] }
+      ]
+    }
+  ]
+}
 ```
 
 If you omit `tracklets` but provide per-frame annotations, Pixano derives one tracklet per view from the min/max `frame_index` — the only derivation in the format, and it is deterministic.
 
-### Conversations (VQA)
+#### Conversations (VQA)
 
 ```json
-{"views": {"image": "000001.jpg"},
- "conversations": [
-   {"messages": [
-     {"type": "QUESTION", "question_type": "SINGLE_CHOICE", "content": "Where are the kids riding?", "choices": ["carnival ride", "bus"]},
-     {"type": "ANSWER", "content": "carnival ride"}
-   ]}
- ]}
+{
+  "views": { "image": "000001.jpg" },
+  "conversations": [
+    {
+      "messages": [
+        {
+          "type": "QUESTION",
+          "question_type": "SINGLE_CHOICE",
+          "content": "Where are the kids riding?",
+          "choices": ["carnival ride", "bus"]
+        },
+        { "type": "ANSWER", "content": "carnival ride" }
+      ]
+    }
+  ]
+}
 ```
 
 `question_type` is required on questions — `OPEN`, `SINGLE_CHOICE`, `MULTI_CHOICE`, or `YES_NO`.
 
-### Sidecar annotation files
+#### Sidecar annotation files
 
 Dense per-frame annotations can live in separate files, stem-matched to frames:
 
 ```json
-{"views": {"camera": {"frame_pattern": "frames/bear/*.jpg", "fps": 24}},
- "annotation_files": [
-   {"kind": "mask", "view": "camera", "pattern": "masks/bear/*.png", "encoding": "index_png", "entity_map": {"1": "bear", "2": "cub"}}
- ]}
+{
+  "views": { "camera": { "frame_pattern": "frames/bear/*.jpg", "fps": 24 } },
+  "annotation_files": [
+    {
+      "kind": "mask",
+      "view": "camera",
+      "pattern": "masks/bear/*.png",
+      "encoding": "index_png",
+      "entity_map": { "1": "bear", "2": "cub" }
+    }
+  ]
+}
 ```
 
 `index_png` files are indexed PNGs where each pixel value is one object (0 = background). `entity_map` names them; `"auto"` derives `object_1`, `object_2`, …
 
-## The schema spec: dataset.yaml
+### The schema spec: dataset.yaml
 
 The YAML file names the dataset, picks a workspace, and declares views and custom attributes:
 
@@ -179,7 +218,7 @@ schema:
 
 Everything in the yaml can also be given as CLI flags (`--name`, `--workspace`, `--media`, …) — flags win over the file.
 
-## Media storage: embed or URI
+### Media storage: embed or URI
 
 Pixano stores media one of two ways (spec §6):
 
@@ -188,16 +227,85 @@ Pixano stores media one of two ways (spec §6):
 
 Mixed datasets are legal: local images embed while, say, LeRobot episode videos stay as `https://` URIs. The dataset records itself as `mixed`.
 
-## Deterministic ids and round-trips
+## Exporting Data
 
-You may provide explicit `id`s on any object; everything else gets a **deterministic** id derived from the source (namespace, split, file, line). Re-importing the same source produces the same ids — which makes `--mode add` re-runs idempotent, and makes export/import a true round-trip:
+### General
+
+Pixano exports a dataset back to the JSONL v2 format — the same format it imports. The command:
+
+```sh
+pixano data export /path/to/data_dir <dataset_name> <dest>
+```
+
+produces a self-contained source folder (JSONL files + `dataset.yaml`) ready for re-import or sharing.
+
+The exported JSONL contains every field Pixano stores — views, entities, annotations, and their ids — in the exact format described in the [Importing Data](#importing-data) section above.
+
+A minimal exported line looks like:
+
+```json
+{
+  "id": "rec_001",
+  "split": "train",
+  "views": { "image": "images/000042.jpg" },
+  "entities": [
+    {
+      "id": "ent_001",
+      "attrs": { "category": "dog" },
+      "annotations": [
+        {
+          "id": "ann_001",
+          "kind": "bbox",
+          "view": "image",
+          "coords": [0.132, 0.28, 0.41, 0.55],
+          "format": "xywh",
+          "is_normalized": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+By default, Record base fields (`status`, `created_at`, `updated_at`, `comment`) are always present in the dataset but **omitted** from the exported JSONL. The `--include-record-field` flag (repeatable) brings them back into the `"attrs"` dict:
+
+```sh
+pixano data export /path/to/data_dir my_dataset ./exported \
+  --include-record-field status \
+  --include-record-field created_at
+```
+
+The exported line then carries these values:
+
+```json
+{"id": "rec_001", "split": "train", "attrs": {"status": "validated", "created_at": "2024-01-15T10:30:00"}, "views": {...}, "entities": [...]}
+```
+
+The exported `dataset.yaml` records the option so that re-import knows to expect these fields:
+
+```yaml
+export:
+  include_record_fields:
+    - status
+    - created_at
+```
+
+<Callout type="note" title="Available fields">
+
+The selectable fields are: `status`, `created_at`, `updated_at`, `comment`. These fields always exist in the dataset — the flag controls whether they appear in the exported JSONL.
+
+</Callout>
+
+### Deterministic ids and round-trips
+
+You may provide explicit `id`s on any object; everything else gets a **deterministic** id derived from the source (namespace, split, file, line). Re-importing the same source produces the same ids — which makes `pixano data import --mode add` re-runs idempotent, and makes export/import a true round-trip:
 
 ```sh
 pixano data export /path/to/data_dir voc_2007 ./exported
 pixano data import /path/to/data_dir ./exported   # id-identical dataset
 ```
 
-The export emits exactly this format, with explicit ids and its own `dataset.yaml`. Export output *is* import input.
+The export emits exactly this format, with explicit ids and its own `dataset.yaml`. Export output _is_ import input.
 
 ## Migrating from Pixano 0.7
 

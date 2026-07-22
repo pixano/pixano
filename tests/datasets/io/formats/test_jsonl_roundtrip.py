@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 from pathlib import Path
 
 import pytest
@@ -77,6 +78,20 @@ class TestGoldenRoundTrips:
         assert second.get_data("masks")[0].counts == first.get_data("masks")[0].counts
         assert second.get_data("records")[0].license == "voc2007"
 
+    def test_annotation_attrs_survive(self, tmp_path: Path):
+        source = materialize_corpus("mel", tmp_path / "src")
+        first = _import(source, tmp_path / "data1", "mel")
+        exported = export_dataset(first, tmp_path / "exported")
+        second = _import(exported, tmp_path / "data2", "mel")
+
+        original_bbox = first.get_data("bboxes")[0]
+        reimported_bbox = second.get_data("bboxes")[0]
+        assert reimported_bbox.annotator == original_bbox.annotator == "alice"
+
+        original_span = first.get_data("text_spans")[0]
+        reimported_span = second.get_data("text_spans")[0]
+        assert reimported_span.role == original_span.role == "title"
+
     def test_uris_mode_refuses_embedded_dataset(self, tmp_path: Path):
         from pixano.datasets.io import SpecValidationError
 
@@ -84,6 +99,58 @@ class TestGoldenRoundTrips:
         dataset = _import(source, tmp_path / "data", "voc_like")
         with pytest.raises(SpecValidationError, match="files"):
             export_dataset(dataset, tmp_path / "exported", media="uris")
+
+    def test_export_includes_record_base_fields(self, tmp_path: Path):
+        source = materialize_corpus("mel", tmp_path / "src")
+        first = _import(source, tmp_path / "data1", "mel")
+
+        exported = export_dataset(
+            first,
+            tmp_path / "exported",
+            media="files",
+            options={"include_record_fields": ["status", "created_at"]},
+        )
+
+        # Check the exported JSONL contains status and created_at in attrs
+        jsonl_path = exported / "train" / "metadata.jsonl"
+        lines = jsonl_path.read_text().strip().split("\n")
+        # First line is the header, second line is the record
+        record_line = json.loads(lines[1])
+        assert "attrs" in record_line
+        assert record_line["attrs"]["status"] == "new"
+        assert "created_at" in record_line["attrs"]
+
+        # Re-import and verify the values survive the round-trip
+        second = _import(exported, tmp_path / "data2", "mel")
+        rec = second.get_data("records")[0]
+        assert rec.status == "new"
+
+    def test_export_excludes_record_base_fields_by_default(self, tmp_path: Path):
+        source = materialize_corpus("mel", tmp_path / "src")
+        first = _import(source, tmp_path / "data1", "mel")
+
+        exported = export_dataset(first, tmp_path / "exported", media="files")
+
+        # Default export should NOT include status/created_at in attrs
+        jsonl_path = exported / "train" / "metadata.jsonl"
+        lines = jsonl_path.read_text().strip().split("\n")
+        record_line = json.loads(lines[1])
+        attrs = record_line.get("attrs", {})
+        assert "status" not in attrs
+        assert "created_at" not in attrs
+
+    def test_exported_yaml_contains_export_options(self, tmp_path: Path):
+        source = materialize_corpus("mel", tmp_path / "src")
+        dataset = _import(source, tmp_path / "data", "mel")
+        exported = export_dataset(
+            dataset,
+            tmp_path / "exported",
+            options={"include_record_fields": ["status", "created_at"]},
+        )
+        yaml_content = (exported / "dataset.yaml").read_text()
+        assert "include_record_fields" in yaml_content
+        assert "status" in yaml_content
+        assert "created_at" in yaml_content
 
 
 class TestReaderGuarantees:

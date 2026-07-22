@@ -243,13 +243,20 @@ def export_command(
     destination: Path = typer.Argument(..., help="Destination directory."),
     format: str = typer.Option("pixano_jsonl", "--format", help="Export format."),
     media: str = typer.Option("files", "--media", help="files (dump embedded bytes) or uris (write URIs verbatim)."),
+    include_record_field: list[str] = typer.Option(
+        [],
+        "--include-record-field",
+        help="Include a Record base field in exported JSONL attrs (repeatable). "
+        "Choices: status, created_at, updated_at, comment.",
+    ),
 ) -> None:
     """Export a dataset from the library (JSONL v2 output re-imports identically)."""
     library_dir = data_dir / "library"
     dataset_dir = library_dir / to_snake_case(dataset)
     try:
         resolved = Dataset(dataset_dir) if dataset_dir.is_dir() else Dataset.find(dataset, library_dir)
-        exported = export_dataset(resolved, destination, format=format, media=media)
+        options = {"include_record_fields": include_record_field} if include_record_field else None
+        exported = export_dataset(resolved, destination, format=format, media=media, options=options)
     except (PixanoDataError, FileNotFoundError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
