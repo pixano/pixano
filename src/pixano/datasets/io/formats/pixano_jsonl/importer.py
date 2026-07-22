@@ -368,6 +368,15 @@ class PixanoJsonlImporter(DatasetImporter):
             return None
         return sorted(p for p in split_dir.rglob("*") if p.is_file() and classify_media(p) == "image")
 
+    _ANNOTATION_SLOT_OF_KIND = {
+        "bbox": "bbox",
+        "mask": "mask",
+        "keypoints": "keypoint",
+        "multi_path": "multi_path",
+        "text_span": "text_span",
+        "classification": "classification",
+    }
+
     def _check_attrs(self, context: _LineContext, line: ParsedLine, report: PreflightReport) -> None:
         record_fields = set(context.info.record.model_fields) if context.info.record else set()
         for attr_name in line.model.attrs:
@@ -386,6 +395,18 @@ class PixanoJsonlImporter(DatasetImporter):
                         line.provenance,
                         suggestion=f"Entity attr '{attr_name}' is not declared in the schema.",
                     )
+            for annotation in entity.annotations:
+                slot = self._ANNOTATION_SLOT_OF_KIND.get(annotation.kind)
+                schema = context.slot_schema(slot) if slot else None
+                if schema is None:
+                    continue  # a missing slot has its own error at build time
+                for attr_name in annotation.attrs:
+                    if attr_name not in schema.model_fields:
+                        report.add(
+                            "unknown_annotation_attr",
+                            line.provenance,
+                            suggestion=f"{annotation.kind} attr '{attr_name}' is not declared in the schema.",
+                        )
 
     def _check_media(self, context: _LineContext, line: ParsedLine, report: PreflightReport) -> int:
         probed = 0
@@ -964,32 +985,48 @@ class PixanoJsonlImporter(DatasetImporter):
                 entity_dynamic_state_id=state_ids.get(annotation.frame_index, ""),
             )
 
+        def construct(schema: type[LanceModel], payload: dict[str, Any]) -> LanceModel:
+            # attrs merge into the payload here (never at a call site, where a
+            # duplicate keyword would raise an unprovenanced TypeError).
+            overlap = sorted(payload.keys() & annotation.attrs.keys())
+            if overlap:
+                raise MetadataError(
+                    f"{annotation.kind} attrs collide with reserved annotation fields: {overlap}.",
+                    line.provenance,
+                )
+            try:
+                return schema(**payload, **annotation.attrs)
+            except ValidationError as exc:
+                raise MetadataError(
+                    f"{annotation.kind} attrs do not match the schema: {exc}", line.provenance
+                ) from None
+
         if annotation.kind == "bbox":
             schema = context.slot_schema("bbox")
             if schema is None:
                 raise MetadataError("bbox annotation but no bbox slot in the schema.", line.provenance)
-            return schema(
-                **per_frame,
-                coords=annotation.coords,
-                format=annotation.format or line.defaults.bbox.format,
-                is_normalized=(
-                    annotation.is_normalized
-                    if annotation.is_normalized is not None
-                    else bool(line.defaults.bbox.is_normalized)
+            return construct(
+                schema,
+                dict(
+                    **per_frame,
+                    coords=annotation.coords,
+                    format=annotation.format or line.defaults.bbox.format,
+                    is_normalized=(
+                        annotation.is_normalized
+                        if annotation.is_normalized is not None
+                        else bool(line.defaults.bbox.is_normalized)
+                    ),
+                    confidence=annotation.confidence,
                 ),
-                confidence=annotation.confidence,
-                **annotation.attrs,
             )
         if annotation.kind == "mask":
             schema = context.slot_schema("mask")
             if schema is None:
                 raise MetadataError("mask annotation but no mask slot in the schema.", line.provenance)
             if annotation.rle is not None:
-                return schema(
-                    **per_frame,
-                    size=annotation.rle.size,
-                    counts=annotation.rle.counts.encode("utf-8"),
-                    **annotation.attrs,
+                return construct(
+                    schema,
+                    dict(**per_frame, size=annotation.rle.size, counts=annotation.rle.counts.encode("utf-8")),
                 )
             view_row = view_rows.get(annotation.view or context.single_view or "")
             height = getattr(view_row, "height", 0) if view_row is not None else 0
@@ -1006,39 +1043,45 @@ class PixanoJsonlImporter(DatasetImporter):
             from pixano.schemas import CompressedRLE
 
             rle = CompressedRLE.from_polygons(polygons, height=height, width=width)
-            return schema(**per_frame, size=rle.size, counts=rle.counts, **annotation.attrs)
+            return construct(schema, dict(**per_frame, size=rle.size, counts=rle.counts))
         if annotation.kind == "keypoints":
             schema = context.slot_schema("keypoint")
             if schema is None:
                 raise MetadataError("keypoints annotation but no keypoint slot in the schema.", line.provenance)
-            return schema(
-                **per_frame,
-                template_id=annotation.template_id,
-                coords=annotation.coords,
-                states=annotation.states,
-                **annotation.attrs,
+            return construct(
+                schema,
+                dict(
+                    **per_frame,
+                    template_id=annotation.template_id,
+                    coords=annotation.coords,
+                    states=annotation.states,
+                ),
             )
         if annotation.kind == "multi_path":
             schema = context.slot_schema("multi_path")
             if schema is None:
                 raise MetadataError("multi_path annotation but no multi_path slot in the schema.", line.provenance)
-            return schema(
-                **per_frame,
-                coords=annotation.coords,
-                num_points=annotation.num_points,
-                is_closed=annotation.is_closed,
-                **annotation.attrs,
+            return construct(
+                schema,
+                dict(
+                    **per_frame,
+                    coords=annotation.coords,
+                    num_points=annotation.num_points,
+                    is_closed=annotation.is_closed,
+                ),
             )
         if annotation.kind == "text_span":
             schema = context.slot_schema("text_span")
             if schema is None:
                 raise MetadataError("text_span annotation but no text_span slot in the schema.", line.provenance)
-            return schema(
-                **per_frame,
-                mention=annotation.mention,
-                spans_start=annotation.spans_start,
-                spans_end=annotation.spans_end,
-                **annotation.attrs,
+            return construct(
+                schema,
+                dict(
+                    **per_frame,
+                    mention=annotation.mention,
+                    spans_start=annotation.spans_start,
+                    spans_end=annotation.spans_end,
+                ),
             )
         if annotation.kind == "classification":
             schema = context.slot_schema("classification")
@@ -1046,11 +1089,13 @@ class PixanoJsonlImporter(DatasetImporter):
                 raise MetadataError(
                     "classification annotation but no classification slot in the schema.", line.provenance
                 )
-            return schema(
-                **per_frame,
-                labels=annotation.labels,
-                confidences=annotation.confidences or [1.0] * len(annotation.labels),
-                **annotation.attrs,
+            return construct(
+                schema,
+                dict(
+                    **per_frame,
+                    labels=annotation.labels,
+                    confidences=annotation.confidences or [1.0] * len(annotation.labels),
+                ),
             )
         return None
 

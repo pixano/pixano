@@ -241,3 +241,55 @@ class TestGoldenCorporaImport:
         assert len(text_spans) == 1
         assert bboxes[0].annotator == "alice"
         assert text_spans[0].role == "title"
+
+
+class TestAnnotationAttrGuards:
+    """Annotation-level attrs get the same preflight + typed-error treatment as record/entity attrs."""
+
+    _SPEC = {
+        "format": "pixano_jsonl",
+        "dataset": {"name": "guards", "workspace": "image"},
+        "schema": {"annotations": {"bbox": {"attrs": {"annotator": "str"}}}},
+    }
+
+    def _source(self, tmp_path: Path, attrs_json: str) -> Path:
+        split = tmp_path / "src" / "train"
+        split.mkdir(parents=True)
+        shutil.copy(IMAGE_JPG_ASSET_URL, split / "a.jpg")
+        line = (
+            '{"id": "r1", "views": {"image": "a.jpg"}, "entities": [{"annotations": '
+            '[{"kind": "bbox", "coords": [0.1, 0.1, 0.2, 0.2], "format": "xywh", "is_normalized": true, '
+            '"attrs": ' + attrs_json + "}]}]}"
+        )
+        (split / "metadata.jsonl").write_text(line + "\n", encoding="utf-8")
+        return tmp_path / "src"
+
+    def test_unknown_annotation_attr_reported(self, tmp_path: Path):
+        from pixano.datasets.io import analyze
+
+        source = self._source(tmp_path, '{"annotatr": "alice"}')  # typo'd attr
+        plan = analyze(source, ImportSpec.model_validate(self._SPEC))
+        assert "unknown_annotation_attr" in plan.report.findings
+        assert not plan.report.is_valid
+
+    def test_colliding_annotation_attr_is_a_metadata_error(self, tmp_path: Path):
+        from pixano.datasets.io import import_dataset
+        from pixano.datasets.io.errors import MetadataError
+
+        # 'confidence' is a declared BBox field, so analyze passes — the kwarg
+        # collision must surface as a MetadataError with provenance, not a raw TypeError.
+        source = self._source(tmp_path, '{"confidence": 0.9}')
+        with pytest.raises(MetadataError, match="bbox attrs collide"):
+            import_dataset(
+                source, tmp_path / "data", ImportSpec.model_validate(self._SPEC), importer=PixanoJsonlImporter()
+            )
+
+    def test_wrong_typed_annotation_attr_is_a_metadata_error(self, tmp_path: Path):
+        from pixano.datasets.io import import_dataset
+        from pixano.datasets.io.errors import MetadataError
+
+        source = self._source(tmp_path, '{"annotator": {"nested": true}}')
+        with pytest.raises(MetadataError, match="bbox attrs do not match"):
+            import_dataset(
+                source, tmp_path / "data", ImportSpec.model_validate(self._SPEC), importer=PixanoJsonlImporter()
+            )
