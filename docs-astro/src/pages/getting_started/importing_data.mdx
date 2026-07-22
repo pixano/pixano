@@ -281,10 +281,10 @@ The exported line then carries these values:
 {"id": "rec_001", "split": "train", "attrs": {"status": "validated", "created_at": "2024-01-15T10:30:00"}, "views": {...}, "entities": [...]}
 ```
 
-The exported `dataset.yaml` records the option so that re-import knows to expect these fields:
+The exported `dataset.yaml` records the option (under `options`, so the file remains a valid import spec):
 
 ```yaml
-export:
+options:
   include_record_fields:
     - status
     - created_at
@@ -302,7 +302,7 @@ When re-importing an exported dataset that contains record base fields in `"attr
 pixano data import /path/to/data_dir ./exported
 ```
 
-For the importer to accept these fields, declare them in `dataset.yaml` under `schema.record.attrs`. The following exemple declares a supplementary string field named `label` as a record's attribute, that will be imported from the JSONL dataset files :
+Record **base** fields (`status`, `created_at`, `updated_at`, `comment`) are recognized by name and need no declaration. **Supplementary** custom attributes, however, must be declared in `dataset.yaml` under `schema.record.attrs`. The following example declares a supplementary string field named `label` as a record attribute, imported from the JSONL dataset files:
 
 ```yaml
 pixano: 2
@@ -320,7 +320,7 @@ schema:
   annotations: [bbox]
 ```
 
-The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as Record base fields by name and sets them directly. If the value type does not match (e.g. a string where a `datetime` is expected), the import fails with a clear validation error.
+The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as Record base fields by name and sets them directly. Timestamp fields accept ISO-8601 strings (e.g. `"2024-01-15T10:30:00"`); a value that cannot be parsed as the field's type fails the import with a clear validation error. On `create`/`overwrite` imports the provided `created_at`/`updated_at` values are **preserved as-is**; in `--mode add`, upsert semantics apply — a re-imported existing record keeps its stored `created_at` and gets a fresh `updated_at`.
 
 ### Deterministic ids and round-trips
 

@@ -120,10 +120,13 @@ class TestGoldenRoundTrips:
         assert record_line["attrs"]["status"] == "new"
         assert "created_at" in record_line["attrs"]
 
-        # Re-import and verify the values survive the round-trip
+        # Re-import and verify the values survive the round-trip EXACTLY —
+        # including timestamps (fresh imports must not restamp created_at).
         second = _import(exported, tmp_path / "data2", "mel")
+        original = first.get_data("records")[0]
         rec = second.get_data("records")[0]
-        assert rec.status == "new"
+        assert rec.status == original.status
+        assert rec.created_at == original.created_at
 
     def test_export_excludes_record_base_fields_by_default(self, tmp_path: Path):
         source = materialize_corpus("mel", tmp_path / "src")
@@ -151,6 +154,34 @@ class TestGoldenRoundTrips:
         assert "include_record_fields" in yaml_content
         assert "status" in yaml_content
         assert "created_at" in yaml_content
+
+        # The exported yaml must remain a VALID import spec (the option lives
+        # under `options`, never as an unknown top-level key), and the export
+        # must be fully re-importable as-is — the §5 round-trip contract.
+        spec = ImportSpec.from_yaml(exported / "dataset.yaml")
+        assert spec.options["include_record_fields"] == ["status", "created_at"]
+        second = _import(exported, tmp_path / "data2", "mel")
+        assert _sorted_ids(second) == _sorted_ids(dataset)
+
+    def test_hand_authored_timestamps_are_preserved(self, tmp_path: Path):
+        import shutil
+        from datetime import datetime
+
+        from tests.assets.sample_data.metadata import IMAGE_JPG_ASSET_URL
+
+        split = tmp_path / "src" / "train"
+        split.mkdir(parents=True)
+        shutil.copy(IMAGE_JPG_ASSET_URL, split / "a.jpg")
+        split.joinpath("metadata.jsonl").write_text(
+            '{"id": "rec_1", "attrs": {"created_at": "2020-01-02T03:04:05", "status": "validated"}, '
+            '"views": {"image": "a.jpg"}}\n',
+            encoding="utf-8",
+        )
+        spec = ImportSpec.model_validate({"format": "pixano_jsonl", "dataset": {"name": "ts", "workspace": "image"}})
+        result = import_dataset(tmp_path / "src", tmp_path / "data", spec, importer=PixanoJsonlImporter())
+        rec = Dataset(result.dataset_path).get_data("records")[0]
+        assert rec.created_at == datetime(2020, 1, 2, 3, 4, 5)
+        assert rec.status == "validated"
 
 
 class TestReaderGuarantees:

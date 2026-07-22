@@ -516,7 +516,10 @@ class ImportEngine:
                     pending_ids=pending_ids,
                     fk_lookup=ledger.fk_lookup,
                 )
-            dataset.add_records(batch, check_integrity="none")
+            # Importers construct rows with correct timestamps (explicit values
+            # from the source, else construction-time defaults) — don't restamp,
+            # so re-imported exports keep their original created_at/updated_at.
+            dataset.add_records(batch, check_integrity="none", stamp_timestamps=False)
 
         for table, rows in batch.items():
             ledger.add(table, [row.id for row in rows if row.id])

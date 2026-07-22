@@ -997,6 +997,7 @@ class Dataset:
         self,
         data: dict[str, LanceModel | list[LanceModel]],
         check_integrity: Literal["raise", "warn", "none"] = "raise",
+        stamp_timestamps: bool = True,
     ) -> None:
         """Insert rows into multiple tables in a single call.
 
@@ -1012,6 +1013,11 @@ class Dataset:
             check_integrity: Integrity-check mode.
                 ``"raise"`` (default) aborts on the first error,
                 ``"warn"`` emits warnings, ``"none"`` skips validation.
+            stamp_timestamps: Overwrite ``created_at``/``updated_at`` with
+                now (default). Importers pass ``False`` so explicitly
+                provided timestamps (e.g. a re-imported export) survive;
+                rows without explicit values keep their construction-time
+                defaults, which are equally "now".
         """
         # Normalize values to lists and filter empties
         normalized: dict[str, list[LanceModel]] = {}
@@ -1063,11 +1069,12 @@ class Dataset:
         # Insert into LanceDB in dependency order
         for table_name in ordered_tables:
             rows = normalized[table_name]
-            for row in rows:
-                if hasattr(row, "created_at"):
-                    row.created_at = datetime.now()
-                if hasattr(row, "updated_at"):
-                    row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
+            if stamp_timestamps:
+                for row in rows:
+                    if hasattr(row, "created_at"):
+                        row.created_at = datetime.now()
+                    if hasattr(row, "updated_at"):
+                        row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
             table = self.open_table(table_name)
             table.add(rows)
 

@@ -120,7 +120,10 @@ class PixanoJsonlExporter:
         }
         include_fields = self.options.get("include_record_fields")
         if include_fields:
-            spec_payload["export"] = {"include_record_fields": list(include_fields)}
+            # Recorded under `options` so the exported dataset.yaml stays a VALID
+            # import spec (ImportSpec forbids unknown top-level keys); the key is
+            # inert on import and documents how the export was produced.
+            spec_payload["options"] = {"include_record_fields": list(include_fields)}
         try:
             schema = SchemaSpec.from_dataset_info(dataset.info)
             spec_payload["schema"] = schema.model_dump(exclude_defaults=True, exclude_none=True)
