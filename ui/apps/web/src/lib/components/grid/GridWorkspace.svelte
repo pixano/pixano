@@ -24,7 +24,9 @@ License: CECILL-C
   let { manager, registry }: Props = $props();
 
   let grid: GridStack;
-  let mountedWidgets: Map<string, Record<string, unknown>> = new Map();
+  // Value is the mounted Svelte component, or null while its deferred mount is
+  // still pending (see mountWidget).
+  let mountedWidgets: Map<string, Record<string, unknown> | null> = new Map();
   let lastManipulationEvent = 0;
 
   function mountWidget(widget: WidgetInstance) {
@@ -35,39 +37,68 @@ License: CECILL-C
     element.dataset.widgetId = widget.id;
     grid.el.appendChild(element);
 
-    const component = mount(WidgetFrame, {
-      target: element,
-      context: new Map<string, unknown>([["workspaceManager", manager]]),
-      props: {
-        widget,
-        config,
-        onRemove: () => manager.removeWidget(widget.id),
-      },
+    // Reserve the slot before the deferred mount so the reconciliation effect
+    // stays idempotent and unmountWidget can cancel a not-yet-run mount.
+    mountedWidgets.set(widget.id, null);
+
+    // Mount in a microtask, outside any reactive context. A component root
+    // created inside a re-running $effect is "detached" by Svelte on the next
+    // re-run while staying reachable from this component's effect tree; when
+    // such a half-detached root is later scheduled together with the app root
+    // in one flush, Svelte's scheduler permanently stops updating it (the
+    // widget freezes: toolbar, gizmos and resize go dead while the canvas
+    // keeps rendering). Deferring makes each widget an independent root from
+    // birth, which that scheduler conflict cannot reach.
+    queueMicrotask(() => {
+      // Unmounted (or workspace destroyed) before the mount could run. The
+      // element check covers an unmount + remount of the same id in between:
+      // only the latest attempt's element is still in the grid.
+      if (!mountedWidgets.has(widget.id) || !element.isConnected) return;
+
+      const component = mount(WidgetFrame, {
+        target: element,
+        context: new Map<string, unknown>([["workspaceManager", manager]]),
+        props: {
+          widget,
+          config,
+          onRemove: () => manager.removeWidget(widget.id),
+        },
+      });
+
+      mountedWidgets.set(widget.id, component);
+
+      // Honor the computed layout even when it is below the extension's default
+      // minW/minH; otherwise GridStack silently enlarges the widget and breaks
+      // the alignment of programmatically computed grids.
+      const minW = Math.min(widget.layout.w, config.defaultLayout.minW ?? 2);
+      const minH = Math.min(widget.layout.h, config.defaultLayout.minH ?? 2);
+
+      // Keep the stored spot when free, else drop into the next free spot (used
+      // when a re-shown widget's original slot was filled by a prior compaction).
+      // Registered only after the mount: GridStack resolves the drag handle
+      // (.grid-stack-handle, the frame's title bar) from the item's content when
+      // it wires dragging — registering an empty element would make the whole
+      // widget draggable from anywhere, including the 3D canvas.
+      placeWidget(grid, element, widget.id, widget.layout, minW, minH, manager);
     });
-
-    mountedWidgets.set(widget.id, component);
-
-    // Honor the computed layout even when it is below the extension's default
-    // minW/minH; otherwise GridStack silently enlarges the widget and breaks
-    // the alignment of programmatically computed grids.
-    const minW = Math.min(widget.layout.w, config.defaultLayout.minW ?? 2);
-    const minH = Math.min(widget.layout.h, config.defaultLayout.minH ?? 2);
-
-    // Keep the stored spot when free, else drop into the next free spot (used
-    // when a re-shown widget's original slot was filled by a prior compaction).
-    placeWidget(grid, element, widget.id, widget.layout, minW, minH, manager);
   }
 
   function unmountWidget(widgetId: string) {
-    const component = mountedWidgets.get(widgetId);
-    if (!component) return;
+    if (!mountedWidgets.has(widgetId)) return;
 
-    unmount(component);
+    // A null entry means the deferred mount hasn't run yet; deleting the entry
+    // cancels it (the microtask bails when the id is gone from the map).
+    const component = mountedWidgets.get(widgetId);
     mountedWidgets.delete(widgetId);
+    if (component) void unmount(component);
 
     const element = grid.getGridItems().find((i) => i.dataset.widgetId === widgetId);
     if (element) {
       grid.removeWidget(element, true);
+    } else {
+      // The deferred mount hadn't registered the element with GridStack yet;
+      // it is still a plain child of the grid container.
+      grid.el.querySelector(`[data-widget-id="${CSS.escape(widgetId)}"]`)?.remove();
     }
   }
 
@@ -185,7 +216,7 @@ License: CECILL-C
 
   onDestroy(() => {
     for (const component of mountedWidgets.values()) {
-      unmount(component);
+      if (component) void unmount(component);
     }
     mountedWidgets.clear();
 
