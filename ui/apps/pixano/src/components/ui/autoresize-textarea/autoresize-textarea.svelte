@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  /* eslint-disable svelte/valid-compile */
   import { tick } from "svelte";
   import type { HTMLTextareaAttributes } from "svelte/elements";
 
