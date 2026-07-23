@@ -11,6 +11,7 @@ splits/statuses so filtered/sorted pagination can be checked for exactness.
 """
 
 import tempfile
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -183,6 +184,29 @@ class TestFiltering:
         body = client.get(f"{BASE}/records", params={"q": "dog", "limit": 50}).json()
         assert body["total"] == sum(1 for c in CAPTIONS if "dog" in c)
         assert all("dog" in r["caption"].lower() for r in body["items"])
+
+    def test_datetime_filter_runs_against_the_engine(self, client: TestClient):
+        # Records were created "now"; a date-only >= on today's UTC date must
+        # match all of them and, crucially, not 500 (timestamp-literal casting).
+        today = datetime.now(timezone.utc).date().isoformat()
+        resp = client.get(f"{BASE}/records", params={"filter": f"created_at:gte:{today}", "limit": 50})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["total"] == 15
+
+    def test_datetime_filter_combined_with_split_and_sort(self, client: TestClient):
+        # Reproduces the reported 500: created_at eq (day range) + split + sort.
+        today = datetime.now(timezone.utc).date().isoformat()
+        resp = client.get(
+            f"{BASE}/records",
+            params={
+                "filter": ["split:eq:val", f"created_at:eq:{today}"],
+                "sort": "status",
+                "order": "desc",
+                "limit": 50,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        assert all(r["split"] == "val" for r in resp.json()["items"])
 
 
 class TestSorting:

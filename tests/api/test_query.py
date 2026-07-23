@@ -87,11 +87,20 @@ class TestGoldenSql:
 
     def test_datetime_date_only_eq_is_a_day_range(self):
         where, _r, _s = compile_filters(CATALOGUE, ["created_at:eq:2026-07-20"])
-        assert where == "(created_at >= '2026-07-20 00:00:00' AND created_at < '2026-07-21 00:00:00')"
+        assert where == (
+            "(created_at >= timestamp '2026-07-20 00:00:00' " "AND created_at < timestamp '2026-07-21 00:00:00')"
+        )
 
     def test_datetime_between(self):
         where, _r, _s = compile_filters(CATALOGUE, ["created_at:between:2026-01-01,2026-07-20"])
-        assert where == "(created_at >= '2026-01-01 00:00:00' AND created_at < '2026-07-21 00:00:00')"
+        assert where == (
+            "(created_at >= timestamp '2026-01-01 00:00:00' " "AND created_at < timestamp '2026-07-21 00:00:00')"
+        )
+
+    def test_datetime_comparison_uses_a_typed_literal(self):
+        # LanceDB/DataFusion rejects a bare quoted string on a timestamp column.
+        where, _r, _s = compile_filters(CATALOGUE, ["created_at:gte:2026-07-20"])
+        assert where == "created_at >= timestamp '2026-07-20 00:00:00'"
 
     def test_free_text_sweeps_searchable_columns_lowercased(self):
         where, referenced, servable = compile_filters(CATALOGUE, [], q="Cat")

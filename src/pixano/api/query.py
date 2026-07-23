@@ -268,7 +268,10 @@ def _parse_datetime(value: str, column: str) -> tuple[datetime, bool]:
 
 
 def _dt_literal(dt: datetime) -> str:
-    return quote_sql_string(dt.isoformat(sep=" "))
+    # DataFusion (LanceDB's filter engine) does not implicitly cast a string to
+    # a timestamp column, so a bare quoted string fails; emit a typed timestamp
+    # literal instead. Microsecond precision round-trips.
+    return f"timestamp {quote_sql_string(dt.isoformat(sep=' '))}"
 
 
 def _escape_like(value: str) -> str:
