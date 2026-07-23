@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 export * from "./datasets";
+export * from "./filters";
 export * from "./records";
 export * from "./workspace";
 export * from "./schemaApi";

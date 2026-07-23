@@ -128,7 +128,6 @@ export interface DatasetBrowserType {
   name: string;
   table_data: TableData;
   pagination: PaginationInfo;
-  semantic_search: string[];
   isErrored?: boolean;
 }
 
@@ -137,7 +136,6 @@ export class DatasetBrowser implements DatasetBrowserType {
   name: string;
   table_data: TableData;
   pagination: PaginationInfo;
-  semantic_search: Array<string>;
   isErrored?: boolean;
 
   constructor(obj: DatasetBrowserType) {
@@ -145,7 +143,6 @@ export class DatasetBrowser implements DatasetBrowserType {
     this.name = obj.name;
     this.table_data = obj.table_data;
     this.pagination = obj.pagination;
-    this.semantic_search = obj.semantic_search;
     this.isErrored = obj.isErrored;
   }
 }

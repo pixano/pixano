@@ -44,6 +44,13 @@ describe("toDatasetBrowser list attributes", () => {
     expect(browser.table_data.rows[0].tasks).toBe("");
   });
 
+  it("preserves the backend row order (no client-side re-sort) and drops semantic_search", () => {
+    const browser = toDatasetBrowser("ds", paginated([{ id: "b" }, { id: "a" }, { id: "c" }]));
+    // Rows must keep the server-sent order, not be re-sorted client-side.
+    expect(browser.table_data.rows.map((r) => r.id)).toEqual(["b", "a", "c"]);
+    expect("semantic_search" in browser).toBe(false);
+  });
+
   it("infers bool columns and never turns view_previews into a record column", () => {
     const browser = toDatasetBrowser(
       "ds",
