@@ -87,27 +87,42 @@ def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> typ
     return sup_type
 
 
-def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
-    """Convert a list of IDs to a SQL-friendly string.
+def quote_sql_string(value: str) -> str:
+    """Quote a string as a SQL string literal, escaping embedded single quotes.
 
     Args:
-        ids: List of IDs.
+        value: The raw string.
 
     Returns:
-        SQL-friendly string of IDs.
+        A SQL string literal, e.g. ``O'Brien`` -> ``'O''Brien'``.
+    """
+    return "'" + value.replace("'", "''") + "'"
+
+
+def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
+    """Convert an id, or a collection of ids, into a SQL ``IN``-list literal.
+
+    Single quotes inside ids are escaped (doubled), so the result is a valid,
+    injection-safe SQL list even for ids containing ``'``. An empty collection
+    yields ``(NULL)`` — a list that matches nothing — rather than raising, so a
+    filtered query with no candidate ids degrades to an empty result instead of
+    a 500.
+
+    Args:
+        ids: A single id, or a sequence/set of ids.
+
+    Returns:
+        A SQL list literal such as ``('a', 'b')`` or ``(NULL)``.
     """
     if isinstance(ids, str):
-        return f"('{ids}')"
-    elif len(ids) == 0:
-        raise ValueError("IDs must not be empty.")
-    else:
-        for id in ids:
-            if not isinstance(id, str):
-                raise ValueError("IDs must be strings.")
-    ids = list(dict.fromkeys(ids))  # Keep order and remove duplicates
-    if len(ids) == 1:
-        return f"('{ids.pop()}')"
-    return str(tuple(ids))
+        return f"({quote_sql_string(ids)})"
+    for id in ids:
+        if not isinstance(id, str):
+            raise ValueError("IDs must be strings.")
+    unique_ids = list(dict.fromkeys(ids))  # Keep order and remove duplicates
+    if len(unique_ids) == 0:
+        return "(NULL)"
+    return "(" + ", ".join(quote_sql_string(id) for id in unique_ids) + ")"
 
 
 def fn_sort_dict(dict_: dict[str, Any], order_by: list[str], descending: list[bool]) -> tuple[Any, ...]:

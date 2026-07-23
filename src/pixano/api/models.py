@@ -141,6 +141,46 @@ class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
 
 
+class ColumnDescriptorResponse(ResponseModel):
+    """One filterable/sortable column, as published to the explorer UI."""
+
+    name: str
+    type: str
+    collection: bool
+    source: str
+    filterable: bool
+    sortable: bool
+    searchable: bool
+    indexed: bool
+    operators: list[str]
+    values: list[str] | None = None
+    values_complete: bool = True
+
+
+class SearchCapabilities(ResponseModel):
+    """Available search modes for a dataset (semantic search lands in 0.9)."""
+
+    modes: list[str] = Field(default_factory=lambda: ["text"])
+    models: list[str] = Field(default_factory=list)
+
+
+class FilterSchemaResponse(ResponseModel):
+    """Capability document for the explorer's filter/sort/search affordances."""
+
+    table: str
+    columns: list[ColumnDescriptorResponse]
+    search: SearchCapabilities
+
+
+class NeighborsResponse(ResponseModel):
+    """A record's neighbors within the current filtered, sorted result set."""
+
+    prev: str | None = None
+    next: str | None = None
+    position: int | None = None
+    total: int
+
+
 EntityCreate = _create_transport_model(
     "EntityCreate",
     Entity,

@@ -74,6 +74,7 @@ class TableQueryBuilder:
         self._offset: int | None = None
         self._order_by: list[str] = []
         self._descending: list[bool] = []
+        self._force_full_scan: bool = False
         self._function_called: dict[str, bool] = {
             "select": False,
             "where": False,
@@ -133,6 +134,26 @@ class TableQueryBuilder:
         if not isinstance(where, str):
             raise ValueError("where must be a string.")
         self._where = where
+        return self
+
+    def force_full_scan(self, force: bool = True) -> Self:
+        """Force the safe full-scan-then-slice path regardless of index coverage.
+
+        The index-coverage check (`_filter_is_index_covered`) inspects which
+        columns a filter references, not which operators it uses. Some operators
+        (`!=`, `NOT IN`, `LIKE`, `array_contains`) are not served correctly by a
+        scalar index, so a filter using them on an indexed column would wrongly
+        take the native fast path and, under the lancedb 0.29 limit-before-filter
+        caveat, silently under-return. Callers that build such a filter set this
+        so the whole table is scanned and sliced afterwards.
+
+        Args:
+            force: Whether to force the full-scan path.
+
+        Returns:
+            The TableQueryBuilder instance.
+        """
+        self._force_full_scan = force
         return self
 
     def limit(self, limit: int | None) -> Self:
@@ -201,7 +222,11 @@ class TableQueryBuilder:
         Conservative: identifier tokens are matched against the table schema;
         any schema column appearing in the filter must be indexed. Unknown or
         unparsable filters return False (callers fall back to the full scan).
+        When `force_full_scan` is set, always report False so the safe
+        full-scan-then-slice path is taken (see `force_full_scan`).
         """
+        if self._force_full_scan:
+            return False
         if self._where is None:
             return True
         try:
