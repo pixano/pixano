@@ -233,7 +233,7 @@ License: CECILL-C
     for (const tname in objectProperties) {
       for (const feat in objectProperties[tname]) {
         if (typeof objectProperties[feat] === "string") {
-          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
+          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat], $itemMetas.datasetId);
         }
       }
     }

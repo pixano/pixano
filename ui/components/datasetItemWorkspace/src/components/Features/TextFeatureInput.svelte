@@ -41,7 +41,7 @@ License: CECILL-C
 
     if (typeof formattedValue === "string") {
       itemMetas.update((metas) => {
-        addNewInput(metas.featuresList, featureClass, propertyName, formattedValue);
+        addNewInput(metas.featuresList, featureClass, propertyName, formattedValue, metas.datasetId);
         return { ...metas };
       });
     }

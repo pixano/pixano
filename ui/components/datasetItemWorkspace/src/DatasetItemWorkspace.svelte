@@ -34,6 +34,10 @@ License: CECILL-C
   import { getTopEntity } from "./lib/api/objectsApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
   import {
+    loadFeaturesFromStorage,
+    mergeFeaturesList,
+  } from "./lib/api/featuresApi";
+  import {
     annotations,
     canSave,
     entities,
@@ -47,6 +51,7 @@ License: CECILL-C
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
+  export let datasetId: string;
   export let models: string[] = [];
   export let handleSaveItem: (data: SaveItem[]) => Promise<void>;
   export let isLoading: boolean;
@@ -162,10 +167,15 @@ License: CECILL-C
     console.log("XXX entities", $entities);
     console.log("XXX annotations", $annotations);
 
+    const baseFeatures = featureValues || { main: {}, objects: {} };
+    const storedFeatures = loadFeaturesFromStorage(datasetId);
+    const mergedFeatures = storedFeatures ? mergeFeaturesList(baseFeatures, storedFeatures) : baseFeatures;
+
     itemMetas.set({
-      featuresList: featureValues || { main: {}, objects: {} },
+      featuresList: mergedFeatures,
       item: selectedItem.item,
       type: selectedItem.ui.type,
+      datasetId,
     });
 
     saveData.set([]);

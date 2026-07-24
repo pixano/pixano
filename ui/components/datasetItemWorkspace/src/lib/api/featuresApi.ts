@@ -119,6 +119,46 @@ export const addNewInput = (
     }
   }
 };
+
+const STORAGE_PREFIX = "pixano_features_";
+
+export const saveFeaturesToStorage = (datasetId: string, features: FeaturesValues) => {
+  try {
+    localStorage.setItem(STORAGE_PREFIX + datasetId, JSON.stringify(features));
+  } catch (e) {
+    console.warn("Failed to save features to localStorage:", e);
+  }
+};
+
+export const loadFeaturesFromStorage = (datasetId: string): FeaturesValues | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + datasetId);
+    if (!raw) return null;
+    return JSON.parse(raw) as FeaturesValues;
+  } catch (e) {
+    console.warn("Failed to load features from localStorage:", e);
+    return null;
+  }
+};
+
+export const mergeFeaturesList = (backend: FeaturesValues, stored: FeaturesValues): FeaturesValues => {
+  const merged: FeaturesValues = { main: {}, objects: {} };
+  for (const featureClass of ["main", "objects"] as const) {
+    const allKeys = new Set([
+      ...Object.keys(backend[featureClass] || {}),
+      ...Object.keys(stored[featureClass] || {}),
+    ]);
+    for (const key of allKeys) {
+      const backendValues = backend[featureClass]?.[key]?.values || [];
+      const storedValues = stored[featureClass]?.[key]?.values || [];
+      const restricted = backend[featureClass]?.[key]?.restricted ?? stored[featureClass]?.[key]?.restricted ?? false;
+      const uniqueValues = [...new Set([...backendValues, ...storedValues])];
+      merged[featureClass][key] = { restricted, values: uniqueValues };
+    }
+  }
+  return merged;
+};
+
 export const mapFeatureList = (featureList: FeatureList = { restricted: false, values: [] }) => {
   featureList.values ??= [];
   featureList.restricted ??= false;

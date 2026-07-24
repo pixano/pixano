@@ -330,6 +330,7 @@ License: CECILL-C
     {selectedItem}
     models={$modelsStore}
     {featureValues}
+    datasetId={currentDatasetId}
     {handleSaveItem}
     isLoading={isLoadingNewItem}
     bind:canSaveCurrentItem
