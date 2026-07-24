@@ -65,8 +65,8 @@ class TestSchemaSpecCompile:
     def test_unknown_view_kind_and_slot(self):
         with pytest.raises(SpecValidationError, match="unknown kind 'hologram'"):
             SchemaSpec.model_validate({"views": {"x": {"kind": "hologram"}}}).compile(WorkspaceType.IMAGE)
-        with pytest.raises(SpecValidationError, match="Unknown annotation slot 'bbox3d'"):
-            SchemaSpec.model_validate({"annotations": ["bbox3d"]}).compile(WorkspaceType.IMAGE)
+        with pytest.raises(SpecValidationError, match="Unknown annotation slot 'hologram_box'"):
+            SchemaSpec.model_validate({"annotations": ["hologram_box"]}).compile(WorkspaceType.IMAGE)
 
     def test_dict_typed_attr_is_out_of_dialect(self):
         with pytest.raises(SpecValidationError, match="custom Python importer"):

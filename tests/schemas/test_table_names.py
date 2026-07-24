@@ -37,8 +37,8 @@ class TestNewCanonicalFamilies:
         slots = supported_dataset_info_slots()
         assert "classification" in slots
         assert "relation" in slots
-        # 3D families are deferred to 0.9 (separate 3D workstream).
-        assert "bbox3d" not in slots
+        # Upstream defers 3D families to 0.9; this branch already ships bbox3d.
+        assert "bbox3d" in slots
         assert "keypoints3d" not in slots
         assert "cam_calibration" not in slots
 
