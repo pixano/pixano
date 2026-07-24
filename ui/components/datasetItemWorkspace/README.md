@@ -1,48 +1,83 @@
-# Svelte + TS + Vite
+# datasetItemWorkspace
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+Svelte component library for the Pixano dataset item workspace. This is the main editing interface displayed when opening a dataset item.
 
-## Recommended IDE Setup
+## Architecture
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+```
+DatasetItemWorkspace.svelte
+├── components/
+│   ├── DatasetItemViewer/    — Image/video/point-cloud rendering
+│   ├── Features/             — Feature editing inputs
+│   │   ├── AutoCompleteFeatureInput.svelte
+│   │   ├── TextFeatureInput.svelte
+│   │   ├── CreateFeatureInputs.svelte
+│   │   ├── UpdateFeatureInputs.svelte
+│   │   └── SelectFeatureInput.svelte
+│   ├── Inspector/            — Object/entity inspector panels
+│   ├── SaveShape/            — Shape creation confirmation form
+│   ├── Toolbar.svelte        — Annotation tools toolbar
+│   ├── Toolbar/              — Toolbar sub-components
+│   ├── VideoPlayer/          — Video timeline and playback
+│   ├── LoadModelModal.svelte — Smart model selection modal
+│   └── PreAnnotation/        — Pre-annotation workflow
+└── lib/
+    ├── api/                  — API functions
+    │   ├── featuresApi.ts    — Feature CRUD + localStorage persistence
+    │   ├── modelsApi.ts      — Model inference API
+    │   ├── objectsApi/       — Object annotation API
+    │   └── videoApi.ts       — Video-specific operations
+    ├── stores/               — Svelte stores for workspace state
+    ├── settings/             — Validation schemas, tool configs
+    ├── types/                — TypeScript type definitions
+    ├── constants.ts          — Shared constants
+    └── utils/                — Utility functions
+```
 
-## Need an official Svelte framework?
+## Feature inputs
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+### AutoCompleteFeatureInput
 
-## Technical considerations
+Autocomplete dropdown built on [cmdk](https://cmdk.paco.me). Supports keyboard navigation and filtered search. The Enter key always saves the current input value (intercepted via `Command.Root` `onKeydown`). Empty values are filtered from the dropdown.
 
-**Why use this over SvelteKit?**
+### TextFeatureInput
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+Simple text input wrapper that delegates to `AutoCompleteFeatureInput` for datasets with defined feature values. Passes `datasetId` to `addNewInput` for localStorage persistence.
 
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+### Autocomplete persistence
 
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
+Feature suggestions (e.g. object names, categories) are persisted in the browser's `localStorage`, keyed by dataset ID. The flow:
 
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
+1. **`addNewInput(store, featureClass, feature, value, datasetId?)`** — adds a new value to the in-memory `FeaturesValues` store and saves to localStorage.
+2. **`saveFeaturesToStorage(datasetId, features)`** — serializes `FeaturesValues` to `localStorage` under key `pixano_features_{datasetId}`.
+3. **`loadFeaturesFromStorage(datasetId)`** — reads and deserializes from localStorage.
+4. **`mergeFeaturesList(backend, stored)`** — merges backend and stored feature values using a union strategy (all unique values are kept).
 
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
+On item load, `DatasetItemWorkspace.svelte` calls `loadFeaturesFromStorage` and merges with backend values via `mergeFeaturesList`, ensuring suggestions persist across items, page reloads, and reconnections.
 
-**Why include `.vscode/extensions.json`?**
+## Types
 
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
+### ItemsMeta
 
 ```ts
-// store.ts
-// An extremely simple external store
-import { writable } from "svelte/store";
+type ItemsMeta = {
+  featuresList: FeaturesValues;  // Available feature values (main + objects)
+  item: Item;                     // Current dataset item
+  type: WorkspaceType;            // IMAGE, VIDEO, VQA, etc.
+  datasetId?: string;             // Used as localStorage key for persistence
+  format?: "1bit" | "8bit" | "16bit";
+  color?: "grayscale" | "rgb" | "rgba";
+};
+```
 
-export default writable(0);
+### Feature
+
+Union type for feature inputs: `CheckboxFeature | TextFeature | NumberFeature | ListFeature`.
+
+## Development
+
+```bash
+cd ui/
+pnpm i
+pnpm --parallel run dev
 ```

@@ -20,6 +20,40 @@ When hovering over a dataset card, a tooltip will display this dataset specific 
 
 Clicking on a dataset card will lead to the selected dataset page.
 
+### Sorting
+
+Two toggle buttons at the top-right of the home page allow sorting datasets:
+
+- **Name**: alphabetical order (A → Z).
+- **Creation date**: most recent first. Datasets without a creation date are placed at the end.
+
+### Bookmark sections
+
+Datasets are grouped into sections based on their bookmark status:
+
+- **TODO** (blue dot)
+- **NEW** (green dot)
+- **FAVORITE** (yellow dot)
+- **Other datasets** / **All datasets** (gray dot) — shown when at least one dataset has a bookmark.
+
+### Split / Status progress bars
+
+Each dataset card displays colored horizontal progress bars below the thumbnail. Each bar represents a **split** (e.g. train, val), segmented by annotation **status** (done, todo, review, wip, etc.). Colors indicate status:
+
+| Status | Color |
+|--------|-------|
+| done / validated | green |
+| todo | red |
+| review / inReview | yellow |
+| wip / inProgress | blue |
+| other | gray |
+
+Hovering over a bar shows the count and percentage for each status segment.
+
+### Creation date
+
+When available, the dataset creation date is displayed below the item count (e.g. "Created on 2025-03-15"). If a dataset has no creation date, you can fix it using the [utilities](utilities.md) script.
+
 ## Dataset page
 
 On the dataset page, you will see a list of all the items it contains, by pages of 20 items.
@@ -194,6 +228,14 @@ The dropbox "Select parent Entity" let choose if the object is a new object, or 
 Below, each relevant feature for this shape is listed, with an input to enter value. If Features Values <!--TODO link to FeaturesValues (future) doc--> are defined, choices may be proposed.
 
 <!-- devnote: FeaturesValues should be completely reworked, at least front side - cf https://github.com/pixano/pixano/issues/491 & https://github.com/pixano/pixano/issues/408 -->
+
+##### Autocomplete suggestions persistence
+
+When editing feature values (e.g. object names, categories), the autocomplete dropdown proposes suggestions based on existing values. These suggestions are **persisted in the browser's localStorage**, keyed by dataset ID. This means:
+
+- Suggestions entered on one item are available when editing other items in the same dataset.
+- Suggestions survive page reloads and browser restarts.
+- When switching items, backend values and locally saved values are merged (union strategy), so no suggestion is lost.
 
 ##### Bounding box tool
 
