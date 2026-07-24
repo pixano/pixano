@@ -218,6 +218,11 @@ License: CECILL-C
               ? " - " + dataset.size
               : ""}
           </p>
+          {#if dataset.creation_date}
+            <p class="text-xs text-slate-400">
+              Créé le {dataset.creation_date}
+            </p>
+          {/if}
         </div>
 
         <!-- Right area: bookmarks horizontally + arrow below -->

@@ -64,7 +64,12 @@ License: CECILL-C
     if (mode === "name") {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
-    return [...list].sort((a, b) => a.creation_date.localeCompare(b.creation_date));
+    return [...list].sort((a, b) => {
+      if (!a.creation_date && !b.creation_date) return 0;
+      if (!a.creation_date) return 1;
+      if (!b.creation_date) return -1;
+      return b.creation_date.localeCompare(a.creation_date);
+    });
   }
 
   onMount(() => {
