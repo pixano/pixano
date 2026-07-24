@@ -12,6 +12,9 @@ const config = {
       fallback: "index.html",
     }),
     appDir: "_legacy_app",
+    router: {
+      type: "hash",
+    },
     alias: pixanoAliases,
   },
 };
