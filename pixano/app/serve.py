@@ -121,19 +121,19 @@ class App:
 
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
+            return templates.TemplateResponse(request, "index.html")
 
         @self.app.get("/{ds_id}/dataset", response_class=HTMLResponse)
         async def dataset_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
+            return templates.TemplateResponse(request, "index.html")
 
         @self.app.get("/{ds_id}/dashboard", response_class=HTMLResponse)
         async def dashboard_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
+            return templates.TemplateResponse(request, "index.html")
 
         @self.app.get("/{ds_id}/dataset/{item_id}", response_class=HTMLResponse)
         async def item_page(request: fastapi.Request):
-            return templates.TemplateResponse("index.html", {"request": request})
+            return templates.TemplateResponse(request, "index.html")
 
         try:
             self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
