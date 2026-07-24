@@ -40,7 +40,10 @@ License: CECILL-C
     }
 
     if (typeof formattedValue === "string") {
-      addNewInput($itemMetas.featuresList, featureClass, propertyName, formattedValue);
+      itemMetas.update((metas) => {
+        addNewInput(metas.featuresList, featureClass, propertyName, formattedValue);
+        return { ...metas };
+      });
     }
     saveInputChange(formattedValue, propertyName, obj);
     isSaved = true;

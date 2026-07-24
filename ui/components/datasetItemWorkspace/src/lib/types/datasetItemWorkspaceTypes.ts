@@ -87,6 +87,7 @@ export type ItemsMeta = {
   featuresList: FeaturesValues;
   item: Item;
   type: WorkspaceType;
+  datasetId?: string;
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";
 };

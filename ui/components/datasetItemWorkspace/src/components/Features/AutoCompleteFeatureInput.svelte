@@ -28,6 +28,8 @@ License: CECILL-C
     (value === "" ? null : value) ??
     placeholder;
 
+  $: cleanedFeatureList = featureList.filter((f) => f.value !== "");
+
   // We want to refocus the trigger button when the user selects
   // an item from the list so users can continue navigating the
   // rest of the form with the keyboard.
@@ -51,10 +53,7 @@ License: CECILL-C
   };
 
   const onSearchInput = () => {
-    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
-    if (!existingValue && inputValue) {
-      featureList = [...featureList, { value: inputValue, label: inputValue }];
-    }
+    // cmdk handles filtering internally via state.search
   };
 </script>
 
@@ -73,12 +72,20 @@ License: CECILL-C
     </button>
   </Popover.Trigger>
   <Popover.Content class="p-0 " tabindex={-1}>
-    <Command.Root>
+    <Command.Root
+      onKeydown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onTextInputChange(inputValue);
+          closeAndFocusTrigger(ids.trigger);
+        }
+      }}
+    >
       {#if isInputEnabled}
         <Command.Input {placeholder} bind:value={inputValue} on:input={onSearchInput} />
       {/if}
       <Command.List>
-        {#each featureList as feature}
+        {#each cleanedFeatureList as feature}
           <Command.Item
             value={feature.value}
             onSelect={(currentValue) => onSelect(currentValue, ids.trigger)}
