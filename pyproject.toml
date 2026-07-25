@@ -47,6 +47,7 @@ dependencies = [
   "typer >= 0.9.0, < 1.0.0",
   "uvicorn >= 0.20.0, < 1.0.0",
   "pyyaml>=6.0,<7.0",
+  "pixano-inference-client",
 ]
 
 [project.optional-dependencies]
@@ -77,6 +78,11 @@ pixano = "pixano.cli:main"
 [tool.uv]
 default-groups = ["test"]
 prerelease = "allow"
+
+[tool.uv.sources]
+# Until pixano-inference-client is published to PyPI, pull it from the
+# production-hardening branch (verified live against a MobileCLIP2 deploy).
+pixano-inference-client = { git = "https://github.com/pixano/pixano-inference", subdirectory = "packages/pixano-inference-client", branch = "production-hardening" }
 
 [build-system]
 requires = ["hatchling"]
