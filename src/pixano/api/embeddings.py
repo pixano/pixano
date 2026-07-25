@@ -13,7 +13,6 @@ polled through the existing ``/io/jobs/{id}`` endpoint. Idempotent: records alre
 skipped (resume-safe).
 """
 
-import asyncio
 import logging
 import os
 import threading
@@ -21,12 +20,13 @@ import traceback
 from pathlib import Path
 from typing import Any
 
+from pixano_inference_client import EmbeddingRequest, SyncPixanoInferenceClient
+
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.io.jobs import JobSink, JobStore
 from pixano.datasets.io.progress import ProgressEvent
 from pixano.inference.media import bytes_to_data_uri
 from pixano.inference.provider import InferenceProvider
-from pixano.inference.types import EmbeddingInput, EmbeddingResult
 
 
 logger = logging.getLogger(__name__)
@@ -52,27 +52,27 @@ def _resolve_image_ref(dataset: Dataset, image: Any) -> str | None:
     return None
 
 
-def _embed_images(provider: InferenceProvider, model: str, images: list[str]) -> list[list[float]]:
-    """Call the provider's (async) embedding task for a batch of images, on this thread."""
+def _embed_images(client: SyncPixanoInferenceClient, model: str, images: list[str]) -> list[list[float]]:
+    """Embed a batch of images via the SYNCHRONOUS client.
 
-    async def _call() -> EmbeddingResult:
-        return await provider.embedding(EmbeddingInput(model=model, image=images))
-
-    result = asyncio.run(_call())
-    dim = result.data.dim
-    values = result.data.embedding.values
-    return [values[i * dim : (i + 1) * dim] for i in range(len(images))]
+    The compute job runs in its own thread, so it must NOT reuse the connected provider's async
+    httpx client (bound to the server's event loop); a fresh sync client avoids the cross-loop hang.
+    """
+    response = client.embedding(EmbeddingRequest(model=model, image=images))
+    return response.data.embeddings.to_numpy().tolist()
 
 
 def _run_embedding_job(
     store: JobStore,
     job_id: str,
     dataset_path: Path,
-    provider: InferenceProvider,
+    url: str,
+    api_key: str | None,
     model: str,
     batch_size: int,
 ) -> None:
     dataset = Dataset(dataset_path)
+    client = SyncPixanoInferenceClient(url, api_key=api_key)
     store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=True)
     sink = JobSink(store, job_id)
     try:
@@ -106,7 +106,7 @@ def _run_embedding_job(
                     ordered_ids.append(rid)
 
             if refs:
-                vectors = _embed_images(provider, model, refs)
+                vectors = _embed_images(client, model, refs)
                 if not dataset.has_record_embeddings():
                     dataset.create_record_embedding_table(dim=len(vectors[0]), model_id=model)
                 dataset.add_record_embeddings(
@@ -139,6 +139,7 @@ def _run_embedding_job(
         )
     finally:
         sink.close()
+        client.close()
 
 
 def submit_embedding_job(
@@ -151,13 +152,20 @@ def submit_embedding_job(
 ) -> str:
     """Create an embedding job and start it in a background daemon thread.
 
+    The connected provider supplies the server URL/key; the job then talks to it through a fresh
+    synchronous client on its own thread.
+
     Returns:
         The job id (poll via ``GET /io/jobs/{id}``).
     """
+    url = getattr(provider, "url", None)
+    if not url:
+        raise ValueError("The connected provider does not expose a server URL for embedding.")
+    api_key = getattr(provider, "_api_key", None)
     job = store.create_job(kind="embed", dataset=dataset_id, spec={"model": model})
     thread = threading.Thread(
         target=_run_embedding_job,
-        args=(store, job.id, dataset_path, provider, model, batch_size),
+        args=(store, job.id, dataset_path, url, api_key, model, batch_size),
         daemon=True,
     )
     thread.start()

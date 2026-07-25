@@ -15,8 +15,9 @@ import tempfile
 import time
 from functools import lru_cache
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
@@ -165,23 +166,49 @@ class TestRecordSearch:
         assert resp.status_code == 400
 
 
+def _fake_sync_client_factory():
+    """A stand-in for SyncPixanoInferenceClient: embeds each image batch to zero vectors."""
+
+    def make(url, api_key=None):  # noqa: ANN001, ARG001
+        instance = MagicMock()
+
+        def embedding(request):  # noqa: ANN001
+            images = request.image if isinstance(request.image, list) else [request.image]
+            arr = np.zeros((len(images), DIM), dtype=np.float32)
+            response = MagicMock()
+            response.data.embeddings.to_numpy.return_value = arr
+            response.data.dim = DIM
+            return response
+
+        instance.embedding.side_effect = embedding
+        instance.close.return_value = None
+        return instance
+
+    return make
+
+
 class TestComputeJob:
     def test_compute_embeddings_end_to_end(self):
         provider = _make_provider()
         client = _make_client(_build_dataset(with_embeddings=False), provider)
-        resp = client.post(f"{BASE}/embeddings/compute", json={"model": "mock-clip"})
-        assert resp.status_code == 202
-        job_id = resp.json()["job_id"]
+        # The background job uses a fresh SYNC client (not the async provider), so patch it.
+        with patch(
+            "pixano.api.embeddings.SyncPixanoInferenceClient",
+            side_effect=_fake_sync_client_factory(),
+        ):
+            resp = client.post(f"{BASE}/embeddings/compute", json={"model": "mock-clip"})
+            assert resp.status_code == 202
+            job_id = resp.json()["job_id"]
 
-        # Poll the shared job endpoint until the background thread finishes.
-        deadline = time.time() + 15
-        status = "pending"
-        while time.time() < deadline:
-            status = client.get(f"/io/jobs/{job_id}").json()["status"]
-            if status in {"done", "error", "cancelled"}:
-                break
-            time.sleep(0.1)
-        assert status == "done", client.get(f"/io/jobs/{job_id}").json()
+            # Poll the shared job endpoint until the background thread finishes.
+            deadline = time.time() + 15
+            status = "pending"
+            while time.time() < deadline:
+                status = client.get(f"/io/jobs/{job_id}").json()["status"]
+                if status in {"done", "error", "cancelled"}:
+                    break
+                time.sleep(0.1)
+            assert status == "done", client.get(f"/io/jobs/{job_id}").json()
 
         # The dataset now advertises semantic search.
         search = client.get(f"{BASE}/filters").json()["search"]
