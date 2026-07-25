@@ -15,7 +15,7 @@ License: CECILL-C
   } from "@tanstack/table-core";
   // Pixano Core Imports
   import { Button, Checkbox } from "bits-ui";
-  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown, Check } from "phosphor-svelte";
+  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown, Check, Sparkle } from "phosphor-svelte";
   import { untrack } from "svelte";
   import SortableList from "svelte-sortable-list";
 
@@ -31,9 +31,11 @@ License: CECILL-C
     activeSort?: { col: string; order: string };
     onColsort?: (sortKeys: { id: string; order: string }[]) => void;
     onSelectItem?: (id: string) => void;
+    /** When set, each row shows a "Find similar" action emitting the record id. */
+    onFindSimilar?: (id: string) => void;
   }
 
-  let { items, activeSort, onColsort, onSelectItem }: Props = $props();
+  let { items, activeSort, onColsort, onSelectItem, onFindSimilar }: Props = $props();
 
   // Build column definitions from items.columns
   const buildColumns = (): ColumnDef<TableRow>[] => {
@@ -295,6 +297,23 @@ License: CECILL-C
             </td>
           {/each}
           <td class="w-full border-b border-border"></td>
+          {#if onFindSimilar}
+            <!-- Find-similar action (semantic search) -->
+            <td class="border-b border-border">
+              <button
+                type="button"
+                title="Find similar records"
+                aria-label="Find similar records"
+                class="flex h-8 w-8 mx-auto ml-3 items-center justify-center border rounded-full border-border text-foreground transition-colors hover:bg-accent hover:text-primary"
+                onclick={(event: MouseEvent) => {
+                  event.stopPropagation();
+                  onFindSimilar(items.rows[Number(row.id)].id as string);
+                }}
+              >
+                <Sparkle size={16} />
+              </button>
+            </td>
+          {/if}
           <!-- Go Button -->
           <td class="border-b border-border">
             <svg
