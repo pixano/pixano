@@ -49,7 +49,14 @@ from .annotations import (
     is_text_span,
     is_tracklet,
 )
-from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function, is_embedding, is_view_embedding
+from .embeddings import (
+    Embedding,
+    ViewEmbedding,
+    build_record_embedding_schema,
+    create_view_embedding_function,
+    is_embedding,
+    is_view_embedding,
+)
 from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
@@ -112,6 +119,7 @@ __all__ = [
     "Conversation",
     "EntityDynamicState",
     "Embedding",
+    "build_record_embedding_schema",
     "Entity",
     "Extrinsics",
     "Image",

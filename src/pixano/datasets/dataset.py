@@ -39,6 +39,7 @@ from pixano.schemas import (
     Record,
     SchemaGroup,
     ViewEmbedding,
+    build_record_embedding_schema,
     is_image,
     is_sequence_frame,
     is_video,
@@ -116,6 +117,8 @@ class Dataset:
     _PREVIEWS_PATH: str = "previews"
     _INFO_FILE: str = "info.json"
     _FEATURES_VALUES_FILE: str = "features_values.json"
+    _EMBEDDINGS_FILE: str = "embeddings.json"
+    _RECORD_EMBEDDING_TABLE: str = "embeddings"
     _STAT_FILE: str = "stats.json"
     _THUMB_FILE: str = "preview.png"
 
@@ -135,12 +138,18 @@ class Dataset:
         self._info_file = self.path / self._INFO_FILE
         self._table_handles: dict[str, LanceTable] = {}
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._embeddings_file = self.path / self._EMBEDDINGS_FILE
+        self._record_embedding_space: dict[str, Any] | None = None
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
         self._db_path = self.path / self._DB_PATH
 
         self.info = DatasetInfo.from_json(self._info_file)
         validate_canonical_table_map(self.info.tables)
+        # The record-embedding table is internal to the search engine (not part of the public
+        # dataset schema), so it is persisted in a sidecar and re-injected here after the
+        # canonical check — DatasetInfo does not round-trip it.
+        self._load_record_embedding_space()
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
         self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.thumbnail = self._thumb_file
@@ -1561,6 +1570,147 @@ class Dataset:
             if info.id == id:
                 return Dataset(json_fp.parent)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
+
+    # ------------------------------------------------------------------
+    # Record-level embeddings & semantic search
+    # ------------------------------------------------------------------
+
+    def _load_record_embedding_space(self) -> None:
+        """Load the record-embedding sidecar and inject its schema into ``info.tables``."""
+        if not self._embeddings_file.is_file():
+            self._record_embedding_space = None
+            return
+        try:
+            space = json.loads(self._embeddings_file.read_text(encoding="utf-8"))
+            dim = int(space["dim"])
+        except (json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
+            logger.warning("Dataset %s: ignoring unreadable %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
+            self._record_embedding_space = None
+            return
+        self._record_embedding_space = space
+        self.info.tables[self._RECORD_EMBEDDING_TABLE] = build_record_embedding_schema(dim)
+
+    def has_record_embeddings(self) -> bool:
+        """Whether this dataset has a computed record-embedding table."""
+        return self._record_embedding_space is not None
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Return the record-embedding space descriptor (model, dim, metric), or None."""
+        return dict(self._record_embedding_space) if self._record_embedding_space is not None else None
+
+    def create_record_embedding_table(
+        self,
+        dim: int,
+        model_id: str,
+        metric: str = "cosine",
+        source_view: str = "image",
+        index_type: str = "IVF_PQ",
+    ) -> None:
+        """Create (or replace) the record-embedding table and persist its sidecar descriptor.
+
+        Args:
+            dim: Embedding dimensionality.
+            model_id: Identifier of the model that produced the vectors.
+            metric: Distance metric (``cosine``/``l2``/``dot``).
+            source_view: Logical view the embeddings were computed from.
+            index_type: LanceDB vector index type to build once populated.
+        """
+        schema = build_record_embedding_schema(dim)
+        self.create_table(self._RECORD_EMBEDDING_TABLE, schema, mode="overwrite")
+        self._record_embedding_space = {
+            "table": self._RECORD_EMBEDDING_TABLE,
+            "model_id": model_id,
+            "dim": int(dim),
+            "metric": metric,
+            "source_view": source_view,
+            "index_type": index_type,
+        }
+        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
+        self._embeddings_file.write_text(json.dumps(self._record_embedding_space, indent=4), encoding="utf-8")
+
+    def add_record_embeddings(self, rows: list[dict[str, Any]]) -> None:
+        """Append rows to the record-embedding table (plain float vectors, no model).
+
+        Args:
+            rows: Dicts with at least ``record_id`` and ``vector``; ``id``/``view_id`` optional.
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError("No record-embedding table; call create_record_embedding_table first.")
+        schema = self.info.tables[self._RECORD_EMBEDDING_TABLE]
+        instances = [
+            schema(
+                id=row.get("id") or shortuuid.uuid(),
+                record_id=row["record_id"],
+                view_id=row.get("view_id", ""),
+                frame_id=row.get("frame_id", ""),
+                vector=row["vector"],
+            )
+            for row in rows
+        ]
+        self.add_data(self._RECORD_EMBEDDING_TABLE, instances, raise_or_warn="none")
+
+    def build_record_embedding_index(self) -> None:
+        """Build the vector + record_id indexes on the record-embedding table.
+
+        The vector (ANN) index needs enough rows to train; when there are too few, it is skipped
+        and search falls back to an exact brute-force scan (still correct).
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError("No record-embedding table to index.")
+        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        try:
+            table.create_scalar_index("record_id", index_type="BTREE")
+        except Exception:  # pragma: no cover - already indexed / lancedb quirk
+            logger.debug("record_id scalar index already present or unavailable", exc_info=True)
+        index_type = self._record_embedding_space.get("index_type", "IVF_PQ")
+        metric = self._record_embedding_space.get("metric", "cosine")
+        try:
+            table.create_index(metric=metric, index_type=index_type, vector_column_name="vector")
+        except Exception as exc:
+            # Typically "not enough rows to train IVF"; brute-force search remains exact.
+            logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
+
+    def search_records(
+        self,
+        query_vector: Sequence[float],
+        k: int,
+        record_id_filter: list[str] | None = None,
+    ) -> tuple[list[LanceModel], list[float]]:
+        """Rank records by similarity of their embedding to ``query_vector``.
+
+        Args:
+            query_vector: The query embedding (same space/dim as the stored vectors).
+            k: Maximum number of records to return.
+            record_id_filter: Optional record-id allowlist applied as a vector-search prefilter.
+
+        Returns:
+            A tuple of ``(records, distances)`` ordered by increasing distance.
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError(f"Dataset {self.id} has no record embeddings.")
+        if not isinstance(k, int) or k < 1:
+            raise DatasetAccessError("k must be a strictly positive integer.")
+        if record_id_filter is not None and len(record_id_filter) == 0:
+            return [], []
+
+        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        metric = self._record_embedding_space.get("metric", "cosine")
+        query = table.search(list(query_vector)).metric(metric).select(["record_id"])
+        if record_id_filter is not None:
+            query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
+        # One vector per record, but group defensively so duplicates collapse to their best match.
+        results: pl.DataFrame = query.limit(max(k, 1)).to_polars()
+        if results.is_empty():
+            return [], []
+        ranked = results.group_by("record_id").agg(pl.min("_distance")).sort("_distance")
+        record_ids = ranked["record_id"].to_list()[:k]
+
+        records = self.get_data(SchemaGroup.RECORD.value, ids=record_ids)
+        records = sorted(records, key=lambda record: record_ids.index(record.id))
+        distances = [
+            ranked.row(by_predicate=(pl.col("record_id") == record.id), named=True)["_distance"] for record in records
+        ]
+        return records, distances
 
     def semantic_search(
         self, query: str, table_name: str, limit: int, skip: int = 0
