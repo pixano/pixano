@@ -248,12 +248,33 @@ class PixanoInferenceProvider(InferenceProvider):
     # --- Video mask generation ---
 
     def _build_tracking_request(self, input_data: VideoMaskGenerationInput) -> TrackingRequestV1:
-        """Build a `/v1` tracking request, converting flat prompts to keyframes.
+        """Build a `/v1` tracking request.
 
-        Keyframe i is associated positionally with ``objects_ids[i]`` / ``frame_indexes[i]``;
-        boxes are converted from xyxy to x,y,width,height.
+        Two prompt formats are supported: structured ``keyframes`` (dicts carrying point/box/mask
+        prompts, box already x,y,width,height) are passed through; otherwise flat points/boxes are
+        converted to keyframes (keyframe i ↔ ``objects_ids[i]``/``frame_indexes[i]``, boxes
+        xyxy→x,y,width,height).
         """
-        keyframes: list[TrackingKeyframeV1] = []
+        video = (
+            [_frame_to_str(f) for f in input_data.video]
+            if isinstance(input_data.video, list)
+            else _frame_to_str(input_data.video)
+        )
+        interval = TrackingInterval(**input_data.interval) if input_data.interval is not None else None
+
+        if input_data.keyframes:
+            keyframes = [self._keyframe_from_dict(kf) for kf in input_data.keyframes]
+            return TrackingRequestV1(
+                model=input_data.model,
+                video=video,
+                objects_ids=list(input_data.objects_ids),
+                frame_indexes=list(input_data.frame_indexes),
+                propagate=input_data.propagate,
+                interval=interval,
+                keyframes=keyframes,
+            )
+
+        keyframes = []
         for i, _obj_id in enumerate(input_data.objects_ids):
             frame_index = input_data.frame_indexes[i] if i < len(input_data.frame_indexes) else 0
 
@@ -282,20 +303,36 @@ class PixanoInferenceProvider(InferenceProvider):
                 )
             )
 
-        interval = None
-        if input_data.interval is not None:
-            interval = TrackingInterval(**input_data.interval)
-
         return TrackingRequestV1(
             model=input_data.model,
-            video=[_frame_to_str(f) for f in input_data.video]
-            if isinstance(input_data.video, list)
-            else _frame_to_str(input_data.video),
+            video=video,
             objects_ids=list(input_data.objects_ids),
             frame_indexes=list(input_data.frame_indexes),
             propagate=input_data.propagate,
             interval=interval,
             keyframes=keyframes,
+        )
+
+    @staticmethod
+    def _keyframe_from_dict(keyframe: dict[str, Any]) -> TrackingKeyframeV1:
+        """Build a `/v1` keyframe from a router-serialized keyframe dict (box already x,y,w,h)."""
+        points = keyframe.get("points")
+        point_prompts = (
+            [TrackingPointPrompt(x=int(p["x"]), y=int(p["y"]), label=int(p["label"])) for p in points]
+            if points
+            else None
+        )
+        box = keyframe.get("box")
+        box_prompt = (
+            TrackingBoxPrompt(x=int(box["x"]), y=int(box["y"]), width=int(box["width"]), height=int(box["height"]))
+            if box
+            else None
+        )
+        mask = keyframe.get("mask")
+        mask_prompt = CompressedRLE(size=mask["size"], counts=mask["counts"]) if mask else None
+        return TrackingKeyframeV1(
+            frame_index=int(keyframe["frame_index"]),
+            prompts=TrackingPrompts(points=point_prompts, box=box_prompt, mask=mask_prompt),
         )
 
     async def video_mask_generation(
