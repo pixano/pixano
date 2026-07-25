@@ -16,7 +16,7 @@ export interface ConversationPromptContext {
 export enum MultimodalImageNLPTask {
   CAPTIONING = "image_captioning",
   VLM = "vlm",
-  EMBEDDING = "image_text_embedding",
+  EMBEDDING = "embedding",
   MATCHING = "image_text_matching",
   QUESTION_ANSWERING = "image_question_answering",
 }

@@ -8,17 +8,22 @@ License: CECILL-C
   // Imports
   import { CircleNotch } from "phosphor-svelte";
 
+  import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import RecordFilterBar from "./RecordFilterBar.svelte";
   import { Table } from "./table";
+  import { invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
+  import { computeEmbeddings, getIoJob, listInferenceModels } from "$lib/api";
   import type { FilterSchemaResponse } from "$lib/api/restTypes";
+  import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
 
   interface Props {
     selectedDataset: DatasetBrowser;
     filterSchema: FilterSchemaResponse;
+    semanticActive?: boolean;
     onSelectItem?: (itemId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
@@ -32,8 +37,33 @@ License: CECILL-C
     };
   }
 
-  let { selectedDataset, filterSchema, onSelectItem, onNavigate, pagination }: Props = $props();
+  let {
+    selectedDataset,
+    filterSchema,
+    semanticActive = false,
+    onSelectItem,
+    onNavigate,
+    pagination,
+  }: Props = $props();
   const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
+
+  let computing = $state(false);
+  let showConnectModal = $state(false);
+
+  async function runCompute(): Promise<boolean> {
+    // Returns false when no embedding model is reachable (caller prompts to connect).
+    const models = await listInferenceModels();
+    const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
+    if (embeddingModels.length === 0) return false;
+    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
+    for (;;) {
+      const job = await getIoJob(jobId);
+      if (["done", "error", "cancelled"].includes(job.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    await invalidateAll();
+    return true;
+  }
 
   // Remount the table when the dataset, its column set, or the active sort
   // changes: the table builds its column defs and initial sort state once at
@@ -51,9 +81,40 @@ License: CECILL-C
     onSelectItem?.(itemId);
   }
 
-  function handleApply(updates: { filter?: string[]; q?: string }) {
-    // Any filter/search change resets to the first page.
-    onNavigate({ page: "1", ...updates });
+  function handleApply(updates: { filter?: string[]; q?: string; semantic?: boolean }) {
+    // Any filter/search change resets to the first page. Semantic search is ranked, so it
+    // clears any column sort and the similar-to target.
+    const semantic = updates.semantic;
+    onNavigate({
+      page: "1",
+      filter: updates.filter,
+      q: updates.q,
+      semantic: semantic ? "1" : undefined,
+      similar_to: undefined, // a text search or filter change exits find-similar mode
+      ...(semantic ? { sort: undefined, order: undefined } : {}),
+    });
+  }
+
+  async function handleCompute() {
+    if (computing) return;
+    computing = true;
+    try {
+      // If no embedding model is reachable, the server isn't connected — prompt for it.
+      const ok = await runCompute();
+      if (!ok) showConnectModal = true;
+    } finally {
+      computing = false;
+    }
+  }
+
+  async function handleConnected() {
+    showConnectModal = false;
+    computing = true;
+    try {
+      await runCompute();
+    } finally {
+      computing = false;
+    }
   }
 
   function handleColSort(colsorts: { id: string; order: string }[]) {
@@ -82,7 +143,10 @@ License: CECILL-C
           filters={pagination.filters}
           q={pagination.q}
           total={selectedDataset.pagination.total_size}
+          {semanticActive}
+          {computing}
           onApply={handleApply}
+          onCompute={handleCompute}
         />
       </div>
 
@@ -120,3 +184,7 @@ License: CECILL-C
     {/if}
   </div>
 </div>
+
+{#if showConnectModal}
+  <ConnectToServerModal onClose={() => (showConnectModal = false)} onConnected={handleConnected} />
+{/if}

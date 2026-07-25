@@ -5,9 +5,11 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { PageLoad } from "./$types";
-import { listRecords } from "$lib/api";
+import { listRecords, searchRecords } from "$lib/api";
 import { DEFAULT_DATASET_TABLE_PAGE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
 import { getRouteSearchParams } from "$lib/utils/routes";
+
+const SEMANTIC_LIMIT = 100;
 
 export const load: PageLoad = async ({ params, url }) => {
   const searchParams = getRouteSearchParams(url);
@@ -18,6 +20,27 @@ export const load: PageLoad = async ({ params, url }) => {
   const filters = searchParams.getAll("filter").filter((value) => value !== "");
   const q = searchParams.get("q") ?? "";
   const where = searchParams.get("where") ?? "";
+  const semantic = searchParams.get("semantic") === "1";
+  const similarTo = searchParams.get("similar_to") ?? "";
+  const model = searchParams.get("model") ?? "";
+
+  // Semantic search is a separate ranked endpoint (not paginated); a text query or a
+  // find-similar target activates it. Structured filter chips apply as a prefilter.
+  if ((semantic && q) || similarTo) {
+    const browserData = await searchRecords(params.datasetId, {
+      model: model || undefined,
+      text: similarTo ? undefined : q,
+      similarTo: similarTo || undefined,
+      k: SEMANTIC_LIMIT,
+      filters,
+      where: where || undefined,
+    });
+    return {
+      browserData,
+      pagination: { currentPage: 1, size: SEMANTIC_LIMIT, sort, order, filters, q, where },
+      semantic: { active: true, similarTo, model },
+    };
+  }
 
   const browserData = await listRecords(params.datasetId, {
     offset: (currentPage - 1) * size,
@@ -32,5 +55,6 @@ export const load: PageLoad = async ({ params, url }) => {
   return {
     browserData,
     pagination: { currentPage, size, sort, order, filters, q, where },
+    semantic: { active: false, similarTo: "", model: "" },
   };
 };

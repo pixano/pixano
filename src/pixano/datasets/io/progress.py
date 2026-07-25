@@ -15,7 +15,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-Phase = Literal["analyze", "ingest", "finalize"]
+Phase = Literal["analyze", "ingest", "embed", "finalize"]
 
 
 class ProgressEvent(BaseModel):
