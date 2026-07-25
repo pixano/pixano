@@ -8,7 +8,7 @@ License: CECILL-C
   import { CircleNotch, FunnelSimple, MagnifyingGlass, Plus, Sparkle, X } from "phosphor-svelte";
 
   import FilterChipEditor from "./FilterChipEditor.svelte";
-  import type { FilterSchemaResponse } from "$lib/api/restTypes";
+  import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
   import {
     isListOperator,
     OPERATOR_LABELS,
@@ -23,9 +23,15 @@ License: CECILL-C
     q: string;
     total: number;
     semanticActive?: boolean;
+    /** Record id the current ranked view is "similar to" (find-similar mode). */
+    similarTo?: string;
     computing?: boolean;
+    /** Live progress of the embedding-compute job (while `computing`). */
+    computeProgress?: IoJobResponse["progress"] | null;
+    computeError?: string;
     onApply: (updates: { filter?: string[]; q?: string; semantic?: boolean }) => void;
     onCompute?: () => void;
+    onClearSimilar?: () => void;
   }
 
   let {
@@ -34,10 +40,21 @@ License: CECILL-C
     q,
     total,
     semanticActive = false,
+    similarTo = "",
     computing = false,
+    computeProgress = null,
+    computeError = "",
     onApply,
     onCompute,
+    onClearSimilar,
   }: Props = $props();
+
+  // Determinate compute progress (pulse fallback while the total is unknown).
+  const computeDone = $derived(computeProgress?.done ?? 0);
+  const computeTotal = $derived(computeProgress?.total ?? null);
+  const computePercent = $derived(
+    computeTotal ? Math.min(100, Math.round((computeDone / computeTotal) * 100)) : null,
+  );
 
   const columns = $derived(filterSchema.columns);
   const hasSearchable = $derived(columns.some((c) => c.searchable));
@@ -175,6 +192,23 @@ License: CECILL-C
       <Plus size={14} />
     </button>
 
+    {#if similarTo}
+      <div
+        class="inline-flex items-center gap-1 h-7 pl-2.5 pr-1 rounded-full border border-primary/30 bg-primary/10 text-xs text-foreground"
+      >
+        <Sparkle size={12} class="text-primary" />
+        <span class="font-medium">Similar to {similarTo}</span>
+        <button
+          type="button"
+          onclick={() => onClearSimilar?.()}
+          aria-label="Exit find-similar mode"
+          class="p-0.5 rounded-full hover:bg-primary/20"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    {/if}
+
     <span class="ml-auto text-sm text-muted-foreground tabular-nums">
       {#if semanticActive}
         <span class="text-primary">Ranked by similarity ·</span>
@@ -183,6 +217,33 @@ License: CECILL-C
       {total === 1 ? "record" : "records"}
     </span>
   </div>
+
+  {#if computing && computeProgress}
+    <div class="flex items-center gap-3">
+      <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+        {#if computePercent !== null}
+          <div
+            class="h-full rounded-full bg-primary transition-[width] duration-500"
+            style="width: {computePercent}%"
+          ></div>
+        {:else}
+          <div class="h-full w-1/3 animate-pulse rounded-full bg-primary/60"></div>
+        {/if}
+      </div>
+      <span class="shrink-0 text-xs text-muted-foreground tabular-nums">
+        {#if computeTotal !== null}
+          {computeDone.toLocaleString()} / {computeTotal.toLocaleString()} records
+          {#if computePercent !== null}· {computePercent}%{/if}
+        {:else}
+          Embedding records…
+        {/if}
+      </span>
+    </div>
+  {/if}
+
+  {#if computeError}
+    <p class="text-xs text-destructive">Embedding computation failed: {computeError}</p>
+  {/if}
 
   {#if activeFilters.length > 0}
     <div class="flex flex-wrap items-center gap-1.5">
