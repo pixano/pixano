@@ -4,52 +4,116 @@
 # License: CECILL-C
 # =====================================
 
-import json
-from datetime import datetime
+"""Provider backed by a pixano-inference `/v1` server, via `pixano-inference-client`.
+
+Translates between Pixano's inference types and the client's wire models. The ML models run on
+the pixano-inference server; this process only speaks HTTP through the client.
+"""
+
 from typing import Any
 
-from ..exceptions import ProviderConnectionError
+import numpy as np
+from pixano_inference_client import (
+    CompressedRLE,
+    DetectionRequest,
+    EmbeddingRequest,
+    NDArrayFloat,
+    PixanoInferenceClient,
+    PixanoInferenceError,
+    SegmentationRequest,
+    TrackingBoxPrompt,
+    TrackingInterval,
+    TrackingKeyframeV1,
+    TrackingPointPrompt,
+    TrackingPrompts,
+    TrackingRequestV1,
+    VLMRequest,
+)
+
+from ..exceptions import InferenceRequestError, ProviderConnectionError
+from ..media import bytes_to_data_uri
+from ..provider import InferenceProvider
 from ..registry import register_provider
 from ..types import (
+    CAPABILITY_TO_TASK,
     CompressedRLEData,
     DetectionInput,
     DetectionOutput,
     DetectionResult,
+    EmbeddingInput,
+    EmbeddingOutput,
+    EmbeddingResult,
+    ImageMaskGenerationInput,
+    ImageMaskGenerationOutput,
+    ImageMaskGenerationResult,
     InferenceTask,
     ModelInfo,
     NDArrayData,
-    ProviderCapabilities,
-    SegmentationInput,
-    SegmentationOutput,
-    SegmentationResult,
     ServerInfo,
-    TrackingInput,
-    TrackingJobStatus,
-    TrackingOutput,
-    TrackingResult,
     UsageInfo,
+    VideoMaskGenerationInput,
+    VideoMaskGenerationJobStatus,
+    VideoMaskGenerationOutput,
+    VideoMaskGenerationResult,
     VLMInput,
     VLMOutput,
     VLMResult,
 )
-from .base import HTTPProvider
+
+
+# --- Boundary converters -----------------------------------------------------
+
+
+def _ndarray_to_data(array: NDArrayFloat) -> NDArrayData:
+    arr = array.to_numpy()
+    return NDArrayData(values=arr.ravel().tolist(), shape=list(arr.shape))
+
+
+def _data_to_ndarray(data: NDArrayData) -> NDArrayFloat:
+    arr = np.asarray(data.values, dtype=np.float32).reshape(data.shape)
+    return NDArrayFloat.from_numpy(arr)
+
+
+def _rle_to_data(rle: CompressedRLE) -> CompressedRLEData:
+    counts = rle.counts
+    if isinstance(counts, str):
+        counts = counts.encode("utf-8")
+    elif not isinstance(counts, bytes):
+        # A numeric-array RLE is compressed to bytes by CompressedRLE's validator, so this
+        # is defensive only.
+        counts = str(counts).encode("utf-8")
+    return CompressedRLEData(size=list(rle.size), counts=counts)
+
+
+def _frame_to_str(frame: str | bytes) -> str:
+    return bytes_to_data_uri(frame) if isinstance(frame, bytes) else frame
+
+
+# --- Provider ----------------------------------------------------------------
 
 
 @register_provider("pixano-inference")
-class PixanoInferenceProvider(HTTPProvider):
-    """Provider for pixano-inference server.
-
-    This provider communicates with a pixano-inference server using its HTTP API.
-    It translates between Pixano's types and the pixano-inference API format.
+class PixanoInferenceProvider(InferenceProvider):
+    """Provider for a pixano-inference `/v1` server.
 
     Example:
         ```python
-        from pixano.inference import get_provider
-
-        provider = get_provider("pixano-inference", url="http://localhost:8000")
+        provider = await PixanoInferenceProvider.connect("http://localhost:7463")
         models = await provider.list_models()
+        await provider.close()
         ```
     """
+
+    def __init__(self, url: str, *, api_key: str | None = None) -> None:
+        """Create the provider (does not connect).
+
+        Args:
+            url: Base URL of the pixano-inference server.
+            api_key: Optional API key.
+        """
+        self.url = url.rstrip("/")
+        self._api_key = api_key
+        self._client = PixanoInferenceClient(self.url, api_key=api_key)
 
     @property
     def name(self) -> str:
@@ -57,418 +121,333 @@ class PixanoInferenceProvider(HTTPProvider):
         return "pixano-inference"
 
     @classmethod
-    async def connect(cls, url: str) -> "PixanoInferenceProvider":
-        """Connect to a pixano-inference server.
+    async def connect(cls, url: str, *, api_key: str | None = None) -> "PixanoInferenceProvider":
+        """Connect to a pixano-inference server, verifying readiness.
 
         Args:
             url: The URL of the pixano-inference server.
+            api_key: Optional API key.
 
         Returns:
-            A connected PixanoInferenceProvider instance.
+            A connected `PixanoInferenceProvider`.
 
         Raises:
-            ProviderConnectionError: If connection fails.
+            ProviderConnectionError: If the server is unreachable or not ready.
         """
-        provider = cls(url=url)
+        provider = cls(url, api_key=api_key)
         try:
-            await provider.get("ready")
-        except Exception:
-            try:
-                await provider.get("health")
-            except Exception:
-                try:
-                    await provider.get("app/settings/")
-                except Exception as e:
-                    raise ProviderConnectionError(f"Failed to connect to pixano-inference at {url}: {e}") from e
+            await provider._client.ready()
+        except Exception as exc:
+            await provider.close()
+            raise ProviderConnectionError(f"Failed to connect to pixano-inference at {url}: {exc}") from exc
         return provider
 
-    async def get_capabilities(self) -> ProviderCapabilities:
-        """Return provider capabilities."""
-        return ProviderCapabilities(
-            tasks=[
-                InferenceTask.SEGMENTATION,
-                InferenceTask.TRACKING,
-                InferenceTask.DETECTION,
-                InferenceTask.VLM,
-            ],
-            supports_batching=True,
-            supports_streaming=False,
-        )
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self._client.aclose()
+
+    # --- Discovery ---
 
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
-        """List available models."""
-        response = await self.get("app/models/")
-        models_data = response.json()
-        models = [
-            ModelInfo(
-                name=m["name"],
-                capability=m["capability"],
-                model_path=m.get("model_path"),
-                model_class=m.get("model_class"),
-            )
-            for m in models_data
-        ]
-
-        if task is not None:
-            models = [m for m in models if m.capability == task.value]
-
-        return models
-
-    async def get_server_info(self) -> ServerInfo:
-        """Get server information."""
-        response = await self.get("app/settings/")
-        data = response.json()
-        return ServerInfo(
-            app_name=data.get("app_name", ""),
-            app_version=data.get("app_version", "unknown"),
-            app_description=data.get("app_description", ""),
-            num_cpus=data.get("num_cpus"),
-            num_gpus=data.get("num_gpus", 0),
-            num_nodes=data.get("num_nodes", 1),
-            gpus_used=data.get("gpus_used", 0.0),
-            gpu_to_model=data.get("gpu_to_model", {}),
-            models=data.get("models", []),
-            models_to_capability=data.get("models_to_capability", {}),
-        )
-
-    # --- Segmentation ---
-
-    def _build_segmentation_request(self, input_data: SegmentationInput) -> dict[str, Any]:
-        """Build request data for segmentation."""
-        request: dict[str, Any] = {
-            "model": input_data.model,
-            "image": input_data.image,
-            "reset_predictor": input_data.reset_predictor,
-            "num_multimask_outputs": input_data.num_multimask_outputs,
-            "multimask_output": input_data.multimask_output,
-            "return_image_embedding": input_data.return_image_embedding,
-        }
-
-        if input_data.image_embedding is not None:
-            request["image_embedding"] = input_data.image_embedding.to_dict()
-
-        if input_data.high_resolution_features is not None:
-            request["high_resolution_features"] = [f.to_dict() for f in input_data.high_resolution_features]
-
-        if input_data.mask_input is not None:
-            request["mask_input"] = input_data.mask_input.to_dict()
-
-        if input_data.points is not None:
-            request["points"] = input_data.points
-
-        if input_data.labels is not None:
-            request["labels"] = input_data.labels
-
-        if input_data.boxes is not None:
-            request["boxes"] = input_data.boxes
-
-        if input_data.return_logits:
-            request["return_logits"] = input_data.return_logits
-
-        return request
-
-    def _build_binary_segmentation_request(
-        self,
-        input_data: SegmentationInput,
-    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
-        request = self._build_segmentation_request(input_data)
-        image = request.pop("image")
-        if not isinstance(image, bytes):
-            raise TypeError("Binary segmentation requests require image bytes.")
-
-        return [
-            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
-            ("image", ("image.bin", image, "application/octet-stream")),
-        ]
-
-    def _parse_segmentation_response(self, response: dict[str, Any]) -> SegmentationResult:
-        """Parse segmentation response."""
-        data = response["data"]
-
-        # Parse masks
-        masks = []
-        for prompt_masks in data["masks"]:
-            masks.append([CompressedRLEData.from_dict(m) for m in prompt_masks])
-
-        # Parse scores
-        scores = NDArrayData.from_dict(data["scores"])
-
-        # Parse optional embeddings
-        image_embedding = None
-        if data.get("image_embedding"):
-            image_embedding = NDArrayData.from_dict(data["image_embedding"])
-
-        high_resolution_features = None
-        if data.get("high_resolution_features"):
-            high_resolution_features = [NDArrayData.from_dict(f) for f in data["high_resolution_features"]]
-
-        mask_logits = None
-        if data.get("mask_logits"):
-            mask_logits = NDArrayData.from_dict(data["mask_logits"])
-
-        output = SegmentationOutput(
-            masks=masks,
-            scores=scores,
-            image_embedding=image_embedding,
-            high_resolution_features=high_resolution_features,
-            mask_logits=mask_logits,
-        )
-
-        return SegmentationResult(
-            data=output,
-            timestamp=datetime.fromisoformat(response["timestamp"]),
-            processing_time=response["processing_time"],
-            metadata=response["metadata"],
-            id=response.get("id", ""),
-            status=response.get("status", "SUCCESS"),
-        )
-
-    async def segmentation(
-        self,
-        input_data: SegmentationInput,
-        timeout: float = 60.0,
-    ) -> SegmentationResult:
-        """Generate masks for an image."""
-        if isinstance(input_data.image, bytes):
-            response = await self.post(
-                "inference/segmentation/binary",
-                files=self._build_binary_segmentation_request(input_data),
-                timeout=timeout,
-            )
-        else:
-            request_data = self._build_segmentation_request(input_data)
-            response = await self.post("inference/segmentation/", json=request_data, timeout=timeout)
-        return self._parse_segmentation_response(response.json())
-
-    # --- Tracking ---
-
-    def _build_tracking_request(self, input_data: TrackingInput) -> dict[str, Any]:
-        """Build request data for tracking."""
-        request: dict[str, Any] = {
-            "model": input_data.model,
-            "video": input_data.video,
-            "objects_ids": list(input_data.objects_ids),
-            "frame_indexes": list(input_data.frame_indexes),
-            "propagate": input_data.propagate,
-        }
-
-        if input_data.points is not None:
-            request["points"] = input_data.points
-
-        if input_data.labels is not None:
-            request["labels"] = input_data.labels
-
-        if input_data.boxes is not None:
-            request["boxes"] = input_data.boxes
-
-        if input_data.interval is not None:
-            request["interval"] = input_data.interval
-
-        if input_data.keyframes is not None:
-            request["keyframes"] = input_data.keyframes
-
-        return request
-
-    def _build_binary_tracking_request(
-        self,
-        input_data: TrackingInput,
-    ) -> list[tuple[str, tuple[str | None, bytes | str, str]]]:
-        request = self._build_tracking_request(input_data)
-        video = request.pop("video")
-        if not isinstance(video, list) or not all(isinstance(frame, bytes) for frame in video):
-            raise TypeError("Binary tracking requests require a list of frame bytes.")
-
-        files: list[tuple[str, tuple[str | None, bytes | str, str]]] = [
-            ("metadata", ("metadata.json", json.dumps(request), "application/json")),
-        ]
-        for index, frame in enumerate(video):
-            files.append(
-                (
-                    "frames",
-                    (f"frame-{index:06d}.bin", frame, "application/octet-stream"),
+        """List available models, optionally filtered by Pixano task."""
+        try:
+            models = await self._client.list_models()
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        infos: list[ModelInfo] = []
+        for model in models:
+            model_task = CAPABILITY_TO_TASK.get(model.capability)
+            if model_task is None:
+                continue
+            if task is not None and model_task != task:
+                continue
+            infos.append(
+                ModelInfo(
+                    name=model.name,
+                    task=model_task.value,
+                    model_class=model.model_class,
+                    model_path=model.model_path,
+                    status=getattr(model, "status", None),
                 )
             )
-        return files
+        return infos
 
-    def _parse_tracking_response(self, response: dict[str, Any]) -> TrackingResult:
-        """Parse tracking response."""
-        data = response["data"]
+    async def get_server_info(self) -> ServerInfo:
+        """Get server version + loaded models mapped to Pixano tasks."""
+        try:
+            info = await self._client.info()
+            models = await self._client.list_models()
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        version = str(info.get("appVersion") or info.get("version") or "unknown")
+        names: list[str] = []
+        models_to_task: dict[str, str] = {}
+        for model in models:
+            model_task = CAPABILITY_TO_TASK.get(model.capability)
+            if model_task is None:
+                continue
+            names.append(model.name)
+            models_to_task[model.name] = model_task.value
+        return ServerInfo(version=version, models=names, models_to_task=models_to_task)
 
-        masks = [CompressedRLEData.from_dict(m) for m in data["masks"]]
+    # --- Image mask generation ---
 
-        output = TrackingOutput(
-            objects_ids=data["objects_ids"],
-            frame_indexes=data["frame_indexes"],
-            masks=masks,
+    async def image_mask_generation(
+        self,
+        input_data: ImageMaskGenerationInput,
+        timeout: float = 60.0,
+    ) -> ImageMaskGenerationResult:
+        """Generate masks for an image."""
+        request = SegmentationRequest(
+            model=input_data.model,
+            image=_frame_to_str(input_data.image),
+            image_embedding=(
+                _data_to_ndarray(input_data.image_embedding) if input_data.image_embedding is not None else None
+            ),
+            high_resolution_features=(
+                [_data_to_ndarray(f) for f in input_data.high_resolution_features]
+                if input_data.high_resolution_features is not None
+                else None
+            ),
+            mask_input=_data_to_ndarray(input_data.mask_input) if input_data.mask_input is not None else None,
+            reset_predictor=input_data.reset_predictor,
+            points=input_data.points,
+            labels=input_data.labels,
+            boxes=input_data.boxes,
+            num_multimask_outputs=input_data.num_multimask_outputs,
+            multimask_output=input_data.multimask_output,
+            return_image_embedding=input_data.return_image_embedding,
+            return_logits=input_data.return_logits,
         )
+        try:
+            response = await self._client.segmentation(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
 
-        return TrackingResult(
+        data = response.data
+        output = ImageMaskGenerationOutput(
+            masks=[[_rle_to_data(m) for m in prompt_masks] for prompt_masks in data.masks],
+            scores=_ndarray_to_data(data.scores),
+            image_embedding=_ndarray_to_data(data.image_embedding) if data.image_embedding is not None else None,
+            high_resolution_features=(
+                [_ndarray_to_data(f) for f in data.high_resolution_features]
+                if data.high_resolution_features is not None
+                else None
+            ),
+            mask_logits=_ndarray_to_data(data.mask_logits) if data.mask_logits is not None else None,
+        )
+        return ImageMaskGenerationResult(
             data=output,
-            status=response["status"],
-            timestamp=datetime.fromisoformat(response["timestamp"]),
-            processing_time=response["processing_time"],
-            metadata=response["metadata"],
-            id=response.get("id", ""),
+            timestamp=response.timestamp,
+            processing_time=response.processing_time,
+            metadata=response.metadata,
+            id=response.id,
+            status=response.status.upper(),
         )
 
-    def _parse_tracking_job_status(self, response: dict[str, Any]) -> TrackingJobStatus:
-        data_payload = response.get("data")
-        data = None
-        if data_payload is not None:
-            data = TrackingOutput(
-                objects_ids=data_payload["objects_ids"],
-                frame_indexes=data_payload["frame_indexes"],
-                masks=[CompressedRLEData.from_dict(mask) for mask in data_payload["masks"]],
+    # --- Video mask generation ---
+
+    def _build_tracking_request(self, input_data: VideoMaskGenerationInput) -> TrackingRequestV1:
+        """Build a `/v1` tracking request.
+
+        Two prompt formats are supported: structured ``keyframes`` (dicts carrying point/box/mask
+        prompts, box already x,y,width,height) are passed through; otherwise flat points/boxes are
+        converted to keyframes (keyframe i ↔ ``objects_ids[i]``/``frame_indexes[i]``, boxes
+        xyxy→x,y,width,height).
+        """
+        video = (
+            [_frame_to_str(f) for f in input_data.video]
+            if isinstance(input_data.video, list)
+            else _frame_to_str(input_data.video)
+        )
+        interval = TrackingInterval(**input_data.interval) if input_data.interval is not None else None
+
+        if input_data.keyframes:
+            keyframes = [self._keyframe_from_dict(kf) for kf in input_data.keyframes]
+            return TrackingRequestV1(
+                model=input_data.model,
+                video=video,
+                objects_ids=list(input_data.objects_ids),
+                frame_indexes=list(input_data.frame_indexes),
+                propagate=input_data.propagate,
+                interval=interval,
+                keyframes=keyframes,
             )
 
-        timestamp_value = response.get("timestamp")
-        timestamp = datetime.fromisoformat(timestamp_value) if timestamp_value else None
+        keyframes = []
+        for i, _obj_id in enumerate(input_data.objects_ids):
+            frame_index = input_data.frame_indexes[i] if i < len(input_data.frame_indexes) else 0
 
-        return TrackingJobStatus(
-            job_id=response["job_id"],
-            status=response["status"],
-            detail=response.get("detail"),
-            data=data,
-            metadata=response.get("metadata", {}),
-            timestamp=timestamp,
-            processing_time=response.get("processing_time", 0.0),
+            point_prompts: list[TrackingPointPrompt] | None = None
+            if input_data.points is not None and i < len(input_data.points):
+                obj_points = input_data.points[i]
+                obj_labels = (
+                    input_data.labels[i]
+                    if input_data.labels is not None and i < len(input_data.labels)
+                    else [1] * len(obj_points)
+                )
+                point_prompts = [
+                    TrackingPointPrompt(x=int(p[0]), y=int(p[1]), label=int(obj_labels[j]))
+                    for j, p in enumerate(obj_points)
+                ]
+
+            box_prompt: TrackingBoxPrompt | None = None
+            if input_data.boxes is not None and i < len(input_data.boxes):
+                x1, y1, x2, y2 = (int(c) for c in input_data.boxes[i])
+                box_prompt = TrackingBoxPrompt(x=x1, y=y1, width=x2 - x1, height=y2 - y1)
+
+            keyframes.append(
+                TrackingKeyframeV1(
+                    frame_index=frame_index,
+                    prompts=TrackingPrompts(points=point_prompts, box=box_prompt),
+                )
+            )
+
+        return TrackingRequestV1(
+            model=input_data.model,
+            video=video,
+            objects_ids=list(input_data.objects_ids),
+            frame_indexes=list(input_data.frame_indexes),
+            propagate=input_data.propagate,
+            interval=interval,
+            keyframes=keyframes,
         )
 
-    async def tracking(
+    @staticmethod
+    def _keyframe_from_dict(keyframe: dict[str, Any]) -> TrackingKeyframeV1:
+        """Build a `/v1` keyframe from a router-serialized keyframe dict (box already x,y,w,h)."""
+        points = keyframe.get("points")
+        point_prompts = (
+            [TrackingPointPrompt(x=int(p["x"]), y=int(p["y"]), label=int(p["label"])) for p in points]
+            if points
+            else None
+        )
+        box = keyframe.get("box")
+        box_prompt = (
+            TrackingBoxPrompt(x=int(box["x"]), y=int(box["y"]), width=int(box["width"]), height=int(box["height"]))
+            if box
+            else None
+        )
+        mask = keyframe.get("mask")
+        mask_prompt = CompressedRLE(size=mask["size"], counts=mask["counts"]) if mask else None
+        return TrackingKeyframeV1(
+            frame_index=int(keyframe["frame_index"]),
+            prompts=TrackingPrompts(points=point_prompts, box=box_prompt, mask=mask_prompt),
+        )
+
+    async def video_mask_generation(
         self,
-        input_data: TrackingInput,
+        input_data: VideoMaskGenerationInput,
         timeout: float = 120.0,
-    ) -> TrackingResult:
-        """Generate masks for video frames."""
-        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
-            response = await self.post(
-                "inference/tracking/binary",
-                files=self._build_binary_tracking_request(input_data),
-                timeout=timeout,
-            )
-        else:
-            request_data = self._build_tracking_request(input_data)
-            response = await self.post("inference/tracking/", json=request_data, timeout=timeout)
-        return self._parse_tracking_response(response.json())
+    ) -> VideoMaskGenerationResult:
+        """Generate masks for video frames (synchronous)."""
+        request = self._build_tracking_request(input_data)
+        try:
+            response = await self._client.tracking(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        data = response.data
+        output = VideoMaskGenerationOutput(
+            objects_ids=list(data.objects_ids),
+            frame_indexes=list(data.frame_indexes),
+            masks=[_rle_to_data(m) for m in data.masks],
+        )
+        return VideoMaskGenerationResult(
+            data=output,
+            status=response.status.upper(),
+            timestamp=response.timestamp,
+            processing_time=response.processing_time,
+            metadata=response.metadata,
+            id=response.id,
+        )
 
-    async def submit_tracking_job(
+    async def submit_video_mask_generation_job(
         self,
-        input_data: TrackingInput,
+        input_data: VideoMaskGenerationInput,
         timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Submit an asynchronous tracking job."""
-        if isinstance(input_data.video, list) and any(isinstance(frame, bytes) for frame in input_data.video):
-            response = await self.post(
-                "inference/tracking/jobs/binary",
-                files=self._build_binary_tracking_request(input_data),
-                timeout=timeout,
-            )
-        else:
-            request_data = self._build_tracking_request(input_data)
-            response = await self.post("inference/tracking/jobs/", json=request_data, timeout=timeout)
-        return self._parse_tracking_job_status(response.json())
+    ) -> VideoMaskGenerationJobStatus:
+        """Submit an asynchronous video mask generation job."""
+        request = self._build_tracking_request(input_data)
+        try:
+            job = await self._client.submit_tracking_job(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        return self._job_status(job)
 
-    async def get_tracking_job(
-        self,
-        job_id: str,
-        timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Fetch asynchronous tracking job status."""
-        response = await self.get(f"inference/tracking/jobs/{job_id}", timeout=timeout)
-        return self._parse_tracking_job_status(response.json())
-
-    async def cancel_tracking_job(
+    async def get_video_mask_generation_job(
         self,
         job_id: str,
         timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Cancel an asynchronous tracking job."""
-        response = await self.delete(f"inference/tracking/jobs/{job_id}", timeout=timeout)
-        return self._parse_tracking_job_status(response.json())
+    ) -> VideoMaskGenerationJobStatus:
+        """Fetch the status of a video mask generation job."""
+        try:
+            job = await self._client.get_job(job_id)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        return self._job_status(job)
+
+    async def cancel_video_mask_generation_job(
+        self,
+        job_id: str,
+        timeout: float = 30.0,
+    ) -> VideoMaskGenerationJobStatus:
+        """Cancel a video mask generation job."""
+        try:
+            job = await self._client.cancel_job(job_id)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        return self._job_status(job)
+
+    def _job_status(self, job: Any) -> VideoMaskGenerationJobStatus:
+        """Convert a client `JobStatus` (camelCase `data` dict) to Pixano's type."""
+        output: VideoMaskGenerationOutput | None = None
+        payload = job.data
+        if payload:
+            output = VideoMaskGenerationOutput(
+                objects_ids=list(payload.get("objectsIds", [])),
+                frame_indexes=list(payload.get("frameIndexes", [])),
+                masks=[CompressedRLEData.from_dict(m) for m in payload.get("masks", [])],
+            )
+        return VideoMaskGenerationJobStatus(
+            job_id=job.job_id,
+            status=job.status,
+            detail=job.detail,
+            data=output,
+            metadata=job.metadata,
+            processing_time=job.processing_time,
+        )
 
     # --- Detection ---
-
-    def _build_detection_request(self, input_data: DetectionInput) -> dict[str, Any]:
-        """Build request data for zero-shot detection."""
-        return {
-            "model": input_data.model,
-            "image": input_data.image,
-            "classes": input_data.classes,
-            "box_threshold": input_data.box_threshold,
-            "text_threshold": input_data.text_threshold,
-        }
-
-    def _parse_detection_response(self, response: dict[str, Any]) -> DetectionResult:
-        """Parse zero-shot detection response."""
-        data = response["data"]
-
-        output = DetectionOutput(
-            boxes=data["boxes"],
-            scores=data["scores"],
-            classes=data["classes"],
-        )
-
-        return DetectionResult(
-            data=output,
-            timestamp=datetime.fromisoformat(response["timestamp"]),
-            processing_time=response["processing_time"],
-            metadata=response["metadata"],
-            id=response.get("id", ""),
-            status=response.get("status", "SUCCESS"),
-        )
 
     async def detection(
         self,
         input_data: DetectionInput,
         timeout: float = 60.0,
     ) -> DetectionResult:
-        """Detect objects using zero-shot detection."""
-        request_data = self._build_detection_request(input_data)
-        response = await self.post("inference/detection/", json=request_data, timeout=timeout)
-        return self._parse_detection_response(response.json())
+        """Detect objects in an image using zero-shot detection."""
+        request = DetectionRequest(
+            model=input_data.model,
+            image=_frame_to_str(input_data.image),
+            classes=input_data.classes,
+            box_threshold=input_data.box_threshold,
+            text_threshold=input_data.text_threshold,
+        )
+        try:
+            response = await self._client.detection(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        data = response.data
+        output = DetectionOutput(boxes=data.boxes, scores=data.scores, classes=data.classes)
+        return DetectionResult(
+            data=output,
+            timestamp=response.timestamp,
+            processing_time=response.processing_time,
+            metadata=response.metadata,
+            id=response.id,
+            status=response.status.upper(),
+        )
 
     # --- VLM ---
-
-    def _build_vlm_request(self, input_data: VLMInput) -> dict[str, Any]:
-        """Build request data for VLM inference."""
-        request: dict[str, Any] = {
-            "model": input_data.model,
-            "prompt": input_data.prompt,
-            "max_new_tokens": input_data.max_new_tokens,
-            "temperature": input_data.temperature,
-        }
-
-        if input_data.images is not None:
-            request["images"] = [str(img) for img in input_data.images]
-        else:
-            request["images"] = None
-
-        return request
-
-    def _parse_vlm_response(self, response: dict[str, Any]) -> VLMResult:
-        """Parse VLM response."""
-        data = response["data"]
-
-        usage = UsageInfo(
-            prompt_tokens=data["usage"]["prompt_tokens"],
-            completion_tokens=data["usage"]["completion_tokens"],
-            total_tokens=data["usage"]["total_tokens"],
-        )
-
-        output = VLMOutput(
-            generated_text=data["generated_text"],
-            usage=usage,
-            generation_config=data.get("generation_config", {}),
-        )
-
-        return VLMResult(
-            data=output,
-            timestamp=datetime.fromisoformat(response["timestamp"]),
-            processing_time=response["processing_time"],
-            metadata=response.get("metadata", {}),
-            id=response.get("id", ""),
-            status=response.get("status", "SUCCESS"),
-        )
 
     async def vlm(
         self,
@@ -476,6 +455,72 @@ class PixanoInferenceProvider(HTTPProvider):
         timeout: float = 60.0,
     ) -> VLMResult:
         """Generate text conditioned on images."""
-        request_data = self._build_vlm_request(input_data)
-        response = await self.post("inference/vlm/", json=request_data, timeout=timeout)
-        return self._parse_vlm_response(response.json())
+        request = VLMRequest(
+            model=input_data.model,
+            prompt=input_data.prompt,
+            images=input_data.images,
+            max_new_tokens=input_data.max_new_tokens if input_data.max_new_tokens is not None else 512,
+            temperature=input_data.temperature,
+        )
+        try:
+            response = await self._client.vlm(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        data = response.data
+        usage = data.usage
+        output = VLMOutput(
+            generated_text=data.generated_text,
+            usage=UsageInfo(
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+            ),
+            generation_config=data.generation_config,
+        )
+        return VLMResult(
+            data=output,
+            timestamp=response.timestamp,
+            processing_time=response.processing_time,
+            metadata=response.metadata,
+            id=response.id,
+            status=response.status.upper(),
+        )
+
+    # --- Embedding ---
+
+    async def embedding(
+        self,
+        input_data: EmbeddingInput,
+        timeout: float = 60.0,
+    ) -> EmbeddingResult:
+        """Embed an image or text into a shared vector space (CLIP-style)."""
+        request = EmbeddingRequest(
+            model=input_data.model,
+            image=input_data.image,
+            text=input_data.text,
+            normalize=input_data.normalize,
+        )
+        try:
+            response = await self._client.embedding(request, timeout=timeout)
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
+        data = response.data
+        return EmbeddingResult(
+            data=EmbeddingOutput(embedding=_ndarray_to_data(data.embeddings), dim=data.dim),
+            timestamp=response.timestamp,
+            processing_time=response.processing_time,
+            metadata=response.metadata,
+            id=response.id,
+            status=response.status.upper(),
+        )
+
+    # --- Errors ---
+
+    @staticmethod
+    def _request_error(exc: PixanoInferenceError) -> InferenceRequestError:
+        return InferenceRequestError(
+            status_code=exc.status_code,
+            code=getattr(exc, "code", ""),
+            message=str(exc),
+            request_id=getattr(exc, "request_id", None),
+        )
