@@ -11,9 +11,11 @@ License: CECILL-C
     FunnelSimple,
     MagnifyingGlass,
     Plus,
+    Rows,
     SortAscending,
     SortDescending,
     Sparkle,
+    SquaresFour,
     Warning,
     X,
   } from "phosphor-svelte";
@@ -52,10 +54,12 @@ License: CECILL-C
     computeProgress?: IoJobResponse["progress"] | null;
     computeError?: string;
     searchError?: string;
+    view?: "grid" | "table";
     onApply: (updates: { filter?: string[]; q?: string; semantic?: boolean }) => void;
     onSortChange?: (sort: string | undefined, order: string | undefined) => void;
     onCompute?: () => void;
     onClearSimilar?: () => void;
+    onViewChange?: (view: "grid" | "table") => void;
   }
 
   let {
@@ -72,10 +76,12 @@ License: CECILL-C
     computeProgress = null,
     computeError = "",
     searchError = "",
+    view = "table",
     onApply,
     onSortChange,
     onCompute,
     onClearSimilar,
+    onViewChange,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -317,6 +323,41 @@ License: CECILL-C
     </div>
 
     <div class="flex items-center gap-3 shrink-0">
+      {#if onViewChange}
+        <div
+          class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm"
+          role="group"
+          aria-label="View mode"
+        >
+          <button
+            type="button"
+            title="Gallery view"
+            aria-label="Gallery view"
+            aria-pressed={view === "grid"}
+            class="px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {view ===
+            'grid'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => onViewChange("grid")}
+          >
+            <SquaresFour size={16} weight={view === "grid" ? "fill" : "regular"} />
+          </button>
+          <button
+            type="button"
+            title="Table view"
+            aria-label="Table view"
+            aria-pressed={view === "table"}
+            class="px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {view ===
+            'table'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => onViewChange("table")}
+          >
+            <Rows size={16} weight={view === "table" ? "fill" : "regular"} />
+          </button>
+        </div>
+      {/if}
+
       {#if onSortChange && sortableColumns.length > 0}
         <div
           class="flex items-center gap-1"

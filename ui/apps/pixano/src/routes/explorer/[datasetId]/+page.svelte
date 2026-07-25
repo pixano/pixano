@@ -53,6 +53,7 @@ License: CECILL-C
     semanticActive={data.semantic?.active ?? false}
     similarTo={data.semantic?.similarTo ?? ""}
     searchError={data.searchError ?? ""}
+    view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}
