@@ -95,7 +95,10 @@ describe("trackVideo", () => {
   it("throws ApiError and preserves backend detail on failure", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(
-        JSON.stringify({ detail: "Model 'sam2-video' is tracking-only; use /inference/tracking" }),
+        JSON.stringify({
+          detail:
+            "Model 'sam2-video' is a video_mask_generation model; use /inference/video_mask_generation",
+        }),
         {
           status: 400,
           statusText: "Bad Request",
@@ -120,7 +123,8 @@ describe("trackVideo", () => {
       name: "ApiError",
       status: 400,
       body: JSON.stringify({
-        detail: "Model 'sam2-video' is tracking-only; use /inference/tracking",
+        detail:
+          "Model 'sam2-video' is a video_mask_generation model; use /inference/video_mask_generation",
       }),
     });
   });
