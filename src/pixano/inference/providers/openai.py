@@ -21,20 +21,11 @@ from typing import Any
 
 import httpx
 
-from ..exceptions import TaskNotSupportedError
 from ..registry import register_provider
 from ..types import (
-    DetectionInput,
-    DetectionResult,
     InferenceTask,
     ModelInfo,
-    ProviderCapabilities,
-    SegmentationInput,
-    SegmentationResult,
     ServerInfo,
-    TrackingInput,
-    TrackingJobStatus,
-    TrackingResult,
     UsageInfo,
     VLMInput,
     VLMOutput,
@@ -73,36 +64,21 @@ class OpenAICompatibleProvider(HTTPProvider):
         """Provider name."""
         ...
 
-    async def get_capabilities(self) -> ProviderCapabilities:
-        """Return provider capabilities."""
-        return ProviderCapabilities(
-            tasks=[InferenceTask.VLM],
-            supports_batching=False,
-            supports_streaming=False,
-        )
-
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
-        """List available models."""
+        """List available models (VLM only)."""
         if task is not None and task != InferenceTask.VLM:
             return []
         response = await self.get("/v1/models")
         data = response.json()
-        return [ModelInfo(name=item["id"], capability="vlm") for item in data.get("data", [])]
+        return [ModelInfo(name=item["id"], task=InferenceTask.VLM.value) for item in data.get("data", [])]
 
     async def get_server_info(self) -> ServerInfo:
         """Get server information."""
         models = await self.list_models()
         return ServerInfo(
-            app_name=self.name,
-            app_version="unknown",
-            app_description=f"{self.name} provider",
-            num_cpus=None,
-            num_gpus=0,
-            num_nodes=1,
-            gpus_used=0.0,
-            gpu_to_model={},
+            version="unknown",
             models=[m.name for m in models],
-            models_to_capability={m.name: m.capability for m in models},
+            models_to_task={m.name: m.task for m in models},
         )
 
     async def vlm(self, input_data: VLMInput, timeout: float = 120.0) -> VLMResult:
@@ -197,32 +173,6 @@ class OpenAICompatibleProvider(HTTPProvider):
             "type": "image_url",
             "image_url": {"url": f"data:image/jpeg;base64,{image_str}"},
         }
-
-    # --- Unsupported tasks ---
-
-    async def segmentation(self, input_data: SegmentationInput, timeout: float = 60.0) -> SegmentationResult:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support segmentation")
-
-    async def tracking(self, input_data: TrackingInput, timeout: float = 120.0) -> TrackingResult:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
-
-    async def submit_tracking_job(self, input_data: TrackingInput, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
-
-    async def get_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
-
-    async def cancel_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support tracking")
-
-    async def detection(self, input_data: DetectionInput, timeout: float = 60.0) -> DetectionResult:
-        """Not supported."""
-        raise TaskNotSupportedError(f"Provider '{self.name}' does not support detection")
 
 
 @register_provider("openai")
