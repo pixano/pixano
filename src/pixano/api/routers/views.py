@@ -7,8 +7,10 @@
 """Subtype-specific view routers."""
 
 import hashlib
+import io
 from typing import Annotated, Any
 
+import PIL.Image
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 
@@ -92,22 +94,62 @@ def _stream_blob(dataset: Dataset, table_name: str, row_id: str) -> Response:
     return Response(content=blob_data, media_type=media_type_from_format(fmt))
 
 
-def _stream_preview(dataset: Dataset, table_name: str, row_id: str) -> Response:
-    row = _get_row(dataset, table_name, row_id)
-    preview = getattr(row, "preview", b"") or b""
-    preview_format = getattr(row, "preview_format", "") or ""
-    if not preview or not preview_format:
-        raise HTTPException(status_code=404, detail=f"Resource '{row_id}' has no preview.")
+PREVIEW_SIZES = (128, 256, 512)
 
-    etag = hashlib.sha1(preview).hexdigest()  # noqa: S324
+
+def _resize_from_blob(dataset: Dataset, table_name: str, row_id: str, size: int) -> tuple[bytes, str] | None:
+    """Produce a `size`-bounded JPEG thumbnail from the row's full embedded blob, if any."""
+    try:
+        result = dataset.get_view_binary(table_name, row_id)
+    except DatasetAccessError:
+        return None
+    if result is None:
+        return None
+    blob, _fmt = result
+    if not blob:
+        return None
+    try:
+        image = PIL.Image.open(io.BytesIO(blob))
+        image.thumbnail((size, size))
+        buffer = io.BytesIO()
+        image.convert("RGB").save(buffer, format="JPEG", quality=85)
+    except Exception:  # noqa: BLE001 - unreadable blob → fall back to the stored preview
+        return None
+    return buffer.getvalue(), "jpeg"
+
+
+def _stream_preview(dataset: Dataset, table_name: str, row_id: str, size: int | None = None) -> Response:
+    row = _get_row(dataset, table_name, row_id)
+
+    content: bytes | None = None
+    content_format = ""
+    if size is not None:
+        # Larger-than-stored thumbnail, resized on demand from the full blob (cacheable).
+        resized = _resize_from_blob(dataset, table_name, row_id, size)
+        if resized is not None:
+            content, content_format = resized
+
+    if content is None:
+        content = getattr(row, "preview", b"") or b""
+        content_format = getattr(row, "preview_format", "") or ""
+        if not content or not content_format:
+            raise HTTPException(status_code=404, detail=f"Resource '{row_id}' has no preview.")
+
+    etag = hashlib.sha1(content).hexdigest()  # noqa: S324
     return Response(
-        content=preview,
-        media_type=media_type_from_format(preview_format),
+        content=content,
+        media_type=media_type_from_format(content_format),
         headers={
             "Cache-Control": "public, max-age=3600",
             "ETag": f'"{etag}"',
         },
     )
+
+
+def _validated_preview_size(size: int | None) -> int | None:
+    if size is not None and size not in PREVIEW_SIZES:
+        raise HTTPException(status_code=400, detail=f"Invalid preview size {size}; allowed: {sorted(PREVIEW_SIZES)}")
+    return size
 
 
 def _image_src(dataset_id: str, resource_name: str, row: Any) -> str:
@@ -266,9 +308,11 @@ def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Resp
 
 
 @router.get("/images/{id}/preview", operation_id="get_image_preview")
-def get_image_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
+def get_image_preview(
+    id: str, dataset: Dataset = Depends(get_dataset_dep), size: Annotated[int | None, Query()] = None
+) -> Response:
     """Stream the preview thumbnail of an image."""
-    return _stream_preview(dataset, IMAGE_TABLE, id)
+    return _stream_preview(dataset, IMAGE_TABLE, id, size=_validated_preview_size(size))
 
 
 @router.get("/texts", response_model=PaginatedResponse[TextResponse], operation_id="list_texts")
@@ -328,9 +372,11 @@ def get_sframe_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Res
 
 
 @router.get("/sframes/{id}/preview", operation_id="get_sframe_preview")
-def get_sframe_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
+def get_sframe_preview(
+    id: str, dataset: Dataset = Depends(get_dataset_dep), size: Annotated[int | None, Query()] = None
+) -> Response:
     """Stream the preview thumbnail of a sequence frame."""
-    return _stream_preview(dataset, SFRAME_TABLE, id)
+    return _stream_preview(dataset, SFRAME_TABLE, id, size=_validated_preview_size(size))
 
 
 @router.get(

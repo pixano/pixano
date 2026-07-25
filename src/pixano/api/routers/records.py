@@ -66,11 +66,16 @@ def _query_preview_rows(
         raise HTTPException(status_code=500, detail=f"Internal server error. {err}") from err
 
 
-def _preview_url(dataset_id: str, resource: str, row_id: str, uri: object) -> str:
+_PREVIEW_THUMBNAIL_SIZE = 256
+_TEXT_EXCERPT_LENGTH = 160
+
+
+def _preview_url(dataset_id: str, resource: str, row_id: str, uri: object, size: int | None = None) -> str:
     """Datalake rows (spec §6 uri mode) are browser-loadable directly; embedded rows go through /preview."""
     if isinstance(uri, str) and uri.startswith(("http://", "https://")):
         return uri
-    return f"/datasets/{dataset_id}/{resource}/{row_id}/preview"
+    url = f"/datasets/{dataset_id}/{resource}/{row_id}/preview"
+    return f"{url}?size={size}" if size else url
 
 
 def _resolve_view_previews(
@@ -89,7 +94,7 @@ def _resolve_view_previews(
             resource="images",
             id=row_id,
             kind="image",
-            preview_url=_preview_url(dataset_id, "images", row_id, row.get("uri")),
+            preview_url=_preview_url(dataset_id, "images", row_id, row.get("uri"), size=_PREVIEW_THUMBNAIL_SIZE),
         )
 
     # Only the first frame of each sequence is needed for a thumbnail. Filter to
@@ -116,8 +121,30 @@ def _resolve_view_previews(
             resource="sframes",
             id=row_id,
             kind="image",
-            preview_url=_preview_url(dataset_id, "sframes", row_id, row.get("uri")),
+            preview_url=_preview_url(dataset_id, "sframes", row_id, row.get("uri"), size=_PREVIEW_THUMBNAIL_SIZE),
         )
+
+    # Text views: no thumbnail, but an excerpt lets multi-modal cards (e.g. MEL image+text)
+    # show real content. Excerpting in Python is fine at page sizes ≤ 100.
+    if "texts" in dataset.info.tables:
+        text_rows = _query_preview_rows(dataset, "texts", ["id", "record_id", "logical_name", "content"], record_ids)
+        for row in text_rows:
+            record_id = str(row.get("record_id", "") or "")
+            logical_name = str(row.get("logical_name", "") or "")
+            row_id = str(row.get("id", "") or "")
+            if not record_id or not logical_name or not row_id:
+                continue
+            logical_previews = previews_by_record.setdefault(record_id, {})
+            if logical_name in logical_previews:
+                continue
+            content = str(row.get("content", "") or "")
+            logical_previews[logical_name] = PreviewDescriptor(
+                resource="texts",
+                id=row_id,
+                kind="text",
+                preview_url="",
+                excerpt=content[:_TEXT_EXCERPT_LENGTH],
+            )
 
     return previews_by_record
 
