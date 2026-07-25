@@ -28,7 +28,7 @@ const EMPTY_MODELS: InferenceModel[] = [];
 
 export async function getInferenceServers(): Promise<InferenceProviderRegistry> {
   try {
-    const response = await fetch("/app/inference/servers/", {
+    const response = await fetch("/inference/connected", {
       headers: { Accept: "application/json" },
       method: "GET",
     });
@@ -38,7 +38,20 @@ export async function getInferenceServers(): Promise<InferenceProviderRegistry> 
       return EMPTY_REGISTRY;
     }
 
-    return (await response.json()) as InferenceProviderRegistry;
+    // The /connected payload keys providers by name; flatten to the array shape the app uses.
+    const payload = (await response.json()) as {
+      connected: boolean;
+      providers: Record<string, { url: string | null }>;
+      default_provider: string | null;
+    };
+    return {
+      connected: payload.connected,
+      providers: Object.entries(payload.providers ?? {}).map(([name, info]) => ({
+        name,
+        url: info?.url ?? null,
+      })),
+      default_provider: payload.default_provider,
+    };
   } catch (e) {
     console.error("api.getInferenceServers -", e);
     return EMPTY_REGISTRY;
@@ -51,14 +64,13 @@ export async function registerInferenceServer(
   apiKey: string | null = null,
 ): Promise<{ provider: ConnectedProvider } | { error: string }> {
   try {
-    const response = await fetch("/app/inference/servers/", {
+    const params = new URLSearchParams({ provider_type: type });
+    if (url?.trim()) params.set("url", url.trim());
+    if (apiKey?.trim()) params.set("api_key", apiKey.trim());
+
+    const response = await fetch(`/inference/connect?${params.toString()}`, {
       headers: JSON_HEADERS,
       method: "POST",
-      body: JSON.stringify({
-        type,
-        url: url?.trim() || null,
-        api_key: apiKey?.trim() || null,
-      }),
     });
 
     if (!response.ok) {
@@ -74,10 +86,11 @@ export async function registerInferenceServer(
     }
 
     const payload = (await response.json()) as {
-      provider: ConnectedProvider;
-      default_provider: string | null;
+      status: string;
+      provider: string;
+      url: string | null;
     };
-    return { provider: payload.provider };
+    return { provider: { name: payload.provider, url: payload.url } };
   } catch (e) {
     console.error("api.registerInferenceServer -", e);
     return { error: String(e) };
@@ -86,7 +99,7 @@ export async function registerInferenceServer(
 
 export async function listInferenceModels(): Promise<InferenceModel[]> {
   try {
-    const response = await fetch("/app/inference/models/", {
+    const response = await fetch("/inference/models/list", {
       headers: { Accept: "application/json" },
       method: "GET",
     });
@@ -127,7 +140,7 @@ export async function segmentImage(
   input: ImageSegmentationTaskInput,
 ): Promise<ImageSegmentationTaskResult> {
   return requestJson<ImageSegmentationTaskResult>(
-    "/inference/segmentation",
+    "/inference/image_mask_generation",
     {
       headers: JSON_HEADERS,
       method: "POST",
@@ -139,7 +152,7 @@ export async function segmentImage(
 
 export async function trackVideo(input: VideoTrackingTaskInput): Promise<VideoTrackingTaskResult> {
   return requestJson<VideoTrackingTaskResult>(
-    "/inference/tracking",
+    "/inference/video_mask_generation",
     {
       headers: JSON_HEADERS,
       method: "POST",
@@ -153,7 +166,7 @@ export async function submitTrackingJob(
   input: VideoTrackingTaskInput,
 ): Promise<VideoTrackingJobStatus> {
   return requestJson<VideoTrackingJobStatus>(
-    "/inference/tracking/jobs",
+    "/inference/video_mask_generation/jobs",
     {
       headers: JSON_HEADERS,
       method: "POST",
@@ -165,7 +178,7 @@ export async function submitTrackingJob(
 
 export async function getTrackingJob(jobId: string): Promise<VideoTrackingJobStatus> {
   return requestJson<VideoTrackingJobStatus>(
-    `/inference/tracking/jobs/${jobId}`,
+    `/inference/video_mask_generation/jobs/${jobId}`,
     {
       headers: { Accept: "application/json" },
       method: "GET",
@@ -176,7 +189,7 @@ export async function getTrackingJob(jobId: string): Promise<VideoTrackingJobSta
 
 export async function cancelTrackingJob(jobId: string): Promise<VideoTrackingJobStatus> {
   return requestJson<VideoTrackingJobStatus>(
-    `/inference/tracking/jobs/${jobId}`,
+    `/inference/video_mask_generation/jobs/${jobId}`,
     {
       headers: { Accept: "application/json" },
       method: "DELETE",

@@ -4,9 +4,15 @@
 # License: CECILL-C
 # =====================================
 
+"""Inference router, aligned to the pixano-inference `/v1` task vocabulary.
+
+Exposes a single ``/inference`` surface: connect/discovery plus the execution routes
+(``image_mask_generation``/``video_mask_generation``/``vlm``/``detection``). App-level request
+models resolve dataset media and remap sequence-frame windows; the provider speaks to the server.
+"""
+
 import base64
 import logging
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -20,16 +26,17 @@ from pydantic import BaseModel, Field
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
 from pixano.datasets.utils.errors import DatasetAccessError
-from pixano.inference.exceptions import InferenceError, ProviderConnectionError, ProviderNotFoundError
+from pixano.inference.exceptions import InferenceRequestError, ProviderConnectionError, ProviderNotFoundError
+from pixano.inference.media import detect_image_mime
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
 from pixano.inference.registry import get_provider
 from pixano.inference.types import (
     DetectionInput,
+    ImageMaskGenerationInput,
     InferenceTask,
     NDArrayData,
-    SegmentationInput,
-    TrackingInput,
+    VideoMaskGenerationInput,
     VLMInput,
 )
 
@@ -37,15 +44,22 @@ from pixano.inference.types import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/inference", tags=["Inference"])
-app_router = APIRouter(prefix="/app/inference", tags=["Inference"])
 IMAGE_TABLE = "images"
 SFRAME_TABLE = "sequence_frames"
 TRACKING_JOB_TERMINAL_STATES = {"completed", "failed", "canceled"}
 
+# Default URLs for providers that have well-known endpoints.
+_DEFAULT_PROVIDER_URLS: dict[str, str] = {
+    "openai": "https://api.openai.com",
+    "gemini": "https://generativelanguage.googleapis.com",
+    "ollama": "http://localhost:11434",
+    "litellm": "http://localhost:4000",
+}
+
 
 @dataclass
 class TrackingJobRecord:
-    """Record of a submitted tracking job."""
+    """Record of a submitted video mask generation job."""
 
     provider_name: str
     provider_job_id: str
@@ -56,37 +70,39 @@ class TrackingJobRecord:
 TRACKING_JOB_REGISTRY: dict[str, TrackingJobRecord] = {}
 
 
-class ConnectedProviderResponse(BaseModel):
-    """Response schema for a connected inference provider."""
+# --- Response / request models ------------------------------------------------
 
-    name: str
+
+class ConnectedProviderResponse(BaseModel):
+    """One connected inference provider."""
+
     url: str | None = None
 
 
 class InferenceRegistryResponse(BaseModel):
-    """Response schema for the inference registry status."""
+    """Connected inference providers, keyed by provider name."""
 
     connected: bool
-    providers: list[ConnectedProviderResponse]
+    providers: dict[str, ConnectedProviderResponse]
     default_provider: str | None = None
 
 
+class ServerInfoResponse(BaseModel):
+    """Inference server info (version + models mapped to tasks)."""
+
+    version: str
+    models: list[str]
+    models_to_task: dict[str, str]
+
+
 class ModelInfoResponse(BaseModel):
-    """Response schema for model information."""
+    """Model information."""
 
     name: str
     task: str
     provider_name: str
     model_path: str | None = None
     model_class: str | None = None
-
-
-class RegisterServerRequest(BaseModel):
-    """Request schema for registering an inference server."""
-
-    type: str = "pixano-inference"
-    url: str | None = None
-    api_key: str | None = None
 
 
 class VLMRequest(BaseModel):
@@ -119,8 +135,8 @@ class NDArrayRequest(BaseModel):
     shape: list[int]
 
 
-class ImageSegmentationRequest(BaseModel):
-    """Request schema for image segmentation inference."""
+class ImageMaskGenerationRequest(BaseModel):
+    """Request schema for image mask generation inference."""
 
     model: str
     provider_name: str | None = None
@@ -140,7 +156,7 @@ class ImageSegmentationRequest(BaseModel):
 
 
 class VideoTrackingIntervalRequest(BaseModel):
-    """Request schema for a video tracking frame interval."""
+    """Request schema for a video mask generation frame interval."""
 
     start_frame: int = Field(ge=0)
     end_frame: int = Field(ge=0)
@@ -148,7 +164,7 @@ class VideoTrackingIntervalRequest(BaseModel):
 
 
 class VideoTrackingPointPromptRequest(BaseModel):
-    """Request schema for a point prompt in video tracking."""
+    """Request schema for a point prompt in video mask generation."""
 
     x: int
     y: int
@@ -156,7 +172,7 @@ class VideoTrackingPointPromptRequest(BaseModel):
 
 
 class VideoTrackingBoxPromptRequest(BaseModel):
-    """Request schema for a bounding box prompt in video tracking."""
+    """Request schema for a bounding box prompt in video mask generation."""
 
     x: int
     y: int
@@ -165,14 +181,14 @@ class VideoTrackingBoxPromptRequest(BaseModel):
 
 
 class VideoTrackingMaskPromptRequest(BaseModel):
-    """Request schema for a mask prompt in video tracking."""
+    """Request schema for a mask prompt in video mask generation."""
 
     size: list[int]
     counts: str | list[int]
 
 
 class VideoTrackingKeyframeRequest(BaseModel):
-    """Request schema for a keyframe with prompts in video tracking."""
+    """Request schema for a keyframe with prompts in video mask generation."""
 
     frame_index: int = Field(ge=0)
     points: list[VideoTrackingPointPromptRequest] | None = None
@@ -180,8 +196,8 @@ class VideoTrackingKeyframeRequest(BaseModel):
     mask: VideoTrackingMaskPromptRequest | None = None
 
 
-class VideoTrackingRequest(BaseModel):
-    """Request schema for video object tracking inference."""
+class VideoMaskGenerationRequest(BaseModel):
+    """Request schema for video mask generation inference."""
 
     model: str
     provider_name: str | None = None
@@ -201,7 +217,7 @@ class VideoTrackingRequest(BaseModel):
 
 
 class VideoTrackingTaskOutputResponse(BaseModel):
-    """Response schema for video tracking task output."""
+    """Response schema for video mask generation task output."""
 
     objects_ids: list[int]
     frame_indexes: list[int]
@@ -209,7 +225,7 @@ class VideoTrackingTaskOutputResponse(BaseModel):
 
 
 class VideoTrackingJobStatusResponse(BaseModel):
-    """Response schema for video tracking job status."""
+    """Response schema for video mask generation job status."""
 
     job_id: str
     status: Literal["queued", "running", "completed", "failed", "canceled"]
@@ -220,18 +236,18 @@ class VideoTrackingJobStatusResponse(BaseModel):
     processing_time: float = 0.0
 
 
+# --- Provider helpers ---------------------------------------------------------
+
+
 def _normalize_provider_url(url: str) -> str:
     normalized_url = url.strip()
     parsed = urlparse(normalized_url)
-
     if not normalized_url or parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise HTTPException(status_code=400, detail="Invalid inference server URL")
-
     try:
         parsed.port
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid inference server URL") from exc
-
     return normalized_url
 
 
@@ -239,22 +255,6 @@ def _build_provider_name(provider_type: str, url: str) -> str:
     parsed = urlparse(url)
     port = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
     return f"{provider_type}@{parsed.hostname}:{port}"
-
-
-# Default URLs for providers that have well-known endpoints.
-_DEFAULT_PROVIDER_URLS: dict[str, str] = {
-    "openai": "https://api.openai.com",
-    "gemini": "https://generativelanguage.googleapis.com",
-    "ollama": "http://localhost:11434",
-    "litellm": "http://localhost:4000",
-}
-
-
-def _list_connected_providers(settings: Settings) -> list[ConnectedProviderResponse]:
-    providers: list[ConnectedProviderResponse] = []
-    for name, provider in settings.inference_providers.items():
-        providers.append(ConnectedProviderResponse(name=name, url=getattr(provider, "url", None)))
-    return providers
 
 
 def _get_default_provider(settings: Settings) -> InferenceProvider:
@@ -266,10 +266,7 @@ def _get_default_provider(settings: Settings) -> InferenceProvider:
     return provider
 
 
-def _get_provider(
-    settings: Settings,
-    provider_name: str | None = None,
-) -> InferenceProvider:
+def _get_provider(settings: Settings, provider_name: str | None = None) -> InferenceProvider:
     if provider_name:
         provider = settings.inference_providers.get(provider_name)
         if provider is None:
@@ -302,7 +299,6 @@ def _resolve_view_binary(dataset: Dataset, view_id: str) -> bytes:
         if result is not None:
             blob_data, _ = result
             return blob_data
-
     raise HTTPException(
         status_code=404,
         detail=f"View '{view_id}' was not found or has no embedded binary content.",
@@ -326,20 +322,15 @@ def _resolve_tracking_frames(
         )
     except DatasetAccessError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
     if not frames:
         raise HTTPException(status_code=404, detail="No sequence frames found for the requested window.")
-
     resolved_frames = [(frame_index, blob_data) for frame_index, blob_data, _ in frames]
     if not all(blob_data for _, blob_data in resolved_frames):
         raise HTTPException(status_code=404, detail="One or more sequence frames have no embedded binary content.")
     return resolved_frames
 
 
-def _to_window_relative_indexes(
-    prompt_frame_indexes: list[int],
-    resolved_frame_indexes: list[int],
-) -> list[int]:
+def _to_window_relative_indexes(prompt_frame_indexes: list[int], resolved_frame_indexes: list[int]) -> list[int]:
     index_lookup = {frame_index: offset for offset, frame_index in enumerate(resolved_frame_indexes)}
     missing = [frame_index for frame_index in prompt_frame_indexes if frame_index not in index_lookup]
     if missing:
@@ -350,16 +341,11 @@ def _to_window_relative_indexes(
     return [index_lookup[frame_index] for frame_index in prompt_frame_indexes]
 
 
-def _to_absolute_frame_indexes(
-    provider_frame_indexes: list[int],
-    resolved_frame_indexes: list[int],
-) -> list[int]:
+def _to_absolute_frame_indexes(provider_frame_indexes: list[int], resolved_frame_indexes: list[int]) -> list[int]:
     if all(0 <= frame_index < len(resolved_frame_indexes) for frame_index in provider_frame_indexes):
         return [resolved_frame_indexes[frame_index] for frame_index in provider_frame_indexes]
-
     if all(frame_index in resolved_frame_indexes for frame_index in provider_frame_indexes):
         return provider_frame_indexes
-
     raise HTTPException(
         status_code=500,
         detail=f"Tracking provider returned frame indexes outside the resolved window: {provider_frame_indexes}",
@@ -367,75 +353,39 @@ def _to_absolute_frame_indexes(
 
 
 def _serialize_tracking_keyframes(
-    keyframes: list[VideoTrackingKeyframeRequest] | None,
-    resolved_frame_indexes: list[int],
+    keyframes: list[VideoTrackingKeyframeRequest] | None, resolved_frame_indexes: list[int]
 ) -> tuple[list[int], list[dict[str, Any]] | None]:
+    """Convert structured keyframes to window-relative dicts (box already x,y,w,h).
+
+    Returns the keyframes' absolute frame indexes and the serialized payloads (which carry
+    point/box/mask prompts through to the provider — the only path that supports mask prompts).
+    """
     if not keyframes:
         return [], None
-
     absolute_indexes = [keyframe.frame_index for keyframe in keyframes]
     relative_indexes = _to_window_relative_indexes(absolute_indexes, resolved_frame_indexes)
     serialized: list[dict[str, Any]] = []
-
     for keyframe, relative_index in zip(keyframes, relative_indexes, strict=False):
-        serialized_keyframe: dict[str, Any] = {"frame_index": relative_index}
+        payload: dict[str, Any] = {"frame_index": relative_index}
         if keyframe.points is not None:
-            serialized_keyframe["points"] = [point.model_dump() for point in keyframe.points]
+            payload["points"] = [point.model_dump() for point in keyframe.points]
         if keyframe.box is not None:
-            serialized_keyframe["box"] = keyframe.box.model_dump()
+            payload["box"] = keyframe.box.model_dump()
         if keyframe.mask is not None:
-            serialized_keyframe["mask"] = keyframe.mask.model_dump()
-        serialized.append(serialized_keyframe)
-
+            payload["mask"] = keyframe.mask.model_dump()
+        serialized.append(payload)
     return absolute_indexes, serialized
 
 
-def _derive_legacy_tracking_prompts(
-    request: VideoTrackingRequest,
-) -> tuple[list[list[list[int]]] | None, list[list[int]] | None, list[list[int]] | None]:
-    if request.points is not None or request.labels is not None or request.boxes is not None:
-        return request.points, request.labels, request.boxes
-
-    if not request.keyframes:
-        return None, None, None
-
-    for keyframe in request.keyframes:
-        points = [[[point.x, point.y] for point in keyframe.points]] if keyframe.points else None
-        labels = [[point.label for point in keyframe.points]] if keyframe.points else None
-        boxes = (
-            [
-                [
-                    keyframe.box.x,
-                    keyframe.box.y,
-                    keyframe.box.x + keyframe.box.width,
-                    keyframe.box.y + keyframe.box.height,
-                ]
-            ]
-            if keyframe.box is not None
-            else None
-        )
-        if points is not None or boxes is not None or keyframe.mask is not None:
-            return points, labels, boxes
-
-    return None, None, None
-
-
 def _serialize_tracking_interval(
-    interval: VideoTrackingIntervalRequest | None,
-    resolved_frame_indexes: list[int],
+    interval: VideoTrackingIntervalRequest | None, resolved_frame_indexes: list[int]
 ) -> dict[str, Any] | None:
     if interval is None:
         return None
-
     relative_start, relative_end = _to_window_relative_indexes(
-        [interval.start_frame, interval.end_frame],
-        resolved_frame_indexes,
+        [interval.start_frame, interval.end_frame], resolved_frame_indexes
     )
-    return {
-        "start_frame": relative_start,
-        "end_frame": relative_end,
-        "direction": interval.direction,
-    }
+    return {"start_frame": relative_start, "end_frame": relative_end, "direction": interval.direction}
 
 
 def _parse_ndarray_request(array: NDArrayRequest | None) -> NDArrayData | None:
@@ -444,9 +394,7 @@ def _parse_ndarray_request(array: NDArrayRequest | None) -> NDArrayData | None:
     return NDArrayData(values=array.values, shape=array.shape)
 
 
-def _parse_ndarray_request_list(
-    arrays: list[NDArrayRequest] | None,
-) -> list[NDArrayData] | None:
+def _parse_ndarray_request_list(arrays: list[NDArrayRequest] | None) -> list[NDArrayData] | None:
     if arrays is None:
         return None
     return [NDArrayData(values=array.values, shape=array.shape) for array in arrays if array is not None]
@@ -455,50 +403,39 @@ def _parse_ndarray_request_list(
 def _serialize_model_info(model: Any, provider_name: str) -> dict[str, Any]:
     return {
         "name": model.name,
-        "task": model.capability,
+        "task": model.task,
         "provider_name": provider_name,
         "model_path": model.model_path,
         "model_class": model.model_class,
     }
 
 
-async def _get_model_capability(
-    provider: InferenceProvider,
-    model_name: str,
-) -> str | None:
+async def _get_model_task(provider: InferenceProvider, model_name: str) -> str | None:
     try:
         models = await provider.list_models()
     except Exception:
         models = []
-
     for model in models:
         if getattr(model, "name", None) == model_name:
-            return getattr(model, "capability", None)
-
+            return getattr(model, "task", None)
     try:
         server_info = await provider.get_server_info()
     except Exception:
         return None
+    return server_info.models_to_task.get(model_name)
 
-    return server_info.models_to_capability.get(model_name)
 
-
-async def _ensure_model_capability(
-    provider: InferenceProvider,
-    model_name: str,
-    expected_capability: InferenceTask,
-) -> None:
-    actual_capability = await _get_model_capability(provider, model_name)
-    if actual_capability is None or actual_capability == expected_capability.value:
+async def _ensure_model_task(provider: InferenceProvider, model_name: str, expected_task: InferenceTask) -> None:
+    actual_task = await _get_model_task(provider, model_name)
+    if actual_task is None or actual_task == expected_task.value:
         return
-
     raise HTTPException(
         status_code=400,
-        detail=(f"Model '{model_name}' is {actual_capability}-only; use /inference/{actual_capability}"),
+        detail=f"Model '{model_name}' is a {actual_task} model; use /inference/{actual_task}",
     )
 
 
-def _serialize_segmentation_result(result: Any) -> dict[str, Any]:
+def _serialize_image_mask_generation_result(result: Any) -> dict[str, Any]:
     return {
         "data": {
             "masks": [[mask.to_dict() for mask in prompt_masks] for prompt_masks in result.data.masks],
@@ -519,7 +456,7 @@ def _serialize_segmentation_result(result: Any) -> dict[str, Any]:
     }
 
 
-def _serialize_tracking_result(result: Any) -> dict[str, Any]:
+def _serialize_video_mask_generation_result(result: Any) -> dict[str, Any]:
     return {
         "data": {
             "objects_ids": result.data.objects_ids,
@@ -535,10 +472,7 @@ def _serialize_tracking_result(result: Any) -> dict[str, Any]:
 
 
 def _serialize_tracking_job_status(
-    result: Any,
-    *,
-    job_id: str,
-    resolved_frame_indexes: list[int] | None = None,
+    result: Any, *, job_id: str, resolved_frame_indexes: list[int] | None = None
 ) -> dict[str, Any]:
     data = None
     if getattr(result, "data", None) is not None:
@@ -550,7 +484,6 @@ def _serialize_tracking_job_status(
             "frame_indexes": frame_indexes,
             "masks": [mask.to_dict() for mask in result.data.masks],
         }
-
     timestamp = getattr(result, "timestamp", None)
     return {
         "job_id": job_id,
@@ -584,11 +517,7 @@ def _serialize_vlm_result(result: Any) -> dict[str, Any]:
 
 def _serialize_detection_result(result: Any) -> dict[str, Any]:
     return {
-        "data": {
-            "boxes": result.data.boxes,
-            "scores": result.data.scores,
-            "classes": result.data.classes,
-        },
+        "data": {"boxes": result.data.boxes, "scores": result.data.scores, "classes": result.data.classes},
         "timestamp": result.timestamp.isoformat(),
         "processing_time": result.processing_time,
         "metadata": result.metadata,
@@ -597,19 +526,14 @@ def _serialize_detection_result(result: Any) -> dict[str, Any]:
     }
 
 
-def _raise_http_from_inference_error(exc: InferenceError) -> None:
-    message = str(exc)
-    status_match = re.match(r"HTTP (\d{3}): .*?(?: - (?P<detail>.*))?$", message)
-    if status_match:
-        detail = status_match.group("detail") or message
-        raise HTTPException(status_code=int(status_match.group(1)), detail=detail) from exc
-    raise HTTPException(status_code=502, detail=message) from exc
+def _raise_http_from_request_error(exc: InferenceRequestError) -> None:
+    status = exc.status_code if exc.status_code and exc.status_code >= 400 else 502
+    raise HTTPException(status_code=status, detail=str(exc)) from exc
 
 
-def _build_tracking_input(
-    request: VideoTrackingRequest,
-    settings: Settings,
-) -> tuple[TrackingInput, list[int]]:
+def _build_video_mask_generation_input(
+    request: VideoMaskGenerationRequest, settings: Settings
+) -> tuple[VideoMaskGenerationInput, list[int]]:
     dataset = _get_dataset(request.dataset_id, settings)
     resolved_frames = _resolve_tracking_frames(
         dataset,
@@ -619,15 +543,20 @@ def _build_tracking_input(
         frame_count=request.frame_count,
     )
     resolved_frame_indexes = [frame_index for frame_index, _ in resolved_frames]
-    prompt_frame_indexes = request.prompt_frame_indexes
+
+    # Structured keyframes carry point/box/mask prompts through verbatim (window-relative); the
+    # flat points/labels/boxes fields are the legacy path (boxes xyxy, converted by the provider).
+    points = labels = boxes = None
     serialized_keyframes: list[dict[str, Any]] | None = None
     if request.keyframes:
         prompt_frame_indexes, serialized_keyframes = _serialize_tracking_keyframes(
-            request.keyframes,
-            resolved_frame_indexes,
+            request.keyframes, resolved_frame_indexes
         )
-    points, labels, boxes = _derive_legacy_tracking_prompts(request)
-    input_data = TrackingInput(
+    else:
+        prompt_frame_indexes = request.prompt_frame_indexes
+        points, labels, boxes = request.points, request.labels, request.boxes
+
+    input_data = VideoMaskGenerationInput(
         model=request.model,
         video=[blob_data for _, blob_data in resolved_frames],
         objects_ids=request.objects_ids,
@@ -642,12 +571,28 @@ def _build_tracking_input(
     return input_data, resolved_frame_indexes
 
 
-@app_router.get("/servers/", response_model=InferenceRegistryResponse, operation_id="list_inference_servers")
-def list_inference_servers(
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> InferenceRegistryResponse:
-    """List all connected inference servers."""
-    providers = _list_connected_providers(settings)
+def _resolve_dataset_images(dataset_id: str, image_ids: list[str], settings: Settings) -> list[str | Path]:
+    """Read image blobs from the dataset and encode them as base64 data URIs."""
+    dataset = _get_dataset(dataset_id, settings)
+    result: list[str | Path] = []
+    for image_id in image_ids:
+        blob_data = _resolve_view_binary(dataset, image_id)
+        mime = detect_image_mime(blob_data)
+        b64 = base64.b64encode(blob_data).decode("ascii")
+        result.append(f"data:{mime};base64,{b64}")
+    return result
+
+
+# --- Connection & discovery routes -------------------------------------------
+
+
+@router.get("/connected", response_model=InferenceRegistryResponse, operation_id="list_connected_providers")
+def list_connected_providers(settings: Annotated[Settings, Depends(get_settings)]) -> InferenceRegistryResponse:
+    """List connected inference providers."""
+    providers = {
+        name: ConnectedProviderResponse(url=getattr(provider, "url", None))
+        for name, provider in settings.inference_providers.items()
+    }
     return InferenceRegistryResponse(
         connected=len(providers) > 0,
         providers=providers,
@@ -655,69 +600,65 @@ def list_inference_servers(
     )
 
 
-@app_router.post("/servers/", operation_id="register_inference_server")
-async def register_inference_server(
-    request: RegisterServerRequest,
+@router.post("/connect", operation_id="connect_inference_server")
+async def connect_inference_server(
     settings: Annotated[Settings, Depends(get_settings)],
+    url: Annotated[str | None, Query()] = None,
+    provider_type: Annotated[str, Query()] = "pixano-inference",
+    api_key: Annotated[str | None, Query()] = None,
 ) -> dict[str, Any]:
-    """Register a new inference server."""
-    provider_type = request.type
-
-    # Resolve URL: use provided, fall back to default, or error.
-    if request.url:
-        url = _normalize_provider_url(request.url)
+    """Connect to an inference server and register it as the default provider."""
+    if url:
+        resolved_url = _normalize_provider_url(url)
     elif provider_type in _DEFAULT_PROVIDER_URLS:
-        url = _DEFAULT_PROVIDER_URLS[provider_type]
+        resolved_url = _DEFAULT_PROVIDER_URLS[provider_type]
     else:
         raise HTTPException(status_code=400, detail=f"URL is required for provider type '{provider_type}'")
 
-    # Build constructor kwargs.
-    kwargs: dict[str, Any] = {"url": url}
-    if request.api_key is not None:
-        kwargs["api_key"] = request.api_key
-
     provider: InferenceProvider
     if provider_type == "pixano-inference":
-        # Pixano-inference uses its own connection validation flow.
         try:
-            provider = await PixanoInferenceProvider.connect(url)
+            provider = await PixanoInferenceProvider.connect(resolved_url, api_key=api_key)
         except ProviderConnectionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        provider_name = "pixano-inference"
+        # Singleton: replace any previously connected pixano-inference provider.
+        previous = settings.inference_providers.get(provider_name)
+        if previous is not None:
+            try:
+                await previous.close()
+            except Exception:
+                logger.warning("Failed to close previous pixano-inference provider", exc_info=True)
     else:
+        kwargs: dict[str, Any] = {"url": resolved_url}
+        if api_key is not None:
+            kwargs["api_key"] = api_key
         try:
             provider = get_provider(provider_type, **kwargs)
-            # Validate connectivity by listing models.
             await provider.list_models()
         except ProviderNotFoundError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except ProviderConnectionError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
         except Exception as exc:
             raise HTTPException(
-                status_code=400,
-                detail=f"Failed to connect to {provider_type} provider: {exc}",
+                status_code=404, detail=f"Failed to connect to {provider_type} provider: {exc}"
             ) from exc
+        provider_name = _build_provider_name(provider_type, resolved_url)
 
-    provider_name = _build_provider_name(provider_type, url)
     settings.inference_providers[provider_name] = provider
     settings.default_inference_provider = provider_name
-
-    return {
-        "status": "ok",
-        "provider": ConnectedProviderResponse(name=provider_name, url=url).model_dump(),
-        "default_provider": settings.default_inference_provider,
-    }
+    return {"status": "connected", "provider": provider_name, "url": resolved_url}
 
 
-@app_router.get("/models/", response_model=list[ModelInfoResponse], operation_id="list_inference_models")
+@router.get("/models/list", response_model=list[ModelInfoResponse], operation_id="list_inference_models")
 async def list_inference_models(
     settings: Annotated[Settings, Depends(get_settings)],
     task: Annotated[str | None, Query()] = None,
 ) -> list[dict[str, Any]]:
-    """List available inference models across all providers."""
+    """List available inference models across all connected providers."""
     if not settings.inference_providers:
         return []
-
     try:
         inference_task = InferenceTask(task) if task else None
     except ValueError as exc:
@@ -727,55 +668,32 @@ async def list_inference_models(
         try:
             models = await provider.list_models(task=inference_task)
             result.extend(_serialize_model_info(model, provider_name) for model in models)
-        except TypeError:
-            # Some test doubles do not expose the optional enum filtering; fall back to no filtering.
-            models = await provider.list_models()
-            filtered_models = [model for model in models if task is None or model.capability == task]
-            result.extend(_serialize_model_info(model, provider_name) for model in filtered_models)
         except Exception:
             logger.warning("Failed to list models from provider %s", provider_name, exc_info=True)
     return result
 
 
-def _detect_image_mime(blob: bytes) -> str:
-    """Detect MIME type from image magic bytes."""
-    if blob[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png"
-    if blob[:2] == b"\xff\xd8":
-        return "image/jpeg"
-    if blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
-        return "image/webp"
-    return "image/jpeg"
+@router.get("/models/server-info", response_model=ServerInfoResponse, operation_id="get_inference_server_info")
+async def get_inference_server_info(settings: Annotated[Settings, Depends(get_settings)]) -> ServerInfoResponse:
+    """Return server info (version + models mapped to tasks) for the default provider."""
+    provider = _get_default_provider(settings)
+    try:
+        info = await provider.get_server_info()
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
+    return ServerInfoResponse(version=info.version, models=info.models, models_to_task=info.models_to_task)
 
 
-def _resolve_dataset_images(
-    dataset_id: str,
-    image_ids: list[str],
-    settings: Settings,
-) -> list[str | Path]:
-    """Read image blobs from the dataset and encode them as base64 data URIs."""
-    dataset = _get_dataset(dataset_id, settings)
-    result: list[str | Path] = []
-    for image_id in image_ids:
-        blob_data = _resolve_view_binary(dataset, image_id)
-        mime = _detect_image_mime(blob_data)
-        b64 = base64.b64encode(blob_data).decode("ascii")
-        result.append(f"data:{mime};base64,{b64}")
-    return result
+# --- Execution routes --------------------------------------------------------
 
 
 @router.post("/vlm", operation_id="vlm")
-async def vlm(
-    request: VLMRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, Any]:
+async def vlm(request: VLMRequest, settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, Any]:
     """Run vision-language model inference."""
     provider = _get_provider(settings, request.provider_name)
-
     resolved_images: list[str | Path] | None = None
     if request.dataset_id and request.image_ids:
         resolved_images = _resolve_dataset_images(request.dataset_id, request.image_ids, settings)
-
     input_data = VLMInput(
         model=request.model,
         prompt=request.prompt,
@@ -783,15 +701,15 @@ async def vlm(
         max_new_tokens=request.max_new_tokens,
         temperature=request.temperature,
     )
-    result = await provider.vlm(input_data=input_data)
+    try:
+        result = await provider.vlm(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
     return _serialize_vlm_result(result)
 
 
 @router.post("/detection", operation_id="detect")
-async def detect(
-    request: DetectionRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, Any]:
+async def detect(request: DetectionRequest, settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, Any]:
     """Run object detection inference."""
     provider = _get_provider(settings, request.provider_name)
     input_data = DetectionInput(
@@ -801,21 +719,23 @@ async def detect(
         box_threshold=request.box_threshold,
         text_threshold=request.text_threshold,
     )
-    result = await provider.detection(input_data=input_data)
+    try:
+        result = await provider.detection(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
     return _serialize_detection_result(result)
 
 
-@router.post("/segmentation", operation_id="segment_image")
-async def segment_image(
-    request: ImageSegmentationRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
+@router.post("/image_mask_generation", operation_id="image_mask_generation")
+async def image_mask_generation(
+    request: ImageMaskGenerationRequest, settings: Annotated[Settings, Depends(get_settings)]
 ) -> dict[str, Any]:
-    """Run image segmentation inference."""
+    """Run image mask generation inference."""
     provider = _get_provider(settings, request.provider_name)
-    await _ensure_model_capability(provider, request.model, InferenceTask.SEGMENTATION)
+    await _ensure_model_task(provider, request.model, InferenceTask.MASK_GENERATION)
     dataset = _get_dataset(request.dataset_id, settings)
     image_bytes = _resolve_view_binary(dataset, request.view_id)
-    input_data = SegmentationInput(
+    input_data = ImageMaskGenerationInput(
         model=request.model,
         image=image_bytes,
         image_embedding=_parse_ndarray_request(request.image_embedding),
@@ -831,57 +751,48 @@ async def segment_image(
         return_logits=request.return_logits,
     )
     try:
-        result = await provider.segmentation(input_data=input_data)
-    except InferenceError as exc:
-        _raise_http_from_inference_error(exc)
-    return _serialize_segmentation_result(result)
+        result = await provider.image_mask_generation(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
+    return _serialize_image_mask_generation_result(result)
 
 
-@router.post("/tracking", operation_id="track_video")
-async def track_video(
-    request: VideoTrackingRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
+@router.post("/video_mask_generation", operation_id="video_mask_generation")
+async def video_mask_generation(
+    request: VideoMaskGenerationRequest, settings: Annotated[Settings, Depends(get_settings)]
 ) -> dict[str, Any]:
-    """Run video object tracking inference."""
+    """Run video mask generation inference."""
     provider = _get_provider(settings, request.provider_name)
-    await _ensure_model_capability(provider, request.model, InferenceTask.TRACKING)
-    input_data, resolved_frame_indexes = _build_tracking_input(request, settings)
+    await _ensure_model_task(provider, request.model, InferenceTask.VIDEO_MASK_GENERATION)
+    input_data, resolved_frame_indexes = _build_video_mask_generation_input(request, settings)
     try:
-        result = await provider.tracking(input_data=input_data)
-    except InferenceError as exc:
-        _raise_http_from_inference_error(exc)
-    result.data.frame_indexes = _to_absolute_frame_indexes(
-        result.data.frame_indexes,
-        resolved_frame_indexes,
-    )
-    return _serialize_tracking_result(result)
+        result = await provider.video_mask_generation(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
+    result.data.frame_indexes = _to_absolute_frame_indexes(result.data.frame_indexes, resolved_frame_indexes)
+    return _serialize_video_mask_generation_result(result)
 
 
 @router.post(
-    "/tracking/jobs",
+    "/video_mask_generation/jobs",
     response_model=VideoTrackingJobStatusResponse,
-    operation_id="submit_tracking_job",
+    operation_id="submit_video_mask_generation_job",
 )
-async def submit_tracking_job(
-    request: VideoTrackingRequest,
-    settings: Annotated[Settings, Depends(get_settings)],
+async def submit_video_mask_generation_job(
+    request: VideoMaskGenerationRequest, settings: Annotated[Settings, Depends(get_settings)]
 ) -> dict[str, Any]:
-    """Submit a new video tracking job."""
+    """Submit a new video mask generation job."""
     provider_name = _get_provider_name(settings, request.provider_name)
     provider = _get_provider(settings, provider_name)
-    await _ensure_model_capability(provider, request.model, InferenceTask.TRACKING)
-    input_data, resolved_frame_indexes = _build_tracking_input(request, settings)
-
+    await _ensure_model_task(provider, request.model, InferenceTask.VIDEO_MASK_GENERATION)
+    input_data, resolved_frame_indexes = _build_video_mask_generation_input(request, settings)
     try:
-        provider_status = await provider.submit_tracking_job(input_data=input_data)
-    except InferenceError as exc:
-        _raise_http_from_inference_error(exc)
-
-    job_id = f"tracking-job-{uuid4().hex}"
+        provider_status = await provider.submit_video_mask_generation_job(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
+    job_id = f"video-mask-generation-job-{uuid4().hex}"
     payload = _serialize_tracking_job_status(
-        provider_status,
-        job_id=job_id,
-        resolved_frame_indexes=resolved_frame_indexes,
+        provider_status, job_id=job_id, resolved_frame_indexes=resolved_frame_indexes
     )
     record = TrackingJobRecord(
         provider_name=provider_name,
@@ -894,32 +805,26 @@ async def submit_tracking_job(
 
 
 @router.get(
-    "/tracking/jobs/{job_id}",
+    "/video_mask_generation/jobs/{job_id}",
     response_model=VideoTrackingJobStatusResponse,
-    operation_id="get_tracking_job",
+    operation_id="get_video_mask_generation_job",
 )
-async def get_tracking_job_status(
-    job_id: str,
-    settings: Annotated[Settings, Depends(get_settings)],
+async def get_video_mask_generation_job_status(
+    job_id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> dict[str, Any]:
-    """Get the status of a tracking job."""
+    """Get the status of a video mask generation job."""
     record = TRACKING_JOB_REGISTRY.get(job_id)
     if record is None:
-        raise HTTPException(status_code=404, detail=f"Tracking job '{job_id}' was not found.")
-
+        raise HTTPException(status_code=404, detail=f"Video mask generation job '{job_id}' was not found.")
     if record.terminal_payload is not None:
         return record.terminal_payload
-
     provider = _get_provider(settings, record.provider_name)
     try:
-        provider_status = await provider.get_tracking_job(record.provider_job_id)
-    except InferenceError as exc:
-        _raise_http_from_inference_error(exc)
-
+        provider_status = await provider.get_video_mask_generation_job(record.provider_job_id)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
     payload = _serialize_tracking_job_status(
-        provider_status,
-        job_id=job_id,
-        resolved_frame_indexes=record.resolved_frame_indexes,
+        provider_status, job_id=job_id, resolved_frame_indexes=record.resolved_frame_indexes
     )
     if provider_status.status in TRACKING_JOB_TERMINAL_STATES:
         record.terminal_payload = payload
@@ -927,41 +832,36 @@ async def get_tracking_job_status(
 
 
 @router.delete(
-    "/tracking/jobs/{job_id}",
+    "/video_mask_generation/jobs/{job_id}",
     response_model=VideoTrackingJobStatusResponse,
-    operation_id="cancel_tracking_job",
+    operation_id="cancel_video_mask_generation_job",
 )
-async def cancel_tracking_job_status(
-    job_id: str,
-    settings: Annotated[Settings, Depends(get_settings)],
+async def cancel_video_mask_generation_job_status(
+    job_id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> dict[str, Any]:
-    """Cancel a tracking job."""
+    """Cancel a video mask generation job."""
     record = TRACKING_JOB_REGISTRY.get(job_id)
     if record is None:
-        raise HTTPException(status_code=404, detail=f"Tracking job '{job_id}' was not found.")
-
+        raise HTTPException(status_code=404, detail=f"Video mask generation job '{job_id}' was not found.")
     if record.terminal_payload is not None:
         return record.terminal_payload
-
     provider = _get_provider(settings, record.provider_name)
     canceled_payload: dict[str, Any] = {
         "job_id": job_id,
         "status": "canceled",
-        "detail": "Tracking job canceled.",
+        "detail": "Video mask generation job canceled.",
         "data": None,
         "metadata": {},
         "timestamp": None,
         "processing_time": 0.0,
     }
-
     try:
-        provider_status = await provider.cancel_tracking_job(record.provider_job_id)
-    except InferenceError:
-        logger.warning("Failed to cancel provider tracking job %s", record.provider_job_id, exc_info=True)
+        provider_status = await provider.cancel_video_mask_generation_job(record.provider_job_id)
+    except InferenceRequestError:
+        logger.warning("Failed to cancel provider job %s", record.provider_job_id, exc_info=True)
     else:
         canceled_payload = _serialize_tracking_job_status(provider_status, job_id=job_id)
         canceled_payload["status"] = "canceled"
         canceled_payload["data"] = None
-
     record.terminal_payload = canceled_payload
     return canceled_payload

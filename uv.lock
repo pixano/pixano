@@ -1642,6 +1642,7 @@ dependencies = [
     { name = "orjson" },
     { name = "pandas" },
     { name = "pillow" },
+    { name = "pixano-inference-client" },
     { name = "polars" },
     { name = "pycocotools" },
     { name = "pydantic" },
@@ -1694,6 +1695,7 @@ requires-dist = [
     { name = "orjson", specifier = ">=3.9.0,<4.0.0" },
     { name = "pandas", specifier = ">=1.5.0,<3.0.0" },
     { name = "pillow", specifier = ">=9.4.0,<13.0.0" },
+    { name = "pixano-inference-client", git = "https://github.com/pixano/pixano-inference?subdirectory=packages%2Fpixano-inference-client&branch=production-hardening" },
     { name = "polars", specifier = ">1.7.0,<2.0.0" },
     { name = "pycocotools", specifier = ">=2.0.0,<3.0.0" },
     { name = "pydantic", specifier = ">=2.9.0,<3.0.0" },
@@ -1717,6 +1719,18 @@ test = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
+]
+
+[[package]]
+name = "pixano-inference-client"
+version = "0.1.0"
+source = { git = "https://github.com/pixano/pixano-inference?subdirectory=packages%2Fpixano-inference-client&branch=production-hardening#186edb90d51c52a6001502c8e538f707d285c45b" }
+dependencies = [
+    { name = "httpx" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
 ]
 
 [[package]]
