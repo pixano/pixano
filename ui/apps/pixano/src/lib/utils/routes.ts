@@ -29,7 +29,15 @@ export const getWorkspaceRoute = (datasetId: string, itemId: string, query?: str
  * set (`getPageFromPosition`), not carried around; `size` IS carried so that
  * derivation matches the explorer's pagination.
  */
-export const EXPLORER_QUERY_KEYS = ["filter", "q", "sort", "order", "where", "size"] as const;
+export const EXPLORER_QUERY_KEYS = [
+  "filter",
+  "q",
+  "sort",
+  "order",
+  "where",
+  "size",
+  "view",
+] as const;
 
 /** Keep only the result-set-defining params (filter/sort/search) from a set. */
 export const pickExplorerQuery = (params: URLSearchParams): URLSearchParams => {
