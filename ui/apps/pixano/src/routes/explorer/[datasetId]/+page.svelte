@@ -61,6 +61,7 @@ License: CECILL-C
   <DatasetExplorer
     selectedDataset={data.browserData}
     filterSchema={data.filterSchema}
+    semanticActive={data.semantic?.active ?? false}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}

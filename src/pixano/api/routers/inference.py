@@ -33,6 +33,7 @@ from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
 from pixano.inference.registry import get_provider
 from pixano.inference.types import (
     DetectionInput,
+    EmbeddingInput,
     ImageMaskGenerationInput,
     InferenceTask,
     NDArrayData,
@@ -126,6 +127,16 @@ class DetectionRequest(BaseModel):
     classes: list[str] | str
     box_threshold: float = 0.5
     text_threshold: float = 0.5
+
+
+class EmbeddingRequest(BaseModel):
+    """Request schema for embedding inference (exactly one of image/text)."""
+
+    model: str
+    provider_name: str | None = None
+    image: list[str] | str | None = None
+    text: list[str] | str | None = None
+    normalize: bool = True
 
 
 class NDArrayRequest(BaseModel):
@@ -724,6 +735,27 @@ async def detect(request: DetectionRequest, settings: Annotated[Settings, Depend
     except InferenceRequestError as exc:
         _raise_http_from_request_error(exc)
     return _serialize_detection_result(result)
+
+
+@router.post("/embedding", operation_id="embedding")
+async def embedding(request: EmbeddingRequest, settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, Any]:
+    """Embed an image or text into a shared vector space (CLIP-style)."""
+    provider = _get_provider(settings, request.provider_name)
+    input_data = EmbeddingInput(
+        model=request.model, image=request.image, text=request.text, normalize=request.normalize
+    )
+    try:
+        result = await provider.embedding(input_data=input_data)
+    except InferenceRequestError as exc:
+        _raise_http_from_request_error(exc)
+    return {
+        "data": {"embedding": result.data.embedding.to_dict(), "dim": result.data.dim},
+        "timestamp": result.timestamp.isoformat(),
+        "processing_time": result.processing_time,
+        "metadata": result.metadata,
+        "id": result.id,
+        "status": result.status,
+    }
 
 
 @router.post("/image_mask_generation", operation_id="image_mask_generation")
