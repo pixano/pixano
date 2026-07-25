@@ -16,26 +16,36 @@ export const getExplorerRoute = (datasetId: string, query?: string): string => {
   return query.startsWith("?") ? `${baseRoute}${query}` : `${baseRoute}?${query}`;
 };
 
-export const getWorkspaceRoute = (datasetId: string, itemId: string): string =>
-  `#/explorer/${datasetId}/workspace/${itemId}`;
-
-export const findNeighborItemId = (
-  itemsIds: string[],
-  direction: "previous" | "next",
-  currentItemId: string,
-): string | undefined => {
-  const currentIndex: number = itemsIds.findIndex((item) => item === currentItemId);
-  if (currentIndex === -1) return undefined;
-
-  const nextIndex = direction === "previous" ? currentIndex - 1 : currentIndex + 1;
-  if (nextIndex === -1) return itemsIds[itemsIds.length - 1];
-  if (nextIndex === itemsIds.length) return itemsIds[0];
-  return itemsIds[nextIndex];
+export const getWorkspaceRoute = (datasetId: string, itemId: string, query?: string): string => {
+  const baseRoute = `#/explorer/${datasetId}/workspace/${itemId}`;
+  if (!query) return baseRoute;
+  return query.startsWith("?") ? `${baseRoute}${query}` : `${baseRoute}?${query}`;
 };
 
-export const getPageFromItemId = (itemsIds: string[], currentItemId: string): number => {
-  const currentIndex: number = itemsIds.findIndex((item) => item === currentItemId);
-  return Math.floor(currentIndex / DEFAULT_DATASET_TABLE_SIZE) + 1;
+/**
+ * Query-param keys that describe the explorer's active result set (filter, sort
+ * and search). `page`/`size` are intentionally excluded — an item's page is
+ * derived from its position within the filtered set, not carried around.
+ */
+export const EXPLORER_QUERY_KEYS = ["filter", "q", "sort", "order", "where"] as const;
+
+/** Keep only the result-set-defining params (filter/sort/search) from a set. */
+export const pickExplorerQuery = (params: URLSearchParams): URLSearchParams => {
+  const picked = new URLSearchParams();
+  for (const key of EXPLORER_QUERY_KEYS) {
+    for (const value of params.getAll(key)) {
+      if (value !== "") picked.append(key, value);
+    }
+  }
+  return picked;
+};
+
+/** 1-based page number for a 1-based position within the result set. */
+export const getPageFromPosition = (
+  position: number,
+  pageSize: number = DEFAULT_DATASET_TABLE_SIZE,
+): number => {
+  return Math.floor((position - 1) / Math.max(pageSize, 1)) + 1;
 };
 
 export const getRouteSearchParams = (url: URL): URLSearchParams => {

@@ -238,6 +238,28 @@ def _deserialize_field(base_type: type[LanceModel], field_name: str, payload: di
 # ---------------------------------------------------------------------------
 
 
+def serialize_all_fields(schema: type[LanceModel]) -> dict[str, dict[str, Any]]:
+    """Serialize every field of a schema, including inherited base fields.
+
+    Unlike `_serialize_table_schema`, which emits only the fields that differ
+    from the canonical base (so `id`/`split`/`status`/`created_at`/`updated_at`
+    are omitted), this returns the full column set with its `{type, collection,
+    required, default?}` descriptor for each field. The explorer's filter
+    catalogue needs the base fields to expose them as filterable/sortable
+    columns.
+
+    Args:
+        schema: The schema class to serialize.
+
+    Returns:
+        Mapping of field name to its serialized descriptor.
+    """
+    return {
+        field_name: _serialize_field(field_name, field_info)
+        for field_name, field_info in schema.model_fields.items()  # type: ignore[attr-defined]
+    }
+
+
 def _serialize_table_schema(schema: type[LanceModel]) -> dict[str, Any]:
     """Serialize a LanceModel schema to a JSON-compatible dict.
 

@@ -15,14 +15,14 @@ export const load: LayoutLoad = async ({ params, parent }) => {
   // eslint-disable-next-line @typescript-eslint/only-throw-error
   if (!dataset) throw error(404, `Dataset "${params.datasetId}" not found`);
 
-  const [ds, itemIds] = await Promise.all([
+  const [ds, filterSchema] = await Promise.all([
     api.getDataset(params.datasetId),
-    api.listAllRecordIds(params.datasetId),
+    api.getFilterSchema(params.datasetId),
   ]);
   return {
     dataset,
     schema: ds.schema,
     featureValues: ds.featureValues,
-    itemIds,
+    filterSchema,
   };
 };

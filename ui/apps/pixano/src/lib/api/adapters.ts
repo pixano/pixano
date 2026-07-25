@@ -172,19 +172,11 @@ function inferColumnType(value: unknown): string {
 export function toDatasetBrowser(
   datasetId: string,
   records: PaginatedResponse<RecordResponse>,
-  sort?: { col: string; order: string },
 ): DatasetBrowser {
-  const items = [...records.items];
-  if (sort?.col) {
-    items.sort((left, right) => {
-      const leftValue = left[sort.col];
-      const rightValue = right[sort.col];
-      const leftStr = leftValue == null ? "" : String(leftValue as string | number);
-      const rightStr = rightValue == null ? "" : String(rightValue as string | number);
-      const cmp = leftStr.localeCompare(rightStr);
-      return sort.order === "desc" ? -cmp : cmp;
-    });
-  }
+  // Rows arrive already sorted by the backend (server-side ORDER BY with a
+  // stable id tie-break) — no client-side reordering, which was only ever
+  // correct within a single page.
+  const items = records.items;
 
   const columnsMap = new Map<string, string>();
   const viewColumns = new Map<string, string>();
@@ -235,7 +227,6 @@ export function toDatasetBrowser(
       page_size: records.limit,
       total_size: records.total,
     },
-    semantic_search: [],
   };
 }
 
