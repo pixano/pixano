@@ -38,7 +38,7 @@ _MANIFEST_TYPES: dict[str, type] = {
     "int": int,
     "memoryview": memoryview,
     "str": str,
-    "NDArrayFloat": NDArrayFloat
+    "NDArrayFloat": NDArrayFloat,
 }
 
 
