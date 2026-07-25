@@ -23,11 +23,13 @@ export const getWorkspaceRoute = (datasetId: string, itemId: string, query?: str
 };
 
 /**
- * Query-param keys that describe the explorer's active result set (filter, sort
- * and search). `page`/`size` are intentionally excluded — an item's page is
- * derived from its position within the filtered set, not carried around.
+ * Query-param keys that describe the explorer's active result set and its
+ * presentation (filter, sort, search, page size). `page` is intentionally
+ * excluded — an item's page is derived from its position within the filtered
+ * set (`getPageFromPosition`), not carried around; `size` IS carried so that
+ * derivation matches the explorer's pagination.
  */
-export const EXPLORER_QUERY_KEYS = ["filter", "q", "sort", "order", "where"] as const;
+export const EXPLORER_QUERY_KEYS = ["filter", "q", "sort", "order", "where", "size"] as const;
 
 /** Keep only the result-set-defining params (filter/sort/search) from a set. */
 export const pickExplorerQuery = (params: URLSearchParams): URLSearchParams => {

@@ -27,19 +27,39 @@ export const load: PageLoad = async ({ params, url }) => {
   // Semantic search is a separate ranked endpoint (not paginated); a text query or a
   // find-similar target activates it. Structured filter chips apply as a prefilter.
   if ((semantic && q) || similarTo) {
-    const browserData = await searchRecords(params.datasetId, {
-      model: model || undefined,
-      text: similarTo ? undefined : q,
-      similarTo: similarTo || undefined,
-      k: SEMANTIC_LIMIT,
-      filters,
-      where: where || undefined,
-    });
-    return {
-      browserData,
-      pagination: { currentPage: 1, size: SEMANTIC_LIMIT, sort, order, filters, q, where },
-      semantic: { active: true, similarTo, model },
-    };
+    try {
+      const browserData = await searchRecords(params.datasetId, {
+        model: model || undefined,
+        text: similarTo ? undefined : q,
+        similarTo: similarTo || undefined,
+        k: SEMANTIC_LIMIT,
+        filters,
+        where: where || undefined,
+      });
+      return {
+        browserData,
+        pagination: { currentPage: 1, size: SEMANTIC_LIMIT, sort, order, filters, q, where },
+        semantic: { active: true, similarTo, model },
+        searchError: "",
+      };
+    } catch {
+      // A failed semantic search (e.g. unreachable embedding provider) degrades to the
+      // regular listing with an inline banner instead of the route error page.
+      const browserData = await listRecords(params.datasetId, {
+        offset: 0,
+        limit: size,
+        filters,
+        where: where || undefined,
+        order,
+      });
+      return {
+        browserData,
+        pagination: { currentPage: 1, size, sort: "", order, filters, q, where },
+        semantic: { active: false, similarTo: "", model: "" },
+        searchError:
+          "Semantic search failed — showing the unranked list. Check the inference server connection.",
+      };
+    }
   }
 
   const browserData = await listRecords(params.datasetId, {
@@ -56,5 +76,6 @@ export const load: PageLoad = async ({ params, url }) => {
     browserData,
     pagination: { currentPage, size, sort, order, filters, q, where },
     semantic: { active: false, similarTo: "", model: "" },
+    searchError: "",
   };
 };

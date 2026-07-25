@@ -9,7 +9,6 @@ License: CECILL-C
   import type { PageProps } from "./$types";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { WarningModal } from "$lib/ui";
   import {
     getExplorerRoute,
     getRouteSearchParams,
@@ -18,17 +17,6 @@ License: CECILL-C
   } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
-
-  let showNoRowModal = $state(false);
-
-  $effect(() => {
-    const bd = data.browserData;
-    if (!bd?.id) {
-      showNoRowModal = true;
-      return;
-    }
-    showNoRowModal = false;
-  });
 
   function updateSearchParams(updates: Record<string, string | string[] | undefined>) {
     const params = getRouteSearchParams(page.url);
@@ -61,18 +49,12 @@ License: CECILL-C
   <DatasetExplorer
     selectedDataset={data.browserData}
     filterSchema={data.filterSchema}
+    splitCounts={data.splitCounts ?? []}
     semanticActive={data.semantic?.active ?? false}
     similarTo={data.semantic?.similarTo ?? ""}
+    searchError={data.searchError ?? ""}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}
-  />
-{/if}
-{#if showNoRowModal}
-  <WarningModal
-    message="No rows found. Keeping previous state."
-    onConfirm={() => {
-      showNoRowModal = false;
-    }}
   />
 {/if}
