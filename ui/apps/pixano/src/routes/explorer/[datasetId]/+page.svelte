@@ -62,6 +62,7 @@ License: CECILL-C
     selectedDataset={data.browserData}
     filterSchema={data.filterSchema}
     semanticActive={data.semantic?.active ?? false}
+    similarTo={data.semantic?.similarTo ?? ""}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}

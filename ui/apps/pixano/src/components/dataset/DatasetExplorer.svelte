@@ -15,7 +15,7 @@ License: CECILL-C
   import { invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import { computeEmbeddings, getIoJob, listInferenceModels } from "$lib/api";
-  import type { FilterSchemaResponse } from "$lib/api/restTypes";
+  import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
@@ -24,6 +24,8 @@ License: CECILL-C
     selectedDataset: DatasetBrowser;
     filterSchema: FilterSchemaResponse;
     semanticActive?: boolean;
+    /** Record id the current ranked view is "similar to" (find-similar mode). */
+    similarTo?: string;
     onSelectItem?: (itemId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
@@ -41,25 +43,40 @@ License: CECILL-C
     selectedDataset,
     filterSchema,
     semanticActive = false,
+    similarTo = "",
     onSelectItem,
     onNavigate,
     pagination,
   }: Props = $props();
   const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
+  const semanticAvailable = $derived((filterSchema.search?.modes ?? []).includes("semantic"));
 
   let computing = $state(false);
   let showConnectModal = $state(false);
+  let computeJob = $state<IoJobResponse | null>(null);
+  let computeError = $state("");
 
   async function runCompute(): Promise<boolean> {
     // Returns false when no embedding model is reachable (caller prompts to connect).
     const models = await listInferenceModels();
     const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
     if (embeddingModels.length === 0) return false;
+    computeError = "";
     const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
-    for (;;) {
-      const job = await getIoJob(jobId);
-      if (["done", "error", "cancelled"].includes(job.status)) break;
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      for (;;) {
+        const job = await getIoJob(jobId);
+        computeJob = job;
+        if (["done", "error", "cancelled"].includes(job.status)) {
+          if (job.status === "error") {
+            computeError = job.error?.message ?? "Embedding computation failed.";
+          }
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    } finally {
+      computeJob = null;
     }
     await invalidateAll();
     return true;
@@ -93,6 +110,23 @@ License: CECILL-C
       similar_to: undefined, // a text search or filter change exits find-similar mode
       ...(semantic ? { sort: undefined, order: undefined } : {}),
     });
+  }
+
+  function handleFindSimilar(recordId: string) {
+    // Ranked by similarity to the record: keep filter chips (they prefilter), clear the
+    // text query, semantic-text mode, and any column sort.
+    onNavigate({
+      page: "1",
+      similar_to: recordId,
+      q: undefined,
+      semantic: undefined,
+      sort: undefined,
+      order: undefined,
+    });
+  }
+
+  function handleClearSimilar() {
+    onNavigate({ page: "1", similar_to: undefined });
   }
 
   async function handleCompute() {
@@ -144,9 +178,13 @@ License: CECILL-C
           q={pagination.q}
           total={selectedDataset.pagination.total_size}
           {semanticActive}
+          {similarTo}
           {computing}
+          computeProgress={computeJob?.progress ?? null}
+          {computeError}
           onApply={handleApply}
           onCompute={handleCompute}
+          onClearSimilar={handleClearSimilar}
         />
       </div>
 
@@ -166,6 +204,7 @@ License: CECILL-C
                 activeSort={{ col: pagination.sort, order: pagination.order }}
                 onSelectItem={handleSelectItem}
                 onColsort={handleColSort}
+                onFindSimilar={semanticAvailable ? handleFindSimilar : undefined}
               />
             {/key}
           </div>
