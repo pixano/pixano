@@ -8,6 +8,7 @@ License: CECILL-C
   // Imports
   import { CircleNotch } from "phosphor-svelte";
 
+  import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import RecordFilterBar from "./RecordFilterBar.svelte";
   import { Table } from "./table";
@@ -47,6 +48,22 @@ License: CECILL-C
   const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
 
   let computing = $state(false);
+  let showConnectModal = $state(false);
+
+  async function runCompute(): Promise<boolean> {
+    // Returns false when no embedding model is reachable (caller prompts to connect).
+    const models = await listInferenceModels();
+    const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
+    if (embeddingModels.length === 0) return false;
+    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
+    for (;;) {
+      const job = await getIoJob(jobId);
+      if (["done", "error", "cancelled"].includes(job.status)) break;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    await invalidateAll();
+    return true;
+  }
 
   // Remount the table when the dataset, its column set, or the active sort
   // changes: the table builds its column defs and initial sort state once at
@@ -82,20 +99,19 @@ License: CECILL-C
     if (computing) return;
     computing = true;
     try {
-      const models = await listInferenceModels();
-      const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
-      if (embeddingModels.length === 0) {
-        console.error("No embedding model available on the connected inference server");
-        return;
-      }
-      const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
-      // Poll the shared job until it finishes, then reload so /filters advertises semantic search.
-      for (;;) {
-        const job = await getIoJob(jobId);
-        if (["done", "error", "cancelled"].includes(job.status)) break;
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-      }
-      await invalidateAll();
+      // If no embedding model is reachable, the server isn't connected — prompt for it.
+      const ok = await runCompute();
+      if (!ok) showConnectModal = true;
+    } finally {
+      computing = false;
+    }
+  }
+
+  async function handleConnected() {
+    showConnectModal = false;
+    computing = true;
+    try {
+      await runCompute();
     } finally {
       computing = false;
     }
@@ -168,3 +184,7 @@ License: CECILL-C
     {/if}
   </div>
 </div>
+
+{#if showConnectModal}
+  <ConnectToServerModal onClose={() => (showConnectModal = false)} onConnected={handleConnected} />
+{/if}
