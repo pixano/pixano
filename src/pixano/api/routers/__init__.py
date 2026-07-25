@@ -17,6 +17,7 @@ from pixano.api.routers.datasets import router as datasets_router
 from pixano.api.routers.embeddings import router as embeddings_router
 from pixano.api.routers.entities import router as entities_router
 from pixano.api.routers.entity_dynamic_states import router as entity_dynamic_states_router
+from pixano.api.routers.explorer import router as explorer_router
 from pixano.api.routers.inference import app_router as inference_app_router
 from pixano.api.routers.inference import router as inference_router
 from pixano.api.routers.keypoints import router as keypoints_router
@@ -55,6 +56,7 @@ API_ROUTERS: tuple[APIRouter, ...] = (
     data_io_router,
     legacy_import_router,
     datasets_router,
+    explorer_router,
     inference_app_router,
     inference_router,
     *RESOURCE_ROUTERS,

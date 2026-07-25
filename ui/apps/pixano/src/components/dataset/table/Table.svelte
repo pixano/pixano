@@ -16,6 +16,7 @@ License: CECILL-C
   // Pixano Core Imports
   import { Button, Checkbox } from "bits-ui";
   import { CaretDoubleDown, CaretDoubleUp, CaretUpDown, Check } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import SortableList from "svelte-sortable-list";
 
   import { createSvelteTable } from "./createSvelteTable.svelte";
@@ -27,12 +28,12 @@ License: CECILL-C
   interface Props {
     // Exports
     items: TableData;
-    disableSort?: boolean;
+    activeSort?: { col: string; order: string };
     onColsort?: (sortKeys: { id: string; order: string }[]) => void;
     onSelectItem?: (id: string) => void;
   }
 
-  let { items, disableSort = false, onColsort, onSelectItem }: Props = $props();
+  let { items, activeSort, onColsort, onSelectItem }: Props = $props();
 
   // Build column definitions from items.columns
   const buildColumns = (): ColumnDef<TableRow>[] => {
@@ -66,9 +67,15 @@ License: CECILL-C
     return [...highPriority, ...lowPriority];
   };
 
-  // Table state
+  // Table state — reflect the server-side sort supplied by the explorer. Seeded
+  // once; the parent remounts this table (keyed on the active sort) when it
+  // changes, so the caret stays in sync with the server order.
   const initialColumnOrder = buildInitialColumnOrder();
-  let sorting = $state<SortingState>([{ id: "created_at", desc: false }]);
+  let sorting = $state<SortingState>(
+    untrack(() =>
+      activeSort?.col ? [{ id: activeSort.col, desc: activeSort.order === "desc" }] : [],
+    ),
+  );
   let columnOrder = $state<ColumnOrderState>(initialColumnOrder);
   let columnVisibility = $state<VisibilityState>({});
 
@@ -117,15 +124,11 @@ License: CECILL-C
 
   const handleSort = (colId: string) => {
     const colDef = table.getColumn(colId);
-    if (!colDef?.getCanSort() || disableSort) return;
+    if (!colDef?.getCanSort()) return;
 
     colDef.toggleSorting();
 
-    // If no sorts remain, restore default
-    if (sorting.length === 0) {
-      sorting = [{ id: "created_at", desc: false }];
-    }
-
+    // Emit the new sort (empty list clears it → the backend falls back to id asc).
     onColsort?.(sorting.map((s) => ({ id: s.id, order: s.desc ? "desc" : "asc" })));
   };
 
@@ -239,7 +242,7 @@ License: CECILL-C
                 {#if !header.isPlaceholder}
                   <FlexRender content={header.column.columnDef.header} />
                 {/if}
-                {#if !disableSort && header.column.getCanSort()}
+                {#if header.column.getCanSort()}
                   {#if header.column.getIsSorted() === "asc"}
                     <CaretDoubleDown weight="regular" />
                   {:else if header.column.getIsSorted() === "desc"}

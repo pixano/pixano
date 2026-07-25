@@ -10,6 +10,7 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import { Toolbar } from "../workspace";
+  import RecordStatusControl from "./RecordStatusControl.svelte";
   import { navigating } from "$app/state";
   import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { saveData } from "$lib/stores/workspaceStores.svelte";
@@ -140,7 +141,10 @@ License: CECILL-C
       </div>
 
       <!-- RIGHT: Action Group -->
-      <div class="flex items-center justify-end min-w-[60px]">
+      <div class="flex items-center justify-end gap-3 min-w-[60px]">
+        {#if currentDatasetStore.value}
+          <RecordStatusControl datasetId={currentDatasetStore.value.id} recordId={currentItemId} />
+        {/if}
         <IconButton
           disabled={saveData.value.length === 0}
           onclick={handleSave}

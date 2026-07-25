@@ -11,18 +11,17 @@ License: CECILL-C
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import {
-    currentDatasetStore,
-    currentItemSaveCoordinator,
-    datasetItemIds,
-  } from "$lib/stores/appStores.svelte";
+  import * as api from "$lib/api";
+  import type { NeighborsResponse } from "$lib/api/restTypes";
+  import { currentDatasetStore, currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { PrimaryButton, UnsavedChangesDialog } from "$lib/ui";
   import {
     EXPLORER_ROUTE_ID,
-    findNeighborItemId,
     getExplorerRoute,
-    getPageFromItemId,
+    getPageFromPosition,
+    getRouteSearchParams,
     getWorkspaceRoute,
+    pickExplorerQuery,
     WORKSPACE_ROUTE_ID,
   } from "$lib/utils/routes";
 
@@ -50,32 +49,61 @@ License: CECILL-C
     currentItemSaveCoordinator.resetForItemChange();
   });
 
+  // The active filter/sort/search, read from the workspace route's hash query.
+  const explorerQuery = () => {
+    const params = getRouteSearchParams(page.url);
+    return {
+      filters: params.getAll("filter").filter((value) => value !== ""),
+      q: params.get("q") ?? undefined,
+      sort: params.get("sort") ?? undefined,
+      order: params.get("order") ?? undefined,
+      where: params.get("where") ?? undefined,
+    };
+  };
+
+  // Neighbors within the current result set, fetched server-side so item-to-item
+  // navigation honors the explorer's filter and sort (not the full dataset).
+  let neighbors = $state<NeighborsResponse | null>(null);
+  $effect(() => {
+    const datasetId = currentDatasetStore.value?.id;
+    const itemId = currentItemId;
+    if (!isWorkspaceRoute || !datasetId || !itemId) {
+      neighbors = null;
+      return;
+    }
+    const query = explorerQuery();
+    let cancelled = false;
+    void api.getNeighbors(datasetId, itemId, query).then((result) => {
+      if (!cancelled) neighbors = result;
+    });
+    return () => {
+      cancelled = true;
+    };
+  });
+
   const getWorkspaceRecordDisplayCount = () => {
-    const index = datasetItemIds.value.indexOf(currentItemId);
-    if (index === -1) return "0 of 0";
-    return `${index + 1} of ${datasetItemIds.value.length}`;
+    if (!neighbors || neighbors.position == null) return "0 of 0";
+    return `${neighbors.position} of ${neighbors.total}`;
   };
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    if (!currentDatasetStore.value) return;
+    if (!currentDatasetStore.value || !neighbors) return;
 
-    // Find the neighbor item id
-    const neighborId = findNeighborItemId(datasetItemIds.value, direction, currentItemId);
+    const neighborId = direction === "previous" ? neighbors.prev : neighbors.next;
+    if (!neighborId) return; // at the start/end of the filtered result set
 
-    // If a neighbor item has been found
-    if (neighborId) {
-      const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId);
+    const query = pickExplorerQuery(getRouteSearchParams(page.url)).toString();
+    const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId, query);
 
-      // Ask for confirmation if modifications have been made to the item
-      if (saveState.isDirty) {
-        pendingNavigationRoute = route;
-        return;
-      }
-
-      // Go to next/previous item
-      await goto(route);
+    // Ask for confirmation if modifications have been made to the item
+    if (saveState.isDirty) {
+      pendingNavigationRoute = route;
+      return;
     }
+
+    // Go to next/previous item
+    await goto(route);
   };
 
   const handleSave = () => {
@@ -109,12 +137,14 @@ License: CECILL-C
     }
   };
 
-  // Return to the previous page
+  // Return to the explorer, landing on the page that contains this item within
+  // the active filter/sort (derived from its position in the result set).
   const handleReturnToPreviousPage = async () => {
     if (!currentDatasetStore.value) return;
     if (currentItemId) {
-      const targetPage = getPageFromItemId(datasetItemIds.value, currentItemId);
-      await navigateTo(getExplorerRoute(currentDatasetStore.value.id, `page=${targetPage}`));
+      const params = pickExplorerQuery(getRouteSearchParams(page.url));
+      params.set("page", String(getPageFromPosition(neighbors?.position ?? 1)));
+      await navigateTo(getExplorerRoute(currentDatasetStore.value.id, params.toString()));
     } else await navigateTo("/");
   };
 

@@ -12,7 +12,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
 
 import lancedb
 import PIL.Image
@@ -539,6 +539,7 @@ class Dataset:
         record_ids: list[str] | None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> list[LanceModel]: ...
     @overload
     def get_data(
@@ -551,6 +552,7 @@ class Dataset:
         record_ids: None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> LanceModel | None: ...
 
     def get_data(
@@ -563,6 +565,7 @@ class Dataset:
         record_ids: list[str] | None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> list[LanceModel] | LanceModel | None:
         """Read data from a table.
 
@@ -577,6 +580,9 @@ class Dataset:
             record_ids: Record ids to filter by (filters on ``record_id`` column).
             sortcol: column to order by.
             order: sort order (asc or desc).
+            force_full_scan: Force the safe full-scan-then-slice path (for a
+                ``where`` using an operator a scalar index can't serve, e.g. ``!=``
+                or ``LIKE``). See `TableQueryBuilder.force_full_scan`.
 
         Returns:
             List of values.
@@ -609,6 +615,7 @@ class Dataset:
                     query = (
                         TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
                         .where(where)
+                        .force_full_scan(force_full_scan)
                         .limit(limit)
                         .offset(skip)
                     )
@@ -625,11 +632,21 @@ class Dataset:
                 query = (
                     TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
                     .where(where)
+                    .force_full_scan(force_full_scan)
                     .limit(limit)
                     .offset(skip)
                 )
             if sortcol is not None and order is not None:
-                query = query.order_by(sortcol, order == "desc")
+                descending = order == "desc"
+                # Append `id` as a stable final tie-break so pagination over a
+                # non-unique sort column is deterministic — rows that are equal
+                # on `sortcol` keep a fixed order across pages. `id` is unique
+                # and BTREE-indexed. Skip when already sorting by `id`, or for
+                # the `#count-join` ordering (which requires a single order key).
+                if sortcol == "id" or sortcol.startswith("#"):
+                    query = query.order_by(sortcol, descending)
+                else:
+                    query = query.order_by([sortcol, "id"], [descending, False])
         else:
             sql_ids = to_sql_list(ids)
             if where is not None:
@@ -895,6 +912,62 @@ class Dataset:
         if sortcol is not None and order is not None:
             query = query.order_by(order_by=sortcol, descending=order == "desc")
         return [row["id"] for row in query.to_list()]
+
+    def get_neighbors(
+        self,
+        record_id: str,
+        table_name: str = SchemaGroup.RECORD.value,
+        where: str | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
+    ) -> dict[str, Any]:
+        """Locate a record within a filtered, sorted result set and its neighbors.
+
+        Powers item-to-item navigation in the explorer: given the same filter and
+        sort the table view uses, return the ids immediately before and after
+        ``record_id`` and its 1-based position, so previous/next stay inside the
+        current result set instead of walking the whole dataset.
+
+        The scan projects only the ``id`` column (ordered with an ``id`` tie-break
+        for a stable order) and returns a tiny payload. For a record that is not
+        in the filtered set, ``prev``/``next``/``position`` are ``None``.
+
+        Args:
+            record_id: The record to locate.
+            table_name: Table to navigate (defaults to the record table).
+            where: Where clause matching the explorer's active filter.
+            sortcol: Column to order by (defaults to ``id``).
+            order: Sort order, ``"asc"`` or ``"desc"`` (defaults to ``"asc"``).
+
+        Returns:
+            ``{"prev": str | None, "next": str | None, "position": int | None,
+            "total": int}``.
+        """
+        table = self.open_table(table_name)
+        total = table.count_rows(where) if where else table.count_rows()
+
+        sortcol = sortcol or "id"
+        descending = order == "desc"
+        query = TableQueryBuilder(table, self._db_connection).select(["id"])
+        if where is not None:
+            query = query.where(where)
+        if sortcol == "id":
+            query = query.order_by("id", descending)
+        else:
+            query = query.order_by([sortcol, "id"], [descending, False])
+        ordered_ids = [row["id"] for row in query.to_list()]
+
+        try:
+            index = ordered_ids.index(record_id)
+        except ValueError:
+            return {"prev": None, "next": None, "position": None, "total": total}
+
+        return {
+            "prev": ordered_ids[index - 1] if index > 0 else None,
+            "next": ordered_ids[index + 1] if index < len(ordered_ids) - 1 else None,
+            "position": index + 1,
+            "total": total,
+        }
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the view embeddings via the embedding function stored in the table metadata.
@@ -1247,6 +1320,7 @@ class Dataset:
         "frame_index": "BTREE",
         "logical_name": "BITMAP",
         "split": "BITMAP",
+        "status": "BITMAP",
         "source_type": "BITMAP",
     }
 

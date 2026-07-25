@@ -10,7 +10,12 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { WarningModal } from "$lib/ui";
-  import { getExplorerRoute, getRouteSearchParams, getWorkspaceRoute } from "$lib/utils/routes";
+  import {
+    getExplorerRoute,
+    getRouteSearchParams,
+    getWorkspaceRoute,
+    pickExplorerQuery,
+  } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
 
@@ -25,28 +30,37 @@ License: CECILL-C
     showNoRowModal = false;
   });
 
-  function updateSearchParams(updates: Record<string, string | undefined>) {
+  function updateSearchParams(updates: Record<string, string | string[] | undefined>) {
     const params = getRouteSearchParams(page.url);
     for (const [key, value] of Object.entries(updates)) {
-      if (value === undefined || value === "") params.delete(key);
-      else params.set(key, value);
+      params.delete(key);
+      if (value === undefined || value === "") continue;
+      if (Array.isArray(value)) {
+        for (const item of value) if (item !== "") params.append(key, item);
+      } else {
+        params.set(key, value);
+      }
     }
     return params.toString();
   }
 
-  function navigateTable(updates: Record<string, string | undefined>) {
+  function navigateTable(updates: Record<string, string | string[] | undefined>) {
     const qs = updateSearchParams(updates);
     void goto(getExplorerRoute(data.dataset.id, qs), { replaceState: false, noScroll: true });
   }
 
   const handleSelectItem = async (itemId: string) => {
-    await goto(getWorkspaceRoute(data.dataset.id, itemId));
+    // Carry the active filter/sort/search into the workspace so item-to-item
+    // navigation stays within the current result set.
+    const query = pickExplorerQuery(getRouteSearchParams(page.url)).toString();
+    await goto(getWorkspaceRoute(data.dataset.id, itemId, query));
   };
 </script>
 
 {#if data.browserData?.table_data}
   <DatasetExplorer
     selectedDataset={data.browserData}
+    filterSchema={data.filterSchema}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}

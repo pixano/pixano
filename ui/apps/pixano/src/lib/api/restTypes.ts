@@ -51,6 +51,38 @@ export interface SchemaFieldDescriptor {
   default?: unknown;
 }
 
+export interface ColumnDescriptorResponse {
+  name: string;
+  type: string;
+  collection: boolean;
+  source: string;
+  filterable: boolean;
+  sortable: boolean;
+  searchable: boolean;
+  indexed: boolean;
+  operators: string[];
+  values?: string[] | null;
+  values_complete: boolean;
+}
+
+export interface SearchCapabilitiesResponse {
+  modes: string[];
+  models: string[];
+}
+
+export interface FilterSchemaResponse {
+  table: string;
+  columns: ColumnDescriptorResponse[];
+  search: SearchCapabilitiesResponse;
+}
+
+export interface NeighborsResponse {
+  prev?: string | null;
+  next?: string | null;
+  position?: number | null;
+  total: number;
+}
+
 export interface SchemaDescriptor {
   base?: string;
   name?: string;
