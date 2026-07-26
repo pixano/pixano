@@ -18,12 +18,9 @@ License: CECILL-C
     Link,
     Pencil,
     Quotes,
-    Robot,
     Square,
-    Target,
     TextT,
     Trash,
-    User,
   } from "phosphor-svelte";
   import { cubicOut } from "svelte/easing";
   import { slide } from "svelte/transition";
@@ -31,6 +28,7 @@ License: CECILL-C
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
+  import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
   import {
     annotations,
     current_itemBBoxes,
@@ -70,27 +68,6 @@ License: CECILL-C
     [BaseSchema.TextSpan]: "Text Span",
     [BaseSchema.Tracklet]: "Track",
   };
-
-  // ─── Source name color coding ─────────────────────────────────────────────
-  function getSourceStyle(sourceName: string): { class: string; icon: typeof User } {
-    switch (sourceName) {
-      case "Pixano":
-        return { class: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: User };
-      case "Pre-annotation":
-        return { class: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Robot };
-      case "Ground Truth":
-        return { class: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: Target };
-      default:
-        return { class: "bg-muted text-muted-foreground border-border/50", icon: Robot };
-    }
-  }
-
-  // ─── Confidence color coding ──────────────────────────────────────────────
-  function getConfidenceStyle(confidence: number): string {
-    if (confidence >= 0.8) return "bg-emerald-500/15 text-emerald-400";
-    if (confidence >= 0.5) return "bg-amber-500/15 text-amber-400";
-    return "bg-red-500/15 text-red-400";
-  }
 
   // ─── Props ────────────────────────────────────────────────────────────────
   interface Props {

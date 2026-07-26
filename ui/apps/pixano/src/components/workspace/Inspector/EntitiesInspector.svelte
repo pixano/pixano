@@ -372,7 +372,7 @@ License: CECILL-C
               </svg>
             </div>
             <p class="text-xs font-medium text-muted-foreground/60">
-              Select an entity to lock its preview here
+              Select an object to lock its preview here
             </p>
           </div>
         {/if}
@@ -395,11 +395,11 @@ License: CECILL-C
         <div
           class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center text-sm text-muted-foreground"
         >
-          Entity exploration is temporarily unavailable while pre-annotation is active.
+          Object exploration is temporarily unavailable while pre-annotation is active.
         </div>
       {:else if allTopEntities.length === 0}
         <div class="rounded-xl border border-border/50 bg-muted/30 p-4 text-center space-y-1">
-          <p class="text-sm font-medium">No entities match the current query</p>
+          <p class="text-sm font-medium">No objects match the current query</p>
           <p class="text-xs text-muted-foreground">
             Adjust search text, confidence threshold, or advanced rules.
           </p>

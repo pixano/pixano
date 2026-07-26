@@ -43,8 +43,8 @@ License: CECILL-C
 
   const modelName = $derived(sourceLabel?.name ?? OTHER);
   const sectionTitle = $derived.by(() => {
-    if (!sourceLabel) return "Entity Explorer";
-    if (sourceLabel.kind.toLowerCase() === "global") return "Entity Explorer";
+    if (!sourceLabel) return "Objects";
+    if (sourceLabel.kind.toLowerCase() === "global") return "Objects";
     return sourceLabel.kind === "ground_truth"
       ? GROUND_TRUTH
       : `${sourceLabel.kind} - ${sourceLabel.name}`;
@@ -147,14 +147,14 @@ License: CECILL-C
       <Popover.Root>
         <Popover.Trigger
           type="button"
-          class="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          class="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           title="Search help"
           aria-label="Search help"
         >
           <Question class="h-4 w-4" />
         </Popover.Trigger>
         <Popover.Content
-          class="z-[120] w-80 rounded-lg border border-border bg-card p-3 text-foreground shadow-2xl ring-1 ring-border/70 outline-none space-y-2.5"
+          class="z-[120] w-80 p-3 text-popover-foreground outline-none space-y-2.5 rounded-2xl border border-border/50 bg-popover/95 shadow-elevation-2 backdrop-blur-md"
         >
           <div class="space-y-0.5">
             <p class="text-xs font-semibold tracking-wide text-foreground">Search help</p>

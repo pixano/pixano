@@ -31,6 +31,7 @@ License: CECILL-C
     setEntityDisplayControl as setDisplayCtrl,
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
+  import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -96,16 +97,6 @@ License: CECILL-C
     "start_timestamp",
     "end_timestamp",
   ]);
-
-  // ─── Annotation type display metadata ───────────────────────────────────────
-  const TYPE_META: Record<string, { label: string; color: string }> = {
-    [BaseSchema.BBox]: { label: "BBox", color: "bg-blue-500/15 text-blue-400" },
-    [BaseSchema.Mask]: { label: "Mask", color: "bg-purple-500/15 text-purple-400" },
-    [BaseSchema.MultiPath]: { label: "MultiPath", color: "bg-orange-500/15 text-orange-400" },
-    [BaseSchema.Keypoints]: { label: "Keypoints", color: "bg-teal-500/15 text-teal-400" },
-    [BaseSchema.TextSpan]: { label: "Text", color: "bg-amber-500/15 text-amber-400" },
-    [BaseSchema.Tracklet]: { label: "Track", color: "bg-cyan-500/15 text-cyan-400" },
-  };
 
   interface Props {
     entity: Entity;
@@ -482,12 +473,12 @@ License: CECILL-C
             <div class="flex flex-wrap gap-1">
               {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
                 {@const typedSchema = schema as BaseSchema}
-                {@const meta = TYPE_META[schema]}
+                {@const meta = ANNOTATION_TYPE_META[schema]}
                 {#if meta}
                   <span
                     class={cn(
                       "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
-                      meta.color,
+                      meta.badgeClass,
                     )}
                   >
                     {#if typedSchema === BaseSchema.BBox}
@@ -516,7 +507,7 @@ License: CECILL-C
       <div class="flex-shrink-0 flex items-center justify-end gap-1">
         <IconButton
           onclick={() => handleSetDisplayControl("hidden", isVisible)}
-          tooltipContent={isVisible ? "Hide entity" : "Show entity"}
+          tooltipContent={isVisible ? "Hide object" : "Show object"}
           class="h-7 w-7 rounded-md"
         >
           {#if isVisible}
@@ -551,7 +542,7 @@ License: CECILL-C
         {/if}
 
         <IconButton
-          tooltipContent="Delete entity"
+          tooltipContent="Delete object"
           redconfirm
           onclick={() => deleteEntity(entity)}
           class="h-7 w-7 rounded-md text-muted-foreground hover:text-destructive"

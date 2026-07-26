@@ -6,6 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Select } from "bits-ui";
+  import { CaretDown, Check } from "phosphor-svelte";
 
   import {
     getOperatorsForType,
@@ -42,14 +44,6 @@ License: CECILL-C
     }
   };
 
-  const handleTableChange = () => {
-    syncFieldConfig();
-  };
-
-  const handleFieldChange = () => {
-    syncFieldConfig();
-  };
-
   const handleBoolValClick = (b: boolean) => {
     filter.value = b;
   };
@@ -58,6 +52,13 @@ License: CECILL-C
 
   // Synchronize field/operator state from initial table selection
   syncFieldConfig();
+
+  const triggerClass =
+    "inline-flex h-8 items-center justify-between gap-1.5 rounded-lg border border-border/60 bg-background px-2 text-xs font-medium shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const contentClass =
+    "z-[130] max-h-64 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md";
+  const itemClass =
+    "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
 </script>
 
 <div class="rounded-lg border border-border/40 bg-background/70 p-2 space-y-2">
@@ -70,43 +71,101 @@ License: CECILL-C
       </span>
     {/if}
 
-    <select
-      title={`Select table (${filter.table})`}
-      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
-      bind:value={filter.table}
-      onchange={handleTableChange}
+    <Select.Root
+      type="single"
+      value={filter.table}
+      onValueChange={(next: string) => {
+        if (!next) return;
+        filter.table = next;
+        syncFieldConfig();
+      }}
     >
-      {#each tableColumns as table}
-        <option value={table}>
-          {table}
-        </option>
-      {/each}
-    </select>
+      <Select.Trigger aria-label="Filter table" class={triggerClass}>
+        {#snippet children()}
+          <span class="truncate">{filter.table}</span>
+          <CaretDown size={11} class="shrink-0 text-muted-foreground" />
+        {/snippet}
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content sideOffset={6} class={contentClass}>
+          {#each tableColumns as table (table)}
+            <Select.Item value={table} label={table} class={itemClass}>
+              {#snippet children()}
+                <Check
+                  size={11}
+                  class={filter.table === table ? "text-primary" : "text-transparent"}
+                />
+                {table}
+              {/snippet}
+            </Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
 
-    <select
-      title={`Select field (${filter.name})`}
-      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
-      bind:value={filter.name}
-      onchange={handleFieldChange}
+    <Select.Root
+      type="single"
+      value={filter.name}
+      onValueChange={(next: string) => {
+        if (!next) return;
+        filter.name = next;
+        syncFieldConfig();
+      }}
     >
-      {#each fieldColumns[filter.table] as { name }}
-        <option value={name}>
-          {name}
-        </option>
-      {/each}
-    </select>
+      <Select.Trigger aria-label="Filter field" class={triggerClass}>
+        {#snippet children()}
+          <span class="truncate">{filter.name}</span>
+          <CaretDown size={11} class="shrink-0 text-muted-foreground" />
+        {/snippet}
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content sideOffset={6} class={contentClass}>
+          {#each fieldColumns[filter.table] as { name } (name)}
+            <Select.Item value={name} label={name} class={itemClass}>
+              {#snippet children()}
+                <Check
+                  size={11}
+                  class={filter.name === name ? "text-primary" : "text-transparent"}
+                />
+                {name}
+              {/snippet}
+            </Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
 
-    <select
-      title="Select field operator"
-      class="h-8 rounded-md border border-border/60 bg-background px-2 text-xs font-medium"
-      bind:value={filter.fieldOperator}
+    <Select.Root
+      type="single"
+      value={filter.fieldOperator}
+      onValueChange={(next) => {
+        if (next) filter.fieldOperator = next as FieldOperator;
+      }}
     >
-      {#each fieldOperators as fieldOperator}
-        <option value={fieldOperator}>
-          {fieldOperator}
-        </option>
-      {/each}
-    </select>
+      <Select.Trigger aria-label="Filter operator" class={triggerClass}>
+        {#snippet children()}
+          <span class="truncate">{filter.fieldOperator}</span>
+          <CaretDown size={11} class="shrink-0 text-muted-foreground" />
+        {/snippet}
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content sideOffset={6} class={contentClass}>
+          {#each fieldOperators as fieldOperator (fieldOperator)}
+            <Select.Item value={fieldOperator} label={fieldOperator} class={itemClass}>
+              {#snippet children()}
+                <Check
+                  size={11}
+                  class={filter.fieldOperator === fieldOperator
+                    ? "text-primary"
+                    : "text-transparent"}
+                />
+                {fieldOperator}
+              {/snippet}
+            </Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   </div>
 
   {#if ftype === "bool"}
@@ -115,7 +174,7 @@ License: CECILL-C
       <button
         type="button"
         onclick={() => handleBoolValClick(true)}
-        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors ${
+        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           boolValue
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border/60 bg-background text-foreground hover:bg-accent"
@@ -126,7 +185,7 @@ License: CECILL-C
       <button
         type="button"
         onclick={() => handleBoolValClick(false)}
-        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors ${
+        class={`h-7 rounded-md px-2 text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
           !boolValue
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border/60 bg-background text-foreground hover:bg-accent"
@@ -140,7 +199,8 @@ License: CECILL-C
       type={ftype === "int" || ftype === "float" ? "number" : "text"}
       bind:value={filter.value}
       placeholder="Filter value"
-      class="h-8 w-full rounded-md border border-border/60 bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
+      aria-label="Filter value"
+      class="h-8 w-full rounded-md border border-border/60 bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     />
   {/if}
 </div>
