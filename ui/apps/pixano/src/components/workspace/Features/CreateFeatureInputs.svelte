@@ -109,7 +109,7 @@ License: CECILL-C
             </span>
           {/snippet}
         </Checkbox.Root>
-        <span class="capitalize">
+        <span class="text-xs font-medium capitalize text-foreground text-left">
           {feature.label}
           {#if feature.required}
             <span>*</span>
@@ -124,7 +124,7 @@ License: CECILL-C
         items={normalizeComboboxItems(feature.options)}
       >
         <Select.Trigger
-          class="justify-between h-10 px-4 py-2 border border-input rounded-md bg-background text-sm inline-flex items-center w-[200px]"
+          class="inline-flex h-10 w-[200px] items-center justify-between rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {#snippet children()}
             {feature.label}
@@ -133,13 +133,14 @@ License: CECILL-C
         </Select.Trigger>
         <Select.Portal>
           <Select.Content
-            class="z-50 rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+            sideOffset={6}
+            class="z-50 rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
           >
             {#each normalizeComboboxItems(feature.options) as item}
               <Select.Item
                 value={item.value}
                 label={item.label}
-                class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+                class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
               >
                 <Check class="h-4 w-4 text-transparent" />
                 {item.label}
@@ -151,7 +152,7 @@ License: CECILL-C
     {/if}
     {#if ["int", "float", "str"].includes(feature.type)}
       <div>
-        <span class="capitalize">
+        <span class="text-xs font-medium capitalize text-foreground text-left">
           {feature.label}
           {#if feature.required}
             <span>*</span>

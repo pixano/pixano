@@ -5,39 +5,29 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // External library imports
-
-  // Internal library imports
-  import { Slider as SliderPrimitive, Switch } from "bits-ui";
   import { Pencil } from "phosphor-svelte";
 
+  import RecordStatusControl from "../../layout/RecordStatusControl.svelte";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  // Local imports
-  import {
-    filters,
-    imageSmoothing,
-    itemMetas,
-    mediaViews,
-  } from "$lib/stores/workspaceStores.svelte";
+  import { itemMetas, mediaViews } from "$lib/stores/workspaceStores.svelte";
   import type { ItemsMeta } from "$lib/types/workspace";
   import { IconButton, Image, SequenceFrame, View } from "$lib/ui";
   import { createFeature } from "$lib/utils/featureMapping";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
-  // Component state variables
+  // The Record tab: everything record-level — status, attributes, view metadata.
+  // Display adjustments are canvas tools and live in the toolbar (DisplaySettings).
   let isEditing: boolean = $state(false);
-  let combineChannels: boolean = $state(false);
   const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
     const views = Object.values(mediaViews.value || {});
-    let nextIsVideo = false;
     const nextViewMeta = views.map((view: View | View[]) => {
       let image: Image | SequenceFrame | undefined;
       if (Array.isArray(view)) {
-        nextIsVideo = true;
         image = view[currentFrameIndex.value] as SequenceFrame | undefined;
       } else {
         image = view as Image;
@@ -60,7 +50,7 @@ License: CECILL-C
             view: "",
           };
     });
-    return { isVideo: nextIsVideo, viewMeta: nextViewMeta };
+    return { viewMeta: nextViewMeta };
   });
 
   const features = $derived.by(() => {
@@ -70,22 +60,13 @@ License: CECILL-C
     return createFeature(metas.item, manifest);
   });
 
-  const safeItemColor = $derived(itemMetas.value?.color ?? "rgb");
-  const safeItemFormat = $derived(itemMetas.value?.format ?? "8bit");
+  const datasetId = $derived(currentDatasetStore.value?.id ?? "");
+  const recordId = $derived(itemMetas.value?.item?.id ?? "");
 
-  /**
-   * Toggle the editing state.
-   */
   const handleEditIconClick = (): void => {
     isEditing = !isEditing;
   };
 
-  /**
-   * Update the text input change for a specific property in itemMetas.
-   *
-   * @param value - The new value for the property.
-   * @param propertyName - The name of the property to update.
-   */
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       if (!oldMetas) return oldMetas;
@@ -95,316 +76,60 @@ License: CECILL-C
       return newMetas;
     });
   };
-
-  const thumbClass =
-    "block h-3.5 w-3.5 rounded-full border-2 border-primary bg-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-  const sliderRootClass = "relative flex w-full touch-none select-none items-center";
-  const trackClass = "relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary";
-  const rangeClass = "absolute h-full bg-primary";
 </script>
 
-<!-- Features Section -->
-<div class="p-4 pb-8 text-foreground">
-  <h3 class="uppercase font-medium h-10">
-    <span>Features</span>
-    <IconButton
-      selected={isEditing}
-      onclick={handleEditIconClick}
-      tooltipContent="Edit scene features"
-    >
-      <Pencil class="h-4" />
-    </IconButton>
-  </h3>
-  <div class="mx-4">
-    <UpdateFeatureInputs
-      featureClass="main"
-      {features}
-      {isEditing}
-      saveInputChange={handleTextInputChange}
-    />
-  </div>
-</div>
-
-<!-- Item Meta Information Section -->
-<div class="p-4 pb-8 border-b-2 border-b-border text-foreground">
-  <h3 class="uppercase font-medium h-10 flex items-center">Views</h3>
-  {#each viewData.viewMeta as meta}
-    <h2 class="font-medium h-10 flex items-center truncate" title="{meta.id} ({meta.view})">
-      {meta.id} ({meta.view})
-    </h2>
-    <div class="mx-4">
-      <div class="grid gap-4 grid-cols-[150px_auto]">
-        <p class="font-medium">URL</p>
-        <p class="truncate" title={meta.url}>{meta.url}</p>
-      </div>
-      <div class="grid gap-4 grid-cols-[150px_auto]">
-        <p class="font-medium">Width</p>
-        <p>{meta.width}</p>
-      </div>
-      <div class="grid gap-4 grid-cols-[150px_auto]">
-        <p class="font-medium">Height</p>
-        <p>{meta.height}</p>
-      </div>
-      <div class="grid gap-4 grid-cols-[150px_auto]">
-        <p class="font-medium">Format</p>
-        <p>{meta.format}</p>
-      </div>
-    </div>
-  {/each}
-</div>
-
-<!-- Filters Section -->
-<div class="p-4 pb-8 text-foreground font-medium">
-  <h3 class="uppercase font-medium h-10">FILTERS</h3>
-
-  <!-- General Filters -->
-  <div class="border border-border rounded py-2 px-4 text-sm">
-    <h4 class="uppercase font-medium h-6 text-muted-foreground">GENERAL</h4>
-    <!-- Image Smoothing -->
-    <div class="w-full my-1 flex items-center justify-between">
-      <label for="smoothing" class="select-none cursor-pointer">Image smoothing</label>
-      <Switch.Root
-        id="smoothing"
-        bind:checked={imageSmoothing.value}
-        class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
-      >
-        <Switch.Thumb
-          class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-        />
-      </Switch.Root>
-    </div>
-
-    {#if !viewData.isVideo}
-      <!-- Histogram Equalizer -->
-      <div class="w-full my-1 flex items-center justify-between">
-        <label for="equalizer" class="select-none cursor-pointer">Equalize histogram</label>
-        <Switch.Root
-          id="equalizer"
-          bind:checked={filters.value.equalizeHistogram}
-          class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
-        >
-          <Switch.Thumb
-            class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-          />
-        </Switch.Root>
-      </div>
-      <!-- Brightness -->
-      <div class="flex items-center">
-        <label for="brightness" class="w-20 pb-1">Brightness</label>
-        <div class="grow text-xs">
-          <SliderPrimitive.Root
-            type="single"
-            min={-0.5}
-            max={0.5}
-            step={0.01}
-            value={filters.value.brightness}
-            onValueChange={(v: number) => {
-              filters.value.brightness = v;
-            }}
-            class={sliderRootClass}
-          >
-            <span class={trackClass}>
-              <SliderPrimitive.Range class={rangeClass} />
-            </span>
-            <SliderPrimitive.Thumb index={0} class={thumbClass} />
-          </SliderPrimitive.Root>
-        </div>
-        <span class="w-8">{Math.round(filters.value.brightness * 100 + 50)}%</span>
-      </div>
-
-      <!-- Contrast -->
-      <div class="flex items-center text-sm">
-        <label for="contrast" class="w-20 pb-1">Contrast</label>
-        <div class="grow text-xs">
-          <SliderPrimitive.Root
-            type="single"
-            min={-50}
-            max={50}
-            step={1}
-            value={filters.value.contrast}
-            onValueChange={(v: number) => {
-              filters.value.contrast = v;
-            }}
-            class={sliderRootClass}
-          >
-            <span class={trackClass}>
-              <SliderPrimitive.Range class={rangeClass} />
-            </span>
-            <SliderPrimitive.Thumb index={0} class={thumbClass} />
-          </SliderPrimitive.Root>
-        </div>
-        <span class="w-8">{Math.round(filters.value.contrast + 50)}%</span>
-      </div>
-    {/if}
-  </div>
-
-  {#if !viewData.isVideo}
-    <!-- Color Channels Filters -->
-    <div class="mt-4 border border-border rounded py-2 px-4 text-sm">
-      <h4 class="uppercase font-medium h-6 text-muted-foreground">CHANNELS</h4>
-
-      {#if safeItemColor === "rgba"}
-        <div class="w-full my-1 flex items-center justify-between">
-          <label for="grayscale" class="select-none cursor-pointer text-sm">
-            Combine RGB channels
-          </label>
-          <Switch.Root
-            id="grayscale"
-            bind:checked={combineChannels}
-            class="peer inline-flex h-[24px] w-[44px] shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
-          >
-            <Switch.Thumb
-              class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-            />
-          </Switch.Root>
-        </div>
-      {/if}
-      {#if combineChannels || safeItemColor === "grayscale"}
-        <!-- Grayscale -->
-        <div class="flex items-center text-sm text-center">
-          <span class="text-left w-4">G</span>
-          <span class="w-8">{filters.value.redRange[0]}</span>
-          <div class="grow text-xs">
-            <SliderPrimitive.Root
-              type="multiple"
-              min={0}
-              max={255}
-              step={1}
-              value={filters.value.redRange}
-              onValueChange={(v: number[]) => {
-                filters.value.redRange = v;
-                filters.value.blueRange = v;
-                filters.value.greenRange = v;
-              }}
-              class={sliderRootClass}
-            >
-              <span class={trackClass}>
-                <SliderPrimitive.Range class={rangeClass} />
-              </span>
-              <SliderPrimitive.Thumb index={0} class={thumbClass} />
-              <SliderPrimitive.Thumb index={1} class={thumbClass} />
-            </SliderPrimitive.Root>
-          </div>
-          <span class="w-8">{filters.value.redRange[1]}</span>
-        </div>
-      {:else}
-        <!-- Red -->
-        <div class="flex items-center text-sm text-center text-red-500">
-          <span class="text-left w-4">R</span>
-          <span class="w-8">{filters.value.redRange[0]}</span>
-          <div class="grow text-xs">
-            <SliderPrimitive.Root
-              type="multiple"
-              min={0}
-              max={255}
-              step={1}
-              value={filters.value.redRange}
-              onValueChange={(v: number[]) => {
-                filters.value.redRange = v;
-              }}
-              class={sliderRootClass}
-            >
-              <span class={trackClass}>
-                <SliderPrimitive.Range class={rangeClass} />
-              </span>
-              <SliderPrimitive.Thumb index={0} class={thumbClass} />
-              <SliderPrimitive.Thumb index={1} class={thumbClass} />
-            </SliderPrimitive.Root>
-          </div>
-          <span class="w-8">{filters.value.redRange[1]}</span>
-        </div>
-
-        <!-- Green -->
-        <div class="flex items-center text-sm text-center text-green-500">
-          <span class="text-left w-4">G</span>
-          <span class="w-8">{filters.value.greenRange[0]}</span>
-          <div class="grow text-xs">
-            <SliderPrimitive.Root
-              type="multiple"
-              min={0}
-              max={255}
-              step={1}
-              value={filters.value.greenRange}
-              onValueChange={(v: number[]) => {
-                filters.value.greenRange = v;
-              }}
-              class={sliderRootClass}
-            >
-              <span class={trackClass}>
-                <SliderPrimitive.Range class={rangeClass} />
-              </span>
-              <SliderPrimitive.Thumb index={0} class={thumbClass} />
-              <SliderPrimitive.Thumb index={1} class={thumbClass} />
-            </SliderPrimitive.Root>
-          </div>
-          <span class="w-8">{filters.value.greenRange[1]}</span>
-        </div>
-
-        <!-- Blue -->
-        <div class="flex items-center text-sm text-center text-blue-500">
-          <span class="text-left w-4">B</span>
-          <span class="w-8">{filters.value.blueRange[0]}</span>
-          <div class="grow text-xs">
-            <SliderPrimitive.Root
-              type="multiple"
-              min={0}
-              max={255}
-              step={1}
-              value={filters.value.blueRange}
-              onValueChange={(v: number[]) => {
-                filters.value.blueRange = v;
-              }}
-              class={sliderRootClass}
-            >
-              <span class={trackClass}>
-                <SliderPrimitive.Range class={rangeClass} />
-              </span>
-              <SliderPrimitive.Thumb index={0} class={thumbClass} />
-              <SliderPrimitive.Thumb index={1} class={thumbClass} />
-            </SliderPrimitive.Root>
-          </div>
-          <span class="w-8">{filters.value.blueRange[1]}</span>
-        </div>
-      {/if}
-    </div>
-
-    <!-- 16-BIT SETTINGS -->
-    {#if safeItemFormat === "16bit"}
-      <div class="mt-4 border border-border rounded py-2 px-4 text-sm">
-        <h4 class="uppercase font-medium h-6 text-muted-foreground">16-BIT SETTINGS</h4>
-        <div class="my-1">Select range :</div>
-        <div class="flex items-center text-sm text-center">
-          <input
-            type="number"
-            class="w-16 bg-inherit outline-none text-center"
-            bind:value={filters.value.u16BitRange[0]}
-          />
-          <div class="grow text-xs">
-            <SliderPrimitive.Root
-              type="multiple"
-              min={0}
-              max={65535}
-              step={1}
-              value={filters.value.u16BitRange}
-              onValueChange={(v: number[]) => {
-                filters.value.u16BitRange = v;
-              }}
-              class={sliderRootClass}
-            >
-              <span class={trackClass}>
-                <SliderPrimitive.Range class={rangeClass} />
-              </span>
-              <SliderPrimitive.Thumb index={0} class={thumbClass} />
-              <SliderPrimitive.Thumb index={1} class={thumbClass} />
-            </SliderPrimitive.Root>
-          </div>
-          <input
-            type="number"
-            class="w-16 bg-inherit outline-none text-center"
-            bind:value={filters.value.u16BitRange[1]}
-          />
-        </div>
-      </div>
-    {/if}
+<div class="flex flex-col gap-6 p-4 text-foreground">
+  <!-- Status -->
+  {#if datasetId && recordId}
+    <section class="flex flex-col gap-2">
+      <h3 class="text-label text-left">Status</h3>
+      <RecordStatusControl {datasetId} {recordId} />
+    </section>
   {/if}
+
+  <!-- Record attributes -->
+  <section class="flex flex-col gap-2">
+    <div class="flex items-center justify-between">
+      <h3 class="text-label text-left">Attributes</h3>
+      <IconButton
+        selected={isEditing}
+        onclick={handleEditIconClick}
+        tooltipContent="Edit record attributes"
+        class="h-8 w-8 rounded-lg"
+      >
+        <Pencil class="h-4 w-4" />
+      </IconButton>
+    </div>
+    {#if features.length > 0}
+      <UpdateFeatureInputs
+        featureClass="main"
+        {features}
+        {isEditing}
+        saveInputChange={handleTextInputChange}
+      />
+    {:else}
+      <p class="text-left text-sm text-muted-foreground">This record has no custom attributes.</p>
+    {/if}
+  </section>
+
+  <!-- Views metadata -->
+  <section class="flex flex-col gap-2">
+    <h3 class="text-label text-left">Views</h3>
+    {#each viewData.viewMeta as meta (meta.id)}
+      <div class="rounded-xl border border-border/60 bg-background p-3">
+        <p class="truncate text-left text-sm font-medium" title="{meta.id} ({meta.view})">
+          {meta.view}
+          <span class="font-mono text-xs text-muted-foreground">{meta.id}</span>
+        </p>
+        <dl class="mt-2 grid grid-cols-[90px_minmax(0,1fr)] gap-x-3 gap-y-1 text-left text-sm">
+          <dt class="text-muted-foreground">URL</dt>
+          <dd class="truncate" title={meta.url}>{meta.url}</dd>
+          <dt class="text-muted-foreground">Size</dt>
+          <dd class="tabular-nums">{meta.width} × {meta.height}</dd>
+          <dt class="text-muted-foreground">Format</dt>
+          <dd>{meta.format}</dd>
+        </dl>
+      </div>
+    {/each}
+  </section>
 </div>

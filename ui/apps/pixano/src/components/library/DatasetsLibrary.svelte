@@ -16,7 +16,7 @@ License: CECILL-C
   import { datasetFilter, datasetSortMode, datasetsStore } from "$lib/stores/appStores.svelte";
   import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import type { DatasetInfo } from "$lib/ui";
-  import { icons } from "$lib/ui";
+  import { icons, Tabs } from "$lib/ui";
   import { sortDatasets } from "$lib/utils/datasetSort";
   import { getExplorerRoute } from "$lib/utils/routes";
 
@@ -40,29 +40,29 @@ License: CECILL-C
     key: string;
     label: string;
     color: string;
-    bgClass: string;
-    textClass: string;
+    dotClass: string;
+    emptyMessage: string;
   }[] = [
     {
       key: "TODO",
-      label: "TODO",
+      label: "Todo",
       color: "#3B82F6",
-      bgClass: "bg-blue-500/10",
-      textClass: "text-blue-500",
+      dotClass: "bg-blue-500",
+      emptyMessage: "No datasets flagged Todo yet — use the blue flag on a card.",
     },
     {
       key: "NEW",
-      label: "NEW",
+      label: "New",
       color: "#22C55E",
-      bgClass: "bg-green-500/10",
-      textClass: "text-green-500",
+      dotClass: "bg-green-500",
+      emptyMessage: "No datasets flagged New yet — use the green flag on a card.",
     },
     {
       key: "FAVORITE",
-      label: "FAVORITE",
+      label: "Favorite",
       color: "#EAB308",
-      bgClass: "bg-yellow-500/10",
-      textClass: "text-yellow-500",
+      dotClass: "bg-yellow-500",
+      emptyMessage: "No favorite datasets yet — use the yellow flag on a card.",
     },
   ];
 
@@ -81,11 +81,9 @@ License: CECILL-C
     ),
   );
 
-  const hasAnyBookmarks = $derived(sortedDatasets.some((d) => d.bookmarks.length > 0));
+  let activeGroup = $state<"all" | "TODO" | "NEW" | "FAVORITE">("all");
 
-  const remainingDatasets = $derived(
-    hasAnyBookmarks ? sortedDatasets.filter((d) => d.bookmarks.length === 0) : sortedDatasets,
-  );
+  const totalItems = $derived(allDatasets.reduce((sum, dataset) => sum + dataset.num_items, 0));
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     await goto(getExplorerRoute(dataset.id));
@@ -101,6 +99,11 @@ License: CECILL-C
       })),
     );
   };
+
+  const tabTriggerClass =
+    "group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60";
+  const tabCountClass =
+    "inline-flex min-w-5 items-center justify-center rounded-full bg-muted/60 px-1.5 text-[10px] font-bold tabular-nums group-data-[state=active]:bg-primary/10 group-data-[state=active]:text-primary";
 
   $effect(() => {
     untrack(() => {
@@ -124,10 +127,29 @@ License: CECILL-C
   />
 {/if}
 
+{#snippet datasetGrid(list: DatasetInfo[], emptyMessage: string)}
+  {#if list.length > 0}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {#each list as dataset (dataset.id)}
+        <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <DatasetPreviewCard {dataset} onSelectDataset={() => handleSelectDataset(dataset)} />
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <div class="flex flex-col items-center gap-3 py-16 text-center">
+      <Database weight="thin" size={36} class="text-muted-foreground/40" />
+      <p class="text-sm text-muted-foreground">
+        {datasetFilter.value ? `No datasets match “${datasetFilter.value}”.` : emptyMessage}
+      </p>
+    </div>
+  {/if}
+{/snippet}
+
 {#if allDatasets && allDatasets.length > 0}
-  <div class="flex flex-col gap-8">
-    <!-- Toolbar: search + sort + stats -->
-    <div class="flex items-center justify-between gap-6 flex-wrap pb-2 border-b border-border/50">
+  <div class="flex flex-col gap-6">
+    <!-- Toolbar: search + sort + import -->
+    <div class="flex items-center gap-4 flex-wrap pb-2 border-b border-border/50">
       <div class="relative flex items-center group">
         <input
           id="search-input"
@@ -148,113 +170,80 @@ License: CECILL-C
           <path d={icons.svg_search} fill="currentColor" />
         </svg>
       </div>
-      <div class="flex items-center gap-4">
-        <!-- Sort controls -->
-        <div class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm">
-          <button
-            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors {datasetSortMode.value ===
-            'name'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-background text-muted-foreground hover:text-foreground'}"
-            onclick={() => (datasetSortMode.value = "name")}
-          >
-            Name
-          </button>
-          <button
-            class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors {datasetSortMode.value ===
-            'creation_date'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-background text-muted-foreground hover:text-foreground'}"
-            onclick={() => (datasetSortMode.value = "creation_date")}
-          >
-            Date
-          </button>
-        </div>
+      <!-- Sort controls -->
+      <div
+        class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm"
+        role="group"
+        aria-label="Sort datasets"
+      >
         <button
-          onclick={() => {
-            showImport = true;
-          }}
-          class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground
-            text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-primary/90 active:scale-95
-            transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          type="button"
+          aria-pressed={datasetSortMode.value === "name"}
+          class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {datasetSortMode.value ===
+          'name'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-background text-muted-foreground hover:text-foreground'}"
+          onclick={() => (datasetSortMode.value = "name")}
         >
-          <UploadSimple weight="bold" size={14} />
-          Import
+          Name
         </button>
-        <div
-          class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
+        <button
+          type="button"
+          aria-pressed={datasetSortMode.value === "creation_date"}
+          class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {datasetSortMode.value ===
+          'creation_date'
+            ? 'bg-primary text-primary-foreground'
+            : 'bg-background text-muted-foreground hover:text-foreground'}"
+          onclick={() => (datasetSortMode.value = "creation_date")}
         >
-          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Datasets
-          </span>
-          <span class="text-sm font-black text-primary tabular-nums">
-            {allDatasets.length}
-          </span>
-        </div>
-        <div
-          class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
-        >
-          <span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Total Items
-          </span>
-          <span class="text-sm font-black text-primary tabular-nums">
-            {allDatasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
-          </span>
-        </div>
+          Date
+        </button>
       </div>
+      <button
+        onclick={() => {
+          showImport = true;
+        }}
+        class="ml-auto inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-primary text-primary-foreground
+          text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-primary/90 active:scale-95
+          transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <UploadSimple weight="bold" size={14} />
+        Import
+      </button>
     </div>
 
-    <!-- Bookmark sections -->
-    {#each BOOKMARK_SECTIONS as section (section.key)}
-      {#if datasetsByBookmark[section.key].length > 0}
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center gap-2.5">
-            <span
-              class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-widest {section.bgClass} {section.textClass}"
-            >
+    <!-- Group tabs -->
+    <Tabs.Root bind:value={activeGroup} class="flex flex-col gap-6">
+      <div class="flex items-center justify-between gap-4">
+        <Tabs.List
+          class="inline-flex w-fit items-center rounded-xl border border-border/60 bg-muted/20 p-1 gap-1"
+        >
+          <Tabs.Trigger value="all" class={tabTriggerClass}>
+            All
+            <span class={tabCountClass}>{sortedDatasets.length}</span>
+          </Tabs.Trigger>
+          {#each BOOKMARK_SECTIONS as section (section.key)}
+            <Tabs.Trigger value={section.key} class={tabTriggerClass}>
+              <span class="h-1.5 w-1.5 rounded-full {section.dotClass}"></span>
               {section.label}
-            </span>
-            <span class="text-xs text-muted-foreground font-medium">
-              {datasetsByBookmark[section.key].length} dataset{datasetsByBookmark[section.key]
-                .length > 1
-                ? "s"
-                : ""}
-            </span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {#each datasetsByBookmark[section.key] as dataset (dataset.id)}
-              <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                <DatasetPreviewCard
-                  {dataset}
-                  onSelectDataset={() => handleSelectDataset(dataset)}
-                />
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
-    {/each}
+              <span class={tabCountClass}>{datasetsByBookmark[section.key].length}</span>
+            </Tabs.Trigger>
+          {/each}
+        </Tabs.List>
+        <span class="text-xs text-muted-foreground tabular-nums">
+          {totalItems.toLocaleString()} items
+        </span>
+      </div>
 
-    <!-- All / Other datasets -->
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center gap-2.5">
-        <span
-          class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-widest bg-muted text-muted-foreground"
-        >
-          {hasAnyBookmarks ? "Other datasets" : "All datasets"}
-        </span>
-        <span class="text-xs text-muted-foreground font-medium">
-          {remainingDatasets.length} dataset{remainingDatasets.length > 1 ? "s" : ""}
-        </span>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {#each remainingDatasets as dataset (dataset.id)}
-          <div class="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <DatasetPreviewCard {dataset} onSelectDataset={() => handleSelectDataset(dataset)} />
-          </div>
-        {/each}
-      </div>
-    </div>
+      <Tabs.Content value="all" class="focus-visible:outline-none">
+        {@render datasetGrid(sortedDatasets, "")}
+      </Tabs.Content>
+      {#each BOOKMARK_SECTIONS as section (section.key)}
+        <Tabs.Content value={section.key} class="focus-visible:outline-none">
+          {@render datasetGrid(datasetsByBookmark[section.key], section.emptyMessage)}
+        </Tabs.Content>
+      {/each}
+    </Tabs.Root>
   </div>
 {:else if allDatasets}
   <!-- Empty library -->
@@ -293,7 +282,7 @@ License: CECILL-C
   </div>
 {:else}
   <!-- Loading skeleton -->
-  <div class="flex flex-col gap-8 px-6 py-8">
+  <div class="flex flex-col gap-8">
     <div class="max-w-[1200px] mx-auto w-full">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}

@@ -11,9 +11,23 @@ License: CECILL-C
   import { refreshInferenceModels } from "$lib/services/inferenceService.svelte";
   import { inferenceServerStore } from "$lib/stores/inferenceStores.svelte";
   import { formatInferenceProviderName, type InferenceModel } from "$lib/types/inference";
-  import { IconButton, PrimaryButton } from "$lib/ui";
+  import { cn, IconButton, PrimaryButton } from "$lib/ui";
+
+  interface Props {
+    variant?: "sidebar" | "popover";
+    onRequestConnect?: () => void;
+  }
+
+  let { variant = "sidebar", onRequestConnect }: Props = $props();
 
   let showConnectModal = $state(false);
+
+  // In popover mode the host owns the connect modal (it must escape the
+  // popover's containing block); standalone use keeps the internal modal.
+  const requestConnect = () => {
+    if (onRequestConnect) onRequestConnect();
+    else showConnectModal = true;
+  };
 
   type ModelGroup = { label: string; models: InferenceModel[] };
 
@@ -34,7 +48,12 @@ License: CECILL-C
   const modelGroups = $derived(groupModelsByTask(inferenceServerStore.value.models));
 </script>
 
-<div class="flex flex-col h-full bg-card p-6 gap-6">
+<div
+  class={cn(
+    "flex flex-col",
+    variant === "popover" ? "min-h-0 p-4 gap-4" : "h-full bg-card p-6 gap-6",
+  )}
+>
   <div class="flex items-center justify-between border-b border-border/50 pb-4">
     <div class="flex items-center gap-2.5">
       <div class="p-2 rounded-lg bg-primary/5">
@@ -108,7 +127,7 @@ License: CECILL-C
           Connect one or more inference servers to enable AI-powered annotation tools.
         </p>
       </div>
-      <PrimaryButton onclick={() => (showConnectModal = true)}>Connect Server</PrimaryButton>
+      <PrimaryButton onclick={requestConnect}>Connect Server</PrimaryButton>
     </div>
   {:else if inferenceServerStore.value.models.length === 0}
     <div
@@ -154,7 +173,7 @@ License: CECILL-C
   {#if inferenceServerStore.value.connected}
     <button
       class="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-primary font-medium transition-colors px-1 mt-auto"
-      onclick={() => (showConnectModal = true)}
+      onclick={requestConnect}
     >
       <Plus weight="bold" size={14} />
       Add another server
