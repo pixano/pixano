@@ -146,9 +146,8 @@ License: CECILL-C
     }
   };
 
-  // Default to Pan only when nothing is selected yet — a header re-render must not
-  // silently reset the user's active tool.
-  if (selectedTool.value == null) selectedTool.value = panTool;
+  // Initialize tool to Pan when Toolbar mounts
+  selectedTool.value = panTool;
 
   let showBrushTools = $derived(selectedTool.value?.type === ToolType.Brush);
   let showInteractiveSegmenterTools = $derived(
@@ -158,15 +157,6 @@ License: CECILL-C
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);
   let smartInferencePending = $derived(smartSegmentationUiState.value.phase === "pending");
   let currentWorkspaceType = $derived(itemMetas.value?.type ?? WorkspaceType.IMAGE);
-  // Raster draw tools show by DEFAULT (image, video, undefined/custom workspaces all
-  // annotate on the canvas); only the text/QA/3D workspaces hide them.
-  let showDrawTools = $derived(
-    ![
-      WorkspaceType.IMAGE_VQA,
-      WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
-      WorkspaceType.PCL_3D,
-    ].includes(currentWorkspaceType),
-  );
   let compatibleSegmentationModels = $derived(currentSegmentationModels.value);
   let currentSegmentationSelection = $derived(
     currentWorkspaceType === WorkspaceType.VIDEO
@@ -219,199 +209,196 @@ License: CECILL-C
     <Cursor weight="regular" class="h-4.5 w-4.5" />
   </IconButton>
 
-  {#if showDrawTools}
-    <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+  <div class="mx-0.5 h-4 w-px bg-border/30"></div>
 
-    <!-- Manual annotation tools -->
+  <!-- Manual annotation tools -->
+  <IconButton
+    tooltipContent={rectangleTool.name}
+    onclick={selectRectangleTool}
+    selected={selectedTool.value?.type === ToolType.Rectangle && !selectedTool.value?.isSmart}
+    disabled={smartInferencePending}
+    class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+  >
+    <Square class="h-4.5 w-4.5" />
+  </IconButton>
+
+  <div
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showPolygonTools,
+      },
+    )}
+  >
     <IconButton
-      tooltipContent={rectangleTool.name}
-      onclick={selectRectangleTool}
-      selected={selectedTool.value?.type === ToolType.Rectangle && !selectedTool.value?.isSmart}
+      tooltipContent="Polygon Tool (P)"
+      onclick={selectPolygonTool}
+      selected={selectedTool.value?.type === ToolType.Polygon}
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <Square class="h-4.5 w-4.5" />
+      <Polygon class="h-4.5 w-4.5" />
     </IconButton>
 
-    <div
-      class={cn(
-        "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
-        {
-          "bg-muted/40 border-border/20 shadow-inner": showPolygonTools,
-        },
-      )}
-    >
-      <IconButton
-        tooltipContent="Polygon Tool (P)"
-        onclick={selectPolygonTool}
-        selected={selectedTool.value?.type === ToolType.Polygon}
-        disabled={smartInferencePending}
-        class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+    {#if showPolygonTools}
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
       >
-        <Polygon class="h-4.5 w-4.5" />
-      </IconButton>
-
-      {#if showPolygonTools}
-        <div
-          class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
+        <IconButton
+          tooltipContent="Keep Raw Polygon Geometry"
+          selected={selectedTool.value?.type === ToolType.Polygon &&
+            selectedTool.value.outputMode === "polygon"}
+          onclick={() => setPolygonOutputMode("polygon")}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
         >
-          <IconButton
-            tooltipContent="Keep Raw Polygon Geometry"
-            selected={selectedTool.value?.type === ToolType.Polygon &&
-              selectedTool.value.outputMode === "polygon"}
-            onclick={() => setPolygonOutputMode("polygon")}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <Graph weight="regular" class="h-4.5 w-4.5" />
-          </IconButton>
-          <IconButton
-            tooltipContent="Convert Polygon To Mask"
-            selected={selectedTool.value?.type === ToolType.Polygon &&
-              selectedTool.value.outputMode === "mask"}
-            onclick={() => setPolygonOutputMode("mask")}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <PaintBucket class="h-4.5 w-4.5" />
-          </IconButton>
-        </div>
-      {/if}
-    </div>
+          <Graph weight="regular" class="h-4.5 w-4.5" />
+        </IconButton>
+        <IconButton
+          tooltipContent="Convert Polygon To Mask"
+          selected={selectedTool.value?.type === ToolType.Polygon &&
+            selectedTool.value.outputMode === "mask"}
+          onclick={() => setPolygonOutputMode("mask")}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <PaintBucket class="h-4.5 w-4.5" />
+        </IconButton>
+      </div>
+    {/if}
+  </div>
 
+  <IconButton
+    tooltipContent="Polyline Tool (L)"
+    onclick={selectPolylineTool}
+    selected={selectedTool.value?.type === ToolType.Polyline}
+    disabled={smartInferencePending}
+    class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+  >
+    <LineSegments weight="regular" class="h-4.5 w-4.5" />
+  </IconButton>
+
+  <div
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showBrushTools,
+      },
+    )}
+  >
     <IconButton
-      tooltipContent="Polyline Tool (L)"
-      onclick={selectPolylineTool}
-      selected={selectedTool.value?.type === ToolType.Polyline}
+      tooltipContent="Brush Tool (B)"
+      onclick={selectBrushTool}
+      selected={selectedTool.value?.type === ToolType.Brush}
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <LineSegments weight="regular" class="h-4.5 w-4.5" />
+      <PaintBrush weight="regular" class="h-4.5 w-4.5" />
     </IconButton>
 
-    <div
-      class={cn(
-        "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
-        {
-          "bg-muted/40 border-border/20 shadow-inner": showBrushTools,
-        },
-      )}
-    >
-      <IconButton
-        tooltipContent="Brush Tool (B)"
-        onclick={selectBrushTool}
-        selected={selectedTool.value?.type === ToolType.Brush}
-        disabled={smartInferencePending}
-        class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+    {#if showBrushTools}
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
       >
-        <PaintBrush weight="regular" class="h-4.5 w-4.5" />
-      </IconButton>
-
-      {#if showBrushTools}
-        <div
-          class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
+        <IconButton
+          tooltipContent="Pencil (X to toggle)"
+          onclick={() => (selectedTool.value = brushDrawTool)}
+          selected={selectedTool.value?.type === ToolType.Brush &&
+            selectedTool.value.mode === "draw"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
         >
-          <IconButton
-            tooltipContent="Pencil (X to toggle)"
-            onclick={() => (selectedTool.value = brushDrawTool)}
-            selected={selectedTool.value?.type === ToolType.Brush &&
-              selectedTool.value.mode === "draw"}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <PencilSimple weight="regular" class="h-4.5 w-4.5" />
-          </IconButton>
-          <IconButton
-            tooltipContent="Eraser (X to toggle)"
-            onclick={() => (selectedTool.value = brushEraseTool)}
-            selected={selectedTool.value?.type === ToolType.Brush &&
-              selectedTool.value.mode === "erase"}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <Eraser class="h-4.5 w-4.5" />
-          </IconButton>
+          <PencilSimple weight="regular" class="h-4.5 w-4.5" />
+        </IconButton>
+        <IconButton
+          tooltipContent="Eraser (X to toggle)"
+          onclick={() => (selectedTool.value = brushEraseTool)}
+          selected={selectedTool.value?.type === ToolType.Brush &&
+            selectedTool.value.mode === "erase"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <Eraser class="h-4.5 w-4.5" />
+        </IconButton>
 
-          <div class="w-px h-3 bg-border/20 mx-0.5"></div>
-          <BrushSettings disabled={smartInferencePending} />
-        </div>
-      {/if}
-    </div>
+        <div class="w-px h-3 bg-border/20 mx-0.5"></div>
+        <BrushSettings disabled={smartInferencePending} />
+      </div>
+    {/if}
+  </div>
 
-    <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+  <div class="mx-0.5 h-4 w-px bg-border/30"></div>
 
-    <!-- AI-powered tools -->
-    <div
-      class={cn(
-        "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
-        {
-          "bg-muted/40 border-border/20 shadow-inner": showInteractiveSegmenterTools,
-        },
-      )}
+  <!-- AI-powered tools -->
+  <div
+    class={cn(
+      "flex items-center gap-1 transition-all duration-300 p-0.5 rounded-xl border border-transparent",
+      {
+        "bg-muted/40 border-border/20 shadow-inner": showInteractiveSegmenterTools,
+      },
+    )}
+  >
+    <IconButton
+      tooltipContent={segmenterTooltip}
+      onclick={selectInteractiveSegmenterTool}
+      selected={selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+        selectedTool.value?.type === ToolType.VOS}
+      disabled={segmenterDisabled}
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <IconButton
-        tooltipContent={segmenterTooltip}
-        onclick={selectInteractiveSegmenterTool}
-        selected={selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-          selectedTool.value?.type === ToolType.VOS}
-        disabled={segmenterDisabled}
-        class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+      <MagicWand weight="regular" class="h-4.5 w-4.5" />
+    </IconButton>
+
+    {#if showInteractiveSegmenterTools}
+      <div
+        class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
       >
-        <MagicWand weight="regular" class="h-4.5 w-4.5" />
-      </IconButton>
-
-      {#if showInteractiveSegmenterTools}
-        <div
-          class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-300 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm"
+        <IconButton
+          tooltipContent="Positive Point Prompt (X toggles +/-)"
+          onclick={() => setInteractivePromptMode("positive")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "positive"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
         >
-          <IconButton
-            tooltipContent="Positive Point Prompt (X toggles +/-)"
-            onclick={() => setInteractivePromptMode("positive")}
-            selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-              selectedTool.value?.type === ToolType.VOS) &&
-              selectedTool.value.promptMode === "positive"}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <span class="text-base font-semibold leading-none">+</span>
-          </IconButton>
-          <IconButton
-            tooltipContent="Negative Point Prompt (X toggles +/-)"
-            onclick={() => setInteractivePromptMode("negative")}
-            selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-              selectedTool.value?.type === ToolType.VOS) &&
-              selectedTool.value.promptMode === "negative"}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <span class="text-base font-semibold leading-none">-</span>
-          </IconButton>
-          <IconButton
-            tooltipContent="Bounding Box Prompt (R)"
-            onclick={() => setInteractivePromptMode("box")}
-            selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
-              selectedTool.value?.type === ToolType.VOS) &&
-              selectedTool.value.promptMode === "box"}
-            disabled={smartInferencePending}
-            class="h-8 w-8"
-          >
-            <Square class="h-4 w-4" />
-          </IconButton>
+          <span class="text-base font-semibold leading-none">+</span>
+        </IconButton>
+        <IconButton
+          tooltipContent="Negative Point Prompt (X toggles +/-)"
+          onclick={() => setInteractivePromptMode("negative")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "negative"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <span class="text-base font-semibold leading-none">-</span>
+        </IconButton>
+        <IconButton
+          tooltipContent="Bounding Box Prompt (R)"
+          onclick={() => setInteractivePromptMode("box")}
+          selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
+            selectedTool.value?.type === ToolType.VOS) &&
+            selectedTool.value.promptMode === "box"}
+          disabled={smartInferencePending}
+          class="h-8 w-8"
+        >
+          <Square class="h-4 w-4" />
+        </IconButton>
 
-          <div class="mx-1 h-4 w-px bg-border/30"></div>
+        <div class="mx-1 h-4 w-px bg-border/30"></div>
 
-          <ModelSelectBadge
-            models={compatibleSegmentationModels}
-            selectedModelKey={currentSegmentationModelKey}
-            disabled={segmentationSelectorDisabled}
-            label={segmentationModelLabel}
-            onValueChange={setSegmentationModelSelection}
-          />
-        </div>
-      {/if}
-    </div>
-  {/if}
-
+        <ModelSelectBadge
+          models={compatibleSegmentationModels}
+          selectedModelKey={currentSegmentationModelKey}
+          disabled={segmentationSelectorDisabled}
+          label={segmentationModelLabel}
+          onValueChange={setSegmentationModelSelection}
+        />
+      </div>
+    {/if}
+  </div>
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
 
   <!-- Display settings (canvas tools, not record data) -->
