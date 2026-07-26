@@ -79,7 +79,7 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-1.5">
-  <span class="text-label text-left" id="relink-label">Parent object</span>
+  <span class="text-label text-left" id="relink-label">Parent entity</span>
   <Select.Root
     type="single"
     value={selectedEntityId}
@@ -93,7 +93,7 @@ License: CECILL-C
         <span class="flex min-w-0 items-center gap-2">
           {#if selected?.kind === "new" || !selected}
             <Plus size={13} class="shrink-0 text-primary" />
-            <span class="truncate">Create new object</span>
+            <span class="truncate">Create new entity</span>
           {:else}
             <span
               class="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -112,19 +112,19 @@ License: CECILL-C
       >
         <Select.Item
           value="new"
-          label="Create new object"
+          label="Create new entity"
           class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
         >
           {#snippet children()}
             <Plus size={13} class="shrink-0 text-primary" />
-            <span class="flex-1 truncate text-left">Create new object</span>
+            <span class="flex-1 truncate text-left">Create new entity</span>
             {#if selectedEntityId === "new"}<Check size={13} class="shrink-0 text-primary" />{/if}
           {/snippet}
         </Select.Item>
         {#if existing.length > 0}
           <Select.Group>
             <Select.GroupHeading class="text-label px-2.5 pb-1 pt-2 text-left">
-              Link to existing object
+              Link to existing entity
             </Select.GroupHeading>
             {#each existing as option (option.id)}
               {@const chip = kindChip(option)}
@@ -147,8 +147,8 @@ License: CECILL-C
                     <span
                       class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {chip.classes}"
                       title={option.kind === "forbidden"
-                        ? "An annotation of this kind already exists here for this object"
-                        : "Merges into this object's overlapping track"}
+                        ? "An annotation of this kind already exists here for this entity"
+                        : "Merges into this entity's overlapping track"}
                     >
                       {chip.label}
                     </span>

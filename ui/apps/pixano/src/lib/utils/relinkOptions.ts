@@ -8,17 +8,17 @@ import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/t
 import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
 /**
- * A candidate parent object for a new annotation.
+ * A candidate parent entity for a new annotation.
  *
  * `kind` encodes the linking semantics instead of label-prefix strings:
- * - `new`: create a fresh object.
- * - `move`: link to this object (no tracklet overlap).
+ * - `new`: create a fresh entity.
+ * - `move`: link to this entity (no tracklet overlap).
  * - `merge`: link and merge into the overlapping tracklet(s) in `targets`.
  * - `forbidden`: disabled — `conflicts` same-kind annotations already exist there.
  */
 export interface RelinkOption {
   id: string;
-  /** Display name (object display attribute, or its id). */
+  /** Display name (entity display attribute, or its id). */
   name: string;
   kind: "new" | "move" | "merge" | "forbidden";
   conflicts: number;
@@ -114,10 +114,10 @@ function entityAllowInfo(entity: Entity, context: RelinkContext): AllowInfo {
 }
 
 /**
- * Build the parent-object options for the save-annotation form.
+ * Build the parent-entity options for the save-annotation form.
  *
- * The "Create new object" option always comes first; hard-forbidden entities
- * (sub-entities, conversations, the track's own object) are omitted entirely.
+ * The "Create new entity" option always comes first; hard-forbidden entities
+ * (sub-entities, conversations, the track's own entity) are omitted entirely.
  */
 export function buildRelinkOptions(context: RelinkContext): RelinkOption[] {
   const options: RelinkOption[] = [{ id: "new", name: "", kind: "new", conflicts: 0, targets: [] }];

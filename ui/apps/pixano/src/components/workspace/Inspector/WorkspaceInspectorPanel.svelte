@@ -40,7 +40,7 @@ License: CECILL-C
             class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"
           >
             <Cube class="h-4 w-4" />
-            Objects
+            Entities
           </Tabs.Trigger>
           <Tabs.Trigger
             value="record"
