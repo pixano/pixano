@@ -5,15 +5,13 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Select } from "bits-ui";
-  import { CaretDown, Check, Plus } from "phosphor-svelte";
-
+  // Imports
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import { colorScale, entities } from "$lib/stores/workspaceStores.svelte";
-  import { Annotation, BaseSchema, type Reference } from "$lib/ui";
+  import { Annotation, BaseSchema, Entity, Tracklet, type Reference } from "$lib/ui";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { OVERLAPIDS_SEPARATOR } from "$lib/utils/entityRelink";
-  import { buildRelinkOptions, type RelinkOption } from "$lib/utils/relinkOptions";
+  import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
   interface Props {
     selectedEntityId?: string;
@@ -33,135 +31,147 @@ License: CECILL-C
     track = null,
   }: Props = $props();
 
-  const options = $derived(
-    buildRelinkOptions({
-      entities: entities.value,
-      baseSchema,
-      viewRef,
-      track,
-      trackTopEntityId: track ? getTopEntity(track).id : null,
-      currentFrameIndex: currentFrameIndex.value,
-    }),
-  );
-  const existing = $derived(options.filter((option) => option.kind !== "new"));
-  const selected = $derived(options.find((option) => option.id === selectedEntityId));
+  const entityAllowInfo = (
+    entity: Entity,
+  ): {
+    hard_forbidden: boolean;
+    overlap: boolean;
+    numSameKindInSameView: number;
+    overlapTargetIds: string[];
+  } => {
+    if (
+      entity.data.parent_id !== "" ||
+      entity.is_conversation ||
+      (track && getTopEntity(track).id === entity.id)
+    )
+      return {
+        hard_forbidden: true,
+        overlap: false,
+        numSameKindInSameView: 0,
+        overlapTargetIds: [],
+      };
+    const entityTracks = entity.ui.childs?.filter((ann) => ann.is_type(BaseSchema.Tracklet));
+    const annsNotTracks = entity.ui.childs?.filter((ann) => !ann.is_type(BaseSchema.Tracklet));
+    let numSameKindInSameView: number = 0;
+    let overlap: boolean | undefined = undefined;
+    let overlapTargetIds: string[] = [];
+    if (track && track.is_type(BaseSchema.Tracklet)) {
+      const trackBaseSchemaByFrameIndex = (track as Tracklet).ui.childs.reduce(
+        (acc, ann) => {
+          if (ann.ui.frame_index) {
+            acc[ann.ui.frame_index] = ann.table_info.base_schema;
+          }
+          return acc;
+        },
+        {} as Record<number, BaseSchema>,
+      );
+      const sameKindInSameView_anns = annsNotTracks?.filter(
+        //NOTE we "miss" interpolated shapes. So we can "insert"
+        (ann) =>
+          ann.ui.frame_index
+            ? ann.data.view_name === viewRef.name &&
+              trackBaseSchemaByFrameIndex[ann.ui.frame_index] === ann.table_info.base_schema
+            : false,
+      );
+      numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
+
+      const overlap_tracks = entityTracks?.filter(
+        (ann) =>
+          (ann as Tracklet).data.view_name === viewRef.name &&
+          (ann as Tracklet).data.start_frame <= (track as Tracklet).data.end_frame &&
+          (ann as Tracklet).data.end_frame >= (track as Tracklet).data.start_frame,
+      );
+      overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
+      if (overlap_tracks && overlap_tracks.length > 0)
+        overlapTargetIds = overlap_tracks.map((ann) => ann.id);
+    } else {
+      const sameKindInSameView_anns = annsNotTracks?.filter(
+        //NOTE we "miss" interpolated shapes. So we can "insert"
+        (ann) => ann.data.frame_id === viewRef.id && baseSchema === ann.table_info.base_schema,
+      );
+      numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
+      //WARNING : if we allow relinking of a tracklet child (not allowed now)
+      //$curentFrameIndex will not be reliable !
+      //anyway, we should find a more reliable frame index
+      const overlap_tracks = entityTracks?.filter(
+        (ann) =>
+          (ann as Tracklet).data.view_name === viewRef.name &&
+          (ann as Tracklet).data.start_frame <= currentFrameIndex.value &&
+          (ann as Tracklet).data.end_frame >= currentFrameIndex.value,
+      );
+      overlap = overlap_tracks ? overlap_tracks.length > 0 : false;
+      if (overlap_tracks && overlap_tracks.length > 0)
+        overlapTargetIds = overlap_tracks.map((ann) => ann.id);
+    }
+    // ! overlap --> Move
+    // overlap && numSameKindInSameView === 0 --> Merge -- need to keep target tracklet
+    // overlap && numSameKindInSameView > 0 --> Forbidden
+    return {
+      hard_forbidden: false,
+      overlap: overlap ?? false,
+      numSameKindInSameView,
+      overlapTargetIds,
+    };
+  };
+
+  let entitiesCombo = $derived.by(() => {
+    const currentEntities = entities.value;
+    const res: { id: string; name: string; color: string; targets: string[] }[] = [
+      { id: "new", name: "New", color: "", targets: [] },
+    ];
+    currentEntities.forEach((entity) => {
+      //check if there is no annotation of same kind & view_id for this entity
+      const { hard_forbidden, overlap, numSameKindInSameView, overlapTargetIds } =
+        entityAllowInfo(entity);
+      if (!hard_forbidden) {
+        const displayFeat = getDefaultDisplayFeat(entity);
+        const prefixText = overlap
+          ? numSameKindInSameView === 0
+            ? "Merge in "
+            : `Forbidden (${numSameKindInSameView} conflict${numSameKindInSameView > 1 ? "s" : ""}) in `
+          : "Move in ";
+        res.push({
+          id: entity.id,
+          name: prefixText + (displayFeat ? `${displayFeat} (${entity.id})` : entity.id),
+          color: `${colorScale.value[1](entity.id)}3a`,
+          targets: overlapTargetIds,
+        });
+      }
+    });
+    return res;
+  });
 
   $effect(() => {
-    if (options.length > 0 && !options.some((option) => option.id === selectedEntityId)) {
-      selectedEntityId = options[0].id;
+    if (entitiesCombo.length > 0) {
+      selectedEntityId = entitiesCombo[0].id;
     }
   });
 
-  function applySelection(option: RelinkOption | undefined) {
-    if (!option || option.kind === "forbidden") return;
-    selectedEntityId = option.id;
-    mustMerge = option.kind === "merge";
-    overlapTargetId = option.targets.join(OVERLAPIDS_SEPARATOR);
-  }
-
-  function entityColor(id: string): string {
-    return id === "new" ? "transparent" : colorScale.value[1](id);
-  }
-
-  const kindChip = (option: RelinkOption): { label: string; classes: string } | null => {
-    switch (option.kind) {
-      case "merge":
-        return { label: "Merge", classes: "bg-warning/10 text-warning" };
-      case "forbidden":
-        return {
-          label: `${option.conflicts} conflict${option.conflicts > 1 ? "s" : ""}`,
-          classes: "bg-destructive/10 text-destructive",
-        };
-      default:
-        return null;
-    }
+  const handleChange = (e: Event) => {
+    const target = e.target as HTMLSelectElement;
+    overlapTargetId = target.options[target.selectedIndex].dataset.overlap ?? "";
+    selectedEntityId = target.value;
+    mustMerge = target.options[target.selectedIndex].label.startsWith("Merge");
   };
 </script>
 
-<div class="flex flex-col gap-1.5">
-  <span class="text-label text-left" id="relink-label">Parent entity</span>
-  <Select.Root
-    type="single"
-    value={selectedEntityId}
-    onValueChange={(next) => applySelection(options.find((option) => option.id === next))}
-  >
-    <Select.Trigger
-      aria-labelledby="relink-label"
-      class="inline-flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-input bg-background px-3 text-sm shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+{#if entitiesCombo.length > 0}
+  <div class="flex flex-col gap-1.5">
+    <span class="text-label text-left">Parent entity</span>
+    <select
+      class="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onchange={handleChange}
     >
-      {#snippet children()}
-        <span class="flex min-w-0 items-center gap-2">
-          {#if selected?.kind === "new" || !selected}
-            <Plus size={13} class="shrink-0 text-primary" />
-            <span class="truncate">Create new entity</span>
-          {:else}
-            <span
-              class="h-2.5 w-2.5 shrink-0 rounded-full"
-              style:background={entityColor(selected.id)}
-            ></span>
-            <span class="truncate">{selected.name}</span>
-          {/if}
-        </span>
-        <CaretDown size={13} class="shrink-0 text-muted-foreground" />
-      {/snippet}
-    </Select.Trigger>
-    <Select.Portal>
-      <Select.Content
-        sideOffset={6}
-        class="z-50 max-h-72 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
-      >
-        <Select.Item
-          value="new"
-          label="Create new entity"
-          class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+      {#each entitiesCombo as { id, name, color, targets }}
+        <option
+          value={id}
+          data-overlap={targets.join(OVERLAPIDS_SEPARATOR)}
+          style="background: {color};"
+          disabled={name.startsWith("Forbidden")}
         >
-          {#snippet children()}
-            <Plus size={13} class="shrink-0 text-primary" />
-            <span class="flex-1 truncate text-left">Create new entity</span>
-            {#if selectedEntityId === "new"}<Check size={13} class="shrink-0 text-primary" />{/if}
-          {/snippet}
-        </Select.Item>
-        {#if existing.length > 0}
-          <Select.Group>
-            <Select.GroupHeading class="text-label px-2.5 pb-1 pt-2 text-left">
-              Link to existing entity
-            </Select.GroupHeading>
-            {#each existing as option (option.id)}
-              {@const chip = kindChip(option)}
-              <Select.Item
-                value={option.id}
-                label={option.name}
-                disabled={option.kind === "forbidden"}
-                class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
-              >
-                {#snippet children()}
-                  <span
-                    class="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style:background={entityColor(option.id)}
-                  ></span>
-                  <span class="min-w-0 flex-1 truncate text-left">
-                    {option.name}
-                    <span class="font-mono text-[10px] text-muted-foreground">{option.id}</span>
-                  </span>
-                  {#if chip}
-                    <span
-                      class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {chip.classes}"
-                      title={option.kind === "forbidden"
-                        ? "An annotation of this kind already exists here for this entity"
-                        : "Merges into this entity's overlapping track"}
-                    >
-                      {chip.label}
-                    </span>
-                  {/if}
-                  {#if selectedEntityId === option.id}
-                    <Check size={13} class="shrink-0 text-primary" />
-                  {/if}
-                {/snippet}
-              </Select.Item>
-            {/each}
-          </Select.Group>
-        {/if}
-      </Select.Content>
-    </Select.Portal>
-  </Select.Root>
-</div>
+          {name}
+        </option>
+      {/each}
+    </select>
+  </div>
+{/if}

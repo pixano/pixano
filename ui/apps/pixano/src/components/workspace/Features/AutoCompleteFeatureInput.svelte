@@ -5,8 +5,9 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Combobox } from "bits-ui";
-  import { CaretUpDown, Check, Plus } from "phosphor-svelte";
+  // Imports
+  import { Command, Popover } from "bits-ui";
+  import { Check } from "phosphor-svelte";
   import { tick } from "svelte";
 
   import { cn } from "$lib/ui";
@@ -25,7 +26,7 @@ License: CECILL-C
     onTextInputChange,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     featureList = $bindable([]),
-    placeholder = "",
+    placeholder = "Select a feature",
     value = $bindable(""),
     autofocus = false,
     className = "",
@@ -33,128 +34,92 @@ License: CECILL-C
   }: Props = $props();
 
   let open = $state(false);
-  let search = $state("");
-  let inputRef = $state<HTMLInputElement | null>(null);
+  let selectedValue = $state<string | null>(null);
+  let inputValue: string = $state("");
+  const triggerId = `autocomplete-feature-${Math.random().toString(36).slice(2, 11)}`;
 
-  const effectivePlaceholder = $derived(
-    placeholder || (isInputEnabled ? "Type or choose…" : "Choose a value…"),
-  );
-
-  // Free text is allowed (unless restricted); filter as the user types.
-  const filtered = $derived(
-    search === "" || !isInputEnabled
-      ? featureList
-      : featureList.filter((f) => f.label.toLowerCase().includes(search.toLowerCase())),
-  );
-  const hasExactMatch = $derived(
-    featureList.some((f) => f.value.toLowerCase() === search.trim().toLowerCase()),
-  );
-  const createCandidate = $derived(
-    isInputEnabled && search.trim() !== "" && !hasExactMatch ? search.trim() : null,
-  );
-
-  /** Commit a value: update the bound value, register it once, notify, sync the input. */
-  function commit(next: string) {
-    value = next;
-    if (next !== "" && !featureList.some((f) => f.value === next)) {
-      featureList = [...featureList, { value: next, label: next }];
-    }
-    onTextInputChange(next);
-    if (inputRef) inputRef.value = next;
-    search = "";
-  }
-
-  // Reflect externally-set values into the input (without clobbering active typing).
   $effect(() => {
-    if (inputRef && document.activeElement !== inputRef) {
-      inputRef.value = value;
-    }
+    open = autofocus;
   });
 
-  // Autofocus focuses the input — it must NOT auto-open the list.
   $effect(() => {
-    if (autofocus && inputRef) {
-      void tick().then(() => inputRef?.focus());
-    }
+    inputValue = value;
   });
 
-  function handleBlur() {
-    // Committing typed free text on blur lets Tab-through work like a tag editor.
-    const text = search.trim();
-    if (!open && isInputEnabled && text !== "" && text !== value) {
-      commit(text);
-    }
+  $effect(() => {
+    selectedValue =
+      featureList.find((f) => f.value === value)?.label ??
+      (value === "" ? null : value) ??
+      placeholder;
+  });
+
+  // We want to refocus the trigger button when the user selects
+  // an item from the list so users can continue navigating the
+  // rest of the form with the keyboard.
+  function closeAndFocusTrigger(triggerId: string) {
+    open = false;
+    tick()
+      .then(() => {
+        document.getElementById(triggerId)?.focus();
+      })
+      .catch((err) => console.error(err));
   }
+
+  const onSelect = (currentValue: string, trigger: string) => {
+    value = currentValue;
+    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
+    if (!existingValue && inputValue) {
+      featureList = [...featureList, { value: inputValue, label: inputValue }];
+    }
+    onTextInputChange(value);
+    closeAndFocusTrigger(trigger);
+  };
+
+  const onSearchInput = () => {
+    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
+    if (!existingValue && inputValue) {
+      featureList = [...featureList, { value: inputValue, label: inputValue }];
+    }
+  };
 </script>
 
-<Combobox.Root
-  type="single"
-  bind:open
-  value={value === "" ? undefined : value}
-  onValueChange={(next) => {
-    if (next !== undefined) commit(next);
-  }}
-  onOpenChange={(isOpen) => {
-    if (!isOpen) search = "";
-  }}
->
-  <div class={cn("relative w-full", className)}>
-    <Combobox.Input
-      bind:ref={inputRef}
-      defaultValue={value}
-      readonly={!isInputEnabled}
-      placeholder={effectivePlaceholder}
-      aria-label={effectivePlaceholder}
-      oninput={(event) => {
-        search = event.currentTarget.value;
-        if (!open) open = true;
-      }}
-      onblur={handleBlur}
-      class={cn(
-        "h-10 w-full rounded-xl border border-input bg-background px-3 pr-9 text-sm text-foreground",
-        "placeholder:text-muted-foreground/60 shadow-sm transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        !isInputEnabled && "cursor-pointer",
-      )}
-    />
-    <Combobox.Trigger
-      aria-label="Show values"
-      class="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <CaretUpDown size={14} />
-    </Combobox.Trigger>
-  </div>
-  <Combobox.Portal>
-    <Combobox.Content
-      sideOffset={6}
-      class="z-50 max-h-64 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md w-[var(--bits-floating-anchor-width)]"
-    >
-      {#each filtered as feature, i (feature.value + "\u0000" + i)}
-        <Combobox.Item
-          value={feature.value}
-          label={feature.label}
-          class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
-        >
-          <Check
-            size={13}
-            class={cn("shrink-0", value === feature.value ? "text-primary" : "text-transparent")}
-          />
-          <span class="truncate">{feature.label}</span>
-        </Combobox.Item>
-      {/each}
-      {#if createCandidate !== null}
-        <Combobox.Item
-          value={createCandidate}
-          label={createCandidate}
-          class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
-        >
-          <Plus size={13} class="shrink-0 text-primary" />
-          <span class="truncate">Create "{createCandidate}"</span>
-        </Combobox.Item>
+<Popover.Root bind:open>
+  <Popover.Trigger
+    type="button"
+    id={triggerId}
+    class={cn(
+      "flex h-10 w-full items-center rounded-xl border border-input bg-background px-3 text-sm text-foreground shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      className,
+    )}
+  >
+    {selectedValue}
+  </Popover.Trigger>
+  <Popover.Content
+    sideOffset={6}
+    class="z-50 w-[var(--bits-floating-anchor-width)] rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 outline-none backdrop-blur-md"
+    tabindex={-1}
+  >
+    <Command.Root>
+      {#if isInputEnabled}
+        <Command.Input
+          {placeholder}
+          bind:value={inputValue}
+          oninput={onSearchInput}
+          class="mb-1 h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
       {/if}
-      {#if filtered.length === 0 && createCandidate === null}
-        <p class="px-2.5 py-2 text-sm text-muted-foreground">No values yet.</p>
-      {/if}
-    </Combobox.Content>
-  </Combobox.Portal>
-</Combobox.Root>
+      <Command.List>
+        {#each featureList as feature}
+          <Command.Item
+            value={feature.value}
+            onSelect={() => onSelect(feature.value, triggerId)}
+            class="flex cursor-pointer items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors data-[selected]:bg-accent data-[selected]:text-accent-foreground"
+          >
+            <Check class={cn("mr-2 h-4 w-4", value !== feature.value && "text-transparent")} />
+            {feature.label}
+          </Command.Item>
+        {/each}
+      </Command.List>
+    </Command.Root>
+  </Popover.Content>
+</Popover.Root>
