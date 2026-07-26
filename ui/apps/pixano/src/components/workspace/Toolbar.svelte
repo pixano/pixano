@@ -18,6 +18,7 @@ License: CECILL-C
   } from "phosphor-svelte";
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
+  import DisplaySettings from "./Toolbar/DisplaySettings.svelte";
   import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
   import { polygonIcon } from "$lib/assets";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
@@ -403,6 +404,11 @@ License: CECILL-C
   </div>
 
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  <!-- Display settings (canvas tools, not record data) -->
+  {#if currentWorkspaceType !== WorkspaceType.PCL_3D}
+    <DisplaySettings />
+  {/if}
 
   <!-- Help -->
   <KeyboardShortcuts isVideo={currentWorkspaceType === WorkspaceType.VIDEO} />

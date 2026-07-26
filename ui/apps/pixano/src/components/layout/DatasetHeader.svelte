@@ -76,8 +76,8 @@ License: CECILL-C
   });
 
   const getWorkspaceRecordDisplayCount = () => {
-    if (!neighbors || neighbors.position == null) return "0 of 0";
-    return `${neighbors.position} of ${neighbors.total}`;
+    if (!neighbors || neighbors.position == null) return "Record — of —";
+    return `Record ${neighbors.position} of ${neighbors.total}`;
   };
 
   // Handle bi-directional navigation using arrows
@@ -102,6 +102,10 @@ License: CECILL-C
 
   const handleSave = () => {
     void currentItemSaveCoordinator.requestSave();
+  };
+
+  const handleReturnToLibrary = () => {
+    void navigateTo("/");
   };
 
   const handleSaveAndContinue = async () => {
@@ -181,6 +185,7 @@ License: CECILL-C
       {handleSave}
       {goToNeighborItem}
       {handleReturnToPreviousPage}
+      {handleReturnToLibrary}
       {getWorkspaceRecordDisplayCount}
     />
   {:else}

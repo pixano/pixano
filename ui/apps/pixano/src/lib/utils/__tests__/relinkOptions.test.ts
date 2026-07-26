@@ -72,9 +72,7 @@ describe("buildRelinkOptions (image mode)", () => {
   });
 
   it("marks same-kind-same-view collisions via conflicts (still move without tracklet overlap)", () => {
-    const clashing = fakeEntity("e2", [
-      fakeAnnotation(BaseSchema.BBox, { frame_id: "view_0" }),
-    ]);
+    const clashing = fakeEntity("e2", [fakeAnnotation(BaseSchema.BBox, { frame_id: "view_0" })]);
     const options = buildRelinkOptions(context([clashing]));
     // No tracklet overlap → kind stays move even with same-kind annotations (image datasets
     // have no tracklets); conflicts are only forbidden when an overlapping tracklet exists.
@@ -84,7 +82,12 @@ describe("buildRelinkOptions (image mode)", () => {
 
 describe("buildRelinkOptions (video mode, tracklets)", () => {
   const tracklet = (id: string, start: number, end: number) =>
-    fakeAnnotation(BaseSchema.Tracklet, { id, view_name: "image", start_frame: start, end_frame: end });
+    fakeAnnotation(BaseSchema.Tracklet, {
+      id,
+      view_name: "image",
+      start_frame: start,
+      end_frame: end,
+    });
 
   it("merge when a tracklet overlaps the current frame and no same-kind conflict", () => {
     const withTrack = fakeEntity("e3", [tracklet("t1", 0, 10)]);
@@ -114,7 +117,7 @@ describe("buildRelinkOptions (video mode, tracklets)", () => {
       start_frame: 0,
       end_frame: 10,
     });
-    (trackAnn.ui as Record<string, unknown>).childs = [];
+    trackAnn.ui.childs = [];
     const owner = fakeEntity("owner", [trackAnn]);
     const options = buildRelinkOptions(
       context([owner], { track: trackAnn as unknown as Annotation, trackTopEntityId: "owner" }),

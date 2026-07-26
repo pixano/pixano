@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  /* eslint-disable svelte/no-at-html-tags */
   // Imports
   import { Button } from "bits-ui";
   import { nanoid } from "nanoid";
@@ -52,6 +51,7 @@ License: CECILL-C
   } from "$lib/utils/entityOperations";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
   import { highlightTrackletChildren } from "$lib/utils/highlightOperations";
+  import { humanizeShapeType } from "$lib/utils/labels";
   import { getAlphaBoundingBox, rleToBitmapCanvas } from "$lib/utils/maskUtils";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { cn } from "$lib/utils/styleUtils";
@@ -59,15 +59,15 @@ License: CECILL-C
   import { getWorkspaceContext } from "$lib/workspace/context";
 
   interface Props {
-    currentTab: "scene" | "objects";
+    currentTab: "record" | "objects";
   }
 
   let { currentTab = $bindable() }: Props = $props();
   let isFormValid: boolean = $state(false);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let formInputs: CreateEntityInputs = $state([]);
-  const defaultButtonClass =
-    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
+  const footerButtonBase =
+    "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-xl px-5 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
 
   let objectProperties: EntityProperties = $state({});
   let selectedEntityId: string = $state("");
@@ -527,7 +527,8 @@ License: CECILL-C
   }
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === "Escape") {
+    // Open floating content (combobox/select) consumes Escape first and prevents default.
+    if (event.key === "Escape" && !event.defaultPrevented) {
       handleCancel();
     }
   }
@@ -537,15 +538,15 @@ License: CECILL-C
     handleFormSubmit();
   }
 
-  //set specific header text for different kind of shape
-  let saveText = $derived.by(() => {
-    if (newShape.value.status !== "saving") return "Save";
-    let text = "Save " + newShape.value.type;
-    if (newShape.value.type === ShapeType.textSpan) {
-      text += " <i>" + newShape.value.attrs.mention + "</i>";
-    }
-    return text;
-  });
+  // Humanized heading for the shape being saved ("Save bounding box", "Save text span …").
+  const shapeTypeLabel = $derived(
+    newShape.value.status === "saving" ? humanizeShapeType(newShape.value.type) : "",
+  );
+  const textSpanMention = $derived(
+    newShape.value.status === "saving" && newShape.value.type === ShapeType.textSpan
+      ? String(newShape.value.attrs.mention ?? "")
+      : "",
+  );
 
   // Cleanup: remove temporary text span when this component unmounts
   $effect(() => {
@@ -554,14 +555,23 @@ License: CECILL-C
 </script>
 
 {#if newShape.value.status === "saving"}
-  <form class="flex flex-col gap-4 p-4" onsubmit={handleSubmit}>
-    <p>{@html saveText}</p>
-    <RelinkAnnotation
-      bind:selectedEntityId
-      baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
-      viewRef={newShape.value.viewRef}
-    />
-    <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
+  <form class="flex h-full min-h-0 flex-col" onsubmit={handleSubmit}>
+    <!-- Header -->
+    <div class="shrink-0 border-b border-border/50 px-4 pb-3 pt-4 text-left">
+      <p class="text-label">New annotation</p>
+      <h2 class="mt-0.5 text-sm font-bold text-foreground">
+        Save {shapeTypeLabel}{#if textSpanMention}
+          <i class="font-normal text-muted-foreground">“{textSpanMention}”</i>{/if}
+      </h2>
+    </div>
+
+    <!-- Fields -->
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <RelinkAnnotation
+        bind:selectedEntityId
+        baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
+        viewRef={newShape.value.viewRef}
+      />
       <CreateFeatureInputs
         bind:isFormValid
         bind:formInputs
@@ -570,11 +580,29 @@ License: CECILL-C
         baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
       />
     </div>
-    <div class="flex gap-4">
-      <Button.Root type="button" class={cn(defaultButtonClass)} onclick={handleCancel}>
+
+    <!-- Footer -->
+    <div class="flex shrink-0 justify-end gap-3 border-t border-border/50 bg-card p-4">
+      <Button.Root
+        type="button"
+        title="Discard this annotation (Esc)"
+        class={cn(
+          footerButtonBase,
+          "border border-border bg-transparent text-foreground hover:bg-accent",
+        )}
+        onclick={handleCancel}
+      >
         Cancel
       </Button.Root>
-      <Button.Root type="submit" class={cn(defaultButtonClass)} disabled={!isFormValid}>
+      <Button.Root
+        type="submit"
+        title="Save this annotation (Enter)"
+        class={cn(
+          footerButtonBase,
+          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90",
+        )}
+        disabled={!isFormValid}
+      >
         Confirm
       </Button.Root>
     </div>
