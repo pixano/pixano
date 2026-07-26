@@ -19,7 +19,7 @@ License: CECILL-C
   function toggleHover() {
     isHovered = !isHovered;
     if (isHovered) {
-      video.playbackRate = 4;
+      video.playbackRate = 2;
       video.play().catch(() => console.error("video playback error"));
     } else {
       video.pause();
@@ -27,13 +27,14 @@ License: CECILL-C
   }
 </script>
 
-<div class="mx-4 h-16 aspect-square">
+<div class="mx-auto h-10 w-10">
   <video
     bind:this={video}
     src={value}
     loop
     muted
-    class="h-full w-full object-cover rounded-lg"
+    playsinline
+    class="h-full w-full object-cover rounded-lg bg-muted"
     onmouseenter={toggleHover}
     onmouseleave={toggleHover}
   ></video>

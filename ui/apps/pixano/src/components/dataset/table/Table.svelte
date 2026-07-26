@@ -10,20 +10,27 @@ License: CECILL-C
     getCoreRowModel,
     type ColumnDef,
     type ColumnOrderState,
-    type SortingState,
     type VisibilityState,
   } from "@tanstack/table-core";
   // Pixano Core Imports
-  import { Button, Checkbox } from "bits-ui";
-  import { CaretDoubleDown, CaretDoubleUp, CaretUpDown, Check, Sparkle } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { Checkbox, Popover } from "bits-ui";
+  import {
+    ArrowRight,
+    CaretDown,
+    CaretUp,
+    CaretUpDown,
+    Check,
+    DotsSixVertical,
+    GearSix,
+    Sparkle,
+  } from "phosphor-svelte";
   import SortableList from "svelte-sortable-list";
 
   import { createSvelteTable } from "./createSvelteTable.svelte";
   import FlexRender from "./FlexRender.svelte";
   import { TableCell } from "./TableCell";
   import type { TableData, TableRow } from "$lib/types/dataset";
-  import { icons } from "$lib/ui";
+  import { formatColumnLabel } from "$lib/utils/columns";
 
   interface Props {
     // Exports
@@ -42,7 +49,7 @@ License: CECILL-C
     return items.columns.map((col) => ({
       id: col.name,
       accessorKey: col.name,
-      header: col.name.replace("_", " "),
+      header: formatColumnLabel(col.name),
       cell: (info) => {
         const cellRenderer = TableCell[col.type];
         if (cellRenderer) {
@@ -69,15 +76,7 @@ License: CECILL-C
     return [...highPriority, ...lowPriority];
   };
 
-  // Table state — reflect the server-side sort supplied by the explorer. Seeded
-  // once; the parent remounts this table (keyed on the active sort) when it
-  // changes, so the caret stays in sync with the server order.
   const initialColumnOrder = buildInitialColumnOrder();
-  let sorting = $state<SortingState>(
-    untrack(() =>
-      activeSort?.col ? [{ id: activeSort.col, desc: activeSort.order === "desc" }] : [],
-    ),
-  );
   let columnOrder = $state<ColumnOrderState>(initialColumnOrder);
   let columnVisibility = $state<VisibilityState>({});
 
@@ -91,22 +90,12 @@ License: CECILL-C
     getCoreRowModel: getCoreRowModel(),
     manualSorting: true,
     state: {
-      get sorting() {
-        return sorting;
-      },
       get columnOrder() {
         return columnOrder;
       },
       get columnVisibility() {
         return columnVisibility;
       },
-    },
-    onSortingChange: (updater) => {
-      if (typeof updater === "function") {
-        sorting = updater(sorting);
-      } else {
-        sorting = updater;
-      }
     },
     onColumnOrderChange: (updater) => {
       if (typeof updater === "function") {
@@ -124,23 +113,24 @@ License: CECILL-C
     },
   });
 
+  // Sorting is fully server-driven: carets reflect the activeSort prop, and a header
+  // click cycles asc → desc → clear via onColsort. No table remount, no local state.
+  function sortStateOf(colId: string): "asc" | "desc" | null {
+    if (activeSort?.col !== colId) return null;
+    return activeSort.order === "desc" ? "desc" : "asc";
+  }
+
   const handleSort = (colId: string) => {
-    const colDef = table.getColumn(colId);
-    if (!colDef?.getCanSort()) return;
-
-    colDef.toggleSorting();
-
-    // Emit the new sort (empty list clears it → the backend falls back to id asc).
-    onColsort?.(sorting.map((s) => ({ id: s.id, order: s.desc ? "desc" : "asc" })));
+    if (!table.getColumn(colId)?.getCanSort()) return;
+    const current = sortStateOf(colId);
+    if (current === null) onColsort?.([{ id: colId, order: "asc" }]);
+    else if (current === "asc") onColsort?.([{ id: colId, order: "desc" }]);
+    else onColsort?.([]);
   };
 
   // Column visibility tracking by id
   let shownColumnsById = $state(Object.fromEntries(initialColumnOrder.map((id) => [id, true])));
   $effect(() => {
-    const hidden: VisibilityState = {};
-    for (const [id, shown] of Object.entries(shownColumnsById)) {
-      if (!shown) hidden[id] = false;
-    }
     columnVisibility = Object.fromEntries(
       columnOrder.map((id) => [id, shownColumnsById[id] !== false]),
     );
@@ -154,80 +144,17 @@ License: CECILL-C
     onSelectItem?.(id);
   }
 
-  // Settings popup status
-  let popupOpened = $state(false);
-  const defaultButtonClass =
-    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2";
-  const ghostButtonClass =
-    "inline-flex items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap ring-offset-background transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2";
+  function recordIdOf(rowId: string): string {
+    return items.rows[Number(rowId)].id as string;
+  }
+
+  let settingsOpen = $state(false);
+
+  const rowActionClass =
+    "flex h-8 w-8 items-center justify-center border rounded-full border-border text-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 </script>
 
-<!-- Settings popup -->
-{#if popupOpened}
-  <div
-    class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/40 backdrop-blur-sm
-    flex items-center justify-center font-sans"
-  >
-    <div
-      class="px-8 pt-8 flex flex-col
-    bg-card border border-border shadow-xl rounded-xl"
-    >
-      <span class="text-lg font-medium mb-3">Column settings</span>
-      <span class="text-sm text-muted-foreground mb-3">
-        Drag and drop to re-order, toggle box for visibility.
-      </span>
-      <div class="flex flex-col space-y-2">
-        <SortableList list={columnOrder} on:sort={sortList}>
-          {#snippet children({ item })}
-            <div class="py-1 px-2 flex items-center space-x-2 border border-border rounded-md">
-              <Checkbox.Root
-                id={item}
-                bind:checked={shownColumnsById[item]}
-                class="peer h-4 w-4 shrink-0 rounded border border-primary ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
-              >
-                {#snippet children({ checked })}
-                  <span class="flex items-center justify-center text-current h-full w-full">
-                    {#if checked}
-                      <Check class="h-3.5 w-3.5" />
-                    {/if}
-                  </span>
-                {/snippet}
-              </Checkbox.Root>
-              <label for={item} class="text-sm select-none grow cursor-pointer">
-                {item}
-              </label>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="48"
-                viewBox="0 -960 960 960"
-                width="48"
-                class="h-6 w-6 cursor-move"
-              >
-                <path d={icons.svg_drag_handle} fill="grey" />
-              </svg>
-            </div>
-          {/snippet}
-        </SortableList>
-      </div>
-
-      <div class="my-6 flex justify-end items-end">
-        <Button.Root
-          type="button"
-          class={defaultButtonClass}
-          onclick={() => {
-            popupOpened = false;
-          }}
-        >
-          Done
-        </Button.Root>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<div
-  class="w-full h-full overflow-auto rounded-xl bg-card border border-border shadow-elevation-1 font-sans"
->
+<div class="w-full h-full overflow-auto font-sans">
   <table
     class="table-auto z-0 w-full text-center text-sm text-foreground border-separate border-spacing-0"
   >
@@ -236,47 +163,100 @@ License: CECILL-C
       {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
         <tr>
           {#each headerGroup.headers as header (header.id)}
-            <th
-              onclick={() => handleSort(header.column.id)}
-              class="relative py-3 px-2 text-label bg-surface-2 border-b border-border/60"
-            >
-              <span class="whitespace-nowrap flex items-center gap-1 justify-center">
-                {#if !header.isPlaceholder}
-                  <FlexRender content={header.column.columnDef.header} />
-                {/if}
-                {#if header.column.getCanSort()}
-                  {#if header.column.getIsSorted() === "asc"}
-                    <CaretDoubleDown weight="regular" />
-                  {:else if header.column.getIsSorted() === "desc"}
-                    <CaretDoubleUp weight="regular" />
-                  {:else}
-                    <CaretUpDown weight="regular" class="opacity-20" />
+            {@const sorted = sortStateOf(header.column.id)}
+            <th class="bg-surface-2 border-b border-border/60 px-2">
+              {#if header.column.getCanSort()}
+                <button
+                  type="button"
+                  onclick={() => handleSort(header.column.id)}
+                  aria-label="Sort by {formatColumnLabel(header.column.id)}"
+                  class="group w-full py-3 px-1 text-label whitespace-nowrap flex items-center gap-1 justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {#if !header.isPlaceholder}
+                    <FlexRender content={header.column.columnDef.header} />
                   {/if}
-                {/if}
-              </span>
+                  {#if sorted === "asc"}
+                    <CaretUp size={14} weight="bold" class="text-primary" />
+                  {:else if sorted === "desc"}
+                    <CaretDown size={14} weight="bold" class="text-primary" />
+                  {:else}
+                    <CaretUpDown
+                      size={14}
+                      class="opacity-40 group-hover:opacity-100 transition-opacity"
+                    />
+                  {/if}
+                </button>
+              {:else}
+                <span
+                  class="py-3 px-1 text-label whitespace-nowrap flex items-center justify-center"
+                >
+                  {#if !header.isPlaceholder}
+                    <FlexRender content={header.column.columnDef.header} />
+                  {/if}
+                </span>
+              {/if}
             </th>
           {/each}
           <th class="w-full bg-surface-2 border-b border-border/60"></th>
           <th class="pr-4 bg-surface-2 border-b border-border/60">
-            <!-- Settings button -->
-            <Button.Root
-              type="button"
-              class={ghostButtonClass}
-              onclick={() => {
-                popupOpened = true;
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="48"
-                viewBox="0 -960 960 960"
-                width="48"
-                class="h-6 w-6"
+            <!-- Column settings -->
+            <Popover.Root bind:open={settingsOpen}>
+              <Popover.Trigger
+                aria-label="Column settings"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <title></title>
-                <path d={icons.svg_settings} fill="currentcolor" />
-              </svg>
-            </Button.Root>
+                <GearSix size={16} />
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={8}
+                  class="z-50 w-72 rounded-2xl border border-border/50 bg-popover/95 p-3 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
+                >
+                  <p class="text-label mb-1 text-left">Columns</p>
+                  <p
+                    class="text-xs text-muted-foreground mb-3 text-left font-normal normal-case tracking-normal"
+                  >
+                    Drag to reorder, toggle to show or hide.
+                  </p>
+                  <div class="flex flex-col space-y-1.5">
+                    <SortableList list={columnOrder} on:sort={sortList}>
+                      {#snippet children({ item })}
+                        <div
+                          class="py-1.5 px-2 flex items-center gap-2 border border-border/60 rounded-lg bg-background"
+                        >
+                          <Checkbox.Root
+                            id={item}
+                            bind:checked={shownColumnsById[item]}
+                            class="peer h-4 w-4 shrink-0 rounded border border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                          >
+                            {#snippet children({ checked })}
+                              <span
+                                class="flex items-center justify-center text-current h-full w-full"
+                              >
+                                {#if checked}
+                                  <Check class="h-3 w-3" />
+                                {/if}
+                              </span>
+                            {/snippet}
+                          </Checkbox.Root>
+                          <label
+                            for={item}
+                            class="text-sm font-normal normal-case tracking-normal select-none grow cursor-pointer text-left truncate"
+                          >
+                            {formatColumnLabel(item)}
+                          </label>
+                          <DotsSixVertical
+                            size={16}
+                            class="shrink-0 text-muted-foreground cursor-grab"
+                          />
+                        </div>
+                      {/snippet}
+                    </SortableList>
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </th>
         </tr>
       {/each}
@@ -285,47 +265,59 @@ License: CECILL-C
     <tbody>
       {#each table.getRowModel().rows as row (row.id)}
         <tr
-          class="h-20 cursor-pointer hover:bg-accent/60 transition-colors"
+          class="h-14 cursor-pointer hover:bg-accent/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          tabindex="0"
           onclick={() => {
-            handleSelectItem(items.rows[Number(row.id)].id as string);
+            handleSelectItem(recordIdOf(row.id));
+          }}
+          onkeydown={(event: KeyboardEvent) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              handleSelectItem(recordIdOf(row.id));
+            }
           }}
         >
           {#each row.getVisibleCells() as cell (cell.id)}
-            <td class="px-3 py-1 border-b border-border">
+            <td
+              class="px-3 py-1 border-b border-border/60 {cell.column.id === 'id'
+                ? 'font-mono text-xs text-muted-foreground'
+                : ''}"
+            >
               <!-- eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-explicit-any -->
               <FlexRender content={(cell.column.columnDef.cell as any)?.(cell.getContext())} />
             </td>
           {/each}
-          <td class="w-full border-b border-border"></td>
-          {#if onFindSimilar}
-            <!-- Find-similar action (semantic search) -->
-            <td class="border-b border-border">
+          <td class="w-full border-b border-border/60"></td>
+          <!-- Row actions -->
+          <td class="border-b border-border/60 pr-4">
+            <div class="flex items-center justify-end gap-1.5">
+              {#if onFindSimilar}
+                <button
+                  type="button"
+                  title="Find similar records"
+                  aria-label="Find similar records"
+                  class={rowActionClass}
+                  onclick={(event: MouseEvent) => {
+                    event.stopPropagation();
+                    onFindSimilar(recordIdOf(row.id));
+                  }}
+                >
+                  <Sparkle size={15} />
+                </button>
+              {/if}
               <button
                 type="button"
-                title="Find similar records"
-                aria-label="Find similar records"
-                class="flex h-8 w-8 mx-auto ml-3 items-center justify-center border rounded-full border-border text-foreground transition-colors hover:bg-accent hover:text-primary"
+                title="Open record"
+                aria-label="Open record"
+                class={rowActionClass}
                 onclick={(event: MouseEvent) => {
                   event.stopPropagation();
-                  onFindSimilar(items.rows[Number(row.id)].id as string);
+                  handleSelectItem(recordIdOf(row.id));
                 }}
               >
-                <Sparkle size={16} />
+                <ArrowRight size={15} />
               </button>
-            </td>
-          {/if}
-          <!-- Go Button -->
-          <td class="border-b border-border">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="48"
-              viewBox="0 -960 960 960"
-              width="48"
-              class="h-8 w-8 mx-auto p-1 ml-3 border rounded-full border-border text-foreground transition-colors hover:bg-accent"
-            >
-              <title>Open</title>
-              <path d={icons.svg_right_arrow} fill="currentcolor" />
-            </svg>
+            </div>
           </td>
         </tr>
       {/each}

@@ -92,7 +92,7 @@ License: CECILL-C
       <div class="flex-1 h-full">
         {#if page.route.id !== HOME_ROUTE_ID}
           <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
-            <DatasetHeader pageId={page.route.id} />
+            <DatasetHeader />
           </div>
         {/if}
       </div>
