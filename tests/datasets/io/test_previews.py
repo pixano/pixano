@@ -79,12 +79,15 @@ class TestPreviewApi:
 
         records = client.get(f"/datasets/{dataset.info.id}/records", params={"include": "view_previews"}).json()
         descriptor = records["items"][0]["view_previews"]["image"]
-        assert descriptor["preview_url"].endswith("/preview")
+        # Explorer previews request a grid-sized thumbnail, resized from the embedded blob.
+        assert descriptor["preview_url"].endswith("/preview?size=256")
 
         response = client.get(descriptor["preview_url"])
         assert response.status_code == 200
-        assert response.headers["content-type"] == "image/png"
-        assert PIL.Image.open(io.BytesIO(response.content)).format == "PNG"
+        assert response.headers["content-type"] == "image/jpeg"
+        image = PIL.Image.open(io.BytesIO(response.content))
+        assert image.format == "JPEG"
+        assert max(image.size) <= 256
 
     def test_datalake_uri_rows_expose_the_remote_url(self, tmp_path: Path):
         dataset = _import_corpus("mixed_media", tmp_path)  # embedded photo + remote video
@@ -92,6 +95,6 @@ class TestPreviewApi:
 
         records = client.get(f"/datasets/{dataset.info.id}/records", params={"include": "view_previews"}).json()
         previews = records["items"][0]["view_previews"]
-        assert previews["image"]["preview_url"].endswith("/preview")  # embedded -> route
+        assert previews["image"]["preview_url"].endswith("/preview?size=256")  # embedded -> route
         embedded = client.get(previews["image"]["preview_url"])
         assert embedded.status_code == 200

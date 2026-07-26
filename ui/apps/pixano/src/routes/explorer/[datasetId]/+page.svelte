@@ -38,10 +38,12 @@ License: CECILL-C
   }
 
   const handleSelectItem = async (itemId: string) => {
-    // Carry the active filter/sort/search into the workspace so item-to-item
-    // navigation stays within the current result set.
-    const query = pickExplorerQuery(getRouteSearchParams(page.url)).toString();
-    await goto(getWorkspaceRoute(data.dataset.id, itemId, query));
+    // Carry the active filter/sort into the workspace so item-to-item navigation
+    // stays within the current result set. In ranked (semantic) mode `q` is a
+    // similarity query the lexical neighbors endpoint cannot honor — drop it.
+    const params = pickExplorerQuery(getRouteSearchParams(page.url));
+    if (data.semantic?.active) params.delete("q");
+    await goto(getWorkspaceRoute(data.dataset.id, itemId, params.toString()));
   };
 </script>
 
@@ -53,6 +55,7 @@ License: CECILL-C
     semanticActive={data.semantic?.active ?? false}
     similarTo={data.semantic?.similarTo ?? ""}
     searchError={data.searchError ?? ""}
+    view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}

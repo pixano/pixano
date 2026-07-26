@@ -1576,19 +1576,25 @@ class Dataset:
     # ------------------------------------------------------------------
 
     def _load_record_embedding_space(self) -> None:
-        """Load the record-embedding sidecar and inject its schema into ``info.tables``."""
+        """Load the record-embedding sidecar and inject its schema into ``info.tables``.
+
+        A corrupt sidecar (unreadable JSON, missing or non-positive ``dim``) degrades to
+        "no embeddings" instead of raising — a broken embeddings file must never make the
+        whole dataset unloadable.
+        """
         if not self._embeddings_file.is_file():
             self._record_embedding_space = None
             return
         try:
             space = json.loads(self._embeddings_file.read_text(encoding="utf-8"))
             dim = int(space["dim"])
-        except (json.JSONDecodeError, KeyError, ValueError, OSError) as exc:
+            schema = build_record_embedding_schema(dim)
+        except (json.JSONDecodeError, KeyError, ValueError, TypeError, OSError) as exc:
             logger.warning("Dataset %s: ignoring unreadable %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
             self._record_embedding_space = None
             return
         self._record_embedding_space = space
-        self.info.tables[self._RECORD_EMBEDDING_TABLE] = build_record_embedding_schema(dim)
+        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
 
     def has_record_embeddings(self) -> bool:
         """Whether this dataset has a computed record-embedding table."""
@@ -1597,6 +1603,78 @@ class Dataset:
     def record_embedding_space(self) -> dict[str, Any] | None:
         """Return the record-embedding space descriptor (model, dim, metric), or None."""
         return dict(self._record_embedding_space) if self._record_embedding_space is not None else None
+
+    def record_embedding_health(self) -> dict[str, Any]:
+        """Cheap health check of the record-embedding storage.
+
+        The sidecar alone advertises semantic search; the physical LanceDB table is only
+        touched at query time, so a crashed job or external deletion can leave the feature
+        advertised but broken. This inspects metadata only (no vector scan).
+
+        Returns:
+            ``{"status", "model_id", "dim", "rows", "records", "detail"}`` where status is one
+            of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
+            ``corrupt``, ``partial`` (fewer vectors than records) or ``ready``.
+        """
+        space = self._record_embedding_space
+        base: dict[str, Any] = {
+            "status": "absent",
+            "model_id": None,
+            "dim": None,
+            "rows": 0,
+            "records": self.num_rows,
+            "detail": None,
+        }
+        if space is None:
+            return base
+        base["model_id"] = space.get("model_id")
+        base["dim"] = space.get("dim")
+
+        try:
+            if self._RECORD_EMBEDDING_TABLE not in set(self._db_connection.table_names()):
+                return {**base, "status": "missing_table", "detail": "The embeddings table is missing."}
+            table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        except Exception as exc:  # noqa: BLE001 - corrupt storage must degrade, not raise
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be opened: {exc}"}
+
+        try:
+            rows = table.count_rows()
+            vector_field = table.schema.field("vector")
+            stored_dim = getattr(vector_field.type, "list_size", None)
+        except Exception as exc:  # noqa: BLE001
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be read: {exc}"}
+
+        base["rows"] = rows
+        if rows == 0:
+            return {**base, "status": "empty", "detail": "The embeddings table has no vectors."}
+        if stored_dim is not None and int(space.get("dim", 0)) != int(stored_dim):
+            return {
+                **base,
+                "status": "dim_mismatch",
+                "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
+            }
+        if rows < base["records"]:
+            return {
+                **base,
+                "status": "partial",
+                "detail": f"{rows} of {base['records']} records embedded.",
+            }
+        return {**base, "status": "ready"}
+
+    def drop_record_embeddings(self) -> None:
+        """Delete the record-embedding table and its sidecar descriptor.
+
+        Safe on missing/corrupt tables; used by force-recompute to escape states where the
+        sidecar advertises embeddings whose table is broken.
+        """
+        try:
+            self._db_connection.drop_table(self._RECORD_EMBEDDING_TABLE, ignore_missing=True)
+        except Exception as exc:  # noqa: BLE001 - dropping a corrupt table must not block repair
+            logger.warning("Dataset %s: dropping the embeddings table failed: %s", self.path, exc)
+        self._table_handles.pop(self._RECORD_EMBEDDING_TABLE, None)
+        self.info.tables.pop(self._RECORD_EMBEDDING_TABLE, None)
+        self._embeddings_file.unlink(missing_ok=True)
+        self._record_embedding_space = None
 
     def create_record_embedding_table(
         self,

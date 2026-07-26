@@ -58,11 +58,20 @@ export async function searchRecords(
   return toDatasetBrowser(datasetId, paginated);
 }
 
-/** Launch the record-embedding computation job; returns the job id (poll via getIoJob). */
-export async function computeEmbeddings(datasetId: string, model: string): Promise<string> {
+/**
+ * Launch the record-embedding computation job; returns the job id (poll via getIoJob).
+ *
+ * `force` drops the existing embedding table first — required to repair a broken store or to
+ * switch embedding models.
+ */
+export async function computeEmbeddings(
+  datasetId: string,
+  model: string,
+  force = false,
+): Promise<string> {
   const response = await requestJson<{ job_id: string }>(
     `/datasets/${datasetId}/embeddings/compute`,
-    { headers: JSON_HEADERS, method: "POST", body: JSON.stringify({ model }) },
+    { headers: JSON_HEADERS, method: "POST", body: JSON.stringify({ model, force }) },
     "computeEmbeddings",
   );
   return response.job_id;
