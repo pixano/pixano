@@ -194,7 +194,7 @@ License: CECILL-C
                   sideOffset={6}
                   class="z-50 max-h-64 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
                 >
-                  {#each normalizeComboboxItems(feature.options) as item (item.value)}
+                  {#each normalizeComboboxItems(feature.options) as item, j (item.value + "\u0000" + j)}
                     <Select.Item
                       value={item.value}
                       label={item.label}
@@ -227,6 +227,8 @@ License: CECILL-C
               {id}
               type="number"
               step={feature.type === "int" ? "1" : "any"}
+              autofocus={isAutofocusEnabled &&
+                firstFieldKey === fieldKey(feature.sch.name, feature.name)}
               class="w-full"
               value={feature.sch.name in initialValues
                 ? normalizeNumericValue(initialValues[feature.sch.name][feature.name]?.value)

@@ -129,7 +129,7 @@ License: CECILL-C
       sideOffset={6}
       class="z-50 max-h-64 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md w-[var(--bits-floating-anchor-width)]"
     >
-      {#each filtered as feature (feature.value)}
+      {#each filtered as feature, i (feature.value + "\u0000" + i)}
         <Combobox.Item
           value={feature.value}
           label={feature.label}
