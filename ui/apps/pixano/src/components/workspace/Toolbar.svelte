@@ -197,10 +197,7 @@ License: CECILL-C
   });
 </script>
 
-<div
-  class="flex items-center gap-1.5 z-10 bg-card/90 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm"
-  aria-busy={smartInferencePending}
->
+<div class="flex items-center gap-1.5 z-10" aria-busy={smartInferencePending}>
   <!-- Navigation -->
   <IconButton
     tooltipContent={panTool.name}

@@ -6,34 +6,44 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { CaretLeft, CaretRight, CircleNotch, FloppyDisk } from "phosphor-svelte";
+  import {
+    ArrowLeft,
+    CaretLeft,
+    CaretRight,
+    Check,
+    CircleNotch,
+    FloppyDisk,
+  } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import { Toolbar } from "../workspace";
   import { navigating } from "$app/state";
   import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { saveData } from "$lib/stores/workspaceStores.svelte";
-  import { cn, IconButton } from "$lib/ui";
+  import { IconButton } from "$lib/ui";
 
   interface Props {
     currentItemId: string;
     goToNeighborItem: (direction: "previous" | "next") => Promise<void>;
     handleReturnToPreviousPage: () => void;
-    handleReturnToLibrary?: () => void;
     handleSave: () => void;
-    getWorkspaceRecordDisplayCount: () => string;
+    getRecordPosition: () => { position: number | null; total: number | null };
   }
 
   let {
     currentItemId,
     goToNeighborItem,
     handleReturnToPreviousPage,
-    handleReturnToLibrary,
     handleSave,
-    getWorkspaceRecordDisplayCount,
+    getRecordPosition,
   }: Props = $props();
 
   const dirtyCount = $derived(saveData.value.length);
+
+  const recordLabel = $derived.by(() => {
+    const { position, total } = getRecordPosition();
+    return position != null && total != null ? `${position} / ${total}` : "— / —";
+  });
 
   const onKeyUp = async (event: KeyboardEvent) => {
     // Item navigation shortcuts should work globally, even when typing in a textarea
@@ -71,37 +81,32 @@ License: CECILL-C
     class="grid h-full flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-2"
   >
     {#if navigating.from !== null}
-      <div class="flex items-center gap-3 px-4">
+      <div class="flex items-center gap-2 px-1">
         <CircleNotch weight="regular" class="h-4 w-4 animate-spin text-primary" />
-        <span class="text-label">Loading…</span>
+        <span class="text-sm text-muted-foreground">Loading…</span>
       </div>
       <div></div>
       <div></div>
     {:else}
-      <!-- LEFT: breadcrumb — Library › dataset › record nav -->
+      <!-- LEFT: back to explorer · dataset name · record position -->
       <nav class="flex min-w-0 items-center gap-2">
-        {#if handleReturnToLibrary}
-          <button
-            type="button"
-            onclick={handleReturnToLibrary}
-            class="shrink-0 rounded-md px-1 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Library
-          </button>
-          <CaretRight size={14} class="shrink-0 text-muted-foreground/50" />
-        {/if}
+        <IconButton
+          onclick={handleReturnToPreviousPage}
+          tooltipContent="Back to explorer"
+          class="h-8 w-8 shrink-0 rounded-lg"
+        >
+          <ArrowLeft class="h-4 w-4" />
+        </IconButton>
         <button
           type="button"
           onclick={handleReturnToPreviousPage}
           title="Back to the dataset explorer"
-          class="flex min-w-0 shrink items-center rounded-xl border border-primary/10 bg-primary/[0.03] px-3 py-1.5 transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="min-w-0 shrink truncate rounded-md px-1 text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span class="truncate text-sm font-bold text-foreground">
-            {currentDatasetStore.value?.name}
-          </span>
+          {currentDatasetStore.value?.name}
         </button>
-        <CaretRight size={14} class="shrink-0 text-muted-foreground/50" />
-        <div class="flex min-w-0 items-center gap-1">
+        <span class="shrink-0 text-sm text-muted-foreground/50">·</span>
+        <div class="flex shrink-0 items-center gap-1">
           <IconButton
             onclick={() => goToNeighborItem("previous")}
             tooltipContent="Previous record (Shift + ←)"
@@ -110,15 +115,10 @@ License: CECILL-C
             <CaretLeft class="h-3.5 w-3.5" />
           </IconButton>
           <span
-            class="max-w-[180px] truncate font-mono text-xs text-muted-foreground"
-            title={currentItemId}
+            class="text-sm tabular-nums text-muted-foreground"
+            title={`Record ID: ${currentItemId}`}
           >
-            {currentItemId}
-          </span>
-          <span
-            class="inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border border-border/40 bg-muted/40 px-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground tabular-nums"
-          >
-            {getWorkspaceRecordDisplayCount()}
+            {recordLabel}
           </span>
           <IconButton
             onclick={() => goToNeighborItem("next")}
@@ -139,30 +139,31 @@ License: CECILL-C
 
       <!-- RIGHT: save -->
       <div class="flex items-center justify-end">
-        <button
-          type="button"
-          disabled={dirtyCount === 0}
-          onclick={handleSave}
-          title={dirtyCount > 0
-            ? `Save ${dirtyCount} change${dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)`
-            : "No changes to save"}
-          class={cn(
-            "inline-flex h-10 items-center gap-2 rounded-xl px-4 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            dirtyCount > 0
-              ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-              : "cursor-default border border-border bg-transparent text-muted-foreground opacity-60",
-          )}
-        >
-          <FloppyDisk size={16} />
-          Save
-          {#if dirtyCount > 0}
+        {#if dirtyCount > 0}
+          <button
+            type="button"
+            onclick={handleSave}
+            title={`Save ${dirtyCount} change${dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)`}
+            class="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <FloppyDisk size={14} />
+            Save
             <span
               class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] tabular-nums"
             >
               {dirtyCount}
             </span>
-          {/if}
-        </button>
+          </button>
+        {:else}
+          <span
+            role="status"
+            title="No changes to save"
+            class="inline-flex h-9 items-center gap-1.5 px-3.5 text-xs font-medium text-muted-foreground"
+          >
+            <Check size={14} />
+            Saved
+          </span>
+        {/if}
       </div>
     {/if}
   </div>

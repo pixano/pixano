@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { CaretRight } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
@@ -75,10 +74,10 @@ License: CECILL-C
     };
   });
 
-  const getWorkspaceRecordDisplayCount = () => {
-    if (!neighbors || neighbors.position == null) return "Record — of —";
-    return `Record ${neighbors.position} of ${neighbors.total}`;
-  };
+  const getRecordPosition = () => ({
+    position: neighbors?.position ?? null,
+    total: neighbors?.total ?? null,
+  });
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
@@ -102,10 +101,6 @@ License: CECILL-C
 
   const handleSave = () => {
     void currentItemSaveCoordinator.requestSave();
-  };
-
-  const handleReturnToLibrary = () => {
-    void navigateTo("/");
   };
 
   const handleSaveAndContinue = async () => {
@@ -185,11 +180,10 @@ License: CECILL-C
       {handleSave}
       {goToNeighborItem}
       {handleReturnToPreviousPage}
-      {handleReturnToLibrary}
-      {getWorkspaceRecordDisplayCount}
+      {getRecordPosition}
     />
   {:else}
-    <!-- Breadcrumb: Library › dataset name -->
+    <!-- Breadcrumb: Library / dataset name -->
     <nav in:fade={{ duration: 200 }} class="flex-1 flex items-center gap-2 h-full min-w-0">
       <button
         type="button"
@@ -198,15 +192,11 @@ License: CECILL-C
       >
         Library
       </button>
-      <CaretRight size={14} class="shrink-0 text-muted-foreground/50" />
+      <span class="shrink-0 text-sm text-muted-foreground/40">/</span>
       {#if currentDatasetStore.value}
-        <div
-          class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[360px]"
-        >
-          <span class="text-sm font-bold text-foreground truncate">
-            {currentDatasetStore.value.name}
-          </span>
-        </div>
+        <span class="max-w-[360px] truncate text-sm font-bold text-foreground">
+          {currentDatasetStore.value.name}
+        </span>
       {/if}
     </nav>
   {/if}
