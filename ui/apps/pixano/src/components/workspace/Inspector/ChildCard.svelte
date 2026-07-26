@@ -331,7 +331,7 @@ License: CECILL-C
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
-              tooltipContent="Edit object"
+              tooltipContent="Edit annotation"
               selected={childEditing}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
@@ -340,7 +340,7 @@ License: CECILL-C
             </IconButton>
           {/if}
           <IconButton
-            tooltipContent="Relink object"
+            tooltipContent="Relink annotation"
             selected={showRelink}
             onclick={() => {
               showRelink = !showRelink;
@@ -350,7 +350,7 @@ License: CECILL-C
             <Link class="h-3 w-3" />
           </IconButton>
           <IconButton
-            tooltipContent="Delete object"
+            tooltipContent="Delete annotation"
             redconfirm
             onclick={() => deleteEntity(entity, child)}
             class="h-6 w-6 text-muted-foreground hover:text-destructive"
@@ -687,7 +687,7 @@ License: CECILL-C
           >
             {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
               <IconButton
-                tooltipContent="Edit object"
+                tooltipContent="Edit annotation"
                 selected={trackChild.ui.displayControl.editing}
                 onclick={() => onEditIconClick(trackChild)}
                 class="h-6 w-6"
@@ -696,7 +696,7 @@ License: CECILL-C
               </IconButton>
             {/if}
             <IconButton
-              tooltipContent="Delete object"
+              tooltipContent="Delete annotation"
               redconfirm
               onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
               class="h-6 w-6 text-muted-foreground hover:text-destructive"

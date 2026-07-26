@@ -43,8 +43,8 @@ License: CECILL-C
 
   const modelName = $derived(sourceLabel?.name ?? OTHER);
   const sectionTitle = $derived.by(() => {
-    if (!sourceLabel) return "Objects";
-    if (sourceLabel.kind.toLowerCase() === "global") return "Objects";
+    if (!sourceLabel) return "Entities";
+    if (sourceLabel.kind.toLowerCase() === "global") return "Entities";
     return sourceLabel.kind === "ground_truth"
       ? GROUND_TRUTH
       : `${sourceLabel.kind} - ${sourceLabel.name}`;

@@ -158,9 +158,14 @@ License: CECILL-C
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);
   let smartInferencePending = $derived(smartSegmentationUiState.value.phase === "pending");
   let currentWorkspaceType = $derived(itemMetas.value?.type ?? WorkspaceType.IMAGE);
-  // Raster draw tools only make sense where shapes are annotated on the canvas.
+  // Raster draw tools show by DEFAULT (image, video, undefined/custom workspaces all
+  // annotate on the canvas); only the text/QA/3D workspaces hide them.
   let showDrawTools = $derived(
-    currentWorkspaceType === WorkspaceType.IMAGE || currentWorkspaceType === WorkspaceType.VIDEO,
+    ![
+      WorkspaceType.IMAGE_VQA,
+      WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
+      WorkspaceType.PCL_3D,
+    ].includes(currentWorkspaceType),
   );
   let compatibleSegmentationModels = $derived(currentSegmentationModels.value);
   let currentSegmentationSelection = $derived(

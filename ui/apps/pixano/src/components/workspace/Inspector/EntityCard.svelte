@@ -507,7 +507,7 @@ License: CECILL-C
       <div class="flex-shrink-0 flex items-center justify-end gap-1">
         <IconButton
           onclick={() => handleSetDisplayControl("hidden", isVisible)}
-          tooltipContent={isVisible ? "Hide object" : "Show object"}
+          tooltipContent={isVisible ? "Hide entity" : "Show entity"}
           class="h-7 w-7 rounded-md"
         >
           {#if isVisible}
@@ -542,7 +542,7 @@ License: CECILL-C
         {/if}
 
         <IconButton
-          tooltipContent="Delete object"
+          tooltipContent="Delete entity"
           redconfirm
           onclick={() => deleteEntity(entity)}
           class="h-7 w-7 rounded-md text-muted-foreground hover:text-destructive"
