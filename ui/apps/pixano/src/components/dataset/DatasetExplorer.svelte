@@ -6,16 +6,17 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { CircleNotch } from "phosphor-svelte";
-
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
+  import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
   import RecordFilterBar from "./RecordFilterBar.svelte";
   import { Table } from "./table";
+  import TableSkeleton from "./TableSkeleton.svelte";
   import { invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import { computeEmbeddings, getIoJob, listInferenceModels } from "$lib/api";
   import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
+  import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
@@ -23,9 +24,11 @@ License: CECILL-C
   interface Props {
     selectedDataset: DatasetBrowser;
     filterSchema: FilterSchemaResponse;
+    splitCounts?: SplitStatusCount[];
     semanticActive?: boolean;
     /** Record id the current ranked view is "similar to" (find-similar mode). */
     similarTo?: string;
+    searchError?: string;
     onSelectItem?: (itemId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
@@ -42,14 +45,21 @@ License: CECILL-C
   let {
     selectedDataset,
     filterSchema,
+    splitCounts = [],
     semanticActive = false,
     similarTo = "",
+    searchError = "",
     onSelectItem,
     onNavigate,
     pagination,
   }: Props = $props();
   const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
   const semanticAvailable = $derived((filterSchema.search?.modes ?? []).includes("semantic"));
+  const ranked = $derived(semanticActive || similarTo !== "");
+  const isEmpty = $derived(selectedDataset.table_data.rows.length === 0);
+  const hasActiveQuery = $derived(
+    pagination.filters.length > 0 || pagination.q !== "" || similarTo !== "",
+  );
 
   let computing = $state(false);
   let showConnectModal = $state(false);
@@ -82,16 +92,11 @@ License: CECILL-C
     return true;
   }
 
-  // Remount the table when the dataset, its column set, or the active sort
-  // changes: the table builds its column defs and initial sort state once at
-  // mount, so a key keeps them in sync with the server-driven query.
+  // Remount the table only when the dataset or its column set changes — the
+  // table builds its column defs once at mount. Sorting is prop-driven and
+  // re-renders in place (no remount, no scroll reset).
   const tableKey = $derived(
-    [
-      selectedDataset.id,
-      selectedDataset.table_data.columns.map((c) => c.name).join(","),
-      pagination.sort,
-      pagination.order,
-    ].join("|"),
+    [selectedDataset.id, selectedDataset.table_data.columns.map((c) => c.name).join(",")].join("|"),
   );
 
   function handleSelectItem(itemId: string) {
@@ -154,74 +159,101 @@ License: CECILL-C
   function handleColSort(colsorts: { id: string; order: string }[]) {
     if (colsorts.length === 0) {
       onNavigate({ page: "1", sort: undefined, order: undefined });
-    } else if (colsorts.length === 1) {
+    } else {
       const { id, order } = colsorts[0];
       onNavigate({ page: "1", sort: id, order });
-    } else {
-      console.error("ERROR: MultiSort on columns is not managed nor allowed");
     }
+  }
+
+  function handleSortSelect(sort: string | undefined, order: string | undefined) {
+    onNavigate({ page: "1", sort, order });
   }
 
   function handlePageChange(newPage: number) {
     onNavigate({ page: String(newPage) });
   }
+
+  function handlePageSizeChange(size: number) {
+    onNavigate({ page: "1", size: String(size) });
+  }
+
+  function handleClearAllForEmptyState() {
+    onNavigate({
+      page: "1",
+      filter: undefined,
+      q: undefined,
+      semantic: undefined,
+      similar_to: undefined,
+    });
+  }
 </script>
 
-<div class="flex-1 min-w-0 px-6 py-4 bg-background flex flex-col text-foreground overflow-hidden">
-  <div class="max-w-[1400px] w-full mx-auto flex flex-col h-full">
-    {#if selectedDataset.pagination}
-      <!-- Filter / search / sort toolbar -->
-      <div class="shrink-0">
-        <RecordFilterBar
-          {filterSchema}
-          filters={pagination.filters}
-          q={pagination.q}
-          total={selectedDataset.pagination.total_size}
-          {semanticActive}
-          {similarTo}
-          {computing}
-          computeProgress={computeJob?.progress ?? null}
-          {computeError}
-          onApply={handleApply}
-          onCompute={handleCompute}
-          onClearSimilar={handleClearSimilar}
-        />
-      </div>
+<div class="flex-1 min-w-0 px-6 py-2 bg-background flex flex-col text-foreground overflow-hidden">
+  {#if selectedDataset.pagination}
+    <!-- Filter / search / sort toolbar -->
+    <div class="shrink-0">
+      <RecordFilterBar
+        {filterSchema}
+        filters={pagination.filters}
+        q={pagination.q}
+        total={selectedDataset.pagination.total_size}
+        {splitCounts}
+        sort={pagination.sort}
+        order={pagination.order}
+        {semanticActive}
+        {similarTo}
+        {computing}
+        computeProgress={computeJob?.progress ?? null}
+        {computeError}
+        {searchError}
+        onApply={handleApply}
+        onSortChange={handleSortSelect}
+        onCompute={handleCompute}
+        onClearSimilar={handleClearSimilar}
+      />
+    </div>
 
-      <!-- Main Table Area - This should scroll -->
-      <div
-        class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-sm"
-      >
-        {#if isLoadingTableItems}
-          <div class="flex-grow flex justify-center items-center">
-            <CircleNotch weight="regular" class="animate-spin text-primary opacity-50" />
-          </div>
-        {:else}
-          <div class="flex-1 min-h-0">
-            {#key tableKey}
-              <Table
-                items={selectedDataset.table_data}
-                activeSort={{ col: pagination.sort, order: pagination.order }}
-                onSelectItem={handleSelectItem}
-                onColsort={handleColSort}
-                onFindSimilar={semanticAvailable ? handleFindSimilar : undefined}
-              />
-            {/key}
-          </div>
-        {/if}
-      </div>
-
-      <!-- Pagination — always visible at the bottom -->
-      <div class="shrink-0 pt-2">
-        <DatasetPagination
-          {selectedDataset}
-          currentPage={pagination.currentPage}
-          pageSize={pagination.size}
-          onPageChange={handlePageChange}
+    <!-- Main content area — the single card that owns border/rounding -->
+    <div
+      class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-elevation-1"
+    >
+      {#if isLoadingTableItems}
+        <TableSkeleton
+          rows={pagination.size}
+          columns={Math.min(selectedDataset.table_data.columns.length, 6)}
         />
-      </div>
-    {/if}
-  </div>
+      {:else if isEmpty}
+        <ExplorerEmptyState
+          {hasActiveQuery}
+          onClear={hasActiveQuery ? handleClearAllForEmptyState : undefined}
+        />
+      {:else}
+        <div class="flex-1 min-h-0">
+          {#key tableKey}
+            <Table
+              items={selectedDataset.table_data}
+              activeSort={{ col: pagination.sort, order: pagination.order }}
+              onSelectItem={handleSelectItem}
+              onColsort={handleColSort}
+              onFindSimilar={semanticAvailable ? handleFindSimilar : undefined}
+            />
+          {/key}
+        </div>
+      {/if}
+    </div>
+
+    <!-- Pagination — always visible at the bottom -->
+    <div class="shrink-0">
+      <DatasetPagination
+        {selectedDataset}
+        currentPage={pagination.currentPage}
+        pageSize={pagination.size}
+        pageSizeOptions={ranked ? [] : [20, 50, 100]}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
+    </div>
+  {/if}
 </div>
 
 {#if showConnectModal}

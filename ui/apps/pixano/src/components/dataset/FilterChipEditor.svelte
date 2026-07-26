@@ -5,11 +5,12 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Check, X } from "phosphor-svelte";
+  import { CaretUpDown, Check, X } from "phosphor-svelte";
   import { untrack } from "svelte";
 
   import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
-  import { IconButton } from "$lib/ui";
+  import { Select } from "$lib/ui";
+  import { formatColumnLabel } from "$lib/utils/columns";
   import { isListOperator, OPERATOR_LABELS, type RecordFilter } from "$lib/utils/recordFilters";
 
   interface Props {
@@ -45,11 +46,9 @@ License: CECILL-C
 
   // Normalize the value slots to the operator's arity.
   $effect(() => {
-    const wanted = isBetween ? 2 : listMode ? Math.max(values.length, 1) : 1;
     if (!listMode && values.length !== 1) values = [values[0] ?? ""];
     else if (isBetween && values.length !== 2) values = [values[0] ?? "", values[1] ?? ""];
     else if (listMode && !isBetween && values.length < 1) values = [""];
-    void wanted;
   });
 
   const canSave = $derived(
@@ -78,69 +77,174 @@ License: CECILL-C
     if (!canSave) return;
     onSave({ col, op, values: values.map((v) => v.trim()).filter((v) => v !== "") });
   }
+
+  function handleContainerKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      onCancel();
+    } else if (event.key === "Enter" && canSave) {
+      // Selects handle Enter themselves while open; this catches the rest of the form.
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-select-content]") === null) {
+        event.preventDefault();
+        save();
+      }
+    }
+  }
+
+  const triggerClass =
+    "inline-flex h-9 items-center justify-between gap-2 px-3 rounded-xl border border-input bg-background text-sm shadow-sm transition-colors hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const contentClass =
+    "z-50 min-w-[10rem] max-h-72 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md";
+  const itemClass =
+    "cursor-pointer rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
+  const inputClass =
+    "h-9 rounded-xl border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20";
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="flex flex-wrap items-center gap-2 p-2 rounded-lg border border-border bg-card shadow-sm"
+  class="flex flex-wrap items-center gap-2 p-2.5 rounded-xl border border-border bg-card shadow-elevation-1"
+  onkeydown={handleContainerKeydown}
 >
-  <select bind:value={col} class="h-9 rounded-md border border-border bg-background px-2 text-sm">
-    {#each filterable as c (c.name)}
-      <option value={c.name}>{c.name}</option>
-    {/each}
-  </select>
+  <!-- Column -->
+  <Select.Root
+    type="single"
+    value={col}
+    items={filterable.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) }))}
+    onValueChange={(value: string) => {
+      if (value) col = value;
+    }}
+  >
+    <Select.Trigger aria-label="Filter column" class={triggerClass}>
+      {#snippet children()}
+        <span class="truncate">{col ? formatColumnLabel(col) : "Column"}</span>
+        <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
+      {/snippet}
+    </Select.Trigger>
+    <Select.Portal>
+      <Select.Content sideOffset={6} class={contentClass} data-select-content>
+        {#each filterable as c (c.name)}
+          <Select.Item value={c.name} label={formatColumnLabel(c.name)} class={itemClass}>
+            {#snippet children()}
+              <span class="flex items-center gap-2">
+                {#if col === c.name}<Check size={12} class="text-primary" />{/if}
+                {formatColumnLabel(c.name)}
+              </span>
+            {/snippet}
+          </Select.Item>
+        {/each}
+      </Select.Content>
+    </Select.Portal>
+  </Select.Root>
 
-  <select bind:value={op} class="h-9 rounded-md border border-border bg-background px-2 text-sm">
-    {#each operators as o (o)}
-      <option value={o}>{OPERATOR_LABELS[o] ?? o}</option>
-    {/each}
-  </select>
+  <!-- Operator -->
+  <Select.Root
+    type="single"
+    value={op}
+    items={operators.map((o) => ({ value: o, label: OPERATOR_LABELS[o] ?? o }))}
+    onValueChange={(value: string) => {
+      if (value) op = value;
+    }}
+  >
+    <Select.Trigger aria-label="Filter operator" class={triggerClass}>
+      {#snippet children()}
+        <span class="truncate">{OPERATOR_LABELS[op] ?? op ?? "Operator"}</span>
+        <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
+      {/snippet}
+    </Select.Trigger>
+    <Select.Portal>
+      <Select.Content sideOffset={6} class={contentClass} data-select-content>
+        {#each operators as o (o)}
+          <Select.Item value={o} label={OPERATOR_LABELS[o] ?? o} class={itemClass}>
+            {#snippet children()}
+              <span class="flex items-center gap-2">
+                {#if op === o}<Check size={12} class="text-primary" />{/if}
+                {OPERATOR_LABELS[o] ?? o}
+              </span>
+            {/snippet}
+          </Select.Item>
+        {/each}
+      </Select.Content>
+    </Select.Portal>
+  </Select.Root>
 
+  <!-- Value(s) -->
   {#if enumValues && !listMode}
-    <select
-      bind:value={values[0]}
-      class="h-9 rounded-md border border-border bg-background px-2 text-sm"
+    <Select.Root
+      type="single"
+      value={values[0]}
+      items={enumValues.map((v) => ({ value: v, label: v }))}
+      onValueChange={(value: string) => {
+        if (value) values[0] = value;
+      }}
     >
-      <option value="" disabled>Select…</option>
-      {#each enumValues as v (v)}
-        <option value={v}>{v}</option>
-      {/each}
-    </select>
+      <Select.Trigger aria-label="Filter value" class={triggerClass}>
+        {#snippet children()}
+          <span class="truncate">{values[0] || "Select…"}</span>
+          <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
+        {/snippet}
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content sideOffset={6} class={contentClass} data-select-content>
+          {#each enumValues as v (v)}
+            <Select.Item value={v} label={v} class={itemClass}>
+              {#snippet children()}
+                <span class="flex items-center gap-2">
+                  {#if values[0] === v}<Check size={12} class="text-primary" />{/if}
+                  {v}
+                </span>
+              {/snippet}
+            </Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   {:else if isBetween}
-    <input
-      type={inputType()}
-      bind:value={values[0]}
-      placeholder="from"
-      class="h-9 w-36 rounded-md border border-border bg-background px-2 text-sm"
-    />
+    <input type={inputType()} bind:value={values[0]} placeholder="from" class="{inputClass} w-36" />
     <span class="text-muted-foreground text-sm">and</span>
-    <input
-      type={inputType()}
-      bind:value={values[1]}
-      placeholder="to"
-      class="h-9 w-36 rounded-md border border-border bg-background px-2 text-sm"
-    />
+    <input type={inputType()} bind:value={values[1]} placeholder="to" class="{inputClass} w-36" />
   {:else if listMode}
-    <div class="flex flex-wrap items-center gap-1">
+    <div class="flex flex-wrap items-center gap-1.5">
       {#each values as value, i (i)}
         <div class="flex items-center gap-1">
           {#if enumValues}
-            <select
+            <Select.Root
+              type="single"
               {value}
-              onchange={(e) => (values[i] = e.currentTarget.value)}
-              class="h-9 rounded-md border border-border bg-background px-2 text-sm"
+              items={enumValues.map((v) => ({ value: v, label: v }))}
+              onValueChange={(next: string) => {
+                if (next) values[i] = next;
+              }}
             >
-              <option value="" disabled>Select…</option>
-              {#each enumValues as v (v)}
-                <option value={v}>{v}</option>
-              {/each}
-            </select>
+              <Select.Trigger aria-label="Filter value {i + 1}" class={triggerClass}>
+                {#snippet children()}
+                  <span class="truncate">{value || "Select…"}</span>
+                  <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
+                {/snippet}
+              </Select.Trigger>
+              <Select.Portal>
+                <Select.Content sideOffset={6} class={contentClass} data-select-content>
+                  {#each enumValues as v (v)}
+                    <Select.Item value={v} label={v} class={itemClass}>
+                      {#snippet children()}
+                        <span class="flex items-center gap-2">
+                          {#if value === v}<Check size={12} class="text-primary" />{/if}
+                          {v}
+                        </span>
+                      {/snippet}
+                    </Select.Item>
+                  {/each}
+                </Select.Content>
+              </Select.Portal>
+            </Select.Root>
           {:else}
             <input
               type={inputType()}
               {value}
               oninput={(e) => (values[i] = e.currentTarget.value)}
               placeholder="value"
-              class="h-9 w-32 rounded-md border border-border bg-background px-2 text-sm"
+              class="{inputClass} w-32"
             />
           {/if}
           {#if values.length > 1}
@@ -148,7 +252,7 @@ License: CECILL-C
               type="button"
               onclick={() => removeValueSlot(i)}
               aria-label="Remove value"
-              class="p-1 rounded hover:bg-accent text-muted-foreground"
+              class="p-1 rounded-md hover:bg-accent text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X size={14} />
             </button>
@@ -158,27 +262,37 @@ License: CECILL-C
       <button
         type="button"
         onclick={addValueSlot}
-        class="h-9 px-2 rounded-md border border-dashed border-border text-xs text-muted-foreground hover:bg-accent"
+        class="h-9 px-2.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         + value
       </button>
     </div>
   {:else}
+    <!-- svelte-ignore a11y_autofocus -->
     <input
       type={inputType()}
       bind:value={values[0]}
       placeholder="value"
-      onkeydown={(e) => e.key === "Enter" && save()}
-      class="h-9 w-44 rounded-md border border-border bg-background px-2 text-sm"
+      autofocus
+      class="{inputClass} w-44"
     />
   {/if}
 
-  <div class="flex items-center gap-1 ml-auto">
-    <IconButton onclick={save} disabled={!canSave} tooltipContent="Apply filter">
-      <Check weight="bold" />
-    </IconButton>
-    <IconButton onclick={onCancel} tooltipContent="Cancel">
-      <X weight="bold" />
-    </IconButton>
+  <div class="flex items-center gap-2 ml-auto">
+    <button
+      type="button"
+      onclick={onCancel}
+      class="h-9 px-3.5 rounded-xl text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      Cancel
+    </button>
+    <button
+      type="button"
+      onclick={save}
+      disabled={!canSave}
+      class="h-9 px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      Apply
+    </button>
   </div>
 </div>

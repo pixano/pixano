@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { CaretRight } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
@@ -14,9 +15,8 @@ License: CECILL-C
   import * as api from "$lib/api";
   import type { NeighborsResponse } from "$lib/api/restTypes";
   import { currentDatasetStore, currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
-  import { PrimaryButton, UnsavedChangesDialog } from "$lib/ui";
+  import { UnsavedChangesDialog } from "$lib/ui";
   import {
-    EXPLORER_ROUTE_ID,
     getExplorerRoute,
     getPageFromPosition,
     getRouteSearchParams,
@@ -24,12 +24,6 @@ License: CECILL-C
     pickExplorerQuery,
     WORKSPACE_ROUTE_ID,
   } from "$lib/utils/routes";
-
-  interface Props {
-    pageId: string | null;
-  }
-
-  let { pageId }: Props = $props();
 
   let pendingNavigationRoute = $state<string | null>(null);
   let isDestroyed = false;
@@ -143,7 +137,9 @@ License: CECILL-C
     if (!currentDatasetStore.value) return;
     if (currentItemId) {
       const params = pickExplorerQuery(getRouteSearchParams(page.url));
-      params.set("page", String(getPageFromPosition(neighbors?.position ?? 1)));
+      // Respect a custom page size so the computed page matches the explorer's pagination.
+      const size = parseInt(params.get("size") ?? "") || undefined;
+      params.set("page", String(getPageFromPosition(neighbors?.position ?? 1, size)));
       await navigateTo(getExplorerRoute(currentDatasetStore.value.id, params.toString()));
     } else await navigateTo("/");
   };
@@ -188,30 +184,26 @@ License: CECILL-C
       {getWorkspaceRecordDisplayCount}
     />
   {:else}
-    <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">
-      <div class="flex items-center gap-6">
-        {#if currentDatasetStore.value}
-          <div
-            class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]"
-          >
-            <span class="text-sm font-bold text-foreground truncate">
-              {currentDatasetStore.value.name}
-            </span>
-          </div>
-        {/if}
-
-        <PrimaryButton
-          isSelected={pageId === EXPLORER_ROUTE_ID}
-          onclick={() => navigateTo(getExplorerRoute(currentDatasetStore.value.id))}
-          class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
+    <!-- Breadcrumb: Library › dataset name -->
+    <nav in:fade={{ duration: 200 }} class="flex-1 flex items-center gap-2 h-full min-w-0">
+      <button
+        type="button"
+        onclick={() => navigateTo("/")}
+        class="text-sm font-medium text-muted-foreground hover:text-primary transition-colors rounded-md px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Library
+      </button>
+      <CaretRight size={14} class="shrink-0 text-muted-foreground/50" />
+      {#if currentDatasetStore.value}
+        <div
+          class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[360px]"
         >
-          Dataset
-        </PrimaryButton>
-      </div>
-
-      <!-- Placeholder for Right zone in browser view to maintain symmetry -->
-      <div class="w-10"></div>
-    </div>
+          <span class="text-sm font-bold text-foreground truncate">
+            {currentDatasetStore.value.name}
+          </span>
+        </div>
+      {/if}
+    </nav>
   {/if}
 </div>
 {#if pendingNavigationRoute !== null}
