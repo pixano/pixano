@@ -9,6 +9,7 @@ import { Database, House } from "phosphor-svelte";
 // --- Dataset table defaults ---
 
 export const DEFAULT_DATASET_TABLE_SIZE = 20;
+export const DEFAULT_DATASET_GRID_SIZE = 48;
 export const DEFAULT_DATASET_TABLE_PAGE = 1;
 
 export const COUNTS_COLUMNS_PREFIX = "#";

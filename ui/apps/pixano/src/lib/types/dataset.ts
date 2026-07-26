@@ -123,10 +123,34 @@ export interface PaginationInfo {
   total_size: number;
 }
 
+/** One view preview available to a record card (image thumbnail or text excerpt). */
+export interface RecordPreview {
+  /** Logical view name (e.g. "image", "front_camera", "text"). */
+  name: string;
+  kind: "image" | "text";
+  /** Backing resource ("images" | "sframes" | "texts") — sframes render a film badge. */
+  resource: string;
+  url: string;
+  excerpt?: string;
+}
+
+/** Card-oriented projection of a record for the gallery view. */
+export interface RecordCard {
+  id: string;
+  split?: string;
+  status?: string;
+  /** Similarity distance in ranked (semantic / find-similar) mode. */
+  distance?: number;
+  previews: RecordPreview[];
+  /** Scalar custom attributes (system fields excluded). */
+  attrs: Record<string, string | number | boolean>;
+}
+
 export interface DatasetBrowserType {
   id: string;
   name: string;
   table_data: TableData;
+  card_data?: RecordCard[];
   pagination: PaginationInfo;
   isErrored?: boolean;
 }
@@ -135,6 +159,7 @@ export class DatasetBrowser implements DatasetBrowserType {
   id: string;
   name: string;
   table_data: TableData;
+  card_data?: RecordCard[];
   pagination: PaginationInfo;
   isErrored?: boolean;
 
@@ -142,6 +167,7 @@ export class DatasetBrowser implements DatasetBrowserType {
     this.id = obj.id;
     this.name = obj.name;
     this.table_data = obj.table_data;
+    this.card_data = obj.card_data;
     this.pagination = obj.pagination;
     this.isErrored = obj.isErrored;
   }

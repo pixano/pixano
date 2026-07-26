@@ -135,6 +135,7 @@ class PreviewDescriptor(ResponseModel):
     id: str
     kind: str
     preview_url: str
+    excerpt: str | None = None
 
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
@@ -158,10 +159,16 @@ class ColumnDescriptorResponse(ResponseModel):
 
 
 class SearchCapabilities(ResponseModel):
-    """Available search modes for a dataset (semantic search lands in 0.9)."""
+    """Available search modes for a dataset, with embedding-storage health."""
 
     modes: list[str] = Field(default_factory=lambda: ["text"])
     models: list[str] = Field(default_factory=list)
+    # Embedding health: "absent" (never computed), "ready", "partial" (some records missing),
+    # or a degraded state needing recompute ("missing_table" | "empty" | "dim_mismatch" | "corrupt").
+    status: str = "absent"
+    detail: str | None = None
+    embedded_rows: int = 0
+    total_records: int = 0
 
 
 class FilterSchemaResponse(ResponseModel):

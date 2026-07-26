@@ -9,13 +9,16 @@ License: CECILL-C
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
+  import GridSkeleton from "./GridSkeleton.svelte";
   import RecordFilterBar from "./RecordFilterBar.svelte";
+  import RecordGrid from "./RecordGrid.svelte";
   import { Table } from "./table";
   import TableSkeleton from "./TableSkeleton.svelte";
   import { invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import { computeEmbeddings, getIoJob, listInferenceModels } from "$lib/api";
   import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
+  import { DEFAULT_DATASET_GRID_SIZE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
@@ -29,6 +32,7 @@ License: CECILL-C
     /** Record id the current ranked view is "similar to" (find-similar mode). */
     similarTo?: string;
     searchError?: string;
+    view?: "grid" | "table";
     onSelectItem?: (itemId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
@@ -49,6 +53,7 @@ License: CECILL-C
     semanticActive = false,
     similarTo = "",
     searchError = "",
+    view = "table",
     onSelectItem,
     onNavigate,
     pagination,
@@ -66,13 +71,13 @@ License: CECILL-C
   let computeJob = $state<IoJobResponse | null>(null);
   let computeError = $state("");
 
-  async function runCompute(): Promise<boolean> {
+  async function runCompute(force = false): Promise<boolean> {
     // Returns false when no embedding model is reachable (caller prompts to connect).
     const models = await listInferenceModels();
     const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
     if (embeddingModels.length === 0) return false;
     computeError = "";
-    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
+    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name, force);
     try {
       for (;;) {
         const job = await getIoJob(jobId);
@@ -134,12 +139,12 @@ License: CECILL-C
     onNavigate({ page: "1", similar_to: undefined });
   }
 
-  async function handleCompute() {
+  async function handleCompute(force = false) {
     if (computing) return;
     computing = true;
     try {
       // If no embedding model is reachable, the server isn't connected — prompt for it.
-      const ok = await runCompute();
+      const ok = await runCompute(force);
       if (!ok) showConnectModal = true;
     } finally {
       computing = false;
@@ -177,6 +182,18 @@ License: CECILL-C
     onNavigate({ page: "1", size: String(size) });
   }
 
+  function handleViewChange(nextView: "grid" | "table") {
+    if (nextView === view) return;
+    // Remember the choice per dataset; switching views resets to page 1 with the
+    // view's default page size.
+    localStorage.setItem(`pixano.explorer.view.${selectedDataset.id}`, nextView);
+    onNavigate({
+      page: "1",
+      view: nextView,
+      size: String(nextView === "grid" ? DEFAULT_DATASET_GRID_SIZE : DEFAULT_DATASET_TABLE_SIZE),
+    });
+  }
+
   function handleClearAllForEmptyState() {
     onNavigate({
       page: "1",
@@ -206,10 +223,12 @@ License: CECILL-C
         computeProgress={computeJob?.progress ?? null}
         {computeError}
         {searchError}
+        {view}
         onApply={handleApply}
         onSortChange={handleSortSelect}
         onCompute={handleCompute}
         onClearSimilar={handleClearSimilar}
+        onViewChange={handleViewChange}
       />
     </div>
 
@@ -218,14 +237,25 @@ License: CECILL-C
       class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-elevation-1"
     >
       {#if isLoadingTableItems}
-        <TableSkeleton
-          rows={pagination.size}
-          columns={Math.min(selectedDataset.table_data.columns.length, 6)}
-        />
+        {#if view === "grid"}
+          <GridSkeleton count={pagination.size} />
+        {:else}
+          <TableSkeleton
+            rows={pagination.size}
+            columns={Math.min(selectedDataset.table_data.columns.length, 6)}
+          />
+        {/if}
       {:else if isEmpty}
         <ExplorerEmptyState
           {hasActiveQuery}
           onClear={hasActiveQuery ? handleClearAllForEmptyState : undefined}
+        />
+      {:else if view === "grid"}
+        <RecordGrid
+          cards={selectedDataset.card_data ?? []}
+          {ranked}
+          onOpen={handleSelectItem}
+          onFindSimilar={semanticAvailable ? handleFindSimilar : undefined}
         />
       {:else}
         <div class="flex-1 min-h-0">
@@ -248,7 +278,7 @@ License: CECILL-C
         {selectedDataset}
         currentPage={pagination.currentPage}
         pageSize={pagination.size}
-        pageSizeOptions={ranked ? [] : [20, 50, 100]}
+        pageSizeOptions={ranked ? [] : view === "grid" ? [24, 48, 96] : [20, 50, 100]}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
       />

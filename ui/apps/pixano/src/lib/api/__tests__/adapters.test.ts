@@ -71,3 +71,59 @@ describe("toDatasetBrowser list attributes", () => {
     expect(browser.table_data.rows[0].image).toBe("/blob/v0");
   });
 });
+
+describe("toDatasetBrowser card_data", () => {
+  it("builds one card per record with previews, badges and custom attrs", () => {
+    const browser = toDatasetBrowser(
+      "ds",
+      paginated([
+        {
+          id: "r0",
+          split: "train",
+          status: "new",
+          created_at: "2026-01-01",
+          scene: "urban",
+          view_previews: {
+            rgb: { resource: "images", id: "i0", kind: "image", preview_url: "/i0?size=256" },
+            thermal: { resource: "images", id: "i1", kind: "image", preview_url: "/i1?size=256" },
+          },
+        },
+      ]),
+    );
+    const card = browser.card_data?.[0];
+    if (!card) throw new Error("card_data missing");
+    expect(card.id).toBe("r0");
+    expect(card.split).toBe("train");
+    expect(card.status).toBe("new");
+    expect(card.previews.map((p) => p.name)).toEqual(["rgb", "thermal"]);
+    expect(card.previews[0].url).toBe("/i0?size=256");
+    // system fields are excluded from the attr line; customs are kept
+    expect(card.attrs).toEqual({ scene: "urban" });
+  });
+
+  it("maps a text preview to an excerpt (card) and a str column (table)", () => {
+    const browser = toDatasetBrowser(
+      "ds",
+      paginated([
+        {
+          id: "r0",
+          view_previews: {
+            text: { resource: "texts", id: "t0", kind: "text", preview_url: "", excerpt: "lorem" },
+          },
+        },
+      ]),
+    );
+    const card = browser.card_data?.[0];
+    if (!card) throw new Error("card_data missing");
+    expect(card.previews[0]).toMatchObject({ kind: "text", resource: "texts", excerpt: "lorem" });
+    // the table shows the excerpt string, not an empty preview URL
+    expect(columnType(browser, "text")).toBe("str");
+    expect(browser.table_data.rows[0].text).toBe("lorem");
+  });
+
+  it("carries _distance into the card in ranked mode", () => {
+    const browser = toDatasetBrowser("ds", paginated([{ id: "r0", _distance: 0.42 }]));
+    expect(browser.card_data?.[0].distance).toBe(0.42);
+    expect(browser.card_data?.[0].attrs).toEqual({});
+  });
+});

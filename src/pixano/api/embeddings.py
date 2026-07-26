@@ -70,12 +70,17 @@ def _run_embedding_job(
     api_key: str | None,
     model: str,
     batch_size: int,
+    force: bool,
 ) -> None:
     dataset = Dataset(dataset_path)
     client = SyncPixanoInferenceClient(url, api_key=api_key)
     store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=True)
     sink = JobSink(store, job_id)
     try:
+        if force:
+            # Repair/model-switch path: drop the table + sidecar so the space is rebuilt from
+            # scratch (also escapes states where the sidecar points at a broken table).
+            dataset.drop_record_embeddings()
         record_ids: list[str] = dataset.get_all_ids("records")
         already: set[str] = set()
         if dataset.has_record_embeddings():
@@ -149,11 +154,13 @@ def submit_embedding_job(
     provider: InferenceProvider,
     model: str,
     batch_size: int = _EMBED_BATCH,
+    force: bool = False,
 ) -> str:
     """Create an embedding job and start it in a background daemon thread.
 
     The connected provider supplies the server URL/key; the job then talks to it through a fresh
-    synchronous client on its own thread.
+    synchronous client on its own thread. ``force`` drops the existing embedding table + sidecar
+    first (repair / model switch).
 
     Returns:
         The job id (poll via ``GET /io/jobs/{id}``).
@@ -162,10 +169,10 @@ def submit_embedding_job(
     if not url:
         raise ValueError("The connected provider does not expose a server URL for embedding.")
     api_key = getattr(provider, "_api_key", None)
-    job = store.create_job(kind="embed", dataset=dataset_id, spec={"model": model})
+    job = store.create_job(kind="embed", dataset=dataset_id, spec={"model": model, "force": force})
     thread = threading.Thread(
         target=_run_embedding_job,
-        args=(store, job.id, dataset_path, url, api_key, model, batch_size),
+        args=(store, job.id, dataset_path, url, api_key, model, batch_size, force),
         daemon=True,
     )
     thread.start()

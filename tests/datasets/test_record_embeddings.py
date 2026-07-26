@@ -6,6 +6,8 @@
 
 """Record-level embedding storage + vector search (no ML model involved)."""
 
+import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -73,3 +75,84 @@ class TestRecordEmbeddingStorage:
         assert not dataset.has_record_embeddings()
         with pytest.raises(DatasetAccessError):
             dataset.search_records(_bit_vector(0), k=1)
+
+
+def _embeddings_table_dir(dataset: Dataset) -> Path:
+    return dataset.path / "db" / "embeddings.lance"
+
+
+class TestRecordEmbeddingHealth:
+    def test_ready(self, dataset_with_embeddings: Dataset):
+        health = dataset_with_embeddings.record_embedding_health()
+        assert health["status"] == "ready"
+        assert health["model_id"] == "test-clip"
+        assert health["rows"] == 20
+        assert health["records"] == 20
+
+    def test_absent_without_sidecar(self):
+        tmp = Path(tempfile.mkdtemp()) / "none"
+        dataset = Dataset.create(tmp, DatasetInfo(name="none", description="d", record=Record, views={"image": Image}))
+        assert dataset.record_embedding_health()["status"] == "absent"
+
+    def test_partial_when_some_records_missing(self, dataset_with_embeddings: Dataset):
+        dataset_with_embeddings.add_records({"records": [Record(id="extra")]})
+        health = dataset_with_embeddings.record_embedding_health()
+        assert health["status"] == "partial"
+        assert health["rows"] == 20
+        assert health["records"] == 21
+
+    def test_missing_table_detected(self, dataset_with_embeddings: Dataset):
+        # Sidecar remains but the physical table is gone (crashed job / external delete).
+        shutil.rmtree(_embeddings_table_dir(dataset_with_embeddings))
+        reopened = Dataset(dataset_with_embeddings.path)
+        assert reopened.has_record_embeddings()  # sidecar still advertises...
+        assert reopened.record_embedding_health()["status"] == "missing_table"  # ...health does not
+
+    def test_dim_mismatch_detected(self, dataset_with_embeddings: Dataset):
+        sidecar = dataset_with_embeddings.path / "embeddings.json"
+        space = json.loads(sidecar.read_text())
+        space["dim"] = 16  # stored vectors are dim 8
+        sidecar.write_text(json.dumps(space))
+        reopened = Dataset(dataset_with_embeddings.path)
+        assert reopened.record_embedding_health()["status"] == "dim_mismatch"
+
+    def test_empty_table_detected(self):
+        tmp = Path(tempfile.mkdtemp()) / "empty_table"
+        dataset = Dataset.create(tmp, DatasetInfo(name="e", description="d", record=Record, views={"image": Image}))
+        dataset.add_records({"records": [Record(id="r0")]})
+        dataset.create_record_embedding_table(dim=8, model_id="m")
+        assert dataset.record_embedding_health()["status"] == "empty"
+
+    def test_corrupt_sidecar_degrades_instead_of_bricking_the_dataset(self, dataset_with_embeddings: Dataset):
+        sidecar = dataset_with_embeddings.path / "embeddings.json"
+        space = json.loads(sidecar.read_text())
+        space["dim"] = 0  # previously raised out of Dataset.__init__ → 500 on EVERY endpoint
+        sidecar.write_text(json.dumps(space))
+        reopened = Dataset(dataset_with_embeddings.path)
+        assert not reopened.has_record_embeddings()
+        assert reopened.record_embedding_health()["status"] == "absent"
+
+
+class TestDropRecordEmbeddings:
+    def test_drop_clears_table_sidecar_and_space(self, dataset_with_embeddings: Dataset):
+        dataset_with_embeddings.drop_record_embeddings()
+        assert not dataset_with_embeddings.has_record_embeddings()
+        assert not (dataset_with_embeddings.path / "embeddings.json").exists()
+        assert not _embeddings_table_dir(dataset_with_embeddings).exists()
+        assert dataset_with_embeddings.record_embedding_health()["status"] == "absent"
+
+    def test_drop_is_safe_when_the_table_is_already_gone(self, dataset_with_embeddings: Dataset):
+        shutil.rmtree(_embeddings_table_dir(dataset_with_embeddings))
+        dataset_with_embeddings.drop_record_embeddings()  # must not raise
+        assert not dataset_with_embeddings.has_record_embeddings()
+
+    def test_recompute_after_drop_works(self, dataset_with_embeddings: Dataset):
+        dataset_with_embeddings.drop_record_embeddings()
+        dataset_with_embeddings.create_record_embedding_table(dim=4, model_id="new-model")
+        dataset_with_embeddings.add_record_embeddings(
+            [{"record_id": f"r{i}", "vector": _bit_vector(i, dim=4)} for i in range(20)]
+        )
+        health = dataset_with_embeddings.record_embedding_health()
+        assert health["status"] == "ready"
+        assert health["model_id"] == "new-model"
+        assert health["dim"] == 4

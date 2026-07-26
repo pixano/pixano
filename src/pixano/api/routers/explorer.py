@@ -58,10 +58,15 @@ class RecordSearchRequest(BaseModel):
 
 
 class ComputeEmbeddingsRequest(BaseModel):
-    """Start a record-embedding computation job."""
+    """Start a record-embedding computation job.
+
+    ``force`` drops the existing embedding table + descriptor first — required to repair a
+    broken store or to switch embedding models (a plain resume must stay in the same space).
+    """
 
     model: str
     provider_name: str | None = None
+    force: bool = False
 
 
 class ComputeEmbeddingsResponse(BaseModel):
@@ -112,17 +117,27 @@ def get_filter_schema(
         for column in catalogue
     ]
     # Lexical text search is always available; semantic search + the model that produced the
-    # embeddings appear once a record-embedding table has been computed.
+    # embeddings appear once a HEALTHY record-embedding table exists. Degraded storage (missing/
+    # corrupt table, dim mismatch) is reported via `status` so the UI can offer a repair action
+    # instead of a search box that 500s.
+    health = dataset.record_embedding_health()
     modes = ["text"]
     models: list[str] = []
-    if dataset.has_record_embeddings():
+    if health["status"] in ("ready", "partial"):
         modes.append("semantic")
-        space = dataset.record_embedding_space() or {}
-        model_id = space.get("model_id")
-        if model_id:
-            models.append(model_id)
+        if health["model_id"]:
+            models.append(str(health["model_id"]))
     return FilterSchemaResponse(
-        table="records", columns=columns, search=SearchCapabilities(modes=modes, models=models)
+        table="records",
+        columns=columns,
+        search=SearchCapabilities(
+            modes=modes,
+            models=models,
+            status=str(health["status"]),
+            detail=health["detail"],
+            embedded_rows=int(health["rows"]),
+            total_records=int(health["records"]),
+        ),
     )
 
 
@@ -207,14 +222,32 @@ async def search_records(
     settings: Annotated[Settings, Depends(get_settings)] = None,  # type: ignore[assignment]
 ) -> RecordSearchResponse:
     """Semantic search over records (text→records or find-similar)."""
-    if not dataset.has_record_embeddings():
+    # Health short-circuit: a broken embedding store must yield an actionable error, never a 500.
+    health = dataset.record_embedding_health()
+    if health["status"] == "absent":
         raise HTTPException(status_code=400, detail="No record embeddings; compute them first.")
+    if health["status"] in ("missing_table", "corrupt", "empty"):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Record embeddings are unavailable ({health['detail']}) Recompute the embeddings.",
+        )
+    if health["status"] == "dim_mismatch":
+        raise HTTPException(
+            status_code=409,
+            detail=f"Record embeddings are stale ({health['detail']}) Recompute the embeddings.",
+        )
     space = dataset.record_embedding_space() or {}
     model = body.model or space.get("model_id", "")
 
     mode: str
     if body.similar_to:
-        query_vector = _stored_record_vector(dataset, body.similar_to)
+        try:
+            query_vector = _stored_record_vector(dataset, body.similar_to)
+        except Exception as exc:  # noqa: BLE001 - corrupt storage → actionable 503
+            raise HTTPException(
+                status_code=503,
+                detail=f"Record embeddings could not be read ({exc}). Recompute the embeddings.",
+            ) from exc
         if query_vector is None:
             raise HTTPException(status_code=404, detail=f"Record '{body.similar_to}' has no embedding.")
         mode = "similar"
@@ -229,10 +262,27 @@ async def search_records(
     else:
         raise HTTPException(status_code=400, detail="Provide either 'text' or 'similar_to'.")
 
+    if len(query_vector) != int(space.get("dim", len(query_vector))):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"The query embedding has dim {len(query_vector)} but the stored embeddings have "
+                f"dim {space.get('dim')} (model '{space.get('model_id')}'). Recompute the embeddings "
+                "with the current model."
+            ),
+        )
+
     record_id_filter = _prefilter_record_ids(dataset, body.filter, body.where)
     try:
         records, distances = dataset.search_records(query_vector, k=body.k, record_id_filter=record_id_filter)
-    except RuntimeError as err:
+    except HTTPException:
+        raise
+    except (FileNotFoundError, OSError) as err:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Record embeddings are unavailable ({err}). Recompute the embeddings.",
+        ) from err
+    except (ValueError, RuntimeError) as err:
         raise HTTPException(status_code=400, detail=f"Search failed. {err}") from None
 
     record_ids = [record.id for record in records]
@@ -272,6 +322,25 @@ def compute_record_embeddings(
     )
     if provider is None:
         raise HTTPException(status_code=404, detail=f"Unknown inference provider '{body.provider_name}'")
+
+    # Without force, a resume must stay in the SAME embedding space: appending vectors from a
+    # different model would silently mix spaces and corrupt every search.
+    health = dataset.record_embedding_health()
+    if not body.force:
+        if health["status"] not in ("absent", "ready", "partial"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Record embeddings are broken ({health['detail']}) Recompute with force=true.",
+            )
+        if health["status"] != "absent" and health["model_id"] and body.model != health["model_id"]:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Embeddings were computed with model '{health['model_id']}'; recomputing with "
+                    f"'{body.model}' requires force=true (it replaces the whole embedding space)."
+                ),
+            )
+
     store = JobStore.for_data_dir(_data_dir(settings))
-    job_id = submit_embedding_job(store, dataset.path, dataset_id, provider, body.model)
+    job_id = submit_embedding_job(store, dataset.path, dataset_id, provider, body.model, force=body.force)
     return ComputeEmbeddingsResponse(job_id=job_id)
