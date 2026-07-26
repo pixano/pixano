@@ -5,9 +5,11 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { Popover } from "bits-ui";
   import {
     ArrowsClockwise,
     ArrowsDownUp,
+    CaretDown,
     CircleNotch,
     FunnelSimple,
     Images,
@@ -86,8 +88,6 @@ License: CECILL-C
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
-  const hasSearchable = $derived(columns.some((c) => c.searchable));
-  const semanticAvailable = $derived((filterSchema.search?.modes ?? []).includes("semantic"));
   const embeddingsStatus = $derived(filterSchema.search?.status ?? "absent");
   const embeddingsDetail = $derived(filterSchema.search?.detail ?? "");
   const embeddingsDegraded = $derived(
@@ -95,6 +95,9 @@ License: CECILL-C
   );
   const embeddedRows = $derived(filterSchema.search?.embedded_rows ?? 0);
   const totalRecords = $derived(filterSchema.search?.total_records ?? 0);
+  const embeddingModelId = $derived(filterSchema.search?.models?.[0] ?? "");
+  // The search bar is semantic-only; exact matching is the filters' job.
+  const searchReady = $derived(embeddingsStatus === "ready" || embeddingsStatus === "partial");
   const sortableColumns = $derived(columns.filter((c) => c.sortable));
   const ranked = $derived(semanticActive || similarTo !== "");
   const sortItems = $derived([
@@ -102,11 +105,8 @@ License: CECILL-C
     ...sortableColumns.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) })),
   ]);
 
-  // Semantic mode is a local toggle; it activates on submit and reflects the URL state.
-  let semanticMode = $state(false);
-  $effect(() => {
-    semanticMode = semanticActive;
-  });
+  // Embedding-tools popover (grouped inside the search bar).
+  let toolsOpen = $state(false);
 
   // Active filters, parsed from the URL-sourced tokens.
   const activeFilters = $derived(parseFilters(filters));
@@ -183,8 +183,9 @@ License: CECILL-C
   }
 
   function submitSearch() {
+    if (!searchReady || computing) return;
     const text = searchInput.trim();
-    onApply({ q: text || undefined, semantic: semanticMode && text !== "" });
+    onApply({ q: text || undefined, semantic: text !== "" });
   }
 
   function clearSearch() {
@@ -192,12 +193,9 @@ License: CECILL-C
     onApply({ q: undefined, semantic: false });
   }
 
-  function setMode(semantic: boolean) {
-    if (semanticMode === semantic) return;
-    semanticMode = semantic;
-    // Re-run the current query in the new mode when there is one.
-    if (searchInput.trim() !== "") submitSearch();
-    else if (semanticActive) onApply({ semantic: false });
+  function runCompute(force: boolean) {
+    toolsOpen = false;
+    onCompute?.(force);
   }
 
   function chipLabel(filter: RecordFilter): string {
@@ -213,122 +211,136 @@ License: CECILL-C
   const computePercent = $derived(
     computeTotal ? Math.min(100, Math.round((computeDone / computeTotal) * 100)) : null,
   );
-
-  const segmentedButtonClass = (active: boolean) =>
-    `px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
-      active
-        ? "bg-primary text-primary-foreground"
-        : "bg-background text-muted-foreground hover:text-foreground"
-    }`;
 </script>
 
 <div class="flex flex-col gap-2.5 py-3">
   <!-- Row 1 — search, mode, facets, filters · sort, count -->
   <div class="flex items-center justify-between gap-4 flex-wrap">
     <div class="flex items-center gap-3 flex-1 min-w-0 flex-wrap">
-      {#if hasSearchable || semanticAvailable}
-        <div class="relative group flex-1 min-w-[220px] max-w-md">
-          <MagnifyingGlass
-            size={16}
-            class="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors {semanticMode
-              ? 'text-primary'
-              : 'text-muted-foreground/60 group-focus-within:text-primary'}"
-          />
-          <input
-            type="text"
-            bind:value={searchInput}
-            onkeydown={(e) => e.key === "Enter" && submitSearch()}
-            placeholder={semanticMode ? "Search by meaning…" : "Search text…"}
-            class="h-10 w-full pl-10 pr-8 rounded-xl bg-muted/50 border text-sm text-foreground placeholder-muted-foreground/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background {semanticMode
-              ? 'border-primary/40'
-              : 'border-border'}"
-          />
-          {#if searchInput !== ""}
+      <!-- Semantic search bar — every embedding tool lives inside it. -->
+      <div class="relative group flex-1 min-w-[240px] max-w-md">
+        <MagnifyingGlass
+          size={16}
+          class="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors {ranked
+            ? 'text-primary'
+            : 'text-muted-foreground/60 group-focus-within:text-primary'}"
+        />
+        <input
+          type="text"
+          bind:value={searchInput}
+          onkeydown={(e) => e.key === "Enter" && submitSearch()}
+          disabled={!searchReady || computing}
+          placeholder={computing
+            ? "Computing embeddings…"
+            : searchReady
+              ? "Search by meaning…"
+              : embeddingsDegraded
+                ? "Semantic search needs repair"
+                : "Semantic search — not enabled yet"}
+          class="h-10 w-full pl-10 pr-24 rounded-xl bg-muted/50 border text-sm text-foreground placeholder-muted-foreground/60 shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-background disabled:cursor-not-allowed disabled:opacity-70 {ranked
+            ? 'border-primary/40'
+            : 'border-border'}"
+        />
+        <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {#if searchInput !== "" && searchReady && !computing}
             <button
               type="button"
               onclick={clearSearch}
               aria-label="Clear search"
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              class="p-0.5 rounded-full hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X size={14} />
             </button>
           {/if}
-        </div>
 
-        {#if embeddingsDegraded && onCompute}
-          <!-- Broken embedding store: offer the repair, not a search box that errors. -->
-          <button
-            type="button"
-            onclick={() => onCompute?.(true)}
-            disabled={computing}
-            title={embeddingsDetail || "The embedding store is broken; recompute it from scratch."}
-            class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-warning/50 bg-warning/10 text-xs font-bold uppercase tracking-wider text-warning hover:bg-warning/20 shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {#if computing}
-              <CircleNotch size={15} class="animate-spin" />
-              Recomputing…
-            {:else}
-              <ArrowsClockwise size={15} />
-              Repair semantic search
-            {/if}
-          </button>
-        {:else if semanticAvailable}
-          <div
-            class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm shrink-0"
-            role="group"
-            aria-label="Search mode"
-          >
+          {#if computing}
+            <span
+              class="inline-flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums"
+            >
+              <CircleNotch size={13} class="animate-spin" />
+              {computePercent !== null ? `${computePercent}%` : ""}
+            </span>
+          {:else if embeddingsDegraded && onCompute}
             <button
               type="button"
-              class={segmentedButtonClass(!semanticMode)}
-              aria-pressed={!semanticMode}
-              onclick={() => setMode(false)}
+              onclick={() => runCompute(true)}
+              title={embeddingsDetail ||
+                "The embedding store is broken; recompute it from scratch."}
+              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-warning/50 bg-warning/10 text-[11px] font-bold uppercase tracking-wider text-warning hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Text
+              <ArrowsClockwise size={12} />
+              Repair
             </button>
+          {:else if embeddingsStatus === "absent" && onCompute}
             <button
               type="button"
-              class={segmentedButtonClass(semanticMode)}
-              aria-pressed={semanticMode}
-              onclick={() => setMode(true)}
+              onclick={() => runCompute(false)}
+              title="Compute embeddings to enable semantic search"
+              class="inline-flex items-center h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Semantic
+              Enable
             </button>
-          </div>
-          {#if embeddingsStatus === "partial" && onCompute}
-            <button
-              type="button"
-              onclick={() => onCompute?.(false)}
-              disabled={computing}
-              title="{embeddedRows.toLocaleString()} of {totalRecords.toLocaleString()} records embedded — embed the missing ones"
-              class="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl border border-dashed border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {#if computing}
-                <CircleNotch size={15} class="animate-spin" />
-              {:else}
-                <ArrowsClockwise size={15} />
-              {/if}
-              Update embeddings
-            </button>
+          {:else if searchReady && onCompute}
+            <Popover.Root bind:open={toolsOpen}>
+              <Popover.Trigger
+                aria-label="Embedding options"
+                title="Embedding options"
+                class={embeddingsStatus === "partial"
+                  ? "inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-warning/50 bg-warning/10 text-[11px] font-bold text-warning tabular-nums hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  : "inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}
+              >
+                {#if embeddingsStatus === "partial"}
+                  {embeddedRows.toLocaleString()}/{totalRecords.toLocaleString()}
+                  <CaretDown size={10} />
+                {:else}
+                  <ArrowsClockwise size={14} />
+                {/if}
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="end"
+                  sideOffset={10}
+                  class="z-50 w-72 rounded-2xl border border-border/50 bg-popover/95 p-3 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
+                >
+                  <p class="text-label mb-2 text-left">Semantic search</p>
+                  <div class="space-y-1 mb-3 text-left">
+                    {#if embeddingModelId}
+                      <p class="text-xs text-muted-foreground">
+                        Model <span class="font-mono text-foreground">{embeddingModelId}</span>
+                      </p>
+                    {/if}
+                    <p class="text-xs text-muted-foreground tabular-nums">
+                      {embeddedRows.toLocaleString()} of {totalRecords.toLocaleString()} records embedded
+                    </p>
+                    {#if embeddingsDetail}
+                      <p class="text-xs text-warning">{embeddingsDetail}</p>
+                    {/if}
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    {#if embeddingsStatus === "partial"}
+                      <button
+                        type="button"
+                        onclick={() => runCompute(false)}
+                        class="h-9 w-full rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        Update embeddings
+                      </button>
+                    {/if}
+                    <button
+                      type="button"
+                      onclick={() => runCompute(true)}
+                      title="Drop and rebuild the whole embedding space"
+                      class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Recompute
+                    </button>
+                  </div>
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           {/if}
-        {:else if onCompute}
-          <button
-            type="button"
-            onclick={() => onCompute?.(false)}
-            disabled={computing}
-            title="Compute embeddings to enable semantic search"
-            class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-dashed border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {#if computing}
-              <CircleNotch size={15} class="animate-spin" />
-              Computing…
-            {:else}
-              <MagnifyingGlass size={15} />
-              Enable semantic search
-            {/if}
-          </button>
-        {/if}
-      {/if}
+        </div>
+      </div>
 
       {#if splitFacet.length > 0}
         <FacetSelect
