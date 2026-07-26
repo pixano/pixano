@@ -9,6 +9,7 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import pixanoFavicon from "../assets/favicon.ico";
+  import InferenceStatusChip from "../components/inference/InferenceStatusChip.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
   import ImportJobsTray from "../components/library/import-wizard/ImportJobsTray.svelte";
   import type { LayoutProps } from "./$types";
@@ -110,6 +111,7 @@ License: CECILL-C
           <ArrowsLeftRight size={20} />
         </button>
 
+        <InferenceStatusChip />
         <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
       </div>
     </header>

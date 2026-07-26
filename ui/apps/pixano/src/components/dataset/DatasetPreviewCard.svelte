@@ -166,12 +166,17 @@ License: CECILL-C
 </script>
 
 <div class="relative group h-full font-sans">
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card cursor-pointer"
+    class="w-full h-full flex flex-col text-left overflow-hidden bg-card rounded-2xl border border-border shadow-sm hover:shadow-2xl hover:border-primary/30 transition-all duration-500 hover:-translate-y-1.5 group/card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    role="button"
+    tabindex={0}
+    aria-label="Open dataset {dataset.name}"
     onclick={handleSelectDataset}
     onkeydown={(e) => {
-      if (e.key === "Enter" || e.key === " ") handleSelectDataset();
+      if (e.key === "Enter" || e.key === " ") {
+        if (e.key === " ") e.preventDefault();
+        handleSelectDataset();
+      }
     }}
   >
     <div class="relative aspect-video w-full overflow-hidden bg-muted">
@@ -241,16 +246,18 @@ License: CECILL-C
       {/if}
 
       <!-- Bookmark Icons -->
-      <div class="absolute top-3 right-3 flex items-center gap-1.5">
+      <div class="absolute top-3 right-3 flex items-center gap-1.5 group/flags">
         {#each BOOKMARK_TYPES as type (type)}
           {@const active = isBookmarked(type)}
           {@const color = BOOKMARK_COLORS[type]}
           <button
             class="w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md border transition-all duration-200 hover:scale-110 {active
               ? 'bg-background/80 border-white/20 shadow-lg'
-              : 'bg-background/40 border-white/10 opacity-60 hover:opacity-100'}"
+              : 'bg-background/40 border-white/10 opacity-0 group-hover/card:opacity-100 group-focus-within/flags:opacity-100 focus-visible:opacity-100'}"
             onclick={(e) => handleBookmarkClick(e, type)}
             title={type}
+            aria-pressed={active}
+            aria-label={active ? `Remove ${type} flag` : `Flag as ${type}`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -287,11 +294,17 @@ License: CECILL-C
         </h3>
       </div>
 
-      <p
-        class="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed opacity-80 mb-4 flex-1"
-      >
-        {dataset.description || "No description provided for this dataset."}
-      </p>
+      {#if dataset.description}
+        <p
+          class="text-[13px] text-muted-foreground line-clamp-2 leading-relaxed opacity-80 mb-4 flex-1"
+        >
+          {dataset.description}
+        </p>
+      {:else}
+        <p class="text-[13px] italic text-muted-foreground/60 leading-relaxed mb-4 flex-1">
+          No description
+        </p>
+      {/if}
 
       <!-- Footer Meta -->
       <div class="flex items-center gap-4 pt-4 border-t border-border/40">
@@ -343,13 +356,6 @@ License: CECILL-C
       {#if splitGroups.length > 0}
         <div class="mt-3 pt-3 border-t border-border/40">
           <table class="w-full text-[10px]">
-            <thead>
-              <tr class="text-muted-foreground font-bold uppercase tracking-wider">
-                <th class="text-left py-0.5">Split</th>
-                <th class="text-left py-0.5">Status</th>
-                <th class="text-right py-0.5">Count</th>
-              </tr>
-            </thead>
             <tbody>
               {#each splitGroups as sg (sg.split)}
                 {#each sg.statuses as st (st.status)}

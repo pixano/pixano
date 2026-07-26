@@ -6,22 +6,28 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ArrowLeft, ArrowRight, CaretLeft, CircleNotch, FloppyDisk } from "phosphor-svelte";
+  import {
+    ArrowLeft,
+    CaretLeft,
+    CaretRight,
+    Check,
+    CircleNotch,
+    FloppyDisk,
+  } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import { Toolbar } from "../workspace";
-  import RecordStatusControl from "./RecordStatusControl.svelte";
   import { navigating } from "$app/state";
   import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { saveData } from "$lib/stores/workspaceStores.svelte";
-  import { cn, IconButton } from "$lib/ui";
+  import { IconButton } from "$lib/ui";
 
   interface Props {
     currentItemId: string;
     goToNeighborItem: (direction: "previous" | "next") => Promise<void>;
     handleReturnToPreviousPage: () => void;
     handleSave: () => void;
-    getWorkspaceRecordDisplayCount: () => string;
+    getRecordPosition: () => { position: number | null; total: number | null };
   }
 
   let {
@@ -29,8 +35,15 @@ License: CECILL-C
     goToNeighborItem,
     handleReturnToPreviousPage,
     handleSave,
-    getWorkspaceRecordDisplayCount,
+    getRecordPosition,
   }: Props = $props();
+
+  const dirtyCount = $derived(saveData.value.length);
+
+  const recordLabel = $derived.by(() => {
+    const { position, total } = getRecordPosition();
+    return position != null && total != null ? `${position} / ${total}` : "— / —";
+  });
 
   const onKeyUp = async (event: KeyboardEvent) => {
     // Item navigation shortcuts should work globally, even when typing in a textarea
@@ -65,119 +78,92 @@ License: CECILL-C
 {#if currentItemId}
   <div
     in:fade={{ duration: 200 }}
-    class="flex-1 flex items-center justify-between h-full relative px-2"
+    class="grid h-full flex-1 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-2"
   >
     {#if navigating.from !== null}
-      <div class="flex items-center gap-3 px-4">
-        <CircleNotch weight="regular" class="animate-spin text-primary h-4 w-4" />
-        <span
-          class="text-[11px] text-muted-foreground animate-pulse font-bold uppercase tracking-wider"
-        >
-          Loading...
-        </span>
+      <div class="flex items-center gap-2 px-1">
+        <CircleNotch weight="regular" class="h-4 w-4 animate-spin text-primary" />
+        <span class="text-sm text-muted-foreground">Loading…</span>
       </div>
+      <div></div>
+      <div></div>
     {:else}
-      <!-- LEFT: Navigation & Context -->
-      <div class="flex items-center gap-3 min-w-[240px]">
-        <button
+      <!-- LEFT: back to explorer · dataset name · record position -->
+      <nav class="flex min-w-0 items-center gap-2">
+        <IconButton
           onclick={handleReturnToPreviousPage}
-          class="group flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-primary/5 transition-all duration-200 border border-transparent hover:border-primary/10"
-          title="Back to dataset"
+          tooltipContent="Back to explorer"
+          class="h-8 w-8 shrink-0 rounded-lg"
         >
-          <CaretLeft
-            weight="regular"
-            class="h-4 w-4 text-primary opacity-0 -ml-1 group-hover:opacity-100 transition-all duration-300"
-          />
-          <span
-            class="text-[13px] font-black uppercase tracking-tighter text-foreground/80 group-hover:text-primary transition-colors"
-          >
-            {currentDatasetStore.value?.name}
-          </span>
+          <ArrowLeft class="h-4 w-4" />
+        </IconButton>
+        <button
+          type="button"
+          onclick={handleReturnToPreviousPage}
+          title="Back to the dataset explorer"
+          class="min-w-0 shrink truncate rounded-md px-1 text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {currentDatasetStore.value?.name}
         </button>
-
-        <div class="h-4 w-px bg-border/40 mx-1"></div>
-
-        <div
-          class="flex items-center gap-1 bg-muted/20 rounded-xl border border-border/30 p-0.5 shadow-inner"
-        >
+        <span class="shrink-0 text-sm text-muted-foreground/50">·</span>
+        <div class="flex shrink-0 items-center gap-1">
           <IconButton
             onclick={() => goToNeighborItem("previous")}
-            tooltipContent="Previous (Shift + ←)"
-            class="h-7 w-7 hover:bg-background/80"
+            tooltipContent="Previous record (Shift + ←)"
+            class="h-7 w-7 rounded-lg"
           >
-            <ArrowLeft class="h-3.5 w-3.5" />
+            <CaretLeft class="h-3.5 w-3.5" />
           </IconButton>
-
-          <div class="flex items-baseline gap-1.5 px-2">
-            <span class="text-[11px] font-black text-foreground/90 tabular-nums">
-              {currentItemId}
-            </span>
-            <span
-              class="text-[9px] text-muted-foreground font-bold opacity-40 uppercase tracking-tighter"
-            >
-              {getWorkspaceRecordDisplayCount()}
-            </span>
-          </div>
-
+          <span
+            class="text-sm tabular-nums text-muted-foreground"
+            title={`Record ID: ${currentItemId}`}
+          >
+            {recordLabel}
+          </span>
           <IconButton
             onclick={() => goToNeighborItem("next")}
-            tooltipContent="Next (Shift + →)"
-            class="h-7 w-7 hover:bg-background/80"
+            tooltipContent="Next record (Shift + →)"
+            class="h-7 w-7 rounded-lg"
           >
-            <ArrowRight class="h-3.5 w-3.5" />
+            <CaretRight class="h-3.5 w-3.5" />
           </IconButton>
         </div>
-      </div>
+      </nav>
 
-      <!-- MIDDLE: Absolute Center Tools -->
-      <div
-        class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
-      >
-        <div class="pointer-events-auto">
-          {#if currentDatasetStore.value}
-            <Toolbar />
-          {/if}
-        </div>
-      </div>
-
-      <!-- RIGHT: Action Group -->
-      <div class="flex items-center justify-end gap-3 min-w-[60px]">
+      <!-- CENTER: annotation tools (in flow — no absolute overlap) -->
+      <div class="flex items-center justify-center">
         {#if currentDatasetStore.value}
-          <RecordStatusControl datasetId={currentDatasetStore.value.id} recordId={currentItemId} />
+          <Toolbar />
         {/if}
-        <IconButton
-          disabled={saveData.value.length === 0}
-          onclick={handleSave}
-          tooltipContent={saveData.value.length > 0
-            ? `Save ${saveData.value.length} changes`
-            : "No changes to save"}
-          class={cn(
-            "h-10 w-10 transition-all duration-500 rounded-xl border",
-            saveData.value.length > 0
-              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-110 animate-pulse"
-              : "bg-background border-border text-muted-foreground opacity-40",
-          )}
-        >
-          <FloppyDisk
-            weight="regular"
-            class={cn(
-              "h-5 w-5 transition-transform duration-300",
-              saveData.value.length > 0 && "scale-110",
-            )}
-          />
-          {#if saveData.value.length > 0}
-            <span class="absolute -top-1 -right-1 flex h-4 w-4">
-              <span
-                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-foreground opacity-75"
-              ></span>
-              <span
-                class="relative inline-flex rounded-full h-4 w-4 bg-primary-foreground text-[9px] font-black text-primary items-center justify-center shadow-sm"
-              >
-                {saveData.value.length}
-              </span>
+      </div>
+
+      <!-- RIGHT: save -->
+      <div class="flex items-center justify-end">
+        {#if dirtyCount > 0}
+          <button
+            type="button"
+            onclick={handleSave}
+            title={`Save ${dirtyCount} change${dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)`}
+            class="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <FloppyDisk size={14} />
+            Save
+            <span
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] tabular-nums"
+            >
+              {dirtyCount}
             </span>
-          {/if}
-        </IconButton>
+          </button>
+        {:else}
+          <span
+            role="status"
+            title="No changes to save"
+            class="inline-flex h-9 items-center gap-1.5 px-3.5 text-xs font-medium text-muted-foreground"
+          >
+            <Check size={14} />
+            Saved
+          </span>
+        {/if}
       </div>
     {/if}
   </div>
