@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  /* eslint-disable svelte/no-at-html-tags */
   // Imports
   import { Button } from "bits-ui";
   import { nanoid } from "nanoid";
@@ -52,6 +51,7 @@ License: CECILL-C
   } from "$lib/utils/entityOperations";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
   import { highlightTrackletChildren } from "$lib/utils/highlightOperations";
+  import { humanizeShapeType } from "$lib/utils/labels";
   import { getAlphaBoundingBox, rleToBitmapCanvas } from "$lib/utils/maskUtils";
   import { saveTo } from "$lib/utils/saveItemUtils";
   import { cn } from "$lib/utils/styleUtils";
@@ -540,13 +540,30 @@ License: CECILL-C
   }
 
   //set specific header text for different kind of shape
-  let saveText = $derived.by(() => {
-    if (newShape.value.status !== "saving") return "Save";
-    let text = "Save " + newShape.value.type;
-    if (newShape.value.type === ShapeType.textSpan) {
-      text += " <i>" + newShape.value.attrs.mention + "</i>";
+  let headerContext = $derived.by(() => {
+    const empty = {
+      title: "Save",
+      dims: null as string | null,
+      viewName: null as string | null,
+      mention: null as string | null,
+    };
+    if (newShape.value.status !== "saving") return empty;
+    const shape = newShape.value;
+    let dims: string | null = null;
+    if (shape.type === ShapeType.bbox) {
+      dims = `${Math.round(shape.attrs.width)} \u00d7 ${Math.round(shape.attrs.height)} px`;
+    } else if (
+      (shape.type === ShapeType.mask || shape.type === ShapeType.polygon) &&
+      shape.maskBounds
+    ) {
+      dims = `${Math.round(shape.maskBounds.width)} \u00d7 ${Math.round(shape.maskBounds.height)} px`;
     }
-    return text;
+    return {
+      title: "Save " + humanizeShapeType(shape.type),
+      dims,
+      viewName: shape.viewRef.name || null,
+      mention: shape.type === ShapeType.textSpan ? shape.attrs.mention : null,
+    };
   });
 
   // Cleanup: remove temporary text span when this component unmounts
@@ -557,20 +574,38 @@ License: CECILL-C
 
 {#if newShape.value.status === "saving"}
   <form class="flex flex-col gap-4 p-4" onsubmit={handleSubmit}>
-    <p class="text-sm font-bold text-foreground">{@html saveText}</p>
+    <header class="flex flex-col gap-1">
+      <span class="text-label text-left">New annotation</span>
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm font-bold text-foreground">{headerContext.title}</p>
+        {#if headerContext.dims || headerContext.viewName}
+          <span
+            class="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
+          >
+            {[headerContext.dims, headerContext.viewName].filter(Boolean).join(" \u00b7 ")}
+          </span>
+        {/if}
+      </div>
+      {#if headerContext.mention}
+        <p class="truncate text-sm italic text-muted-foreground">“{headerContext.mention}”</p>
+      {/if}
+    </header>
     <RelinkAnnotation
       bind:selectedEntityId
       baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
       viewRef={newShape.value.viewRef}
     />
-    <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
-      <CreateFeatureInputs
-        bind:isFormValid
-        bind:formInputs
-        bind:objectProperties
-        {selectedEntityId}
-        baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
-      />
+    <div class="flex flex-col gap-1.5">
+      <span class="text-label text-left">Attributes</span>
+      <div class="flex max-h-[calc(100vh-250px)] flex-col gap-4 overflow-y-auto">
+        <CreateFeatureInputs
+          bind:isFormValid
+          bind:formInputs
+          bind:objectProperties
+          {selectedEntityId}
+          baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
+        />
+      </div>
     </div>
     <div class="flex justify-end gap-3">
       <Button.Root type="button" class={cn(cancelButtonClass)} onclick={handleCancel}>

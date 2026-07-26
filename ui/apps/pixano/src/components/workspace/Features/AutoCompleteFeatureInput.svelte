@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Command, Popover } from "bits-ui";
-  import { Check } from "phosphor-svelte";
+  import { CaretUpDown, Check, Plus } from "phosphor-svelte";
   import { tick } from "svelte";
 
   import { cn } from "$lib/ui";
@@ -26,7 +26,7 @@ License: CECILL-C
     onTextInputChange,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     featureList = $bindable([]),
-    placeholder = "Select a feature",
+    placeholder = "Choose or type\u2026",
     value = $bindable(""),
     autofocus = false,
     className = "",
@@ -67,20 +67,21 @@ License: CECILL-C
 
   const onSelect = (currentValue: string, trigger: string) => {
     value = currentValue;
-    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
-    if (!existingValue && inputValue) {
-      featureList = [...featureList, { value: inputValue, label: inputValue }];
+    if (!featureList.some((f) => f.value === currentValue)) {
+      featureList = [...featureList, { value: currentValue, label: currentValue }];
     }
     onTextInputChange(value);
     closeAndFocusTrigger(trigger);
   };
 
-  const onSearchInput = () => {
-    const existingValue = featureList.find((f) => f.value === inputValue)?.label;
-    if (!existingValue && inputValue) {
-      featureList = [...featureList, { value: inputValue, label: inputValue }];
-    }
-  };
+  // A new value only enters the list through the explicit Create row —
+  // never as a side effect of typing in the search field.
+  const createCandidate = $derived.by(() => {
+    const candidate = inputValue.trim();
+    if (!candidate) return null;
+    if (featureList.some((f) => f.value === candidate || f.label === candidate)) return null;
+    return candidate;
+  });
 </script>
 
 <Popover.Root bind:open>
@@ -92,7 +93,10 @@ License: CECILL-C
       className,
     )}
   >
-    {selectedValue}
+    <span class="min-w-0 truncate {value === '' ? 'text-muted-foreground/70' : ''}">
+      {selectedValue}
+    </span>
+    <CaretUpDown size={14} class="ml-auto shrink-0 text-muted-foreground/70" />
   </Popover.Trigger>
   <Popover.Content
     sideOffset={6}
@@ -104,11 +108,10 @@ License: CECILL-C
         <Command.Input
           {placeholder}
           bind:value={inputValue}
-          oninput={onSearchInput}
           class="mb-1 h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       {/if}
-      <Command.List>
+      <Command.List class="max-h-56 overflow-y-auto">
         {#each featureList as feature}
           <Command.Item
             value={feature.value}
@@ -119,6 +122,19 @@ License: CECILL-C
             {feature.label}
           </Command.Item>
         {/each}
+        {#if isInputEnabled && createCandidate}
+          <Command.Item
+            value={createCandidate}
+            forceMount
+            onSelect={() => onSelect(createCandidate, triggerId)}
+            class="flex cursor-pointer items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors data-[selected]:bg-accent data-[selected]:text-accent-foreground"
+          >
+            <Plus size={14} class="mr-2 shrink-0 text-muted-foreground" />
+            <span class="min-w-0 truncate">Create “{createCandidate}”</span>
+          </Command.Item>
+        {:else if featureList.length === 0}
+          <p class="px-2 py-3 text-center text-xs text-muted-foreground">No values yet</p>
+        {/if}
       </Command.List>
     </Command.Root>
   </Popover.Content>
