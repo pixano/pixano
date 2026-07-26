@@ -103,6 +103,7 @@ export interface PreviewDescriptor {
   id: string;
   kind: string;
   preview_url: string;
+  excerpt?: string | null;
 }
 
 export interface RecordComponentResponse {

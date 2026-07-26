@@ -135,6 +135,7 @@ class PreviewDescriptor(ResponseModel):
     id: str
     kind: str
     preview_url: str
+    excerpt: str | None = None
 
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
