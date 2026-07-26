@@ -71,13 +71,13 @@ License: CECILL-C
   let computeJob = $state<IoJobResponse | null>(null);
   let computeError = $state("");
 
-  async function runCompute(): Promise<boolean> {
+  async function runCompute(force = false): Promise<boolean> {
     // Returns false when no embedding model is reachable (caller prompts to connect).
     const models = await listInferenceModels();
     const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
     if (embeddingModels.length === 0) return false;
     computeError = "";
-    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name);
+    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name, force);
     try {
       for (;;) {
         const job = await getIoJob(jobId);
@@ -139,12 +139,12 @@ License: CECILL-C
     onNavigate({ page: "1", similar_to: undefined });
   }
 
-  async function handleCompute() {
+  async function handleCompute(force = false) {
     if (computing) return;
     computing = true;
     try {
       // If no embedding model is reachable, the server isn't connected — prompt for it.
-      const ok = await runCompute();
+      const ok = await runCompute(force);
       if (!ok) showConnectModal = true;
     } finally {
       computing = false;

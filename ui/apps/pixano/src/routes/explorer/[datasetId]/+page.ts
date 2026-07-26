@@ -7,6 +7,7 @@ License: CECILL-C
 import type { PageLoad } from "./$types";
 import { browser } from "$app/environment";
 import { listRecords, searchRecords } from "$lib/api";
+import { ApiError } from "$lib/api/apiClient";
 import {
   DEFAULT_DATASET_GRID_SIZE,
   DEFAULT_DATASET_TABLE_PAGE,
@@ -18,6 +19,19 @@ import { getRouteSearchParams } from "$lib/utils/routes";
 const SEMANTIC_LIMIT = 100;
 
 type ExplorerView = "grid" | "table";
+
+/** Extract the backend's actionable `detail` from a failed search, with an honest fallback. */
+function searchErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.body) {
+    try {
+      const detail = (JSON.parse(error.body) as { detail?: string }).detail;
+      if (detail) return `Semantic search failed — showing the unranked list. ${detail}`;
+    } catch {
+      // fall through to the generic message
+    }
+  }
+  return "Semantic search failed — showing the unranked list.";
+}
 
 /** View precedence: URL param → per-dataset localStorage → data-driven default. */
 function resolveView(
@@ -69,9 +83,10 @@ export const load: PageLoad = async ({ params, url }) => {
         searchError: "",
         view: resolveView(params.datasetId, urlView, browserData),
       };
-    } catch {
-      // A failed semantic search (e.g. unreachable embedding provider) degrades to the
-      // regular listing with an inline banner instead of the route error page.
+    } catch (error) {
+      // A failed semantic search (broken embeddings, unreachable provider…) degrades to the
+      // regular listing with the backend's actionable detail in an inline banner instead of
+      // the route error page.
       const browserData = await listRecords(params.datasetId, {
         offset: 0,
         limit: size,
@@ -83,8 +98,7 @@ export const load: PageLoad = async ({ params, url }) => {
         browserData,
         pagination: { currentPage: 1, size, sort: "", order, filters, q, where },
         semantic: { active: false, similarTo: "", model: "" },
-        searchError:
-          "Semantic search failed — showing the unranked list. Check the inference server connection.",
+        searchError: searchErrorMessage(error),
         view: resolveView(params.datasetId, urlView, browserData),
       };
     }

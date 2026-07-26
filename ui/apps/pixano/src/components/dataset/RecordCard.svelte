@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { ArrowRight, FilmStrip, Sparkle } from "phosphor-svelte";
+  import { ArrowRight, FilmStrip, Images } from "phosphor-svelte";
 
   import type { RecordCard } from "$lib/types/dataset";
   import { cardLayout } from "$lib/utils/cardLayout";
@@ -37,7 +37,7 @@ License: CECILL-C
   };
 
   const overlayButtonClass =
-    "flex h-10 w-10 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm transition-colors hover:bg-background hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    "inline-flex h-9 items-center gap-1.5 px-3.5 rounded-full bg-background/90 text-xs font-bold text-foreground shadow-sm transition-colors hover:bg-background hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 </script>
 
 <div
@@ -136,13 +136,12 @@ License: CECILL-C
       </span>
     {/if}
 
-    <!-- Hover overlay actions -->
+    <!-- Hover overlay actions (labeled — no icon guessing) -->
     <div
-      class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex items-center justify-center gap-3"
+      class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-2"
     >
       <button
         type="button"
-        title="Open record"
         aria-label="Open record"
         class="{overlayButtonClass} translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300"
         onclick={(event: MouseEvent) => {
@@ -150,20 +149,21 @@ License: CECILL-C
           onOpen(record.id);
         }}
       >
-        <ArrowRight size={17} />
+        <ArrowRight size={14} />
+        Open
       </button>
       {#if onFindSimilar}
         <button
           type="button"
-          title="Find similar records"
-          aria-label="Find similar records"
+          aria-label="More like this"
           class="{overlayButtonClass} translate-y-4 group-hover/card:translate-y-0 transition-transform duration-300 delay-75"
           onclick={(event: MouseEvent) => {
             event.stopPropagation();
             onFindSimilar(record.id);
           }}
         >
-          <Sparkle size={17} />
+          <Images size={14} />
+          More like this
         </button>
       {/if}
     </div>

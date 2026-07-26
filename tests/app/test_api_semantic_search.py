@@ -11,6 +11,8 @@ required. Record embeddings are seeded directly (bring-your-own vectors).
 """
 
 import io
+import json
+import shutil
 import tempfile
 import time
 from functools import lru_cache
@@ -185,6 +187,86 @@ def _fake_sync_client_factory():
         return instance
 
     return make
+
+
+class TestEmbeddingCorruption:
+    """A broken embedding store must degrade to actionable errors + a repair path, never 500."""
+
+    def _corrupt_missing_table(self, dataset: Dataset) -> Dataset:
+        shutil.rmtree(dataset.path / "db" / "embeddings.lance")
+        return dataset
+
+    def _corrupt_dim(self, dataset: Dataset) -> Dataset:
+        sidecar = dataset.path / "embeddings.json"
+        space = json.loads(sidecar.read_text())
+        space["dim"] = 16  # stored vectors are DIM=8
+        sidecar.write_text(json.dumps(space))
+        return dataset
+
+    def test_filters_report_missing_table_and_stop_advertising_semantic(self):
+        dataset = self._corrupt_missing_table(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset)
+        search = client.get(f"{BASE}/filters").json()["search"]
+        assert search["modes"] == ["text"]
+        assert search["status"] == "missing_table"
+        assert search["detail"]
+
+    def test_filters_report_dim_mismatch(self):
+        dataset = self._corrupt_dim(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset)
+        search = client.get(f"{BASE}/filters").json()["search"]
+        assert search["modes"] == ["text"]
+        assert search["status"] == "dim_mismatch"
+
+    def test_search_on_missing_table_is_503_not_500(self):
+        dataset = self._corrupt_missing_table(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset, _make_provider())
+        resp = client.post(f"{BASE}/records/search", json={"text": "record 1"})
+        assert resp.status_code == 503
+        assert "ecompute" in resp.json()["detail"]  # actionable: "Recompute the embeddings"
+
+    def test_search_on_dim_mismatch_is_409(self):
+        dataset = self._corrupt_dim(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset, _make_provider())
+        resp = client.post(f"{BASE}/records/search", json={"text": "record 1"})
+        assert resp.status_code == 409
+
+    def test_recompute_without_force_is_409_when_broken(self):
+        dataset = self._corrupt_missing_table(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset, _make_provider())
+        resp = client.post(f"{BASE}/embeddings/compute", json={"model": "mock-clip"})
+        assert resp.status_code == 409
+        assert "force" in resp.json()["detail"]
+
+    def test_model_switch_without_force_is_409(self):
+        client = _make_client(_build_dataset(with_embeddings=True), _make_provider())
+        resp = client.post(f"{BASE}/embeddings/compute", json={"model": "another-model"})
+        assert resp.status_code == 409
+        assert "another-model" in resp.json()["detail"]
+
+    def test_force_recompute_repairs_a_broken_store(self):
+        dataset = self._corrupt_missing_table(_build_dataset(with_embeddings=True))
+        client = _make_client(dataset, _make_provider())
+        with patch(
+            "pixano.api.embeddings.SyncPixanoInferenceClient",
+            side_effect=_fake_sync_client_factory(),
+        ):
+            resp = client.post(f"{BASE}/embeddings/compute", json={"model": "mock-clip", "force": True})
+            assert resp.status_code == 202
+            job_id = resp.json()["job_id"]
+
+            deadline = time.time() + 15
+            status = "pending"
+            while time.time() < deadline:
+                status = client.get(f"/io/jobs/{job_id}").json()["status"]
+                if status in {"done", "error", "cancelled"}:
+                    break
+                time.sleep(0.1)
+            assert status == "done", client.get(f"/io/jobs/{job_id}").json()
+
+        search = client.get(f"{BASE}/filters").json()["search"]
+        assert search["status"] == "ready"
+        assert "semantic" in search["modes"]
 
 
 class TestComputeJob:

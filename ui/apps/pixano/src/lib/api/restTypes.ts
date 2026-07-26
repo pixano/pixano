@@ -68,6 +68,11 @@ export interface ColumnDescriptorResponse {
 export interface SearchCapabilitiesResponse {
   modes: string[];
   models: string[];
+  /** Embedding-storage health: "absent" | "ready" | "partial" | "missing_table" | "empty" | "dim_mismatch" | "corrupt". */
+  status?: string;
+  detail?: string | null;
+  embedded_rows?: number;
+  total_records?: number;
 }
 
 export interface FilterSchemaResponse {

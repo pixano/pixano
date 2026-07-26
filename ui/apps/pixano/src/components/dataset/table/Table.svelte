@@ -20,11 +20,9 @@ License: CECILL-C
     CaretUp,
     CaretUpDown,
     Check,
-    DotsSixVertical,
     GearSix,
-    Sparkle,
+    Images,
   } from "phosphor-svelte";
-  import SortableList from "svelte-sortable-list";
 
   import { createSvelteTable } from "./createSvelteTable.svelte";
   import FlexRender from "./FlexRender.svelte";
@@ -136,8 +134,12 @@ License: CECILL-C
     );
   });
 
-  const sortList = (ev: { detail: string[] }) => {
-    columnOrder = ev.detail;
+  const moveColumn = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= columnOrder.length) return;
+    const next = [...columnOrder];
+    [next[index], next[target]] = [next[target], next[index]];
+    columnOrder = next;
   };
 
   function handleSelectItem(id: string) {
@@ -217,42 +219,57 @@ License: CECILL-C
                   <p
                     class="text-xs text-muted-foreground mb-3 text-left font-normal normal-case tracking-normal"
                   >
-                    Drag to reorder, toggle to show or hide.
+                    Toggle to show or hide, arrows to reorder.
                   </p>
                   <div class="flex flex-col space-y-1.5">
-                    <SortableList list={columnOrder} on:sort={sortList}>
-                      {#snippet children({ item })}
-                        <div
-                          class="py-1.5 px-2 flex items-center gap-2 border border-border/60 rounded-lg bg-background"
+                    {#each columnOrder as item, index (item)}
+                      <div
+                        class="py-1.5 px-2 flex items-center gap-2 border border-border/60 rounded-lg bg-background"
+                      >
+                        <Checkbox.Root
+                          id={item}
+                          checked={shownColumnsById[item] !== false}
+                          onCheckedChange={(checked) => {
+                            shownColumnsById[item] = checked === true;
+                          }}
+                          class="peer h-4 w-4 shrink-0 rounded border border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                         >
-                          <Checkbox.Root
-                            id={item}
-                            bind:checked={shownColumnsById[item]}
-                            class="peer h-4 w-4 shrink-0 rounded border border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                          >
-                            {#snippet children({ checked })}
-                              <span
-                                class="flex items-center justify-center text-current h-full w-full"
-                              >
-                                {#if checked}
-                                  <Check class="h-3 w-3" />
-                                {/if}
-                              </span>
-                            {/snippet}
-                          </Checkbox.Root>
-                          <label
-                            for={item}
-                            class="text-sm font-normal normal-case tracking-normal select-none grow cursor-pointer text-left truncate"
-                          >
-                            {formatColumnLabel(item)}
-                          </label>
-                          <DotsSixVertical
-                            size={16}
-                            class="shrink-0 text-muted-foreground cursor-grab"
-                          />
-                        </div>
-                      {/snippet}
-                    </SortableList>
+                          {#snippet children({ checked })}
+                            <span
+                              class="flex items-center justify-center text-current h-full w-full"
+                            >
+                              {#if checked}
+                                <Check class="h-3 w-3" />
+                              {/if}
+                            </span>
+                          {/snippet}
+                        </Checkbox.Root>
+                        <label
+                          for={item}
+                          class="text-sm font-normal normal-case tracking-normal select-none grow cursor-pointer text-left truncate"
+                        >
+                          {formatColumnLabel(item)}
+                        </label>
+                        <button
+                          type="button"
+                          aria-label="Move {formatColumnLabel(item)} up"
+                          disabled={index === 0}
+                          onclick={() => moveColumn(index, -1)}
+                          class="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-25 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <CaretUp size={13} weight="bold" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move {formatColumnLabel(item)} down"
+                          disabled={index === columnOrder.length - 1}
+                          onclick={() => moveColumn(index, 1)}
+                          class="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-25 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <CaretDown size={13} weight="bold" />
+                        </button>
+                      </div>
+                    {/each}
                   </div>
                 </Popover.Content>
               </Popover.Portal>
@@ -294,15 +311,15 @@ License: CECILL-C
               {#if onFindSimilar}
                 <button
                   type="button"
-                  title="Find similar records"
-                  aria-label="Find similar records"
+                  title="More like this"
+                  aria-label="More like this"
                   class={rowActionClass}
                   onclick={(event: MouseEvent) => {
                     event.stopPropagation();
                     onFindSimilar(recordIdOf(row.id));
                   }}
                 >
-                  <Sparkle size={15} />
+                  <Images size={15} />
                 </button>
               {/if}
               <button

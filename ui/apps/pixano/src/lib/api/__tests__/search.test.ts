@@ -82,6 +82,12 @@ describe("computeEmbeddings", () => {
     expect(jobId).toBe("job-1");
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toBe("/datasets/ds/embeddings/compute");
-    expect(requestBody()).toEqual({ model: "clip" });
+    expect(requestBody()).toEqual({ model: "clip", force: false });
+  });
+
+  it("passes force for repair / model-switch recomputes", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ job_id: "job-2" }));
+    await computeEmbeddings("ds", "clip", true);
+    expect(requestBody()).toEqual({ model: "clip", force: true });
   });
 });

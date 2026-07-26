@@ -6,15 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   import {
+    ArrowsClockwise,
     ArrowsDownUp,
     CircleNotch,
     FunnelSimple,
+    Images,
     MagnifyingGlass,
     Plus,
     Rows,
     SortAscending,
     SortDescending,
-    Sparkle,
     SquaresFour,
     Warning,
     X,
@@ -57,7 +58,7 @@ License: CECILL-C
     view?: "grid" | "table";
     onApply: (updates: { filter?: string[]; q?: string; semantic?: boolean }) => void;
     onSortChange?: (sort: string | undefined, order: string | undefined) => void;
-    onCompute?: () => void;
+    onCompute?: (force?: boolean) => void;
     onClearSimilar?: () => void;
     onViewChange?: (view: "grid" | "table") => void;
   }
@@ -87,6 +88,13 @@ License: CECILL-C
   const columns = $derived(filterSchema.columns);
   const hasSearchable = $derived(columns.some((c) => c.searchable));
   const semanticAvailable = $derived((filterSchema.search?.modes ?? []).includes("semantic"));
+  const embeddingsStatus = $derived(filterSchema.search?.status ?? "absent");
+  const embeddingsDetail = $derived(filterSchema.search?.detail ?? "");
+  const embeddingsDegraded = $derived(
+    ["missing_table", "empty", "dim_mismatch", "corrupt"].includes(embeddingsStatus),
+  );
+  const embeddedRows = $derived(filterSchema.search?.embedded_rows ?? 0);
+  const totalRecords = $derived(filterSchema.search?.total_records ?? 0);
   const sortableColumns = $derived(columns.filter((c) => c.sortable));
   const ranked = $derived(semanticActive || similarTo !== "");
   const sortItems = $derived([
@@ -220,17 +228,12 @@ License: CECILL-C
     <div class="flex items-center gap-3 flex-1 min-w-0 flex-wrap">
       {#if hasSearchable || semanticAvailable}
         <div class="relative group flex-1 min-w-[220px] max-w-md">
-          {#if semanticMode}
-            <Sparkle
-              size={16}
-              class="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none"
-            />
-          {:else}
-            <MagnifyingGlass
-              size={16}
-              class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 group-focus-within:text-primary transition-colors pointer-events-none"
-            />
-          {/if}
+          <MagnifyingGlass
+            size={16}
+            class="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors {semanticMode
+              ? 'text-primary'
+              : 'text-muted-foreground/60 group-focus-within:text-primary'}"
+          />
           <input
             type="text"
             bind:value={searchInput}
@@ -252,7 +255,24 @@ License: CECILL-C
           {/if}
         </div>
 
-        {#if semanticAvailable}
+        {#if embeddingsDegraded && onCompute}
+          <!-- Broken embedding store: offer the repair, not a search box that errors. -->
+          <button
+            type="button"
+            onclick={() => onCompute?.(true)}
+            disabled={computing}
+            title={embeddingsDetail || "The embedding store is broken; recompute it from scratch."}
+            class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-warning/50 bg-warning/10 text-xs font-bold uppercase tracking-wider text-warning hover:bg-warning/20 shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {#if computing}
+              <CircleNotch size={15} class="animate-spin" />
+              Recomputing…
+            {:else}
+              <ArrowsClockwise size={15} />
+              Repair semantic search
+            {/if}
+          </button>
+        {:else if semanticAvailable}
           <div
             class="flex items-center rounded-xl border border-border overflow-hidden shadow-sm shrink-0"
             role="group"
@@ -275,10 +295,26 @@ License: CECILL-C
               Semantic
             </button>
           </div>
+          {#if embeddingsStatus === "partial" && onCompute}
+            <button
+              type="button"
+              onclick={() => onCompute?.(false)}
+              disabled={computing}
+              title="{embeddedRows.toLocaleString()} of {totalRecords.toLocaleString()} records embedded — embed the missing ones"
+              class="inline-flex items-center gap-1.5 h-10 px-3 rounded-xl border border-dashed border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {#if computing}
+                <CircleNotch size={15} class="animate-spin" />
+              {:else}
+                <ArrowsClockwise size={15} />
+              {/if}
+              Update embeddings
+            </button>
+          {/if}
         {:else if onCompute}
           <button
             type="button"
-            onclick={onCompute}
+            onclick={() => onCompute?.(false)}
             disabled={computing}
             title="Compute embeddings to enable semantic search"
             class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-dashed border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground shadow-sm transition-colors disabled:opacity-60 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -287,7 +323,7 @@ License: CECILL-C
               <CircleNotch size={15} class="animate-spin" />
               Computing…
             {:else}
-              <Sparkle size={15} />
+              <MagnifyingGlass size={15} />
               Enable semantic search
             {/if}
           </button>
@@ -428,7 +464,6 @@ License: CECILL-C
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1"
         >
           {#if ranked}
-            <Sparkle size={12} class="text-primary" />
             Ranked
           {:else}
             Records
@@ -446,7 +481,7 @@ License: CECILL-C
         <div
           class="inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1 rounded-full bg-primary text-primary-foreground text-xs shadow-sm"
         >
-          <Sparkle size={12} weight="fill" />
+          <Images size={12} weight="fill" />
           <span class="font-medium">
             Similar to <span class="font-mono">{similarTo}</span>
           </span>
