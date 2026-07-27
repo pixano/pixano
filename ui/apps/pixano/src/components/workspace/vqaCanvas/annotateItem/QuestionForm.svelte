@@ -155,7 +155,7 @@ License: CECILL-C
       <!-- Node on the line -->
       <div
         class="absolute -left-[25px] top-3.5 w-3 h-3 rounded-full border-2 border-border bg-card z-10 {questionCompleted
-          ? 'border-green-500'
+          ? 'border-success'
           : 'border-warning'}"
       ></div>
 

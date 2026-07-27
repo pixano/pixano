@@ -14,13 +14,13 @@ License: CECILL-C
     PaintBrush,
     PaintBucket,
     PencilSimple,
+    Polygon,
     Square,
   } from "phosphor-svelte";
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
   import DisplaySettings from "./Toolbar/DisplaySettings.svelte";
   import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
-  import { polygonIcon } from "$lib/assets";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     currentSegmentationModels,
@@ -237,7 +237,7 @@ License: CECILL-C
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <img src={polygonIcon} alt="polygon icon" class="h-4.5 w-4.5" />
+      <Polygon class="h-4.5 w-4.5" />
     </IconButton>
 
     {#if showPolygonTools}
@@ -399,7 +399,6 @@ License: CECILL-C
       </div>
     {/if}
   </div>
-
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
 
   <!-- Display settings (canvas tools, not record data) -->

@@ -44,7 +44,7 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { Image, type LoadedImagesPerView } from "$lib/ui";
+  import { CanvasStateOverlay, Image, type LoadedImagesPerView } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
@@ -65,6 +65,7 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
+  let loadError = $state(false);
   let prevSelectedItemId: string = $state("");
   let imageLoadRequestId = 0;
   const hasImages = $derived(Object.keys(imagesPerView).length > 0);
@@ -251,8 +252,10 @@ License: CECILL-C
       clearSmartPreview();
       interactiveSegmenter.clear();
       resetSmartSegmentationFeedback();
+      loadError = false;
       void updateImages(itemChanged).catch(() => {
         console.error("Error loading the images.");
+        loadError = true;
       });
     }
   });
@@ -335,7 +338,13 @@ License: CECILL-C
     <div class="w-full h-full bg-canvas"></div>
   {/if}
 
-  {#if !loaded}
+  {#if loadError}
+    <CanvasStateOverlay
+      variant="error"
+      title="The image could not be loaded"
+      message="The media file may be missing or unreachable. Reload the page or check the dataset's media storage."
+    />
+  {:else if !loaded}
     <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
       <CircleNotch weight="regular" class="h-10 w-10 animate-spin stroke-white" />
     </div>

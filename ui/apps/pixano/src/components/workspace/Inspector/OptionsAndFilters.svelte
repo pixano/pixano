@@ -300,7 +300,7 @@ License: CECILL-C
   <div class="space-y-2">
     <div class="flex items-center justify-between">
       <span
-        class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground"
+        class="text-label"
         title="Hide all objects with confidence below threshold. 0 disables threshold."
       >
         Confidence threshold
@@ -359,9 +359,7 @@ License: CECILL-C
   {#if !filterSetup.disableFilter}
     <div class="space-y-2 border-t border-border/40 pt-3">
       <div class="flex items-center justify-between gap-2">
-        <span class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-          Advanced Rules
-        </span>
+        <span class="text-label">Advanced Rules</span>
 
         <div class="flex items-center gap-1.5">
           <button
