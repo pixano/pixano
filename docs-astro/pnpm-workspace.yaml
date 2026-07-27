@@ -1,3 +1,16 @@
+# Single-package project, but pnpm still wants `packages` declared.
+packages:
+  - "."
+
+# esbuild (via astro/vite) and sharp (astro image optimization) need their
+# install scripts to fetch platform binaries. The pnpm version is pinned by
+# `packageManager` in package.json, so only the pnpm 11 spelling is needed
+# here — note pnpm 10 reads this setting from package.json instead, and would
+# silently skip these builds.
 allowBuilds:
-  esbuild: set this to true or false
-  sharp: set this to true or false
+  esbuild: true
+  sharp: true
+
+# pnpm does not run pre/post scripts by default; npm does. Opt in so
+# `pnpm run build` still runs prebuild (generate-api) and postbuild (pagefind).
+enablePrePostScripts: true

@@ -13,6 +13,16 @@ on:
     paths:
       - "docs-astro/**"
       - "src/pixano/**"
+  pull_request:
+    paths:
+      - "docs-astro/**"
+      - ".github/workflows/docs.yml"
+      - "src/pixano/**"
+    branches:
+      - "main"
+      - "arch/**"
+      - "feat/**"
+      - "releases/**"
   workflow_dispatch:
 
 permissions:
@@ -20,9 +30,11 @@ permissions:
   pages: write
   id-token: write
 
+# One queue per ref: deploys from main are serialized and never cancelled,
+# while pull request builds run in their own group and supersede themselves.
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -32,12 +44,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      # Version comes from "packageManager" in docs-astro/package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: docs-astro/package.json
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: docs-astro/package-lock.json
+          cache: pnpm
+          cache-dependency-path: docs-astro/pnpm-lock.yaml
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
@@ -51,18 +69,18 @@ jobs:
         run: uv sync --group docs
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm i --frozen-lockfile
         working-directory: docs-astro
 
       - name: Generate API reference
         run: uv run python docs-astro/scripts/generate_api_docs.py
 
       - name: Build Astro site
-        run: npx astro build
+        run: pnpm exec astro build
         working-directory: docs-astro
 
       - name: Run Pagefind
-        run: npx pagefind --site dist
+        run: pnpm exec pagefind --site dist
         working-directory: docs-astro
 
       - name: Upload artifact
@@ -73,6 +91,7 @@ jobs:
   deploy:
     name: Deploy
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
