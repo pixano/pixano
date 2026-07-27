@@ -18,12 +18,9 @@ License: CECILL-C
     Link,
     Pencil,
     Quotes,
-    Robot,
     Square,
-    Target,
     TextT,
     Trash,
-    User,
   } from "phosphor-svelte";
   import { cubicOut } from "svelte/easing";
   import { slide } from "svelte/transition";
@@ -31,6 +28,7 @@ License: CECILL-C
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
+  import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
   import {
     annotations,
     current_itemBBoxes,
@@ -70,27 +68,6 @@ License: CECILL-C
     [BaseSchema.TextSpan]: "Text Span",
     [BaseSchema.Tracklet]: "Track",
   };
-
-  // ─── Source name color coding ─────────────────────────────────────────────
-  function getSourceStyle(sourceName: string): { class: string; icon: typeof User } {
-    switch (sourceName) {
-      case "Pixano":
-        return { class: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: User };
-      case "Pre-annotation":
-        return { class: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Robot };
-      case "Ground Truth":
-        return { class: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: Target };
-      default:
-        return { class: "bg-muted text-muted-foreground border-border/50", icon: Robot };
-    }
-  }
-
-  // ─── Confidence color coding ──────────────────────────────────────────────
-  function getConfidenceStyle(confidence: number): string {
-    if (confidence >= 0.8) return "bg-emerald-500/15 text-emerald-400";
-    if (confidence >= 0.5) return "bg-amber-500/15 text-amber-400";
-    return "bg-red-500/15 text-red-400";
-  }
 
   // ─── Props ────────────────────────────────────────────────────────────────
   interface Props {
@@ -354,7 +331,7 @@ License: CECILL-C
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
-              tooltipContent="Edit object"
+              tooltipContent="Edit annotation"
               selected={childEditing}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
@@ -363,7 +340,7 @@ License: CECILL-C
             </IconButton>
           {/if}
           <IconButton
-            tooltipContent="Relink object"
+            tooltipContent="Relink annotation"
             selected={showRelink}
             onclick={() => {
               showRelink = !showRelink;
@@ -373,7 +350,7 @@ License: CECILL-C
             <Link class="h-3 w-3" />
           </IconButton>
           <IconButton
-            tooltipContent="Delete object"
+            tooltipContent="Delete annotation"
             redconfirm
             onclick={() => deleteEntity(entity, child)}
             class="h-6 w-6 text-muted-foreground hover:text-destructive"
@@ -710,7 +687,7 @@ License: CECILL-C
           >
             {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
               <IconButton
-                tooltipContent="Edit object"
+                tooltipContent="Edit annotation"
                 selected={trackChild.ui.displayControl.editing}
                 onclick={() => onEditIconClick(trackChild)}
                 class="h-6 w-6"
@@ -719,7 +696,7 @@ License: CECILL-C
               </IconButton>
             {/if}
             <IconButton
-              tooltipContent="Delete object"
+              tooltipContent="Delete annotation"
               redconfirm
               onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
               class="h-6 w-6 text-muted-foreground hover:text-destructive"

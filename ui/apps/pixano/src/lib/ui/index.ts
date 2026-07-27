@@ -29,6 +29,8 @@ export { default as Histogram } from "$components/ui/histogram/Histogram.svelte"
 // Molecules (kept, internals updated to use bits-ui directly)
 export { default as PrimaryButton } from "$components/ui/molecules/PrimaryButton.svelte";
 export { default as IconButton } from "$components/ui/molecules/TooltipIconButton.svelte";
+export { default as ResizeHandle } from "$components/ui/molecules/ResizeHandle.svelte";
+export { default as CanvasStateOverlay } from "$components/ui/molecules/CanvasStateOverlay.svelte";
 export { default as ModelSelectBadge } from "$components/ui/model-select-badge/ModelSelectBadge.svelte";
 export { default as AiProcessingBadge } from "$components/ui/ai-processing-badge/AiProcessingBadge.svelte";
 

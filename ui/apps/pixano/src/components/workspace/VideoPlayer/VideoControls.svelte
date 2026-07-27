@@ -8,6 +8,7 @@ License: CECILL-C
   import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
 
   import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
+  import { IconButton } from "$lib/ui";
   import {
     ensureFrameAvailable,
     getReadyAheadFrames,
@@ -269,14 +270,14 @@ License: CECILL-C
 </script>
 
 <div class="flex items-center gap-1.5">
-  <button
-    title={playbackState.value.isBuffering
-      ? "Buffering..."
+  <IconButton
+    tooltipContent={playbackState.value.isBuffering
+      ? "Buffering…"
       : playbackState.value.intervalId
-        ? "Pause (space)"
-        : "Play (space)"}
+        ? "Pause (Space)"
+        : "Play (Space)"}
     onclick={onPlayClick}
-    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80 disabled:pointer-events-none disabled:opacity-40"
+    class="h-7 w-7 rounded-lg text-primary"
   >
     {#if playbackState.value.isBuffering}
       <CircleNotch weight="regular" class="h-4 w-4 animate-spin" />
@@ -285,20 +286,20 @@ License: CECILL-C
     {:else}
       <Play weight="fill" class="ml-0.5 h-4 w-4" />
     {/if}
-  </button>
-  <button
-    title="Previous frame (Left / A or Q)"
+  </IconButton>
+  <IconButton
+    tooltipContent="Previous frame (← / A)"
     onclick={onPlayStepBackClick}
-    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80"
+    class="h-7 w-7 rounded-lg text-primary"
   >
     <SkipBack weight="fill" class="h-4 w-4" />
-  </button>
-  <button
-    title="Next frame (Right / D)"
+  </IconButton>
+  <IconButton
+    tooltipContent="Next frame (→ / D)"
     onclick={onPlayStepClick}
-    class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border/50 bg-background/80 text-primary transition-colors hover:border-primary/30 hover:bg-accent/80"
+    class="h-7 w-7 rounded-lg text-primary"
   >
     <SkipForward weight="fill" class="h-4 w-4" />
-  </button>
+  </IconButton>
 </div>
 <svelte:window onkeydown={shortcutHandler} />

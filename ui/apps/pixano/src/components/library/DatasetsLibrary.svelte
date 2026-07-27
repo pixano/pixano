@@ -147,9 +147,9 @@ License: CECILL-C
 {/snippet}
 
 {#if allDatasets && allDatasets.length > 0}
-  <div class="flex flex-col gap-6">
+  <div class="flex h-full min-h-0 flex-col gap-4">
     <!-- Toolbar: search + sort + import -->
-    <div class="flex items-center gap-4 flex-wrap pb-2 border-b border-border/50">
+    <div class="flex shrink-0 items-center gap-4 flex-wrap pb-2 border-b border-border/50">
       <div class="relative flex items-center group">
         <input
           id="search-input"
@@ -213,8 +213,8 @@ License: CECILL-C
     </div>
 
     <!-- Group tabs -->
-    <Tabs.Root bind:value={activeGroup} class="flex flex-col gap-6">
-      <div class="flex items-center justify-between gap-4">
+    <Tabs.Root bind:value={activeGroup} class="flex flex-1 min-h-0 flex-col gap-4">
+      <div class="flex shrink-0 items-center justify-between gap-4">
         <Tabs.List
           class="inline-flex w-fit items-center rounded-xl border border-border/60 bg-muted/20 p-1 gap-1"
         >
@@ -235,11 +235,17 @@ License: CECILL-C
         </span>
       </div>
 
-      <Tabs.Content value="all" class="focus-visible:outline-none">
+      <Tabs.Content
+        value="all"
+        class="flex-1 min-h-0 overflow-y-auto pt-2 pb-6 focus-visible:outline-none"
+      >
         {@render datasetGrid(sortedDatasets, "")}
       </Tabs.Content>
       {#each BOOKMARK_SECTIONS as section (section.key)}
-        <Tabs.Content value={section.key} class="focus-visible:outline-none">
+        <Tabs.Content
+          value={section.key}
+          class="flex-1 min-h-0 overflow-y-auto pt-2 pb-6 focus-visible:outline-none"
+        >
           {@render datasetGrid(datasetsByBookmark[section.key], section.emptyMessage)}
         </Tabs.Content>
       {/each}
@@ -283,7 +289,7 @@ License: CECILL-C
 {:else}
   <!-- Loading skeleton -->
   <div class="flex flex-col gap-8">
-    <div class="max-w-[1200px] mx-auto w-full">
+    <div class="w-full">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {#each [0, 1, 2, 3, 4, 5, 6, 7] as i (i)}
           <div

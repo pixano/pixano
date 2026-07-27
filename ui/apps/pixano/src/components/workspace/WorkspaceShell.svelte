@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { CircleNotch } from "phosphor-svelte";
+  import { CircleNotch, Warning, X } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { cubicOut } from "svelte/easing";
@@ -79,6 +79,7 @@ License: CECILL-C
   let initialOIAreaWidth = 0;
 
   let isSaving: boolean = $state(false);
+  let saveErrorMessage = $state("");
   let lastHandledSaveRequestId = $state<number | null>(null);
 
   // --- Store probes via $effect (auto-cleanup, replaces subscribe + onDestroy) ---
@@ -150,6 +151,7 @@ License: CECILL-C
     try {
       await handleSaveItem(saveData.value);
       saveData.value = [];
+      saveErrorMessage = "";
       if (requestId !== null) {
         currentItemSaveCoordinator.setSaveSucceeded(requestId);
       }
@@ -158,6 +160,7 @@ License: CECILL-C
         currentItemSaveCoordinator.setSaveFailed(undefined, requestId);
       }
       console.error(error);
+      saveErrorMessage = "Saving failed — your changes are still staged. Try again.";
     } finally {
       isSaving = false;
     }
@@ -215,6 +218,23 @@ License: CECILL-C
       class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-black/10 z-50"
     >
       <CircleNotch weight="regular" class="animate-spin" />
+    </div>
+  {/if}
+  {#if saveErrorMessage}
+    <div
+      class="absolute left-1/2 top-3 z-50 flex -translate-x-1/2 items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive shadow-elevation-1 backdrop-blur-md"
+      role="alert"
+    >
+      <Warning size={14} class="shrink-0" />
+      <span>{saveErrorMessage}</span>
+      <button
+        type="button"
+        onclick={() => (saveErrorMessage = "")}
+        aria-label="Dismiss"
+        class="rounded-full p-0.5 transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <X size={12} />
+      </button>
     </div>
   {/if}
   <div
