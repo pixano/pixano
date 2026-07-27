@@ -70,7 +70,13 @@ License: CECILL-C
     type Shape,
   } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { AiProcessingBadge, effectProbe, Image, type LoadedImagesPerView } from "$lib/ui";
+  import {
+    AiProcessingBadge,
+    effectProbe,
+    Image,
+    ResizeHandle,
+    type LoadedImagesPerView,
+  } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
@@ -467,14 +473,12 @@ License: CECILL-C
       onGenerateQuestion={handleGenerateQuestion}
     />
   </div>
-  <button
-    type="button"
-    aria-label="Resize VQA and image panels"
-    class="w-1 bg-primary-light cursor-col-resize h-full"
+  <ResizeHandle
+    ariaLabel="Resize VQA and image panels"
     onmousedown={() => {
       expanding = true;
     }}
-  ></button>
+  />
   <div class="overflow-hidden grow relative">
     {#if loaded && hasImages}
       <Canvas2D

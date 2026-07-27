@@ -74,7 +74,7 @@ License: CECILL-C
       />
     {/if}
     {#if isSaved}
-      <span class="text-green-700">
+      <span class="text-success">
         <Checks weight="regular" />
       </span>
     {/if}

@@ -37,13 +37,14 @@ License: CECILL-C
     {disabled}
     type="button"
     aria-disabled={disabled}
-    class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/60 transition-all duration-200 disabled:pointer-events-none disabled:opacity-50"
-    title="Brush Settings"
+    class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-foreground hover:bg-accent/60 transition-all duration-200 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    aria-label="Brush settings"
+    title="Brush settings"
   >
     <Gear weight="regular" class="h-4.5 w-4.5" />
   </Popover.Trigger>
   <Popover.Content
-    class="w-64 p-4 space-y-4 bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg shadow-lg"
+    class="z-50 w-64 p-4 space-y-4 rounded-2xl border border-border/50 bg-popover/95 shadow-elevation-2 backdrop-blur-md"
   >
     <div class="text-sm font-medium text-foreground mb-2">Brush Settings</div>
 
