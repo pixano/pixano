@@ -24,6 +24,7 @@ on:
     branches:
       - "main"
       - "arch/**"
+      - "feat/**"
       - "releases/**"
 
 permissions:
@@ -80,3 +81,84 @@ jobs:
         run: |
           cd ui
           pnpm format_check
+  check_front:
+    name: Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 23
+
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+
+      - name: Type-check frontend code with svelte-check
+        run: |
+          cd ui
+          pnpm -C apps/pixano run check
+  test_front:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 23
+
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+
+      - name: Test frontend code with vitest
+        run: |
+          cd ui
+          pnpm -C apps/pixano test
+  build_front:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 23
+
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+
+      - name: Build frontend
+        run: |
+          cd ui
+          pnpm -C apps/pixano run build
