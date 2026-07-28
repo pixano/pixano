@@ -568,6 +568,12 @@ def get_point_cloud_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -
     return _stream_blob(dataset, POINT_CLOUD_TABLE, id)
 
 
+@router.get("/point-clouds/{id}/preview", operation_id="get_point_cloud_preview")
+def get_point_cloud_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the bird's-eye-view preview thumbnail of a point cloud."""
+    return _stream_preview(dataset, POINT_CLOUD_TABLE, id)
+
+
 @router.get(
     "/records/{record_id}/point-clouds",
     response_model=PaginatedResponse[PointCloudResponse],

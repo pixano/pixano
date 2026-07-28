@@ -30,7 +30,9 @@ export async function listRecords(
   offset = 0,
 ): Promise<PaginatedResponse<RecordResponse>> {
   return requestJson<PaginatedResponse<RecordResponse>>(
-    `/datasets/${datasetId}/records?limit=${limit}&offset=${offset}`,
+    // `include=view_previews` asks the backend to attach each record's per-view
+    // thumbnail descriptors so the left panel can render image previews.
+    `/datasets/${datasetId}/records?limit=${limit}&offset=${offset}&include=view_previews`,
     {},
     "listRecords",
   );

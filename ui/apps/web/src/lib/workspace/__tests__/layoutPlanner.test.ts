@@ -140,4 +140,29 @@ describe("measureGridViewport", () => {
     expect(vp.width).toBe(1600);
     expect(vp.height).toBe(900);
   });
+
+  it("reads height from the stable parent, not the grid's overridden height", () => {
+    // GridStack rewrites `.grid-stack`'s inline height to its content height
+    // (rows × cellHeight). If a widget was enlarged, that grid height grows
+    // past the viewport; measuring it would ratchet the next record larger.
+    // We must read the parent (fixed viewport wrapper) height instead.
+    const parent = document.createElement("div");
+    Object.defineProperty(parent, "clientHeight", { value: 900, configurable: true });
+
+    const grid = document.createElement("div");
+    grid.className = "grid-stack";
+    Object.defineProperty(grid, "clientWidth", { value: 1600, configurable: true });
+    // Grown content height, as GridStack would set after a manual enlarge.
+    Object.defineProperty(grid, "clientHeight", { value: 4000, configurable: true });
+
+    parent.appendChild(grid);
+    document.body.appendChild(parent);
+    try {
+      const vp = measureGridViewport();
+      expect(vp.width).toBe(1600);
+      expect(vp.height).toBe(900);
+    } finally {
+      parent.remove();
+    }
+  });
 });

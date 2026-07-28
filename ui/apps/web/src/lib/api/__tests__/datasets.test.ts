@@ -178,15 +178,23 @@ describe("listRecords", () => {
 
     await listRecords("ds-1");
 
-    expect(fetch).toHaveBeenCalledWith("/datasets/ds-1/records?limit=50&offset=0", {});
+    expect(fetch).toHaveBeenCalledWith(
+      "/datasets/ds-1/records?limit=50&offset=0&include=view_previews",
+      {},
+    );
   });
 
   it("passes custom limit and offset in URL", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(okResponse({ ...mockPaginatedRecords, limit: 10, offset: 20 }));
+    vi.mocked(fetch).mockResolvedValueOnce(
+      okResponse({ ...mockPaginatedRecords, limit: 10, offset: 20 }),
+    );
 
     await listRecords("ds-1", 10, 20);
 
-    expect(fetch).toHaveBeenCalledWith("/datasets/ds-1/records?limit=10&offset=20", {});
+    expect(fetch).toHaveBeenCalledWith(
+      "/datasets/ds-1/records?limit=10&offset=20&include=view_previews",
+      {},
+    );
   });
 
   it("encodes the dataset id in the URL", async () => {

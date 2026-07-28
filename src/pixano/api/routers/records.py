@@ -71,19 +71,27 @@ def _resolve_view_previews(
 ) -> dict[str, dict[str, PreviewDescriptor]]:
     previews_by_record: dict[str, dict[str, PreviewDescriptor]] = {record_id: {} for record_id in record_ids}
 
-    image_rows = _query_preview_rows(dataset, "images", ["id", "record_id", "logical_name"], record_ids)
-    for row in image_rows:
-        record_id = str(row.get("record_id", "") or "")
-        logical_name = str(row.get("logical_name", "") or "")
-        row_id = str(row.get("id", "") or "")
-        if not record_id or not logical_name or not row_id:
-            continue
-        previews_by_record.setdefault(record_id, {})[logical_name] = PreviewDescriptor(
-            resource="images",
-            id=row_id,
-            kind="image",
-            preview_url=f"/datasets/{dataset_id}/images/{row_id}/preview",
-        )
+    # Image-family views live in either the `images` table (plain Image) or the
+    # `calibrated_images` table (CalibratedImage, e.g. nuScenes cameras). Both are
+    # served through the `/images/{id}/preview` route (see views._resolve_image_table),
+    # so we emit the same descriptor for either. `calibrated_images` is queried first
+    # so it wins on the rare dataset that carries both, matching _resolve_image_table.
+    for table_name in ("calibrated_images", "images"):
+        for row in _query_preview_rows(dataset, table_name, ["id", "record_id", "logical_name"], record_ids):
+            record_id = str(row.get("record_id", "") or "")
+            logical_name = str(row.get("logical_name", "") or "")
+            row_id = str(row.get("id", "") or "")
+            if not record_id or not logical_name or not row_id:
+                continue
+            logical_previews = previews_by_record.setdefault(record_id, {})
+            if logical_name in logical_previews:
+                continue
+            logical_previews[logical_name] = PreviewDescriptor(
+                resource="images",
+                id=row_id,
+                kind="image",
+                preview_url=f"/datasets/{dataset_id}/images/{row_id}/preview",
+            )
 
     sframe_rows = _query_preview_rows(
         dataset,
@@ -106,6 +114,25 @@ def _resolve_view_previews(
             id=row_id,
             kind="image",
             preview_url=f"/datasets/{dataset_id}/sframes/{row_id}/preview",
+        )
+
+    # Point clouds render a bird's-eye-view PNG at ingestion, served through
+    # `/point-clouds/{id}/preview`. `kind="image"` so the same UI preview path
+    # (an <img> tag) displays it — it is a raster after all.
+    for row in _query_preview_rows(dataset, "point_clouds", ["id", "record_id", "logical_name"], record_ids):
+        record_id = str(row.get("record_id", "") or "")
+        logical_name = str(row.get("logical_name", "") or "")
+        row_id = str(row.get("id", "") or "")
+        if not record_id or not logical_name or not row_id:
+            continue
+        logical_previews = previews_by_record.setdefault(record_id, {})
+        if logical_name in logical_previews:
+            continue
+        logical_previews[logical_name] = PreviewDescriptor(
+            resource="point-clouds",
+            id=row_id,
+            kind="image",
+            preview_url=f"/datasets/{dataset_id}/point-clouds/{row_id}/preview",
         )
 
     return previews_by_record
