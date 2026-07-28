@@ -175,8 +175,31 @@ class BaseService:
         where: str | None = None,
         limit: int = 100,
         offset: int = 0,
+        sortcol: str | None = None,
+        order: str | None = None,
+        force_full_scan: bool = False,
+        raw_where: bool = False,
     ) -> PaginatedResponse:
-        """List resources with filtering and pagination."""
+        """List resources with filtering, sorting and pagination.
+
+        Args:
+            record_id: Equality filter on ``record_id`` (auxiliary resources).
+            entity_id: Equality filter on ``entity_id`` (auxiliary resources).
+            view_name: Equality filter on the view's logical name / view id.
+            source_type: Equality filter on ``source_type``.
+            tracklet_id: Equality filter on ``tracklet_id``.
+            frame_index: Equality filter on ``frame_index``.
+            where: A ready-to-use SQL where clause (e.g. compiled by the explorer
+                filter compiler, or a deprecated raw clause).
+            limit: Page size (clamped to ``MAX_QUERY_LIMIT``).
+            offset: Rows to skip.
+            sortcol: Column to order by (``get_data`` adds an ``id`` tie-break).
+            order: Sort order, ``asc`` or ``desc``.
+            force_full_scan: Force the safe full-scan path for a non-index-servable
+                ``where`` (see `TableQueryBuilder.force_full_scan`).
+            raw_where: True when ``where`` includes a user-supplied raw clause, so a
+                query-engine error is reported as 400 (bad input) rather than 500.
+        """
         resolved_table = self.resolve_table()
         limit = min(limit, MAX_QUERY_LIMIT)
 
@@ -206,9 +229,20 @@ class BaseService:
                 where=combined_where,
                 limit=limit,
                 skip=offset,
+                sortcol=sortcol,
+                order=order,
+                force_full_scan=force_full_scan,
             )
         except DatasetPaginationError as err:
             raise HTTPException(status_code=400, detail=f"Invalid query parameters. {err}")
+        except RuntimeError as err:
+            # A malformed user-supplied `where` reaches LanceDB as a query-engine
+            # error (a bare RuntimeError). Report it as bad input, not a server
+            # fault — but only when a raw clause was actually supplied; the
+            # compiled filter path is allowlisted and can't be malformed.
+            if raw_where:
+                raise HTTPException(status_code=400, detail=f"Invalid filter. {err}")
+            raise HTTPException(status_code=500, detail=f"Internal server error. {err}")
         except DatasetAccessError as err:
             raise HTTPException(status_code=500, detail=f"Internal server error. {err}")
 

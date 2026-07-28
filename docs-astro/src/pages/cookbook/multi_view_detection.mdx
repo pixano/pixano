@@ -68,52 +68,48 @@ Each line in `metadata.jsonl` pairs an RGB image with its thermal counterpart an
 
 ```json
 {
-  "status": "validated",
   "views": {
     "rgb": "rgb/000000.jpg",
     "thermal": "thermal/000000.jpg"
   },
+  "attrs": { "status": "validated" },
   "entities": [
     {
-      "category": "person",
-      "annotations": {
-        "thermal": { "bbox": [0.12, 0.25, 0.15, 0.30] }
-      }
+      "attrs": { "category": "person" },
+      "annotations": [
+        { "kind": "bbox", "view": "thermal", "coords": [0.12, 0.25, 0.15, 0.30], "format": "xywh", "is_normalized": true }
+      ]
     }
   ]
 }
 ```
 
-The dataset info for image mode (`examples/flir/info.py:dataset_info`):
+With more than one view declared, **every annotation names its view** — here the bounding box was detected in the `thermal` view.
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, Entity, Image, Record
+The schema for image mode lives in `dataset.yaml` at the source root:
 
-
-class FLIREntity(Entity):
-    category: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="FLIR Static Sample",
-    description="Sample import for FLIR static image pairs.",
-    workspace=WorkspaceType.IMAGE,
-    record=Record,
-    entity=FLIREntity,
-    bbox=BBox,
-    views={"rgb": Image, "thermal": Image},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: flir_static_sample
+  workspace: image
+schema:
+  views:
+    rgb: { kind: image }
+    thermal: { kind: image }
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox]
 ```
 
-Note `views` has two entries: `"rgb"` and `"thermal"`, both of type `Image`. This tells Pixano to display them side by side.
+Note `views` has two entries: `"rgb"` and `"thermal"`, both images. This tells Pixano to display them side by side. See [Importing Data](/getting_started/importing_data/) for the full reference.
 
 Import:
 
 ```bash
-pixano data import ./my_data ./flir_sample \
-    --info examples/flir/info.py:dataset_info
+pixano data import ./my_data ./flir_sample
 ```
 
 ### Video mode — synchronized sequences
@@ -146,54 +142,39 @@ Each metadata entry uses glob patterns for frame sequences and per-frame annotat
 
 ```json
 {
-  "status": "validated",
+  "attrs": { "status": "validated" },
   "views": {
-    "rgb": { "path": "rgb/video_000/*.jpg", "fps": 30 },
-    "thermal": { "path": "thermal/video_000/*.jpg", "fps": 30 }
+    "rgb": { "frame_pattern": "rgb/video_000/*.jpg", "fps": 30 },
+    "thermal": { "frame_pattern": "thermal/video_000/*.jpg", "fps": 30 }
   },
-  "annotation_files": {
-    "bbox": "bboxes/video_000/*.json"
-  }
+  "annotation_files": [
+    { "kind": "bbox", "view": "rgb", "pattern": "bboxes/video_000/*.json", "encoding": "track_json" }
+  ]
 }
 ```
 
-The dataset info for video mode (`examples/flir/info.py:video_dataset_info`):
+Frames matching each `frame_pattern` are imported in lexicographic order at the declared `fps`; the per-frame `track_json` files are stem-matched to their frames. The video-mode schema:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import (
-    BBox, Entity, EntityDynamicState,
-    Record, SequenceFrame, Tracklet,
-)
-
-
-class FLIREntity(Entity):
-    category: str = ""
-
-
-class FLIREntityDynamicState(EntityDynamicState):
-    pass
-
-
-video_dataset_info = DatasetInfo(
-    name="FLIR Dynamic Sample",
-    description="Sample import for FLIR dynamic synchronized frame sequences.",
-    workspace=WorkspaceType.VIDEO,
-    record=Record,
-    entity=FLIREntity,
-    entity_dynamic_state=FLIREntityDynamicState,
-    tracklet=Tracklet,
-    bbox=BBox,
-    views={"rgb": SequenceFrame, "thermal": SequenceFrame},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: flir_dynamic_sample
+  workspace: video
+schema:
+  views:
+    rgb: { kind: sequence_frames }
+    thermal: { kind: sequence_frames }
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox, tracklet]
 ```
 
 Import:
 
 ```bash
-pixano data import ./my_data ./flir_video_sample \
-    --info examples/flir/info.py:video_dataset_info
+pixano data import ./my_data ./flir_video_sample
 ```
 
 ### Launch the server

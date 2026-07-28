@@ -158,7 +158,9 @@ export const getValidationSchemaAndFormInputs = (
             featuresArray.push({
               name: feat,
               required: false, //TODO (info not in datasetSchema (nowhere yet))
-              label: `[${tname}] ${feat}`,
+              // Plain field name — table context lives in `sch.name` (rendered as a group
+              // header, never as a "[table] field" prefix leaking schema jargon).
+              label: feat,
               type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
               sch: { name: tname, group, base_schema: sch.base_schema },
             });

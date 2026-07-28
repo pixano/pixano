@@ -53,43 +53,33 @@ This separation is intentional. By keeping records, views, entities, and annotat
 
 ## Dataset schema
 
-Here is the `DatasetInfo` used to import a VOC dataset into Pixano:
+The schema lives in a `dataset.yaml` file at the root of the source folder — no Python required:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record
-
-
-class VOCEntity(Entity):
-    """An object detected in a VOC image."""
-    category: str = ""
-    is_difficult: bool = False
-
-
-dataset_info = DatasetInfo(
-    name="VOC 2007 Sample",
-    description="Pascal VOC 2007 object detection dataset.",
-    workspace=WorkspaceType.IMAGE,
-    record=Record,
-    entity=VOCEntity,
-    bbox=BBox,
-    mask=CompressedRLE,
-    views={"image": Image},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: voc_2007
+  workspace: image
+schema:
+  entity:
+    attrs:
+      category: str
+      is_difficult: { type: bool, default: false }
+  annotations: [bbox, keypoint, mask]
 ```
 
 Let's look at each piece:
 
-- **`VOCEntity`** — A custom subclass of `Entity` with two domain-specific fields. `category` stores the object class (e.g. `"car"`, `"person"`). `is_difficult` mirrors VOC's flag for objects that are hard to recognize.
+- **`entity.attrs`** — Two domain-specific fields on entities. `category` stores the object class (e.g. `"car"`, `"person"`). `is_difficult` mirrors VOC's flag for objects that are hard to recognize.
 
-- **`bbox=BBox`** — Creates a bounding box table. This is where the rectangular coordinates for each entity will be stored. VOC annotations use normalized coordinates in `[x, y, w, h]` format, which Pixano handles natively.
+- **`annotations: [bbox, …]`** — Creates a bounding box table. This is where the rectangular coordinates for each entity will be stored. VOC annotations use normalized coordinates in `[x, y, w, h]` format, which Pixano handles natively.
 
-- **`mask=CompressedRLE`** — Creates a segmentation mask table using compressed run-length encoding. The original VOC dataset only has bounding boxes — we add masks here to show that **Pixano supports multiple annotation types per entity**. This also enables AI-assisted segmentation tools like SAM in the annotation workspace.
+- **`… mask]`** — Creates a segmentation mask table using compressed run-length encoding. The original VOC dataset only has bounding boxes — we add masks here to show that **Pixano supports multiple annotation types per entity**. This also enables AI-assisted segmentation tools like SAM in the annotation workspace.
 
-- **`views={"image": Image}`** — Each record has one view named `"image"`.
+- **`workspace: image`** — Provides the single-image view named `"image"` and tells the UI to use the single-image viewer with annotation tools.
 
-- **`workspace=WorkspaceType.IMAGE`** — Tells the UI to use the single-image viewer with annotation tools.
+See [Importing Data](/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
 
 ## Import the dataset
 
@@ -126,17 +116,14 @@ Each line in `metadata.jsonl` describes one image and its annotations:
 
 ```json
 {
-  "status": "validated",
   "views": { "image": "000032.jpg" },
+  "attrs": { "status": "validated" },
   "entities": [
     {
-      "category": "aeroplane",
-      "is_difficult": false,
-      "annotations": {
-        "image": {
-          "bbox": [0.078, 0.09, 0.756, 0.792]
-        }
-      }
+      "attrs": { "category": "aeroplane", "is_difficult": false },
+      "annotations": [
+        { "kind": "bbox", "coords": [0.078, 0.09, 0.756, 0.792], "format": "xywh", "is_normalized": true }
+      ]
     }
   ]
 }
@@ -144,19 +131,20 @@ Each line in `metadata.jsonl` describes one image and its annotations:
 
 Notice the structure:
 - `"views"` maps view names to filenames — Pixano uses this to find the image
-- `"entities"` is a list of objects, each with the custom fields from `VOCEntity`
-- `"annotations"` is nested per view — the `"image"` key matches the view name defined in `DatasetInfo`, and `"bbox"` matches the annotation slot. Coordinates are normalized `[x, y, w, h]` values in `[0, 1]`.
+- `"entities"` is a list of objects, each carrying the custom `attrs` declared in `dataset.yaml`
+- `"annotations"` is a flat list discriminated by `"kind"` — `{"kind": "bbox"}` maps to the `BBox` table. Coordinates are explicit: `"format"` and `"is_normalized"` are required (or declared once as file-scoped defaults in a header line) — Pixano never guesses them from value ranges.
 
 ### Run the import
 
 ```bash
 pixano init ./my_library
-pixano data import ./my_library ./voc_sample \
-    --info data_importation/voc/info.py:dataset_info
+pixano data import ./my_library ./voc_sample
 ```
 
+Pixano validates every line first and prints a plan (record counts per split, findings with `file:line` locations). Only a clean, confirmed plan is imported.
+
 <Callout type="tip" title="Import options">
-Use `--dry-run` to validate your metadata without creating the dataset. Use `--mode overwrite` to re-import over an existing dataset.
+Use `--dry-run` to validate your metadata without creating the dataset. Use `--mode overwrite` to re-import over an existing dataset — re-imports are idempotent thanks to deterministic ids.
 </Callout>
 
 ## Launch and explore
@@ -199,7 +187,7 @@ Let's connect the dots:
 
 - **Pascal VOC** is an object detection benchmark where each image contains objects localized with bounding boxes and classified into 20 categories.
 - In Pixano, this maps to **records** (images), **entities** (objects with `category` and `is_difficult`), and **annotations** (bounding boxes and optionally masks).
-- The `DatasetInfo` schema defines which tables Pixano creates — adding `CompressedRLE` alongside `BBox` enables multi-type annotation and AI segmentation tools.
+- The `dataset.yaml` schema defines which tables Pixano creates — adding `mask` alongside `bbox` enables multi-type annotation and AI segmentation tools.
 - **Provenance fields** on annotations let you combine human labels, model predictions, and AI-assisted masks in a single dataset.
 
 ## Next steps

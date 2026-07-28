@@ -1,0 +1,115 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Writing a Custom Importer"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Writing a Custom Importer
+
+When your data doesn't fit `pixano_jsonl`, COCO, or LeRobot, you can implement the same contract Pixano's own formats use. Importers only *read and describe* — the import engine owns every write, so your format gets atomicity, resume, idempotent re-runs, progress, and grid previews for free.
+
+<Callout type="info" title="What you'll learn">
+
+- The `DatasetImporter` contract: `probe`, `analyze`, `iter_batches`
+- Deterministic ids and why they matter
+- Testing with the shipped `DatasetImporterTestCase` harness
+- Registering your format (entry points)
+
+</Callout>
+
+## The contract
+
+```python
+from pixano.datasets.io import (
+    AnalyzeLimits, BatchBundle, Cursor, DatasetImporter,
+    DetectResult, ImportPlan, ImportSpec, SourceRef,
+)
+from pixano.datasets.io.ids import stable_id
+from pixano.datasets.io.plan import Provenance
+
+
+class MyImporter(DatasetImporter):
+    format_name = "my_format"
+    importer_version = "1.0.0"
+    supports_resume = True
+    deterministic_ids = True
+
+    def probe(self, source: SourceRef) -> DetectResult | None:
+        """Cheap sniff: is this source my format? (used by format auto-detection)"""
+        if source.path and (source.path / "my_manifest.json").is_file():
+            return DetectResult(confidence=0.9, evidence="my_manifest.json")
+        return None
+
+    def analyze(self, source: SourceRef, spec: ImportSpec, limits: AnalyzeLimits) -> ImportPlan:
+        """Validate WITHOUT side effects: counts, findings, previews."""
+        plan = ImportPlan(format=self.format_name, importer_version=self.importer_version)
+        # ... stream your metadata, count records per split, verify media exists,
+        # add findings with precise provenance:
+        # plan.report.add("missing_media", Provenance(file=..., line=...), suggestion=...)
+        return plan
+
+    def iter_batches(self, source, spec, plan, cursor: Cursor | None = None):
+        """Stream rows as BatchBundles; NEVER write to the dataset yourself."""
+        namespace = self.effective_namespace(spec, source)
+        for ordinal, item in enumerate(self._items(source), start=1):
+            if cursor and ordinal <= int(cursor.get("ordinal", 0)):
+                continue  # resume: skip already-committed work
+            record_id = stable_id(namespace, "train", item.key)
+            yield BatchBundle(
+                tables={"records": [...], "images": [...]},
+                cursor={"ordinal": ordinal},
+            )
+```
+
+Three rules make everything downstream work:
+
+1. **Analyze is pure.** It runs the *same parsing code* as ingest but touches no storage. Everything wrong with the source must surface here, as `Finding`s with `file:line` provenance — ingest should never be the first place an error appears.
+2. **Ids are deterministic.** Derive every id from the source identity with `stable_id(namespace, …)` chains (record ← split/file/line; children ← their parents). This is what makes `--mode add` re-runs idempotent, resume exactly-once, and rollback surgical.
+3. **The engine owns writes.** Yield `BatchBundle`s; the engine buffers, validates integrity, embeds media, stamps previews, and commits atomically. Your cursor values are persisted after each committed flush — resume re-enters `iter_batches` with the last one.
+
+If your format implies its own schema (like COCO's categories), override `resolve_info(spec, source)` to supply it — a user's explicit schema still wins.
+
+## Testing
+
+The harness Pixano's own formats use ships in the package:
+
+```python
+from pixano.datasets.io.testing import DatasetImporterTestCase
+
+case = DatasetImporterTestCase(
+    importer=MyImporter(),
+    source=my_fixture_dir,
+    spec=ImportSpec.model_validate({"dataset": {"name": "t", "workspace": "image"}}),
+    expected_counts={"records": 10, "images": 10},
+)
+case.assert_analyze_clean()
+dataset, _ = case.run_import(tmp_path)
+case.assert_counts(dataset)
+case.assert_idempotent_rerun(dataset, tmp_path)   # the deterministic-ids proof
+```
+
+## Registering
+
+For a quick local run, pass the importer explicitly:
+
+```sh
+pixano data import ./my_data ./source --importer my_module.py:MyImporter
+```
+
+To make it a first-class format (auto-detected, listed in `pixano data formats` and `GET /io/formats`), expose a `DataFormat` through the `pixano.formats` entry point in your package:
+
+```toml
+[project.entry-points."pixano.formats"]
+my_format = "my_package.importer:MY_FORMAT"
+```
+
+<Callout type="warning" title="Migrating from DatasetBuilder">
+`DatasetBuilder` is deprecated and will be removed in 0.9. The equivalent importer is usually *smaller*: builders had to manage tables and writes themselves; an importer only yields rows.
+</Callout>
+
+<PrevNext
+  prev={{ href: "/getting_started/importing_data/", label: "Importing Data" }}
+  next={{ href: "/cookbook/", label: "Cookbook" }}
+/>

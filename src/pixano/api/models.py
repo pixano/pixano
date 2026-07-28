@@ -17,6 +17,7 @@ from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
     BBox3D,
+    Classification,
     CompressedRLE,
     Embedding,
     Entity,
@@ -25,7 +26,9 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    Relation,
     TextSpan,
+    TimeSeries,
     Tracklet,
 )
 
@@ -133,10 +136,57 @@ class PreviewDescriptor(ResponseModel):
     id: str
     kind: str
     preview_url: str
+    excerpt: str | None = None
 
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
+
+
+class ColumnDescriptorResponse(ResponseModel):
+    """One filterable/sortable column, as published to the explorer UI."""
+
+    name: str
+    type: str
+    collection: bool
+    source: str
+    filterable: bool
+    sortable: bool
+    searchable: bool
+    indexed: bool
+    operators: list[str]
+    values: list[str] | None = None
+    values_complete: bool = True
+
+
+class SearchCapabilities(ResponseModel):
+    """Available search modes for a dataset, with embedding-storage health."""
+
+    modes: list[str] = Field(default_factory=lambda: ["text"])
+    models: list[str] = Field(default_factory=list)
+    # Embedding health: "absent" (never computed), "ready", "partial" (some records missing),
+    # or a degraded state needing recompute ("missing_table" | "empty" | "dim_mismatch" | "corrupt").
+    status: str = "absent"
+    detail: str | None = None
+    embedded_rows: int = 0
+    total_records: int = 0
+
+
+class FilterSchemaResponse(ResponseModel):
+    """Capability document for the explorer's filter/sort/search affordances."""
+
+    table: str
+    columns: list[ColumnDescriptorResponse]
+    search: SearchCapabilities
+
+
+class NeighborsResponse(ResponseModel):
+    """A record's neighbors within the current filtered, sorted result set."""
+
+    prev: str | None = None
+    next: str | None = None
+    position: int | None = None
+    total: int
 
 
 EntityCreate = _create_transport_model(
@@ -320,6 +370,35 @@ KeyPointsUpdate = _create_transport_model(
 )
 KeyPointsResponse = _create_transport_model("KeyPointsResponse", KeyPoints)
 
+ClassificationCreate = _create_transport_model(
+    "ClassificationCreate",
+    Classification,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+ClassificationUpdate = _create_transport_model(
+    "ClassificationUpdate",
+    Classification,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+ClassificationResponse = _create_transport_model("ClassificationResponse", Classification)
+
+RelationCreate = _create_transport_model(
+    "RelationCreate",
+    Relation,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+RelationUpdate = _create_transport_model(
+    "RelationUpdate",
+    Relation,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+RelationResponse = _create_transport_model("RelationResponse", Relation)
+
+
 TextSpanCreate = _create_transport_model(
     "TextSpanCreate",
     TextSpan,
@@ -364,6 +443,8 @@ EmbeddingCreate = _create_transport_model(
 )
 EmbeddingResponse = _create_transport_model("EmbeddingResponse", Embedding, exclude_fields={"vector"})
 
+TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
+
 
 class DatasetInfoResponse(DatasetInfo):
     """Dataset info plus the number of records."""
@@ -379,9 +460,12 @@ class DatasetInfoResponse(DatasetInfo):
         "mask",
         "multi_path",
         "keypoint",
+        "classification",
+        "relation",
         "tracklet",
         "message",
         "text_span",
+        "timeseries",
         when_used="json",
     )
     def serialize_schema_slot(self, schema_cls: type[LanceModel] | None) -> dict[str, Any] | None:
@@ -434,6 +518,9 @@ __all__ = [
     "BBox3DCreate",
     "BBox3DResponse",
     "BBox3DUpdate",
+    "ClassificationCreate",
+    "ClassificationResponse",
+    "ClassificationUpdate",
     "DatasetInfoResponse",
     "DatasetResponse",
     "EmbeddingCreate",
@@ -462,6 +549,9 @@ __all__ = [
     "MessageUpdate",
     "PaginatedResponse",
     "CalibratedImageResponse",
+    "RelationCreate",
+    "RelationResponse",
+    "RelationUpdate",
     "ImageResponse",
     "PointCloudResponse",
     "SFrameResponse",

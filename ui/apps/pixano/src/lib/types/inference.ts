@@ -16,7 +16,7 @@ export interface ConversationPromptContext {
 export enum MultimodalImageNLPTask {
   CAPTIONING = "image_captioning",
   VLM = "vlm",
-  EMBEDDING = "image_text_embedding",
+  EMBEDDING = "embedding",
   MATCHING = "image_text_matching",
   QUESTION_ANSWERING = "image_question_answering",
 }
@@ -27,7 +27,7 @@ export enum ImageTask {
   INSTANCE_SEGMENTATION = "instance_segmentation",
   FEATURE_EXTRACTION = "image_feature_extraction",
   KEYPOINT_DETECTION = "keypoint_detection",
-  SEGMENTATION = "segmentation",
+  SEGMENTATION = "image_mask_generation",
   OBJECT_DETECTION = "object_detection",
   SEMANTIC_SEGMENTATION = "semantic_segmentation",
   UNIVERSAL_SEGMENTATION = "universal_segmentation",
@@ -36,7 +36,7 @@ export enum ImageTask {
 }
 
 export enum VideoTask {
-  TRACKING = "tracking",
+  TRACKING = "video_mask_generation",
 }
 
 export type Task = MultimodalImageNLPTask | ImageTask | VideoTask;
@@ -50,6 +50,12 @@ export interface InferenceProviderRegistry {
   connected: boolean;
   providers: ConnectedProvider[];
   default_provider: string | null;
+}
+
+export interface InferenceServerInfo {
+  version: string;
+  models: string[];
+  models_to_task: Record<string, string>;
 }
 
 export interface InferenceModelSelection {

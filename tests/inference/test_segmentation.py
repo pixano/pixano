@@ -23,11 +23,11 @@ from pixano.inference.provider import InferenceProvider
 from pixano.inference.segmentation import segmentation, tracking
 from pixano.inference.types import (
     CompressedRLEData,
+    ImageMaskGenerationOutput,
+    ImageMaskGenerationResult,
     NDArrayData,
-    SegmentationOutput,
-    SegmentationResult,
-    TrackingOutput,
-    TrackingResult,
+    VideoMaskGenerationOutput,
+    VideoMaskGenerationResult,
 )
 
 
@@ -59,11 +59,11 @@ class ViewEmbedding8(ViewEmbedding):
     "response, expected_output, image_embedding, high_resolution_features, bbox, points, labels",
     [
         (
-            SegmentationResult(
+            ImageMaskGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=SegmentationOutput(
+                data=ImageMaskGenerationOutput(
                     masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
                     scores=NDArrayData(values=[0.9], shape=[1]),
                     image_embedding=NDArrayData(values=[1], shape=[1]),
@@ -92,11 +92,11 @@ class ViewEmbedding8(ViewEmbedding):
             None,
         ),
         (
-            SegmentationResult(
+            ImageMaskGenerationResult(
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=SegmentationOutput(
+                data=ImageMaskGenerationOutput(
                     masks=[[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))]],
                     scores=NDArrayData(values=[0.9], shape=[1]),
                     image_embedding=None,
@@ -128,7 +128,7 @@ class ViewEmbedding8(ViewEmbedding):
 )
 async def test_segmentation(
     simple_inference_provider: InferenceProvider,
-    response: SegmentationResult,
+    response: ImageMaskGenerationResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     image_embedding: ViewEmbedding | None,
     high_resolution_features: list[ViewEmbedding] | None,
@@ -137,7 +137,7 @@ async def test_segmentation(
     labels: list[int],
     image_url: Image,
 ):
-    simple_inference_provider.segmentation.return_value = response
+    simple_inference_provider.image_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
 
@@ -167,12 +167,12 @@ async def test_segmentation(
     "response, expected_output, bbox, points, labels",
     [
         (
-            TrackingResult(
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=TrackingOutput(
+                data=VideoMaskGenerationOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -197,12 +197,12 @@ async def test_segmentation(
             None,
         ),
         (
-            TrackingResult(
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=TrackingOutput(
+                data=VideoMaskGenerationOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -227,12 +227,12 @@ async def test_segmentation(
             [0],
         ),
         (
-            TrackingResult(
+            VideoMaskGenerationResult(
                 status="SUCCESS",
                 timestamp=datetime(year=2025, month=2, day=19),
                 processing_time=1.0,
                 metadata={"metadata": "value"},
-                data=TrackingOutput(
+                data=VideoMaskGenerationOutput(
                     masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
                     objects_ids=[0],
                     frame_indexes=[0],
@@ -260,14 +260,14 @@ async def test_segmentation(
 )
 async def test_tracking(
     simple_inference_provider: InferenceProvider,
-    response: TrackingResult,
+    response: VideoMaskGenerationResult,
     expected_output: tuple[CompressedRLE, float, NDArrayFloat | None, list[NDArrayFloat] | None],
     bbox: BBox | None,
     points: list[list[int]] | None,
     labels: list[int],
     image_url: Image,
 ):
-    simple_inference_provider.tracking.return_value = response
+    simple_inference_provider.video_mask_generation.return_value = response
 
     entity = Entity(id="test_entity")
 

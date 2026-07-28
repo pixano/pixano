@@ -55,7 +55,7 @@ License: CECILL-C
 {/if}
 {#if !data.workspaceData}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
-    <p>Current item could not be loaded</p>
+    <p>This record could not be loaded</p>
     <PrimaryButton onclick={() => goto(getExplorerRoute(data.dataset.id))}>
       Back to dataset
     </PrimaryButton>

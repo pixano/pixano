@@ -87,6 +87,7 @@ License: CECILL-C
   import { toLegacyReference } from "$lib/types/workspaceLocators";
   import {
     AiProcessingBadge,
+    ResizeHandle,
     SequenceFrame,
     ShapeType,
     type EditShape,
@@ -1036,30 +1037,102 @@ License: CECILL-C
       {/if}
       {#if isTracking.value}
         <div
-          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
         >
           {#if hasPendingKeyframe.value}
-            Drag to adjust &middot; Press T to confirm as keyframe &middot; Navigate away to discard
+            Drag to adjust, <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              T
+            </kbd>
+            confirms the keyframe — navigate away to discard
           {:else if isAwaitingNewSegmentKeyframe.value}
-            New segment started &middot; Navigate to a frame and draw a bbox to begin
+            New segment started — draw a bounding box on a frame to begin
           {:else}
-            Draw or edit on a frame and press T &middot; N for new segment &middot; Enter to save
-            &middot; Escape to cancel
+            Draw or edit on a frame, then <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              T
+            </kbd>
+            keyframe ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              N
+            </kbd>
+            new segment ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Enter
+            </kbd>
+            save ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Esc
+            </kbd>
+            cancel
           {/if}
         </div>
       {/if}
       {#if selectedTool.value?.type === ToolType.VOS}
         <div
-          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 rounded bg-amber-600/90 px-3 py-1 text-xs text-white shadow pointer-events-none select-none"
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
         >
           {#if smartSegmentationUiState.value.phase === "pending"}
-            Tracking interval... Scrub is locked until the request finishes
+            Tracking the interval… scrubbing is locked until it finishes
           {:else if vosAnchorFrameIndex.value === null}
-            Prompt an object to set anchor A &middot; Scrub forward and press T &middot; N starts a
-            new segment &middot; Enter saves &middot; Escape resets
+            Prompt an object to set the anchor, scrub forward, then <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              T
+            </kbd>
+            track ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              N
+            </kbd>
+            new segment ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Enter
+            </kbd>
+            save ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Esc
+            </kbd>
+            reset
           {:else}
-            Anchor at frame #{vosAnchorFrameIndex.value} &middot; Scrub forward and press T &middot;
-            N starts a new segment &middot; Enter saves &middot; Escape resets
+            Anchor at frame #{vosAnchorFrameIndex.value} — scrub forward, then
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              T
+            </kbd>
+            track ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              N
+            </kbd>
+            new segment ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Enter
+            </kbd>
+            save ·
+            <kbd
+              class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
+            >
+              Esc
+            </kbd>
+            reset
           {/if}
         </div>
       {/if}
@@ -1070,14 +1143,13 @@ License: CECILL-C
     {/if}
   </div>
   {#if !isRouteLoading && isLoaded && current_itemBBoxes.value && current_itemKeypoints.value}
-    <button
-      type="button"
-      aria-label="Resize canvas and inspector panels"
-      class="h-1 bg-primary-light cursor-row-resize w-full"
+    <ResizeHandle
+      orientation="horizontal"
+      ariaLabel="Resize canvas and inspector panels"
       onmousedown={() => {
         expanding = true;
       }}
-    ></button>
+    />
     <div
       class="h-full grow max-h-[28%] overflow-hidden border-t border-border/40 bg-card/90"
       style={`max-height: ${inspectorMaxHeight}px`}

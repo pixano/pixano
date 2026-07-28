@@ -1,0 +1,1 @@
+{"views":{"camera":{"frame_pattern":"frames/bear/*.jpg","fps":24}},"annotation_files":[{"kind":"mask","view":"camera","pattern":"masks/bear/*.png","encoding":"index_png","entity_map":"auto"}]}

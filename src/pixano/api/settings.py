@@ -34,6 +34,12 @@ class Settings(BaseSettings):
         inference_providers: Dictionary of connected inference providers (InferenceProvider instances),
             keyed by name.
         default_inference_provider: Name of the default inference provider to use.
+        cors_origins: Explicit list of origins allowed to make cross-origin requests. Defaults to an
+            empty list, which disables CORS entirely (the app is same-origin in both development,
+            via the Vite dev proxy, and production, where the UI is bundled into this app). Set it
+            via the CORS_ORIGINS environment variable to production origins only, e.g.
+            CORS_ORIGINS='["https://pixano.example.com"]'. Localhost development ports must never be
+            added here.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -47,6 +53,7 @@ class Settings(BaseSettings):
     aws_secret_key: str | None = None
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
+    cors_origins: list[str] = []
 
     @field_validator("data_dir", mode="before")
     @classmethod

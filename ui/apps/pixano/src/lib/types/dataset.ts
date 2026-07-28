@@ -123,12 +123,35 @@ export interface PaginationInfo {
   total_size: number;
 }
 
+/** One view preview available to a record card (image thumbnail or text excerpt). */
+export interface RecordPreview {
+  /** Logical view name (e.g. "image", "front_camera", "text"). */
+  name: string;
+  kind: "image" | "text";
+  /** Backing resource ("images" | "sframes" | "texts") — sframes render a film badge. */
+  resource: string;
+  url: string;
+  excerpt?: string;
+}
+
+/** Card-oriented projection of a record for the gallery view. */
+export interface RecordCard {
+  id: string;
+  split?: string;
+  status?: string;
+  /** Similarity distance in ranked (semantic / find-similar) mode. */
+  distance?: number;
+  previews: RecordPreview[];
+  /** Scalar custom attributes (system fields excluded). */
+  attrs: Record<string, string | number | boolean>;
+}
+
 export interface DatasetBrowserType {
   id: string;
   name: string;
   table_data: TableData;
+  card_data?: RecordCard[];
   pagination: PaginationInfo;
-  semantic_search: string[];
   isErrored?: boolean;
 }
 
@@ -136,16 +159,16 @@ export class DatasetBrowser implements DatasetBrowserType {
   id: string;
   name: string;
   table_data: TableData;
+  card_data?: RecordCard[];
   pagination: PaginationInfo;
-  semantic_search: Array<string>;
   isErrored?: boolean;
 
   constructor(obj: DatasetBrowserType) {
     this.id = obj.id;
     this.name = obj.name;
     this.table_data = obj.table_data;
+    this.card_data = obj.card_data;
     this.pagination = obj.pagination;
-    this.semantic_search = obj.semantic_search;
     this.isErrored = obj.isErrored;
   }
 }
@@ -243,6 +266,8 @@ export interface DatasetInfoType {
   description: string;
   size: string;
   preview: string;
+  creation_date: string;
+  bookmarks: string[];
   workspace: string;
   num_items: number;
   isFiltered?: boolean;
@@ -255,6 +280,8 @@ export class DatasetInfo implements DatasetInfoType {
   num_items: number;
   size: string;
   preview: string;
+  creation_date: string;
+  bookmarks: string[];
   workspace: WorkspaceType;
   isFiltered?: boolean;
 
@@ -265,6 +292,8 @@ export class DatasetInfo implements DatasetInfoType {
     this.num_items = obj.num_items;
     this.size = obj.size;
     this.preview = obj.preview;
+    this.creation_date = obj.creation_date;
+    this.bookmarks = obj.bookmarks;
     this.workspace = obj.workspace as WorkspaceType;
     this.isFiltered = obj.isFiltered;
   }
@@ -981,4 +1010,12 @@ export interface Dataset {
   schema: DatasetSchema;
   featureValues: object; //not used right now, maybe we will make a real type if needed
   info: DatasetInfo;
+}
+
+// ─── SplitStatusCount ────────────────────────────────────────────────────────
+
+export interface SplitStatusCount {
+  split: string;
+  status: string;
+  count: number;
 }

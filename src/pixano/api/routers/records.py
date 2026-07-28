@@ -8,11 +8,12 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.api.models import PaginatedResponse, PreviewDescriptor, RecordListResponse, RecordResponse
+from pixano.api.query import FilterCompileError, build_column_catalogue, compile_filters, validate_sort
 from pixano.api.resources import RECORD_RESOURCE
-from pixano.api.routers._deps import FilterParams, PaginationParams, get_dataset_dep
+from pixano.api.routers._deps import PaginationParams, RecordQueryParams, get_dataset_dep
 from pixano.api.service import BaseService
 from pixano.datasets import Dataset, TableQueryBuilder
 from pixano.datasets.utils import DatasetAccessError
@@ -46,24 +47,35 @@ def _query_preview_rows(
     columns: list[str],
     record_ids: list[str],
     *,
-    order_by: str | None = None,
+    extra_where: str | None = None,
 ) -> list[dict[str, Any]]:
     if not record_ids or table_name not in dataset.info.tables:
         return []
 
+    where = f"record_id IN {to_sql_list(record_ids)}"
+    if extra_where is not None:
+        where += f" AND {extra_where}"
     try:
-        query = (
-            TableQueryBuilder(dataset.open_table(table_name), dataset._db_connection)
+        return (
+            TableQueryBuilder(dataset.open_table(table_name), dataset._db_connection)  # noqa: SLF001
             .select(columns)
-            .where(  # noqa: SLF001
-                f"record_id IN {to_sql_list(record_ids)}"
-            )
+            .where(where)
+            .to_list()
         )
-        if order_by is not None:
-            query = query.order_by(order_by)
-        return query.to_list()
     except DatasetAccessError as err:
         raise HTTPException(status_code=500, detail=f"Internal server error. {err}") from err
+
+
+_PREVIEW_THUMBNAIL_SIZE = 256
+_TEXT_EXCERPT_LENGTH = 160
+
+
+def _preview_url(dataset_id: str, resource: str, row_id: str, uri: object, size: int | None = None) -> str:
+    """Datalake rows (spec §6 uri mode) are browser-loadable directly; embedded rows go through /preview."""
+    if isinstance(uri, str) and uri.startswith(("http://", "https://")):
+        return uri
+    url = f"/datasets/{dataset_id}/{resource}/{row_id}/preview"
+    return f"{url}?size={size}" if size else url
 
 
 def _resolve_view_previews(
@@ -77,7 +89,7 @@ def _resolve_view_previews(
     # so we emit the same descriptor for either. `calibrated_images` is queried first
     # so it wins on the rare dataset that carries both, matching _resolve_image_table.
     for table_name in ("calibrated_images", "images"):
-        for row in _query_preview_rows(dataset, table_name, ["id", "record_id", "logical_name"], record_ids):
+        for row in _query_preview_rows(dataset, table_name, ["id", "record_id", "logical_name", "uri"], record_ids):
             record_id = str(row.get("record_id", "") or "")
             logical_name = str(row.get("logical_name", "") or "")
             row_id = str(row.get("id", "") or "")
@@ -90,15 +102,19 @@ def _resolve_view_previews(
                 resource="images",
                 id=row_id,
                 kind="image",
-                preview_url=f"/datasets/{dataset_id}/images/{row_id}/preview",
+                preview_url=_preview_url(dataset_id, "images", row_id, row.get("uri"), size=_PREVIEW_THUMBNAIL_SIZE),
             )
 
+    # Only the first frame of each sequence is needed for a thumbnail. Filter to
+    # frame 0 (BTREE-indexed → native path) instead of ordering the whole
+    # sequence_frames table by frame_index with no limit, which would materialize
+    # every frame of every video just to render a page of previews.
     sframe_rows = _query_preview_rows(
         dataset,
         "sequence_frames",
-        ["id", "record_id", "logical_name", "frame_index"],
+        ["id", "record_id", "logical_name", "frame_index", "uri"],
         record_ids,
-        order_by="frame_index",
+        extra_where="frame_index = 0",
     )
     for row in sframe_rows:
         record_id = str(row.get("record_id", "") or "")
@@ -113,8 +129,30 @@ def _resolve_view_previews(
             resource="sframes",
             id=row_id,
             kind="image",
-            preview_url=f"/datasets/{dataset_id}/sframes/{row_id}/preview",
+            preview_url=_preview_url(dataset_id, "sframes", row_id, row.get("uri"), size=_PREVIEW_THUMBNAIL_SIZE),
         )
+
+    # Text views: no thumbnail, but an excerpt lets multi-modal cards (e.g. MEL image+text)
+    # show real content. Excerpting in Python is fine at page sizes ≤ 100.
+    if "texts" in dataset.info.tables:
+        text_rows = _query_preview_rows(dataset, "texts", ["id", "record_id", "logical_name", "content"], record_ids)
+        for row in text_rows:
+            record_id = str(row.get("record_id", "") or "")
+            logical_name = str(row.get("logical_name", "") or "")
+            row_id = str(row.get("id", "") or "")
+            if not record_id or not logical_name or not row_id:
+                continue
+            logical_previews = previews_by_record.setdefault(record_id, {})
+            if logical_name in logical_previews:
+                continue
+            content = str(row.get("content", "") or "")
+            logical_previews[logical_name] = PreviewDescriptor(
+                resource="texts",
+                id=row_id,
+                kind="text",
+                preview_url="",
+                excerpt=content[:_TEXT_EXCERPT_LENGTH],
+            )
 
     # Point clouds render a bird's-eye-view PNG at ingestion, served through
     # `/point-clouds/{id}/preview`. `kind="image"` so the same UI preview path
@@ -138,33 +176,46 @@ def _resolve_view_previews(
     return previews_by_record
 
 
-def _list_record_kwargs(filters: FilterParams, pagination: PaginationParams) -> dict[str, Any]:
-    return {
-        "where": filters.where,
-        "limit": pagination.limit,
-        "offset": pagination.offset,
-    }
-
-
 @router.get(
     "",
     response_model=PaginatedResponse[RecordListResponse],
     response_model_exclude_none=True,
     operation_id="list_records",
     summary="List records",
-    description="List records in a dataset with optional filters, pagination, and explorer expansions.",
+    description="List records in a dataset with typed filters, free-text search, sorting, "
+    "pagination, and explorer expansions.",
 )
 def list_records(
     dataset_id: str,
     dataset: Dataset = Depends(get_dataset_dep),
     pagination: PaginationParams = Depends(),
-    filters: FilterParams = Depends(),
-    include: str | None = Query(default=None),
+    query: RecordQueryParams = Depends(),
 ) -> PaginatedResponse[RecordListResponse]:
-    """List records with optional filters, pagination, and view previews."""
-    includes = _parse_include(include)
+    """List records with typed filters, free-text search, sorting, and view previews."""
+    includes = _parse_include(query.include)
+
+    catalogue = build_column_catalogue(dataset, "records")
+    try:
+        where, _referenced, index_servable = compile_filters(catalogue, query.filter, query.q)
+        sortcol, order = validate_sort(catalogue, query.sort, query.order)
+    except FilterCompileError as err:
+        raise HTTPException(status_code=400, detail=str(err)) from None
+
+    # Fold in a deprecated raw `where` clause (back-compat) if present.
+    raw_where = bool(query.where)
+    if raw_where:
+        where = f"({query.where})" if where is None else f"{where} AND ({query.where})"
+
     service = BaseService(dataset, RECORD_RESOURCE)
-    records_page = service.list(**_list_record_kwargs(filters, pagination))
+    records_page = service.list(
+        where=where,
+        limit=pagination.limit,
+        offset=pagination.offset,
+        sortcol=sortcol,
+        order=order,
+        force_full_scan=not index_servable,
+        raw_where=raw_where,
+    )
 
     record_ids = [record.id for record in records_page.items]
     previews_by_record = (

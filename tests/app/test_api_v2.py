@@ -210,7 +210,7 @@ class TestStaticImage:
             "resource": "images",
             "id": "image_0",
             "kind": "image",
-            "preview_url": f"{STATIC_BASE}/images/image_0/preview",
+            "preview_url": f"{STATIC_BASE}/images/image_0/preview?size=256",
         }
 
     def test_list_records_rejects_unknown_include(self, static_image_client: TestClient):
@@ -816,7 +816,7 @@ class TestVideo:
             "resource": "sframes",
             "id": "frame_0_0",
             "kind": "image",
-            "preview_url": f"{VIDEO_BASE}/sframes/frame_0_0/preview",
+            "preview_url": f"{VIDEO_BASE}/sframes/frame_0_0/preview?size=256",
         }
 
     def test_stream_sframe_blob(self, video_client: TestClient):

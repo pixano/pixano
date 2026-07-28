@@ -107,9 +107,6 @@ importers:
       svelte-konva:
         specifier: ^1.0.1
         version: 1.0.1(konva@9.3.18)(svelte@5.51.2)
-      svelte-sortable-list:
-        specifier: ^1.1.0
-        version: 1.1.0(svelte@5.51.2)
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -156,6 +153,9 @@ importers:
       tslib:
         specifier: ^2.6.2
         version: 2.8.1
+      tw-animate-css:
+        specifier: ^1.4.0
+        version: 1.4.0
       typescript:
         specifier: ^5.5.0
         version: 5.7.3
@@ -3279,11 +3279,6 @@ packages:
     peerDependencies:
       konva: 8 - 10
       svelte: ^5.0.0
-
-  svelte-sortable-list@1.1.0:
-    resolution: {integrity: sha512-K8axS2OEJhN8KI/aXx1LEJkMGZTkR13U191nVhvN0BImZpNmFJ10Zy8K9T0EAg6chB6/hz3/hOeFoe2RVZylSw==}
-    peerDependencies:
-      svelte: ^3.4.1
 
   svelte-toolbelt@0.10.6:
     resolution: {integrity: sha512-YWuX+RE+CnWYx09yseAe4ZVMM7e7GRFZM6OYWpBKOb++s+SQ8RBIMMe+Bs/CznBMc0QPLjr+vDBxTAkozXsFXQ==}
@@ -6725,10 +6720,6 @@ snapshots:
   svelte-konva@1.0.1(konva@9.3.18)(svelte@5.51.2):
     dependencies:
       konva: 9.3.18
-      svelte: 5.51.2
-
-  svelte-sortable-list@1.1.0(svelte@5.51.2):
-    dependencies:
       svelte: 5.51.2
 
   svelte-toolbelt@0.10.6(@sveltejs/kit@2.52.0(@sveltejs/vite-plugin-svelte@4.0.4(svelte@5.51.2)(vite@5.4.14(@types/node@22.13.4)(less@4.2.2)(lightningcss@1.31.1)(terser@5.39.0)))(svelte@5.51.2)(typescript@5.7.3)(vite@5.4.14(@types/node@22.13.4)(less@4.2.2)(lightningcss@1.31.1)(terser@5.39.0)))(svelte@5.51.2):

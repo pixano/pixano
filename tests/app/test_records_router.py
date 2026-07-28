@@ -19,10 +19,17 @@ from pixano.api.routers.records import _resolve_view_previews
 def _rows_for(table_rows: dict[str, list[dict[str, Any]]]):
     """Return a stand-in for `_query_preview_rows` that serves rows per table name."""
 
-    def _fake_query(dataset, table_name, columns, record_ids, *, order_by=None):
+    def _fake_query(dataset, table_name, columns, record_ids, *, order_by=None, extra_where=None):
         return table_rows.get(table_name, [])
 
     return _fake_query
+
+
+class _DatasetStub:
+    class _Info:
+        tables: dict = {}
+
+    info = _Info()
 
 
 # ─── _resolve_view_previews ───────────────────────────────────────────────────
@@ -32,12 +39,12 @@ class TestResolveViewPreviews:
     def test_plain_images_produce_previews(self):
         rows = {"images": [{"id": "image_0", "record_id": "rec_0", "logical_name": "image"}]}
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"]["image"] == PreviewDescriptor(
             resource="images",
             id="image_0",
             kind="image",
-            preview_url="/datasets/ds/images/image_0/preview",
+            preview_url="/datasets/ds/images/image_0/preview?size=256",
         )
 
     def test_calibrated_images_produce_previews_via_images_route(self):
@@ -50,21 +57,21 @@ class TestResolveViewPreviews:
             ]
         }
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"]["CAM_FRONT"] == PreviewDescriptor(
             resource="images",
             id="CAM_FRONT_0",
             kind="image",
-            preview_url="/datasets/ds/images/CAM_FRONT_0/preview",
+            preview_url="/datasets/ds/images/CAM_FRONT_0/preview?size=256",
         )
-        assert result["rec_0"]["CAM_BACK"].preview_url == "/datasets/ds/images/CAM_BACK_0/preview"
+        assert result["rec_0"]["CAM_BACK"].preview_url == "/datasets/ds/images/CAM_BACK_0/preview?size=256"
 
     def test_point_clouds_produce_previews_via_point_clouds_route(self):
         # Lidar views yield a BEV thumbnail served through /point-clouds/{id}/preview,
         # tagged kind="image" so the UI's <img> preview path renders it.
         rows = {"point_clouds": [{"id": "LIDAR_TOP_0", "record_id": "rec_0", "logical_name": "LIDAR_TOP"}]}
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"]["LIDAR_TOP"] == PreviewDescriptor(
             resource="point-clouds",
             id="LIDAR_TOP_0",
@@ -78,16 +85,16 @@ class TestResolveViewPreviews:
             "images": [{"id": "img_0", "record_id": "rec_0", "logical_name": "cam"}],
         }
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"]["cam"].id == "cal_0"
 
     def test_record_without_views_gets_empty_map(self):
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for({})):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"] == {}
 
     def test_rows_missing_required_fields_are_skipped(self):
         rows = {"calibrated_images": [{"id": "", "record_id": "rec_0", "logical_name": "cam"}]}
         with patch("pixano.api.routers.records._query_preview_rows", side_effect=_rows_for(rows)):
-            result = _resolve_view_previews("ds", object(), ["rec_0"])
+            result = _resolve_view_previews("ds", _DatasetStub(), ["rec_0"])
         assert result["rec_0"] == {}

@@ -18,12 +18,9 @@ License: CECILL-C
     Link,
     Pencil,
     Quotes,
-    Robot,
     Square,
-    Target,
     TextT,
     Trash,
-    User,
   } from "phosphor-svelte";
   import { cubicOut } from "svelte/easing";
   import { slide } from "svelte/transition";
@@ -31,6 +28,7 @@ License: CECILL-C
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
+  import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
   import {
     annotations,
     current_itemBBoxes,
@@ -70,27 +68,6 @@ License: CECILL-C
     [BaseSchema.TextSpan]: "Text Span",
     [BaseSchema.Tracklet]: "Track",
   };
-
-  // ─── Source name color coding ─────────────────────────────────────────────
-  function getSourceStyle(sourceName: string): { class: string; icon: typeof User } {
-    switch (sourceName) {
-      case "Pixano":
-        return { class: "bg-blue-500/10 text-blue-400 border-blue-500/20", icon: User };
-      case "Pre-annotation":
-        return { class: "bg-amber-500/10 text-amber-400 border-amber-500/20", icon: Robot };
-      case "Ground Truth":
-        return { class: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", icon: Target };
-      default:
-        return { class: "bg-muted text-muted-foreground border-border/50", icon: Robot };
-    }
-  }
-
-  // ─── Confidence color coding ──────────────────────────────────────────────
-  function getConfidenceStyle(confidence: number): string {
-    if (confidence >= 0.8) return "bg-emerald-500/15 text-emerald-400";
-    if (confidence >= 0.5) return "bg-amber-500/15 text-amber-400";
-    return "bg-red-500/15 text-red-400";
-  }
 
   // ─── Props ────────────────────────────────────────────────────────────────
   interface Props {
@@ -354,7 +331,7 @@ License: CECILL-C
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
-              tooltipContent="Edit object"
+              tooltipContent="Edit annotation"
               selected={childEditing}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
@@ -363,7 +340,7 @@ License: CECILL-C
             </IconButton>
           {/if}
           <IconButton
-            tooltipContent="Relink object"
+            tooltipContent="Relink annotation"
             selected={showRelink}
             onclick={() => {
               showRelink = !showRelink;
@@ -373,7 +350,7 @@ License: CECILL-C
             <Link class="h-3 w-3" />
           </IconButton>
           <IconButton
-            tooltipContent="Delete object"
+            tooltipContent="Delete annotation"
             redconfirm
             onclick={() => deleteEntity(entity, child)}
             class="h-6 w-6 text-muted-foreground hover:text-destructive"
@@ -440,17 +417,32 @@ License: CECILL-C
         {#if bboxData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1.5">
             <!-- Coordinate grid -->
-            <div class="grid grid-cols-2 gap-x-3 gap-y-0.5">
-              {#each bboxData.labels as label, i}
-                {#if i < bboxData.coords.length}
-                  <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-muted-foreground/70 font-medium">{label}</span>
-                    <span class="text-[11px] font-mono text-foreground/90">
-                      {fmtCoord(bboxData.coords[i])}
-                    </span>
-                  </div>
-                {/if}
-              {/each}
+            <div class="flex gap-2 items-stretch">
+              <div class="flex-1 min-w-0 space-y-0.5">
+                {#each bboxData.labels as label, i}
+                  {#if i < bboxData.coords.length && i % 2 === 0}
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[10px] text-foreground font-medium">{label}</span>
+                      <span class="text-[11px] font-mono text-foreground/70">
+                        {fmtCoord(bboxData.coords[i])}
+                      </span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
+              <div class="w-[50px] bg-border/20 shrink-0 self-stretch"></div>
+              <div class="flex-1 min-w-0 space-y-0.5">
+                {#each bboxData.labels as label, i}
+                  {#if i < bboxData.coords.length && i % 2 === 1}
+                    <div class="flex items-center justify-between gap-1">
+                      <span class="text-[10px] text-foreground font-medium">{label}</span>
+                      <span class="text-[11px] font-mono text-foreground/70">
+                        {fmtCoord(bboxData.coords[i])}
+                      </span>
+                    </div>
+                  {/if}
+                {/each}
+              </div>
             </div>
 
             <!-- Format row -->
@@ -476,16 +468,16 @@ License: CECILL-C
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if maskData.size.length >= 2}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Size</span>
-                <span class="text-[11px] font-mono text-foreground/90">
+                <span class="text-[10px] text-foreground font-medium">Size</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {maskData.size[0]} &times; {maskData.size[1]}
                 </span>
               </div>
             {/if}
             {#if maskData.bounds}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Bounds</span>
-                <span class="text-[11px] font-mono text-foreground/80">
+                <span class="text-[10px] text-foreground font-medium">Bounds</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {Math.round(maskData.bounds.x)}, {Math.round(maskData.bounds.y)} &mdash; {Math.round(
                     maskData.bounds.width,
                   )}&times;{Math.round(maskData.bounds.height)}
@@ -504,7 +496,7 @@ License: CECILL-C
                   weight="fill"
                   class="h-3 w-3 text-muted-foreground/40 flex-shrink-0 mt-0.5"
                 />
-                <span class="text-[11px] italic text-foreground/90 leading-snug break-words">
+                <span class="text-[11px] italic text-foreground/70 leading-snug break-words">
                   {textSpanData.mention}
                 </span>
               </div>
@@ -513,10 +505,10 @@ License: CECILL-C
             <!-- Span offsets -->
             {#if textSpanData.spans.length > 0}
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Spans</span>
+                <span class="text-[10px] text-foreground font-medium">Spans</span>
                 {#each textSpanData.spans as span}
                   <span
-                    class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground leading-none"
+                    class="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-foreground/70 leading-none"
                   >
                     [{span[0]}, {span[1]}]
                   </span>
@@ -531,7 +523,7 @@ License: CECILL-C
                   <span
                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/30 text-[10px] font-medium text-foreground/70 leading-none"
                   >
-                    <span class="text-muted-foreground/60">{extra.key}:</span>
+                    <span class="text-foreground">{extra.key}:</span>
                     {extra.value}
                   </span>
                 {/each}
@@ -544,15 +536,15 @@ License: CECILL-C
           <div class="rounded-md bg-muted/30 border border-border/30 p-2 space-y-1">
             {#if keypointsData.templateId}
               <div class="flex items-center gap-2">
-                <span class="text-[10px] text-muted-foreground/70 font-medium">Template</span>
-                <span class="text-[11px] font-mono text-foreground/80">
+                <span class="text-[10px] text-foreground font-medium">Template</span>
+                <span class="text-[11px] font-mono text-foreground/70">
                   {keypointsData.templateId}
                 </span>
               </div>
             {/if}
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-muted-foreground/70 font-medium">Vertices</span>
-              <span class="text-[11px] text-foreground/80">{keypointsData.vertexCount}</span>
+              <span class="text-[10px] text-foreground font-medium">Vertices</span>
+              <span class="text-[11px] text-foreground/70">{keypointsData.vertexCount}</span>
               {#if keypointsData.visibleCount > 0 || keypointsData.hiddenCount > 0}
                 <span class="text-[9px] text-muted-foreground/50">
                   ({keypointsData.visibleCount} visible, {keypointsData.hiddenCount} hidden)
@@ -565,12 +557,12 @@ License: CECILL-C
         {:else if trackletData}
           <div class="rounded-md bg-muted/30 border border-border/30 p-2">
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-muted-foreground/70 font-medium">Frames</span>
-              <span class="text-[11px] font-mono text-foreground/80">
+              <span class="text-[10px] text-foreground font-medium">Frames</span>
+              <span class="text-[11px] font-mono text-foreground/70">
                 {trackletData.startFrame}
               </span>
               <span class="text-[10px] text-muted-foreground/40">&rarr;</span>
-              <span class="text-[11px] font-mono text-foreground/80">
+              <span class="text-[11px] font-mono text-foreground/70">
                 {trackletData.endFrame}
               </span>
               <span class="text-[9px] text-muted-foreground/50">
@@ -695,7 +687,7 @@ License: CECILL-C
           >
             {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
               <IconButton
-                tooltipContent="Edit object"
+                tooltipContent="Edit annotation"
                 selected={trackChild.ui.displayControl.editing}
                 onclick={() => onEditIconClick(trackChild)}
                 class="h-6 w-6"
@@ -704,7 +696,7 @@ License: CECILL-C
               </IconButton>
             {/if}
             <IconButton
-              tooltipContent="Delete object"
+              tooltipContent="Delete annotation"
               redconfirm
               onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
               class="h-6 w-6 text-muted-foreground hover:text-destructive"

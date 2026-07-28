@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 import io
+import json
+import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
 
 import lancedb
 import PIL.Image
@@ -27,6 +29,7 @@ from pixano.datasets.utils.integrity import (
     IntegrityCheck,
     check_table_integrity,
     handle_integrity_errors,
+    validate_arrow_batch,
     validate_batch,
 )
 from pixano.features.utils.image import create_mosaic, image_to_base64
@@ -36,8 +39,10 @@ from pixano.schemas import (
     Record,
     SchemaGroup,
     ViewEmbedding,
+    build_record_embedding_schema,
     is_image,
     is_sequence_frame,
+    is_video,
     is_view_embedding,
     validate_canonical_table_map,
 )
@@ -45,11 +50,14 @@ from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
-from .dataset_stat import DatasetStatistic
+from .dataset_stat import DatasetStatistic, SplitStatusCount
 
 
 if TYPE_CHECKING:
     pass
+
+
+logger = logging.getLogger(__name__)
 
 
 def _combine_where_clauses(*clauses: str | None) -> str | None:
@@ -93,8 +101,8 @@ class Dataset:
     It is a collection of tables that can be queried and manipulated with LanceDB.
 
     Tables are defined by the :class:`DatasetInfo` ``tables`` mapping, which maps
-    table names to :class:`LanceModel` schema classes.  The main table is always
-    named ``"record"`` and its schema must inherit from :class:`Record`.  All
+    table names to :class:`LanceModel` schema classes. The main table is always
+    named ``"records"`` and its schema must inherit from :class:`Record`.  All
     auxiliary tables must have schemas that inherit from :class:`RecordComponent`.
 
     Attributes:
@@ -109,6 +117,8 @@ class Dataset:
     _PREVIEWS_PATH: str = "previews"
     _INFO_FILE: str = "info.json"
     _FEATURES_VALUES_FILE: str = "features_values.json"
+    _EMBEDDINGS_FILE: str = "embeddings.json"
+    _RECORD_EMBEDDING_TABLE: str = "embeddings"
     _STAT_FILE: str = "stats.json"
     _THUMB_FILE: str = "preview.png"
 
@@ -126,20 +136,82 @@ class Dataset:
         self.path = path
 
         self._info_file = self.path / self._INFO_FILE
+        self._table_handles: dict[str, LanceTable] = {}
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._embeddings_file = self.path / self._EMBEDDINGS_FILE
+        self._record_embedding_space: dict[str, Any] | None = None
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
         self._db_path = self.path / self._DB_PATH
 
         self.info = DatasetInfo.from_json(self._info_file)
         validate_canonical_table_map(self.info.tables)
+        # The record-embedding table is internal to the search engine (not part of the public
+        # dataset schema), so it is persisted in a sidecar and re-injected here after the
+        # canonical check — DatasetInfo does not round-trip it.
+        self._load_record_embedding_space()
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
         self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.thumbnail = self._thumb_file
         self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
+        if self.info.spec_version < self._CURRENT_SPEC_VERSION:
+            try:
+                self._migrate_storage_to_spec_version_2()
+            except Exception as exc:
+                # A read-only dataset stays readable at the old layout; writes will
+                # surface the missing columns explicitly.
+                logger.warning(
+                    "Dataset %s: spec version %d migration failed, continuing unmigrated: %s",
+                    self.path,
+                    self._CURRENT_SPEC_VERSION,
+                    exc,
+                )
         self._num_rows_cache: int | None = None
+
+    # ------------------------------------------------------------------
+    # Storage-layout migrations
+    # ------------------------------------------------------------------
+
+    _CURRENT_SPEC_VERSION: int = 2
+
+    def _migrate_storage_to_spec_version_2(self) -> None:
+        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+
+        Concurrency-safe: when several processes open the same pre-migration
+        dataset, losers of the ``add_columns`` race converge by re-reading the
+        table schema, and the ``info.json`` rewrite is atomic and idempotent
+        (all writers produce identical content).
+        """
+        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        for table_name, schema_cls in self.info.tables.items():
+            if not is_video(schema_cls):
+                continue
+            table = self.open_table(table_name)
+            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            if not missing:
+                continue
+            try:
+                table.add_columns(missing)
+            except Exception:
+                self._table_handles.pop(table_name, None)  # re-read the live schema, not a cached handle
+                still_missing = [
+                    column for column in missing if column not in self.open_table(table_name).schema.names
+                ]
+                if still_missing:
+                    raise
+            finally:
+                self._table_handles.pop(table_name, None)
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory
@@ -244,6 +316,37 @@ class Dataset:
         """
         table = self.open_table(table_name)
         return table.count_rows(where)
+
+    def get_splits_count(self) -> list[SplitStatusCount]:
+        """Get record counts grouped by split and status.
+
+        Opens the record table as PyArrow, groups by ``["split", "status"]``
+        and aggregates counts.  If the ``status`` column does not exist the
+        table is old-schema and an empty list is returned for backward
+        compatibility.
+
+        Returns:
+            List of SplitStatusCount sorted by split asc then status asc.
+        """
+        try:
+            arrow_table = self.open_table(SchemaGroup.RECORD.value).to_arrow()
+        except Exception:
+            return []
+
+        if "status" not in arrow_table.column_names:
+            return []
+
+        grouped = arrow_table.group_by(["split", "status"]).aggregate([("id", "count")])
+        grouped = grouped.rename_columns(["split", "status", "count"])
+        grouped = grouped.sort_by([("split", "ascending"), ("status", "ascending")])
+
+        result: list[SplitStatusCount] = []
+        splits = grouped.column("split").to_pylist()
+        statuses = grouped.column("status").to_pylist()
+        counts = grouped.column("count").to_pylist()
+        for split, status, count in zip(splits, statuses, counts):
+            result.append(SplitStatusCount(split=split, status=status, count=count))
+        return result
 
     def generate_preview(self) -> str:
         """Generate a preview for the dataset.
@@ -383,7 +486,7 @@ class Dataset:
             schema = self.info.tables.get(table_name)
         if schema is None:
             return set()
-        return {"blob"} if "blob" in schema.model_fields else set()
+        return {column for column in ("blob", "raw_bytes") if column in schema.model_fields}
 
     def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
         """Open the dataset tables with LanceDB.
@@ -417,6 +520,9 @@ class Dataset:
         if name not in self.info.tables:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
+        cached = self._table_handles.get(name)
+        if cached is not None:
+            return cached
         table = self._db_connection.open_table(name)
 
         schema_table = self.info.tables[name]
@@ -426,6 +532,9 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
+        # Handles read the latest table version per query, so caching is safe;
+        # Dataset-level cache invalidation drops the whole instance anyway.
+        self._table_handles[name] = table
         return table
 
     @overload
@@ -439,6 +548,7 @@ class Dataset:
         record_ids: list[str] | None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> list[LanceModel]: ...
     @overload
     def get_data(
@@ -451,6 +561,7 @@ class Dataset:
         record_ids: None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> LanceModel | None: ...
 
     def get_data(
@@ -463,6 +574,7 @@ class Dataset:
         record_ids: list[str] | None = None,
         sortcol: str | None = None,
         order: str | None = None,
+        force_full_scan: bool = False,
     ) -> list[LanceModel] | LanceModel | None:
         """Read data from a table.
 
@@ -477,6 +589,9 @@ class Dataset:
             record_ids: Record ids to filter by (filters on ``record_id`` column).
             sortcol: column to order by.
             order: sort order (asc or desc).
+            force_full_scan: Force the safe full-scan-then-slice path (for a
+                ``where`` using an operator a scalar index can't serve, e.g. ``!=``
+                or ``LIKE``). See `TableQueryBuilder.force_full_scan`.
 
         Returns:
             List of values.
@@ -509,6 +624,7 @@ class Dataset:
                     query = (
                         TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
                         .where(where)
+                        .force_full_scan(force_full_scan)
                         .limit(limit)
                         .offset(skip)
                     )
@@ -525,11 +641,21 @@ class Dataset:
                 query = (
                     TableQueryBuilder(table, self._db_connection, blob_columns=blob_cols)
                     .where(where)
+                    .force_full_scan(force_full_scan)
                     .limit(limit)
                     .offset(skip)
                 )
             if sortcol is not None and order is not None:
-                query = query.order_by(sortcol, order == "desc")
+                descending = order == "desc"
+                # Append `id` as a stable final tie-break so pagination over a
+                # non-unique sort column is deterministic — rows that are equal
+                # on `sortcol` keep a fixed order across pages. `id` is unique
+                # and BTREE-indexed. Skip when already sorting by `id`, or for
+                # the `#count-join` ordering (which requires a single order key).
+                if sortcol == "id" or sortcol.startswith("#"):
+                    query = query.order_by(sortcol, descending)
+                else:
+                    query = query.order_by([sortcol, "id"], [descending, False])
         else:
             sql_ids = to_sql_list(ids)
             if where is not None:
@@ -616,8 +742,7 @@ class Dataset:
         )
         assert where is not None
 
-        query = table.search(None).select(columns).where(where).limit(batch_size)
-        rows = query.to_list()
+        rows = TableQueryBuilder(table).select(columns).where(where).limit(batch_size).to_list()
         rows.sort(key=lambda row: int(row.get("frame_index", -1)))
 
         result = []
@@ -797,6 +922,62 @@ class Dataset:
             query = query.order_by(order_by=sortcol, descending=order == "desc")
         return [row["id"] for row in query.to_list()]
 
+    def get_neighbors(
+        self,
+        record_id: str,
+        table_name: str = SchemaGroup.RECORD.value,
+        where: str | None = None,
+        sortcol: str | None = None,
+        order: str | None = None,
+    ) -> dict[str, Any]:
+        """Locate a record within a filtered, sorted result set and its neighbors.
+
+        Powers item-to-item navigation in the explorer: given the same filter and
+        sort the table view uses, return the ids immediately before and after
+        ``record_id`` and its 1-based position, so previous/next stay inside the
+        current result set instead of walking the whole dataset.
+
+        The scan projects only the ``id`` column (ordered with an ``id`` tie-break
+        for a stable order) and returns a tiny payload. For a record that is not
+        in the filtered set, ``prev``/``next``/``position`` are ``None``.
+
+        Args:
+            record_id: The record to locate.
+            table_name: Table to navigate (defaults to the record table).
+            where: Where clause matching the explorer's active filter.
+            sortcol: Column to order by (defaults to ``id``).
+            order: Sort order, ``"asc"`` or ``"desc"`` (defaults to ``"asc"``).
+
+        Returns:
+            ``{"prev": str | None, "next": str | None, "position": int | None,
+            "total": int}``.
+        """
+        table = self.open_table(table_name)
+        total = table.count_rows(where) if where else table.count_rows()
+
+        sortcol = sortcol or "id"
+        descending = order == "desc"
+        query = TableQueryBuilder(table, self._db_connection).select(["id"])
+        if where is not None:
+            query = query.where(where)
+        if sortcol == "id":
+            query = query.order_by("id", descending)
+        else:
+            query = query.order_by([sortcol, "id"], [descending, False])
+        ordered_ids = [row["id"] for row in query.to_list()]
+
+        try:
+            index = ordered_ids.index(record_id)
+        except ValueError:
+            return {"prev": None, "next": None, "position": None, "total": total}
+
+        return {
+            "prev": ordered_ids[index - 1] if index > 0 else None,
+            "next": ordered_ids[index + 1] if index < len(ordered_ids) - 1 else None,
+            "position": index + 1,
+            "total": total,
+        }
+
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the view embeddings via the embedding function stored in the table metadata.
 
@@ -871,6 +1052,7 @@ class Dataset:
     _INSERT_ORDER: list[SchemaGroup] = [
         SchemaGroup.RECORD,
         SchemaGroup.VIEW,
+        SchemaGroup.TIMESERIES,
         SchemaGroup.ENTITY,
         SchemaGroup.ENTITY_DYNAMIC_STATE,
         SchemaGroup.ANNOTATION,
@@ -897,6 +1079,7 @@ class Dataset:
         self,
         data: dict[str, LanceModel | list[LanceModel]],
         check_integrity: Literal["raise", "warn", "none"] = "raise",
+        stamp_timestamps: bool = True,
     ) -> None:
         """Insert rows into multiple tables in a single call.
 
@@ -912,6 +1095,11 @@ class Dataset:
             check_integrity: Integrity-check mode.
                 ``"raise"`` (default) aborts on the first error,
                 ``"warn"`` emits warnings, ``"none"`` skips validation.
+            stamp_timestamps: Overwrite ``created_at``/``updated_at`` with
+                now (default). Importers pass ``False`` so explicitly
+                provided timestamps (e.g. a re-imported export) survive;
+                rows without explicit values keep their construction-time
+                defaults, which are equally "now".
         """
         # Normalize values to lists and filter empties
         normalized: dict[str, list[LanceModel]] = {}
@@ -963,12 +1151,236 @@ class Dataset:
         # Insert into LanceDB in dependency order
         for table_name in ordered_tables:
             rows = normalized[table_name]
+            if stamp_timestamps:
+                for row in rows:
+                    if hasattr(row, "created_at"):
+                        row.created_at = datetime.now()
+                    if hasattr(row, "updated_at"):
+                        row.updated_at = row.created_at if hasattr(row, "created_at") else datetime.now()
             table = self.open_table(table_name)
             table.add(rows)
 
         # Invalidate row-count cache if records were touched
         if SchemaGroup.RECORD.value in normalized:
             self._num_rows_cache = None
+
+    def merge_records(
+        self,
+        data: dict[str, LanceModel | list[LanceModel] | pa.RecordBatch | pa.Table],
+        check_integrity: Literal["raise", "warn", "none"] = "raise",
+        known_ids: dict[str, set[str]] | None = None,
+    ) -> dict[str, int]:
+        """Upsert rows into multiple tables in a single call.
+
+        The multi-table counterpart of :meth:`update_data` and the idempotent
+        counterpart of :meth:`add_records`: rows whose ``id`` already exists
+        are updated, new ids are inserted, so re-running the same payload
+        converges instead of duplicating. Tables are processed in FK
+        dependency order (record → view → entity → … → annotation).
+
+        Args:
+            data: Mapping of table name to one or more rows, or to an Arrow
+                ``RecordBatch``/``Table``. Arrow payloads currently require
+                ``check_integrity="none"`` — vectorized Arrow integrity checks
+                land with the import engine (spec §8); missing
+                ``created_at``/``updated_at`` columns are appended to Arrow
+                payloads so the LanceDB schema cast cannot fail on them.
+            check_integrity: Integrity-check mode for row payloads. Uniqueness
+                against already-stored ids is intentionally not enforced
+                (existing ids are updates by design); in-batch duplicates,
+                missing ids, and foreign keys are checked.
+            known_ids: Optional ``table → ids`` mapping (e.g. an import
+                engine's id ledger) used to resolve foreign keys without DB
+                lookups.
+
+        Returns:
+            Mapping of table name to number of rows upserted.
+        """
+        row_payloads: dict[str, list[LanceModel]] = {}
+        arrow_payloads: dict[str, pa.Table] = {}
+        for table_name, value in data.items():
+            if value is None:
+                continue
+            if isinstance(value, pa.RecordBatch):
+                value = pa.Table.from_batches([value])
+            if isinstance(value, pa.Table):
+                if value.num_rows:
+                    arrow_payloads[table_name] = value
+                continue
+            rows = value if isinstance(value, list) else [value]
+            if rows:
+                row_payloads[table_name] = rows
+
+        if not row_payloads and not arrow_payloads:
+            return {}
+
+        ordered_tables = self._table_insert_order([*row_payloads.keys(), *arrow_payloads.keys()])
+
+        # Sort temporal row batches by timestamp for storage co-locality.
+        for table_name, rows in row_payloads.items():
+            schema_type = self.info.tables.get(table_name)
+            if schema_type is not None and "timestamp" in schema_type.model_fields:
+                row_payloads[table_name] = sorted(rows, key=lambda s: (getattr(s, "timestamp", 0),))
+
+        if check_integrity != "none":
+            pending_ids: dict[str, set[str]] = {
+                tname: {row.id for row in rows if row.id} for tname, rows in row_payloads.items()
+            }
+            accumulated: dict[str, set[str]] = {tname: set(ids) for tname, ids in (known_ids or {}).items()}
+            for table_name in ordered_tables:
+                rows_to_check = row_payloads.get(table_name)
+                if rows_to_check is None:
+                    continue
+                # Upsert semantics: ids already known for the target table are
+                # legal (they are updates), so uniqueness applies only inside
+                # the batch; other tables' known ids still resolve FKs.
+                upsert_known = {tname: ids for tname, ids in accumulated.items() if tname != table_name}
+                validate_batch(
+                    table_name,
+                    rows_to_check,
+                    upsert_known,
+                    self,
+                    raise_or_warn=check_integrity,
+                    pending_ids=pending_ids,
+                )
+                accumulated.setdefault(table_name, set()).update(row.id for row in rows_to_check if row.id)
+            for table_name in ordered_tables:
+                arrow_batch = arrow_payloads.get(table_name)
+                if arrow_batch is None:
+                    continue
+                upsert_known = {tname: ids for tname, ids in accumulated.items() if tname != table_name}
+                validate_arrow_batch(
+                    table_name,
+                    arrow_batch,
+                    upsert_known,
+                    self,
+                    raise_or_warn=check_integrity,
+                    pending_ids=pending_ids,
+                )
+                if "id" in arrow_batch.schema.names:
+                    accumulated.setdefault(table_name, set()).update(
+                        value.as_py() for value in arrow_batch.column("id") if value.as_py()
+                    )
+
+        counts: dict[str, int] = {}
+        for table_name in ordered_tables:
+            table = self.open_table(table_name)
+            if table_name in row_payloads:
+                rows = row_payloads[table_name]
+                self._stamp_upsert_timestamps(table, rows)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(rows)
+                counts[table_name] = len(rows)
+            else:
+                arrow_table = self._with_timestamp_columns(table, arrow_payloads[table_name])
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(arrow_table)
+                counts[table_name] = arrow_table.num_rows
+
+        if SchemaGroup.RECORD.value in counts:
+            self._num_rows_cache = None
+        return counts
+
+    def _stamp_upsert_timestamps(self, table: LanceTable, rows: list[LanceModel]) -> None:
+        """Stamp ``updated_at`` and preserve stored ``created_at`` for existing rows."""
+        if not rows or not (hasattr(rows[0], "created_at") or hasattr(rows[0], "updated_at")):
+            return
+
+        stored_created_at: dict[str, datetime | None] = {}
+        if hasattr(rows[0], "created_at"):
+            row_ids = {row.id for row in rows if row.id}
+            if row_ids:
+                stored_created_at = {
+                    stored["id"]: stored["created_at"]
+                    for stored in TableQueryBuilder(table, self._db_connection)
+                    .select(["id", "created_at"])
+                    .where(f"id in {to_sql_list(row_ids)}")
+                    .to_list()
+                }
+
+        for row in rows:
+            now = datetime.now()
+            if hasattr(row, "updated_at"):
+                row.updated_at = now
+            if hasattr(row, "created_at"):
+                existing = stored_created_at.get(row.id)
+                row.created_at = existing if existing is not None else now
+
+    def _with_timestamp_columns(self, table: LanceTable, arrow_table: pa.Table) -> pa.Table:
+        """Append missing ``created_at``/``updated_at`` columns to an Arrow payload."""
+        table_schema = table.schema
+        present = set(arrow_table.schema.names)
+        now = datetime.now()
+        for column in ("created_at", "updated_at"):
+            if column in table_schema.names and column not in present:
+                field = table_schema.field(column)
+                arrow_table = arrow_table.append_column(field, pa.array([now] * arrow_table.num_rows, type=field.type))
+        return arrow_table
+
+    # Standard filter columns the REST/query layers put in where clauses, with
+    # the index type suited to their cardinality. When EVERY predicate column
+    # of a query is index-covered, lancedb applies limit/offset after the
+    # filter — TableQueryBuilder's fast path depends on this census.
+    FILTER_INDEX_COLUMNS: ClassVar[dict[str, str]] = {
+        "id": "BTREE",
+        "record_id": "BTREE",
+        "entity_id": "BTREE",
+        "view_id": "BTREE",
+        "frame_id": "BTREE",
+        "tracklet_id": "BTREE",
+        "frame_index": "BTREE",
+        "logical_name": "BITMAP",
+        "split": "BITMAP",
+        "status": "BITMAP",
+        "source_type": "BITMAP",
+    }
+
+    def create_scalar_indexes(
+        self,
+        columns: Sequence[str] | None = None,
+        tables: Sequence[str] | None = None,
+    ) -> None:
+        """Create scalar indexes on the given columns of the given tables.
+
+        Idempotent: columns that are already indexed or absent from a table's
+        schema are skipped. Indexes make ``merge_insert``, foreign-key lookups,
+        export paging, and filtered pagination scale past full-table scans.
+
+        Args:
+            columns: Column names to index where present. Defaults to the
+                standard filter columns (``FILTER_INDEX_COLUMNS``).
+            tables: Table names to index. Defaults to every dataset table.
+        """
+        wanted = list(columns) if columns is not None else list(self.FILTER_INDEX_COLUMNS)
+        table_names = list(tables) if tables is not None else list(self.info.tables.keys())
+        for table_name in table_names:
+            table = self.open_table(table_name)
+            indexed_columns: set[str] = set()
+            for index in table.list_indices():
+                indexed_columns.update(getattr(index, "columns", None) or [])
+            schema_names = set(table.schema.names)
+            for column in wanted:
+                if column in schema_names and column not in indexed_columns:
+                    table.create_scalar_index(column, index_type=self.FILTER_INDEX_COLUMNS.get(column, "BTREE"))
+
+    # ------------------------------------------------------------------
+    # Cross-process cache invalidation
+    # ------------------------------------------------------------------
+
+    _cache_invalidation_hooks: ClassVar[list[Callable[[str], None]]] = []
+
+    @classmethod
+    def register_cache_invalidation_hook(cls, hook: Callable[[str], None]) -> None:
+        """Register a callable invoked with a dataset id when its caches must be dropped."""
+        if hook not in cls._cache_invalidation_hooks:
+            cls._cache_invalidation_hooks.append(hook)
+
+    @classmethod
+    def invalidate_caches(cls, dataset_id: str) -> None:
+        """Notify registered caches that a dataset changed on disk (e.g. after an import)."""
+        for hook in cls._cache_invalidation_hooks:
+            try:
+                hook(dataset_id)
+            except Exception as exc:
+                logger.warning("Cache invalidation hook %r failed for dataset %s: %s", hook, dataset_id, exc)
 
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.
@@ -1158,6 +1570,225 @@ class Dataset:
             if info.id == id:
                 return Dataset(json_fp.parent)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
+
+    # ------------------------------------------------------------------
+    # Record-level embeddings & semantic search
+    # ------------------------------------------------------------------
+
+    def _load_record_embedding_space(self) -> None:
+        """Load the record-embedding sidecar and inject its schema into ``info.tables``.
+
+        A corrupt sidecar (unreadable JSON, missing or non-positive ``dim``) degrades to
+        "no embeddings" instead of raising — a broken embeddings file must never make the
+        whole dataset unloadable.
+        """
+        if not self._embeddings_file.is_file():
+            self._record_embedding_space = None
+            return
+        try:
+            space = json.loads(self._embeddings_file.read_text(encoding="utf-8"))
+            dim = int(space["dim"])
+            schema = build_record_embedding_schema(dim)
+        except (json.JSONDecodeError, KeyError, ValueError, TypeError, OSError) as exc:
+            logger.warning("Dataset %s: ignoring unreadable %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
+            self._record_embedding_space = None
+            return
+        self._record_embedding_space = space
+        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
+
+    def has_record_embeddings(self) -> bool:
+        """Whether this dataset has a computed record-embedding table."""
+        return self._record_embedding_space is not None
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Return the record-embedding space descriptor (model, dim, metric), or None."""
+        return dict(self._record_embedding_space) if self._record_embedding_space is not None else None
+
+    def record_embedding_health(self) -> dict[str, Any]:
+        """Cheap health check of the record-embedding storage.
+
+        The sidecar alone advertises semantic search; the physical LanceDB table is only
+        touched at query time, so a crashed job or external deletion can leave the feature
+        advertised but broken. This inspects metadata only (no vector scan).
+
+        Returns:
+            ``{"status", "model_id", "dim", "rows", "records", "detail"}`` where status is one
+            of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
+            ``corrupt``, ``partial`` (fewer vectors than records) or ``ready``.
+        """
+        space = self._record_embedding_space
+        base: dict[str, Any] = {
+            "status": "absent",
+            "model_id": None,
+            "dim": None,
+            "rows": 0,
+            "records": self.num_rows,
+            "detail": None,
+        }
+        if space is None:
+            return base
+        base["model_id"] = space.get("model_id")
+        base["dim"] = space.get("dim")
+
+        try:
+            if self._RECORD_EMBEDDING_TABLE not in set(self._db_connection.table_names()):
+                return {**base, "status": "missing_table", "detail": "The embeddings table is missing."}
+            table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        except Exception as exc:  # noqa: BLE001 - corrupt storage must degrade, not raise
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be opened: {exc}"}
+
+        try:
+            rows = table.count_rows()
+            vector_field = table.schema.field("vector")
+            stored_dim = getattr(vector_field.type, "list_size", None)
+        except Exception as exc:  # noqa: BLE001
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be read: {exc}"}
+
+        base["rows"] = rows
+        if rows == 0:
+            return {**base, "status": "empty", "detail": "The embeddings table has no vectors."}
+        if stored_dim is not None and int(space.get("dim", 0)) != int(stored_dim):
+            return {
+                **base,
+                "status": "dim_mismatch",
+                "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
+            }
+        if rows < base["records"]:
+            return {
+                **base,
+                "status": "partial",
+                "detail": f"{rows} of {base['records']} records embedded.",
+            }
+        return {**base, "status": "ready"}
+
+    def drop_record_embeddings(self) -> None:
+        """Delete the record-embedding table and its sidecar descriptor.
+
+        Safe on missing/corrupt tables; used by force-recompute to escape states where the
+        sidecar advertises embeddings whose table is broken.
+        """
+        try:
+            self._db_connection.drop_table(self._RECORD_EMBEDDING_TABLE, ignore_missing=True)
+        except Exception as exc:  # noqa: BLE001 - dropping a corrupt table must not block repair
+            logger.warning("Dataset %s: dropping the embeddings table failed: %s", self.path, exc)
+        self._table_handles.pop(self._RECORD_EMBEDDING_TABLE, None)
+        self.info.tables.pop(self._RECORD_EMBEDDING_TABLE, None)
+        self._embeddings_file.unlink(missing_ok=True)
+        self._record_embedding_space = None
+
+    def create_record_embedding_table(
+        self,
+        dim: int,
+        model_id: str,
+        metric: str = "cosine",
+        source_view: str = "image",
+        index_type: str = "IVF_PQ",
+    ) -> None:
+        """Create (or replace) the record-embedding table and persist its sidecar descriptor.
+
+        Args:
+            dim: Embedding dimensionality.
+            model_id: Identifier of the model that produced the vectors.
+            metric: Distance metric (``cosine``/``l2``/``dot``).
+            source_view: Logical view the embeddings were computed from.
+            index_type: LanceDB vector index type to build once populated.
+        """
+        schema = build_record_embedding_schema(dim)
+        self.create_table(self._RECORD_EMBEDDING_TABLE, schema, mode="overwrite")
+        self._record_embedding_space = {
+            "table": self._RECORD_EMBEDDING_TABLE,
+            "model_id": model_id,
+            "dim": int(dim),
+            "metric": metric,
+            "source_view": source_view,
+            "index_type": index_type,
+        }
+        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
+        self._embeddings_file.write_text(json.dumps(self._record_embedding_space, indent=4), encoding="utf-8")
+
+    def add_record_embeddings(self, rows: list[dict[str, Any]]) -> None:
+        """Append rows to the record-embedding table (plain float vectors, no model).
+
+        Args:
+            rows: Dicts with at least ``record_id`` and ``vector``; ``id``/``view_id`` optional.
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError("No record-embedding table; call create_record_embedding_table first.")
+        schema = self.info.tables[self._RECORD_EMBEDDING_TABLE]
+        instances = [
+            schema(
+                id=row.get("id") or shortuuid.uuid(),
+                record_id=row["record_id"],
+                view_id=row.get("view_id", ""),
+                frame_id=row.get("frame_id", ""),
+                vector=row["vector"],
+            )
+            for row in rows
+        ]
+        self.add_data(self._RECORD_EMBEDDING_TABLE, instances, raise_or_warn="none")
+
+    def build_record_embedding_index(self) -> None:
+        """Build the vector + record_id indexes on the record-embedding table.
+
+        The vector (ANN) index needs enough rows to train; when there are too few, it is skipped
+        and search falls back to an exact brute-force scan (still correct).
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError("No record-embedding table to index.")
+        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        try:
+            table.create_scalar_index("record_id", index_type="BTREE")
+        except Exception:  # pragma: no cover - already indexed / lancedb quirk
+            logger.debug("record_id scalar index already present or unavailable", exc_info=True)
+        index_type = self._record_embedding_space.get("index_type", "IVF_PQ")
+        metric = self._record_embedding_space.get("metric", "cosine")
+        try:
+            table.create_index(metric=metric, index_type=index_type, vector_column_name="vector")
+        except Exception as exc:
+            # Typically "not enough rows to train IVF"; brute-force search remains exact.
+            logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
+
+    def search_records(
+        self,
+        query_vector: Sequence[float],
+        k: int,
+        record_id_filter: list[str] | None = None,
+    ) -> tuple[list[LanceModel], list[float]]:
+        """Rank records by similarity of their embedding to ``query_vector``.
+
+        Args:
+            query_vector: The query embedding (same space/dim as the stored vectors).
+            k: Maximum number of records to return.
+            record_id_filter: Optional record-id allowlist applied as a vector-search prefilter.
+
+        Returns:
+            A tuple of ``(records, distances)`` ordered by increasing distance.
+        """
+        if self._record_embedding_space is None:
+            raise DatasetAccessError(f"Dataset {self.id} has no record embeddings.")
+        if not isinstance(k, int) or k < 1:
+            raise DatasetAccessError("k must be a strictly positive integer.")
+        if record_id_filter is not None and len(record_id_filter) == 0:
+            return [], []
+
+        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        metric = self._record_embedding_space.get("metric", "cosine")
+        query = table.search(list(query_vector)).metric(metric).select(["record_id"])
+        if record_id_filter is not None:
+            query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
+        # One vector per record, but group defensively so duplicates collapse to their best match.
+        results: pl.DataFrame = query.limit(max(k, 1)).to_polars()
+        if results.is_empty():
+            return [], []
+        ranked = results.group_by("record_id").agg(pl.min("_distance")).sort("_distance")
+        record_ids = ranked["record_id"].to_list()[:k]
+
+        records = self.get_data(SchemaGroup.RECORD.value, ids=record_ids)
+        records = sorted(records, key=lambda record: record_ids.index(record.id))
+        distances = [
+            ranked.row(by_predicate=(pl.col("record_id") == record.id), named=True)["_distance"] for record in records
+        ]
+        return records, distances
 
     def semantic_search(
         self, query: str, table_name: str, limit: int, skip: int = 0

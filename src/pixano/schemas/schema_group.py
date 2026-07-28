@@ -26,6 +26,7 @@ from .annotations import (
 from .embeddings import Embedding, ViewEmbedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
+from .timeseries import TimeSeries
 from .views import (
     PDF,
     CalibratedImage,
@@ -48,6 +49,7 @@ class SchemaGroup(Enum):
     RECORD = "records"
     ENTITY = "entities"
     ENTITY_DYNAMIC_STATE = "entity_dynamic_states"
+    TIMESERIES = "timeseries"
     VIEW = "views"
 
     @classmethod
@@ -64,6 +66,7 @@ _SCHEMA_GROUP_TO_SCHEMA_DICT = {
     SchemaGroup.RECORD: Record,
     SchemaGroup.ENTITY: Entity,
     SchemaGroup.ENTITY_DYNAMIC_STATE: EntityDynamicState,
+    SchemaGroup.TIMESERIES: TimeSeries,
     SchemaGroup.ANNOTATION: EntityAnnotation,
     SchemaGroup.VIEW: View,
 }
@@ -82,6 +85,7 @@ CANONICAL_SCHEMA_TYPES = (
     Video,
     Entity,
     EntityDynamicState,
+    TimeSeries,
     EntityAnnotation,
     EntityGroupAnnotation,
     BBox,
@@ -117,6 +121,8 @@ def schema_to_group(schema_type: LanceModel | type) -> SchemaGroup:
         return SchemaGroup.RECORD
     if isinstance(schema_type, EntityDynamicState) or is_class and issubclass(schema_type, EntityDynamicState):
         return SchemaGroup.ENTITY_DYNAMIC_STATE
+    if isinstance(schema_type, TimeSeries) or is_class and issubclass(schema_type, TimeSeries):
+        return SchemaGroup.TIMESERIES
     if isinstance(schema_type, Entity) or is_class and issubclass(schema_type, Entity):
         return SchemaGroup.ENTITY
     # Check EntityAnnotation and EntityGroupAnnotation (both are annotation groups)
@@ -139,6 +145,8 @@ def group_to_str(group: SchemaGroup, plural: bool = False) -> str:
         return "entities" if plural else "entity"
     if group == SchemaGroup.ENTITY_DYNAMIC_STATE:
         return "entity_dynamic_states" if plural else "entity_dynamic_state"
+    if group == SchemaGroup.TIMESERIES:
+        return "timeseries"
     if group == SchemaGroup.VIEW:
         return "views" if plural else "view"
     if group == SchemaGroup.ANNOTATION:

@@ -9,54 +9,55 @@ License: CECILL-C
   import type { PageProps } from "./$types";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { WarningModal } from "$lib/ui";
-  import { getExplorerRoute, getRouteSearchParams, getWorkspaceRoute } from "$lib/utils/routes";
+  import {
+    getExplorerRoute,
+    getRouteSearchParams,
+    getWorkspaceRoute,
+    pickExplorerQuery,
+  } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
 
-  let showNoRowModal = $state(false);
-
-  $effect(() => {
-    const bd = data.browserData;
-    if (!bd?.id) {
-      showNoRowModal = true;
-      return;
-    }
-    showNoRowModal = false;
-  });
-
-  function updateSearchParams(updates: Record<string, string | undefined>) {
+  function updateSearchParams(updates: Record<string, string | string[] | undefined>) {
     const params = getRouteSearchParams(page.url);
     for (const [key, value] of Object.entries(updates)) {
-      if (value === undefined || value === "") params.delete(key);
-      else params.set(key, value);
+      params.delete(key);
+      if (value === undefined || value === "") continue;
+      if (Array.isArray(value)) {
+        for (const item of value) if (item !== "") params.append(key, item);
+      } else {
+        params.set(key, value);
+      }
     }
     return params.toString();
   }
 
-  function navigateTable(updates: Record<string, string | undefined>) {
+  function navigateTable(updates: Record<string, string | string[] | undefined>) {
     const qs = updateSearchParams(updates);
     void goto(getExplorerRoute(data.dataset.id, qs), { replaceState: false, noScroll: true });
   }
 
   const handleSelectItem = async (itemId: string) => {
-    await goto(getWorkspaceRoute(data.dataset.id, itemId));
+    // Carry the active filter/sort into the workspace so item-to-item navigation
+    // stays within the current result set. In ranked (semantic) mode `q` is a
+    // similarity query the lexical neighbors endpoint cannot honor — drop it.
+    const params = pickExplorerQuery(getRouteSearchParams(page.url));
+    if (data.semantic?.active) params.delete("q");
+    await goto(getWorkspaceRoute(data.dataset.id, itemId, params.toString()));
   };
 </script>
 
 {#if data.browserData?.table_data}
   <DatasetExplorer
     selectedDataset={data.browserData}
+    filterSchema={data.filterSchema}
+    splitCounts={data.splitCounts ?? []}
+    semanticActive={data.semantic?.active ?? false}
+    similarTo={data.semantic?.similarTo ?? ""}
+    searchError={data.searchError ?? ""}
+    view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
     onNavigate={navigateTable}
     pagination={data.pagination}
-  />
-{/if}
-{#if showNoRowModal}
-  <WarningModal
-    message="No rows found. Keeping previous state."
-    onConfirm={() => {
-      showNoRowModal = false;
-    }}
   />
 {/if}

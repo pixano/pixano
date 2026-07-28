@@ -49,7 +49,14 @@ from .annotations import (
     is_text_span,
     is_tracklet,
 )
-from .embeddings import Embedding, ViewEmbedding, create_view_embedding_function, is_embedding, is_view_embedding
+from .embeddings import (
+    Embedding,
+    ViewEmbedding,
+    build_record_embedding_schema,
+    create_view_embedding_function,
+    is_embedding,
+    is_view_embedding,
+)
 from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
@@ -66,6 +73,7 @@ from .table_names import (
     supported_dataset_info_slots,
     validate_canonical_table_map,
 )
+from .timeseries import TimeSeries, create_timeseries_schema
 from .views import (
     PDF,
     CalibratedImage,
@@ -108,6 +116,7 @@ __all__ = [
     "Conversation",
     "EntityDynamicState",
     "Embedding",
+    "build_record_embedding_schema",
     "Entity",
     "Image",
     "Record",
@@ -118,6 +127,7 @@ __all__ = [
     "MultiPath",
     "QuestionType",
     "TextSpan",
+    "TimeSeries",
     "PDF",
     "PointCloud",
     "PointCloudFrame",
@@ -143,6 +153,7 @@ __all__ = [
     "create_point_cloud_frame",
     "create_relation",
     "create_text",
+    "create_timeseries_schema",
     "create_video",
     "create_view_embedding_function",
     "canonical_table_name_for_schema",

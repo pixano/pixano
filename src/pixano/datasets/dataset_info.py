@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import json
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, overload
 
@@ -27,6 +29,7 @@ from pixano.features.utils.image import get_image_thumbnail, image_to_base64
 from pixano.schemas import (
     BBox,
     BBox3D,
+    Classification,
     CompressedRLE,
     Entity,
     EntityDynamicState,
@@ -35,7 +38,9 @@ from pixano.schemas import (
     MultiPath,
     Record,
     RecordComponent,
+    Relation,
     TextSpan,
+    TimeSeries,
     Tracklet,
     View,
     canonical_table_name_for_schema,
@@ -47,6 +52,11 @@ from pixano.schemas import (
 from pixano.schemas.schema_group import SchemaGroup, schema_to_group
 
 
+BOOKMARK_TYPES: tuple[str, ...] = ("TODO", "NEW", "FAVORITE")
+
+logger = logging.getLogger(__name__)
+
+
 _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "record": Record,
     "entity": Entity,
@@ -56,8 +66,11 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "mask": CompressedRLE,
     "multi_path": MultiPath,
     "keypoint": KeyPoints,
+    "classification": Classification,
+    "relation": Relation,
     "tracklet": Tracklet,
     "message": Message,
+    "timeseries": TimeSeries,
     "text_span": TextSpan,
 }
 
@@ -75,8 +88,12 @@ class DatasetInfo(BaseModel):
         description: Dataset description.
         size: Dataset estimated size.
         preview: Path to a preview thumbnail.
+        creation_date: ISO creation date string. Auto-populated if empty.
+        bookmarks: List of bookmark labels (e.g. TODO, NEW, FAVORITE).
         workspace: Workspace type.
         storage_mode: How media data is stored.
+        spec_version: Version of the on-disk dataset layout this dataset conforms to
+            (datasets written before the field existed load as version 1).
         record: Main record schema.
         entity: Entity schema.
         entity_dynamic_state: Entity dynamic state schema.
@@ -84,6 +101,8 @@ class DatasetInfo(BaseModel):
         bbox3d: 3D bounding box schema.
         mask: Mask schema.
         keypoint: Keypoint schema.
+        classification: Classification schema.
+        relation: Relation schema.
         tracklet: Tracklet schema.
         message: Message schema.
         text_span: Text span schema.
@@ -95,8 +114,11 @@ class DatasetInfo(BaseModel):
     description: str = ""
     size: str = "Unknown"
     preview: str = ""
+    creation_date: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    bookmarks: list[str] = Field(default_factory=list)
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
     storage_mode: Literal["filesystem", "embedded", "mixed"] = "filesystem"
+    spec_version: int = 2
     record: type[Record] | None = None
     entity: type[Entity] | None = None
     entity_dynamic_state: type[EntityDynamicState] | None = None
@@ -105,8 +127,11 @@ class DatasetInfo(BaseModel):
     mask: type[CompressedRLE] | None = None
     multi_path: type[MultiPath] | None = None
     keypoint: type[KeyPoints] | None = None
+    classification: type[Classification] | None = None
+    relation: type[Relation] | None = None
     tracklet: type[Tracklet] | None = None
     message: type[Message] | None = None
+    timeseries: type[TimeSeries] | None = None
     text_span: type[TextSpan] | None = None
     views: dict[str, type[View]] = Field(default_factory=dict)
     tables: dict[str, type[LanceModel]] = Field(default_factory=dict, exclude=True)
@@ -263,16 +288,27 @@ class DatasetInfo(BaseModel):
         info_json["workspace"] = (
             WorkspaceType(info_json["workspace"]) if "workspace" in info_json else WorkspaceType.UNDEFINED
         )
+        # Datasets written before spec_version existed are layout version 1.
+        info_json.setdefault("spec_version", 1)
+        # Datasets written before creation_date existed load a STABLE empty value —
+        # never a fabricated load-time date (the fix-creation-dates CLI backfills it).
+        info_json.setdefault("creation_date", "")
 
         for slot_name in supported_dataset_info_slots():
             schema_payload = info_json.get(slot_name)
             if schema_payload is not None:
                 info_json[slot_name] = _deserialize_table_schema(schema_payload)
         views_json = info_json.get("views", {})
-        info_json["views"] = {
-            logical_name: _deserialize_table_schema(schema_payload)
-            for logical_name, schema_payload in views_json.items()
-        }
+        deserialized_views: dict[str, type[LanceModel]] = {}
+        for logical_name, schema_payload in views_json.items():
+            try:
+                deserialized_views[logical_name] = _deserialize_table_schema(schema_payload)
+            except Exception as e:
+                # Drop views whose schema cannot be deserialized (e.g. it references a base schema
+                # not registered in this build) so the rest of the dataset stays usable instead of
+                # making every endpoint that loads this dataset fail.
+                logger.warning("Dropping view '%s' from %s with unsupported schema: %s", logical_name, json_fp, e)
+        info_json["views"] = deserialized_views
 
         info = DatasetInfo.model_validate(info_json)
         return info
@@ -309,9 +345,18 @@ class DatasetInfo(BaseModel):
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
-        # Browse directory
+        # Browse directory (dot-directories such as engine staging/trash are not datasets)
         for json_fp in sorted(directory.glob("*/info.json")):
-            info: DatasetInfo = DatasetInfo.from_json(json_fp)
+            if json_fp.parent.name.startswith("."):
+                continue
+            try:
+                info: DatasetInfo = DatasetInfo.from_json(json_fp)
+            except Exception as e:
+                # Skip datasets whose stored schema cannot be deserialized (e.g. it references a
+                # base schema not registered in this build) so one bad dataset does not break the
+                # whole library listing.
+                logger.warning("Failed to load dataset info from %s, skipping: %s", json_fp, e)
+                continue
             try:
                 preview_path = json_fp.parent.resolve() / "previews/dataset_preview.jpg"
                 if not preview_path.exists():
@@ -365,6 +410,8 @@ class DatasetInfo(BaseModel):
             The DatasetInfo.
         """
         for json_fp in directory.glob("*/info.json"):
+            if json_fp.parent.name.startswith("."):
+                continue
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 try:

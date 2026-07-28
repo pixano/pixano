@@ -5,16 +5,32 @@ License: CECILL-C
 -------------------------------------*/
 
 import { toDatasetBrowser } from "./adapters";
-import { buildQueryString, requestJson } from "./apiClient";
+import { buildQueryString, JSON_HEADERS, requestJson } from "./apiClient";
 import type { PaginatedResponse, RecordResponse } from "./restTypes";
 import type { DatasetBrowser } from "$lib/types/dataset";
 
-interface ListRecordsOptions {
+/** Record annotation-workflow states, in progression order. */
+export const RECORD_STATUSES = ["new", "inProgress", "inReview", "validated"] as const;
+export type RecordStatus = (typeof RECORD_STATUSES)[number];
+
+export const RECORD_STATUS_LABELS: Record<RecordStatus, string> = {
+  new: "New",
+  inProgress: "In progress",
+  inReview: "In review",
+  validated: "Validated",
+};
+
+export interface ListRecordsOptions {
   limit?: number;
   offset?: number;
+  /** Serialized `col:op:value` filter tokens (repeated `filter=` params). */
+  filters?: string[];
+  /** Free-text search over searchable string columns. */
+  q?: string;
+  /** Deprecated raw SQL where clause. */
   where?: string;
-  sort?: { col: string; order: string };
-  workspaceType?: string;
+  sort?: string;
+  order?: string;
 }
 
 export async function listRecords(
@@ -24,7 +40,11 @@ export async function listRecords(
   const query = buildQueryString({
     limit: options.limit ?? 100,
     offset: options.offset ?? 0,
+    filter: options.filters,
+    q: options.q,
     where: options.where,
+    sort: options.sort,
+    order: options.order,
     include: "view_previews",
   });
   const records = await requestJson<PaginatedResponse<RecordResponse>>(
@@ -32,7 +52,7 @@ export async function listRecords(
     {},
     "listRecords",
   );
-  return toDatasetBrowser(datasetId, records, options.sort);
+  return toDatasetBrowser(datasetId, records);
 }
 
 export async function getRecord(datasetId: string, recordId: string): Promise<RecordResponse> {
@@ -43,25 +63,15 @@ export async function getRecord(datasetId: string, recordId: string): Promise<Re
   );
 }
 
-export async function listAllRecordIds(datasetId: string): Promise<string[]> {
-  const ids: string[] = [];
-  let offset = 0;
-  const limit = 1000;
-
-  while (true) {
-    const query = buildQueryString({ limit, offset });
-    const page = await requestJson<PaginatedResponse<RecordResponse>>(
-      `/datasets/${datasetId}/records${query}`,
-      {},
-      "listAllRecordIds",
-    );
-
-    ids.push(...page.items.map((record) => record.id));
-
-    if (ids.length >= page.total || page.items.length === 0) {
-      return ids;
-    }
-
-    offset += page.limit;
-  }
+/** Update a record's annotation-workflow status. */
+export async function updateRecordStatus(
+  datasetId: string,
+  recordId: string,
+  status: RecordStatus,
+): Promise<RecordResponse> {
+  return await requestJson<RecordResponse>(
+    `/datasets/${datasetId}/records/${recordId}`,
+    { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify({ status }) },
+    "updateRecordStatus",
+  );
 }

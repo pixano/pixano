@@ -9,7 +9,9 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import pixanoFavicon from "../assets/favicon.ico";
+  import InferenceStatusChip from "../components/inference/InferenceStatusChip.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
+  import ImportJobsTray from "../components/library/import-wizard/ImportJobsTray.svelte";
   import type { LayoutProps } from "./$types";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -91,12 +93,12 @@ License: CECILL-C
       <div class="flex-1 h-full">
         {#if page.route.id !== HOME_ROUTE_ID}
           <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
-            <DatasetHeader pageId={page.route.id} />
+            <DatasetHeader />
           </div>
         {/if}
       </div>
 
-      <div class="flex items-center gap-1 shrink-0">
+      <div class="flex items-center gap-2 shrink-0">
         <button
           type="button"
           onclick={() => {
@@ -108,6 +110,8 @@ License: CECILL-C
         >
           <ArrowsLeftRight size={20} />
         </button>
+
+        <InferenceStatusChip />
         <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
       </div>
     </header>
@@ -118,4 +122,6 @@ License: CECILL-C
       </div>
     </main>
   </div>
+
+  <ImportJobsTray />
 </Tooltip.Provider>

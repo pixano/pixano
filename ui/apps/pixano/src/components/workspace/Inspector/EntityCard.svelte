@@ -31,6 +31,7 @@ License: CECILL-C
     setEntityDisplayControl as setDisplayCtrl,
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
+  import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -97,16 +98,6 @@ License: CECILL-C
     "end_timestamp",
   ]);
 
-  // ─── Annotation type display metadata ───────────────────────────────────────
-  const TYPE_META: Record<string, { label: string; color: string }> = {
-    [BaseSchema.BBox]: { label: "BBox", color: "bg-blue-500/15 text-blue-400" },
-    [BaseSchema.Mask]: { label: "Mask", color: "bg-purple-500/15 text-purple-400" },
-    [BaseSchema.MultiPath]: { label: "MultiPath", color: "bg-orange-500/15 text-orange-400" },
-    [BaseSchema.Keypoints]: { label: "Keypoints", color: "bg-teal-500/15 text-teal-400" },
-    [BaseSchema.TextSpan]: { label: "Text", color: "bg-amber-500/15 text-amber-400" },
-    [BaseSchema.Tracklet]: { label: "Track", color: "bg-cyan-500/15 text-cyan-400" },
-  };
-
   interface Props {
     entity: Entity;
   }
@@ -170,17 +161,20 @@ License: CECILL-C
   };
 
   const totalAllowableChildCount = $derived.by(() => {
+    void entities.value;
     return entity.ui.childs?.filter((ann) => isAllowableChild(ann)).length ?? 0;
   });
 
   const allowedChilds = $derived.by(() => {
     if (!isExpanded) return [];
     if (currentFrameIndex.value === undefined) return [];
+    void entities.value;
     return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
   });
 
   // ─── Annotation type summary for header pills ──────────────────────────────
   const annotationTypeSummary = $derived.by(() => {
+    void entities.value;
     const counts: Record<string, number> = {};
     for (const ann of entity.ui.childs ?? []) {
       if (!isAllowableChild(ann)) continue;
@@ -479,12 +473,12 @@ License: CECILL-C
             <div class="flex flex-wrap gap-1">
               {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
                 {@const typedSchema = schema as BaseSchema}
-                {@const meta = TYPE_META[schema]}
+                {@const meta = ANNOTATION_TYPE_META[schema]}
                 {#if meta}
                   <span
                     class={cn(
                       "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
-                      meta.color,
+                      meta.badgeClass,
                     )}
                   >
                     {#if typedSchema === BaseSchema.BBox}

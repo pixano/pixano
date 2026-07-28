@@ -24,6 +24,8 @@ import {
   type DatasetSchema,
   type DS_Schema,
   type RawSchemaData,
+  type RecordCard,
+  type RecordPreview,
   type TableColumn,
   type TableRow,
 } from "$lib/types/dataset";
@@ -90,6 +92,8 @@ export function toDatasetInfo(dto: DatasetInfoResponse): DatasetInfo {
     description: dto.description,
     size: dto.size,
     preview: dto.preview,
+    creation_date: dto.creation_date,
+    bookmarks: dto.bookmarks,
     workspace: mapWorkspace(dto.workspace),
     num_items: dto.num_records,
   };
@@ -167,40 +171,80 @@ function inferColumnType(value: unknown): string {
   return "str";
 }
 
+/** Record fields that are system-owned and excluded from a card's attribute line. */
+const CARD_SYSTEM_FIELDS = new Set([
+  "id",
+  "split",
+  "status",
+  "created_at",
+  "updated_at",
+  "_distance",
+]);
+
 export function toDatasetBrowser(
   datasetId: string,
   records: PaginatedResponse<RecordResponse>,
-  sort?: { col: string; order: string },
 ): DatasetBrowser {
-  const items = [...records.items];
-  if (sort?.col) {
-    items.sort((left, right) => {
-      const leftValue = left[sort.col];
-      const rightValue = right[sort.col];
-      const leftStr = leftValue == null ? "" : String(leftValue as string | number);
-      const rightStr = rightValue == null ? "" : String(rightValue as string | number);
-      const cmp = leftStr.localeCompare(rightStr);
-      return sort.order === "desc" ? -cmp : cmp;
-    });
-  }
+  // Rows arrive already sorted by the backend (server-side ORDER BY with a
+  // stable id tie-break) — no client-side reordering, which was only ever
+  // correct within a single page.
+  const items = records.items;
 
   const columnsMap = new Map<string, string>();
   const viewColumns = new Map<string, string>();
+  const cards: RecordCard[] = [];
   const rows: TableRow[] = items.map((record) => {
     const row: TableRow = {};
+    const attrs: RecordCard["attrs"] = {};
     for (const [key, value] of Object.entries(record)) {
-      if (typeof value === "object" && value !== null) continue;
+      if (Array.isArray(value)) {
+        // List attributes (e.g. LeRobot `tasks`) render as a joined string —
+        // the table can only show primitives, and an instruction reads best
+        // as text. The raw array stays available in the single-item view.
+        const joined = value.map((item) => (item == null ? "" : String(item))).join("; ");
+        row[key] = joined;
+        if (!CARD_SYSTEM_FIELDS.has(key)) attrs[key] = joined;
+        if (!columnsMap.has(key)) columnsMap.set(key, "list");
+        continue;
+      }
+      if (typeof value === "object" && value !== null) continue; // nested objects aren't renderable
       row[key] = (value ?? "") as string | number | boolean;
+      if (!CARD_SYSTEM_FIELDS.has(key) && key !== "view_previews") {
+        attrs[key] = (value ?? "") as string | number | boolean;
+      }
       if (!columnsMap.has(key)) {
         columnsMap.set(key, inferColumnType(value));
       }
     }
 
+    const previews: RecordPreview[] = [];
     const viewPreviews = record.view_previews;
     for (const [logicalName, preview] of Object.entries(viewPreviews ?? {})) {
-      row[logicalName] = preview.preview_url;
-      viewColumns.set(logicalName, preview.kind);
+      if (preview.kind === "text") {
+        // Text views carry an excerpt, not a thumbnail: the table shows the text.
+        row[logicalName] = preview.excerpt ?? "";
+        viewColumns.set(logicalName, "str");
+      } else {
+        row[logicalName] = preview.preview_url;
+        viewColumns.set(logicalName, preview.kind);
+      }
+      previews.push({
+        name: logicalName,
+        kind: preview.kind === "text" ? "text" : "image",
+        resource: preview.resource,
+        url: preview.preview_url,
+        excerpt: preview.excerpt ?? undefined,
+      });
     }
+
+    cards.push({
+      id: String(record.id ?? ""),
+      split: typeof record.split === "string" ? record.split : undefined,
+      status: typeof record.status === "string" ? record.status : undefined,
+      distance: typeof record._distance === "number" ? record._distance : undefined,
+      previews,
+      attrs,
+    });
 
     return row;
   });
@@ -220,12 +264,12 @@ export function toDatasetBrowser(
       columns,
       rows,
     },
+    card_data: cards,
     pagination: {
       current_page: Math.floor(records.offset / Math.max(records.limit, 1)) + 1,
       page_size: records.limit,
       total_size: records.total,
     },
-    semantic_search: [],
   };
 }
 

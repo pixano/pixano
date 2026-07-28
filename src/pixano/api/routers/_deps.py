@@ -18,6 +18,21 @@ from pixano.datasets import Dataset
 _dataset_cache: dict[str, Dataset] = {}
 
 
+def invalidate_dataset(dataset_id: str) -> None:
+    """Drop cached `Dataset` instances for the given dataset id.
+
+    Registered as a `Dataset` cache-invalidation hook so that rebuilding or
+    overwriting a dataset on disk (e.g. an import job) is picked up by the API
+    without a server restart.
+    """
+    prefix = f"{dataset_id}:"
+    for cache_key in [key for key in _dataset_cache if key.startswith(prefix)]:
+        _dataset_cache.pop(cache_key, None)
+
+
+Dataset.register_cache_invalidation_hook(invalidate_dataset)
+
+
 def get_dataset_dep(
     dataset_id: str,
     settings: Settings = Depends(get_settings),
@@ -92,3 +107,34 @@ class FilterParams:
         self.tracklet_id = tracklet_id
         self.frame_index = frame_index
         self.where = where
+
+
+class RecordQueryParams:
+    """Explorer query parameters for the record listing.
+
+    Attributes:
+        filter: Repeated ``col:op:value`` clauses, AND-composed and compiled
+            server-side against the dataset's filter catalogue.
+        q: Free-text search over searchable string columns.
+        sort: Column to sort by (defaults to ``id`` in the compiler).
+        order: Sort order, ``asc`` or ``desc``.
+        where: Deprecated raw SQL where clause (kept for back-compat; a malformed
+            value returns 400, not 500).
+        include: Comma-separated explorer expansions (e.g. ``view_previews``).
+    """
+
+    def __init__(
+        self,
+        filter: Annotated[list[str] | None, Query()] = None,
+        q: str | None = None,
+        sort: str | None = None,
+        order: str | None = None,
+        where: str | None = None,
+        include: str | None = None,
+    ):
+        self.filter = filter or []
+        self.q = q
+        self.sort = sort
+        self.order = order
+        self.where = where
+        self.include = include

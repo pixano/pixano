@@ -161,7 +161,7 @@ License: CECILL-C
     ontransformend={handleTransformEnd}
   />
   {#if editing}
-    <Transformer bind:this={trComponent} rotateEnabled={false} />
+    <Transformer bind:this={trComponent} rotateEnabled={false} keepRatio={false} />
   {/if}
   <LabelTag
     id={bbox.id}

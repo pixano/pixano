@@ -6,8 +6,6 @@
 
 from enum import Enum
 
-from .dataset_items import default_image_tables, default_point_cloud_tables, default_video_tables, default_vqa_tables
-
 
 class WorkspaceType(Enum):
     """Workspace type.
@@ -33,8 +31,4 @@ class WorkspaceType(Enum):
 
 __all__ = [
     "WorkspaceType",
-    "default_image_tables",
-    "default_point_cloud_tables",
-    "default_video_tables",
-    "default_vqa_tables",
 ]
