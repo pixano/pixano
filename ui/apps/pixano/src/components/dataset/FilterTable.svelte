@@ -51,6 +51,7 @@ License: CECILL-C
   // cosmetic: use a ghost span to measure width and adjust select width accordingly
   function updateWidth() {
     if (!ghostEl || !selectEl) return;
+    // eslint-disable-next-line svelte/no-dom-manipulating -- measurement-only ghost span, never rendered from reactive state
     ghostEl.textContent = selectedCol;
     const width = ghostEl.getBoundingClientRect().width + 10; // +padding
     selectWidth = Math.max(width, 50); // min width
@@ -90,7 +91,7 @@ License: CECILL-C
     class="h-10 pl-10 pr-4 rounded-lg border font-normal text-foreground placeholder-muted-foreground bg-background border-border shadow-sm"
     onchange={handleFilterText}
   />
-  <IconButton onclick={handleClearFilter} tooltipContent={"Clear filter"}>
+  <IconButton onclick={handleClearFilter} tooltipContent="Clear filter">
     <Prohibit weight="regular" />
   </IconButton>
 </div>

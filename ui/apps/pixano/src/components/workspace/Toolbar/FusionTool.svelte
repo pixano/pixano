@@ -122,14 +122,14 @@ License: CECILL-C
       class="flex items-center gap-0.5 animate-in fade-in slide-in-from-left-1 duration-500 bg-background/60 backdrop-blur-sm rounded-lg p-0.5 border border-border/40 shadow-sm ml-0.5"
     >
       <IconButton
-        tooltipContent={"Validate association (S / Enter)"}
+        tooltipContent="Validate association (S / Enter)"
         onclick={onValidate}
         class="h-8 w-8 text-success/80 hover:bg-success/5"
       >
         <Check class="h-4.5 w-4.5" />
       </IconButton>
       <IconButton
-        tooltipContent={"Abort association (Escape)"}
+        tooltipContent="Abort association (Escape)"
         onclick={onAbort}
         class="h-8 w-8 text-destructive/80 hover:bg-destructive/5"
       >

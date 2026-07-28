@@ -18,6 +18,14 @@ License: CECILL-C
   let { widget, config, onRemove }: Props = $props();
 
   let WidgetComponent = $derived(config.component);
+
+  function reportWidgetError(error: unknown) {
+    console.error(`Widget "${widget.title}" crashed:`, error);
+  }
+
+  function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
 </script>
 
 <div
@@ -38,7 +46,26 @@ License: CECILL-C
 
   <div class="flex-1 overflow-hidden">
     {#if WidgetComponent}
-      <WidgetComponent widgetId={widget.id} options={widget.options} data={widget.data} />
+      <!-- Contain widget crashes: without a boundary, one throwing widget can
+           silently break the reactivity of the surrounding workspace. -->
+      <svelte:boundary onerror={reportWidgetError}>
+        <WidgetComponent widgetId={widget.id} options={widget.options} data={widget.data} />
+
+        {#snippet failed(error, reset)}
+          <div
+            class="flex h-full flex-col items-center justify-center gap-2 overflow-auto p-4 text-center"
+          >
+            <p class="text-sm font-medium text-destructive">This widget crashed.</p>
+            <p class="text-xs text-muted-foreground">{errorMessage(error)}</p>
+            <button
+              onclick={reset}
+              class="cursor-pointer rounded border border-border px-2 py-1 text-xs text-card-foreground hover:bg-muted"
+            >
+              Reload widget
+            </button>
+          </div>
+        {/snippet}
+      </svelte:boundary>
     {/if}
   </div>
 </div>
