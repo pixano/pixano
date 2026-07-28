@@ -9,6 +9,7 @@ import { flushSync, tick } from "svelte";
 import { afterEach, describe, expect, it } from "vitest";
 
 import GridWorkspace from "../GridWorkspace.svelte";
+import StubReactiveWidget from "./StubReactiveWidget.svelte";
 import type { WidgetExtensionConfig } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type { DatasetGateway } from "$lib/workspace/datasetGateway.js";
@@ -66,6 +67,100 @@ describe("GridWorkspace — hide/show reflow", () => {
     flushSync();
     await tick();
     expect(mountedIds(container)).toEqual([top.id, bottom.id].sort());
+  });
+
+  it("keeps earlier-mounted widgets reactive after the mount effect re-runs", async () => {
+    // Guards the deferred-mount lifecycle (mount lands after a microtask, and
+    // widgets keep reacting across reconciliation re-runs + cross-root
+    // flushes). Context: mounting widget roots inside the reconciliation
+    // $effect let a later re-run detach them (Svelte nulls their parent while
+    // they stay reachable from this tree), after which a flush queueing both
+    // the app root and a detached widget root froze the widget for good, with
+    // no error thrown. That scheduler poisoning needs a tree topology jsdom
+    // doesn't reproduce, so this test can't fail for it — the freeze itself
+    // was verified fixed in the browser.
+    const reactiveConfig = {
+      ...stubConfig,
+      component: StubReactiveWidget,
+    } as WidgetExtensionConfig;
+    const reactiveRegistry = {
+      get: () => reactiveConfig,
+      getAll: () => [reactiveConfig],
+    } as unknown as WidgetRegistry;
+
+    const manager = new WorkspaceManager(reactiveRegistry, {} as DatasetGateway);
+
+    const { container } = render(GridWorkspace, {
+      props: { manager, registry: reactiveRegistry },
+    });
+    await tick();
+
+    // Widget added after initial render: mounted by the reconciliation
+    // $effect. A further re-run of that effect is what used to detach it.
+    manager.addWidget("stub", { layout: { x: 0, y: 0, w: 6, h: 6 } });
+    flushSync();
+    await tick();
+    await Promise.resolve(); // let the deferred widget mount run
+    await tick();
+    expect(container.querySelectorAll("[data-testid='preset-name']")).toHaveLength(1);
+
+    // Further batches: each add re-runs the $effect (used to detach the
+    // previously mounted widget roots while they stayed reachable from this
+    // tree).
+    for (let i = 1; i <= 3; i++) {
+      manager.addWidget("stub", { layout: { x: 0, y: 6 * i, w: 6, h: 6 } });
+      flushSync();
+      await tick();
+      await Promise.resolve();
+      await tick();
+    }
+
+    // One flush dirtying both the workspace tree (editMode) and the widget
+    // roots (presetName) — the poisoning pattern — followed by a second write:
+    // the widgets must still re-render it.
+    manager.editMode = false;
+    manager.presetName = "First";
+    await tick();
+    manager.presetName = "Second";
+    await tick();
+
+    const labels = [...container.querySelectorAll("[data-testid='preset-name']")];
+    expect(labels).toHaveLength(4);
+    for (const label of labels) {
+      expect(label.textContent).toBe("Second");
+    }
+  });
+
+  it("cancels a deferred mount when the widget is removed before it runs", async () => {
+    // Removal in the same synchronous batch as the add: the widget's Svelte
+    // component must never mount, and the placeholder element (not yet
+    // registered with GridStack at that point) must be removed from the DOM.
+    const reactiveConfig = {
+      ...stubConfig,
+      component: StubReactiveWidget,
+    } as WidgetExtensionConfig;
+    const reactiveRegistry = {
+      get: () => reactiveConfig,
+      getAll: () => [reactiveConfig],
+    } as unknown as WidgetRegistry;
+
+    const manager = new WorkspaceManager(reactiveRegistry, {} as DatasetGateway);
+    const { container } = render(GridWorkspace, {
+      props: { manager, registry: reactiveRegistry },
+    });
+    await tick();
+
+    const widget = manager.addWidget("stub", { layout: { x: 0, y: 0, w: 6, h: 6 } })!;
+    flushSync(); // reconciliation effect appends the element and defers the mount
+    manager.removeWidget(widget.id);
+    flushSync(); // unmount runs before the deferred mount's microtask
+
+    await tick();
+    await Promise.resolve();
+    await tick();
+
+    expect(container.querySelectorAll("[data-widget-id]")).toHaveLength(0);
+    expect(container.querySelectorAll("[data-testid='preset-name']")).toHaveLength(0);
   });
 
   it("does not compact when a widget is removed (not hidden)", async () => {
