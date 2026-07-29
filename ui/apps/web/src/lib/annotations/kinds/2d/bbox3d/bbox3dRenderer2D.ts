@@ -7,7 +7,7 @@ License: CECILL-C
 import Konva from "konva";
 import { Matrix3, Matrix4, Vector3, Vector4 } from "three";
 
-import type { LocalBBox3DAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
@@ -21,16 +21,41 @@ import {
 } from "$lib/annotations/scene/scene2dGeometry.js";
 
 /**
- * Renders the "bbox3d" kind on the Konva scene: one rect (+ optional entity
- * label) per annotation, a shared transformer for the selection, and the
- * drag/transform handlers that write geometry changes back through the
- * collection and the mutation queue.
+ * Corner pairs of the projected wireframe: the cube's 12 edges plus the two
+ * front-face diagonals that mark the box's facing direction. Corner order
+ * matches `_get3dbboxCorners` (bottom face 0-3, top face 4-7).
+ */
+const BOX_EDGES: readonly (readonly [number, number])[] = [
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 0],
+  [4, 5],
+  [5, 6],
+  [6, 7],
+  [7, 4],
+  [0, 4],
+  [1, 5],
+  [2, 6],
+  [3, 7],
+  [2, 5],
+  [1, 6],
+];
+
+const PROJECTED_EDGE_COLOR = "#f59e0b";
+const PROJECTED_EDGE_WIDTH = 2;
+
+/**
+ * Renders the "bbox3d" kind on the Konva scene: each 3D box is projected
+ * through the widget's camera calibration into a wireframe of `BOX_EDGES`
+ * lines, plus a shared transformer for the selection. Each box always owns its
+ * full set of lines; a projection that fails (missing calibration, or a corner
+ * behind the camera) hides them rather than leaving stale geometry.
  */
 class BBox3DRenderer2D implements AnnotationRenderer2D {
   readonly kind = "bbox3d" as const;
 
   private readonly boxByBBoxId = new Map<string, Konva.Line[]>();
-  private readonly labelByBBoxId = new Map<string, Konva.Label>();
   private readonly transformer: Konva.Transformer;
 
   constructor(private readonly ctx: Scene2DReadContext) {
@@ -50,21 +75,24 @@ class BBox3DRenderer2D implements AnnotationRenderer2D {
     const activeIds = new Set<string>();
 
     for (const bbox of this.ctx.collection.byKind("bbox3d")) {
+      // Entity-driven visibility, mirroring the 2D bbox renderer: a persisted
+      // box whose entity is hidden gets no lines. Drafts are always shown.
+      if (bbox.persisted && !this.ctx.isEntityVisible(bbox.entityId)) continue;
       activeIds.add(bbox.id);
       let projectedBox = this.boxByBBoxId.get(bbox.id);
-      if (!projectedBox) {
-        const newBox = this._makeProjectedBox(bbox, frame);
-        if (!newBox) continue;
-        newBox.forEach(line => this.ctx.annotationLayer.add(line));
-        this.boxByBBoxId.set(bbox.id, newBox);
-        projectedBox = newBox;
-      } else if (frame) {
-        this._updateProjectedBox(projectedBox, bbox, frame);
+      if (!projectedBox && frame) {
+        projectedBox = this._makeProjectedBox();
+        for (const line of projectedBox) this.ctx.annotationLayer.add(line);
+        this.boxByBBoxId.set(bbox.id, projectedBox);
       }
+      if (projectedBox && frame) this._applyProjection(projectedBox, bbox.geometry, frame);
     }
 
-    for (const [id, projectedbbox] of this.boxByBBoxId) {
-      if (!activeIds.has(id)) { projectedbbox.forEach(line => line.destroy()); this.boxByBBoxId.delete(id); }
+    for (const [id, projectedBox] of this.boxByBBoxId) {
+      if (!activeIds.has(id)) {
+        for (const line of projectedBox) line.destroy();
+        this.boxByBBoxId.delete(id);
+      }
     }
 
     this._syncTransformer();
@@ -74,22 +102,16 @@ class BBox3DRenderer2D implements AnnotationRenderer2D {
   destroy(): void {
     this.transformer.destroy();
     for (const projectedBox of this.boxByBBoxId.values()) {
-      for (const line of projectedBox) {
-        line.destroy();
-      }
+      for (const line of projectedBox) line.destroy();
     }
     this.boxByBBoxId.clear();
-    for (const label of this.labelByBBoxId.values()) label.destroy();
-    this.labelByBBoxId.clear();
   }
 
   private _syncTransformer(): void {
     const id = this.ctx.collection.selectedId;
     const projectedBox = id ? this.boxByBBoxId.get(id) : undefined;
     if (projectedBox) {
-      for (const line of projectedBox) {
-          this.transformer.nodes([line]);
-      }
+      this.transformer.nodes(projectedBox);
       this.transformer.moveToTop();
     } else {
       this.transformer.nodes([]);
@@ -97,25 +119,47 @@ class BBox3DRenderer2D implements AnnotationRenderer2D {
     this.transformer.getLayer()?.batchDraw();
   }
 
-  private _makeLine(p1: { x: number; y: number }, p2: { x: number; y: number }): Konva.Line {
-    const line = new Konva.Line({
-      points: [p1.x, p1.y, p2.x, p2.y],
-      stroke: "#f59e0b",
-      strokeWidth: 2,
-    });
-    return line;
+  /** One hidden line per `BOX_EDGES` entry; `_applyProjection` fills them in. */
+  private _makeProjectedBox(dash?: number[]): Konva.Line[] {
+    return BOX_EDGES.map(
+      () =>
+        new Konva.Line({
+          points: [],
+          stroke: PROJECTED_EDGE_COLOR,
+          strokeWidth: PROJECTED_EDGE_WIDTH,
+          visible: false,
+          dash,
+        }),
+    );
   }
 
-  private _get3dbboxCorners(bbox: LocalBBox3DAnnotation): { x: number; y: number; z: number }[] {
-    const [x, y, z, w, h, d] = bbox.geometry.coords;
-    let rotation_matrix;
-    if (!bbox.geometry.rotation){
-      rotation_matrix = new Matrix3().identity();
-    }else{
-      rotation_matrix = new Matrix3().fromArray(bbox.geometry.rotation).transpose();
+  /**
+   * Project the geometry and update every wireframe line, or hide them all
+   * when the projection fails (no calibration / a corner behind the camera) —
+   * lines must never keep stale points, since a box can cross the camera
+   * plane between two syncs.
+   */
+  private _applyProjection(lines: Konva.Line[], geometry: BBox3DGeometry, frame: PixelFrame): void {
+    const pixels = this._getProjectedPixels(geometry, frame);
+    if (!pixels) {
+      for (const line of lines) line.visible(false);
+      return;
     }
+    for (let i = 0; i < BOX_EDGES.length; i++) {
+      const [a, b] = BOX_EDGES[i];
+      lines[i].points([pixels[a].x, pixels[a].y, pixels[b].x, pixels[b].y]);
+      lines[i].visible(true);
+    }
+  }
+
+  /** The box's 8 corners in world (Lance, Z-up) space. */
+  private _get3dbboxCorners(geometry: BBox3DGeometry): { x: number; y: number; z: number }[] {
+    const [x, y, z, w, h, d] = geometry.coords;
+    const rotationMatrix = geometry.rotation
+      ? new Matrix3().fromArray(geometry.rotation).transpose()
+      : new Matrix3().identity();
     const unitCube = [
-      [-0.5,-0.5, -0.5],
+      [-0.5, -0.5, -0.5],
       [0.5, -0.5, -0.5],
       [0.5, 0.5, -0.5],
       [-0.5, 0.5, -0.5],
@@ -123,86 +167,54 @@ class BBox3DRenderer2D implements AnnotationRenderer2D {
       [0.5, -0.5, 0.5],
       [0.5, 0.5, 0.5],
       [-0.5, 0.5, 0.5],
-    ]
-    let scaledCorners = unitCube.map(([cx, cy, cz]) => [cx * w, cy * h, cz * d]);
-    let rotatedCorners = scaledCorners.map(([cx, cy, cz]) => (new Vector3(cx, cy, cz)).applyMatrix3(rotation_matrix));
-    let translatedCorners = rotatedCorners.map((corner) => ({ x: corner.x + x, y: corner.y + y, z: corner.z + z }));
-    return translatedCorners;
-  }
-
-  private _projectPoint(bbox: LocalBBox3DAnnotation): { x: number; y: number }[] | null {
-    if (!this.ctx.camera.calibration) return null;
-    const f = this.ctx.camera.calibration.f;
-    const c = this.ctx.camera.calibration.c;
-    const extrinsics = new Matrix4().fromArray(this.ctx.camera.calibration.extrinsicMatrix).transpose();
-    // Homogenous points
-    let points_h = this._get3dbboxCorners(bbox).map(point => [point.x, point.y, point.z, 1]);
-    // world -> cam
-    let pointsCam = points_h.map(([x, y, z, w]) => {
-      let vec = new Vector4(x, y, z, w).applyMatrix4(extrinsics);
-      return { x: vec.x, y: vec.y, z: vec.z };
-    });
-    let projectedPoints = pointsCam.map(({x, y, z}) => {
-      if (z <= 0) return null; // Behind the camera
-      return {
-        x: f[0] * x / z + c[0],
-        y: f[1] * y / z + c[1],
-      };
-    });
-    return projectedPoints.every(p => p !== null) ? projectedPoints as { x: number; y: number }[] : null;
-  }
-
-  private _makeProjectedBox(bbox: LocalBBox3DAnnotation, frame: PixelFrame | null): Konva.Line[] | null {
-    if (!frame) return null;
-    const edges = [
-      [0, 1], [1, 2], [2, 3], [3, 0],
-      [4, 5], [5, 6], [6, 7], [7, 4],
-      [0, 4], [1, 5], [2, 6], [3, 7],
-      [2, 5], [1, 6]
     ];
-    const pixels = this._getNormalizedProjectedPoints(bbox, frame);
-    let lines = [];
-        for (const [a, b] of edges) {
-          if (pixels?.[a] && pixels?.[b]) {
-            const konvaLine = this._makeLine(pixels[a], pixels[b]);
-            lines.push(konvaLine);
-          }
-        }
-    return lines;
+    return unitCube.map(([cx, cy, cz]) => {
+      const corner = new Vector3(cx * w, cy * h, cz * d).applyMatrix3(rotationMatrix);
+      return { x: corner.x + x, y: corner.y + y, z: corner.z + z };
+    });
   }
 
-  private _updateProjectedBox(lines: Konva.Line[], bbox: LocalBBox3DAnnotation, frame: PixelFrame): void {
-    if (!frame) return;
-    const edges = [
-      [0, 1], [1, 2], [2, 3], [3, 0],
-      [4, 5], [5, 6], [6, 7], [7, 4],
-      [0, 4], [1, 5], [2, 6], [3, 7],
-      [2, 5], [1, 6]
-    ];
-    const pixels = this._getNormalizedProjectedPoints(bbox,frame);
-    if (pixels) {
-      for (let i = 0; i<edges.length; i++){
-        const p1 = pixels[edges[i][0]];
-        const p2 = pixels[edges[i][1]];
-
-        if (!p1 || !p2) continue;
-        lines[i].points([p1.x, p1.y, p2.x, p2.y]);
-
-      }
+  /**
+   * Pinhole-project the corners into image pixel coordinates, or null when the
+   * widget has no calibration or any corner sits behind the camera.
+   */
+  private _projectCorners(geometry: BBox3DGeometry): { x: number; y: number }[] | null {
+    const calibration = this.ctx.camera.calibration;
+    if (!calibration) return null;
+    const { f, c } = calibration;
+    const extrinsics = new Matrix4().fromArray(calibration.extrinsicMatrix).transpose();
+    const projected: { x: number; y: number }[] = [];
+    for (const corner of this._get3dbboxCorners(geometry)) {
+      // world -> camera
+      const cam = new Vector4(corner.x, corner.y, corner.z, 1).applyMatrix4(extrinsics);
+      if (cam.z <= 0) return null; // Behind the camera
+      projected.push({
+        x: (f[0] * cam.x) / cam.z + c[0],
+        y: (f[1] * cam.y) / cam.z + c[1],
+      });
     }
+    return projected;
   }
 
-  private _getNormalizedProjectedPoints(bbox: LocalBBox3DAnnotation, frame: PixelFrame): ({ x: number; y: number } | null)[] {
-    let projectedPoints = this._projectPoint(bbox);
-    let normalizedPoints = projectedPoints?.map(point => {
-          const dx = point.x /this.ctx.camera.imageWidth;
-          const dy = point.y /this.ctx.camera.imageHeight;
-          return {x:dx,y:dy};
-          });
-    const pixels = normalizedPoints?.map(point => normalizedPointToPixel(point.x, point.y, frame));
-    if (!pixels) return [];
+  /** Corner pixels in Konva stage space, or null when projection fails. */
+  private _getProjectedPixels(
+    geometry: BBox3DGeometry,
+    frame: PixelFrame,
+  ): { x: number; y: number }[] | null {
+    const projected = this._projectCorners(geometry);
+    if (!projected) return null;
+    const pixels: { x: number; y: number }[] = [];
+    for (const point of projected) {
+      const pixel = normalizedPointToPixel(
+        point.x / this.ctx.camera.imageWidth,
+        point.y / this.ctx.camera.imageHeight,
+        frame,
+      );
+      if (!pixel) return null;
+      pixels.push(pixel);
+    }
     return pixels;
-    }
+  }
 }
 
 export const bbox3dRenderer2DFactory: AnnotationRenderer2DFactory = {
