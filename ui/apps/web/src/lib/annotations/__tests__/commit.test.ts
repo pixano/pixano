@@ -11,11 +11,7 @@ import {
   type BBox3DGeometry,
   type BBoxGeometry,
 } from "../annotationCollection.svelte.js";
-import {
-  commitGeometryEdit,
-  commitNewAnnotation,
-  type CommitContext,
-} from "../payloadBuilders.js";
+import { commitGeometryEdit, commitNewAnnotation, type CommitContext } from "../payloadBuilders.js";
 import type { ResourceMutation } from "../types.js";
 
 const BUILD_CTX = { datasetId: "ds-1", recordId: "rec-1", viewId: "view-1" };

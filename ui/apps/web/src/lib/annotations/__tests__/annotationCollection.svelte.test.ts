@@ -14,7 +14,14 @@ import {
 } from "../annotationCollection.svelte.js";
 
 function makeBBox(id: string, persisted = false): LocalBBox {
-  return { id, entityId: `e-${id}`, kind: "bbox", viewId: "view-1", geometry: [0.1, 0.1, 0.2, 0.2], persisted };
+  return {
+    id,
+    entityId: `e-${id}`,
+    kind: "bbox",
+    viewId: "view-1",
+    geometry: [0.1, 0.1, 0.2, 0.2],
+    persisted,
+  };
 }
 
 function makeBBox3D(id: string): LocalAnnotation {
@@ -77,7 +84,6 @@ describe("AnnotationCollection", () => {
     collection.setGeometry("a", [0.5, 0.5, 0.1, 0.1]);
     expect(collection.find("a")?.geometry).toEqual([0.5, 0.5, 0.1, 0.1]);
   });
-
 });
 
 describe("ViewScopedAnnotations", () => {
@@ -100,7 +106,9 @@ describe("ViewScopedAnnotations", () => {
     const { shared, view1 } = makeShared();
 
     view1.setGeometry("box3d", { coords: [9, 9, 9, 1, 1, 1], format: "xyzwhd" });
-    expect((shared.find("box3d")?.geometry as { coords: number[] }).coords).toEqual([9, 9, 9, 1, 1, 1]);
+    expect((shared.find("box3d")?.geometry as { coords: number[] }).coords).toEqual([
+      9, 9, 9, 1, 1, 1,
+    ]);
 
     view1.add({ ...makeBBox("new"), viewId: "view-1" });
     expect(shared.find("new")).toBeDefined();

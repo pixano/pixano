@@ -7,10 +7,11 @@ License: CECILL-C
 <script lang="ts">
   import { ArrowLeftRight, Lock, Moon, PanelRight, Sun, Unlock } from "lucide-svelte";
 
+  import pixanoLogo from "$lib/assets/pixano.png";
   import type { PanelState } from "$lib/components/ui/resizable-panel/PanelState.svelte.js";
   import { themeStore } from "$lib/stores/theme.svelte.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
-  import pixanoLogo from "$lib/assets/pixano.png";
+
   interface Props {
     manager: WorkspaceManager;
     rightPanel: PanelState;

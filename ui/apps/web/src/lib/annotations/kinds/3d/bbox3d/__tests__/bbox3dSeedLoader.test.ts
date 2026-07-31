@@ -6,11 +6,10 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { bbox3dSeedLoader } from "../bbox3dSeedLoader.js";
 import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import type { SeedLoadContext } from "$lib/annotations/seedLoaders.js";
 import type { BBox3DRow, EntityRow } from "$lib/api/annotations.js";
-
-import { bbox3dSeedLoader } from "../bbox3dSeedLoader.js";
 
 function makeContext(rows: BBox3DRow[], entities: EntityRow[] = []): SeedLoadContext {
   return {
@@ -53,7 +52,9 @@ describe("bbox3dSeedLoader", () => {
   });
 
   it("carries the row's view_id through (often empty for scene-level boxes)", async () => {
-    expect((await bbox3dSeedLoader.load(makeContext([makeRow({ view_id: "" })])))[0].viewId).toBe("");
+    expect((await bbox3dSeedLoader.load(makeContext([makeRow({ view_id: "" })])))[0].viewId).toBe(
+      "",
+    );
     expect(
       (await bbox3dSeedLoader.load(makeContext([makeRow({ view_id: "lidar-top" })])))[0].viewId,
     ).toBe("lidar-top");

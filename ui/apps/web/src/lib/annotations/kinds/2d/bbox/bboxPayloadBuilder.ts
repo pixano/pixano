@@ -4,7 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBoxGeometry, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import type {
+  BBoxGeometry,
+  LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
 import {
   buildBBoxCreate,
   buildBBoxUpdate,
@@ -41,7 +44,10 @@ export const bboxPayloadBuilder = {
     }).mutations;
   },
 
-  buildUpdate(ctx: BuildContext, annotation: LocalAnnotation<BBoxGeometry>): Record<string, unknown> {
+  buildUpdate(
+    ctx: BuildContext,
+    annotation: LocalAnnotation<BBoxGeometry>,
+  ): Record<string, unknown> {
     return buildBBoxUpdate(ctx, annotation.id, annotation.entityId, annotation.geometry);
   },
 };

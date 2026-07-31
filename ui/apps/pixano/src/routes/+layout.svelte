@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Tooltip } from "bits-ui";
+  import { ArrowsLeftRight } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import pixanoFavicon from "../assets/favicon.ico";
@@ -17,8 +18,6 @@ License: CECILL-C
   import { page } from "$app/state";
   import { pixanoLogo } from "$lib/assets";
   import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
-  import { ArrowsLeftRight } from "phosphor-svelte";
-
   import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
 
   import "./styles.css";

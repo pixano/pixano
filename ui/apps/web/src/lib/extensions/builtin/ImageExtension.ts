@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { WidgetExtension } from "../WidgetExtension.js";
 import { DEFAULT_TOOL_2D } from "$lib/annotations/scene/tool.js";
 import type {
   CameraCalibration,
@@ -13,8 +14,6 @@ import type {
 import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
 import ImageWidget from "$lib/components/widgets/image/ImageWidget.svelte";
 
-import { WidgetExtension } from "../WidgetExtension.js";
-
 /**
  * Bases this extension claims. `CalibratedImage` extends `Image` on the
  * backend and now surfaces calibration data via `options.calibration`.
@@ -22,7 +21,13 @@ import { WidgetExtension } from "../WidgetExtension.js";
 const CLAIMED_BASES = new Set(["Image", "CalibratedImage"]);
 
 function _extractCalibration(image: CalibratedImageResponse | null): CameraCalibration | null {
-  if (!image?.extrinsic_matrix || !image.ego_to_world || !image.f || !image.c || !image.distortion) {
+  if (
+    !image?.extrinsic_matrix ||
+    !image.ego_to_world ||
+    !image.f ||
+    !image.c ||
+    !image.distortion
+  ) {
     return null;
   }
   return {

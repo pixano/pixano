@@ -4,16 +4,15 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
+import { measureGridViewport, planViewportLayouts, type Viewport } from "./layoutPlanner.js";
+import type { RecordWidgetSeed } from "./recordSeed.js";
+import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import { SEED_LOADERS, type ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
-
-import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
-import { measureGridViewport, planViewportLayouts, type Viewport } from "./layoutPlanner.js";
-import type { RecordWidgetSeed } from "./recordSeed.js";
-import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 
 /**
  * Minimal write surface the loader needs. Defined as an interface so

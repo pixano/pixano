@@ -4,20 +4,19 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it, vi } from "vitest";
-
-import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
-import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
-import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
-import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
-import { DatasetInfo } from "$lib/types/dataset";
-import type { Dataset } from "$lib/types/dataset";
 import type { Component } from "svelte";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DatasetGateway } from "../datasetGateway.js";
 import { RecordLoader } from "../recordLoader.js";
 import type { WidgetSink } from "../recordLoader.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
+import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
+import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
+import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
+import { DatasetInfo } from "$lib/types/dataset";
+import type { Dataset } from "$lib/types/dataset";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -46,19 +45,20 @@ function makeDataset(views: Record<string, { base: string }>): Dataset {
   };
 }
 
-function makeGateway(opts: {
-  dataset?: Dataset;
-  entities?: EntityRow[];
-  images?: Map<string, CalibratedImageResponse>;
-  pointClouds?: Map<string, PointCloudResponse>;
-  bboxes?: BBoxRow[];
-  bboxes3d?: BBox3DRow[];
-} = {}): DatasetGateway {
+function makeGateway(
+  opts: {
+    dataset?: Dataset;
+    entities?: EntityRow[];
+    images?: Map<string, CalibratedImageResponse>;
+    pointClouds?: Map<string, PointCloudResponse>;
+    bboxes?: BBoxRow[];
+    bboxes3d?: BBox3DRow[];
+  } = {},
+): DatasetGateway {
   return {
     getDataset: () => Promise.resolve(opts.dataset ?? makeDataset({})),
     listEntities: () => Promise.resolve(opts.entities ?? []),
-    loadImageByLogicalName: (_, __, name) =>
-      Promise.resolve(opts.images?.get(name) ?? null),
+    loadImageByLogicalName: (_, __, name) => Promise.resolve(opts.images?.get(name) ?? null),
     listBBoxes: () => Promise.resolve(opts.bboxes ?? []),
     loadPointCloudByLogicalName: (_, __, name) =>
       Promise.resolve(opts.pointClouds?.get(name) ?? null),
@@ -190,7 +190,26 @@ describe("RecordLoader.load", () => {
     const loader = new RecordLoader({
       workspace: sink,
       registry: makeRegistry(makeImageExtension()),
-      gateway: makeGateway({ dataset, images: new Map([["cam", { id: "img-1", record_id: "rec-1", src: "/cam.jpg", width: 100, height: 100, f: null, c: null, distortion: null, extrinsic_matrix: null, ego_to_world: null } as CalibratedImageResponse]]) }),
+      gateway: makeGateway({
+        dataset,
+        images: new Map([
+          [
+            "cam",
+            {
+              id: "img-1",
+              record_id: "rec-1",
+              src: "/cam.jpg",
+              width: 100,
+              height: 100,
+              f: null,
+              c: null,
+              distortion: null,
+              extrinsic_matrix: null,
+              ego_to_world: null,
+            } as CalibratedImageResponse,
+          ],
+        ]),
+      }),
       session,
     });
 
@@ -331,7 +350,9 @@ describe("RecordLoader.load", () => {
     session.entities = [{ id: "stale", record_id: "old-rec" }];
 
     let resolveEntities!: (rows: EntityRow[]) => void;
-    const entitiesPromise = new Promise<EntityRow[]>((res) => { resolveEntities = res; });
+    const entitiesPromise = new Promise<EntityRow[]>((res) => {
+      resolveEntities = res;
+    });
 
     const gateway = makeGateway({ dataset });
     gateway.listEntities = () => entitiesPromise;
@@ -436,7 +457,9 @@ describe("RecordLoader.reloadEntities", () => {
       call++;
       // 1: load rec-A, 2: the reload (held in-flight), 3: load rec-B.
       if (call === 2) return new Promise<EntityRow[]>((res) => (resolveReload = res));
-      return Promise.resolve(call === 1 ? [{ id: "e-A", record_id: "rec-A" }] : [{ id: "e-B", record_id: "rec-B" }]);
+      return Promise.resolve(
+        call === 1 ? [{ id: "e-A", record_id: "rec-A" }] : [{ id: "e-B", record_id: "rec-B" }],
+      );
     };
     const loader = new RecordLoader({
       workspace: makeSink().sink,

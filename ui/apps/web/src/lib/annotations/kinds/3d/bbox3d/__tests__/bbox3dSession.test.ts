@@ -11,10 +11,7 @@ import {
   AnnotationCollection,
   type BBox3DGeometry,
 } from "$lib/annotations/annotationCollection.svelte.js";
-import type {
-  LiveAnnotationDraft,
-  SeamContext,
-} from "$lib/annotations/scene/sceneContext.js";
+import type { LiveAnnotationDraft, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { PendingAnnotation, ResourceMutation, Rotation3x3 } from "$lib/annotations/types.js";
 
 const COORDS: [number, number, number, number, number, number] = [1, 2, 3, 4, 5, 6];

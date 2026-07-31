@@ -5,11 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import * as api from "$lib/api";
-import type {
-  BBox3DRow,
-  BBoxRow,
-  EntityRow,
-} from "$lib/api/annotations.js";
+import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { Dataset } from "$lib/types/dataset";
 
@@ -60,10 +56,7 @@ export interface RecordReadGateway {
 }
 
 export interface MutationGateway {
-  createEntity(
-    datasetId: string,
-    body: Record<string, unknown>,
-  ): Promise<Record<string, unknown>>;
+  createEntity(datasetId: string, body: Record<string, unknown>): Promise<Record<string, unknown>>;
 
   deleteEntity(datasetId: string, id: string): Promise<void>;
 
@@ -104,6 +97,7 @@ export const httpDatasetGateway: DatasetGateway = {
   createEntity: (datasetId, body) => api.createEntity(datasetId, body),
   deleteEntity: (datasetId, id) => api.deleteEntity(datasetId, id),
   createAnnotation: (datasetId, resource, body) => api.createAnnotation(datasetId, resource, body),
-  updateAnnotation: (datasetId, resource, id, body) => api.updateAnnotation(datasetId, resource, id, body),
+  updateAnnotation: (datasetId, resource, id, body) =>
+    api.updateAnnotation(datasetId, resource, id, body),
   deleteAnnotation: (datasetId, resource, id) => api.deleteAnnotation(datasetId, resource, id),
 };
