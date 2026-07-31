@@ -50,6 +50,10 @@ jobs:
         run: |
           cd ui
           pnpm i --frozen-lockfile
+      # `turbo lint` only runs workspaces that define a `lint` script, so this
+      # currently covers apps/pixano alone. Adding one to apps/web would pin the
+      # job red (134 eslint errors, mostly no-unsafe-call / unbound-method in
+      # test files); add it once those are cleared.
       - name: Lint frontend code with eslint
         run: |
           cd ui
@@ -104,6 +108,10 @@ jobs:
           cd ui
           pnpm i --frozen-lockfile
 
+      # Deliberately scoped to apps/pixano, not `pnpm check` (turbo, all
+      # workspaces): apps/web currently reports 41 svelte-check errors, so
+      # widening this would pin the job red. Widen it once those are cleared —
+      # apps/web is already covered by Test and Build above.
       - name: Type-check frontend code with svelte-check
         run: |
           cd ui
@@ -131,10 +139,11 @@ jobs:
           cd ui
           pnpm i --frozen-lockfile
 
+      # Turbo runs every workspace's `test` script, so this covers apps/web too.
       - name: Test frontend code with vitest
         run: |
           cd ui
-          pnpm -C apps/pixano test
+          pnpm test
   build_front:
     name: Build
     runs-on: ubuntu-latest
@@ -158,7 +167,8 @@ jobs:
           cd ui
           pnpm i --frozen-lockfile
 
+      # Turbo runs every workspace's `build` script, so this covers apps/web too.
       - name: Build frontend
         run: |
           cd ui
-          pnpm -C apps/pixano run build
+          pnpm build
