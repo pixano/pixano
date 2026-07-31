@@ -8,7 +8,7 @@ import type { Component } from "svelte";
 
 import type Konva from "konva";
 
-import type { Scene2DContext, Scene3DContext, SceneContextBase } from "./sceneContext.js";
+import type { Scene2DContext, Scene3DContext, SeamContext } from "./sceneContext.js";
 import type { ToolDefinition } from "./toolDefinition.js";
 
 export type { ToolDefinition } from "./toolDefinition.js";
@@ -80,5 +80,5 @@ export interface ToolHudProps {
 export interface Tool3D extends ToolDefinition {
   overlay?: Component<AnnotationTool3DProps>;
   hud?: Component<ToolHudProps>;
-  createSession?: (seam: SceneContextBase) => unknown;
+  createSession?: (seam: SeamContext) => unknown;
 }

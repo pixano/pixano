@@ -7,8 +7,12 @@ License: CECILL-C
 import type { Component } from "svelte";
 
 import type { AnnotationKind } from "../annotationCollection.svelte.js";
-
-import type { Scene2DContext, Scene2DReadContext, Scene3DContext } from "./sceneContext.js";
+import type {
+  LiveAnnotationDraft,
+  Scene2DContext,
+  Scene2DReadContext,
+  Scene3DContext,
+} from "./sceneContext.js";
 
 /**
  * Displays one annotation kind on the 2D scene: pure display plus selection.
@@ -20,6 +24,19 @@ export interface AnnotationRenderer2D {
   readonly kind: AnnotationKind;
   /** Reconcile scene nodes with the collection. */
   sync(): void;
+  /**
+   * Reconcile ONLY the live-gesture preview, leaving persisted nodes untouched.
+   * Called at pointer rate while a gesture runs in another widget, so it must
+   * stay proportional to the draft — never to the size of the collection.
+   * Receives the whole `LiveAnnotationDraft` union (the widget is kind-agnostic
+   * and cannot narrow it); implementations narrow on `draft.kind`. `null` means
+   * "no gesture in flight" and must tear any preview down.
+   *
+   * Required, not optional: an optional method would let a renamed or
+   * mistyped implementation silently opt out with no compile error. Kinds with
+   * no cross-widget preview implement a documented no-op.
+   */
+  syncDraft(draft: LiveAnnotationDraft | null): void;
   destroy(): void;
 }
 

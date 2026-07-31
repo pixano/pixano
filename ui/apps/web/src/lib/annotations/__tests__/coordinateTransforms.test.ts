@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it } from "vitest";
-
 import * as THREE from "three";
+import { describe, expect, it } from "vitest";
 
 import {
   bboxTransform,
@@ -15,7 +14,8 @@ import {
   threeBoxToLanceXYZWHD,
   threeQuaternionToLanceRotation,
 } from "../coordinateTransforms";
-import type { LocalBBox3D } from "$lib/api/annotations";
+import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
+import type { Rotation3x3 } from "$lib/annotations/types.js";
 
 // ─── lanceToThree ─────────────────────────────────────────────────────────────
 
@@ -69,16 +69,13 @@ describe("lanceRotationToThree", () => {
 
 // ─── bboxTransform ────────────────────────────────────────────────────────────
 
-function makeBbox(overrides: Partial<LocalBBox3D>): LocalBBox3D {
+// `bboxTransform` takes validated local geometry, not a raw server row — the
+// identifying fields a `LocalBBox3D` carries are irrelevant to it.
+function makeBbox(overrides: Partial<BBox3DGeometry>): BBox3DGeometry {
   return {
-    id: "bbox-1",
-    record_id: "rec-1",
-    entity_id: "ent-1",
-    view_id: "view-1",
     coords: [0, 0, 0, 1, 1, 1],
     format: "xyzwhd",
     rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-    is_normalized: false,
     ...overrides,
   };
 }
@@ -127,13 +124,13 @@ describe("bboxTransform — xyzxyz", () => {
 describe("threeQuaternionToLanceRotation", () => {
   it("returns identity matrix for identity quaternion", () => {
     const rot = threeQuaternionToLanceRotation(new THREE.Quaternion());
-    const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    const identity: Rotation3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
     for (let i = 0; i < 9; i++) expect(rot[i]).toBeCloseTo(identity[i]);
   });
 
   it("round-trips with lanceRotationToThree for a 90° Z rotation", () => {
     // The 90° CCW about Lance Z matrix, in row-major:
-    const lanceRot = [0, -1, 0, 1, 0, 0, 0, 0, 1];
+    const lanceRot: Rotation3x3 = [0, -1, 0, 1, 0, 0, 0, 0, 1];
     const q = lanceRotationToThree(lanceRot);
     const recovered = threeQuaternionToLanceRotation(q);
     for (let i = 0; i < 9; i++) expect(recovered[i]).toBeCloseTo(lanceRot[i]);

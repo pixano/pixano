@@ -26,7 +26,7 @@ const MIN_BBOX_PIXELS = 1;
  * listens at the **layer** level, so display and input stay decoupled (D4).
  */
 class BBoxEditor2D implements AnnotationEditor2D {
-  readonly kind = "bbox" as const;
+  readonly kind = "bbox";
 
   private readonly transformer: Konva.Transformer;
 

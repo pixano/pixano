@@ -74,6 +74,7 @@ function makeHarness(opts: { image?: Konva.Image | null } = {}) {
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
     },
+    liveDraft: { get: () => null },
     stage: { getPointerPosition: () => pointer } as unknown as Konva.Stage,
     annotationLayer: { add: vi.fn(), batchDraw: vi.fn() } as unknown as Konva.Layer,
     camera: { imageWidth: 100, imageHeight: 100, calibration: null },

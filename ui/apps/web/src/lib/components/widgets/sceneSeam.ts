@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { ViewScopedAnnotations } from "$lib/annotations/annotationCollection.svelte.js";
 import type { BuildContext } from "$lib/annotations/buildPayloads.js";
-import type { MutationSink, SceneContextBase } from "$lib/annotations/scene/sceneContext.js";
+import type { MutationSink, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 /**
@@ -43,12 +43,23 @@ export function buildSeam(
     storage: { activeToolId: string };
     requestRedraw?: () => void;
   },
-): SceneContextBase {
+): SeamContext {
   return {
     widgetId: opts.widgetId,
     buildContext: opts.buildContext,
     collection: new ViewScopedAnnotations(() => manager.annotations, opts.buildContext.viewId),
     mutations: buildMutationSink(manager),
+    // The live-draft slot is shared workspace-wide, so ownership is enforced
+    // here rather than left to each tool: `publish` stamps this widget's id, and
+    // `clear` only ever clears a draft this widget published. A tool physically
+    // cannot wipe a gesture running in another widget.
+    liveDraft: {
+      get: () => manager.liveDraft,
+      publish: (draft) => manager.setLiveDraft({ ...draft, sourceWidgetId: opts.widgetId }),
+      clear: () => {
+        if (manager.liveDraft?.sourceWidgetId === opts.widgetId) manager.setLiveDraft(null);
+      },
+    },
     setActiveTool: (id) => {
       opts.storage.activeToolId = id;
     },

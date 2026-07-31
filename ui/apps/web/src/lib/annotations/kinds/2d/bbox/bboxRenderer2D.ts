@@ -15,6 +15,7 @@ import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js"
 import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
+  DRAFT_DASH,
   getPixelFrame,
   normalizedToPixel,
   type PixelFrame,
@@ -31,7 +32,7 @@ import { createBBoxEditor2D } from "./bboxEditor2D.js";
  * to the queue — the drag/transform → commit path lives in `bboxEditor2D.ts` (D4).
  */
 class BBoxRenderer2D implements AnnotationRenderer2D {
-  readonly kind = "bbox" as const;
+  readonly kind = "bbox";
 
   private readonly rectByBBoxId = new Map<string, Konva.Rect>();
   private readonly labelByBBoxId = new Map<string, Konva.Label>();
@@ -61,7 +62,7 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         rect.width(pixel.width);
         rect.height(pixel.height);
         rect.stroke(bbox.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT);
-        rect.dash(bbox.persisted ? [] : [6, 4]);
+        rect.dash(bbox.persisted ? [] : [...DRAFT_DASH]);
       }
 
       let label = this.labelByBBoxId.get(bbox.id);
@@ -84,6 +85,13 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
 
     this.ctx.annotationLayer.batchDraw();
   }
+
+  /**
+   * No-op: a 2D box is drawn inside this widget by its own draw tool, which
+   * owns its rubber-band preview — there is no cross-widget gesture to mirror.
+   * The draft an image widget could receive here is always another medium's.
+   */
+  syncDraft(): void {}
 
   destroy(): void {
     for (const rect of this.rectByBBoxId.values()) rect.destroy();
@@ -113,7 +121,7 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
       height: pixel.height,
       stroke,
       strokeWidth: 2,
-      dash: bbox.persisted ? undefined : [6, 4],
+      dash: bbox.persisted ? undefined : [...DRAFT_DASH],
       draggable: true,
       name: BBOX_NODE_NAME,
     });

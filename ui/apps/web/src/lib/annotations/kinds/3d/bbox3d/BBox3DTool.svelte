@@ -7,9 +7,13 @@ License: CECILL-C
 <script lang="ts">
   import { T } from "@threlte/core";
   import { HTML } from "@threlte/extras";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
 
-  import { bboxTransform } from "$lib/annotations/coordinateTransforms";
+  import {
+    bboxTransform,
+    threeBoxToLanceXYZWHD,
+    threeQuaternionToLanceRotation,
+  } from "$lib/annotations/coordinateTransforms";
   import type { Scene3DContext } from "$lib/annotations/scene/sceneContext.js";
   import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
   import { pickEntityLabel } from "$lib/annotations/types";
@@ -87,6 +91,24 @@ License: CECILL-C
     session.setResetEditor(() => editor.reset());
     reportHandle?.(handle);
   });
+
+  // Broadcast the live preview geometry (Lance space) on every change, so
+  // image widgets can re-project the box while it is being drawn/dragged.
+  // `clearPreview` only clears a draft this widget owns, which makes the
+  // mount-time run (previewVisible starts false) and unmount safe when
+  // another 3D widget is mid-gesture.
+  $effect(() => {
+    if (!editor.previewVisible) {
+      session.clearPreview();
+      return;
+    }
+    session.reportPreview(
+      threeBoxToLanceXYZWHD(editor.previewCenter, editor.previewSize),
+      threeQuaternionToLanceRotation(editor.previewQuaternion),
+      editor.editingBoxId ?? undefined,
+    );
+  });
+  onDestroy(() => session.clearPreview());
 
   // Precise tuple (CODING_STANDARDS: geometry is tuples, not number[]).
   const previewQuaternionArr = $derived<[number, number, number, number]>([

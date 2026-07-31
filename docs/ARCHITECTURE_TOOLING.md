@@ -106,7 +106,8 @@ select tool. (It was renamed from `tools/` in the 2026-06-29 refactor; it is not
 
 ```
 scene/
-  sceneContext.ts   SceneContextBase, MutationSink, Scene2DReadContext,
+  sceneContext.ts   SceneContextBase, MutationSink, LiveAnnotationDraft,
+                    LiveDraftSource / LiveDraftChannel, Scene2DReadContext,
                     Scene2DContext, Scene3DContext
   renderer.ts       AnnotationRenderer2D + AnnotationEditor2D (+Factory),
                     AnnotationRenderer3DFactory
@@ -180,8 +181,8 @@ interface ToolHandle3D { activeDragging: boolean; editingId: string | null }
 ### 4. Renderer registries (per kind, per scene type)
 
 ```ts
-interface AnnotationRenderer2D { kind; sync(); destroy() }              // display only (read-only ctx)
-interface AnnotationEditor2D   { kind; syncSelection(); destroy() }     // input: transformer + commit
+interface AnnotationRenderer2D { kind; sync(); syncDraft(draft); destroy() }  // display only (read-only ctx)
+interface AnnotationEditor2D   { kind; syncSelection(); destroy() }           // input: transformer + commit
 interface AnnotationRenderer3DFactory { kind; component: Component<{ ctx: Scene3DContext }> }  // declarative
 ```
 
@@ -190,7 +191,9 @@ pushed into it. On 2D, display and input are separate objects (D4): the
 `AnnotationRenderer2D` takes a read-only `Scene2DReadContext` (so it *cannot* write
 to the queue) and the optional `AnnotationEditor2D` owns the `Konva.Transformer` and
 commits — the widget builds both from the same factory. 2D widgets call `sync()` /
-`syncSelection()` on change; the 3D scene mounts one component per
+`syncSelection()` on change, and `syncDraft()` on every live-draft change (see the
+live-projection note in the worked example: `sync()` is proportional to the
+collection, `syncDraft()` must stay proportional to the draft); the 3D scene mounts one component per
 `RENDERER_FACTORIES_3D` entry and Svelte reactivity redraws it. The scene names no
 kind in either case.
 
@@ -252,8 +255,8 @@ renderers — the 3D wireframe (`BBox3DRenderer.svelte`) and a projected 2D wire
 the image widget (`kinds/2d/bbox3d/bbox3dRenderer2D.ts`). Because the collection is
 record-scoped and `ViewScopedAnnotations` passes record-scoped kinds through every view
 filter, the bbox3ds are *already* in the image widget's store; moving a box in 3D
-updates the same object, so the projection follows live. Adding this display touched
-**no tool, widget, or queue** — it is display-only:
+updates the same object, so a **saved** edit re-projects with no extra plumbing.
+Adding the display touched **no tool, widget, or queue** — it is display-only:
 
 1. `kinds/2d/bbox3d/bbox3dRenderer2D.ts` implements `AnnotationRenderer2D`
    (`kind: "bbox3d"`, read-only `Scene2DReadContext`). `sync()` reads
@@ -266,6 +269,31 @@ updates the same object, so the projection follows live. Adding this display tou
 4. The projection math mirrors the backend `src/pixano/schemas/annotations/bbox.py`
    (`get_3dbbox_corners`, `project_points`): the 8 corners of a unit cube × size ×
    rotation + center, then extrinsics → perspective divide → intrinsics.
+
+**Live projection (2026-07-30) — where "display-only" stopped being true.** The
+paragraph above holds for *committed* geometry. Previewing a gesture **while it is
+still in the pointer's hand** is a different problem: the in-flight box is not in the
+collection at all (the store contract covers committed annotations — membership,
+selection, deletion), so there was nothing for the image widget to re-project. That
+needed a real seam addition, not just a renderer:
+
+1. `LiveAnnotationDraft` + a `liveDraft` slot on `WorkspaceSession`, exposed through
+   `SceneContextBase` as a read/write `LiveDraftChannel` and to renderers as a
+   read-only `LiveDraftSource` (D4: a renderer still cannot publish).
+2. `AnnotationRenderer2D.syncDraft(draft)` — a **required** second entry point.
+   `sync()` reconciles the whole collection; `syncDraft` reconciles only the preview
+   and runs at pointer rate, so it must stay proportional to the draft, never to the
+   collection. `ImageWidget` splits its effect accordingly: structural changes take
+   the full reconcile, the draft takes the narrow path. Required rather than optional
+   so a renamed or mistyped implementation is a compile error, not a silent opt-out;
+   kinds with no cross-widget preview implement a documented no-op.
+3. The 3D tool publishes on every editor change (`BBox3DSession.reportPreview`) and
+   clears on gesture end/unmount — clearing only a draft it owns, since the slot is
+   shared workspace-wide.
+
+The lesson for the next kind: **cross-widget *live* feedback is a seam feature, not a
+renderer feature.** A renderer alone can mirror committed state; it cannot see a
+gesture happening in another medium.
 
 ## History — the refactor stages
 
@@ -317,16 +345,56 @@ check` at baseline error count and `vitest` green:
   `commit*` helpers). Adding a 3D kind no longer needs widget surgery. _Residual
   resolved 2026-07-01 (DEBT-5): the confirm UI + save orchestration also left the widget._
 
-- **DEBT-3 — renderer sync tests (partial).** The 2D *editor* now has coverage
-  (`bboxEditor2D.test.ts` fires drag/transform → asserts the commit). `bboxRenderer2D.sync()`
-  and the 3D Threlte scene still lack node-level tests (need a Konva/Threlte mock
-  harness). _Target: alongside the next 2D kind (mask RLE)._
+- **DEBT-3 — renderer sync tests (partial → mostly resolved for 2D, 2026-07-30).**
+  The 2D *editor* has coverage (`bboxEditor2D.test.ts` fires drag/transform → asserts
+  the commit). `bbox3dRenderer2D` now has node-level tests too
+  (`bbox3dRenderer2D.test.ts`, 21 cases): projection math against hand-computed
+  pixels, per-box independence of the shared scratch buffers, create/destroy
+  lifecycle, entity-visibility filtering, degraded inputs (no calibration / no loaded
+  image), rotation, and the whole `syncDraft` fast path including its gesture
+  start/end transitions. The suite is mutation-checked — removing the visibility
+  check, the rotation matrix, the scratch indexing or the draft-visibility guard each
+  turns it red. **The blocker is gone:** the "Konva mock harness" that debt was
+  waiting on now exists (a `vi.mock("konva")` fake `Line` plus a parameterisable
+  `Scene2DReadContext`), so covering `bboxRenderer2D.sync()` is a copy-and-adapt job.
+  _Remaining: `bboxRenderer2D.sync()`, and the 3D Threlte scene (still needs a Threlte
+  harness — a genuinely separate problem). Target: alongside the next 2D kind (mask RLE)._
 
-- **DEBT-4 — 3D boxes can't be deleted (this branch).** The point-cloud pipeline
-  has no delete path (no Trash button / Delete-key handler / `collection.remove`).
-  `deleteLocalAnnotation` already supports `bbox3d` — it is purely unwired. Fix
-  needs a UX decision (button vs confirm overlay; confirm-on-delete?). _Target: with
-  the next point-cloud UX pass, before GA._
+- **DEBT-7 — 3D boxes can't be selected from an image view (2026-07-30).** The
+  projected wireframes are display-only: they carry no click handler, and
+  `bbox3dRenderer2DFactory` has no `createEditor`, so nothing ever puts a bbox3d id
+  in `collection.selectedId`. `bbox3dRenderer2D` used to build a `Konva.Transformer`
+  for that selection; it was **unreachable code** (the lookup was keyed by bbox3d id
+  against a `selectedId` only ever holding 2D bbox ids) and was deleted rather than
+  left to mislead — it had already cost one round of debugging in `d5e3e505`. The
+  wireframes are now `listening: false`, since a listening line with no handler could
+  only swallow `selectTool2D`'s click-empty-canvas-to-deselect.
+  Wiring selection up means: a click handler + `listening: true` on the **persisted**
+  lines only (never the live draft, which mirrors another widget's in-flight gesture),
+  and a UX decision on what "selected" does — a `Konva.Transformer` is the wrong
+  affordance, since resizing a perspective-projected 8-corner shape has no
+  well-defined mapping back to a 3D edit. Highlight-only is the plausible version.
+  _Target: with the next point-cloud UX pass, alongside DEBT-4._
+
+- **DEBT-4 — ~~3D boxes can't be deleted~~ → RESOLVED (#662), narrowed 2026-07-30.**
+  The delete path shipped in `f57f59a2` *"link entities to 2D/3D boxes (deferred
+  entity, reassign, delete)"*: `BBox3DSession.deleteBox()` routes through the shared
+  `deleteLocalAnnotation` (queueing a delete for a saved box, dropping the pending
+  creates for an unsaved one) and is wired to a Delete button in `BBox3DHud.svelte`.
+  `deleteBox()` and `changeEntity()` shipped untested; both are now covered in
+  `bbox3dSession.test.ts` (2026-07-30).
+  _Residual, all UX rather than plumbing:_
+  - **No keyboard delete in the point cloud.** `selectTool2D` handles
+    `Delete`/`Backspace` for 2D only; the 3D scene has no equivalent.
+  - **No confirmation step.** The original debt asked for that call ("button vs
+    confirm overlay; confirm-on-delete?"); the button deletes immediately. The
+    mutation is queued rather than flushed, so it is recoverable until save — but
+    nothing tells the user that.
+  - **Discoverability.** Delete is reachable *only* through the edit-confirm HUD:
+    you must click a box to enter the `confirming` phase. There is no delete from a
+    selection, from the entities panel, or from the toolbar.
+
+  _Target: with the next point-cloud UX pass, alongside DEBT-7._
 
 - **DEBT-5 — ~~PointCloudWidget owns bbox3d UI + save orchestration~~ → RESOLVED
   (2026-07-01, review A1).** The confirm state, gizmo visibility and commit moved into
@@ -343,5 +411,9 @@ check` at baseline error count and `vitest` green:
   reduced-but-present: the tool's session/props still travel as `unknown` through
   `toolProps` / `ToolHudProps` (the host is a deliberately kind-agnostic courier). The
   HUD mount is now guarded (`sessions[tool.id]` truthy) so a `hud`-without-`createSession`
-  tool can't crash, but the pairing is still by-convention.
+  tool can't crash, but the pairing is still by-convention. **The guard covers session
+  *absence*, not session *type*:** `BBox3DHud` and `BBox3DTool` both downcast
+  (`rawSession as BBox3DSession`) with no runtime check, and `BBox3DTool` declares
+  `session?: BBox3DSession` optional while using it as required — so a mismatched
+  `hud`/`createSession` pairing is still a runtime crash, not a compile error.
   _Target: a typed per-tool session contract when a second 3D tool lands._

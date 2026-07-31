@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
+import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
 
@@ -39,6 +40,13 @@ export class WorkspaceSession {
    * shared state so every widget viewing the record filters identically.
    */
   visibleEntityIds = $state<Set<string> | null>(null);
+  /**
+   * In-progress geometry the active editing gesture broadcasts on every pointer
+   * move, so widgets in other mediums can preview it live (e.g. re-projecting a
+   * 3D box onto images while it is dragged). Committed truth stays in
+   * `annotations`; this slot is null whenever no gesture is running.
+   */
+  liveDraft = $state<LiveAnnotationDraft | null>(null);
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
@@ -49,5 +57,6 @@ export class WorkspaceSession {
     this.entitySchemaFields = null;
     this.annotations = new AnnotationCollection();
     this.visibleEntityIds = null;
+    this.liveDraft = null;
   }
 }
