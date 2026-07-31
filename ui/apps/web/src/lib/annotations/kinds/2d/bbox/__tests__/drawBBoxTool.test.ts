@@ -7,6 +7,14 @@ License: CECILL-C
 import type Konva from "konva";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { drawBBoxTool } from "../drawBBoxTool.js";
+import {
+  AnnotationCollection,
+  type BBoxGeometry,
+} from "$lib/annotations/annotationCollection.svelte.js";
+import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { CoordsNorm } from "$lib/annotations/types.js";
+
 // Konva needs a native canvas in node; the tool only constructs a Rect and
 // reads/writes its geometry. Mock it with a plain accessor object.
 vi.mock("konva", () => {
@@ -47,12 +55,6 @@ vi.mock("konva", () => {
   return { default: { Rect } };
 });
 
-import { AnnotationCollection, type BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
-import type { CoordsNorm } from "$lib/annotations/types.js";
-
-import { drawBBoxTool } from "../drawBBoxTool.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
 // Image frame at the origin sized 100×100 so pixel == percent in assertions.
@@ -88,7 +90,9 @@ function makeHarness(opts: { image?: Konva.Image | null } = {}) {
   return { ctx, collection, setPointer: (p: { x: number; y: number } | null) => (pointer = p) };
 }
 
-type PointerEvt = Parameters<NonNullable<ReturnType<typeof drawBBoxTool.createHandler>["onPointerDown"]>>[0];
+type PointerEvt = Parameters<
+  NonNullable<ReturnType<typeof drawBBoxTool.createHandler>["onPointerDown"]>
+>[0];
 const pointerEvent = () => ({ cancelBubble: false }) as PointerEvt;
 
 /** Drive a full down→move→up gesture between two stage points. */

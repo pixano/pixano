@@ -1,3 +1,10 @@
 pnpm-lock.yaml
 **/.svelte-kit/**
 dist
+# Generated output: SvelteKit's adapter-static build and vitest's coverage
+# report. Both are gitignored, so CI's fresh checkout never sees them — but
+# locally, running `pnpm build` or `pnpm test:coverage` before
+# `pnpm format_check` would otherwise report hundreds of generated files as
+# unformatted.
+**/build/**
+**/coverage/**

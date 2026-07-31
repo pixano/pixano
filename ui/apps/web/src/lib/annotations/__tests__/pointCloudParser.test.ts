@@ -58,19 +58,34 @@ describe("parsePointCloud — Lance→Three.js coordinate transform", () => {
 describe("parsePointCloud — elevation colors", () => {
   it("assigns R=0 to the lowest Lance Z point", () => {
     // Point A at Lance Z=0 (minimum elevation): t=0, R=0
-    const { colors } = parsePointCloud(buildBuffer([[0, 0, 0], [0, 0, 10]]));
+    const { colors } = parsePointCloud(
+      buildBuffer([
+        [0, 0, 0],
+        [0, 0, 10],
+      ]),
+    );
     expect(colors[0]).toBeCloseTo(0); // R of point A
   });
 
   it("assigns R=1 to the highest Lance Z point", () => {
     // Point B at Lance Z=10 (maximum elevation): t=1, R=1
-    const { colors } = parsePointCloud(buildBuffer([[0, 0, 0], [0, 0, 10]]));
+    const { colors } = parsePointCloud(
+      buildBuffer([
+        [0, 0, 0],
+        [0, 0, 10],
+      ]),
+    );
     expect(colors[3]).toBeCloseTo(1); // R of point B
   });
 
   it("assigns stable colors when all points share the same elevation", () => {
     // Single elevation: lanceZRange falls back to 1, t=0 for all points
-    const { colors } = parsePointCloud(buildBuffer([[0, 0, 5], [1, 0, 5]]));
+    const { colors } = parsePointCloud(
+      buildBuffer([
+        [0, 0, 5],
+        [1, 0, 5],
+      ]),
+    );
     expect(colors[0]).toBeCloseTo(0); // R: t=0
     expect(colors[1]).toBeCloseTo(0.4); // G: GREEN_MIN + 0 * GREEN_RANGE = 0.4
     expect(colors[2]).toBeCloseTo(1.0); // B: 1 - 0 * BLUE_DECAY = 1
@@ -78,7 +93,13 @@ describe("parsePointCloud — elevation colors", () => {
 
   it("colors are interpolated for a mid-elevation point", () => {
     // Three points: Z=0, Z=5, Z=10 → t=0, 0.5, 1
-    const { colors } = parsePointCloud(buildBuffer([[0, 0, 0], [0, 0, 5], [0, 0, 10]]));
+    const { colors } = parsePointCloud(
+      buildBuffer([
+        [0, 0, 0],
+        [0, 0, 5],
+        [0, 0, 10],
+      ]),
+    );
     expect(colors[3]).toBeCloseTo(0.5); // R of mid point
     expect(colors[4]).toBeCloseTo(0.4 + 0.5 * 0.4); // G
     expect(colors[5]).toBeCloseTo(1 - 0.5 * 0.5); // B
@@ -91,7 +112,12 @@ describe("parsePointCloud — Three.js bounding box", () => {
   it("computes the correct bounds from two opposite points", () => {
     // Lance (-1,-2,-3) → Three.js (-1,-3, 2)
     // Lance ( 1, 2, 3) → Three.js ( 1, 3,-2)
-    const { bounds } = parsePointCloud(buildBuffer([[-1, -2, -3], [1, 2, 3]]));
+    const { bounds } = parsePointCloud(
+      buildBuffer([
+        [-1, -2, -3],
+        [1, 2, 3],
+      ]),
+    );
     expect(bounds.minX).toBeCloseTo(-1);
     expect(bounds.maxX).toBeCloseTo(1);
     expect(bounds.minY).toBeCloseTo(-3);

@@ -177,7 +177,8 @@ export function toDatasetSchema(dto: DatasetResponse): DatasetSchema {
 
     if (normalizedTableName === "records") groups.item.push(normalizedTableName);
     else if (normalizedTableName === "entities") groups.entities.push(normalizedTableName);
-    else if (ANNOTATION_TABLES.has(normalizedTableName)) groups.annotations.push(normalizedTableName);
+    else if (ANNOTATION_TABLES.has(normalizedTableName))
+      groups.annotations.push(normalizedTableName);
     else if (normalizedTableName === "embeddings") groups.embeddings.push(normalizedTableName);
     else groups.views.push(normalizedTableName);
   }
@@ -250,7 +251,9 @@ export function toDatasetBrowser(
 export function toRawRecord(record: RecordResponse, tableName = "records"): RawSchemaData {
   const { id, created_at = "", updated_at = "", ...data } = record;
   return {
-    id, created_at, updated_at,
+    id,
+    created_at,
+    updated_at,
     table_info: tableInfo(normalizeTableName(tableName), "item", BaseSchema.Item),
     data,
   };
@@ -259,7 +262,9 @@ export function toRawRecord(record: RecordResponse, tableName = "records"): RawS
 export function toRawEntity(entity: EntityResponse, tableName = "entities"): RawSchemaData {
   const { id, created_at = "", updated_at = "", record_id = "", parent_id = "", ...data } = entity;
   return {
-    id, created_at, updated_at,
+    id,
+    created_at,
+    updated_at,
     table_info: tableInfo(normalizeTableName(tableName), "entities", BaseSchema.Entity),
     data: { item_id: record_id, parent_id, ...data },
   };
@@ -279,7 +284,9 @@ export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): 
   const isSequenceFrame = typeof frame_index === "number";
 
   return {
-    id, created_at, updated_at,
+    id,
+    created_at,
+    updated_at,
     table_info: tableInfo(
       isText ? "texts" : isSequenceFrame ? "sequence_frames" : "images",
       "views",
@@ -289,7 +296,14 @@ export function toRawView(view: ImageResponse | SFrameResponse | TextResponse): 
       item_id: record_id,
       parent_id: "",
       view_name: logical_name,
-      url: src, content, uri, width, height, format, frame_index, timestamp,
+      url: src,
+      content,
+      uri,
+      width,
+      height,
+      format,
+      frame_index,
+      timestamp,
     },
   };
 }
@@ -315,7 +329,9 @@ export function toRawAnnotation(
   const inferredViewId = typeof frame_id === "string" && frame_id !== "" ? frame_id : view_id;
 
   const result = {
-    id, created_at, updated_at,
+    id,
+    created_at,
+    updated_at,
     table_info: tableInfo(
       normalizedTableName,
       "annotations",
@@ -341,8 +357,14 @@ export function toRawAnnotation(
   // Reverse-map backend field names for tracklets
   if (normalizedTableName === "tracklets") {
     const d = result.data as Record<string, unknown>;
-    if ("start_timestep" in d) { d.start_frame = d.start_timestep; delete d.start_timestep; }
-    if ("end_timestep" in d) { d.end_frame = d.end_timestep; delete d.end_timestep; }
+    if ("start_timestep" in d) {
+      d.start_frame = d.start_timestep;
+      delete d.start_timestep;
+    }
+    if ("end_timestep" in d) {
+      d.end_frame = d.end_timestep;
+      delete d.end_timestep;
+    }
   }
 
   return result;

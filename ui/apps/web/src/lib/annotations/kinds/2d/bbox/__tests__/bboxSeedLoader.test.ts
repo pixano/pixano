@@ -6,13 +6,17 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { bboxSeedLoader } from "../bboxSeedLoader.js";
 import type { SeedLoadContext, ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
 import type { BBoxRow, EntityRow } from "$lib/api/annotations.js";
 
-import { bboxSeedLoader } from "../bboxSeedLoader.js";
-
-const CAM_FRONT: ViewInfo = { id: "CAM_FRONT_0_0", logicalName: "CAM_FRONT", width: 1600, height: 900 };
+const CAM_FRONT: ViewInfo = {
+  id: "CAM_FRONT_0_0",
+  logicalName: "CAM_FRONT",
+  width: 1600,
+  height: 900,
+};
 
 function makeContext(bboxes: BBoxRow[], entities: EntityRow[] = []): SeedLoadContext {
   const views = new Map<string, ViewInfo>();
@@ -91,7 +95,9 @@ describe("bboxSeedLoader — view resolution", () => {
   });
 
   it("resolves legacy rows whose view_id is the logical name", async () => {
-    const rows = await bboxSeedLoader.load(makeContext([makeRow({ id: "legacy", view_id: "CAM_FRONT" })]));
+    const rows = await bboxSeedLoader.load(
+      makeContext([makeRow({ id: "legacy", view_id: "CAM_FRONT" })]),
+    );
     expect(rows).toHaveLength(1);
     expect(rows[0].viewId).toBe("CAM_FRONT_0_0");
   });

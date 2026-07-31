@@ -6,14 +6,13 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
+import { ImageExtension } from "../ImageExtension.js";
 import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
 import type { DatasetGateway } from "$lib/workspace/datasetGateway.js";
 
 // ImageExtension references ImageWidget.svelte which imports Konva (requires native canvas).
 // Mock the component so this unit test stays pure JS.
 vi.mock("$lib/components/widgets/image/ImageWidget.svelte", () => ({ default: {} }));
-
-import { ImageExtension } from "../ImageExtension.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

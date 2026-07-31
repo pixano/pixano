@@ -6,12 +6,11 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import type { ResourceMutation } from "$lib/annotations/types.js";
-import { ApiError } from "$lib/api/apiClient.js";
-
 import type { MutationGateway } from "../datasetGateway.js";
 import { MutationQueue, type LocalAnnotationLocator } from "../mutationQueue.svelte.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
+import type { ResourceMutation } from "$lib/annotations/types.js";
+import { ApiError } from "$lib/api/apiClient.js";
 
 // ─── Test scaffolding ───────────────────────────────────────────────────────
 
@@ -67,7 +66,10 @@ const noopLocator: LocalAnnotationLocator = {
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe("MutationQueue.upsertUpdate", () => {
-  function update(id: string, body: Record<string, unknown>): Extract<ResourceMutation, { op: "update" }> {
+  function update(
+    id: string,
+    body: Record<string, unknown>,
+  ): Extract<ResourceMutation, { op: "update" }> {
     return { op: "update", resource: "bboxes", id, body };
   }
 
@@ -78,7 +80,11 @@ describe("MutationQueue.upsertUpdate", () => {
     queue.upsertUpdate(update("b1", { coords: [0, 0, 1, 1] }));
 
     expect(queue.count).toBe(1);
-    expect(queue.pending[0]).toMatchObject({ op: "update", id: "b1", body: { coords: [0, 0, 1, 1] } });
+    expect(queue.pending[0]).toMatchObject({
+      op: "update",
+      id: "b1",
+      body: { coords: [0, 0, 1, 1] },
+    });
   });
 
   it("replaces the body of the pending update instead of adding a second one", () => {
@@ -117,7 +123,10 @@ describe("MutationQueue.patchPendingCreate", () => {
     queue.patchPendingCreate("b1", "bboxes", { coords: [5, 5, 2, 2] });
 
     expect(queue.count).toBe(1);
-    expect(queue.pending[0]).toMatchObject({ op: "create", body: { id: "b1", coords: [5, 5, 2, 2] } });
+    expect(queue.pending[0]).toMatchObject({
+      op: "create",
+      body: { id: "b1", coords: [5, 5, 2, 2] },
+    });
   });
 
   it("is a no-op when no matching pending create exists", () => {
@@ -213,7 +222,11 @@ describe("MutationQueue.flush", () => {
   });
 
   it("surfaces ApiError detail in saveError", async () => {
-    const apiErr = new ApiError("createAnnotation(bboxes) failed with 422 Unprocessable", 422, '{"detail":"bad"}');
+    const apiErr = new ApiError(
+      "createAnnotation(bboxes) failed with 422 Unprocessable",
+      422,
+      '{"detail":"bad"}',
+    );
     const { gateway } = makeGateway({ failOn: "createAnnotation", error: apiErr });
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
 
@@ -227,7 +240,11 @@ describe("MutationQueue.flush", () => {
   });
 
   it("drops already-applied mutations so a retry does not re-send them", async () => {
-    const apiErr = new ApiError("createAnnotation(bboxes) failed with 422 Unprocessable", 422, '{"detail":"bad"}');
+    const apiErr = new ApiError(
+      "createAnnotation(bboxes) failed with 422 Unprocessable",
+      422,
+      '{"detail":"bad"}',
+    );
     const { gateway, calls } = makeGateway({ failOn: "createAnnotation", error: apiErr });
     const queue = new MutationQueue(gateway, makeSession(), noopLocator);
 

@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { Component } from "svelte";
-
 import type Konva from "konva";
+import type { Component } from "svelte";
 
 import type { Scene2DContext, Scene3DContext, SeamContext } from "./sceneContext.js";
 import type { ToolDefinition } from "./toolDefinition.js";

@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { BBOX3D_RESOURCE, BBOX_RESOURCE, ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
-
 import type { CoordsNorm, ResourceMutation, Rotation3x3 } from "./types.js";
+import { BBOX_RESOURCE, BBOX3D_RESOURCE, ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -142,7 +141,15 @@ export function buildBBoxCreate(
     // entity-create is skipped (the chosen entityId is supplied in opts).
     ...(opts.linkExisting
       ? []
-      : [buildEntityCreateMutation(ctx, entityId, opts.entityFields, opts.widgetId, opts.localAnnotationId)]),
+      : [
+          buildEntityCreateMutation(
+            ctx,
+            entityId,
+            opts.entityFields,
+            opts.widgetId,
+            opts.localAnnotationId,
+          ),
+        ]),
     {
       op: "create",
       resource: BBOX_RESOURCE,
@@ -226,7 +233,15 @@ export function buildBBox3DCreate(
   const mutations: ResourceMutation[] = [
     ...(opts.linkExisting
       ? []
-      : [buildEntityCreateMutation(ctx, entityId, opts.entityFields, opts.widgetId, opts.localAnnotationId)]),
+      : [
+          buildEntityCreateMutation(
+            ctx,
+            entityId,
+            opts.entityFields,
+            opts.widgetId,
+            opts.localAnnotationId,
+          ),
+        ]),
     {
       op: "create",
       resource: BBOX3D_RESOURCE,

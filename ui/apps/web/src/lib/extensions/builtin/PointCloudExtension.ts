@@ -4,11 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { WidgetExtension } from "../WidgetExtension.js";
 import { DEFAULT_TOOL_3D } from "$lib/annotations/scene/tool.js";
 import type { PointCloudWidgetStorage } from "$lib/annotations/types.js";
 import PointCloudWidget from "$lib/components/widgets/point-cloud/PointCloudWidget.svelte";
-
-import { WidgetExtension } from "../WidgetExtension.js";
 
 /**
  * Bases this extension claims. `CalibratedPointCloud` extends `PointCloud`

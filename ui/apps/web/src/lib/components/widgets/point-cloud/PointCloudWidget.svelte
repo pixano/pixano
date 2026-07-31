@@ -9,16 +9,14 @@ License: CECILL-C
   import { getContext, onMount } from "svelte";
   import type { Component } from "svelte";
 
+  import AnnotationToolbar from "../AnnotationToolbar.svelte";
+  import { buildSeam } from "../sceneSeam.js";
   // Type-only import (erased at runtime, so the dynamic import below still
   // code-splits) — gives the scene's exact prop types to the lazy holder.
   import type PointCloudSceneComponent from "./PointCloudScene.svelte";
-
   import { DEFAULT_TOOL_3D, TOOLS_3D } from "$lib/annotations/scene/registry3d.js";
   import type { PointCloudWidgetStorage } from "$lib/annotations/types.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
-
-  import AnnotationToolbar from "../AnnotationToolbar.svelte";
-  import { buildSeam } from "../sceneSeam.js";
 
   interface Props {
     widgetId: string;
@@ -110,7 +108,10 @@ License: CECILL-C
         type="button"
         onclick={() => (cameraMode = "orbit")}
         title="Orbit mode (Left drag to orbit · Right drag to pan · Scroll to zoom)"
-        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'orbit' ? 'bg-accent text-accent-foreground' : ''}"
+        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
+        'orbit'
+          ? 'bg-accent text-accent-foreground'
+          : ''}"
       >
         <Globe class="h-3.5 w-3.5" />
       </button>
@@ -118,7 +119,10 @@ License: CECILL-C
         type="button"
         onclick={() => (cameraMode = "first-person")}
         title="First person mode (Left drag to pan · Right drag to look around · Scroll to move forward/back)"
-        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode === 'first-person' ? 'bg-accent text-accent-foreground' : ''}"
+        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {cameraMode ===
+        'first-person'
+          ? 'bg-accent text-accent-foreground'
+          : ''}"
       >
         <Eye class="h-3.5 w-3.5" />
       </button>

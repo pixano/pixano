@@ -6,7 +6,6 @@ License: CECILL-C
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../apiClient";
 import {
   createAnnotation,
   createEntity,
@@ -17,6 +16,7 @@ import {
   listEntities,
   updateAnnotation,
 } from "../annotations";
+import { ApiError } from "../apiClient";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -61,9 +61,7 @@ describe("listEntities", () => {
   });
 
   it("includes record_id and limit in query string", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], total: 0, limit: 50, offset: 0 }),
-    );
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 50, offset: 0 }));
 
     await listEntities(DS, { recordId: "rec-1", limit: 50 });
 
@@ -74,9 +72,7 @@ describe("listEntities", () => {
   });
 
   it("defaults limit to 1000 when not specified", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], total: 0, limit: 1000, offset: 0 }),
-    );
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
     await listEntities(DS);
 
@@ -105,7 +101,15 @@ describe("listEntities", () => {
 describe("listBBoxes", () => {
   it("returns items from paginated response", async () => {
     const bboxes = [
-      { id: "b1", record_id: "r1", entity_id: "e1", view_id: "v1", coords: [0, 0, 1, 1], format: "xywh", is_normalized: true },
+      {
+        id: "b1",
+        record_id: "r1",
+        entity_id: "e1",
+        view_id: "v1",
+        coords: [0, 0, 1, 1],
+        format: "xywh",
+        is_normalized: true,
+      },
     ];
     vi.mocked(fetch).mockResolvedValueOnce(
       okJson({ items: bboxes, total: 1, limit: 1000, offset: 0 }),
@@ -116,9 +120,7 @@ describe("listBBoxes", () => {
   });
 
   it("maps viewId to view_name query param", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], total: 0, limit: 1000, offset: 0 }),
-    );
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
     await listBBoxes(DS, { viewId: "cam-front" });
 
@@ -127,9 +129,7 @@ describe("listBBoxes", () => {
   });
 
   it("omits view_name when viewId is absent", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], total: 0, limit: 1000, offset: 0 }),
-    );
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
     await listBBoxes(DS);
 
@@ -149,8 +149,14 @@ describe("listBBox3Ds", () => {
   it("returns items from paginated response", async () => {
     const bboxes3d = [
       {
-        id: "b3d-1", record_id: "r1", entity_id: "e1", view_id: "v1",
-        coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd", rotation: [1,0,0,0,1,0,0,0,1], is_normalized: false,
+        id: "b3d-1",
+        record_id: "r1",
+        entity_id: "e1",
+        view_id: "v1",
+        coords: [0, 0, 0, 1, 1, 1],
+        format: "xyzwhd",
+        rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+        is_normalized: false,
       },
     ];
     vi.mocked(fetch).mockResolvedValueOnce(
@@ -162,9 +168,7 @@ describe("listBBox3Ds", () => {
   });
 
   it("maps viewId to view_name param", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      okJson({ items: [], total: 0, limit: 1000, offset: 0 }),
-    );
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
     await listBBox3Ds(DS, { viewId: "lidar" });
 
@@ -261,8 +265,12 @@ describe("deleteAnnotation", () => {
   });
 
   it("throws on unexpected non-404 error", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 500, statusText: "Internal Server Error" }));
-    await expect(deleteAnnotation(DS, "bboxes", "b1")).rejects.toThrow("deleteAnnotation(bboxes) failed with 500");
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(null, { status: 500, statusText: "Internal Server Error" }),
+    );
+    await expect(deleteAnnotation(DS, "bboxes", "b1")).rejects.toThrow(
+      "deleteAnnotation(bboxes) failed with 500",
+    );
   });
 });
 
@@ -285,7 +293,9 @@ describe("deleteEntity", () => {
   });
 
   it("throws on unexpected error", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 403, statusText: "Forbidden" }));
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(null, { status: 403, statusText: "Forbidden" }),
+    );
     await expect(deleteEntity(DS, "e1")).rejects.toThrow("deleteEntity failed with 403");
   });
 });

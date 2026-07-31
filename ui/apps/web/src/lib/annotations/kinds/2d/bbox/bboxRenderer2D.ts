@@ -6,12 +6,13 @@ License: CECILL-C
 
 import Konva from "konva";
 
+import { BBOX_ID_ATTR, BBOX_NODE_NAME } from "./bbox2dNodes.js";
+import { createBBoxEditor2D } from "./bboxEditor2D.js";
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
 import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
-import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
@@ -20,10 +21,8 @@ import {
   normalizedToPixel,
   type PixelFrame,
 } from "$lib/annotations/scene/scene2dGeometry.js";
+import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 import { pickEntityLabel } from "$lib/annotations/types.js";
-
-import { BBOX_ID_ATTR, BBOX_NODE_NAME } from "./bbox2dNodes.js";
-import { createBBoxEditor2D } from "./bboxEditor2D.js";
 
 /**
  * Displays the "bbox" kind on the Konva scene: one rect (+ optional entity
@@ -77,10 +76,16 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
     }
 
     for (const [id, rect] of this.rectByBBoxId) {
-      if (!activeIds.has(id)) { rect.destroy(); this.rectByBBoxId.delete(id); }
+      if (!activeIds.has(id)) {
+        rect.destroy();
+        this.rectByBBoxId.delete(id);
+      }
     }
     for (const [id, label] of this.labelByBBoxId) {
-      if (!activeIds.has(id)) { label.destroy(); this.labelByBBoxId.delete(id); }
+      if (!activeIds.has(id)) {
+        label.destroy();
+        this.labelByBBoxId.delete(id);
+      }
     }
 
     this.ctx.annotationLayer.batchDraw();
@@ -127,19 +132,33 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
     });
     rect.setAttr(BBOX_ID_ATTR, bbox.id);
     // Selection is display state, not a queue mutation, so it stays in the renderer.
-    rect.on("click tap", (e) => { e.cancelBubble = true; this.ctx.collection.select(bbox.id); });
+    rect.on("click tap", (e) => {
+      e.cancelBubble = true;
+      this.ctx.collection.select(bbox.id);
+    });
     // Keep the label glued to the box while the editor drags/transforms it.
     rect.on("dragmove transform", () => this._followLabel(bbox.id, rect));
     return rect;
   }
 
-  private _makeLabel(persisted: boolean, entity: Record<string, unknown> | undefined): Konva.Label | null {
+  private _makeLabel(
+    persisted: boolean,
+    entity: Record<string, unknown> | undefined,
+  ): Konva.Label | null {
     const text = pickEntityLabel(entity);
     if (!text) return null;
     const stroke = persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
     const label = new Konva.Label({ listening: false });
     label.add(new Konva.Tag({ fill: stroke, cornerRadius: 3 }));
-    label.add(new Konva.Text({ text, fontSize: 12, fontFamily: "system-ui, sans-serif", fill: "#0f172a", padding: 3 }));
+    label.add(
+      new Konva.Text({
+        text,
+        fontSize: 12,
+        fontFamily: "system-ui, sans-serif",
+        fill: "#0f172a",
+        padding: 3,
+      }),
+    );
     return label;
   }
 }

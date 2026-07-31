@@ -7,9 +7,7 @@ License: CECILL-C
 import * as THREE from "three";
 import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import { threeBoxToLanceXYZWHD, threeQuaternionToLanceRotation } from "$lib/annotations/coordinateTransforms";
-import type { Rotation3x3 } from "$lib/annotations/types";
-
+import type { BBoxRenderData, GizmoVisibility } from "./bbox3dTypes.js";
 import {
   ARROW_DEFS,
   ARROW_UP,
@@ -28,7 +26,11 @@ import {
   RING_LOCAL_QUATS,
   TRANSLATE_ARROW_DEFS,
 } from "./boxEditorConstants.js";
-import type { BBoxRenderData, GizmoVisibility } from "./bbox3dTypes.js";
+import {
+  threeBoxToLanceXYZWHD,
+  threeQuaternionToLanceRotation,
+} from "$lib/annotations/coordinateTransforms";
+import type { Rotation3x3 } from "$lib/annotations/types";
 
 type DrawPhase = "idle" | "confirming" | "moving" | "resizing-face" | "rotating";
 
@@ -46,8 +48,8 @@ export class BoxEditor {
 
   activeDragging = $derived(
     this.drawPhase === "moving" ||
-    this.drawPhase === "resizing-face" ||
-    this.drawPhase === "rotating",
+      this.drawPhase === "resizing-face" ||
+      this.drawPhase === "rotating",
   );
 
   // Geometry caches
@@ -58,7 +60,8 @@ export class BoxEditor {
 
   // Gizmo derived sizes
   gizmoRingRadius = $derived(
-    Math.hypot(this.previewSize[0], this.previewSize[1], this.previewSize[2]) / 2 * GIZMO_RING_PADDING,
+    (Math.hypot(this.previewSize[0], this.previewSize[1], this.previewSize[2]) / 2) *
+      GIZMO_RING_PADDING,
   );
   gizmoTubeRadius = $derived(this.gizmoRingRadius * GIZMO_TUBE_FRACTION);
   arrowHeight = $derived(this.gizmoRingRadius * GIZMO_ARROW_HEIGHT_FRACTION);
@@ -66,8 +69,8 @@ export class BoxEditor {
   arrowHeadLength = $derived(this.arrowHeight * GIZMO_ARROW_HEAD_FRACTION);
   arrowShaftLength = $derived(this.arrowHeight * (1 - GIZMO_ARROW_HEAD_FRACTION));
   arrowShaftRadius = $derived(this.arrowRadius * GIZMO_ARROW_SHAFT_RADIUS_FRACTION);
-  arrowShaftOffsetY = $derived(-this.arrowHeight * GIZMO_ARROW_HEAD_FRACTION / 2);
-  arrowHeadOffsetY = $derived(this.arrowHeight * (1 - GIZMO_ARROW_HEAD_FRACTION) / 2);
+  arrowShaftOffsetY = $derived((-this.arrowHeight * GIZMO_ARROW_HEAD_FRACTION) / 2);
+  arrowHeadOffsetY = $derived((this.arrowHeight * (1 - GIZMO_ARROW_HEAD_FRACTION)) / 2);
 
   // Gizmo derived world-space positions / orientations
   private readonly _ringWorldQuat = new THREE.Quaternion();
@@ -84,7 +87,12 @@ export class BoxEditor {
       this._ringWorldQuat.multiplyQuaternions(this.previewQuaternion, RING_LOCAL_QUATS[i]);
       return {
         color: ring.color,
-        quat: [this._ringWorldQuat.x, this._ringWorldQuat.y, this._ringWorldQuat.z, this._ringWorldQuat.w] as [number, number, number, number],
+        quat: [
+          this._ringWorldQuat.x,
+          this._ringWorldQuat.y,
+          this._ringWorldQuat.z,
+          this._ringWorldQuat.w,
+        ] as [number, number, number, number],
       };
     }),
   );
@@ -96,13 +104,20 @@ export class BoxEditor {
       return ARROW_DEFS.map((def) => {
         const halfSize = this.previewSize[def.axis] / 2;
         this._arrowWorldDir.copy(def.localDir).applyQuaternion(this.previewQuaternion).normalize();
-        this._arrowFaceCenter.set(...this.previewCenter).addScaledVector(this._arrowWorldDir, halfSize);
+        this._arrowFaceCenter
+          .set(...this.previewCenter)
+          .addScaledVector(this._arrowWorldDir, halfSize);
         this._arrowPos.copy(this._arrowFaceCenter).addScaledVector(this._arrowWorldDir, hs);
         this._arrowRotQuat.setFromUnitVectors(ARROW_UP, this._arrowWorldDir);
         return {
           id: def.id,
           pos: [this._arrowPos.x, this._arrowPos.y, this._arrowPos.z] as [number, number, number],
-          quat: [this._arrowRotQuat.x, this._arrowRotQuat.y, this._arrowRotQuat.z, this._arrowRotQuat.w] as [number, number, number, number],
+          quat: [
+            this._arrowRotQuat.x,
+            this._arrowRotQuat.y,
+            this._arrowRotQuat.z,
+            this._arrowRotQuat.w,
+          ] as [number, number, number, number],
           color: def.color,
           axis: def.axis,
           sign: def.sign,
@@ -115,13 +130,27 @@ export class BoxEditor {
     (() => {
       const hs = this.arrowHeight / 2;
       return TRANSLATE_ARROW_DEFS.map((def) => {
-        this._translateArrowWorldDir.copy(def.localDir).applyQuaternion(this.previewQuaternion).normalize();
-        this._translateArrowPos.set(...this.previewCenter).addScaledVector(this._translateArrowWorldDir, hs);
+        this._translateArrowWorldDir
+          .copy(def.localDir)
+          .applyQuaternion(this.previewQuaternion)
+          .normalize();
+        this._translateArrowPos
+          .set(...this.previewCenter)
+          .addScaledVector(this._translateArrowWorldDir, hs);
         this._translateArrowRotQuat.setFromUnitVectors(ARROW_UP, this._translateArrowWorldDir);
         return {
           id: def.id,
-          pos: [this._translateArrowPos.x, this._translateArrowPos.y, this._translateArrowPos.z] as [number, number, number],
-          quat: [this._translateArrowRotQuat.x, this._translateArrowRotQuat.y, this._translateArrowRotQuat.z, this._translateArrowRotQuat.w] as [number, number, number, number],
+          pos: [
+            this._translateArrowPos.x,
+            this._translateArrowPos.y,
+            this._translateArrowPos.z,
+          ] as [number, number, number],
+          quat: [
+            this._translateArrowRotQuat.x,
+            this._translateArrowRotQuat.y,
+            this._translateArrowRotQuat.z,
+            this._translateArrowRotQuat.w,
+          ] as [number, number, number, number],
           color: def.color,
           axis: def.axis,
         };
@@ -130,10 +159,14 @@ export class BoxEditor {
   );
 
   rotWorldAngleDeg = $derived(
-    2 * Math.atan2(
-      [this.previewQuaternion.x, this.previewQuaternion.y, this.previewQuaternion.z][this.rotAxis],
-      this.previewQuaternion.w,
-    ) * (180 / Math.PI),
+    2 *
+      Math.atan2(
+        [this.previewQuaternion.x, this.previewQuaternion.y, this.previewQuaternion.z][
+          this.rotAxis
+        ],
+        this.previewQuaternion.w,
+      ) *
+      (180 / Math.PI),
   );
 
   // Pre-allocated raycast meshes
@@ -201,7 +234,10 @@ export class BoxEditor {
       this.previewEdgesGeometry = edges;
       this._raycastBoxGeom = box;
       this._raycastBoxMesh.geometry = box;
-      return () => { edges.dispose(); box.dispose(); };
+      return () => {
+        edges.dispose();
+        box.dispose();
+      };
     });
 
     $effect(() => {
@@ -214,7 +250,12 @@ export class BoxEditor {
     });
 
     $effect(() => {
-      const geom = new THREE.CylinderGeometry(this.arrowRadius, this.arrowRadius, this.arrowHeight, 8);
+      const geom = new THREE.CylinderGeometry(
+        this.arrowRadius,
+        this.arrowRadius,
+        this.arrowHeight,
+        8,
+      );
       this._raycastArrowGeom = geom;
       this._raycastArrowMesh.geometry = geom;
       return () => geom.dispose();
@@ -255,7 +296,8 @@ export class BoxEditor {
       };
 
       const raycastRings = (clientX: number, clientY: number): { axis: 0 | 1 | 2 } | null => {
-        if (!this.previewVisible || !this.getGizmoVisibility().rings || !this._raycastRingGeoms) return null;
+        if (!this.previewVisible || !this.getGizmoVisibility().rings || !this._raycastRingGeoms)
+          return null;
         setupRay(clientX, clientY);
         for (let axis = 0; axis < 3; axis++) {
           const mesh = this._raycastRingMeshes[axis];
@@ -289,9 +331,15 @@ export class BoxEditor {
         return closestBox;
       };
 
-      const computeRingAngle = (clientX: number, clientY: number, axis: 0 | 1 | 2): number | null => {
+      const computeRingAngle = (
+        clientX: number,
+        clientY: number,
+        axis: 0 | 1 | 2,
+      ): number | null => {
         setupRay(clientX, clientY);
-        const normal = this._ringNormal.copy(AXIS_UNIT_VECS[axis]).applyQuaternion(this.rotStartQuaternion);
+        const normal = this._ringNormal
+          .copy(AXIS_UNIT_VECS[axis])
+          .applyQuaternion(this.rotStartQuaternion);
         this._ringCenter.set(...this.previewCenter);
         this._ringPlane.set(normal, -this._ringCenter.dot(normal));
         if (!this._raycastRay.ray.intersectPlane(this._ringPlane, this._ringHit)) return null;
@@ -301,7 +349,12 @@ export class BoxEditor {
       };
 
       const raycastArrows = (clientX: number, clientY: number) => {
-        if (!this.previewVisible || !this.getGizmoVisibility().resizeArrows || !this._raycastArrowGeom) return null;
+        if (
+          !this.previewVisible ||
+          !this.getGizmoVisibility().resizeArrows ||
+          !this._raycastArrowGeom
+        )
+          return null;
         setupRay(clientX, clientY);
         for (const arrow of this.arrowGizmos) {
           this._raycastArrowMesh.position.set(...arrow.pos);
@@ -313,7 +366,12 @@ export class BoxEditor {
       };
 
       const raycastTranslateArrows = (clientX: number, clientY: number) => {
-        if (!this.previewVisible || !this.getGizmoVisibility().translateArrows || !this._raycastArrowGeom) return null;
+        if (
+          !this.previewVisible ||
+          !this.getGizmoVisibility().translateArrows ||
+          !this._raycastArrowGeom
+        )
+          return null;
         setupRay(clientX, clientY);
         for (const arrow of this.translateArrowGizmos) {
           this._raycastArrowMesh.position.set(...arrow.pos);
@@ -333,7 +391,8 @@ export class BoxEditor {
         this._screenRay.setFromCamera(this._screenNdc, this.camera.current);
         this._groundPlane.constant = -this.getFloorY();
         return this._screenRay.ray.intersectPlane(this._groundPlane, this._screenGroundHit)
-          ? this._screenGroundHit : null;
+          ? this._screenGroundHit
+          : null;
       };
 
       const onPointerDown = (e: PointerEvent) => {
@@ -341,9 +400,13 @@ export class BoxEditor {
 
         if (this.drawPhase === "idle") {
           if (!this.getDrawMode()) return;
-          e.stopPropagation(); e.preventDefault();
+          e.stopPropagation();
+          e.preventDefault();
           const existing = raycastExistingBoxes(e.clientX, e.clientY);
-          if (existing) { this._startEditingBox(existing); return; }
+          if (existing) {
+            this._startEditingBox(existing);
+            return;
+          }
           const side = this.getOrbitCenterDist() * DEFAULT_BOX_SIZE_FRACTION;
           this.previewCenter = [...this.getCameraTarget()];
           this.previewSize = [side, side, side];
@@ -352,43 +415,54 @@ export class BoxEditor {
           this.editingBoxId = null;
           this._fireReadyToConfirm();
           this.drawPhase = "confirming";
-
         } else if (this.drawPhase === "confirming") {
           const ringHit = raycastRings(e.clientX, e.clientY);
           if (ringHit) {
-            e.stopPropagation(); e.preventDefault();
+            e.stopPropagation();
+            e.preventDefault();
             this.rotAxis = ringHit.axis;
             this.rotStartQuaternion = this.previewQuaternion.clone();
             this._invRotStartQuat.copy(this.rotStartQuaternion).invert();
-            this._rotAxisWorld.copy(AXIS_UNIT_VECS[this.rotAxis]).applyQuaternion(this.rotStartQuaternion);
+            this._rotAxisWorld
+              .copy(AXIS_UNIT_VECS[this.rotAxis])
+              .applyQuaternion(this.rotStartQuaternion);
             this.rotStartAngle = computeRingAngle(e.clientX, e.clientY, ringHit.axis) ?? 0;
             this.drawPhase = "rotating";
             return;
           }
           const translateHit = raycastTranslateArrows(e.clientX, e.clientY);
           if (translateHit) {
-            e.stopPropagation(); e.preventDefault();
+            e.stopPropagation();
+            e.preventDefault();
             this.translateAxis = translateHit.axis;
             this.moveMode = "axis";
             this.moveStartCenter = [...this.previewCenter];
-            this._resizeWorldDir.set(0, 0, 0).setComponent(this.translateAxis, 1).applyQuaternion(this.previewQuaternion).normalize();
+            this._resizeWorldDir
+              .set(0, 0, 0)
+              .setComponent(this.translateAxis, 1)
+              .applyQuaternion(this.previewQuaternion)
+              .normalize();
             this.drawPhase = "moving";
             return;
           }
           const arrowHit = raycastArrows(e.clientX, e.clientY);
           if (arrowHit) {
-            e.stopPropagation(); e.preventDefault();
+            e.stopPropagation();
+            e.preventDefault();
             this.resizeAxis = arrowHit.axis as 0 | 1 | 2;
             this.resizeStartCenter = [...this.previewCenter];
             this.resizeStartSize = [...this.previewSize];
             this._resizeWorldDir.set(0, 0, 0).setComponent(arrowHit.axis, arrowHit.sign);
             this._resizeWorldDir.applyQuaternion(this.previewQuaternion).normalize();
-            this._resizeStartFaceCenter.fromArray(this.previewCenter).addScaledVector(this._resizeWorldDir, this.previewSize[arrowHit.axis] / 2);
+            this._resizeStartFaceCenter
+              .fromArray(this.previewCenter)
+              .addScaledVector(this._resizeWorldDir, this.previewSize[arrowHit.axis] / 2);
             this.drawPhase = "resizing-face";
             return;
           }
           if (!raycastBox(e.clientX, e.clientY)) return;
-          e.stopPropagation(); e.preventDefault();
+          e.stopPropagation();
+          e.preventDefault();
           this.moveMode = "ground";
           const ground = screenToGround(e.clientX, e.clientY);
           if (!ground) return;
@@ -404,8 +478,10 @@ export class BoxEditor {
           const angle = computeRingAngle(e.clientX, e.clientY, this.rotAxis);
           if (angle === null) return;
           this._rotDeltaQ.setFromAxisAngle(this._rotAxisWorld, angle - this.rotStartAngle);
-          this.previewQuaternion = new THREE.Quaternion().multiplyQuaternions(this._rotDeltaQ, this.rotStartQuaternion);
-
+          this.previewQuaternion = new THREE.Quaternion().multiplyQuaternions(
+            this._rotDeltaQ,
+            this.rotStartQuaternion,
+          );
         } else if (this.drawPhase === "moving") {
           e.stopPropagation();
           if (this.moveMode === "axis") {
@@ -413,13 +489,21 @@ export class BoxEditor {
             this.camera.current.getWorldDirection(this._resizeF);
             this._resizePlaneNormal.copy(this._resizeF).addScaledVector(C, -this._resizeF.dot(C));
             if (this._resizePlaneNormal.lengthSq() < 1e-6) {
-              this._resizePlaneNormal.set(Math.abs(C.y) > 0.99 ? 1 : 0, Math.abs(C.y) > 0.99 ? 0 : 1, 0);
+              this._resizePlaneNormal.set(
+                Math.abs(C.y) > 0.99 ? 1 : 0,
+                Math.abs(C.y) > 0.99 ? 0 : 1,
+                0,
+              );
             }
             this._resizePlaneNormal.normalize();
             this._ringCenter.set(...this.moveStartCenter);
-            this._resizeDragPlane.setFromNormalAndCoplanarPoint(this._resizePlaneNormal, this._ringCenter);
+            this._resizeDragPlane.setFromNormalAndCoplanarPoint(
+              this._resizePlaneNormal,
+              this._ringCenter,
+            );
             setupRay(e.clientX, e.clientY);
-            if (!this._raycastRay.ray.intersectPlane(this._resizeDragPlane, this._resizeHitPt)) return;
+            if (!this._raycastRay.ray.intersectPlane(this._resizeDragPlane, this._resizeHitPt))
+              return;
             const drag = this._resizeHitPt.sub(this._ringCenter).dot(C);
             this.previewCenter = [
               this.moveStartCenter[0] + C.x * drag,
@@ -436,29 +520,38 @@ export class BoxEditor {
               ];
             }
           }
-
         } else if (this.drawPhase === "resizing-face") {
           e.stopPropagation();
           const C = this._resizeWorldDir;
           this.camera.current.getWorldDirection(this._resizeF);
           this._resizePlaneNormal.copy(this._resizeF).addScaledVector(C, -this._resizeF.dot(C));
           if (this._resizePlaneNormal.lengthSq() < 1e-6) {
-            this._resizePlaneNormal.set(Math.abs(C.y) > 0.99 ? 1 : 0, Math.abs(C.y) > 0.99 ? 0 : 1, 0);
+            this._resizePlaneNormal.set(
+              Math.abs(C.y) > 0.99 ? 1 : 0,
+              Math.abs(C.y) > 0.99 ? 0 : 1,
+              0,
+            );
           }
           this._resizePlaneNormal.normalize();
-          this._resizeDragPlane.setFromNormalAndCoplanarPoint(this._resizePlaneNormal, this._resizeStartFaceCenter);
+          this._resizeDragPlane.setFromNormalAndCoplanarPoint(
+            this._resizePlaneNormal,
+            this._resizeStartFaceCenter,
+          );
           setupRay(e.clientX, e.clientY);
-          if (!this._raycastRay.ray.intersectPlane(this._resizeDragPlane, this._resizeHitPt)) return;
+          if (!this._raycastRay.ray.intersectPlane(this._resizeDragPlane, this._resizeHitPt))
+            return;
           const drag = this._resizeHitPt.sub(this._resizeStartFaceCenter).dot(C);
           const newSize = [...this.resizeStartSize] as [number, number, number];
           const newCenter = [...this.resizeStartCenter] as [number, number, number];
-          newSize[this.resizeAxis] = Math.max(MIN_GEOMETRY_SIZE, this.resizeStartSize[this.resizeAxis] + drag);
-          newCenter[0] = this.resizeStartCenter[0] + C.x * drag / 2;
-          newCenter[1] = this.resizeStartCenter[1] + C.y * drag / 2;
-          newCenter[2] = this.resizeStartCenter[2] + C.z * drag / 2;
+          newSize[this.resizeAxis] = Math.max(
+            MIN_GEOMETRY_SIZE,
+            this.resizeStartSize[this.resizeAxis] + drag,
+          );
+          newCenter[0] = this.resizeStartCenter[0] + (C.x * drag) / 2;
+          newCenter[1] = this.resizeStartCenter[1] + (C.y * drag) / 2;
+          newCenter[2] = this.resizeStartCenter[2] + (C.z * drag) / 2;
           this.previewSize = newSize;
           this.previewCenter = newCenter;
-
         } else if (this.drawPhase === "confirming") {
           if (raycastRings(e.clientX, e.clientY)) {
             el.style.cursor = "grab";
@@ -467,9 +560,14 @@ export class BoxEditor {
           } else {
             const ah = raycastArrows(e.clientX, e.clientY);
             if (ah) {
-              el.style.cursor = ah.axis === 1 ? "ns-resize" : ah.axis === 0 ? "ew-resize" : "nesw-resize";
+              el.style.cursor =
+                ah.axis === 1 ? "ns-resize" : ah.axis === 0 ? "ew-resize" : "nesw-resize";
             } else {
-              el.style.cursor = raycastBox(e.clientX, e.clientY) ? "grab" : this.getDrawMode() ? "crosshair" : "default";
+              el.style.cursor = raycastBox(e.clientX, e.clientY)
+                ? "grab"
+                : this.getDrawMode()
+                  ? "crosshair"
+                  : "default";
             }
           }
         } else {
@@ -508,7 +606,10 @@ export class BoxEditor {
       const onKeyDown = (e: KeyboardEvent) => {
         const t = e.target as HTMLElement | null;
         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-        if (e.key === "Escape") { e.preventDefault(); this.reset(); }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          this.reset();
+        }
       };
       window.addEventListener("keydown", onKeyDown);
       return () => window.removeEventListener("keydown", onKeyDown);

@@ -6,12 +6,11 @@ License: CECILL-C
 
 import { Box } from "lucide-svelte";
 
-import type { Tool3D } from "$lib/annotations/scene/tool.js";
-
 import BBox3DHud from "./BBox3DHud.svelte";
-import BBox3DTool from "./BBox3DTool.svelte";
 import { BBox3DSession } from "./bbox3dSession.svelte.js";
+import BBox3DTool from "./BBox3DTool.svelte";
 import { DRAW_BBOX3D_TOOL_ID } from "./bbox3dTypes.js";
+import type { Tool3D } from "$lib/annotations/scene/tool.js";
 
 /**
  * The complete bbox3d draw/edit tool, all kind-owned (the host names no kind):

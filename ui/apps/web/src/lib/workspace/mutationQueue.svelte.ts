@@ -4,13 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MutationGateway } from "./datasetGateway.js";
+import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 import { sortMutations } from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
 import { ApiError } from "$lib/api/apiClient.js";
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
-
-import type { MutationGateway } from "./datasetGateway.js";
-import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 
 /**
  * Lookup the queue uses to mark a local annotation as persisted after a
@@ -78,7 +77,8 @@ export class MutationQueue {
     patch: Record<string, unknown>,
   ): void {
     const pending = this.pending.find(
-      (m) => m.op === "create" && m.resource === resource && m.localAnnotationId === localAnnotationId,
+      (m) =>
+        m.op === "create" && m.resource === resource && m.localAnnotationId === localAnnotationId,
     );
     if (pending && pending.op === "create") Object.assign(pending.body, patch);
   }

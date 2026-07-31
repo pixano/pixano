@@ -4,7 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBox3DGeometry, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import type {
+  BBox3DGeometry,
+  LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
 import {
   buildBBox3DCreate,
   buildBBox3DUpdate,

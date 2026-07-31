@@ -17,17 +17,7 @@ export type CoordsNorm = [number, number, number, number];
  * array. Server rows are validated into this shape by the bbox3d seed loader,
  * so everything downstream of that boundary can trust the length.
  */
-export type Rotation3x3 = [
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-  number,
-];
+export type Rotation3x3 = [number, number, number, number, number, number, number, number, number];
 
 /**
  * Pick a human-friendly label from an entity row. Returns the first non-empty

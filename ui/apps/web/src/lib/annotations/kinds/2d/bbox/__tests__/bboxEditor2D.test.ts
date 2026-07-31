@@ -7,6 +7,13 @@ License: CECILL-C
 import type Konva from "konva";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createBBoxEditor2D } from "../bboxEditor2D.js";
+import {
+  AnnotationCollection,
+  type BBoxGeometry,
+} from "$lib/annotations/annotationCollection.svelte.js";
+import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+
 // The editor only constructs a Konva.Transformer; the layer + nodes are fakes
 // supplied by the harness, so we mock just the Transformer.
 vi.mock("konva", () => {
@@ -19,11 +26,6 @@ vi.mock("konva", () => {
   }
   return { default: { Transformer } };
 });
-
-import { AnnotationCollection, type BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-
-import { createBBoxEditor2D } from "../bboxEditor2D.js";
 
 function fakeImage(w = 100, h = 100): Konva.Image {
   return { x: () => 0, y: () => 0, width: () => w, height: () => h } as unknown as Konva.Image;
@@ -102,7 +104,9 @@ describe("bboxEditor2D", () => {
       persisted: true,
     });
 
-    harness.handlers["dragend.bbox-edit"]({ target: fakeRect({ id: "a1", x: 10, y: 20, w: 30, h: 40 }) });
+    harness.handlers["dragend.bbox-edit"]({
+      target: fakeRect({ id: "a1", x: 10, y: 20, w: 30, h: 40 }),
+    });
 
     // pixel (10,20,30,40) over a 100×100 frame → normalized [0.1,0.2,0.3,0.4].
     expect(harness.collection.find("a1")?.geometry).toEqual([0.1, 0.2, 0.3, 0.4]);

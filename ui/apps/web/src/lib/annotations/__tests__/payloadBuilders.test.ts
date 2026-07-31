@@ -86,14 +86,26 @@ describe("buildDeleteMutations", () => {
   it("deletes only the annotation row; the orphan entity is pruned server-side", () => {
     const mutations = buildDeleteMutations(BBOX, "w1");
     expect(mutations).toEqual([
-      expect.objectContaining({ op: "delete", resource: "bboxes", id: "ann-1", localAnnotationId: "ann-1" }),
+      expect.objectContaining({
+        op: "delete",
+        resource: "bboxes",
+        id: "ann-1",
+        localAnnotationId: "ann-1",
+      }),
     ]);
   });
 });
 
 describe("commitDraftWithEntity (shared draft-commit)", () => {
   function makeDraft(): LocalBBox {
-    return { id: "d1", entityId: "", kind: "bbox", viewId: "view", geometry: [0, 0, 1, 1], persisted: false };
+    return {
+      id: "d1",
+      entityId: "",
+      kind: "bbox",
+      viewId: "view",
+      geometry: [0, 0, 1, 1],
+      persisted: false,
+    };
   }
 
   function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): DraftCommitContext {
@@ -111,7 +123,11 @@ describe("commitDraftWithEntity (shared draft-commit)", () => {
     const collection = new AnnotationCollection([makeDraft()]);
     const ctx = makeCtx(collection);
 
-    commitDraftWithEntity(collection.find("d1")!, { mode: "new", entityFields: { category: "car" } }, ctx);
+    commitDraftWithEntity(
+      collection.find("d1")!,
+      { mode: "new", entityFields: { category: "car" } },
+      ctx,
+    );
 
     const draft = collection.find("d1")!;
     expect(draft.entityId).not.toBe("");
@@ -171,14 +187,20 @@ describe("reassignEntity (change a persisted annotation's entity)", () => {
     expect(ctx.mutations.upsertUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ op: "update", resource: "bbox3ds", id: "box-1" }),
     );
-    expect(vi.mocked(ctx.mutations.upsertUpdate).mock.calls[0][0].body).toMatchObject({ entity_id: "new-ent" });
+    expect(vi.mocked(ctx.mutations.upsertUpdate).mock.calls[0][0].body).toMatchObject({
+      entity_id: "new-ent",
+    });
   });
 
   it("new entity: queues an entity create + the box update with the generated id", () => {
     const collection = new AnnotationCollection([makePersisted()]);
     const ctx = makeCtx(collection);
 
-    reassignEntity(collection.find("box-1")!, { mode: "new", entityFields: { category: "car" } }, ctx);
+    reassignEntity(
+      collection.find("box-1")!,
+      { mode: "new", entityFields: { category: "car" } },
+      ctx,
+    );
 
     const box = collection.find("box-1")!;
     expect(box.entityId).not.toBe("old-ent");
