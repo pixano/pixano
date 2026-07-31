@@ -4,11 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
-
 import type { AnnotationKind, LocalAnnotation } from "./annotationCollection.svelte.js";
 import { bboxSeedLoader } from "./kinds/2d/bbox/bboxSeedLoader.js";
 import { bbox3dSeedLoader } from "./kinds/3d/bbox3d/bbox3dSeedLoader.js";
+import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 
 /**
  * The data-layer slice seed loaders may touch (a structural subset of
@@ -62,7 +61,4 @@ export interface AnnotationSeedLoader {
 }
 
 /** Every seed loader; adding a kind means adding its import here. */
-export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
-  bboxSeedLoader,
-  bbox3dSeedLoader,
-];
+export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [bboxSeedLoader, bbox3dSeedLoader];

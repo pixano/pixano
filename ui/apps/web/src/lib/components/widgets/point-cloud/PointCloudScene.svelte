@@ -9,16 +9,15 @@ License: CECILL-C
   import { OrbitControls } from "@threlte/extras";
   import { onMount } from "svelte";
   import * as THREE from "three";
-
-  import { parsePointCloud } from "$lib/annotations/pointCloudParser";
-  import { RENDERER_FACTORIES_3D, TOOLS_3D } from "$lib/annotations/scene/registry3d.js";
-  import type { SceneContextBase, Scene3DContext } from "$lib/annotations/scene/sceneContext.js";
-  import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
   import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
+  import { PointCloudCamera } from "./usePointCloudCamera.svelte.js";
   // RING_DEFS is the orbit-indicator's ring geometry (camera UI), not annotation logic.
   import { RING_DEFS } from "$lib/annotations/kinds/3d/bbox3d/boxEditorConstants.js";
-  import { PointCloudCamera } from "./usePointCloudCamera.svelte.js";
+  import { parsePointCloud } from "$lib/annotations/pointCloudParser";
+  import { RENDERER_FACTORIES_3D, TOOLS_3D } from "$lib/annotations/scene/registry3d.js";
+  import type { Scene3DContext, SceneContextBase } from "$lib/annotations/scene/sceneContext.js";
+  import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
 
   interface Props {
     pointCloudUrl?: string;
@@ -99,7 +98,10 @@ License: CECILL-C
 
   // ─── Point cloud loading ──────────────────────────────────────────────────
   onMount(() => {
-    if (!pointCloudUrl) { loading = false; return; }
+    if (!pointCloudUrl) {
+      loading = false;
+      return;
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -126,14 +128,19 @@ License: CECILL-C
       }
     })();
 
-    return () => { clearTimeout(timeoutId); controller.abort(); };
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   });
 </script>
 
 <T.PerspectiveCamera
   makeDefault
   position={cam.cameraPosition}
-  oncreate={(ref) => { ref.lookAt(...cam.cameraTarget); }}
+  oncreate={(ref) => {
+    ref.lookAt(...cam.cameraTarget);
+  }}
 >
   <OrbitControls
     enableDamping={cameraMode === "orbit"}
@@ -172,7 +179,7 @@ License: CECILL-C
 {#each TOOLS_3D as tool (tool.id)}
   {#if tool.overlay}
     {@const Overlay = tool.overlay}
-    <Overlay {ctx} {...(toolProps[tool.id] ?? {})} reportHandle={(h) => (toolHandles[tool.id] = h)} />
+    <Overlay {ctx} {...toolProps[tool.id] ?? {}} reportHandle={(h) => (toolHandles[tool.id] = h)} />
   {/if}
 {/each}
 
@@ -188,7 +195,13 @@ License: CECILL-C
       renderOrder={999}
     >
       <T.TorusGeometry args={[1, 0.04, 6, 64]} />
-      <T.MeshBasicMaterial color="#ffffff" transparent opacity={0.5} depthTest={false} depthWrite={false} />
+      <T.MeshBasicMaterial
+        color="#ffffff"
+        transparent
+        opacity={0.5}
+        depthTest={false}
+        depthWrite={false}
+      />
     </T.Mesh>
   {/each}
 {/if}

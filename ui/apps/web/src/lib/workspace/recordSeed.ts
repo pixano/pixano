@@ -4,11 +4,10 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { DatasetGateway } from "./datasetGateway.js";
 import type { ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { SchemaDescriptor } from "$lib/types/dataset";
-
-import type { DatasetGateway } from "./datasetGateway.js";
 
 /**
  * Per-extension contract for "seed a widget from a (record, view) pair".

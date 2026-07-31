@@ -9,6 +9,9 @@ License: CECILL-C
   import { HTML } from "@threlte/extras";
   import { onDestroy, onMount } from "svelte";
 
+  import type { BBox3DSession } from "./bbox3dSession.svelte.js";
+  import { DRAW_BBOX3D_TOOL_ID, type BBoxRenderData } from "./bbox3dTypes.js";
+  import { BoxEditor } from "./boxEditor.svelte.js";
   import {
     bboxTransform,
     threeBoxToLanceXYZWHD,
@@ -17,10 +20,6 @@ License: CECILL-C
   import type { Scene3DContext } from "$lib/annotations/scene/sceneContext.js";
   import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
   import { pickEntityLabel } from "$lib/annotations/types";
-
-  import { BoxEditor } from "./boxEditor.svelte.js";
-  import type { BBox3DSession } from "./bbox3dSession.svelte.js";
-  import { DRAW_BBOX3D_TOOL_ID, type BBoxRenderData } from "./bbox3dTypes.js";
 
   interface Props {
     ctx: Scene3DContext;
@@ -140,10 +139,17 @@ License: CECILL-C
   {/each}
 {/if}
 
-{#snippet arrowGizmo(arrow: { id: string; pos: [number, number, number]; quat: [number, number, number, number]; color: string })}
+{#snippet arrowGizmo(arrow: {
+  id: string;
+  pos: [number, number, number];
+  quat: [number, number, number, number];
+  color: string;
+})}
   <T.Group position={arrow.pos} quaternion={arrow.quat}>
     <T.Mesh position={[0, editor.arrowShaftOffsetY, 0]}>
-      <T.CylinderGeometry args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]} />
+      <T.CylinderGeometry
+        args={[editor.arrowShaftRadius, editor.arrowShaftRadius, editor.arrowShaftLength, 8]}
+      />
       <T.MeshBasicMaterial color={arrow.color} transparent opacity={0.85} />
     </T.Mesh>
     <T.Mesh position={[0, editor.arrowHeadOffsetY, 0]}>
@@ -175,7 +181,9 @@ License: CECILL-C
       style="transform: translate(-50%, calc(-50% - 60px));"
     >
       {#if editor.drawPhase === "moving"}
-        {editor.moveMode === "axis" ? "Drag to translate · Release to lock" : "Drag to reposition · Release to lock"}
+        {editor.moveMode === "axis"
+          ? "Drag to translate · Release to lock"
+          : "Drag to reposition · Release to lock"}
       {:else if editor.drawPhase === "resizing-face"}
         Drag to resize · Release to lock
       {:else if editor.drawPhase === "rotating"}

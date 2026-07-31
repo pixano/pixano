@@ -8,9 +8,12 @@ import * as THREE from "three";
 import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 export interface PointCloudBounds {
-  minX: number; maxX: number;
-  minY: number; maxY: number;
-  minZ: number; maxZ: number;
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  minZ: number;
+  maxZ: number;
 }
 
 export class PointCloudCamera {
@@ -116,9 +119,13 @@ export class PointCloudCamera {
         ref.update();
       };
 
-      const onPointerUp = (e: PointerEvent) => { if (e.button === 2) isRightDragging = false; };
+      const onPointerUp = (e: PointerEvent) => {
+        if (e.button === 2) isRightDragging = false;
+      };
 
-      const onChange = () => { this.cameraTarget = [ref.target.x, ref.target.y, ref.target.z]; };
+      const onChange = () => {
+        this.cameraTarget = [ref.target.x, ref.target.y, ref.target.z];
+      };
       ref.addEventListener("change", onChange);
 
       const onWheel = (e: WheelEvent) => {

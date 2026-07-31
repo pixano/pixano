@@ -4,9 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import TextWidget from "$lib/components/widgets/TextWidget.svelte";
-
 import { WidgetExtension } from "../WidgetExtension.js";
+import TextWidget from "$lib/components/widgets/TextWidget.svelte";
 
 export const TextExtension = WidgetExtension.create({
   name: "text",

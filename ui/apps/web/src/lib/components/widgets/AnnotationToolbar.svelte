@@ -55,7 +55,10 @@ License: CECILL-C
       type="button"
       onclick={() => onSelectTool(activeToolId === tool.id ? defaultToolId : tool.id)}
       title={tool.label}
-      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {activeToolId === tool.id ? 'bg-accent text-accent-foreground' : ''}"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground {activeToolId ===
+      tool.id
+        ? 'bg-accent text-accent-foreground'
+        : ''}"
     >
       <tool.icon class="h-3.5 w-3.5" />
     </button>
@@ -72,7 +75,9 @@ License: CECILL-C
     <span class="text-[10px] text-muted-foreground">{pendingCount} unsaved</span>
   {/if}
   {#if saveError}
-    <span class="max-w-[200px] truncate text-[10px] text-destructive" title={saveError}>Save failed</span>
+    <span class="max-w-[200px] truncate text-[10px] text-destructive" title={saveError}>
+      Save failed
+    </span>
   {/if}
   <button
     type="button"
