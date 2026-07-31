@@ -36,6 +36,7 @@ function makeContext(collection: AnnotationCollection) {
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
     },
+    liveDraft: { get: () => null },
     stage,
     annotationLayer: {} as Konva.Layer,
     camera: { imageWidth: 100, imageHeight: 100, calibration: null },

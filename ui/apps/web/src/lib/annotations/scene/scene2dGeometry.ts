@@ -12,11 +12,25 @@ export const PIXEL_THRESHOLD = 3;
 export const BBOX_COLOR_PERSISTED = "#22d3ee";
 export const BBOX_COLOR_DRAFT = "#f59e0b";
 
+/**
+ * Dash pattern marking a shape as not-yet-saved: the draw tool's rubber band,
+ * an unsaved bbox, and the live 3D preview all share it so "dashed = draft"
+ * reads the same everywhere. Frozen because Konva keeps the array by reference
+ * — a mutation here would silently restyle every draft on screen.
+ */
+export const DRAFT_DASH: readonly number[] = Object.freeze([6, 4]);
+
 export interface PixelFrame {
   x: number;
   y: number;
   w: number;
   h: number;
+}
+
+/** A point in Konva stage space. */
+export interface PixelPoint {
+  x: number;
+  y: number;
 }
 
 export function getPixelFrame(konvaImage: Konva.Image | null): PixelFrame | null {
@@ -36,12 +50,23 @@ export function normalizedToPixel(
   };
 }
 
-export function normalizedPointToPixel(x: number, y: number, frame: PixelFrame): { x: number; y: number } | null {
-    return {
-      x: frame.x + x * frame.w,
-      y: frame.y + y * frame.h,
-    };
-  }
+/**
+ * Map a normalized point onto the frame, writing the result into `target`
+ * (Three.js `getWorldPosition(target)` convention) rather than returning a
+ * fresh object: the bbox3d projection calls this once per corner, per box, per
+ * sync — and sync runs on every pointer move while a 3D box is dragged, so the
+ * path must not allocate (CODING_STANDARDS). Returns `target` for chaining.
+ */
+export function normalizedPointToPixel(
+  x: number,
+  y: number,
+  frame: PixelFrame,
+  target: PixelPoint,
+): PixelPoint {
+  target.x = frame.x + x * frame.w;
+  target.y = frame.y + y * frame.h;
+  return target;
+}
 
 export function pixelToNormalized(
   rectX: number,

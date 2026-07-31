@@ -8,9 +8,62 @@ import type Konva from "konva";
 import type { PerspectiveCamera } from "three";
 import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import type { AnnotationStore } from "../annotationCollection.svelte.js";
+import type {
+  AnnotationKind,
+  AnnotationStore,
+  GeometryByKind,
+} from "../annotationCollection.svelte.js";
 import type { BuildContext } from "../buildPayloads.js";
 import type { CameraCalibration, PendingAnnotation, ResourceMutation } from "../types.js";
+
+/**
+ * Transient in-progress geometry an editing tool broadcasts on every pointer
+ * move, so widgets in other mediums can preview the gesture live (e.g. an image
+ * widget re-projecting a 3D box while it is dragged). Deliberately NOT an
+ * `AnnotationStore` entry: the store contract covers committed annotations
+ * (membership, selection, deletion), while this is per-frame editor state that
+ * dies with the gesture. A distributed union so `draft.kind` narrows `geometry`.
+ */
+export type LiveAnnotationDraft = {
+  [K in AnnotationKind]: LiveDraftBody<K> & {
+    /** Widget owning the gesture, stamped by the seam — never by the publisher. */
+    readonly sourceWidgetId: string;
+  };
+}[AnnotationKind];
+
+/**
+ * The part of a draft a publisher supplies. `sourceWidgetId` is deliberately
+ * absent: the seam stamps it, so a tool can neither forge another widget's id
+ * nor forget to set its own.
+ */
+type LiveDraftBody<K extends AnnotationKind> = {
+  readonly kind: K;
+  readonly geometry: GeometryByKind[K];
+  /** Persisted annotation being edited, or null when creating a new one. */
+  readonly editingId: string | null;
+};
+
+/** What a tool hands to `LiveDraftChannel.publish`. */
+export type LiveDraftPublication = {
+  [K in AnnotationKind]: LiveDraftBody<K>;
+}[AnnotationKind];
+
+/** Read side of the live-draft slot — all a renderer, or any 2D tool, may hold (D4). */
+export interface LiveDraftSource {
+  get(): LiveAnnotationDraft | null;
+}
+
+/**
+ * Write side, handed only to the pieces that own a gesture (see `SeamContext`).
+ * Ownership is structural rather than by convention: `publish` stamps the
+ * caller's widget id, and `clear` is a no-op unless the live draft belongs to
+ * that same widget — so no tool can wipe a gesture running in another widget,
+ * whether or not its author remembered the rule.
+ */
+export interface LiveDraftChannel extends LiveDraftSource {
+  publish(draft: LiveDraftPublication): void;
+  clear(): void;
+}
 
 /**
  * Narrow view of the mutation queue handed to tools and renderers: enough to
@@ -46,6 +99,12 @@ export interface SceneContextBase {
   /** View-scoped window onto the record's shared annotation collection. */
   readonly collection: AnnotationStore;
   readonly mutations: MutationSink;
+  /**
+   * Shared slot for the in-progress geometry of the active editing gesture.
+   * Read-only here: observing a gesture is medium-agnostic, but *publishing* one
+   * is a capability handed explicitly through `SeamContext`.
+   */
+  readonly liveDraft: LiveDraftSource;
   /** Switch the widget's active tool (e.g. back to "select" after a draw). */
   setActiveTool(id: string): void;
   /** Ask the host to re-sync annotation rendering. */
@@ -59,6 +118,19 @@ export interface SceneContextBase {
   findEntity(entityId: string): Record<string, unknown> | undefined;
   /** Whether an entity's persisted annotations should currently be shown. */
   isEntityVisible(entityId: string): boolean;
+}
+
+/**
+ * What `buildSeam` returns: `SceneContextBase` plus the live-draft *write* side.
+ * Handed only to the pieces that own a gesture — today a 3D tool's session, via
+ * `Tool3D.createSession`. Every narrower contract (`Scene2DContext`,
+ * `Scene3DContext`) sees `liveDraft` as a read-only `LiveDraftSource`, so
+ * publishing is a capability granted deliberately rather than one every tool in
+ * every medium inherits. Same technique as `Scene2DReadContext`: one object,
+ * handed out through progressively narrower types (D4).
+ */
+export interface SeamContext extends SceneContextBase {
+  readonly liveDraft: LiveDraftChannel;
 }
 
 /**
@@ -86,6 +158,8 @@ export interface Scene2DReadContext {
   readonly annotationLayer: Konva.Layer;
   /** Media size + calibration, for kinds that project into the image. */
   readonly camera: Scene2DCamera;
+  /** Read-only view of the shared live-draft slot, for live previews. */
+  readonly liveDraft: LiveDraftSource;
   getKonvaImage(): Konva.Image | null;
   requestRedraw(): void;
   /** Whether an entity's persisted annotations should currently be shown. */

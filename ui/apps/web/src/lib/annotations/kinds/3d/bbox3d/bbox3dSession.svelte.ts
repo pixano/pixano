@@ -16,12 +16,13 @@ import {
   deleteLocalAnnotation,
   reassignEntity,
 } from "$lib/annotations/payloadBuilders.js";
-import type { SceneContextBase } from "$lib/annotations/scene/sceneContext.js";
+import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Rotation3x3 } from "$lib/annotations/types.js";
 
 /** A 3D box the editor has staged and is waiting for the user to confirm. */
 export interface PendingConfirm {
   coords: [number, number, number, number, number, number];
-  rotation?: number[];
+  rotation?: Rotation3x3;
   /** Set when editing an existing box; absent when creating a new one. */
   editingId?: string;
 }
@@ -42,7 +43,7 @@ export class BBox3DSession {
 
   private resetEditor: () => void = () => {};
 
-  constructor(private readonly seam: SceneContextBase) {}
+  constructor(private readonly seam: SeamContext) {}
 
   /** The overlay's editor registers how to clear its in-progress draft. */
   setResetEditor(reset: () => void): void {
@@ -52,7 +53,7 @@ export class BBox3DSession {
   /** Editor reports a draft ready to confirm. */
   reportReady(
     coords: [number, number, number, number, number, number],
-    rotation?: number[],
+    rotation?: Rotation3x3,
     editingId?: string,
   ): void {
     this.confirm = { coords, rotation, editingId };
@@ -61,6 +62,33 @@ export class BBox3DSession {
   /** Editor reports its draft was canceled/cleared. */
   reportCanceled(): void {
     this.confirm = null;
+  }
+
+  /**
+   * Broadcast the in-progress geometry (called on every pointer move) so other
+   * widgets can preview the gesture live — e.g. image widgets re-projecting the
+   * box while it is dragged. Always publishes a fresh object: consumers track
+   * the `$state` reassignment, so mutating a draft in place would go unnoticed.
+   */
+  reportPreview(
+    coords: [number, number, number, number, number, number],
+    rotation?: Rotation3x3,
+    editingId?: string,
+  ): void {
+    this.seam.liveDraft.publish({
+      kind: "bbox3d",
+      geometry: { coords, format: "xyzwhd", rotation },
+      editingId: editingId ?? null,
+    });
+  }
+
+  /**
+   * Clear the broadcast preview. Safe to call from a mounting, idling or
+   * unmounting widget: the seam clears only a draft this widget published, so
+   * another widget's active gesture is never wiped.
+   */
+  clearPreview(): void {
+    this.seam.liveDraft.clear();
   }
 
   /**

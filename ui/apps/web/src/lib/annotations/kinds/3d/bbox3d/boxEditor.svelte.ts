@@ -8,6 +8,7 @@ import * as THREE from "three";
 import type { OrbitControls as ThreeOrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import { threeBoxToLanceXYZWHD, threeQuaternionToLanceRotation } from "$lib/annotations/coordinateTransforms";
+import type { Rotation3x3 } from "$lib/annotations/types";
 
 import {
   ARROW_DEFS,
@@ -188,7 +189,7 @@ export class BoxEditor {
     private readonly getGizmoVisibility: () => GizmoVisibility,
     private readonly onReadyToConfirm?: (
       coords: [number, number, number, number, number, number],
-      rotation?: number[],
+      rotation?: Rotation3x3,
       editingId?: string,
     ) => void,
     private readonly onDrawCanceled?: () => void,

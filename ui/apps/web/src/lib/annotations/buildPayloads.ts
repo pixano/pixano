@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { BBOX3D_RESOURCE, BBOX_RESOURCE, ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
-import type { CoordsNorm, ResourceMutation } from "./types.js";
+import type { CoordsNorm, ResourceMutation, Rotation3x3 } from "./types.js";
 
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -184,14 +184,14 @@ export function buildBBoxUpdate(
  * Coordinates are in Lance/backend space (xyzwhd, Z-up). Rotation defaults to
  * identity — axis-aligned boxes only for now.
  */
-export const DEFAULT_3D_ROTATION = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+export const DEFAULT_3D_ROTATION: Rotation3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 export function buildBBox3DUpdate(
   ctx: BuildContext,
   bboxId: string,
   entityId: string,
   coordsLance: [number, number, number, number, number, number],
-  rotation?: number[],
+  rotation?: Rotation3x3,
 ): Record<string, unknown> {
   return {
     id: bboxId,
@@ -210,7 +210,7 @@ export function buildBBox3DUpdate(
 export function buildBBox3DCreate(
   ctx: BuildContext,
   coordsLance: [number, number, number, number, number, number],
-  opts: BuildBBoxOpts & { rotation?: number[] } = {},
+  opts: BuildBBoxOpts & { rotation?: Rotation3x3 } = {},
 ): BuildBBoxResult {
   const entityId = opts.entityId ?? generateShortId();
   const bboxId = opts.bboxId ?? generateShortId();

@@ -12,6 +12,7 @@ import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import {
   BBOX_COLOR_DRAFT,
+  DRAFT_DASH,
   getPixelFrame,
   PIXEL_THRESHOLD,
   pixelToNormalized,
@@ -43,7 +44,7 @@ class DrawBBoxHandler implements ToolHandler2D {
       height: 0,
       stroke: BBOX_COLOR_DRAFT,
       strokeWidth: 2,
-      dash: [6, 4],
+      dash: [...DRAFT_DASH],
       listening: false,
     });
     this.ctx.annotationLayer.add(this.draftRect);

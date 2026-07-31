@@ -80,4 +80,39 @@ describe("bbox3dSeedLoader", () => {
     ctx.gateway = { ...ctx.gateway, listBBox3Ds: () => Promise.reject(new Error("boom")) };
     expect(await bbox3dSeedLoader.load(ctx)).toEqual([]);
   });
+
+  // This is the one boundary where an unvalidated rotation can enter. Downstream
+  // consumers feed it straight to `Matrix3.fromArray`, which reads nine slots and
+  // yields NaN geometry from anything shorter — so a malformed matrix must be
+  // dropped here, not carried inward.
+  describe("rotation validation", () => {
+    async function rotationOf(rotation: unknown) {
+      const anns = await bbox3dSeedLoader.load(
+        makeContext([makeRow({ rotation: rotation as number[] })]),
+      );
+      return (anns[0].geometry as BBox3DGeometry).rotation;
+    }
+
+    it("passes a well-formed 3×3 matrix through unchanged", async () => {
+      const rotation = [0, -1, 0, 1, 0, 0, 0, 0, 1];
+      expect(await rotationOf(rotation)).toEqual(rotation);
+    });
+
+    it("drops a matrix with too few entries", async () => {
+      expect(await rotationOf([1, 0, 0])).toBeUndefined();
+    });
+
+    it("drops a matrix with too many entries", async () => {
+      expect(await rotationOf([1, 0, 0, 0, 1, 0, 0, 0, 1, 1])).toBeUndefined();
+    });
+
+    it("drops a matrix containing NaN or Infinity", async () => {
+      expect(await rotationOf([1, 0, 0, 0, NaN, 0, 0, 0, 1])).toBeUndefined();
+      expect(await rotationOf([1, 0, 0, 0, Infinity, 0, 0, 0, 1])).toBeUndefined();
+    });
+
+    it("drops a missing rotation", async () => {
+      expect(await rotationOf(undefined)).toBeUndefined();
+    });
+  });
 });

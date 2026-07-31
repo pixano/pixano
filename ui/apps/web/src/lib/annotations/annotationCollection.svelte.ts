@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { CoordsNorm } from "./types.js";
+import type { CoordsNorm, Rotation3x3 } from "./types.js";
 
 /**
  * Every annotation kind the workspace can hold. Adding a kind means adding a
@@ -54,7 +54,7 @@ export interface BBox3DGeometry {
   coords: [number, number, number, number, number, number];
   /** Server rows may arrive as either; editor output is always "xyzwhd". */
   format: "xyzwhd" | "xyzxyz";
-  rotation?: number[];
+  rotation?: Rotation3x3;
 }
 
 export type LocalBBox = LocalAnnotation<BBoxGeometry>;

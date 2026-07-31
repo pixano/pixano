@@ -4,8 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AnnotationCollection, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
+import type { Viewport } from "./layoutPlanner.js";
+import { MutationQueue } from "./mutationQueue.svelte.js";
+import { RecordLoader } from "./recordLoader.js";
+import { WorkspaceSession } from "./workspaceSession.svelte.js";
+import type {
+  AnnotationCollection,
+  LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
   PendingEntityChoice,
@@ -15,12 +24,6 @@ import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
-
-import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
-import type { Viewport } from "./layoutPlanner.js";
-import { MutationQueue } from "./mutationQueue.svelte.js";
-import { RecordLoader } from "./recordLoader.js";
-import { WorkspaceSession } from "./workspaceSession.svelte.js";
 
 /**
  * Reactive workspace facade. Owns:
@@ -110,8 +113,18 @@ export class WorkspaceManager {
     return this.session.entitySchemaFields;
   }
 
+  /** In-progress geometry of the active editing gesture, or null (see `WorkspaceSession`). */
+  get liveDraft(): LiveAnnotationDraft | null {
+    return this.session.liveDraft;
+  }
+
+  setLiveDraft(draft: LiveAnnotationDraft | null): void {
+    this.session.liveDraft = draft;
+  }
+
   // ─── Entity-driven annotation visibility ──────────────────────────────────
-  // `null` = all entities visible (default). A set isolates the listed entities.
+  // `null` = all entities visible (default). A set isolates the listed entities;
+  // an empty set therefore hides every one of them.
   // Display-only: renderers/derived lists consult `isEntityVisible`; the
   // annotation collection's lifecycle (find/drafts/save) is never filtered.
 
@@ -130,18 +143,39 @@ export class WorkspaceManager {
     const visible = this.session.visibleEntityIds;
     const isolated = visible !== null && visible.size === 1 && visible.has(entityId);
     this.session.visibleEntityIds = isolated ? null : new Set([entityId]);
-    // Keep the shared selection coherent with what's now displayed: a selection
-    // pointing at an annotation this filter just hid would otherwise leave the
-    // delete button/key acting on something no widget shows.
+    this.dropSelectionIfHidden();
+  }
+
+  /** Reveal every entity's annotations. */
+  showAllEntities(): void {
+    this.session.visibleEntityIds = null;
+  }
+
+  /** Hide every entity's annotations (an empty filter matches no entity). */
+  hideAllEntities(): void {
+    this.session.visibleEntityIds = new Set();
+    this.dropSelectionIfHidden();
+  }
+
+  /**
+   * The "Show all" control: reveal every entity, or — when everything is
+   * already shown — hide every one of them.
+   */
+  toggleAllEntitiesVisible(): void {
+    if (this.session.visibleEntityIds === null) this.hideAllEntities();
+    else this.showAllEntities();
+  }
+
+  /**
+   * Keep the shared selection coherent with what's displayed: a selection
+   * pointing at an annotation a visibility change just hid would otherwise
+   * leave the delete button/key acting on something no widget shows.
+   */
+  private dropSelectionIfHidden(): void {
     const selected = this.session.annotations.selected;
     if (selected && selected.persisted && !this.isEntityVisible(selected.entityId)) {
       this.session.annotations.select(null);
     }
-  }
-
-  /** Reveal every entity's annotations (the "Show all" control). */
-  showAllEntities(): void {
-    this.session.visibleEntityIds = null;
   }
 
   // ─── Pending annotation (entity assignment) ───────────────────────────────

@@ -11,6 +11,25 @@ License: CECILL-C
 export type CoordsNorm = [number, number, number, number];
 
 /**
+ * A row-major 3×3 rotation matrix — exactly nine numbers. A precise tuple, not
+ * `number[]`: consumers feed it straight to `Matrix3.fromArray`, which reads
+ * nine slots and silently yields `undefined` (→ NaN geometry) on a shorter
+ * array. Server rows are validated into this shape by the bbox3d seed loader,
+ * so everything downstream of that boundary can trust the length.
+ */
+export type Rotation3x3 = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+
+/**
  * Pick a human-friendly label from an entity row. Returns the first non-empty
  * string field that isn't an id / linkage column. Falls back to the entity id
  * (truncated) when no descriptive field exists so the user still has a handle.
