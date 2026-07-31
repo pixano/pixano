@@ -4,25 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it } from "vitest";
-
-import type {
-  BBox3DRow,
-  BBoxRow,
-  EntityRow,
-} from "$lib/api/annotations.js";
-import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
-import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
-import type {
-  WidgetComponentProps,
-  WidgetExtensionConfig,
-} from "$lib/extensions/types.js";
-import type { Dataset } from "$lib/types/dataset";
-import { DatasetInfo } from "$lib/types/dataset";
 import type { Component } from "svelte";
+import { describe, expect, it } from "vitest";
 
 import type { DatasetGateway } from "../datasetGateway.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
+import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
+import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
+import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
+import type { Dataset } from "$lib/types/dataset";
+import { DatasetInfo } from "$lib/types/dataset";
 
 // ─── Fake gateway ───────────────────────────────────────────────────────────
 // In-memory implementation of `DatasetGateway`. Each scenario builds one
@@ -255,6 +247,60 @@ describe("WorkspaceManager entity visibility", () => {
     expect(manager.isEntityVisible("e2")).toBe(true);
   });
 
+  it("hideAllEntities hides every entity", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.hideAllEntities();
+
+    expect(manager.visibleEntityIds?.size).toBe(0);
+    expect(manager.isEntityVisible("e1")).toBe(false);
+  });
+
+  it("toggleAllEntitiesVisible hides everything when all entities are shown", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleAllEntitiesVisible();
+
+    expect(manager.isEntityVisible("e1")).toBe(false);
+  });
+
+  it("toggleAllEntitiesVisible shows everything when an entity is isolated", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleEntityVisible("e1");
+    manager.toggleAllEntitiesVisible();
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("e2")).toBe(true);
+  });
+
+  it("toggleAllEntitiesVisible returns to show-all after hiding everything", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+
+    manager.toggleAllEntitiesVisible();
+    manager.toggleAllEntitiesVisible();
+
+    expect(manager.visibleEntityIds).toBeNull();
+    expect(manager.isEntityVisible("e1")).toBe(true);
+  });
+
+  it("clears the selection when hiding all entities", () => {
+    const manager = new WorkspaceManager(makeRegistry());
+    manager.annotations.add({
+      id: "b-eB",
+      entityId: "eB",
+      kind: "bbox",
+      viewId: "v1",
+      geometry: [0, 0, 1, 1],
+      persisted: true,
+    });
+    manager.annotations.select("b-eB");
+
+    manager.hideAllEntities();
+
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
   it("clears a selection that isolation has just hidden (no delete on an unseen box)", () => {
     const manager = new WorkspaceManager(makeRegistry());
     manager.annotations.add({
@@ -325,7 +371,11 @@ describe("WorkspaceManager.deleteAnnotation", () => {
     expect(manager.annotations.find("b1")).toBeUndefined();
     // Only the annotation row; the orphan entity is pruned server-side.
     expect(manager.pendingMutations).toHaveLength(1);
-    expect(manager.pendingMutations[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "b1" });
+    expect(manager.pendingMutations[0]).toMatchObject({
+      op: "delete",
+      resource: "bbox3ds",
+      id: "b1",
+    });
   });
 
   it("drops pending creates for an unsaved annotation instead of queueing a delete", () => {
@@ -357,8 +407,14 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       dataset,
       entities: [],
       imagesByLogicalName: new Map([
-        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse],
-        ["cam_back", { id: "img-back", src: "/b.png", width: 100, height: 50 } as CalibratedImageResponse],
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+        [
+          "cam_back",
+          { id: "img-back", src: "/b.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
       ]),
       pointCloudsByLogicalName: new Map([
         ["lidar_top", { id: "pc-top", src: "/lidar.pcd" } as PointCloudResponse],
@@ -370,16 +426,8 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     const manager = new WorkspaceManager(makeRegistry(), gateway);
     await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
 
-    expect(manager.widgets.map((w) => w.title)).toEqual([
-      "cam_front",
-      "lidar_top",
-      "cam_back",
-    ]);
-    expect(manager.widgets.map((w) => w.extensionName)).toEqual([
-      "image",
-      "point-cloud",
-      "image",
-    ]);
+    expect(manager.widgets.map((w) => w.title)).toEqual(["cam_front", "lidar_top", "cam_back"]);
+    expect(manager.widgets.map((w) => w.extensionName)).toEqual(["image", "point-cloud", "image"]);
     expect(manager.datasetId).toBe("ds-1");
     expect(manager.recordId).toBe("rec-1");
   });
@@ -472,7 +520,10 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
       dataset,
       entities: [{ id: "ent-old", record_id: "rec-1" } as EntityRow],
       imagesByLogicalName: new Map([
-        ["cam_front", { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse],
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
       ]),
       pointCloudsByLogicalName: new Map(),
       bboxes: [],
@@ -506,9 +557,9 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     });
 
     const manager = new WorkspaceManager(makeRegistry(), gateway);
-    await expect(
-      manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT),
-    ).rejects.toThrow("No renderable views");
+    await expect(manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT)).rejects.toThrow(
+      "No renderable views",
+    );
 
     // datasetId/recordId are still set so any subsequent flushSave knows
     // which dataset to target — the error case shouldn't make the manager
@@ -536,7 +587,17 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
         return entitiesPromise;
       },
       loadImageByLogicalName: () =>
-        Promise.resolve({ id: "img-1", src: "", width: 1, height: 1, f: null, c: null, distortion: null, extrinsic_matrix: null, ego_to_world: null } as CalibratedImageResponse),
+        Promise.resolve({
+          id: "img-1",
+          src: "",
+          width: 1,
+          height: 1,
+          f: null,
+          c: null,
+          distortion: null,
+          extrinsic_matrix: null,
+          ego_to_world: null,
+        } as CalibratedImageResponse),
       listBBoxes: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
       listBBox3Ds: () => Promise.resolve([]),
