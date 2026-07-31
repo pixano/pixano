@@ -46,6 +46,12 @@ describe("WorkspaceSession", () => {
     session.recordId = "rec-42";
     session.entities = [{ id: "e1", record_id: "rec-1" }];
     session.entitySchemaName = "VOCEntity";
+    session.liveDraft = {
+      kind: "bbox3d",
+      geometry: { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" },
+      editingId: null,
+      sourceWidgetId: "w1",
+    };
 
     session.reset();
 
@@ -53,6 +59,7 @@ describe("WorkspaceSession", () => {
     expect(session.recordId).toBeNull();
     expect(session.entities).toEqual([]);
     expect(session.entitySchemaName).toBeNull();
+    expect(session.liveDraft).toBeNull();
   });
 
   it("reset() is idempotent on an already-empty session", () => {

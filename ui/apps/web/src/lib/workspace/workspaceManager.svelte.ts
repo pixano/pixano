@@ -4,8 +4,17 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { AnnotationCollection, LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
+import type { Viewport } from "./layoutPlanner.js";
+import { MutationQueue } from "./mutationQueue.svelte.js";
+import { RecordLoader } from "./recordLoader.js";
+import { WorkspaceSession } from "./workspaceSession.svelte.js";
+import type {
+  AnnotationCollection,
+  LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
   PendingEntityChoice,
@@ -15,12 +24,6 @@ import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
-
-import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
-import type { Viewport } from "./layoutPlanner.js";
-import { MutationQueue } from "./mutationQueue.svelte.js";
-import { RecordLoader } from "./recordLoader.js";
-import { WorkspaceSession } from "./workspaceSession.svelte.js";
 
 /**
  * Reactive workspace facade. Owns:
@@ -108,6 +111,15 @@ export class WorkspaceManager {
 
   get entitySchemaFields(): Record<string, FieldInfo> | null {
     return this.session.entitySchemaFields;
+  }
+
+  /** In-progress geometry of the active editing gesture, or null (see `WorkspaceSession`). */
+  get liveDraft(): LiveAnnotationDraft | null {
+    return this.session.liveDraft;
+  }
+
+  setLiveDraft(draft: LiveAnnotationDraft | null): void {
+    this.session.liveDraft = draft;
   }
 
   // ─── Entity-driven annotation visibility ──────────────────────────────────

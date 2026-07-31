@@ -7,6 +7,7 @@ License: CECILL-C
 import * as THREE from "three";
 
 import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
+import type { Rotation3x3 } from "$lib/annotations/types.js";
 
 // S maps Lance coords → Three.js coords: lanceToThree(x,y,z) = [x, z, -y].
 // Correct change of basis for rotation matrices: R_three = S * R_lance * S⁻¹ = S * R_lance * Sᵀ
@@ -17,9 +18,11 @@ export function lanceToThree(x: number, y: number, z: number): [number, number, 
   return [x, z, -y];
 }
 
-export function lanceRotationToThree(rotation: number[] | undefined): THREE.Quaternion {
+export function lanceRotationToThree(rotation: Rotation3x3 | undefined): THREE.Quaternion {
   const m = new THREE.Matrix4();
-  if (rotation && rotation.length === 9) {
+  // No length check: `Rotation3x3` guarantees nine entries, and the seed loader
+  // is the one boundary where unvalidated server rows can enter (B2).
+  if (rotation) {
     const r = rotation;
     m.set(r[0], r[1], r[2], 0, r[3], r[4], r[5], 0, r[6], r[7], r[8], 0, 0, 0, 0, 1);
   }
@@ -68,7 +71,7 @@ export function bboxTransform(bbox: BBox3DGeometry): {
  *   lanceToThree(x,y,z) = [x, z, -y]
  *   S = [[1,0,0],[0,0,1],[0,-1,0]]
  */
-export function threeQuaternionToLanceRotation(q: THREE.Quaternion): number[] {
+export function threeQuaternionToLanceRotation(q: THREE.Quaternion): Rotation3x3 {
   const R_three = new THREE.Matrix4().makeRotationFromQuaternion(q);
   const R_lance = new THREE.Matrix4().multiplyMatrices(_ST, R_three).multiply(_S);
   const e = R_lance.elements; // Three.js stores elements column-major

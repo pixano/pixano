@@ -253,12 +253,22 @@ License: CECILL-C
     if (containerEl) containerEl.style.cursor = tool.cursor ?? "default";
   });
 
+  // Structural changes — membership, selection, the visible-entity filter — are
+  // discrete (one per click) and can afford a full reconcile of every renderer.
   $effect(() => {
     void annotations.items.length;
     void annotations.selectedId;
-    // Re-render when the visible-entity filter changes (show/hide annotations).
     void manager.visibleEntityIds;
     if (imageLoaded) syncRenderers();
+  });
+
+  // The live draft is different: it changes on every pointer move of a gesture
+  // running in another widget. A full reconcile there would rewrite every shape
+  // on the record to move one box, so it gets its own narrow path. Kept as a
+  // separate effect so a draft change never triggers the reconcile above.
+  $effect(() => {
+    const draft = manager.liveDraft;
+    if (imageLoaded) for (const renderer of renderers) renderer.syncDraft(draft);
   });
 
   const hasSelection = $derived(annotations.selectedId !== null);

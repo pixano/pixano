@@ -7,9 +7,14 @@ License: CECILL-C
 import type Konva from "konva";
 import { describe, expect, it } from "vitest";
 
+import {
+  getPixelFrame,
+  normalizedPointToPixel,
+  normalizedToPixel,
+  pixelToNormalized,
+  type PixelFrame,
+} from "../scene2dGeometry.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
-
-import { getPixelFrame, normalizedToPixel, pixelToNormalized, type PixelFrame } from "../scene2dGeometry.js";
 
 /** Minimal Konva.Image stand-in: getPixelFrame only reads x/y/width/height. */
 function fakeImage(x: number, y: number, w: number, h: number): Konva.Image {
@@ -29,12 +34,49 @@ describe("getPixelFrame", () => {
 describe("normalizedToPixel", () => {
   it("maps normalized xywh onto a frame at the origin", () => {
     const frame: PixelFrame = { x: 0, y: 0, w: 100, h: 200 };
-    expect(normalizedToPixel([0.1, 0.2, 0.3, 0.4], frame)).toEqual({ x: 10, y: 40, width: 30, height: 80 });
+    expect(normalizedToPixel([0.1, 0.2, 0.3, 0.4], frame)).toEqual({
+      x: 10,
+      y: 40,
+      width: 30,
+      height: 80,
+    });
   });
 
   it("offsets by the frame position (letterboxed image)", () => {
     const frame: PixelFrame = { x: 50, y: 20, w: 100, h: 100 };
-    expect(normalizedToPixel([0, 0, 1, 1], frame)).toEqual({ x: 50, y: 20, width: 100, height: 100 });
+    expect(normalizedToPixel([0, 0, 1, 1], frame)).toEqual({
+      x: 50,
+      y: 20,
+      width: 100,
+      height: 100,
+    });
+  });
+});
+
+describe("normalizedPointToPixel", () => {
+  it("maps a normalized point onto a frame at the origin", () => {
+    const frame: PixelFrame = { x: 0, y: 0, w: 100, h: 200 };
+    expect(normalizedPointToPixel(0.1, 0.2, frame, { x: 0, y: 0 })).toEqual({ x: 10, y: 40 });
+  });
+
+  it("offsets by the frame position (letterboxed image)", () => {
+    const frame: PixelFrame = { x: 50, y: 20, w: 100, h: 100 };
+    expect(normalizedPointToPixel(0, 0, frame, { x: 0, y: 0 })).toEqual({ x: 50, y: 20 });
+  });
+
+  it("maps points outside the frame without clamping (corner behind/off-image)", () => {
+    const frame: PixelFrame = { x: 0, y: 0, w: 100, h: 100 };
+    expect(normalizedPointToPixel(-0.5, 1.5, frame, { x: 0, y: 0 })).toEqual({ x: -50, y: 150 });
+  });
+
+  // The bbox3d projection reuses one scratch point per corner, so the write
+  // must land in the caller's object rather than in a fresh one.
+  it("writes into the target and returns that same object", () => {
+    const frame: PixelFrame = { x: 0, y: 0, w: 100, h: 200 };
+    const target = { x: -1, y: -1 };
+    const returned = normalizedPointToPixel(0.5, 0.5, frame, target);
+    expect(returned).toBe(target);
+    expect(target).toEqual({ x: 50, y: 100 });
   });
 });
 
