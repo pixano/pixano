@@ -148,8 +148,44 @@ WorkspaceManager
 Representative API: `selectRecordInDataset`, `flushSave`, `queueMutation`,
 `upsertUpdateMutation`, `deleteAnnotation`, `beginPendingAnnotation` /
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
-`toggleEntityVisible` / `showAllEntities`. Getters forward to the session/queue
-(`annotations`, `entities`, `pendingCount`, `saving`, …).
+`toggleEntityVisible` / `showAllEntities`, `saveDatasetLayout` /
+`restoreOpeningLayout` / `fitLayoutToViewport`. Getters forward to the
+session/queue (`annotations`, `entities`, `pendingCount`, `saving`, …).
+
+**Per-dataset layout preference.** Every record of a dataset declares the same
+views, so the arrangement the user builds on one is replayed on the others
+(`workspace/datasetLayout.ts` for the rules, `datasetLayoutRepository.ts` for
+storage). Widgets are keyed by `viewName` — the only identifier that survives a
+record switch. Three invariants hold this together:
+
+- **Only gestures persist.** The grid also writes layouts back when *it* places
+  widgets (mount, clamping, compaction after a hide); persisting those would
+  freeze an automatic placement, computed for one record's widget count, as if
+  the user had chosen it. `GridWorkspace` calls `saveDatasetLayout()` at the
+  points where an arrangement has settled after a user action, and nowhere else.
+- **A position is never stored before the grid has resolved it.** Hiding compacts
+  the neighbours and showing re-places a widget wherever a slot is now free, so
+  the save waits for GridStack to react (behind the deferred mount's microtask
+  for a show). The one deliberate exception is a fully hidden workspace, which is
+  never written at all — see `snapshotDatasetLayout`.
+- **A programmatic arrangement is authoritative.** `restoreOpeningLayout` /
+  `fitLayoutToViewport` decide every position themselves, so the reconciliation
+  effect skips the gap-fill meant for a user hide while applying one; otherwise
+  compaction would overwrite the very positions being restored.
+
+`layoutRevision` is the reverse channel: bumped when the manager rewrites layouts
+itself, it tells `GridWorkspace` to push the new positions — and their lowered
+`minW`/`minH` — into GridStack. It is watched *alone*: depending on the layouts
+themselves would re-run that effect mid-drag and fight the user's gesture.
+
+**The workspace lock covers every control that can move a widget.** `editMode`
+off puts GridStack in static mode, and the inspector disables the layout actions
+*and* the per-widget visibility toggles alongside it. Visibility belongs in that
+set rather than being display-only: hiding a widget compacts its neighbours and
+the grid stores the result, so an ungated toggle would write the very arrangement
+the lock exists to protect.
+
+See `docs/OPEN_QUESTIONS.md` for the limitations accepted in this first version.
 
 ### `WorkspaceSession` (`workspace/workspaceSession.svelte.ts`)
 The record-scoped truth, replaced on every load:
@@ -170,7 +206,11 @@ on the whole manager.
 3. For each declared view, ask each registered **extension** `addRecordSeed(...)`;
    run the per-kind **`SEED_LOADERS`** to fetch that record's annotation rows and
    map them into the shared `AnnotationCollection`.
-4. Create one widget per claimed view (layout via `layoutPlanner`).
+4. Create one widget per claimed view, keyed by `viewName`. Placement comes from
+   `resolveRecordLayouts`: the dataset's remembered arrangement where the user
+   has arranged that view, `layoutPlanner`'s automatic placement otherwise. The
+   resolved state is kept on `session.openingLayout` so "Reset layout" can undo
+   the moves made on this record.
 
 `reloadEntities()` refetches just the entity list after a save (token-guarded) so
 the panel/picker reflect created/pruned entities.
@@ -349,7 +389,10 @@ ui/apps/web/src/lib/
 │  ├─ workspaceSession.svelte.ts           record-scoped shared state
 │  ├─ recordLoader.ts                       (dataset,record) → widgets + data
 │  ├─ mutationQueue.svelte.ts               pending writes + flush
-│  └─ datasetGateway.ts                     I/O seam (interface + http impl)
+│  ├─ datasetGateway.ts                     I/O seam (interface + http impl)
+│  ├─ datasetLayout.ts                      per-dataset layout rules (snapshot/
+│  │                                         resolve/parse) — no storage access
+│  └─ datasetLayoutRepository.ts            layout storage seam (+ localStorage impl)
 ├─ annotations/
 │  ├─ annotationCollection.svelte.ts        LocalAnnotation, AnnotationStore,
 │  │                                         AnnotationCollection, ViewScopedAnnotations
@@ -377,6 +420,7 @@ ui/apps/web/src/lib/
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
 | `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue |
+| `DatasetLayoutRepository` | `workspace/datasetLayoutRepository.ts` | `localStorageDatasetLayoutRepository`; consumed by loader + manager |
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets |
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |

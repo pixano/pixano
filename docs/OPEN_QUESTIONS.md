@@ -4,6 +4,44 @@
 > when a decision is deferred; remove it (and record the outcome in the relevant
 > doc or code) once resolved.
 
+## Per-dataset layout preference — accepted limitations
+
+**Status:** open (deliberate trade-offs, shipped knowingly).
+
+The workspace remembers how a user arranges a dataset's widgets and replays it on
+the dataset's other records (`ui/apps/web/src/lib/workspace/datasetLayout.ts`,
+`datasetLayoutRepository.ts`; see FRONTEND_ARCHITECTURE.md §4). These limits were
+accepted to keep the first version small — each is a decision, not an oversight.
+
+- **Storage is browser-local.** The arrangement never follows a user across
+  machines or browsers. `DatasetLayoutRepository` exists precisely so this can
+  move to a user-scoped preference endpoint by swapping the implementation
+  injected into `WorkspaceManager`, with no call-site changes.
+- **No way to forget an arrangement.** `clear()` was dropped from the port when
+  "Reset layout" was redefined as "restore what this record opened with", leaving
+  no caller. Consequences: a dataset can never go back to purely automatic
+  placement once arranged, and entries for deleted datasets linger in
+  `localStorage`. Re-adding `clear()` plus a "Forget arrangement" action is the
+  fix if either becomes a real complaint.
+- **Only view-backed widgets are remembered.** A widget dragged in from the
+  palette has no counterpart in the next record's views, so nothing would restore
+  it onto. "Fit layout" does re-tile them on screen; they just are not persisted.
+- **Concurrent tabs: last writer wins.** No `storage` event listener, so two tabs
+  on the same dataset overwrite each other's arrangement.
+- **UI strings are literals.** `ui/apps/web` has no i18n infrastructure at all
+  (no translation module, no `labelKey` usage), so the layout controls follow the
+  app's existing convention and violate CODING_STANDARDS.md's translation-key
+  rule along with every other component. Introducing i18n is its own piece of
+  work, tracked here rather than silently accepted.
+- **The arrangement no longer adapts to the viewport.** Before this feature every
+  record opened with a placement recomputed for the current screen. Once a
+  dataset has been arranged, its records replay cell coordinates captured on
+  whatever screen the user arranged them on, and nothing re-fits automatically —
+  an arrangement built on a large display can extend past the fold on a laptop.
+  "Fit layout" is the manual escape hatch; re-fitting on viewport change (or
+  storing the viewport alongside the arrangement and re-planning when it differs
+  markedly) is the fix if this bites.
+
 ## How should `tri3d` be declared for `uv`?
 
 **Status:** open.
