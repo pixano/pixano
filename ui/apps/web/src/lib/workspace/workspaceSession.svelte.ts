@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { DatasetLayout } from "./datasetLayout.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
 import type { EntityRow } from "$lib/api/annotations.js";
@@ -47,6 +48,11 @@ export class WorkspaceSession {
    * `annotations`; this slot is null whenever no gesture is running.
    */
   liveDraft = $state<LiveAnnotationDraft | null>(null);
+  /**
+   * The arrangement this record opened with, so "Reset layout" can undo the
+   * moves made since. Written by `RecordLoader` at the end of each load.
+   */
+  openingLayout = $state<DatasetLayout | null>(null);
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
@@ -58,5 +64,6 @@ export class WorkspaceSession {
     this.annotations = new AnnotationCollection();
     this.visibleEntityIds = null;
     this.liveDraft = null;
+    this.openingLayout = null;
   }
 }
