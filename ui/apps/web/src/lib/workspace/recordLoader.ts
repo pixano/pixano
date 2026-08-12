@@ -5,7 +5,9 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { DatasetGateway, RecordReadGateway } from "./datasetGateway.js";
-import { measureGridViewport, planViewportLayouts, type Viewport } from "./layoutPlanner.js";
+import { resolveRecordLayouts, toDatasetLayout } from "./datasetLayout.js";
+import type { DatasetLayoutRepository } from "./datasetLayoutRepository.js";
+import { measureGridViewport, type Viewport } from "./layoutPlanner.js";
 import type { RecordWidgetSeed } from "./recordSeed.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
@@ -37,6 +39,11 @@ export interface RecordLoaderDeps {
    */
   gateway: DatasetGateway;
   session: WorkspaceSession;
+  /**
+   * Source of the dataset's remembered widget arrangement. Read once per load
+   * so a record opens laid out the way the user arranged an earlier one.
+   */
+  layoutRepository: DatasetLayoutRepository;
 }
 
 /**
@@ -49,6 +56,7 @@ export class RecordLoader {
   private gateway: DatasetGateway;
   private readGateway: RecordReadGateway;
   private session: WorkspaceSession;
+  private layoutRepository: DatasetLayoutRepository;
   // Incremented on every load() call. Each async continuation checks that it
   // still holds the current token before mutating workspace state, so a
   // rapid record-switch never lets a stale load overwrite the newer one.
@@ -60,6 +68,7 @@ export class RecordLoader {
     this.gateway = deps.gateway;
     this.readGateway = deps.gateway;
     this.session = deps.session;
+    this.layoutRepository = deps.layoutRepository;
   }
 
   /**
@@ -194,7 +203,18 @@ export class RecordLoader {
     if (token !== this.loadToken) return;
     this.session.annotations = new AnnotationCollection(loaded.flat());
 
-    const layouts = planViewportLayouts(claimed.length, viewport);
+    // Replay the arrangement the user built on an earlier record of this
+    // dataset; views they never arranged fall back to automatic placement.
+    const viewNames = claimed.map(({ viewName }) => viewName);
+    const layouts = resolveRecordLayouts(
+      viewNames,
+      viewport,
+      this.layoutRepository.load(datasetId),
+    );
+
+    // Remember the state the record opens in so the user can undo the moves
+    // they make on it (`WorkspaceManager.restoreOpeningLayout`).
+    this.session.openingLayout = toDatasetLayout(viewNames, layouts);
 
     // Materialize widgets in the dataset's declared view order so on-screen
     // placement matches the schema (e.g. cameras left-to-right, lidar
@@ -207,7 +227,11 @@ export class RecordLoader {
         {
           extensionName,
           title: seed.title ?? viewName,
-          layout: layouts[i],
+          // Keys this widget to its dataset view so a later arrangement of it
+          // is remembered under a name the next record also has.
+          viewName,
+          layout: layouts[i].layout,
+          hidden: layouts[i].hidden,
           options: seed.options,
           data: seed.data,
         },

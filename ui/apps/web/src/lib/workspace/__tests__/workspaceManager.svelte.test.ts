@@ -8,7 +8,10 @@ import type { Component } from "svelte";
 import { describe, expect, it } from "vitest";
 
 import type { DatasetGateway } from "../datasetGateway.js";
+import { DATASET_LAYOUT_VERSION } from "../datasetLayout.js";
+import { planViewportLayouts } from "../layoutPlanner.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
+import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -623,5 +626,274 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     resolveDataset(dataset);
     resolveEntities([]);
     await done;
+  });
+});
+
+// ─── Per-dataset layout preference ───────────────────────────────────────────
+// End-to-end through the manager: an arrangement made on one record is stored
+// against the dataset and replayed when another of its records is opened.
+
+describe("WorkspaceManager dataset layout preference", () => {
+  function makeTwoViewGateway() {
+    return makeGateway({
+      dataset: makeDataset({ cam_front: { base: "Image" }, lidar_top: { base: "PointCloud" } }),
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map([
+        ["lidar_top", { id: "pc-top", src: "/lidar.pcd" } as PointCloudResponse],
+      ]),
+      bboxes: [],
+      bboxes3d: [],
+    });
+  }
+
+  it("keys record-seeded widgets by their dataset view", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+
+    expect(manager.widgets.map((w) => w.viewName)).toEqual(["cam_front", "lidar_top"]);
+  });
+
+  it("reuses on a later record the arrangement saved on an earlier one", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    // The user drags the lidar widget across the grid; the grid component then
+    // asks the manager to remember the arrangement.
+    manager.updateLayout(manager.widgets[1].id, { x: 0, y: 7, w: 12, h: 3 });
+    manager.saveDatasetLayout();
+
+    manager.clearWorkspace();
+    await manager.selectRecordInDataset("ds-1", "rec-2", FIXED_VIEWPORT);
+
+    expect(manager.widgets[1].layout).toEqual({ x: 0, y: 7, w: 12, h: 3 });
+  });
+
+  it("replays a hidden view as hidden on the next record", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.toggleWidgetVisibility(manager.widgets[1].id);
+    // The grid persists once its reflow has settled; stand in for it here.
+    manager.saveDatasetLayout();
+
+    manager.clearWorkspace();
+    await manager.selectRecordInDataset("ds-1", "rec-2", FIXED_VIEWPORT);
+
+    expect(manager.widgets.map((w) => w.hidden)).toEqual([false, true]);
+  });
+
+  it("keeps each dataset's arrangement to itself", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const arranged = { x: 0, y: 7, w: 12, h: 3 };
+    manager.updateLayout(manager.widgets[1].id, arranged);
+    manager.saveDatasetLayout();
+
+    manager.clearWorkspace();
+    await manager.selectRecordInDataset("ds-2", "rec-1", FIXED_VIEWPORT);
+
+    expect(manager.widgets[1].layout).not.toEqual(arranged);
+  });
+
+  it("does not save when no record is open, so clearing keeps the arrangement", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    manager.saveDatasetLayout();
+
+    expect(layouts.saved).toHaveLength(0);
+  });
+
+  it("does not overwrite the arrangement with an empty workspace", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.saveDatasetLayout();
+    // `clearWorkspace` keeps the session's dataset selection, so a save
+    // triggered afterwards must not erase what was stored.
+    manager.clearWorkspace();
+    manager.saveDatasetLayout();
+
+    expect(layouts.load("ds-1")?.views.cam_front).toBeDefined();
+  });
+
+  it("puts the widgets back where the record opened them", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const opening = manager.widgets.map((w) => ({ ...w.layout }));
+
+    manager.updateLayout(manager.widgets[1].id, { x: 0, y: 7, w: 12, h: 3 });
+    manager.toggleWidgetVisibility(manager.widgets[0].id);
+    manager.restoreOpeningLayout();
+
+    expect(manager.widgets.map((w) => w.layout)).toEqual(opening);
+    expect(manager.widgets.map((w) => w.hidden)).toEqual([false, false]);
+  });
+
+  it("tells the grid to re-apply the restored positions", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const before = manager.layoutRevision;
+    manager.restoreOpeningLayout();
+
+    expect(manager.layoutRevision).toBe(before + 1);
+  });
+
+  it("stores the restored arrangement, so screen and storage never disagree", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const opening = { ...manager.widgets[1].layout };
+    manager.updateLayout(manager.widgets[1].id, { x: 0, y: 7, w: 12, h: 3 });
+    manager.saveDatasetLayout();
+
+    manager.restoreOpeningLayout();
+
+    expect(layouts.load("ds-1")?.views.lidar_top.layout).toEqual(opening);
+  });
+
+  it("does nothing before a record has loaded", () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    expect(() => manager.restoreOpeningLayout()).not.toThrow();
+    expect(layouts.saved).toHaveLength(0);
+  });
+
+  it("restores a view that was hidden when the record opened", async () => {
+    const { gateway } = makeTwoViewGateway();
+    // The dataset's stored arrangement hides the lidar, so the record opens with
+    // it hidden — the state "Reset layout" has to be able to get back to.
+    const layouts = makeLayoutRepository({
+      "ds-1": {
+        version: DATASET_LAYOUT_VERSION,
+        views: {
+          cam_front: { layout: { x: 0, y: 0, w: 12, h: 6 }, hidden: false },
+          lidar_top: { layout: { x: 0, y: 6, w: 12, h: 6 }, hidden: true },
+        },
+      },
+    });
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    expect(manager.widgets.map((w) => w.hidden)).toEqual([false, true]);
+
+    manager.toggleWidgetVisibility(manager.widgets[1].id);
+    manager.updateLayout(manager.widgets[0].id, { x: 3, y: 3, w: 6, h: 3 });
+    manager.restoreOpeningLayout();
+
+    expect(manager.widgets.map((w) => w.hidden)).toEqual([false, true]);
+    expect(manager.widgets[0].layout).toMatchObject({ x: 0, y: 0, w: 12, h: 6 });
+  });
+
+  it("drops the opening arrangement when the workspace is cleared", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.clearWorkspace();
+
+    // Nothing to restore onto, and nothing stale left describing the old record.
+    const before = manager.layoutRevision;
+    manager.restoreOpeningLayout();
+    expect(manager.layoutRevision).toBe(before);
+  });
+});
+
+// ─── Fit layout ──────────────────────────────────────────────────────────────
+
+describe("WorkspaceManager.fitLayoutToViewport", () => {
+  function makeTwoViewGateway() {
+    return makeGateway({
+      dataset: makeDataset({ cam_front: { base: "Image" }, lidar_top: { base: "PointCloud" } }),
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map([
+        ["lidar_top", { id: "pc-top", src: "/lidar.pcd" } as PointCloudResponse],
+      ]),
+      bboxes: [],
+      bboxes3d: [],
+    });
+  }
+
+  it("re-tiles every widget to the automatic placement for the viewport", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.updateLayout(manager.widgets[0].id, { x: 9, y: 40, w: 3, h: 3 });
+
+    manager.fitLayoutToViewport(FIXED_VIEWPORT);
+
+    expect(manager.widgets.map((w) => w.layout)).toEqual(
+      planViewportLayouts(2, FIXED_VIEWPORT).map((layout) => expect.objectContaining(layout)),
+    );
+  });
+
+  it("reveals hidden widgets, so nothing is left off-screen", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.toggleWidgetVisibility(manager.widgets[0].id);
+
+    manager.fitLayoutToViewport(FIXED_VIEWPORT);
+
+    expect(manager.widgets.every((w) => w.hidden === false)).toBe(true);
+  });
+
+  it("tells the grid to re-apply, and remembers the result", async () => {
+    const { gateway } = makeTwoViewGateway();
+    const layouts = makeLayoutRepository();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, layouts);
+
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const before = manager.layoutRevision;
+
+    manager.fitLayoutToViewport(FIXED_VIEWPORT);
+
+    expect(manager.layoutRevision).toBe(before + 1);
+    expect(layouts.load("ds-1")?.views.cam_front.layout).toEqual(
+      planViewportLayouts(2, FIXED_VIEWPORT)[0],
+    );
+  });
+
+  it("does nothing on an empty workspace", () => {
+    const { gateway } = makeTwoViewGateway();
+    const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+
+    expect(() => manager.fitLayoutToViewport(FIXED_VIEWPORT)).not.toThrow();
+    expect(manager.layoutRevision).toBe(0);
   });
 });

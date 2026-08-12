@@ -11,6 +11,7 @@ import type { DatasetGateway } from "../datasetGateway.js";
 import { RecordLoader } from "../recordLoader.js";
 import type { WidgetSink } from "../recordLoader.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
+import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -149,6 +150,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(ext),
       gateway: { ...makeGateway({ dataset }), listBBoxes },
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -176,6 +178,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway: makeGateway({ dataset }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -211,6 +214,7 @@ describe("RecordLoader.load", () => {
         ]),
       }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -231,6 +235,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway: makeGateway({ dataset }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -252,6 +257,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway: makeGateway({ dataset }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -268,6 +274,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway: makeGateway({ dataset }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await expect(loader.load("ds-1", "rec-1", VIEWPORT)).rejects.toThrow("No renderable views");
@@ -285,6 +292,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway,
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -313,6 +321,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(highPriority, lowPriority),
       gateway: makeGateway({ dataset }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -334,6 +343,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway: makeGateway({ dataset, entities }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -361,6 +371,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway,
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     const loadPromise = loader.load("ds-1", "rec-1", VIEWPORT);
@@ -382,6 +393,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway,
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -412,6 +424,7 @@ describe("RecordLoader.load", () => {
       registry: makeRegistry(ext),
       gateway: makeGateway({ dataset, entities: [entity] }),
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -437,6 +450,7 @@ describe("RecordLoader.reloadEntities", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway,
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
@@ -466,6 +480,7 @@ describe("RecordLoader.reloadEntities", () => {
       registry: makeRegistry(makeImageExtension()),
       gateway,
       session,
+      layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-A", VIEWPORT);
