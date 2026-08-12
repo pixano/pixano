@@ -24,6 +24,13 @@ export const GRID_TOTAL_COLS = 12;
 export const GRID_MIN_CELL = 3;
 export const GRID_MAX_COLS = Math.floor(GRID_TOTAL_COLS / GRID_MIN_CELL); // 4
 
+/**
+ * Smallest cell GridStack can express. `GRID_MIN_CELL` is the *comfortable*
+ * minimum widget extensions ask for; this is the floor used when fitting every
+ * widget on screen matters more than comfort (see `planFittedLayouts`).
+ */
+export const GRID_ABSOLUTE_MIN_CELL = 1;
+
 export interface Viewport {
   width: number;
   height: number;
@@ -56,19 +63,39 @@ export function pickRenderableViews(
  * fills the full width.
  */
 export function planViewportLayouts(count: number, viewport: Viewport): WidgetLayout[] {
+  return planTiledLayouts(count, viewport, GRID_MIN_CELL);
+}
+
+/**
+ * Same tiling, but guaranteeing the whole set is on screen.
+ *
+ * `planViewportLayouts` keeps every widget at least `GRID_MIN_CELL` tall, which
+ * beyond six widgets needs more rows than the viewport shows — a 6-camera +
+ * lidar rig would tile past the fold. This variant trades that comfort floor for
+ * the guarantee the "Fit layout" action promises: rows × cell height never
+ * exceeds the visible rows. Widths are unaffected (`cols × w ≤ GRID_TOTAL_COLS`
+ * already holds), and consumers must lower each widget's `minH`/`minW`
+ * accordingly or GridStack will inflate the result back past the fold.
+ */
+export function planFittedLayouts(count: number, viewport: Viewport): WidgetLayout[] {
+  return planTiledLayouts(count, viewport, GRID_ABSOLUTE_MIN_CELL);
+}
+
+/**
+ * Shared tiling: square-ish grid of `count` cells across `GRID_TOTAL_COLS`,
+ * with `minCell` as the floor on cell height.
+ */
+function planTiledLayouts(count: number, viewport: Viewport, minCell: number): WidgetLayout[] {
   if (count <= 0) return [];
 
   const containerW = Math.max(1, viewport.width);
   const containerH = Math.max(1, viewport.height);
-  const visibleRows = Math.max(
-    GRID_MIN_CELL,
-    Math.floor((GRID_TOTAL_COLS * containerH) / containerW),
-  );
+  const visibleRows = Math.max(minCell, Math.floor((GRID_TOTAL_COLS * containerH) / containerW));
 
   const cols = Math.max(1, Math.min(GRID_MAX_COLS, Math.ceil(Math.sqrt(count))));
   const rows = Math.ceil(count / cols);
   const w = Math.max(GRID_MIN_CELL, Math.floor(GRID_TOTAL_COLS / cols));
-  const h = Math.max(GRID_MIN_CELL, Math.floor(visibleRows / rows));
+  const h = Math.max(minCell, Math.floor(visibleRows / rows));
 
   const layouts: WidgetLayout[] = [];
   for (let i = 0; i < count; i++) {

@@ -104,6 +104,13 @@ export interface WidgetInstance {
   options: Record<string, unknown>;
   data?: Record<string, unknown>;
   hidden?: boolean;
+  /**
+   * Dataset view this widget renders, set by `RecordLoader` for record-seeded
+   * widgets and absent for ones added from the palette. It is the widget's only
+   * identifier that survives a record switch, so it keys the per-dataset layout
+   * preference (see `workspace/datasetLayout.ts`).
+   */
+  viewName?: string;
 }
 
 /** A workspace preset (named layout configuration) */

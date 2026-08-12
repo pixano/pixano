@@ -7,11 +7,13 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import {
+  GRID_ABSOLUTE_MIN_CELL,
   GRID_MAX_COLS,
   GRID_MIN_CELL,
   GRID_TOTAL_COLS,
   measureGridViewport,
   pickRenderableViews,
+  planFittedLayouts,
   planViewportLayouts,
 } from "../layoutPlanner.js";
 
@@ -115,6 +117,56 @@ describe("planViewportLayouts", () => {
     const layouts = planViewportLayouts(1, { width: 1, height: 1 });
     expect(layouts[0].w).toBeGreaterThanOrEqual(GRID_MIN_CELL);
     expect(layouts[0].h).toBeGreaterThanOrEqual(GRID_MIN_CELL);
+  });
+});
+
+// ─── planFittedLayouts ───────────────────────────────────────────────────────
+
+describe("planFittedLayouts", () => {
+  const VIEWPORT = { width: 1600, height: 900 };
+  // Rows the viewport actually shows, by the planner's own definition.
+  const visibleRows = Math.floor((GRID_TOTAL_COLS * VIEWPORT.height) / VIEWPORT.width);
+
+  it.each([1, 2, 3, 4, 6, 7, 9, 12, 16])(
+    "keeps all %i widgets inside the visible rows",
+    (count) => {
+      for (const layout of planFittedLayouts(count, VIEWPORT)) {
+        expect(layout.y + layout.h).toBeLessThanOrEqual(visibleRows);
+      }
+    },
+  );
+
+  it("fits counts the comfort-floored planner cannot", () => {
+    // The reason this variant exists: a 6-camera + lidar rig is 7 views.
+    const overflowing = planViewportLayouts(7, VIEWPORT);
+    expect(Math.max(...overflowing.map((l) => l.y + l.h))).toBeGreaterThan(visibleRows);
+
+    const fitted = planFittedLayouts(7, VIEWPORT);
+    expect(Math.max(...fitted.map((l) => l.y + l.h))).toBeLessThanOrEqual(visibleRows);
+  });
+
+  it("matches the default planner while the comfort floor is not binding", () => {
+    for (const count of [1, 2, 4, 6]) {
+      expect(planFittedLayouts(count, VIEWPORT)).toEqual(planViewportLayouts(count, VIEWPORT));
+    }
+  });
+
+  it("never plans a cell below what the grid can express", () => {
+    for (const layout of planFittedLayouts(16, VIEWPORT)) {
+      expect(layout.h).toBeGreaterThanOrEqual(GRID_ABSOLUTE_MIN_CELL);
+      expect(layout.w).toBeGreaterThanOrEqual(GRID_MIN_CELL);
+    }
+  });
+
+  it("keeps every row within the column count", () => {
+    for (const layout of planFittedLayouts(9, VIEWPORT)) {
+      expect(layout.x + layout.w).toBeLessThanOrEqual(GRID_TOTAL_COLS);
+    }
+  });
+
+  it("returns nothing for a non-positive count", () => {
+    expect(planFittedLayouts(0, VIEWPORT)).toEqual([]);
+    expect(planFittedLayouts(-1, VIEWPORT)).toEqual([]);
   });
 });
 
