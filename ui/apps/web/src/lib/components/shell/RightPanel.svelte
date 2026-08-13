@@ -5,10 +5,21 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Eye, EyeOff, Layers, MessageSquare, ScanSearch } from "lucide-svelte";
+  import {
+    Eye,
+    EyeOff,
+    Layers,
+    LayoutGrid,
+    MessageSquare,
+    RotateCcw,
+    ScanSearch,
+  } from "lucide-svelte";
 
   import EntitiesPanel from "./EntitiesPanel.svelte";
   import SaveAnnotationForm from "./SaveAnnotationForm.svelte";
+  // Measured here, next to the grid, so the manager stays environment-agnostic
+  // — the same split `LeftPanel` uses when it opens a record.
+  import { measureGridViewport } from "$lib/workspace/layoutPlanner.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
   interface Props {
@@ -18,6 +29,20 @@ License: CECILL-C
   let { manager }: Props = $props();
 
   let activeTab = $state<"inspector" | "entities" | "agent">("inspector");
+
+  // Locking the workspace means "don't rearrange my widgets while I annotate",
+  // so it covers every control that can move a widget — not just dragging.
+  // Visibility is one of them: hiding a widget compacts its neighbours and the
+  // grid then stores the result as the dataset's arrangement, which is exactly
+  // what the lock exists to prevent.
+  const locked = $derived(!manager.editMode);
+  const LOCKED_HINT = "Unlock the workspace to rearrange the widgets";
+
+  const LAYOUT_ACTION_CLASS =
+    "flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] " +
+    "text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground " +
+    "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent " +
+    "disabled:hover:text-muted-foreground";
 
   // Surface the entity form as soon as a drawn box is awaiting its entity.
   $effect(() => {
@@ -62,11 +87,32 @@ License: CECILL-C
       {/if}
     {:else if activeTab === "inspector"}
       <div class="p-3">
-        <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Properties
         </h4>
 
         {#if manager.widgetCount > 0}
+          <div class="mb-3 flex flex-wrap items-center gap-1.5">
+            <button
+              onclick={() => manager.restoreOpeningLayout()}
+              disabled={locked || !manager.hasOpeningLayout}
+              title={locked ? LOCKED_HINT : "Put the widgets back where this record opened them"}
+              class={LAYOUT_ACTION_CLASS}
+            >
+              <RotateCcw class="h-3 w-3" />
+              Reset layout
+            </button>
+            <button
+              onclick={() => manager.fitLayoutToViewport(measureGridViewport())}
+              disabled={locked}
+              title={locked ? LOCKED_HINT : "Show every widget and tile them to fit the screen"}
+              class={LAYOUT_ACTION_CLASS}
+            >
+              <LayoutGrid class="h-3 w-3" />
+              Fit layout
+            </button>
+          </div>
+
           <div class="space-y-2">
             {#each manager.widgets as widget (widget.id)}
               <div
@@ -77,8 +123,10 @@ License: CECILL-C
                 <div class="flex items-center gap-2">
                   <button
                     onclick={() => manager.toggleWidgetVisibility(widget.id)}
-                    title={widget.hidden ? "Show widget" : "Hide widget"}
-                    class="shrink-0 text-muted-foreground hover:text-foreground"
+                    disabled={locked}
+                    title={locked ? LOCKED_HINT : widget.hidden ? "Show widget" : "Hide widget"}
+                    class="shrink-0 text-muted-foreground transition-colors hover:text-foreground
+                      disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted-foreground"
                   >
                     {#if widget.hidden}
                       <EyeOff class="h-3.5 w-3.5" />

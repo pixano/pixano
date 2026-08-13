@@ -5,7 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import { httpDatasetGateway, type DatasetGateway } from "./datasetGateway.js";
-import type { Viewport } from "./layoutPlanner.js";
+import { snapshotDatasetLayout } from "./datasetLayout.js";
+import {
+  localStorageDatasetLayoutRepository,
+  type DatasetLayoutRepository,
+} from "./datasetLayoutRepository.js";
+import { planFittedLayouts, type Viewport } from "./layoutPlanner.js";
 import { MutationQueue } from "./mutationQueue.svelte.js";
 import { RecordLoader } from "./recordLoader.js";
 import { WorkspaceSession } from "./workspaceSession.svelte.js";
@@ -53,6 +58,14 @@ export class WorkspaceManager {
   widgetCount = $derived(this.widgets.length);
 
   /**
+   * Bumped whenever widget layouts are rewritten programmatically rather than
+   * by a grid gesture. `GridWorkspace` watches this counter alone to push the
+   * new positions into GridStack — watching the layouts themselves would make
+   * it re-apply on every drag and fight the user's own gesture.
+   */
+  layoutRevision = $state(0);
+
+  /**
    * A box drawn but awaiting its entity choice in the Inspector. `null` when no
    * box is pending. Set by widgets via `beginPendingAnnotation`.
    */
@@ -64,10 +77,16 @@ export class WorkspaceManager {
   private session: WorkspaceSession;
   private mutations: MutationQueue;
   private loader: RecordLoader;
+  private layoutRepository: DatasetLayoutRepository;
 
-  constructor(registry: WidgetRegistry, gateway: DatasetGateway = httpDatasetGateway) {
+  constructor(
+    registry: WidgetRegistry,
+    gateway: DatasetGateway = httpDatasetGateway,
+    layoutRepository: DatasetLayoutRepository = localStorageDatasetLayoutRepository,
+  ) {
     this.registry = registry;
     this.session = new WorkspaceSession();
+    this.layoutRepository = layoutRepository;
 
     // Annotations are record-scoped: the queue flips `persisted` directly on
     // the session's shared collection, no per-widget storage lookup needed.
@@ -80,6 +99,7 @@ export class WorkspaceManager {
       registry,
       gateway,
       session: this.session,
+      layoutRepository,
     });
   }
 
@@ -304,6 +324,8 @@ export class WorkspaceManager {
       layout: overrides?.layout ?? { ...config.defaultLayout },
       options: { ...options, ...overrides?.options },
       data: overrides?.data,
+      hidden: overrides?.hidden,
+      viewName: overrides?.viewName,
     };
 
     this.storageMap.set(widget.id, storage);
@@ -325,12 +347,97 @@ export class WorkspaceManager {
     }
   }
 
-  /** Toggle the visibility of a widget in the workspace. */
+  /**
+   * Toggle the visibility of a widget in the workspace.
+   *
+   * Persisting is left to the grid: hiding compacts the neighbours and showing
+   * re-places the widget in whatever slot is now free, so the arrangement the
+   * user ends up seeing is only settled once GridStack has reacted.
+   */
   toggleWidgetVisibility(id: string): void {
     const widget = this.widgets.find((w) => w.id === id);
     if (widget) {
       widget.hidden = !widget.hidden;
     }
+  }
+
+  // ─── Per-dataset layout preference ────────────────────────────────────────
+  // Arranging the widgets on one record states how the user wants *this
+  // dataset* laid out, so the arrangement is remembered and replayed when they
+  // open the dataset's other records.
+  //
+  // Saving is deliberately explicit rather than a side effect of
+  // `updateLayout`: the grid also writes layouts back when it places widgets
+  // programmatically (mount, clamping, gap compaction after a hide), and
+  // persisting those would freeze an automatic placement — computed for one
+  // record's widget count — as if the user had chosen it. Only the call sites
+  // that know a gesture happened save.
+
+  /**
+   * Remember how the user arranged the current dataset. No-op when no dataset
+   * is open or no widget is view-backed, so clearing the workspace or moving a
+   * palette widget never erases a stored arrangement.
+   */
+  saveDatasetLayout(): void {
+    const datasetId = this.session.datasetId;
+    if (!datasetId) return;
+
+    const layout = snapshotDatasetLayout(this.widgets);
+    if (layout) this.layoutRepository.save(datasetId, layout);
+  }
+
+  /**
+   * Whether there is an opening arrangement to go back to. False until a record
+   * has loaded, so the UI can disable the action instead of offering a no-op.
+   */
+  get hasOpeningLayout(): boolean {
+    return this.session.openingLayout !== null;
+  }
+
+  /**
+   * Put every widget back where the current record opened it, undoing the moves
+   * made since, and remember that as the dataset's arrangement so what is shown
+   * and what is stored never disagree.
+   *
+   * No-op before a record has loaded.
+   */
+  restoreOpeningLayout(): void {
+    const opening = this.session.openingLayout;
+    if (!opening) return;
+
+    for (const widget of this.widgets) {
+      const stored = widget.viewName ? opening.views[widget.viewName] : undefined;
+      if (!stored) continue;
+      // Spread over the current layout so the extension's minW/minH survive.
+      widget.layout = { ...widget.layout, ...stored.layout };
+      widget.hidden = stored.hidden;
+    }
+
+    this.layoutRevision++;
+    this.saveDatasetLayout();
+  }
+
+  /**
+   * Re-tile every widget so the whole set is visible and fits the viewport,
+   * revealing any that were hidden. The escape hatch for a workspace that has
+   * been arranged into a corner — or whose stored arrangement was built for a
+   * screen the user no longer has.
+   *
+   * The viewport is passed in (rather than measured here) so the manager stays
+   * environment-agnostic and unit-testable; callers read it from the live grid.
+   */
+  fitLayoutToViewport(viewport: Viewport): void {
+    if (this.widgets.length === 0) return;
+
+    const layouts = planFittedLayouts(this.widgets.length, viewport);
+    this.widgets.forEach((widget, index) => {
+      // Spread over the current layout so the extension's minW/minH survive.
+      widget.layout = { ...widget.layout, ...layouts[index] };
+      widget.hidden = false;
+    });
+
+    this.layoutRevision++;
+    this.saveDatasetLayout();
   }
 
   /** Get the mutable storage for a widget instance. */
@@ -348,6 +455,9 @@ export class WorkspaceManager {
     this.storageMap.clear();
     this.widgets = [];
     this.mutations.reset();
+    // The widgets it described are gone, so the arrangement they opened in no
+    // longer means anything; the next load writes the new record's.
+    this.session.openingLayout = null;
   }
 
   /** Apply a workspace preset, replacing all current widgets. */
