@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type { AnnotationKind, LocalAnnotation } from "./annotationCollection.svelte.js";
 import { bboxSeedLoader } from "./kinds/2d/bbox/bboxSeedLoader.js";
+import { classificationSeedLoader } from "./kinds/2d/classification/classificationSeedLoader.js";
 import { keypointsSeedLoader } from "./kinds/2d/keypoints/keypointsSeedLoader.js";
 import { maskSeedLoader } from "./kinds/2d/mask/maskSeedLoader.js";
 import { multiPathSeedLoader } from "./kinds/2d/multi-path/multiPathSeedLoader.js";
@@ -70,4 +71,5 @@ export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
   maskSeedLoader,
   keypointsSeedLoader,
   multiPathSeedLoader,
+  classificationSeedLoader,
 ];

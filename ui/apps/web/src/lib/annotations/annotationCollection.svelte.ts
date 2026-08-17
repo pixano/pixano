@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { ClassificationGeometry } from "./kinds/2d/classification/classificationTypes.js";
 import type { KeypointsGeometry } from "./kinds/2d/keypoints/keypointsTypes.js";
 import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
@@ -14,7 +15,13 @@ import type { CoordsNorm, Rotation3x3 } from "./types.js";
  * literal here plus a module under `lib/annotations/kinds/` — see
  * docs/ARCHITECTURE_TOOLING.md "Adding a new annotation kind".
  */
-export type AnnotationKind = "bbox" | "bbox3d" | "mask" | "keypoints" | "multi_path";
+export type AnnotationKind =
+  | "bbox"
+  | "bbox3d"
+  | "mask"
+  | "keypoints"
+  | "multi_path"
+  | "classification";
 
 /**
  * Kinds that apply to the whole record rather than a single view (e.g. a 3D
@@ -65,6 +72,7 @@ export type LocalBBox3DAnnotation = LocalAnnotation<BBox3DGeometry>;
 export type LocalMask = LocalAnnotation<MaskGeometry>;
 export type LocalKeypoints = LocalAnnotation<KeypointsGeometry>;
 export type LocalMultiPath = LocalAnnotation<MultiPathGeometry>;
+export type LocalClassification = LocalAnnotation<ClassificationGeometry>;
 
 /**
  * Maps each annotation kind to its geometry payload type, so `byKind(kind)`
@@ -78,6 +86,7 @@ export interface GeometryByKind {
   mask: MaskGeometry;
   keypoints: KeypointsGeometry;
   multi_path: MultiPathGeometry;
+  classification: ClassificationGeometry;
 }
 
 /**
