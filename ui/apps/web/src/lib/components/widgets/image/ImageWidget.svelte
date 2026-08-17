@@ -251,6 +251,15 @@ License: CECILL-C
     activeHandler = tool.createHandler(sceneContext);
     activeHandler.activate?.();
     if (containerEl) containerEl.style.cursor = tool.cursor ?? "default";
+
+    // While a creation tool is active, existing annotation nodes must not
+    // capture the pointer: a renderer's nodes are interactive (bbox rects are
+    // draggable, masks are click-to-select), so a gesture starting on top of one
+    // would be swallowed by that node instead of reaching the tool. Painting a
+    // mask over an object — the whole point of segmentation — hit exactly this.
+    // Scene-level rule, so it lives here rather than in any kind: the widget is
+    // the only place that knows both the layer and the active tool.
+    sceneContext.annotationLayer.listening(toolId === DEFAULT_TOOL_2D);
   });
 
   // Structural changes — membership, selection, the visible-entity filter — are
