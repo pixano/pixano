@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { CoordsNorm, Rotation3x3 } from "./types.js";
 
 /**
@@ -59,17 +60,18 @@ export interface BBox3DGeometry {
 
 export type LocalBBox = LocalAnnotation<BBoxGeometry>;
 export type LocalBBox3DAnnotation = LocalAnnotation<BBox3DGeometry>;
+export type LocalMask = LocalAnnotation<MaskGeometry>;
 
 /**
  * Maps each annotation kind to its geometry payload type, so `byKind(kind)`
  * returns annotations typed with the matching geometry (no caller-supplied
  * type argument that could mismatch the kind). Must cover every
- * `AnnotationKind`; `mask` has no geometry module yet.
+ * `AnnotationKind`.
  */
 export interface GeometryByKind {
   bbox: BBoxGeometry;
   bbox3d: BBox3DGeometry;
-  mask: unknown;
+  mask: MaskGeometry;
 }
 
 /**

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type { AnnotationKind, LocalAnnotation } from "./annotationCollection.svelte.js";
 import { bboxSeedLoader } from "./kinds/2d/bbox/bboxSeedLoader.js";
+import { maskSeedLoader } from "./kinds/2d/mask/maskSeedLoader.js";
 import { bbox3dSeedLoader } from "./kinds/3d/bbox3d/bbox3dSeedLoader.js";
 import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
 
@@ -61,4 +62,8 @@ export interface AnnotationSeedLoader {
 }
 
 /** Every seed loader; adding a kind means adding its import here. */
-export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [bboxSeedLoader, bbox3dSeedLoader];
+export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
+  bboxSeedLoader,
+  bbox3dSeedLoader,
+  maskSeedLoader,
+];

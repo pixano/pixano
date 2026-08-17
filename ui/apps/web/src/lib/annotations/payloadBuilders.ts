@@ -12,6 +12,7 @@ import type {
 import { buildEntityCreateMutation, generateShortId } from "./buildPayloads.js";
 import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
+import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./scene/sceneContext.js";
 import type { PendingEntityChoice, ResourceMutation } from "./types.js";
@@ -46,6 +47,7 @@ const PAYLOAD_BUILDERS: ReadonlyMap<AnnotationKind, PayloadBuilder> = new Map<
 >([
   [bboxPayloadBuilder.kind, bboxPayloadBuilder as PayloadBuilder],
   [bbox3dPayloadBuilder.kind, bbox3dPayloadBuilder as PayloadBuilder],
+  [maskPayloadBuilder.kind, maskPayloadBuilder as PayloadBuilder],
 ]);
 
 export function payloadBuilderFor(kind: AnnotationKind): PayloadBuilder {
