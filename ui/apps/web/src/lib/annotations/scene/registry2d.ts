@@ -12,6 +12,8 @@ import { keypointsRenderer2DFactory } from "../kinds/2d/keypoints/keypointsRende
 import { drawMaskTool } from "../kinds/2d/mask/drawMaskTool.js";
 import { maskRenderer2DFactory } from "../kinds/2d/mask/maskRenderer2D.js";
 import { smartSegmentTool } from "../kinds/2d/mask/smartSegmentTool.js";
+import { drawPolygonTool, drawPolylineTool } from "../kinds/2d/multi-path/drawMultiPathTool.js";
+import { multiPathRenderer2DFactory } from "../kinds/2d/multi-path/multiPathRenderer2D.js";
 import type { AnnotationRenderer2DFactory } from "./renderer.js";
 import { selectTool2D } from "./selectTool2D.js";
 import type { Tool2D } from "./tool.js";
@@ -27,6 +29,8 @@ export const TOOLS_2D: readonly Tool2D[] = [
   drawMaskTool,
   smartSegmentTool,
   drawKeypointsTool,
+  drawPolygonTool,
+  drawPolylineTool,
 ];
 
 /** Every 2D renderer factory; widgets instantiate one renderer per kind. */
@@ -35,6 +39,7 @@ export const RENDERER_FACTORIES_2D: readonly AnnotationRenderer2DFactory[] = [
   bbox3dRenderer2DFactory,
   maskRenderer2DFactory,
   keypointsRenderer2DFactory,
+  multiPathRenderer2DFactory,
 ];
 
 export { DEFAULT_TOOL_2D } from "./tool.js";

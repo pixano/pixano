@@ -14,6 +14,7 @@ import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
 import { keypointsPayloadBuilder } from "./kinds/2d/keypoints/keypointsPayloadBuilder.js";
 import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
+import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./scene/sceneContext.js";
 import type { PendingEntityChoice, ResourceMutation } from "./types.js";
@@ -50,6 +51,7 @@ const PAYLOAD_BUILDERS: ReadonlyMap<AnnotationKind, PayloadBuilder> = new Map<
   [bbox3dPayloadBuilder.kind, bbox3dPayloadBuilder as PayloadBuilder],
   [maskPayloadBuilder.kind, maskPayloadBuilder as PayloadBuilder],
   [keypointsPayloadBuilder.kind, keypointsPayloadBuilder as PayloadBuilder],
+  [multiPathPayloadBuilder.kind, multiPathPayloadBuilder as PayloadBuilder],
 ]);
 
 export function payloadBuilderFor(kind: AnnotationKind): PayloadBuilder {
