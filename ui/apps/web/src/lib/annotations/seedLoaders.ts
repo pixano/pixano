@@ -8,6 +8,7 @@ import type { AnnotationKind, LocalAnnotation } from "./annotationCollection.sve
 import { bboxSeedLoader } from "./kinds/2d/bbox/bboxSeedLoader.js";
 import { keypointsSeedLoader } from "./kinds/2d/keypoints/keypointsSeedLoader.js";
 import { maskSeedLoader } from "./kinds/2d/mask/maskSeedLoader.js";
+import { multiPathSeedLoader } from "./kinds/2d/multi-path/multiPathSeedLoader.js";
 import { bbox3dSeedLoader } from "./kinds/3d/bbox3d/bbox3dSeedLoader.js";
 import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
 
@@ -68,4 +69,5 @@ export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
   bbox3dSeedLoader,
   maskSeedLoader,
   keypointsSeedLoader,
+  multiPathSeedLoader,
 ];
