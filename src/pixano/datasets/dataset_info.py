@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal, overload
@@ -258,6 +260,24 @@ class DatasetInfo(BaseModel):
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
 
+        The write is atomic: the payload goes to a temporary file in the same
+        directory and is then renamed over the target, so a reader never sees a
+        half-written file.
+
+        This matters because `BaseService.resolve_table` creates a missing table
+        on the fly — including while serving a read — and persists the new slot
+        here. A client that lists several absent annotation resources at once
+        therefore triggers concurrent writes to this one file. Writing in place
+        (`Path.write_text` truncates, then writes) let two of them interleave at
+        the byte level and leave a document that is neither version: a shorter
+        one followed by the tail of a longer one, which no longer parses. Same
+        technique as the spec-version migration in `dataset.py`.
+
+        The rename removes torn files, not lost updates: concurrent writers
+        still race and the last rename wins. That is tolerable here because they
+        share the in-memory `DatasetInfo`, so the winner already carries the
+        slots the others set.
+
         Args:
             json_fp: The path to the file where the DatasetInfo object
                 will be written.
@@ -269,7 +289,19 @@ class DatasetInfo(BaseModel):
         model_dumped["views"] = {
             logical_name: _serialize_table_schema(schema_cls) for logical_name, schema_cls in self.views.items()
         }
-        json_fp.write_text(json.dumps(model_dumped, indent=4), encoding="utf-8")
+
+        # A unique temporary name per writer: sharing one `.tmp` would just move
+        # the race one file along. Same directory, so the rename stays within a
+        # single filesystem and keeps its atomicity.
+        fd, tmp_name = tempfile.mkstemp(dir=json_fp.parent, prefix=f"{json_fp.name}.", suffix=".tmp")
+        tmp_fp = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+                tmp_file.write(json.dumps(model_dumped, indent=4))
+            tmp_fp.replace(json_fp)
+        except BaseException:
+            tmp_fp.unlink(missing_ok=True)
+            raise
 
     @staticmethod
     def from_json(
