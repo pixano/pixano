@@ -4,8 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { CoordsNorm, ResourceMutation, Rotation3x3 } from "./types.js";
-import { BBOX_RESOURCE, BBOX3D_RESOURCE, ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
+import type { ResourceMutation } from "./types.js";
+import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -22,8 +22,8 @@ export function generateShortId(length = 10): string {
 }
 
 /**
- * Context required to build a BBox / Entity pair. Extracted from the widget's
- * options so the helper stays pure and easy to unit-test.
+ * Context required to build an annotation / Entity pair. Extracted from the
+ * widget's options so the helper stays pure and easy to unit-test.
  */
 export interface BuildContext {
   datasetId: string;
@@ -31,24 +31,25 @@ export interface BuildContext {
   viewId: string;
 }
 
-export interface BuildBBoxResult {
+/** What a kind's create builder returns: the ids it minted and its mutations. */
+export interface BuildAnnotationResult {
   entityId: string;
-  bboxId: string;
+  annotationId: string;
   mutations: ResourceMutation[];
 }
 
 /**
- * Options shared by the 2D and 3D box-create builders.
+ * Options shared by every kind's create builder.
  *
  *  - `entityFields` are merged into the new entity's body (e.g. `{ category }`).
- *  - `linkExisting` attaches the box to an entity that already exists: the
- *    entity-create mutation is omitted and `entityId` must be supplied.
+ *  - `linkExisting` attaches the annotation to an entity that already exists:
+ *    the entity-create mutation is omitted and `entityId` must be supplied.
  */
-export interface BuildBBoxOpts {
+export interface BuildAnnotationOpts {
   widgetId?: string;
   localAnnotationId?: string;
   entityId?: string;
-  bboxId?: string;
+  annotationId?: string;
   entityFields?: Record<string, unknown>;
   linkExisting?: boolean;
 }
@@ -70,11 +71,26 @@ export interface EntityCreateChoice {
  * `"other"` as the source type so we don't imply ground-truth provenance for
  * freshly drawn boxes.
  */
-const DEFAULT_SOURCE = {
+export const DEFAULT_SOURCE = {
   source_type: "other",
   source_name: "Pixano",
   source_metadata: "{}",
 } as const;
+
+/**
+ * The linkage columns every per-frame annotation carries. For single-image
+ * workspaces the frame row and the view row are the same id — mirrors what
+ * pixano's `defineCreatedAnnotation` does when `isVideo === false`. Video would
+ * make these real (see D2, out of scope).
+ */
+export function singleFrameLinkage(ctx: BuildContext): Record<string, unknown> {
+  return {
+    frame_id: ctx.viewId,
+    frame_index: -1,
+    tracklet_id: "",
+    entity_dynamic_state_id: "",
+  };
+}
 
 /**
  * The create mutation for a new entity. Entities carry only
@@ -99,52 +115,28 @@ export function buildEntityCreateMutation(
 }
 
 /**
- * Build the (entity, bbox) create mutation pair for a new 2D box annotation.
- *
- * The payloads match what the pixano backend `EntityCreate` / `BBoxCreate`
- * transport models expect (see `src/pixano/api/models.py`). In particular:
- *   - Entities only carry `{ id, record_id, parent_id }`. They do NOT carry
- *     source_* or timestamps: the `Entity` schema does not declare those
- *     fields and LanceModel-backed tables reject unknown ones.
- *   - BBoxes carry the full per-frame annotation shape including the
- *     required `source_*` and `view_id`/`frame_id` linkage fields.
+ * Assemble a kind's create mutations: the entity-create (unless the annotation
+ * links an entity that already exists) followed by the annotation row itself.
+ * Every kind's `buildCreate` funnels through here, so the entity/annotation
+ * ordering and the widget/local-id bookkeeping live in exactly one place — a
+ * new kind supplies only its `resource` and body.
  */
-export function buildBBoxCreate(
+export function buildCreateMutations(
   ctx: BuildContext,
-  coordsNorm: CoordsNorm,
-  opts: BuildBBoxOpts = {},
-): BuildBBoxResult {
-  const entityId = opts.entityId ?? generateShortId();
-  const bboxId = opts.bboxId ?? generateShortId();
-
-  const bboxBody: Record<string, unknown> = {
-    id: bboxId,
-    record_id: ctx.recordId,
-    entity_id: entityId,
-    view_id: ctx.viewId,
-    // For single-image workspaces, the frame row and the view row are the
-    // same id — mirrors what pixano's `defineCreatedAnnotation` does when
-    // `isVideo === false`.
-    frame_id: ctx.viewId,
-    frame_index: -1,
-    tracklet_id: "",
-    entity_dynamic_state_id: "",
-    coords: Array.from(coordsNorm),
-    format: "xywh",
-    is_normalized: true,
-    confidence: 1,
-    ...DEFAULT_SOURCE,
-  };
-
-  const mutations: ResourceMutation[] = [
-    // `linkExisting` attaches the box to an entity that already exists, so the
-    // entity-create is skipped (the chosen entityId is supplied in opts).
+  resource: string,
+  ids: { entityId: string; annotationId: string },
+  body: Record<string, unknown>,
+  opts: BuildAnnotationOpts,
+): ResourceMutation[] {
+  return [
+    // `linkExisting` attaches the annotation to an entity that already exists,
+    // so the entity-create is skipped (the chosen entityId is supplied in opts).
     ...(opts.linkExisting
       ? []
       : [
           buildEntityCreateMutation(
             ctx,
-            entityId,
+            ids.entityId,
             opts.entityFields,
             opts.widgetId,
             opts.localAnnotationId,
@@ -152,106 +144,12 @@ export function buildBBoxCreate(
         ]),
     {
       op: "create",
-      resource: BBOX_RESOURCE,
-      body: bboxBody,
+      resource,
+      body,
       widgetId: opts.widgetId,
       localAnnotationId: opts.localAnnotationId,
     },
   ];
-
-  return { entityId, bboxId, mutations };
-}
-
-/**
- * Build an update body for an existing BBox whose geometry changed. Only
- * includes fields the backend's `BBoxUpdate` transport model accepts — the
- * server merges this onto the existing row.
- */
-export function buildBBoxUpdate(
-  ctx: BuildContext,
-  bboxId: string,
-  entityId: string,
-  coordsNorm: CoordsNorm,
-): Record<string, unknown> {
-  return {
-    id: bboxId,
-    record_id: ctx.recordId,
-    entity_id: entityId,
-    view_id: ctx.viewId,
-    coords: Array.from(coordsNorm),
-    format: "xywh",
-    is_normalized: true,
-    confidence: 1,
-    ...DEFAULT_SOURCE,
-  };
-}
-
-/**
- * Build the (entity, bbox3d) create mutation pair for a new 3D box annotation.
- * Coordinates are in Lance/backend space (xyzwhd, Z-up). Rotation defaults to
- * identity — axis-aligned boxes only for now.
- */
-export const DEFAULT_3D_ROTATION: Rotation3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-
-export function buildBBox3DUpdate(
-  ctx: BuildContext,
-  bboxId: string,
-  entityId: string,
-  coordsLance: [number, number, number, number, number, number],
-  rotation?: Rotation3x3,
-): Record<string, unknown> {
-  return {
-    id: bboxId,
-    record_id: ctx.recordId,
-    entity_id: entityId,
-    view_id: ctx.viewId,
-    coords: Array.from(coordsLance),
-    format: "xyzwhd",
-    rotation: rotation ?? DEFAULT_3D_ROTATION,
-    is_normalized: false,
-    confidence: 1,
-    ...DEFAULT_SOURCE,
-  };
-}
-
-export function buildBBox3DCreate(
-  ctx: BuildContext,
-  coordsLance: [number, number, number, number, number, number],
-  opts: BuildBBoxOpts & { rotation?: Rotation3x3 } = {},
-): BuildBBoxResult {
-  const entityId = opts.entityId ?? generateShortId();
-  const bboxId = opts.bboxId ?? generateShortId();
-
-  const bboxBody: Record<string, unknown> = {
-    ...buildBBox3DUpdate(ctx, bboxId, entityId, coordsLance, opts.rotation),
-    frame_id: ctx.viewId,
-    frame_index: -1,
-    tracklet_id: "",
-    entity_dynamic_state_id: "",
-  };
-
-  const mutations: ResourceMutation[] = [
-    ...(opts.linkExisting
-      ? []
-      : [
-          buildEntityCreateMutation(
-            ctx,
-            entityId,
-            opts.entityFields,
-            opts.widgetId,
-            opts.localAnnotationId,
-          ),
-        ]),
-    {
-      op: "create",
-      resource: BBOX3D_RESOURCE,
-      body: bboxBody,
-      widgetId: opts.widgetId,
-      localAnnotationId: opts.localAnnotationId,
-    },
-  ];
-
-  return { entityId, bboxId, mutations };
 }
 
 /**

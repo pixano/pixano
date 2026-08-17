@@ -12,6 +12,8 @@ import { DATASET_LAYOUT_VERSION } from "../datasetLayout.js";
 import { planViewportLayouts } from "../layoutPlanner.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
+import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -39,9 +41,9 @@ function makeGateway(state: FakeGatewayState) {
     getDataset: 0,
     listEntities: 0,
     loadImageByLogicalName: 0,
-    listBBoxes: 0,
     loadPointCloudByLogicalName: 0,
-    listBBox3Ds: 0,
+    /** Per-resource listing counts, keyed by the annotation table name. */
+    listAnnotations: {} as Record<string, number>,
   };
   const gateway: DatasetGateway = {
     getDataset: () => {
@@ -56,17 +58,15 @@ function makeGateway(state: FakeGatewayState) {
       calls.loadImageByLogicalName++;
       return Promise.resolve(state.imagesByLogicalName.get(logicalName) ?? null);
     },
-    listBBoxes: () => {
-      calls.listBBoxes++;
-      return Promise.resolve(state.bboxes);
-    },
     loadPointCloudByLogicalName: (_, __, logicalName) => {
       calls.loadPointCloudByLogicalName++;
       return Promise.resolve(state.pointCloudsByLogicalName.get(logicalName) ?? null);
     },
-    listBBox3Ds: () => {
-      calls.listBBox3Ds++;
-      return Promise.resolve(state.bboxes3d);
+    listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
+      calls.listAnnotations[resource] = (calls.listAnnotations[resource] ?? 0) + 1;
+      if (resource === BBOX_RESOURCE) return Promise.resolve(state.bboxes as TRow[]);
+      if (resource === BBOX3D_RESOURCE) return Promise.resolve(state.bboxes3d as TRow[]);
+      return Promise.resolve([]);
     },
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),
@@ -470,7 +470,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
 
     expect(calls.listEntities).toBe(1);
-    expect(calls.listBBoxes).toBe(1);
+    expect(calls.listAnnotations[BBOX_RESOURCE]).toBe(1);
 
     expect(manager.annotations.byKind("bbox")).toHaveLength(1);
     expect(manager.annotations.find("bb-1")).toMatchObject({
@@ -601,17 +601,13 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
           extrinsic_matrix: null,
           ego_to_world: null,
         } as CalibratedImageResponse),
-      listBBoxes: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
-      listBBox3Ds: () => Promise.resolve([]),
+      listAnnotations: () => Promise.resolve([]),
       createEntity: () => Promise.resolve({}),
-      createBBox: () => Promise.resolve({}),
-      updateBBox: () => Promise.resolve({}),
-      deleteBBox: () => Promise.resolve(),
       deleteEntity: () => Promise.resolve(),
-      createBBox3D: () => Promise.resolve({}),
-      updateBBox3D: () => Promise.resolve({}),
-      deleteBBox3D: () => Promise.resolve(),
+      createAnnotation: () => Promise.resolve({}),
+      updateAnnotation: () => Promise.resolve({}),
+      deleteAnnotation: () => Promise.resolve(),
     };
 
     const manager = new WorkspaceManager(makeRegistry(), gateway);

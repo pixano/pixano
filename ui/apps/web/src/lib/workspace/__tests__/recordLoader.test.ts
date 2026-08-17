@@ -12,6 +12,8 @@ import { RecordLoader } from "../recordLoader.js";
 import type { WidgetSink } from "../recordLoader.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
+import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -46,24 +48,34 @@ function makeDataset(views: Record<string, { base: string }>): Dataset {
   };
 }
 
-function makeGateway(
-  opts: {
-    dataset?: Dataset;
-    entities?: EntityRow[];
-    images?: Map<string, CalibratedImageResponse>;
-    pointClouds?: Map<string, PointCloudResponse>;
-    bboxes?: BBoxRow[];
-    bboxes3d?: BBox3DRow[];
-  } = {},
-): DatasetGateway {
+interface GatewayOpts {
+  dataset?: Dataset;
+  entities?: EntityRow[];
+  images?: Map<string, CalibratedImageResponse>;
+  pointClouds?: Map<string, PointCloudResponse>;
+  bboxes?: BBoxRow[];
+  bboxes3d?: BBox3DRow[];
+}
+
+/**
+ * Route a generic annotation listing back to the per-kind fixtures. The seed
+ * loaders now ask for a resource by name, so the fake dispatches on it.
+ */
+function annotationRowsFor(resource: string, opts: GatewayOpts): BBoxRow[] | BBox3DRow[] {
+  if (resource === BBOX_RESOURCE) return opts.bboxes ?? [];
+  if (resource === BBOX3D_RESOURCE) return opts.bboxes3d ?? [];
+  return [];
+}
+
+function makeGateway(opts: GatewayOpts = {}): DatasetGateway {
   return {
     getDataset: () => Promise.resolve(opts.dataset ?? makeDataset({})),
     listEntities: () => Promise.resolve(opts.entities ?? []),
     loadImageByLogicalName: (_, __, name) => Promise.resolve(opts.images?.get(name) ?? null),
-    listBBoxes: () => Promise.resolve(opts.bboxes ?? []),
     loadPointCloudByLogicalName: (_, __, name) =>
       Promise.resolve(opts.pointClouds?.get(name) ?? null),
-    listBBox3Ds: () => Promise.resolve(opts.bboxes3d ?? []),
+    listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> =>
+      Promise.resolve(annotationRowsFor(resource, opts) as TRow[]),
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),
     createAnnotation: () => Promise.resolve({}),
@@ -114,7 +126,7 @@ const VIEWPORT = { width: 1600, height: 900 };
 describe("RecordLoader.load", () => {
   it("runs the per-kind seed loaders once per record against the claimed views", async () => {
     const dataset = makeDataset({ cam_a: { base: "Image" }, cam_b: { base: "Image" } });
-    const listBBoxes = vi.fn().mockResolvedValue([
+    const bboxes = [
       {
         id: "bb-a",
         record_id: "rec-1",
@@ -133,7 +145,12 @@ describe("RecordLoader.load", () => {
         format: "xywh",
         is_normalized: true,
       },
-    ] as BBoxRow[]);
+    ] as BBoxRow[];
+    const listAnnotations = vi
+      .fn()
+      .mockImplementation((_datasetId: string, resource: string) =>
+        Promise.resolve(resource === BBOX_RESOURCE ? bboxes : []),
+      );
     const ext: WidgetExtensionConfig = {
       ...makeImageExtension(),
       addRecordSeed: async ({ viewName, viewDef }) => {
@@ -148,15 +165,18 @@ describe("RecordLoader.load", () => {
     const loader = new RecordLoader({
       workspace: makeSink().sink,
       registry: makeRegistry(ext),
-      gateway: { ...makeGateway({ dataset }), listBBoxes },
+      gateway: { ...makeGateway({ dataset }), listAnnotations },
       session,
       layoutRepository: makeLayoutRepository(),
     });
 
     await loader.load("ds-1", "rec-1", VIEWPORT);
 
-    // One record-scoped fetch, not one per view.
-    expect(listBBoxes).toHaveBeenCalledTimes(1);
+    // One record-scoped fetch per kind, not one per view.
+    const bboxCalls = listAnnotations.mock.calls.filter(
+      ([, resource]) => resource === BBOX_RESOURCE,
+    );
+    expect(bboxCalls).toHaveLength(1);
     // The displayed view's row is seeded; the undisplayed one is skipped.
     expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-a"]);
     expect(session.annotations.find("bb-a")).toMatchObject({ viewId: "img-a", persisted: true });
