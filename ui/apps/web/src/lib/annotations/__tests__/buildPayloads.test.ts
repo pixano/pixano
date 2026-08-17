@@ -7,10 +7,10 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import {
-  buildBBox3DCreate,
-  buildBBoxCreate,
-  buildBBoxUpdate,
+  buildCreateMutations,
+  buildEntityCreateMutation,
   mutationPriority,
+  singleFrameLinkage,
   sortMutations,
 } from "../buildPayloads";
 import type { ResourceMutation } from "../types";
@@ -21,143 +21,79 @@ const CTX = {
   viewId: "view-1",
 };
 
-describe("buildBBoxCreate", () => {
-  it("returns two mutations in (entity, bbox) order", () => {
-    const { mutations } = buildBBoxCreate(CTX, [0.1, 0.2, 0.3, 0.4]);
+/** Narrow a create mutation to its body without repeating the cast everywhere. */
+function bodyOf(m: ResourceMutation): Record<string, unknown> {
+  return (m as Extract<ResourceMutation, { op: "create" }>).body;
+}
 
-    expect(mutations).toHaveLength(2);
-    expect(mutations[0].resource).toBe("entities");
-    expect(mutations[1].resource).toBe("bboxes");
-    expect(mutations[0].op).toBe("create");
-    expect(mutations[1].op).toBe("create");
-  });
+describe("buildEntityCreateMutation", () => {
+  it("builds the system fields and merges the caller's entity fields", () => {
+    const m = buildEntityCreateMutation(CTX, "e-1", { category: "car" }, "w-1", "local-1");
 
-  it("sets matching entity_id between entity and bbox", () => {
-    const { entityId, mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1]);
-    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
-
-    expect(entityBody.id).toBe(entityId);
-    expect(bboxBody.entity_id).toBe(entityId);
-  });
-
-  it("encodes coords as normalized xywh with the expected flags", () => {
-    const coords: [number, number, number, number] = [0.1, 0.2, 0.3, 0.4];
-    const { mutations } = buildBBoxCreate(CTX, coords);
-    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
-
-    expect(bboxBody.coords).toEqual([0.1, 0.2, 0.3, 0.4]);
-    expect(bboxBody.format).toBe("xywh");
-    expect(bboxBody.is_normalized).toBe(true);
-    expect(bboxBody.confidence).toBe(1);
-  });
-
-  it("forwards record_id and view_id from the build context", () => {
-    const { mutations } = buildBBoxCreate(CTX, [0, 0, 0.5, 0.5]);
-    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
-
-    expect(entityBody.record_id).toBe("rec-1");
-    expect(bboxBody.record_id).toBe("rec-1");
-    expect(bboxBody.view_id).toBe("view-1");
-  });
-
-  it("propagates widgetId and localAnnotationId onto every generated mutation", () => {
-    const { mutations } = buildBBoxCreate(CTX, [0, 0, 0.5, 0.5], {
-      widgetId: "widget-1",
-      localAnnotationId: "local-1",
+    expect(m.resource).toBe("entities");
+    expect(m.op).toBe("create");
+    expect(bodyOf(m)).toEqual({
+      id: "e-1",
+      record_id: "rec-1",
+      parent_id: "",
+      category: "car",
     });
+    expect(m.widgetId).toBe("w-1");
+    expect(m.localAnnotationId).toBe("local-1");
+  });
+});
+
+describe("singleFrameLinkage", () => {
+  it("reuses the view row id as the frame id (single-image scope, D2)", () => {
+    expect(singleFrameLinkage(CTX)).toEqual({
+      frame_id: "view-1",
+      frame_index: -1,
+      tracklet_id: "",
+      entity_dynamic_state_id: "",
+    });
+  });
+});
+
+describe("buildCreateMutations", () => {
+  const IDS = { entityId: "e-1", annotationId: "a-1" };
+
+  it("emits the entity create before the annotation create", () => {
+    const mutations = buildCreateMutations(CTX, "masks", IDS, { id: "a-1" }, {});
+
+    expect(mutations.map((m) => m.resource)).toEqual(["entities", "masks"]);
+  });
+
+  it("omits the entity create when linking an existing entity", () => {
+    const mutations = buildCreateMutations(
+      CTX,
+      "masks",
+      IDS,
+      { id: "a-1" },
+      {
+        linkExisting: true,
+      },
+    );
+
+    expect(mutations).toHaveLength(1);
+    expect(mutations[0].resource).toBe("masks");
+  });
+
+  it("propagates widgetId and localAnnotationId onto every mutation", () => {
+    const mutations = buildCreateMutations(
+      CTX,
+      "masks",
+      IDS,
+      { id: "a-1" },
+      {
+        widgetId: "w-1",
+        localAnnotationId: "local-1",
+      },
+    );
 
     for (const m of mutations) {
-      expect(m.widgetId).toBe("widget-1");
+      expect(m.widgetId).toBe("w-1");
       expect(m.localAnnotationId).toBe("local-1");
     }
-  });
-
-  it("reuses caller-provided entityId and bboxId when given", () => {
-    const { entityId, bboxId, mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1], {
-      entityId: "my-entity",
-      bboxId: "my-bbox",
-    });
-
-    expect(entityId).toBe("my-entity");
-    expect(bboxId).toBe("my-bbox");
-    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
-    expect(entityBody.id).toBe("my-entity");
-    expect(bboxBody.id).toBe("my-bbox");
-    expect(bboxBody.entity_id).toBe("my-entity");
-  });
-
-  it("merges entityFields onto the new entity body", () => {
-    const { mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1], {
-      entityFields: { category: "car", is_difficult: false },
-    });
-    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-
-    expect(entityBody.category).toBe("car");
-    expect(entityBody.is_difficult).toBe(false);
-    // System fields are still present.
-    expect(entityBody.parent_id).toBe("");
-  });
-
-  it("omits the entity create when linking to an existing entity", () => {
-    const { mutations } = buildBBoxCreate(CTX, [0, 0, 1, 1], {
-      entityId: "existing-1",
-      linkExisting: true,
-    });
-
-    expect(mutations).toHaveLength(1);
-    expect(mutations[0].resource).toBe("bboxes");
-    const bboxBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    expect(bboxBody.entity_id).toBe("existing-1");
-  });
-});
-
-describe("buildBBox3DCreate", () => {
-  const coords: [number, number, number, number, number, number] = [1, 2, 3, 4, 5, 6];
-
-  it("returns (entity, bbox3d) create mutations with a matching entity_id", () => {
-    const { entityId, mutations } = buildBBox3DCreate(CTX, coords);
-
-    expect(mutations).toHaveLength(2);
-    expect(mutations[0].resource).toBe("entities");
-    expect(mutations[1].resource).toBe("bbox3ds");
-    const bboxBody = (mutations[1] as Extract<ResourceMutation, { op: "create" }>).body;
-    expect(bboxBody.entity_id).toBe(entityId);
-    expect(bboxBody.format).toBe("xyzwhd");
-  });
-
-  it("merges entityFields onto the new entity body", () => {
-    const { mutations } = buildBBox3DCreate(CTX, coords, {
-      entityFields: { category: "pedestrian" },
-    });
-    const entityBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    expect(entityBody.category).toBe("pedestrian");
-  });
-
-  it("omits the entity create when linking to an existing entity", () => {
-    const { mutations } = buildBBox3DCreate(CTX, coords, {
-      entityId: "existing-3d",
-      linkExisting: true,
-    });
-
-    expect(mutations).toHaveLength(1);
-    expect(mutations[0].resource).toBe("bbox3ds");
-    const bboxBody = (mutations[0] as Extract<ResourceMutation, { op: "create" }>).body;
-    expect(bboxBody.entity_id).toBe("existing-3d");
-  });
-});
-
-describe("buildBBoxUpdate", () => {
-  it("returns an update body with the new normalized coords", () => {
-    const body = buildBBoxUpdate(CTX, "bbox-1", "entity-1", [0.5, 0.5, 0.25, 0.25]);
-
-    expect(body.id).toBe("bbox-1");
-    expect(body.entity_id).toBe("entity-1");
-    expect(body.coords).toEqual([0.5, 0.5, 0.25, 0.25]);
-    expect(body.format).toBe("xywh");
-    expect(body.is_normalized).toBe(true);
   });
 });
 

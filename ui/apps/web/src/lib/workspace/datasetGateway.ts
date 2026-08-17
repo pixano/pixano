@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import * as api from "$lib/api";
-import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
+import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { Dataset } from "$lib/types/dataset";
 
@@ -38,21 +38,23 @@ export interface RecordReadGateway {
     logicalName: string,
   ): Promise<CalibratedImageResponse | null>;
 
-  listBBoxes(
-    datasetId: string,
-    params: { recordId?: string; viewId?: string; limit?: number },
-  ): Promise<BBoxRow[]>;
-
   loadPointCloudByLogicalName(
     datasetId: string,
     recordId: string,
     logicalName: string,
   ): Promise<PointCloudResponse | null>;
 
-  listBBox3Ds(
+  /**
+   * Read one annotation resource's rows for a record. Kind-agnostic: the caller
+   * (a seed loader) supplies the resource name its payload builder owns, so
+   * adding an annotation kind never widens this interface. Media reads stay
+   * named per medium above — those are genuinely different endpoints.
+   */
+  listAnnotations<TRow>(
     datasetId: string,
-    params: { recordId?: string; viewId?: string; limit?: number },
-  ): Promise<BBox3DRow[]>;
+    resource: string,
+    params: ListAnnotationsParams,
+  ): Promise<TRow[]>;
 }
 
 export interface MutationGateway {
@@ -89,10 +91,10 @@ export const httpDatasetGateway: DatasetGateway = {
   listEntities: (datasetId, params) => api.listEntities(datasetId, params),
   loadImageByLogicalName: (datasetId, recordId, logicalName) =>
     api.loadImageByLogicalName(datasetId, recordId, logicalName),
-  listBBoxes: (datasetId, params) => api.listBBoxes(datasetId, params),
   loadPointCloudByLogicalName: (datasetId, recordId, logicalName) =>
     api.loadPointCloudByLogicalName(datasetId, recordId, logicalName),
-  listBBox3Ds: (datasetId, params) => api.listBBox3Ds(datasetId, params),
+  listAnnotations: (datasetId, resource, params) =>
+    api.listAnnotations(datasetId, resource, params),
 
   createEntity: (datasetId, body) => api.createEntity(datasetId, body),
   deleteEntity: (datasetId, id) => api.deleteEntity(datasetId, id),

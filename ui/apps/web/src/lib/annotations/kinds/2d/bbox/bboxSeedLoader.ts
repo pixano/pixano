@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { BBOX_RESOURCE } from "./bboxPayloadBuilder.js";
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
 import type { AnnotationSeedLoader, SeedLoadContext } from "$lib/annotations/seedLoaders.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
@@ -20,7 +21,7 @@ export const bboxSeedLoader: AnnotationSeedLoader = {
 
   async load(ctx: SeedLoadContext) {
     const rows = await ctx.gateway
-      .listBBoxes(ctx.datasetId, { recordId: ctx.recordId })
+      .listAnnotations<BBoxRow>(ctx.datasetId, BBOX_RESOURCE, { recordId: ctx.recordId })
       .catch(() => [] as BBoxRow[]);
 
     const annotations: LocalBBox[] = [];
