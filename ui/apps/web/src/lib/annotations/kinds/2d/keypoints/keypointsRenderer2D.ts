@@ -1,0 +1,175 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import Konva from "konva";
+
+import { keypointTemplateFor } from "./keypointsTemplates.js";
+import {
+  KEYPOINTS_EDGE_NAME,
+  KEYPOINTS_ID_ATTR,
+  KEYPOINTS_VERTEX_NAME,
+  type KeypointsGeometry,
+} from "./keypointsTypes.js";
+import type { LocalKeypoints } from "$lib/annotations/annotationCollection.svelte.js";
+import type {
+  AnnotationRenderer2D,
+  AnnotationRenderer2DFactory,
+} from "$lib/annotations/scene/renderer.js";
+import {
+  BBOX_COLOR_DRAFT,
+  BBOX_COLOR_PERSISTED,
+  getPixelFrame,
+  type PixelFrame,
+} from "$lib/annotations/scene/scene2dGeometry.js";
+import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
+
+const VERTEX_RADIUS = 4;
+const VERTEX_STROKE_WIDTH = 2;
+const EDGE_STROKE_WIDTH = 2;
+/** An "invisible" point is annotated but occluded: shown hollow, not filled. */
+const INVISIBLE_FILL = "transparent";
+
+/** One skeleton's nodes, kept together so a resync can move them in place. */
+interface SkeletonNodes {
+  group: Konva.Group;
+  vertices: Konva.Circle[];
+  edges: Konva.Line[];
+}
+
+/**
+ * Displays the "keypoints" kind: the template's bones as lines, each annotated
+ * point as a circle, click-to-select on the whole skeleton. Read-only context,
+ * so it cannot write to the queue (D4) — placing points lives in
+ * `drawKeypointsTool.ts`.
+ *
+ * A point whose state is "hidden" is not drawn at all, and neither is any bone
+ * touching it: "hidden" means the annotator asserted the point is absent, so
+ * drawing a bone into empty space would invent a limb that was never annotated.
+ */
+class KeypointsRenderer2D implements AnnotationRenderer2D {
+  readonly kind = "keypoints";
+
+  private readonly nodesById = new Map<string, SkeletonNodes>();
+
+  constructor(private readonly ctx: Scene2DReadContext) {}
+
+  sync(): void {
+    const frame = getPixelFrame(this.ctx.getKonvaImage());
+    const activeIds = new Set<string>();
+
+    for (const skeleton of this.ctx.collection.byKind("keypoints")) {
+      // Entity-driven visibility, as for every other kind.
+      if (skeleton.persisted && !this.ctx.isEntityVisible(skeleton.entityId)) continue;
+      if (!this._syncOne(skeleton, frame)) continue;
+      activeIds.add(skeleton.id);
+    }
+
+    for (const [id, nodes] of this.nodesById) {
+      if (!activeIds.has(id)) {
+        nodes.group.destroy();
+        this.nodesById.delete(id);
+      }
+    }
+
+    this.ctx.annotationLayer.batchDraw();
+  }
+
+  /**
+   * Rebuild one skeleton's nodes. A skeleton's node *count* depends on its
+   * template and its per-point states, both of which can change between syncs,
+   * so the group is rebuilt rather than reconciled node by node — a skeleton is
+   * a handful of shapes, unlike a mask raster where re-decoding is the cost.
+   */
+  private _syncOne(skeleton: LocalKeypoints, frame: PixelFrame | null): boolean {
+    if (!frame) return false;
+    const points = this._toPixels(skeleton.geometry, frame);
+    if (points.length === 0) return false;
+
+    this.nodesById.get(skeleton.id)?.group.destroy();
+
+    const color = skeleton.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
+    const group = new Konva.Group();
+    group.setAttr(KEYPOINTS_ID_ATTR, skeleton.id);
+    // Selection is display state, not a queue mutation, so it stays here.
+    group.on("click tap", (e) => {
+      e.cancelBubble = true;
+      this.ctx.collection.select(skeleton.id);
+    });
+
+    const template = keypointTemplateFor(skeleton.geometry.templateId);
+    const states = skeleton.geometry.states;
+    const edges: Konva.Line[] = [];
+    for (const [from, to] of template?.edges ?? []) {
+      // Guard the indices: an edge is template data, the point count is row
+      // data, and an import can leave the two disagreeing.
+      if (from >= points.length || to >= points.length) continue;
+      if (states[from] === "hidden" || states[to] === "hidden") continue;
+      const line = new Konva.Line({
+        points: [points[from].x, points[from].y, points[to].x, points[to].y],
+        stroke: color,
+        strokeWidth: EDGE_STROKE_WIDTH,
+        listening: false,
+        name: KEYPOINTS_EDGE_NAME,
+      });
+      group.add(line);
+      edges.push(line);
+    }
+
+    const vertices: Konva.Circle[] = [];
+    for (const [index, point] of points.entries()) {
+      if (states[index] === "hidden") continue;
+      const circle = new Konva.Circle({
+        x: point.x,
+        y: point.y,
+        radius: VERTEX_RADIUS,
+        stroke: template?.points[index]?.color ?? color,
+        strokeWidth: VERTEX_STROKE_WIDTH,
+        fill:
+          states[index] === "invisible"
+            ? INVISIBLE_FILL
+            : (template?.points[index]?.color ?? color),
+        name: KEYPOINTS_VERTEX_NAME,
+      });
+      group.add(circle);
+      vertices.push(circle);
+    }
+
+    this.ctx.annotationLayer.add(group);
+    this.nodesById.set(skeleton.id, { group, vertices, edges });
+    return true;
+  }
+
+  /** Normalized coords → stage pixels, one entry per annotated point. */
+  private _toPixels(geometry: KeypointsGeometry, frame: PixelFrame): { x: number; y: number }[] {
+    const points: { x: number; y: number }[] = [];
+    for (let i = 0; i + 1 < geometry.coords.length; i += 2) {
+      points.push({
+        x: frame.x + geometry.coords[i] * frame.w,
+        y: frame.y + geometry.coords[i + 1] * frame.h,
+      });
+    }
+    return points;
+  }
+
+  /**
+   * No-op: a skeleton is placed inside this widget by its own tool, which owns
+   * its live preview — there is no cross-widget gesture to mirror.
+   */
+  syncDraft(): void {}
+
+  destroy(): void {
+    for (const nodes of this.nodesById.values()) nodes.group.destroy();
+    this.nodesById.clear();
+  }
+}
+
+export const keypointsRenderer2DFactory: AnnotationRenderer2DFactory = {
+  kind: "keypoints",
+  create: (ctx: Scene2DReadContext) => new KeypointsRenderer2D(ctx),
+  // No `createEditor` yet: moving a single vertex is the natural edit gesture
+  // and a `Konva.Transformer` is the wrong affordance for it. Placing a fresh
+  // skeleton is the only write path for now.
+};
