@@ -7,6 +7,8 @@ License: CECILL-C
 import { bboxRenderer2DFactory } from "../kinds/2d/bbox/bboxRenderer2D.js";
 import { drawBBoxTool } from "../kinds/2d/bbox/drawBBoxTool.js";
 import { bbox3dRenderer2DFactory } from "../kinds/2d/bbox3d/bbox3dRenderer2D.js";
+import { classificationRenderer2DFactory } from "../kinds/2d/classification/classificationRenderer2D.js";
+import { classifyTool } from "../kinds/2d/classification/classifyTool.js";
 import { drawKeypointsTool } from "../kinds/2d/keypoints/drawKeypointsTool.js";
 import { keypointsRenderer2DFactory } from "../kinds/2d/keypoints/keypointsRenderer2D.js";
 import { drawMaskTool } from "../kinds/2d/mask/drawMaskTool.js";
@@ -31,6 +33,7 @@ export const TOOLS_2D: readonly Tool2D[] = [
   drawKeypointsTool,
   drawPolygonTool,
   drawPolylineTool,
+  classifyTool,
 ];
 
 /** Every 2D renderer factory; widgets instantiate one renderer per kind. */
@@ -40,6 +43,7 @@ export const RENDERER_FACTORIES_2D: readonly AnnotationRenderer2DFactory[] = [
   maskRenderer2DFactory,
   keypointsRenderer2DFactory,
   multiPathRenderer2DFactory,
+  classificationRenderer2DFactory,
 ];
 
 export { DEFAULT_TOOL_2D } from "./tool.js";
