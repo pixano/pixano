@@ -18,17 +18,6 @@ export interface WidgetLayout {
   minH?: number;
 }
 
-/** Runtime context passed to extension lifecycle hooks */
-export interface WidgetContext {
-  widgetId: string;
-  container: HTMLElement;
-  options: Record<string, unknown>;
-  storage: Record<string, unknown>;
-}
-
-/** A command that operates on a widget context */
-export type WidgetCommand = (ctx: WidgetContext) => boolean;
-
 /** Props interface that all widget components must accept */
 export interface WidgetComponentProps<TOptions = Record<string, unknown>> {
   widgetId: string;
@@ -68,20 +57,15 @@ export interface WidgetExtensionConfig<
   /** Factory for default per-instance mutable storage (like TipTap's addStorage) */
   addStorage?: () => TStorage;
 
-  /** Called when extension is registered with the registry */
-  onCreate?: (ctx: WidgetContext) => void;
-
-  /** Called when the widget's component is mounted in the DOM */
-  onMount?: (ctx: WidgetContext) => void;
-
-  /** Called when GridStack reports a resize */
-  onResize?: (ctx: WidgetContext, width: number, height: number) => void;
-
-  /** Called when the widget is removed from workspace */
-  onDestroy?: (ctx: WidgetContext) => void;
-
-  /** Commands this extension provides */
-  addCommands?: () => Record<string, (...args: unknown[]) => WidgetCommand>;
+  /*
+   * There is deliberately no lifecycle hook here (no onCreate/onMount/onResize/
+   * onDestroy) and no addCommands. An earlier version declared them and nothing
+   * ever invoked them, which made the contract lie about what a widget could
+   * rely on. A widget component owns its own lifecycle with Svelte's `onMount` /
+   * `onDestroy` and a `ResizeObserver` — see `ImageWidget.svelte` — which is one
+   * mechanism instead of two. Reintroduce a hook only with the call site that
+   * fires it.
+   */
 
   /** Child extensions this extension bundles (composition pattern) */
   addExtensions?: () => WidgetExtensionConfig[];
