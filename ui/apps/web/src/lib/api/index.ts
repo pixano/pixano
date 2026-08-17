@@ -6,4 +6,5 @@ License: CECILL-C
 
 export * from "./annotations";
 export * from "./datasets";
+export * from "./inference";
 export * from "./workspace";
