@@ -41,6 +41,7 @@ function makeGateway(state: FakeGatewayState) {
     getDataset: 0,
     listEntities: 0,
     loadImageByLogicalName: 0,
+    listRecordImages: 0,
     loadPointCloudByLogicalName: 0,
     /** Per-resource listing counts, keyed by the annotation table name. */
     listAnnotations: {} as Record<string, number>,
@@ -57,6 +58,10 @@ function makeGateway(state: FakeGatewayState) {
     loadImageByLogicalName: (_, __, logicalName) => {
       calls.loadImageByLogicalName++;
       return Promise.resolve(state.imagesByLogicalName.get(logicalName) ?? null);
+    },
+    listRecordImages: () => {
+      calls.listRecordImages++;
+      return Promise.resolve([...state.imagesByLogicalName.values()]);
     },
     loadPointCloudByLogicalName: (_, __, logicalName) => {
       calls.loadPointCloudByLogicalName++;
@@ -753,6 +758,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
           extrinsic_matrix: null,
           ego_to_world: null,
         } as CalibratedImageResponse),
+      listRecordImages: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
       loadTextByLogicalName: () => Promise.resolve(null),
       listAnnotations: () => Promise.resolve([]),
