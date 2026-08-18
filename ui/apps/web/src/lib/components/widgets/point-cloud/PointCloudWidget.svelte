@@ -22,6 +22,7 @@ License: CECILL-C
     createProjectionCamera,
     type ProjectionCameraSpec,
   } from "$lib/pointcloud/cameraPixels.js";
+  import { localStorageColorModePreferenceRepository } from "$lib/pointcloud/colorModePreferenceRepository.js";
   import { PointCloudColorController } from "$lib/pointcloud/pointCloudColorController.svelte.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
@@ -74,6 +75,9 @@ License: CECILL-C
 
   function selectColorMode(id: string) {
     storage.colorModeId = id;
+    // Remembered per dataset so the next record opens the same way; the widget's
+    // own storage does not outlive a record load.
+    if (datasetId) localStorageColorModePreferenceRepository.save(datasetId, id);
     void colors.setMode(id);
   }
 
