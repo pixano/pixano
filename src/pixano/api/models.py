@@ -276,7 +276,18 @@ class SFrameResponse(ResponseModel):
 
 
 class PointCloudResponse(ResponseModel):
-    """Response model for a point-cloud view row."""
+    """Response model for a point-cloud view row.
+
+    Carries the sensor pose when the row comes from the ``CalibratedPointCloud``
+    table, mirroring what ``CalibratedImageResponse`` does for cameras. Fields
+    are ``None`` for a plain ``PointCloud`` row so callers always receive this
+    type.
+
+    ``extrinsic_matrix`` is the **world-to-sensor** transform (the builder
+    stores ``R = Rᵀ_sensor2world`` and ``t = -R·C``), so applying it to a stored
+    point yields that point in the sensor frame — which is what makes its norm
+    the range from the lidar.
+    """
 
     id: str
     record_id: str
@@ -284,6 +295,8 @@ class PointCloudResponse(ResponseModel):
     created_at: str = ""
     updated_at: str = ""
     src: str
+    extrinsic_matrix: list[float] | None = None
+    ego_to_world: list[float] | None = None
 
 
 TrackletCreate = _create_transport_model(
