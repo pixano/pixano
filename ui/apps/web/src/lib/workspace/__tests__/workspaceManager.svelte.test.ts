@@ -39,6 +39,7 @@ function makeGateway(state: FakeGatewayState) {
     getDataset: 0,
     listEntities: 0,
     loadImageByLogicalName: 0,
+    listRecordImages: 0,
     listBBoxes: 0,
     loadPointCloudByLogicalName: 0,
     listBBox3Ds: 0,
@@ -55,6 +56,10 @@ function makeGateway(state: FakeGatewayState) {
     loadImageByLogicalName: (_, __, logicalName) => {
       calls.loadImageByLogicalName++;
       return Promise.resolve(state.imagesByLogicalName.get(logicalName) ?? null);
+    },
+    listRecordImages: () => {
+      calls.listRecordImages++;
+      return Promise.resolve([...state.imagesByLogicalName.values()]);
     },
     listBBoxes: () => {
       calls.listBBoxes++;
@@ -601,6 +606,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
           extrinsic_matrix: null,
           ego_to_world: null,
         } as CalibratedImageResponse),
+      listRecordImages: () => Promise.resolve([]),
       listBBoxes: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
       listBBox3Ds: () => Promise.resolve([]),

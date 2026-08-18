@@ -43,6 +43,14 @@ export interface RecordReadGateway {
     params: { recordId?: string; viewId?: string; limit?: number },
   ): Promise<BBoxRow[]>;
 
+  /**
+   * Every image view of the record. Named per medium like the two loaders
+   * above (these are genuinely different endpoints), but record-scoped rather
+   * than view-scoped: an extension whose widget works *across* views needs the
+   * whole set, not the one it was seeded for.
+   */
+  listRecordImages(datasetId: string, recordId: string): Promise<CalibratedImageResponse[]>;
+
   loadPointCloudByLogicalName(
     datasetId: string,
     recordId: string,
@@ -89,6 +97,7 @@ export const httpDatasetGateway: DatasetGateway = {
   listEntities: (datasetId, params) => api.listEntities(datasetId, params),
   loadImageByLogicalName: (datasetId, recordId, logicalName) =>
     api.loadImageByLogicalName(datasetId, recordId, logicalName),
+  listRecordImages: (datasetId, recordId) => api.listRecordImages(datasetId, recordId),
   listBBoxes: (datasetId, params) => api.listBBoxes(datasetId, params),
   loadPointCloudByLogicalName: (datasetId, recordId, logicalName) =>
     api.loadPointCloudByLogicalName(datasetId, recordId, logicalName),
