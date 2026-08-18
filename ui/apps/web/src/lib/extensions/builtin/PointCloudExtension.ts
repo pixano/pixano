@@ -12,6 +12,7 @@ import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
 import PointCloudWidget from "$lib/components/widgets/point-cloud/PointCloudWidget.svelte";
 import type { ProjectionCameraSpec } from "$lib/pointcloud/cameraPixels.js";
 import { DEFAULT_COLOR_MODE_ID } from "$lib/pointcloud/coloring/registry.js";
+import { localStorageColorModePreferenceRepository } from "$lib/pointcloud/colorModePreferenceRepository.js";
 
 /**
  * Bases this extension claims. `CalibratedPointCloud` extends `PointCloud`
@@ -80,6 +81,13 @@ export const PointCloudExtension = WidgetExtension.create({
     return {
       title: viewName,
       options: {},
+      // Seeded, not left to `addStorage`: that factory runs per widget with no
+      // knowledge of the dataset, so the user's choice would reset on every
+      // record — exactly when stepping through a sequence needs it to hold.
+      storage: {
+        colorModeId:
+          localStorageColorModePreferenceRepository.load(datasetId) ?? DEFAULT_COLOR_MODE_ID,
+      },
       data: {
         pointCloudUrl: pointCloud?.src,
         datasetId,

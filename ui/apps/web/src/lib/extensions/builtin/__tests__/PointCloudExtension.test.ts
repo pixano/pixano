@@ -4,12 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PointCloudExtension } from "../PointCloudExtension.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { ProjectionCameraSpec } from "$lib/pointcloud/cameraPixels.js";
 import { DEFAULT_COLOR_MODE_ID } from "$lib/pointcloud/coloring/registry.js";
+import {
+  COLOR_MODE_KEY_PREFIX,
+  localStorageColorModePreferenceRepository,
+} from "$lib/pointcloud/colorModePreferenceRepository.js";
 import type { DatasetGateway } from "$lib/workspace/datasetGateway.js";
 
 // The widget pulls in Threlte and Three; this test only exercises the seed.
@@ -188,5 +192,66 @@ describe("PointCloudExtension.addRecordSeed", () => {
     expect(data.pointCloudUrl).toBe("/cloud.bin");
     expect(data.cameras).toEqual([]);
     consoleError.mockRestore();
+  });
+});
+
+describe("PointCloudExtension colour-mode preference", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("seeds the default mode when the dataset has no remembered choice", async () => {
+    const seed = await PointCloudExtension.config.addRecordSeed!(makeCtx());
+    expect(seed!.storage).toMatchObject({ colorModeId: DEFAULT_COLOR_MODE_ID });
+  });
+
+  it("seeds the mode last chosen on this dataset", async () => {
+    // The regression this guards: the choice used to live only in widget
+    // storage, which `addStorage` rebuilds on every record load — so stepping
+    // to the next record silently reset the mode to elevation.
+    localStorageColorModePreferenceRepository.save("ds", "range");
+
+    const seed = await PointCloudExtension.config.addRecordSeed!(makeCtx());
+
+    expect(seed!.storage).toMatchObject({ colorModeId: "range" });
+  });
+
+  it("ignores a preference stored for another dataset", async () => {
+    localStorageColorModePreferenceRepository.save("another-dataset", "range");
+    const seed = await PointCloudExtension.config.addRecordSeed!(makeCtx());
+    expect(seed!.storage).toMatchObject({ colorModeId: DEFAULT_COLOR_MODE_ID });
+  });
+});
+
+describe("localStorageColorModePreferenceRepository", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("returns null for a dataset with no stored choice", () => {
+    expect(localStorageColorModePreferenceRepository.load("ds")).toBeNull();
+  });
+
+  it("round-trips a mode id", () => {
+    localStorageColorModePreferenceRepository.save("ds", "intensity");
+    expect(localStorageColorModePreferenceRepository.load("ds")).toBe("intensity");
+  });
+
+  it("replaces a previous choice rather than accumulating", () => {
+    localStorageColorModePreferenceRepository.save("ds", "intensity");
+    localStorageColorModePreferenceRepository.save("ds", "range");
+    expect(localStorageColorModePreferenceRepository.load("ds")).toBe("range");
+  });
+
+  it("keeps datasets independent", () => {
+    localStorageColorModePreferenceRepository.save("a", "intensity");
+    localStorageColorModePreferenceRepository.save("b", "range");
+    expect(localStorageColorModePreferenceRepository.load("a")).toBe("intensity");
+    expect(localStorageColorModePreferenceRepository.load("b")).toBe("range");
+  });
+
+  it("treats an empty stored value as no choice", () => {
+    localStorage.setItem(`${COLOR_MODE_KEY_PREFIX}ds`, "");
+    expect(localStorageColorModePreferenceRepository.load("ds")).toBeNull();
   });
 });
