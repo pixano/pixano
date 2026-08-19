@@ -92,6 +92,12 @@ export interface ImageWidgetStorage {
 export interface PointCloudWidgetStorage {
   /** Id of the active tool from the 3D tool registry. */
   activeToolId: string;
+  /**
+   * Id of the active colour mode from `COLOR_MODES_3D`. A plain string rather
+   * than a union, so registering a mode never widens this type; an id no longer
+   * in the registry resolves back to the default (`colorModeFor`).
+   */
+  colorModeId: string;
   [key: string]: unknown;
 }
 

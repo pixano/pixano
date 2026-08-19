@@ -6,6 +6,7 @@
 
 """Unit tests for pure helper functions in the views router."""
 
+from collections.abc import Sequence
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,6 +16,7 @@ from pixano.api.routers.views import (
     IMAGE_TABLE,
     _combine_where,
     _resolve_image_table,
+    _to_point_cloud_response,
 )
 from pixano.schemas.schema_group import SchemaGroup
 
@@ -90,3 +92,62 @@ class TestCombineWhere:
 
     def test_returns_none_when_all_are_empty_strings(self):
         assert _combine_where("", "") is None
+
+
+# ─── _to_point_cloud_response ─────────────────────────────────────────────────
+
+
+def _make_point_cloud_row(**extra) -> MagicMock:
+    """A point-cloud row carrying only the base View columns, plus any extras."""
+    # `spec` matters: a bare MagicMock answers every getattr with a new mock, so
+    # the "plain PointCloud row" cases below would silently pass on a truthy
+    # stub instead of on a genuinely absent column.
+    row = MagicMock(spec=["id", "record_id", "logical_name", "uri", *extra])
+    row.id = "pcd-1"
+    row.record_id = "rec-1"
+    row.logical_name = "LIDAR_TOP"
+    row.uri = ""
+    for name, value in extra.items():
+        setattr(row, name, value)
+    return row
+
+
+class TestToPointCloudResponse:
+    def test_serves_a_blob_url_when_the_row_has_no_uri(self):
+        response = _to_point_cloud_response("ds-1", _make_point_cloud_row())
+        assert response.src == "/datasets/ds-1/point-clouds/pcd-1/blob"
+
+    def test_leaves_the_pose_unset_for_a_plain_point_cloud(self):
+        # A `PointCloud` table has no extrinsics; the field must read as absent
+        # rather than as an empty matrix a caller might try to apply.
+        response = _to_point_cloud_response("ds-1", _make_point_cloud_row())
+        assert response.extrinsic_matrix is None
+        assert response.ego_to_world is None
+
+    def test_exposes_the_sensor_pose_of_a_calibrated_point_cloud(self):
+        world_to_sensor = [float(i) for i in range(16)]
+        ego_to_world = [float(i) for i in range(16, 32)]
+        response = _to_point_cloud_response(
+            "ds-1",
+            _make_point_cloud_row(extrinsic_matrix=world_to_sensor, ego_to_world=ego_to_world),
+        )
+        assert response.extrinsic_matrix == world_to_sensor
+        assert response.ego_to_world == ego_to_world
+
+    def test_converts_the_stored_vector_to_a_plain_list(self):
+        # Lance hands back its own `Vector(16)` sequence; the response model has
+        # to be JSON-serialisable, so it must not keep the storage type.
+        class _Vector(Sequence):
+            def __init__(self, values):
+                self._values = values
+
+            def __getitem__(self, index):
+                return self._values[index]
+
+            def __len__(self):
+                return len(self._values)
+
+        values = [float(i) for i in range(16)]
+        response = _to_point_cloud_response("ds-1", _make_point_cloud_row(extrinsic_matrix=_Vector(values)))
+        assert isinstance(response.extrinsic_matrix, list)
+        assert response.extrinsic_matrix == values

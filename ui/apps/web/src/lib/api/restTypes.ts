@@ -130,6 +130,12 @@ export interface PointCloudResponse {
   created_at?: string;
   updated_at?: string;
   src: string;
+  /**
+   * World-to-sensor 4×4, row-major, present only on a `CalibratedPointCloud`
+   * row. Applying it to a stored point gives that point in the lidar frame.
+   */
+  extrinsic_matrix?: number[] | null;
+  ego_to_world?: number[] | null;
 }
 
 export interface EntityResponse extends RecordComponentResponse {
