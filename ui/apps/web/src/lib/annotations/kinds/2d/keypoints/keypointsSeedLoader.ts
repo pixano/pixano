@@ -6,8 +6,7 @@ License: CECILL-C
 
 import { KEYPOINTS_RESOURCE } from "./keypointsPayloadBuilder.js";
 import type { KeypointsGeometry, KeypointState } from "./keypointsTypes.js";
-import type { LocalKeypoints } from "$lib/annotations/annotationCollection.svelte.js";
-import type { AnnotationSeedLoader, SeedLoadContext } from "$lib/annotations/seedLoaders.js";
+import { createViewScopedSeedLoader } from "$lib/annotations/viewScopedSeedLoader.js";
 
 /** Minimal shape of a keypoints row as returned by `GET /datasets/:id/keypoints`. */
 export interface KeypointsRow {
@@ -46,37 +45,11 @@ function toGeometry(row: KeypointsRow): KeypointsGeometry | null {
 }
 
 /**
- * REST→local mapping for keypoint skeletons: one record-scoped fetch, rows
- * resolved to their displayed view (by image row id or legacy logical name).
- *
- * Coordinates stay normalized, as stored — the renderer scales them onto the
- * frame, exactly as for a bbox.
+ * REST→local mapping for keypoint skeletons. Coordinates arrive already
+ * normalized, so the view is needed only to scope the row, not to convert it.
  */
-export const keypointsSeedLoader: AnnotationSeedLoader = {
+export const keypointsSeedLoader = createViewScopedSeedLoader<"keypoints", KeypointsRow>({
   kind: "keypoints",
-
-  async load(ctx: SeedLoadContext) {
-    const rows = await ctx.gateway
-      .listAnnotations<KeypointsRow>(ctx.datasetId, KEYPOINTS_RESOURCE, { recordId: ctx.recordId })
-      .catch(() => [] as KeypointsRow[]);
-
-    const annotations: LocalKeypoints[] = [];
-    for (const row of rows) {
-      const view = ctx.views.get(row.view_id);
-      if (!view) continue;
-      const geometry = toGeometry(row);
-      if (!geometry) continue;
-
-      annotations.push({
-        id: row.id,
-        entityId: row.entity_id,
-        kind: "keypoints",
-        viewId: view.id,
-        geometry,
-        persisted: true,
-        entity: ctx.entitiesById.get(row.entity_id),
-      });
-    }
-    return annotations;
-  },
-};
+  resource: KEYPOINTS_RESOURCE,
+  toGeometry,
+});

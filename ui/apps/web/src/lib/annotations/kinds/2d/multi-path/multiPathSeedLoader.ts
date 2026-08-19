@@ -6,8 +6,7 @@ License: CECILL-C
 
 import { MULTI_PATH_RESOURCE } from "./multiPathPayloadBuilder.js";
 import { minPointsFor, type MultiPathGeometry } from "./multiPathTypes.js";
-import type { LocalMultiPath } from "$lib/annotations/annotationCollection.svelte.js";
-import type { AnnotationSeedLoader, SeedLoadContext } from "$lib/annotations/seedLoaders.js";
+import { createViewScopedSeedLoader } from "$lib/annotations/viewScopedSeedLoader.js";
 
 /** Minimal shape of a multi-path row as returned by `GET …/multi-paths`. */
 export interface MultiPathRow {
@@ -47,39 +46,12 @@ function toGeometry(row: MultiPathRow): MultiPathGeometry | null {
 }
 
 /**
- * REST→local mapping for multi-paths: one record-scoped fetch, rows resolved to
- * their displayed view (by image row id or legacy logical name).
- *
- * Coordinates stay normalized, as stored — the renderer scales them onto the
- * frame, exactly as for a bbox or a skeleton.
+ * REST→local mapping for polygons and polylines. Both are the same kind, told
+ * apart by `is_closed`; `toGeometry` also enforces the backend's
+ * `sum(num_points) * 2 === coords.length` invariant before seeding.
  */
-export const multiPathSeedLoader: AnnotationSeedLoader = {
+export const multiPathSeedLoader = createViewScopedSeedLoader<"multi_path", MultiPathRow>({
   kind: "multi_path",
-
-  async load(ctx: SeedLoadContext) {
-    const rows = await ctx.gateway
-      .listAnnotations<MultiPathRow>(ctx.datasetId, MULTI_PATH_RESOURCE, {
-        recordId: ctx.recordId,
-      })
-      .catch(() => [] as MultiPathRow[]);
-
-    const annotations: LocalMultiPath[] = [];
-    for (const row of rows) {
-      const view = ctx.views.get(row.view_id);
-      if (!view) continue;
-      const geometry = toGeometry(row);
-      if (!geometry) continue;
-
-      annotations.push({
-        id: row.id,
-        entityId: row.entity_id,
-        kind: "multi_path",
-        viewId: view.id,
-        geometry,
-        persisted: true,
-        entity: ctx.entitiesById.get(row.entity_id),
-      });
-    }
-    return annotations;
-  },
-};
+  resource: MULTI_PATH_RESOURCE,
+  toGeometry,
+});
