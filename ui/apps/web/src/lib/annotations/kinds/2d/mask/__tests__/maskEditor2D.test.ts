@@ -99,6 +99,19 @@ describe("maskEditor2D", () => {
     expect(harness.requestRedraw).toHaveBeenCalled();
   });
 
+  it("commits nothing when the drag is too small to move a whole grid pixel", () => {
+    // The grid is four times the frame here, so a tenth of a stage pixel is
+    // 0.4 grid pixels — below the half that would round to a move, and RLE has
+    // no way to express it. Without this guard the record went dirty and a
+    // no-op PUT was sent for a stray touch.
+    drag(fakeNode({ x: 0.1, y: 0.1 }));
+
+    expect(translateMask).not.toHaveBeenCalled();
+    expect(harness.upsertUpdate).not.toHaveBeenCalled();
+    // Still asks for a redraw, so the node snaps back off its dropped position.
+    expect(harness.requestRedraw).toHaveBeenCalled();
+  });
+
   it("ignores nodes belonging to another kind", () => {
     drag(fakeNode({ name: "pixano-bbox" }));
 

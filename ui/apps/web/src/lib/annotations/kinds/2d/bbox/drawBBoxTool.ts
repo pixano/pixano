@@ -11,12 +11,11 @@ import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js"
 import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import {
-  BBOX_COLOR_DRAFT,
-  DRAFT_DASH,
   getPixelFrame,
   PIXEL_THRESHOLD,
   pixelToNormalized,
 } from "$lib/annotations/scene/scene2dGeometry.js";
+import { BBOX_COLOR_DRAFT, DRAFT_DASH } from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 

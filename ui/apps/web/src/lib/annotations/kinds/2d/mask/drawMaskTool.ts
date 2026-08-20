@@ -12,11 +12,8 @@ import { DRAW_MASK_TOOL_ID, type MaskGeometry } from "./maskTypes.js";
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
 import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
-import {
-  BBOX_COLOR_DRAFT,
-  getPixelFrame,
-  type PixelFrame,
-} from "$lib/annotations/scene/scene2dGeometry.js";
+import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
+import { BBOX_COLOR_DRAFT } from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
