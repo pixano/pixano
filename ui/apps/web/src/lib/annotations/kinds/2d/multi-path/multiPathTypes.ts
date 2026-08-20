@@ -42,6 +42,12 @@ export const MULTI_PATH_VERTEX_NAME = "pixano-multi-path-vertex";
 /** Attribute carrying the local annotation id on a multi-path node. */
 export const MULTI_PATH_ID_ATTR = "pixanoMultiPathId";
 
+/**
+ * Attribute carrying a vertex's index into the flat `coords` list, counted
+ * across every sub-path — the handles of ring 2 continue where ring 1 stopped.
+ */
+export const MULTI_PATH_VERTEX_INDEX_ATTR = "pixanoMultiPathIndex";
+
 /** Tool ids, referenced by the toolbar and by tests. */
 export const DRAW_POLYGON_TOOL_ID = "draw-polygon";
 export const DRAW_POLYLINE_TOOL_ID = "draw-polyline";

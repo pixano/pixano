@@ -10,10 +10,12 @@ import { keypointTemplateFor } from "./keypointsTemplates.js";
 import {
   KEYPOINTS_EDGE_NAME,
   KEYPOINTS_ID_ATTR,
+  KEYPOINTS_VERTEX_INDEX_ATTR,
   KEYPOINTS_VERTEX_NAME,
   type KeypointsGeometry,
 } from "./keypointsTypes.js";
 import type { LocalKeypoints } from "$lib/annotations/annotationCollection.svelte.js";
+import { createFlatCoordsEditor2D } from "$lib/annotations/scene/flatCoordsEditor2D.js";
 import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
@@ -22,6 +24,8 @@ import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
   getPixelFrame,
+  SELECTED_STROKE_SCALE,
+  VERTEX_HIT_RADIUS,
   type PixelFrame,
 } from "$lib/annotations/scene/scene2dGeometry.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
@@ -91,8 +95,11 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
     this.nodesById.get(skeleton.id)?.group.destroy();
 
     const color = skeleton.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
-    const group = new Konva.Group();
+    // Draggable as a whole, like a bbox: grabbing the skeleton moves every
+    // point at once, and the editor bakes the offset back in on drag end.
+    const group = new Konva.Group({ draggable: true });
     group.setAttr(KEYPOINTS_ID_ATTR, skeleton.id);
+    const isSelected = this.ctx.collection.selectedId === skeleton.id;
     // Selection is display state, not a queue mutation, so it stays here.
     group.on("click tap", (e) => {
       e.cancelBubble = true;
@@ -110,7 +117,10 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
       const line = new Konva.Line({
         points: [points[from].x, points[from].y, points[to].x, points[to].y],
         stroke: color,
-        strokeWidth: EDGE_STROKE_WIDTH,
+        // The bones carry the selected look: they are the only part of a
+        // skeleton big enough to read at a glance, and nothing else announces
+        // selection for this kind.
+        strokeWidth: EDGE_STROKE_WIDTH * (isSelected ? SELECTED_STROKE_SCALE : 1),
         listening: false,
         name: KEYPOINTS_EDGE_NAME,
       });
@@ -132,7 +142,20 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
             ? INVISIBLE_FILL
             : (template?.points[index]?.color ?? color),
         name: KEYPOINTS_VERTEX_NAME,
+        // Handles only on the selected skeleton — a person template has 17
+        // points, and live handles everywhere would swallow every click.
+        draggable: isSelected,
+        // Grabbable well beyond the dot that is drawn — see VERTEX_HIT_RADIUS.
+        hitFunc: (context, shape) => {
+          context.beginPath();
+          context.arc(0, 0, VERTEX_HIT_RADIUS, 0, Math.PI * 2, false);
+          context.closePath();
+          context.fillStrokeShape(shape);
+        },
       });
+      // The point's own index, not its rank among the drawn circles: hidden
+      // points get no circle, so the two diverge as soon as one is hidden.
+      circle.setAttr(KEYPOINTS_VERTEX_INDEX_ATTR, index);
       group.add(circle);
       vertices.push(circle);
     }
@@ -169,7 +192,15 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
 export const keypointsRenderer2DFactory: AnnotationRenderer2DFactory = {
   kind: "keypoints",
   create: (ctx: Scene2DReadContext) => new KeypointsRenderer2D(ctx),
-  // No `createEditor` yet: moving a single vertex is the natural edit gesture
-  // and a `Konva.Transformer` is the wrong affordance for it. Placing a fresh
-  // skeleton is the only write path for now.
+  createEditor: (ctx) =>
+    createFlatCoordsEditor2D<KeypointsGeometry>(ctx, {
+      kind: "keypoints",
+      idAttr: KEYPOINTS_ID_ATTR,
+      vertexName: KEYPOINTS_VERTEX_NAME,
+      vertexIndexAttr: KEYPOINTS_VERTEX_INDEX_ATTR,
+      readCoords: (geometry) => geometry.coords,
+      // `templateId` and `states` are untouched: moving a point changes where
+      // it is, never which skeleton it belongs to or whether it is visible.
+      withCoords: (geometry, coords) => ({ ...geometry, coords }),
+    }),
 };

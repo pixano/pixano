@@ -6,6 +6,7 @@ License: CECILL-C
 
 import Konva from "konva";
 
+import { createMaskEditor2D } from "./maskEditor2D.js";
 import { decodeMask, tintMask, type MaskCanvas } from "./maskRaster.js";
 import { MASK_ID_ATTR, MASK_NODE_NAME } from "./maskTypes.js";
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
@@ -17,6 +18,7 @@ import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
   getPixelFrame,
+  SELECTED_OPACITY_BOOST,
   type PixelFrame,
 } from "$lib/annotations/scene/scene2dGeometry.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
@@ -42,6 +44,8 @@ interface CachedMask {
   node: Konva.Image;
   counts: string;
   color: string;
+  /** Part of the key: the tint bakes opacity in, so selection re-rasterises. */
+  opacity: number;
 }
 
 /**
@@ -83,29 +87,44 @@ class MaskRenderer2D implements AnnotationRenderer2D {
   private _syncOne(mask: LocalMask, frame: PixelFrame | null): boolean {
     if (!frame) return false;
     const color = mask.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
+    // A selected mask reads as more solid. It has to go through the tint —
+    // the raster's alpha is baked in, and Konva's node opacity can only scale
+    // that down — which is why selection belongs in the cache key.
+    const opacity =
+      this.ctx.collection.selectedId === mask.id
+        ? MASK_OPACITY + SELECTED_OPACITY_BOOST
+        : MASK_OPACITY;
     const cached = this.cacheByMaskId.get(mask.id);
 
     if (cached) {
-      // Only the geometry and the colour justify re-rasterising; a frame change
-      // is absorbed by repositioning the same node.
-      if (cached.counts !== mask.geometry.counts || cached.color !== color) {
-        const raster = this._rasterise(mask, color);
+      // Only the geometry, the colour and the selected state justify
+      // re-rasterising; a frame change is absorbed by repositioning the node.
+      if (
+        cached.counts !== mask.geometry.counts ||
+        cached.color !== color ||
+        cached.opacity !== opacity
+      ) {
+        const raster = this._rasterise(mask, color, opacity);
         if (!raster) return false;
         cached.node.image(raster as unknown as CanvasImageSource);
         cached.counts = mask.geometry.counts;
         cached.color = color;
+        cached.opacity = opacity;
         this._restrictHitAreaToPaintedPixels(cached.node);
       }
       this._placeNode(cached.node, frame);
       return true;
     }
 
-    const raster = this._rasterise(mask, color);
+    const raster = this._rasterise(mask, color, opacity);
     if (!raster) return false;
     const node = new Konva.Image({
       image: raster as unknown as CanvasImageSource,
       name: MASK_NODE_NAME,
       listening: true,
+      // Draggable like a bbox: moving the painted region is the one edit a
+      // raster supports, and `maskEditor2D` turns the drop into a new RLE.
+      draggable: true,
     });
     node.setAttr(MASK_ID_ATTR, mask.id);
     // Selection is display state, not a queue mutation, so it stays here.
@@ -116,7 +135,7 @@ class MaskRenderer2D implements AnnotationRenderer2D {
     this._restrictHitAreaToPaintedPixels(node);
     this._placeNode(node, frame);
     this.ctx.annotationLayer.add(node);
-    this.cacheByMaskId.set(mask.id, { node, counts: mask.geometry.counts, color });
+    this.cacheByMaskId.set(mask.id, { node, counts: mask.geometry.counts, color, opacity });
     return true;
   }
 
@@ -144,10 +163,10 @@ class MaskRenderer2D implements AnnotationRenderer2D {
     }
   }
 
-  private _rasterise(mask: LocalMask, color: string): MaskCanvas | null {
+  private _rasterise(mask: LocalMask, color: string, opacity: number): MaskCanvas | null {
     const decoded = decodeMask(mask.geometry);
     if (!decoded) return null;
-    return tintMask(decoded, color, MASK_OPACITY);
+    return tintMask(decoded, color, opacity);
   }
 
   /**
@@ -181,7 +200,7 @@ class MaskRenderer2D implements AnnotationRenderer2D {
 export const maskRenderer2DFactory: AnnotationRenderer2DFactory = {
   kind: "mask",
   create: (ctx: Scene2DReadContext) => new MaskRenderer2D(ctx),
-  // No `createEditor`: a painted region has no transform handles that map back
-  // to a sensible RLE edit. Re-painting is the edit gesture, and it lives in
-  // the brush tool.
+  // Moving only: a painted region has no transform handles that map back to a
+  // sensible RLE, so reshaping stays in the brush tool.
+  createEditor: createMaskEditor2D,
 };

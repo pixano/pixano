@@ -6,6 +6,7 @@ License: CECILL-C
 
 import Konva from "konva";
 
+import { createClassificationEditor2D } from "./classificationEditor2D.js";
 import {
   CLASSIFICATION_ID_ATTR,
   CLASSIFICATION_NODE_NAME,
@@ -135,6 +136,7 @@ class ClassificationRenderer2D implements AnnotationRenderer2D {
 export const classificationRenderer2DFactory: AnnotationRenderer2DFactory = {
   kind: "classification",
   create: (ctx: Scene2DReadContext) => new ClassificationRenderer2D(ctx),
-  // No `createEditor`: there is no shape to drag. Changing a classification
-  // means changing its labels, which is a form concern, not a canvas one.
+  // Not a drag: with no geometry, the only editable content is the class
+  // name, so the editor reopens the entity form on double-click.
+  createEditor: createClassificationEditor2D,
 };
