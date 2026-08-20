@@ -548,6 +548,77 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(manager.entities.map((e) => e.id)).toEqual(["ent-new"]);
   });
 
+  it("drops the selection once a save succeeds, so editing handles retract", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.annotations.add({
+      id: "a1",
+      entityId: "e1",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0, 0, 0.1, 0.1],
+      persisted: true,
+    });
+    manager.annotations.select("a1");
+
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "a1", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("keeps the selection when the save failed, leaving the work as it was", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+    // Make the flush fail: the annotation stays selected and still editable.
+    gateway.deleteAnnotation = () => Promise.reject(new Error("backend down"));
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.annotations.add({
+      id: "a1",
+      entityId: "e1",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0, 0, 0.1, 0.1],
+      persisted: true,
+    });
+    manager.annotations.select("a1");
+
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "a1", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(manager.saveError).not.toBeNull();
+    expect(manager.annotations.selectedId).toBe("a1");
+  });
+
   it("throws when the dataset has no renderable views", async () => {
     const dataset = makeDataset({ misc: { base: "UnknownBase" } });
     const { gateway } = makeGateway({

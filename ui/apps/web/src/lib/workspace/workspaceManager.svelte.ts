@@ -278,9 +278,16 @@ export class WorkspaceManager {
   /** Flush every queued mutation to the backend. */
   async flushSave(): Promise<void> {
     await this.mutations.flush();
+    if (this.mutations.saveError) return;
     // Entity creates/prunes happen backend-side; refresh the local entity list
-    // so the panel and picker reflect them. Skip if the flush errored.
-    if (!this.mutations.saveError) await this.loader.reloadEntities();
+    // so the panel and picker reflect them. Skipped when the flush errored, so
+    // the failed work stays on screen exactly as the user left it.
+    await this.loader.reloadEntities();
+    // Saving ends the edit, so drop the selection: every kind's editing
+    // affordances — a bbox's transformer, a path's vertex handles — are tied to
+    // it, and a saved annotation should read as a finished outline rather than
+    // one still covered in grab points.
+    this.session.annotations.select(null);
   }
 
   // ─── Record loader forwarder ──────────────────────────────────────────────
