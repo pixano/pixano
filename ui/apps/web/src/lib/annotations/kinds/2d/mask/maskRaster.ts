@@ -84,6 +84,37 @@ export function tintMask(source: MaskCanvas, color: string, opacity: number): Ma
  * was painted, so an empty gesture produces no annotation instead of a mask the
  * backend would store as its `[0, 0]` empty sentinel.
  */
+/**
+ * Move a mask within its own pixel grid.
+ *
+ * The grid is fixed — it is the media's resolution, recorded in `size` — so a
+ * translation redraws the same stamp at an offset and lets whatever crosses an
+ * edge fall outside the canvas. That clipping is deliberate: the alternative,
+ * growing `size` to fit, would silently re-scale the mask against the image it
+ * annotates.
+ *
+ * Offsets are in grid pixels and rounded, because RLE addresses whole pixels —
+ * a fractional shift has no representation.
+ */
+export function translateMask(
+  geometry: MaskGeometry,
+  dxPixels: number,
+  dyPixels: number,
+): MaskGeometry | null {
+  const dx = Math.round(dxPixels);
+  const dy = Math.round(dyPixels);
+  if (dx === 0 && dy === 0) return geometry;
+
+  const source = decodeMask(geometry);
+  if (!source) return null;
+  const moved = createMaskCanvas(geometry.size);
+  if (!moved) return null;
+  const ctx = moved.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(source, dx, dy);
+  return encodeMask(moved);
+}
+
 export function encodeMask(canvas: MaskCanvas): MaskGeometry | null {
   const { counts, size } = canvasAlphaToRle(canvas);
   // A blank canvas encodes as a single background run covering every pixel.

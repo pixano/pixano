@@ -35,5 +35,12 @@ export const KEYPOINTS_EDGE_NAME = "pixano-keypoint-edge";
 /** Attribute carrying the local annotation id on a keypoints node. */
 export const KEYPOINTS_ID_ATTR = "pixanoKeypointsId";
 
+/**
+ * Attribute carrying a vertex's index into the skeleton's point list. Needed
+ * because hidden points get no circle, so a handle's position among the drawn
+ * vertices is not its index in `coords`.
+ */
+export const KEYPOINTS_VERTEX_INDEX_ATTR = "pixanoKeypointIndex";
+
 /** Tool id of the skeleton placer, referenced by the toolbar and by tests. */
 export const DRAW_KEYPOINTS_TOOL_ID = "draw-keypoints";
