@@ -17,12 +17,11 @@ import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
+import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
-  getPixelFrame,
-  type PixelFrame,
-} from "$lib/annotations/scene/scene2dGeometry.js";
+} from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 
 const CHIP_MARGIN = 8;

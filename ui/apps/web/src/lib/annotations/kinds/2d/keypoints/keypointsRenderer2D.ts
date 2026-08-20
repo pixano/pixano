@@ -20,14 +20,14 @@ import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
+import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
-  getPixelFrame,
+  drawVertexHitArea,
   SELECTED_STROKE_SCALE,
   VERTEX_HIT_RADIUS,
-  type PixelFrame,
-} from "$lib/annotations/scene/scene2dGeometry.js";
+} from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 
 const VERTEX_RADIUS = 4;
@@ -121,7 +121,11 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
         // skeleton big enough to read at a glance, and nothing else announces
         // selection for this kind.
         strokeWidth: EDGE_STROKE_WIDTH * (isSelected ? SELECTED_STROKE_SCALE : 1),
-        listening: false,
+        // The bones must be grabbable, not inert. They are the only part of a
+        // skeleton that is not a vertex, so with them deaf the group could only
+        // be caught through a handle — and once selected a handle drags itself,
+        // which silently removed any way to move the whole skeleton.
+        hitStrokeWidth: VERTEX_HIT_RADIUS,
         name: KEYPOINTS_EDGE_NAME,
       });
       group.add(line);
@@ -146,12 +150,7 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
         // points, and live handles everywhere would swallow every click.
         draggable: isSelected,
         // Grabbable well beyond the dot that is drawn — see VERTEX_HIT_RADIUS.
-        hitFunc: (context, shape) => {
-          context.beginPath();
-          context.arc(0, 0, VERTEX_HIT_RADIUS, 0, Math.PI * 2, false);
-          context.closePath();
-          context.fillStrokeShape(shape);
-        },
+        hitFunc: drawVertexHitArea,
       });
       // The point's own index, not its rank among the drawn circles: hidden
       // points get no circle, so the two diverge as soon as one is hidden.

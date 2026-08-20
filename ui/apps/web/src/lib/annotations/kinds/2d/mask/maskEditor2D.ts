@@ -58,6 +58,14 @@ class MaskEditor2D implements AnnotationEditor2D {
     const dx = ((node.x() - frame.x) * gridWidth) / frame.w;
     const dy = ((node.y() - frame.y) * gridHeight) / frame.h;
 
+    // A drag too small to reach a whole grid pixel is not an edit: without
+    // this the record would go dirty and a no-op PUT would be sent for a stray
+    // one-pixel nudge. `flatCoordsEditor2D` guards the same way.
+    if (Math.round(dx) === 0 && Math.round(dy) === 0) {
+      this.ctx.requestRedraw();
+      return;
+    }
+
     const moved = translateMask(geometry, dx, dy);
     // A failed re-encode (no OffscreenCanvas, or the mask dragged entirely off
     // the media) must not commit an empty mask; the resync snaps the node back.

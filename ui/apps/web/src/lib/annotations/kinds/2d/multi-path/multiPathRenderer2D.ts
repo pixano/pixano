@@ -20,15 +20,15 @@ import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
+import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import {
   BBOX_COLOR_DRAFT,
   BBOX_COLOR_PERSISTED,
-  getPixelFrame,
+  drawVertexHitArea,
   SELECTED_OPACITY_BOOST,
   SELECTED_STROKE_SCALE,
   VERTEX_HIT_RADIUS,
-  type PixelFrame,
-} from "$lib/annotations/scene/scene2dGeometry.js";
+} from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 
 const STROKE_WIDTH = 2;
@@ -138,12 +138,7 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
           name: MULTI_PATH_VERTEX_NAME,
           draggable: true,
           // Grabbable well beyond the dot that is drawn — see VERTEX_HIT_RADIUS.
-          hitFunc: (context, shape) => {
-            context.beginPath();
-            context.arc(0, 0, VERTEX_HIT_RADIUS, 0, Math.PI * 2, false);
-            context.closePath();
-            context.fillStrokeShape(shape);
-          },
+          hitFunc: drawVertexHitArea,
         });
         vertex.setAttr(MULTI_PATH_VERTEX_INDEX_ATTR, pointIndex);
         group.add(vertex);

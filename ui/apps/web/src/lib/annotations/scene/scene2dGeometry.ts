@@ -9,43 +9,6 @@ import type Konva from "konva";
 import type { CoordsNorm } from "$lib/annotations/types.js";
 
 export const PIXEL_THRESHOLD = 3;
-export const BBOX_COLOR_PERSISTED = "#22d3ee";
-export const BBOX_COLOR_DRAFT = "#f59e0b";
-
-/**
- * Dash pattern marking a shape as not-yet-saved: the draw tool's rubber band,
- * an unsaved bbox, and the live 3D preview all share it so "dashed = draft"
- * reads the same everywhere. Frozen because Konva keeps the array by reference
- * — a mutation here would silently restyle every draft on screen.
- */
-export const DRAFT_DASH: readonly number[] = Object.freeze([6, 4]);
-
-/**
- * Radius of a vertex handle's *clickable* area, in stage pixels.
- *
- * Deliberately far larger than the dot drawn on screen. A handle is rendered
- * small so a dense skeleton or ring stays readable, but a small drawn dot makes
- * a small target: a click that misses one falls through to the stage, which
- * **deselects**, so the next drag silently does nothing and the tool looks
- * broken. Widening only the hit region keeps the display honest and the target
- * reachable.
- */
-export const VERTEX_HIT_RADIUS = 12;
-
-/**
- * How much heavier a shape's outline gets while it is the selected annotation.
- *
- * Every kind but bbox needs its own selected look: a bbox announces selection
- * with the editor's `Konva.Transformer`, but a ring, a skeleton or a raster get
- * no handles of that sort, so without this they look identical selected and
- * not — while selection is exactly what decides whether their vertex handles
- * are live. Shared so the three read as one visual language.
- */
-export const SELECTED_STROKE_SCALE = 2;
-
-/** Extra opacity a filled or raster annotation gains while selected. */
-export const SELECTED_OPACITY_BOOST = 0.2;
-
 export interface PixelFrame {
   x: number;
   y: number;
@@ -111,7 +74,15 @@ export function pixelPointToNormalized(x: number, y: number, frame: PixelFrame):
   };
 }
 
-function clampUnit(value: number): number {
+/**
+ * Pin a normalized coordinate inside [0, 1].
+ *
+ * Shared because every editor needs it for the same reason: a handle can be
+ * dragged past the media edge, and the backend validators reject a coordinate
+ * outside the unit square — losing a whole edit over a few pixels of overshoot
+ * would be worse than pinning it to the border.
+ */
+export function clampUnit(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 

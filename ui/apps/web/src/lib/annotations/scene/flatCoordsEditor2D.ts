@@ -9,7 +9,7 @@ import type Konva from "konva";
 import type { AnnotationKind } from "../annotationCollection.svelte.js";
 import { commitGeometryEdit } from "../payloadBuilders.js";
 import type { AnnotationEditor2D } from "./renderer.js";
-import { getPixelFrame, pixelPointToNormalized } from "./scene2dGeometry.js";
+import { clampUnit, getPixelFrame, pixelPointToNormalized } from "./scene2dGeometry.js";
 import type { Scene2DContext } from "./sceneContext.js";
 
 /**
@@ -113,10 +113,6 @@ class FlatCoordsEditor2D<G> implements AnnotationEditor2D {
     commitGeometryEdit(this.ctx, id, this.spec.withCoords(annotation.geometry as G, coords));
     this.ctx.requestRedraw();
   }
-}
-
-function clampUnit(value: number): number {
-  return Math.min(1, Math.max(0, value));
 }
 
 export function createFlatCoordsEditor2D<G>(
