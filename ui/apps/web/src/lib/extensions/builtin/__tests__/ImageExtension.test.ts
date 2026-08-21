@@ -35,6 +35,7 @@ function makeGateway(image: CalibratedImageResponse | null): DatasetGateway {
     listEntities: () => Promise.resolve([]),
     loadImageByLogicalName: () => Promise.resolve(image),
     loadPointCloudByLogicalName: () => Promise.resolve(null),
+    loadTextByLogicalName: () => Promise.resolve(null),
     listAnnotations: () => Promise.resolve([]),
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),

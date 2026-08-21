@@ -74,6 +74,7 @@ function makeGateway(opts: GatewayOpts = {}): DatasetGateway {
     loadImageByLogicalName: (_, __, name) => Promise.resolve(opts.images?.get(name) ?? null),
     loadPointCloudByLogicalName: (_, __, name) =>
       Promise.resolve(opts.pointClouds?.get(name) ?? null),
+    loadTextByLogicalName: () => Promise.resolve(null),
     listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> =>
       Promise.resolve(annotationRowsFor(resource, opts) as TRow[]),
     createEntity: () => Promise.resolve({}),
