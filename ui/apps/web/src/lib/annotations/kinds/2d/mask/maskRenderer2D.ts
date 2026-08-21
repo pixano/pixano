@@ -7,9 +7,10 @@ License: CECILL-C
 import Konva from "konva";
 
 import { createMaskEditor2D } from "./maskEditor2D.js";
-import { decodeMask, tintMask, type MaskCanvas } from "./maskRaster.js";
+import { decodeMask, maskBounds, tintMask, type MaskCanvas } from "./maskRaster.js";
 import { MASK_ID_ATTR, MASK_NODE_NAME } from "./maskTypes.js";
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
+import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
 import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
@@ -21,6 +22,7 @@ import {
   SELECTED_OPACITY_BOOST,
 } from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
+import { rleFrString } from "$lib/utils/maskUtils.js";
 
 /** Masks are filled areas, so they are drawn translucent to keep the image readable. */
 const MASK_OPACITY = 0.45;
@@ -45,6 +47,8 @@ interface CachedMask {
   color: string;
   /** Part of the key: the tint bakes opacity in, so selection re-rasterises. */
   opacity: number;
+  /** Where the paint sits in the grid; recomputed with the raster. */
+  bounds: ReturnType<typeof maskBounds>;
 }
 
 /**
@@ -56,8 +60,11 @@ class MaskRenderer2D implements AnnotationRenderer2D {
   readonly kind = "mask";
 
   private readonly cacheByMaskId = new Map<string, CachedMask>();
+  private readonly labels: EntityLabels2D;
 
-  constructor(private readonly ctx: Scene2DReadContext) {}
+  constructor(private readonly ctx: Scene2DReadContext) {
+    this.labels = new EntityLabels2D(ctx.annotationLayer);
+  }
 
   sync(): void {
     const frame = getPixelFrame(this.ctx.getKonvaImage());
@@ -79,6 +86,7 @@ class MaskRenderer2D implements AnnotationRenderer2D {
       }
     }
 
+    this.labels.sync(this._labelEntries(activeIds, frame));
     this.ctx.annotationLayer.batchDraw();
   }
 
@@ -109,6 +117,7 @@ class MaskRenderer2D implements AnnotationRenderer2D {
         cached.counts = mask.geometry.counts;
         cached.color = color;
         cached.opacity = opacity;
+        cached.bounds = maskBounds(rleFrString(mask.geometry.counts), mask.geometry.size);
         this._restrictHitAreaToPaintedPixels(cached.node);
       }
       this._placeNode(cached.node, frame);
@@ -131,11 +140,56 @@ class MaskRenderer2D implements AnnotationRenderer2D {
       e.cancelBubble = true;
       this.ctx.collection.select(mask.id);
     });
+    // Keep the label glued to the paint while the raster is dragged.
+    node.on("dragmove", () => this._followLabel(mask.id));
     this._restrictHitAreaToPaintedPixels(node);
     this._placeNode(node, frame);
     this.ctx.annotationLayer.add(node);
-    this.cacheByMaskId.set(mask.id, { node, counts: mask.geometry.counts, color, opacity });
+    this.cacheByMaskId.set(mask.id, {
+      node,
+      counts: mask.geometry.counts,
+      color,
+      opacity,
+      bounds: maskBounds(rleFrString(mask.geometry.counts), mask.geometry.size),
+    });
     return true;
+  }
+
+  private _followLabel(id: string): void {
+    const frame = getPixelFrame(this.ctx.getKonvaImage());
+    const [entry] = this._labelEntries(new Set([id]), frame);
+    if (entry) this.labels.moveTo(id, entry.anchor);
+  }
+
+  /**
+   * Hang each mask's label off the top-left of the paint, not of the raster.
+   * A mask's grid is the whole media, so anchoring on the node would park every
+   * label in the image's corner, far from the region it names.
+   */
+  private _labelEntries(
+    activeIds: ReadonlySet<string>,
+    frame: PixelFrame | null,
+  ): EntityLabelEntry[] {
+    if (!frame) return [];
+    const entries: EntityLabelEntry[] = [];
+    for (const mask of this.ctx.collection.byKind("mask")) {
+      if (!activeIds.has(mask.id)) continue;
+      const cached = this.cacheByMaskId.get(mask.id);
+      const bounds = cached?.bounds;
+      if (!bounds) continue;
+      const [gridHeight, gridWidth] = mask.geometry.size;
+      if (!gridWidth || !gridHeight) continue;
+      entries.push({
+        id: mask.id,
+        annotation: mask,
+        anchor: {
+          // The node carries the drag offset until the next resync bakes it in.
+          x: cached.node.x() + (bounds.x * frame.w) / gridWidth,
+          y: cached.node.y() + (bounds.y * frame.h) / gridHeight,
+        },
+      });
+    }
+    return entries;
   }
 
   /**
@@ -191,6 +245,7 @@ class MaskRenderer2D implements AnnotationRenderer2D {
   syncDraft(): void {}
 
   destroy(): void {
+    this.labels.destroy();
     for (const cached of this.cacheByMaskId.values()) cached.node.destroy();
     this.cacheByMaskId.clear();
   }

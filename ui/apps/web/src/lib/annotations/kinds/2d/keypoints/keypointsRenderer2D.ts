@@ -15,6 +15,7 @@ import {
   type KeypointsGeometry,
 } from "./keypointsTypes.js";
 import type { LocalKeypoints } from "$lib/annotations/annotationCollection.svelte.js";
+import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
 import { createFlatCoordsEditor2D } from "$lib/annotations/scene/flatCoordsEditor2D.js";
 import type {
   AnnotationRenderer2D,
@@ -57,8 +58,11 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
   readonly kind = "keypoints";
 
   private readonly nodesById = new Map<string, SkeletonNodes>();
+  private readonly labels: EntityLabels2D;
 
-  constructor(private readonly ctx: Scene2DReadContext) {}
+  constructor(private readonly ctx: Scene2DReadContext) {
+    this.labels = new EntityLabels2D(ctx.annotationLayer);
+  }
 
   sync(): void {
     const frame = getPixelFrame(this.ctx.getKonvaImage());
@@ -78,6 +82,7 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
       }
     }
 
+    this.labels.sync(this._labelEntries(activeIds));
     this.ctx.annotationLayer.batchDraw();
   }
 
@@ -105,6 +110,8 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
       e.cancelBubble = true;
       this.ctx.collection.select(skeleton.id);
     });
+    // Keep the label glued to the skeleton while it is dragged.
+    group.on("dragmove", () => this._followLabel(skeleton.id));
 
     const template = keypointTemplateFor(skeleton.geometry.templateId);
     const states = skeleton.geometry.states;
@@ -164,6 +171,33 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
     return true;
   }
 
+  /**
+   * Hang each skeleton's label off its highest drawn vertex — the only point of
+   * a skeleton that reads as "the top of this shape". Anything lower would put
+   * the label inside the figure it names.
+   */
+  private _followLabel(id: string): void {
+    const nodes = this.nodesById.get(id);
+    if (!nodes || nodes.vertices.length === 0) return;
+    const top = nodes.vertices.reduce((a, b) => (b.y() < a.y() ? b : a));
+    this.labels.moveTo(id, { x: top.x() + nodes.group.x(), y: top.y() + nodes.group.y() });
+  }
+
+  private _labelEntries(activeIds: ReadonlySet<string>): EntityLabelEntry[] {
+    const entries: EntityLabelEntry[] = [];
+    for (const skeleton of this.ctx.collection.byKind("keypoints")) {
+      const nodes = activeIds.has(skeleton.id) ? this.nodesById.get(skeleton.id) : undefined;
+      if (!nodes || nodes.vertices.length === 0) continue;
+      const top = nodes.vertices.reduce((a, b) => (b.y() < a.y() ? b : a));
+      entries.push({
+        id: skeleton.id,
+        annotation: skeleton,
+        anchor: { x: top.x() + nodes.group.x(), y: top.y() + nodes.group.y() },
+      });
+    }
+    return entries;
+  }
+
   /** Normalized coords → stage pixels, one entry per annotated point. */
   private _toPixels(geometry: KeypointsGeometry, frame: PixelFrame): { x: number; y: number }[] {
     const points: { x: number; y: number }[] = [];
@@ -183,6 +217,7 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
   syncDraft(): void {}
 
   destroy(): void {
+    this.labels.destroy();
     for (const nodes of this.nodesById.values()) nodes.group.destroy();
     this.nodesById.clear();
   }

@@ -96,6 +96,63 @@ export function tintMask(source: MaskCanvas, color: string, opacity: number): Ma
  * Offsets are in grid pixels and rounded, because RLE addresses whole pixels —
  * a fractional shift has no representation.
  */
+/** Tight box around the painted pixels, in the mask's own grid. */
+export interface MaskBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Where the paint actually is inside the grid.
+ *
+ * Read straight off the run lengths rather than by scanning a rasterised
+ * canvas: a mask's grid is the media's full resolution, so scanning pixels to
+ * find a stamp that may cover a corner of it would cost far more than walking
+ * the runs that describe it. Column-major, matching the COCO layout the backend
+ * stores — index `i` sits at row `i % height`, column `i / height`.
+ *
+ * Returns null for an empty mask, which has no position to speak of.
+ */
+export function maskBounds(counts: number[], size: [number, number]): MaskBounds | null {
+  const [height, width] = size;
+  if (height <= 0 || width <= 0) return null;
+
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  let index = 0;
+  let painted = false;
+
+  for (const run of counts) {
+    if (painted && run > 0) {
+      const first = index;
+      const last = index + run - 1;
+      const firstCol = Math.floor(first / height);
+      const lastCol = Math.floor(last / height);
+      if (firstCol < minX) minX = firstCol;
+      if (lastCol > maxX) maxX = lastCol;
+      // A run spanning more than one column covers every row it passes through.
+      if (lastCol > firstCol) {
+        minY = 0;
+        maxY = height - 1;
+      } else {
+        const firstRow = first % height;
+        const lastRow = last % height;
+        if (firstRow < minY) minY = firstRow;
+        if (lastRow > maxY) maxY = lastRow;
+      }
+    }
+    index += run;
+    painted = !painted;
+  }
+
+  if (maxX < 0 || maxY < 0) return null;
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
 export function translateMask(
   geometry: MaskGeometry,
   dxPixels: number,

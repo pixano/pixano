@@ -25,6 +25,7 @@ interface FakeNode {
 }
 
 const groups: FakeNode[] = [];
+const labels: FakeNode[] = [];
 
 // Konva is faked down to what the renderer touches: a group that collects its
 // children, and shapes that keep the config they were built with, so the test
@@ -41,6 +42,26 @@ vi.mock("konva", () => {
     setAttr(key: string, value: unknown) {
       this.attrs[key] = value;
     }
+    getAttr(key: string) {
+      return this.attrs[key];
+    }
+    points() {
+      return (this.cfg.points as number[]) ?? [];
+    }
+    x() {
+      return 0;
+    }
+    y() {
+      return 0;
+    }
+    position() {}
+    height() {
+      return 0;
+    }
+    find(selector: string) {
+      const name = selector.replace(".", "");
+      return this.children.filter((c) => c.cfg.name === name);
+    }
     on() {}
     add(child: FakeNode) {
       this.children.push(child);
@@ -55,7 +76,13 @@ vi.mock("konva", () => {
       groups.push(this as unknown as FakeNode);
     }
   }
-  return { default: { Group, Line: Node, Circle: Node } };
+  class Label extends Node {
+    constructor(cfg: Record<string, unknown> = {}) {
+      super(cfg);
+      labels.push(this as unknown as FakeNode);
+    }
+  }
+  return { default: { Group, Line: Node, Circle: Node, Label, Tag: Node, Text: Node } };
 });
 
 const TWO_RING_POLYGON: MultiPathGeometry = {
@@ -95,6 +122,7 @@ describe("multiPathRenderer2D", () => {
 
   beforeEach(() => {
     groups.length = 0;
+    labels.length = 0;
     harness = makeHarness();
   });
 
@@ -135,6 +163,16 @@ describe("multiPathRenderer2D", () => {
     const selected = lines(groups[0])[0].cfg.strokeWidth as number;
 
     expect(selected).toBeGreaterThan(idle);
+  });
+
+  it("names the entity the path belongs to", () => {
+    harness.collection.setEntity("p1", "e1", { id: "e1", name: "roof" });
+    multiPathRenderer2DFactory.create(harness.ctx).sync();
+
+    // Before this, only bboxes said whose entity they were — a mask, a skeleton
+    // or a ring was an anonymous shape on the canvas.
+    const labelTexts = labels.flatMap((l) => l.children.map((c) => c.cfg.text)).filter(Boolean);
+    expect(labelTexts).toContain("roof");
   });
 
   it("gives the outline a hit width, so a handle-less path stays clickable", () => {
