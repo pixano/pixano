@@ -11,10 +11,10 @@ import type {
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import {
+  beginEntityReassign,
   commitDraftWithEntity,
   commitGeometryEdit,
   deleteLocalAnnotation,
-  reassignEntity,
 } from "$lib/annotations/payloadBuilders.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { Rotation3x3 } from "$lib/annotations/types.js";
@@ -150,13 +150,12 @@ export class BBox3DSession {
     const editingId = this.confirm?.editingId;
     if (!editingId) return;
     const annotation = this.seam.collection.find(editingId);
+    // Checked here as well as inside `beginEntityReassign`: this method tears
+    // its own HUD down first, and a draft box would see the editor close for a
+    // reassignment that was never going to happen.
     if (!annotation || !annotation.persisted) return;
     this.confirm = null;
-    this.seam.beginPendingAnnotation({
-      label: "3D box entity",
-      onConfirm: (choice) => reassignEntity(annotation, choice, this.seam),
-      onCancel: () => {},
-    });
+    beginEntityReassign(annotation, this.seam, { label: "3D box entity" });
     this.resetEditor();
   }
 

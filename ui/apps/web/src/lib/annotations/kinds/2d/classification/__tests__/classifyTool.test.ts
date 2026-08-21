@@ -42,6 +42,7 @@ function makeHarness(entities: Record<string, Record<string, unknown>> = {}) {
       upsertUpdate: vi.fn(),
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
+      dropPendingEntityCreate: vi.fn(),
     },
     liveDraft: { get: () => null },
     stage: { getPointerPosition: () => ({ x: 10, y: 10 }) } as unknown as Konva.Stage,

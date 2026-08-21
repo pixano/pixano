@@ -12,7 +12,8 @@ import {
   HUMAN_CONFIDENCE,
   type ClassificationGeometry,
 } from "./classificationTypes.js";
-import { reassignEntity } from "$lib/annotations/payloadBuilders.js";
+import type { LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { beginEntityReassign } from "$lib/annotations/payloadBuilders.js";
 import type { AnnotationEditor2D } from "$lib/annotations/scene/renderer.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 import { pickEntityLabel, type PendingEntityChoice } from "$lib/annotations/types.js";
@@ -56,12 +57,11 @@ class ClassificationEditor2D implements AnnotationEditor2D {
     if (!annotation) return;
 
     this.ctx.collection.select(id);
-    this.ctx.beginPendingAnnotation({
+    // Same flow as the toolbar button and the 3D HUD; this kind only adds the
+    // label rewrite, because its class name *is* the entity's label.
+    beginEntityReassign(annotation, this.ctx, {
       label: "classification",
-      onConfirm: (choice) => this._reclassify(id, choice),
-      // Cancelling an edit leaves the existing classification untouched —
-      // unlike creation, there is no draft to discard.
-      onCancel: () => this.ctx.requestRedraw(),
+      adapt: (current, choice) => this._withChosenClass(current, choice),
     });
   }
 
@@ -76,21 +76,24 @@ class ClassificationEditor2D implements AnnotationEditor2D {
     return null;
   }
 
-  private _reclassify(id: string, choice: PendingEntityChoice): void {
+  /**
+   * Rewrite the classification's labels from the chosen entity, so the chip
+   * cannot keep asserting the class it had under its previous entity. Returns
+   * null — aborting the reassignment — when the choice yields no usable class,
+   * since a classification asserting nothing is a row no one can act on.
+   */
+  private _withChosenClass(
+    annotation: LocalAnnotation,
+    choice: PendingEntityChoice,
+  ): LocalAnnotation | null {
     const label = this._labelFor(choice);
-    // An empty class would leave a row asserting nothing; keep the old one.
-    if (!label) return;
-
-    const annotation = this.ctx.collection.find(id);
-    if (!annotation) return;
+    if (!label) return null;
 
     const geometry: ClassificationGeometry = { labels: [label], confidences: [HUMAN_CONFIDENCE] };
-    // Written before the reassign, which re-reads the annotation to build its
-    // update body — so one mutation carries both the new entity and the new
-    // labels instead of two updates racing over the same row.
-    this.ctx.collection.setGeometry(id, geometry);
-    reassignEntity({ ...annotation, geometry }, choice, this.ctx);
-    this.ctx.requestRedraw();
+    // Written to the collection before the reassignment builds its update body,
+    // so one mutation carries both the new entity and the new labels.
+    this.ctx.collection.setGeometry(annotation.id, geometry);
+    return { ...annotation, geometry };
   }
 
   private _labelFor(choice: PendingEntityChoice): string {

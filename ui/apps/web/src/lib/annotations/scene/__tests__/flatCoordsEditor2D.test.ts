@@ -75,6 +75,7 @@ function makeHarness() {
       upsertUpdate,
       patchPendingCreate,
       dropForLocalAnnotation: vi.fn(),
+      dropPendingEntityCreate: vi.fn(),
     },
     annotationLayer: {
       on: (evt: string, fn: (e: { target: unknown }) => void) => (handlers[evt] = fn),

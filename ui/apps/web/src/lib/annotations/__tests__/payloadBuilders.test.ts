@@ -177,7 +177,11 @@ describe("reassignEntity (change a persisted annotation's entity)", () => {
   function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): ReassignEntityContext {
     return {
       collection,
-      mutations: { queue: vi.fn(), upsertUpdate: vi.fn() },
+      mutations: {
+        queue: vi.fn(),
+        upsertUpdate: vi.fn(),
+        dropPendingEntityCreate: vi.fn(),
+      },
       buildContext: CTX,
       widgetId: "w1",
       findEntity,

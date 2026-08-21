@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   import Konva from "konva";
-  import { Trash2 } from "lucide-svelte";
+  import { Replace, Trash2 } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
 
   import AnnotationToolbar from "../AnnotationToolbar.svelte";
   import { buildSeam } from "../sceneSeam.js";
-  import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+  import { beginEntityReassign, deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
   import {
     DEFAULT_TOOL_2D,
     getTool2D,
@@ -281,6 +281,9 @@ License: CECILL-C
   });
 
   const hasSelection = $derived(annotations.selectedId !== null);
+  // Reassignment only makes sense once the annotation exists server-side: a
+  // draft's entity is still being chosen by the create flow.
+  const canReassignEntity = $derived(annotations.selected?.persisted === true);
   const widgetPending = $derived(
     new Set(
       manager.pendingMutations
@@ -304,6 +307,19 @@ License: CECILL-C
     ariaLabel="Image annotation tools"
   >
     {#snippet controls()}
+      <button
+        type="button"
+        onclick={() => {
+          const annotation = annotations.selected;
+          if (!annotation || !sceneContext) return;
+          beginEntityReassign(annotation, sceneContext, { label: "annotation entity" });
+        }}
+        disabled={!canReassignEntity}
+        title="Change the entity this annotation belongs to"
+        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
+      >
+        <Replace class="h-3.5 w-3.5" />
+      </button>
       <button
         type="button"
         onclick={() => {

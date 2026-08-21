@@ -35,6 +35,7 @@ function makeContext(collection: AnnotationCollection) {
       upsertUpdate: vi.fn(),
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
+      dropPendingEntityCreate: vi.fn(),
     },
     liveDraft: { get: () => null },
     stage,

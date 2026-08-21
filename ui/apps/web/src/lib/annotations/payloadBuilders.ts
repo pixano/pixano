@@ -18,7 +18,7 @@ import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
 import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./scene/sceneContext.js";
-import type { PendingEntityChoice, ResourceMutation } from "./types.js";
+import type { PendingAnnotation, PendingEntityChoice, ResourceMutation } from "./types.js";
 
 /**
  * Per-kind knowledge of how a `LocalAnnotation` becomes backend payloads.
@@ -225,7 +225,7 @@ export function commitDraftWithEntity(
  */
 export interface ReassignEntityContext {
   readonly collection: AnnotationStore;
-  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate">;
+  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate" | "dropPendingEntityCreate">;
   readonly buildContext: BuildContext;
   readonly widgetId: string;
   findEntity(entityId: string): Record<string, unknown> | undefined;
@@ -251,6 +251,10 @@ export function reassignEntity(
   if (choice.mode === "existing") {
     ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
   } else {
+    // Changing your mind twice before saving must not litter: forget the entity
+    // the previous choice was going to create, since `upsertUpdate` will leave
+    // only this one referenced.
+    ctx.mutations.dropPendingEntityCreate(annotation.id);
     const entityId = generateShortId();
     ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
     ctx.mutations.queue(
@@ -277,4 +281,58 @@ export function reassignEntity(
     localAnnotationId: annotation.id,
   });
   ctx.requestRedraw?.();
+}
+
+/** What `beginEntityReassign` needs on top of the reassignment itself. */
+export interface EntityReassignContext extends ReassignEntityContext {
+  beginPendingAnnotation(pending: PendingAnnotation): void;
+}
+
+export interface BeginEntityReassignOptions {
+  /** Header shown above the entity form, e.g. "box entity". */
+  label: string;
+  /**
+   * Last chance for a kind to bring its own payload in line with the chosen
+   * entity before the reassignment is queued. Returning `null` aborts.
+   *
+   * Exists for one real case: a classification's labels *are* the entity's
+   * label, so moving it to another entity without rewriting them would leave a
+   * chip asserting a class the annotation no longer belongs to. Every other
+   * kind carries geometry independent of its entity and needs nothing here.
+   */
+  adapt?: (annotation: LocalAnnotation, choice: PendingEntityChoice) => LocalAnnotation | null;
+}
+
+/**
+ * Ask for an entity, then move the annotation onto it — the whole "this shape
+ * belongs to something else" flow, in one kind-agnostic place.
+ *
+ * Every kind reaches it the same way: the widget toolbar for 2D shapes, the box
+ * HUD in 3D, a double-click on a classification chip. They differ only in how
+ * the user gets here, never in what happens next, which is why the guard, the
+ * form call and the commit live together rather than being re-typed per kind.
+ *
+ * Drafts are refused on purpose. An annotation that has never reached the
+ * backend has no entity to move away from — its entity is still being chosen by
+ * the create flow (`commitDraftWithEntity`), and letting a second picker run
+ * alongside it would queue two entities for one shape.
+ */
+export function beginEntityReassign(
+  annotation: LocalAnnotation,
+  ctx: EntityReassignContext,
+  opts: BeginEntityReassignOptions,
+): void {
+  if (!annotation.persisted) return;
+
+  ctx.beginPendingAnnotation({
+    label: opts.label,
+    onConfirm: (choice) => {
+      const adapted = opts.adapt ? opts.adapt(annotation, choice) : annotation;
+      if (!adapted) return;
+      reassignEntity(adapted, choice, ctx);
+    },
+    // Nothing to undo: unlike creation there is no draft waiting on this
+    // answer, so cancelling leaves the annotation exactly as it was.
+    onCancel: () => ctx.requestRedraw?.(),
+  });
 }
