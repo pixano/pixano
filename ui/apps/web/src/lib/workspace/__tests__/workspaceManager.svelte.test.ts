@@ -62,6 +62,7 @@ function makeGateway(state: FakeGatewayState) {
       calls.loadPointCloudByLogicalName++;
       return Promise.resolve(state.pointCloudsByLogicalName.get(logicalName) ?? null);
     },
+    loadTextByLogicalName: () => Promise.resolve(null),
     listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
       calls.listAnnotations[resource] = (calls.listAnnotations[resource] ?? 0) + 1;
       if (resource === BBOX_RESOURCE) return Promise.resolve(state.bboxes as TRow[]);
@@ -673,6 +674,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
           ego_to_world: null,
         } as CalibratedImageResponse),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
+      loadTextByLogicalName: () => Promise.resolve(null),
       listAnnotations: () => Promise.resolve([]),
       createEntity: () => Promise.resolve({}),
       deleteEntity: () => Promise.resolve(),

@@ -6,7 +6,11 @@ License: CECILL-C
 
 import * as api from "$lib/api";
 import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
-import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
+import type {
+  CalibratedImageResponse,
+  PointCloudResponse,
+  TextResponse,
+} from "$lib/api/restTypes.js";
 import type { Dataset } from "$lib/types/dataset";
 
 /**
@@ -43,6 +47,17 @@ export interface RecordReadGateway {
     recordId: string,
     logicalName: string,
   ): Promise<PointCloudResponse | null>;
+
+  /**
+   * A media read, not an annotation one — hence a name of its own rather than
+   * the kind-agnostic `listAnnotations`. Reading a record's media is the
+   * widget's business; reading its annotations is the seed loaders'.
+   */
+  loadTextByLogicalName(
+    datasetId: string,
+    recordId: string,
+    logicalName: string,
+  ): Promise<TextResponse | null>;
 
   /**
    * Read one annotation resource's rows for a record. Kind-agnostic: the caller
@@ -93,6 +108,8 @@ export const httpDatasetGateway: DatasetGateway = {
     api.loadImageByLogicalName(datasetId, recordId, logicalName),
   loadPointCloudByLogicalName: (datasetId, recordId, logicalName) =>
     api.loadPointCloudByLogicalName(datasetId, recordId, logicalName),
+  loadTextByLogicalName: (datasetId, recordId, logicalName) =>
+    api.loadTextByLogicalName(datasetId, recordId, logicalName),
   listAnnotations: (datasetId, resource, params) =>
     api.listAnnotations(datasetId, resource, params),
 

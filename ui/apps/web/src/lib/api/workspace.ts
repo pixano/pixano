@@ -5,7 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import { requestJson } from "./apiClient";
-import type { CalibratedImageResponse, PaginatedResponse, PointCloudResponse } from "./restTypes";
+import type {
+  CalibratedImageResponse,
+  PaginatedResponse,
+  PointCloudResponse,
+  TextResponse,
+} from "./restTypes";
 
 export async function loadImageByLogicalName(
   datasetId: string,
@@ -29,6 +34,19 @@ export async function loadPointCloudByLogicalName(
     `/datasets/${datasetId}/records/${recordId}/point-clouds?view_name=${encodeURIComponent(logicalName)}`,
     {},
     "loadPointCloudByLogicalName",
+  );
+  return res.items[0] ?? null;
+}
+
+export async function loadTextByLogicalName(
+  datasetId: string,
+  recordId: string,
+  logicalName: string,
+): Promise<TextResponse | null> {
+  const res = await requestJson<PaginatedResponse<TextResponse>>(
+    `/datasets/${datasetId}/records/${recordId}/texts?view_name=${encodeURIComponent(logicalName)}`,
+    {},
+    "loadTextByLogicalName",
   );
   return res.items[0] ?? null;
 }
