@@ -248,13 +248,17 @@ export function reassignEntity(
   if (!annotation.persisted) return;
   const builder = payloadBuilderFor(annotation.kind);
 
+  // Whatever this choice turns out to be, it supersedes the previous one: any
+  // entity still queued for this annotation is now unreachable, since
+  // `upsertUpdate` leaves only the latest choice referenced. Dropped before the
+  // branch, not inside it — landing on an *existing* entity abandons a
+  // previously typed one just as surely as typing another name does, and
+  // guarding only the second case still wrote the orphan to the dataset.
+  ctx.mutations.dropPendingEntityCreate(annotation.id);
+
   if (choice.mode === "existing") {
     ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
   } else {
-    // Changing your mind twice before saving must not litter: forget the entity
-    // the previous choice was going to create, since `upsertUpdate` will leave
-    // only this one referenced.
-    ctx.mutations.dropPendingEntityCreate(annotation.id);
     const entityId = generateShortId();
     ctx.collection.setEntity(annotation.id, entityId, { id: entityId, ...choice.entityFields });
     ctx.mutations.queue(

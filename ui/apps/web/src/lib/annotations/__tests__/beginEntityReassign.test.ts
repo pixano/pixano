@@ -109,6 +109,22 @@ describe("beginEntityReassign", () => {
     expect(harness.dropPendingEntityCreate).toHaveBeenCalledWith("a1");
   });
 
+  it("abandons a typed entity even when the correction lands on an existing one", () => {
+    const annotation = seed(harness.collection, true);
+
+    beginEntityReassign(annotation, harness.ctx, { label: "l" });
+    harness.getPending()?.onConfirm({ mode: "new", entityFields: { name: "typo" } });
+    harness.dropPendingEntityCreate.mockClear();
+    beginEntityReassign(annotation, harness.ctx, { label: "l" });
+    harness.getPending()?.onConfirm({ mode: "existing", entityId: "real-entity" });
+
+    // Picking from the list abandons a name typed a moment earlier just as
+    // surely as typing another one does; guarding only the new→new case left
+    // this orphan in the dataset.
+    expect(harness.dropPendingEntityCreate).toHaveBeenCalledWith("a1");
+    expect(harness.collection.find("a1")?.entityId).toBe("real-entity");
+  });
+
   it("leaves everything alone when the form is cancelled", () => {
     const annotation = seed(harness.collection, true);
 
