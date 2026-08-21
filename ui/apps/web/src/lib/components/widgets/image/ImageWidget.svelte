@@ -313,6 +313,7 @@ License: CECILL-C
     saving={manager.saving}
     saveError={manager.saveError}
     onSave={() => manager.flushSave()}
+    onDiscard={() => manager.discardChanges()}
     ariaLabel="Image annotation tools"
   >
     {#snippet controls()}

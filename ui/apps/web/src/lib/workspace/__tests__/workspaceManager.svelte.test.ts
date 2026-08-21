@@ -549,6 +549,86 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(manager.entities.map((e) => e.id)).toEqual(["ent-new"]);
   });
 
+  it("discards unsaved edits and restores what the backend last saved", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const state = {
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [
+        {
+          id: "saved-1",
+          record_id: "rec-1",
+          entity_id: "e1",
+          view_id: "img-front",
+          coords: [0, 0, 0.1, 0.1],
+          format: "xywh",
+          is_normalized: true,
+        } as unknown as BBoxRow,
+      ],
+      bboxes3d: [],
+    };
+    const { gateway } = makeGateway(state);
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+
+    // An unsaved edit: a locally drawn box plus its queued create.
+    manager.annotations.add({
+      id: "draft-1",
+      entityId: "e2",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0.5, 0.5, 0.2, 0.2],
+      persisted: false,
+    });
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "x", widgetId: "w" });
+    expect(manager.pendingCount).toBe(1);
+
+    await manager.discardChanges();
+
+    // The queue is empty and the collection holds what the backend has, not
+    // what the user was in the middle of.
+    expect(manager.pendingCount).toBe(0);
+    expect(manager.annotations.items.map((a) => a.id)).toEqual(["saved-1"]);
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("leaves widgets and their arrangement alone when discarding", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway, calls } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const widgetsBefore = manager.widgets.length;
+    const datasetFetches = calls.getDataset;
+
+    await manager.discardChanges();
+
+    // Undoing an edit must not feel like reopening the record: no widget churn,
+    // no second dataset fetch — only the annotations come back.
+    expect(manager.widgets.length).toBe(widgetsBefore);
+    expect(calls.getDataset).toBe(datasetFetches);
+  });
+
   it("drops the selection once a save succeeds, so editing handles retract", async () => {
     const dataset = makeDataset({ cam_front: { base: "Image" } });
     const { gateway } = makeGateway({

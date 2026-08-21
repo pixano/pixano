@@ -280,6 +280,28 @@ export class WorkspaceManager {
     this.mutations.dropPendingEntityCreate(localAnnotationId);
   }
 
+  /**
+   * Throw away every unsaved edit and put the record back as it was last saved.
+   *
+   * The backend *is* that state, so the annotations are refetched rather than
+   * rolled back from a snapshot: an optimistic edit has already been applied in
+   * place, and reconstructing what it overwrote would mean keeping a shadow
+   * copy of the whole collection for a button most sessions never press.
+   *
+   * Only the annotations are reloaded — not the widgets, their arrangement or
+   * their active tools — so undoing an edit does not feel like reopening the
+   * record, which is the whole point of having this instead of a page refresh.
+   */
+  async discardChanges(): Promise<void> {
+    this.mutations.reset();
+    await this.loader.reloadAnnotations();
+    // The annotation that was selected may no longer exist (a discarded
+    // create) — and even when it does, the collection it belonged to is gone.
+    this.session.annotations.select(null);
+    this.pendingAnnotation?.onCancel();
+    this.pendingAnnotation = null;
+  }
+
   /** Flush every queued mutation to the backend. */
   async flushSave(): Promise<void> {
     await this.mutations.flush();
