@@ -135,21 +135,49 @@ describe("beginEntityReassign", () => {
     expect(harness.upsertUpdate).not.toHaveBeenCalled();
   });
 
-  it("lets a kind rewrite its payload to match the chosen entity", () => {
+  it("lets a kind bring its payload in line before the move is queued", () => {
     const annotation = seed(harness.collection, true);
-    const adapt = vi.fn((current: LocalAnnotation) => ({ ...current, geometry: [1, 1, 1, 1] }));
+    // The hook's contract: it *writes*, then says whether to go ahead.
+    const syncPayloadToEntity = vi.fn((current: LocalAnnotation) => {
+      harness.collection.setGeometry(current.id, [1, 1, 1, 1]);
+      return true;
+    });
 
-    beginEntityReassign(annotation, harness.ctx, { label: "l", adapt });
+    beginEntityReassign(annotation, harness.ctx, { label: "l", syncPayloadToEntity });
     harness.getPending()?.onConfirm({ mode: "existing", entityId: "new-entity" });
 
-    expect(adapt).toHaveBeenCalledTimes(1);
+    expect(syncPayloadToEntity).toHaveBeenCalledTimes(1);
+    expect(harness.collection.find("a1")?.geometry).toEqual([1, 1, 1, 1]);
     expect(harness.upsertUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("carries the hook's write into the queued update, not a returned copy", () => {
+    const annotation = seed(harness.collection, true);
+
+    beginEntityReassign(annotation, harness.ctx, {
+      label: "l",
+      syncPayloadToEntity: (current) => {
+        harness.collection.setGeometry(current.id, [0.9, 0.9, 0.05, 0.05]);
+        return true;
+      },
+    });
+    harness.getPending()?.onConfirm({ mode: "existing", entityId: "new-entity" });
+
+    // The update body is built from the live annotation, which is why writing
+    // is the mechanism: a hook that returned a modified copy without touching
+    // the collection would type-check and silently change nothing.
+    const body = harness.upsertUpdate.mock.calls[0][0].body as Record<string, unknown>;
+    expect(body.coords).toEqual([0.9, 0.9, 0.05, 0.05]);
+    expect(body.entity_id).toBe("new-entity");
   });
 
   it("aborts the reassignment when the kind rejects the choice", () => {
     const annotation = seed(harness.collection, true);
 
-    beginEntityReassign(annotation, harness.ctx, { label: "l", adapt: () => null });
+    beginEntityReassign(annotation, harness.ctx, {
+      label: "l",
+      syncPayloadToEntity: () => false,
+    });
     harness.getPending()?.onConfirm({ mode: "existing", entityId: "new-entity" });
 
     expect(harness.collection.find("a1")?.entityId).toBe("old-entity");
