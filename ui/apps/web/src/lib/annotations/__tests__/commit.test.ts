@@ -35,6 +35,7 @@ function makeCtx() {
       upsertUpdate: (m) => updates.push(m),
       patchPendingCreate: (id, resource, patch) => patches.push({ id, resource, patch }),
       dropForLocalAnnotation: () => {},
+      dropPendingEntityCreate: () => {},
     },
   };
   return { ctx, collection, queued, updates, patches };

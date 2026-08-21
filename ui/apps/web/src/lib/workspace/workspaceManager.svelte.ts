@@ -275,6 +275,11 @@ export class WorkspaceManager {
     return this.mutations.dropForLocalAnnotation(localAnnotationId);
   }
 
+  /** Forget an entity a reassignment queued and then superseded. */
+  dropPendingEntityCreate(localAnnotationId: string): void {
+    this.mutations.dropPendingEntityCreate(localAnnotationId);
+  }
+
   /** Flush every queued mutation to the backend. */
   async flushSave(): Promise<void> {
     await this.mutations.flush();

@@ -26,6 +26,9 @@ import {
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
 import { pickEntityLabel } from "$lib/annotations/types.js";
 
+/** Attribute holding the text a label was built from, so a stale one is spotted. */
+const LABEL_TEXT_ATTR = "pixanoLabelText";
+
 /**
  * Displays the "bbox" kind on the Konva scene: one rect (+ optional entity
  * label) per annotation, click-to-select, and label-follow while a node is
@@ -66,7 +69,16 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         rect.dash(bbox.persisted ? [] : [...DRAFT_DASH]);
       }
 
+      // Rebuilt whenever the text it shows changed, not just when it is
+      // missing: an annotation can be moved to another entity, and a label
+      // built once would go on naming the entity the box left behind.
+      const wanted = pickEntityLabel(bbox.entity);
       let label = this.labelByBBoxId.get(bbox.id);
+      if (label && label.getAttr(LABEL_TEXT_ATTR) !== wanted) {
+        label.destroy();
+        this.labelByBBoxId.delete(bbox.id);
+        label = undefined;
+      }
       if (!label) {
         label = this._makeLabel(bbox.persisted, bbox.entity) ?? undefined;
         if (label) {
@@ -151,6 +163,9 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
     if (!text) return null;
     const stroke = persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
     const label = new Konva.Label({ listening: false });
+    // Stamped so `sync()` can tell whether the label still matches the entity
+    // without reaching into the Konva.Text child to read it back.
+    label.setAttr(LABEL_TEXT_ATTR, text);
     label.add(new Konva.Tag({ fill: stroke, cornerRadius: 3 }));
     label.add(
       new Konva.Text({

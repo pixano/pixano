@@ -11,6 +11,7 @@ import { MutationQueue, type LocalAnnotationLocator } from "../mutationQueue.sve
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
 import { ApiError } from "$lib/api/apiClient.js";
+import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
 // ─── Test scaffolding ───────────────────────────────────────────────────────
 
@@ -322,5 +323,57 @@ describe("MutationQueue.dropForLocalAnnotation", () => {
     expect(dropped).toHaveLength(2);
     expect(queue.count).toBe(1);
     expect(queue.pending[0].localAnnotationId).toBe("lb-keep");
+  });
+});
+
+describe("dropPendingEntityCreate", () => {
+  const entityCreate = (localAnnotationId: string, id: string): ResourceMutation => ({
+    op: "create",
+    resource: ENTITY_RESOURCE,
+    body: { id },
+    widgetId: "w1",
+    localAnnotationId,
+  });
+
+  it("removes an entity create queued for the given annotation", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue(entityCreate("a1", "ent-1"));
+
+    queue.dropPendingEntityCreate("a1");
+
+    expect(queue.pending).toHaveLength(0);
+  });
+
+  it("keeps the annotation's own pending update", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue(entityCreate("a1", "ent-1"));
+    queue.upsertUpdate({
+      op: "update",
+      resource: "bboxes",
+      id: "a1",
+      body: { x: 1 },
+      widgetId: "w1",
+      localAnnotationId: "a1",
+    });
+
+    queue.dropPendingEntityCreate("a1");
+
+    // Narrower than `dropForLocalAnnotation` on purpose: a reassignment has no
+    // business undoing a geometry edit made in the same breath.
+    expect(queue.pending.map((m) => m.op)).toEqual(["update"]);
+  });
+
+  it("leaves another annotation's entity create alone", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue(entityCreate("a1", "ent-1"));
+    queue.queue(entityCreate("a2", "ent-2"));
+
+    queue.dropPendingEntityCreate("a1");
+
+    expect(queue.pending).toHaveLength(1);
+    expect(queue.pending[0].localAnnotationId).toBe("a2");
   });
 });
