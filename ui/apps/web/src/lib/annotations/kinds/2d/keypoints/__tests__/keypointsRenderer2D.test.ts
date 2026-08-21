@@ -33,6 +33,19 @@ vi.mock("konva", () => {
     setAttr(key: string, value: unknown) {
       this.attrs[key] = value;
     }
+    getAttr(key: string) {
+      return this.attrs[key];
+    }
+    x() {
+      return (this.cfg.x as number) ?? 0;
+    }
+    y() {
+      return (this.cfg.y as number) ?? 0;
+    }
+    position() {}
+    height() {
+      return 0;
+    }
     on() {}
     add(child: FakeNode) {
       this.children.push(child);
@@ -45,7 +58,7 @@ vi.mock("konva", () => {
       groups.push(this as unknown as FakeNode);
     }
   }
-  return { default: { Group, Line: Node, Circle: Node } };
+  return { default: { Group, Line: Node, Circle: Node, Label: Node, Tag: Node, Text: Node } };
 });
 
 /** The "face" template: eye left, eye right, nose, mouth. */

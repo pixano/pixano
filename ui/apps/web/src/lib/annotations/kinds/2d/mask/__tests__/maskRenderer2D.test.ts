@@ -16,7 +16,13 @@ import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js"
 // renderer decides to re-tint, which is the cache key's whole job.
 const decodeMask = vi.hoisted(() => vi.fn());
 const tintMask = vi.hoisted(() => vi.fn());
-vi.mock("../maskRaster.js", () => ({ decodeMask, tintMask }));
+// `maskBounds` is the real one: the label anchor depends on where the paint
+// actually sits, and stubbing it would make the anchor assertions meaningless.
+vi.mock("../maskRaster.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../maskRaster.js")>()),
+  decodeMask,
+  tintMask,
+}));
 
 vi.mock("konva", () => {
   class Image {
@@ -30,12 +36,43 @@ vi.mock("konva", () => {
       return { width: 10, height: 10 };
     }
     position() {}
+    x() {
+      return 0;
+    }
+    y() {
+      return 0;
+    }
+    height() {
+      return 0;
+    }
+    getAttr(key: string) {
+      return this.attrs[key];
+    }
     scale() {}
     cache() {}
     drawHitFromCache() {}
     destroy() {}
   }
-  return { default: { Image } };
+  class Node {
+    attrs: Record<string, unknown> = {};
+    children: unknown[] = [];
+    constructor(public cfg: Record<string, unknown> = {}) {}
+    setAttr(k: string, v: unknown) {
+      this.attrs[k] = v;
+    }
+    getAttr(k: string) {
+      return this.attrs[k];
+    }
+    add(c: unknown) {
+      this.children.push(c);
+    }
+    position() {}
+    height() {
+      return 0;
+    }
+    destroy() {}
+  }
+  return { default: { Image, Label: Node, Tag: Node, Text: Node } };
 });
 
 const GEOMETRY: MaskGeometry = { size: [10, 10], counts: "abc" };

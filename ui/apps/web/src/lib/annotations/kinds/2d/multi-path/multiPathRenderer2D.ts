@@ -15,6 +15,7 @@ import {
   type MultiPathGeometry,
 } from "./multiPathTypes.js";
 import type { LocalMultiPath } from "$lib/annotations/annotationCollection.svelte.js";
+import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
 import { createFlatCoordsEditor2D } from "$lib/annotations/scene/flatCoordsEditor2D.js";
 import type {
   AnnotationRenderer2D,
@@ -51,8 +52,11 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
   readonly kind = "multi_path";
 
   private readonly groupById = new Map<string, Konva.Group>();
+  private readonly labels: EntityLabels2D;
 
-  constructor(private readonly ctx: Scene2DReadContext) {}
+  constructor(private readonly ctx: Scene2DReadContext) {
+    this.labels = new EntityLabels2D(ctx.annotationLayer);
+  }
 
   sync(): void {
     const frame = getPixelFrame(this.ctx.getKonvaImage());
@@ -72,6 +76,7 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
       }
     }
 
+    this.labels.sync(this._labelEntries(activeIds));
     this.ctx.annotationLayer.batchDraw();
   }
 
@@ -99,6 +104,8 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
       e.cancelBubble = true;
       this.ctx.collection.select(path.id);
     });
+    // Keep the label glued to the path while it is dragged.
+    group.on("dragmove", () => this._followLabel(path.id));
 
     // Counts points across every sub-path, so ring 2's handles continue
     // where ring 1's stopped — the same order as the flat `coords` list.
@@ -152,12 +159,46 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
   }
 
   /**
+   * Hang each path's label off its highest point, across every sub-path — a
+   * ring's own start point is wherever drawing began, which says nothing about
+   * where the shape sits on screen.
+   */
+  private _topOf(group: Konva.Group): { x: number; y: number } | null {
+    let top: { x: number; y: number } | null = null;
+    for (const line of group.find(`.${MULTI_PATH_NODE_NAME}`)) {
+      const points = (line as Konva.Line).points();
+      for (let i = 0; i + 1 < points.length; i += 2) {
+        if (!top || points[i + 1] < top.y) top = { x: points[i], y: points[i + 1] };
+      }
+    }
+    if (!top) return null;
+    return { x: top.x + group.x(), y: top.y + group.y() };
+  }
+
+  private _followLabel(id: string): void {
+    const group = this.groupById.get(id);
+    const top = group ? this._topOf(group) : null;
+    if (top) this.labels.moveTo(id, top);
+  }
+
+  private _labelEntries(activeIds: ReadonlySet<string>): EntityLabelEntry[] {
+    const entries: EntityLabelEntry[] = [];
+    for (const path of this.ctx.collection.byKind("multi_path")) {
+      const group = activeIds.has(path.id) ? this.groupById.get(path.id) : undefined;
+      const anchor = group ? this._topOf(group) : null;
+      if (anchor) entries.push({ id: path.id, annotation: path, anchor });
+    }
+    return entries;
+  }
+
+  /**
    * No-op: a path is drawn inside this widget by its own tool, which owns its
    * live preview — there is no cross-widget gesture to mirror.
    */
   syncDraft(): void {}
 
   destroy(): void {
+    this.labels.destroy();
     for (const group of this.groupById.values()) group.destroy();
     this.groupById.clear();
   }
