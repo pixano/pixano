@@ -284,6 +284,15 @@ License: CECILL-C
   // Reassignment only makes sense once the annotation exists server-side: a
   // draft's entity is still being chosen by the create flow.
   const canReassignEntity = $derived(annotations.selected?.persisted === true);
+  // A disabled button with no explanation reads as broken; say which of the two
+  // reasons it is, so the fix ("select something", "save first") is obvious.
+  const reassignEntityTitle = $derived(
+    canReassignEntity
+      ? "Change the entity this annotation belongs to (E)"
+      : hasSelection
+        ? "Save this annotation before moving it to another entity"
+        : "Select an annotation to change its entity",
+  );
   const widgetPending = $derived(
     new Set(
       manager.pendingMutations
@@ -315,7 +324,7 @@ License: CECILL-C
           beginEntityReassign(annotation, sceneContext, { label: "annotation entity" });
         }}
         disabled={!canReassignEntity}
-        title="Change the entity this annotation belongs to"
+        title={reassignEntityTitle}
         class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
       >
         <Replace class="h-3.5 w-3.5" />

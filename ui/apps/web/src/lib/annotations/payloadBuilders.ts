@@ -297,14 +297,21 @@ export interface BeginEntityReassignOptions {
   label: string;
   /**
    * Last chance for a kind to bring its own payload in line with the chosen
-   * entity before the reassignment is queued. Returning `null` aborts.
+   * entity. **Applies its change by writing to the collection**, and returns
+   * whether the reassignment should go ahead — `false` aborts it.
+   *
+   * The write is the mechanism, not the return value: `reassignEntity` re-reads
+   * the live annotation to build its update body, precisely so that body
+   * carries the entity id just assigned. A hook that built a new annotation and
+   * returned it would type-check and silently do nothing, so this signature
+   * says "decide" rather than pretending to say "transform".
    *
    * Exists for one real case: a classification's labels *are* the entity's
    * label, so moving it to another entity without rewriting them would leave a
    * chip asserting a class the annotation no longer belongs to. Every other
    * kind carries geometry independent of its entity and needs nothing here.
    */
-  adapt?: (annotation: LocalAnnotation, choice: PendingEntityChoice) => LocalAnnotation | null;
+  syncPayloadToEntity?: (annotation: LocalAnnotation, choice: PendingEntityChoice) => boolean;
 }
 
 /**
@@ -331,9 +338,8 @@ export function beginEntityReassign(
   ctx.beginPendingAnnotation({
     label: opts.label,
     onConfirm: (choice) => {
-      const adapted = opts.adapt ? opts.adapt(annotation, choice) : annotation;
-      if (!adapted) return;
-      reassignEntity(adapted, choice, ctx);
+      if (opts.syncPayloadToEntity && !opts.syncPayloadToEntity(annotation, choice)) return;
+      reassignEntity(annotation, choice, ctx);
     },
     // Nothing to undo: unlike creation there is no draft waiting on this
     // answer, so cancelling leaves the annotation exactly as it was.

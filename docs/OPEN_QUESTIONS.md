@@ -74,3 +74,49 @@ Options:
 **Leaning:** A (opt-in), but undecided — needs a team call. Whichever is chosen,
 declaring it in `pyproject.toml` also removes the current manual `pip install`
 step. Tested against `tri3d 0.2.2`.
+
+## Entity reassignment — a hook with a single caller
+
+**Status:** open (accepted deliberately; revisit if no second caller appears).
+
+`beginEntityReassign` (`ui/apps/web/src/lib/annotations/payloadBuilders.ts`) takes
+an optional `syncPayloadToEntity` hook, and exactly one kind uses it:
+`classification`, whose labels mirror its entity's own label, so moving it
+without rewriting them would leave a chip asserting a class the annotation no
+longer belongs to. Every other kind carries geometry independent of its entity.
+
+An abstraction with one caller is normally speculative generality. It was kept
+because the concrete alternative is `if (annotation.kind === "classification")`
+inside shared code — the exact coupling the plugin architecture exists to
+prevent, and the point at which the next kind adds its own `else if`. The hook
+keeps the shared layer ignorant of which kinds exist.
+
+Two things to watch:
+
+- **If a second caller never appears**, and the classification kind's labels are
+  ever stored differently (or derived at render time from `annotation.entity`
+  rather than duplicated into `geometry`), the hook loses its only reason to
+  exist and should be removed with it.
+- **The hook applies its change by writing to the collection**, and returns only
+  a go/no-go. That is deliberate — `reassignEntity` re-reads the live annotation
+  so the update body carries the entity id it just assigned — but it means a
+  hook written as a pure function would type-check and silently do nothing. The
+  signature returns `boolean` rather than an annotation precisely so the shape
+  of the contract cannot suggest otherwise.
+
+## `payloadBuilders.ts` is becoming the write path's catch-all
+
+**Status:** open (watch, not yet a problem).
+
+`ui/apps/web/src/lib/annotations/payloadBuilders.ts` is at 14 exports and ~350
+lines. It holds the per-kind builder registry *and* every kind-agnostic write
+helper: `commitNewAnnotation`, `commitGeometryEdit`, `deleteLocalAnnotation`,
+`buildDeleteMutations`, `commitDraftWithEntity`, `reassignEntity`,
+`beginEntityReassign`, plus their context interfaces.
+
+Nothing is wrong with any of it — they genuinely share the queue and the
+builder registry — but the file is the default destination for "generic write
+logic", which is how a module drifts into being a grab bag. The natural split,
+if it keeps growing, is registry (`payloadBuilders.ts`) versus lifecycle helpers
+(`annotationLifecycle.ts`). Flagged now so the decision is made deliberately
+rather than discovered at 600 lines.

@@ -61,7 +61,7 @@ class ClassificationEditor2D implements AnnotationEditor2D {
     // label rewrite, because its class name *is* the entity's label.
     beginEntityReassign(annotation, this.ctx, {
       label: "classification",
-      adapt: (current, choice) => this._withChosenClass(current, choice),
+      syncPayloadToEntity: (current, choice) => this._writeChosenClass(current, choice),
     });
   }
 
@@ -78,22 +78,21 @@ class ClassificationEditor2D implements AnnotationEditor2D {
 
   /**
    * Rewrite the classification's labels from the chosen entity, so the chip
-   * cannot keep asserting the class it had under its previous entity. Returns
-   * null — aborting the reassignment — when the choice yields no usable class,
-   * since a classification asserting nothing is a row no one can act on.
+   * cannot keep asserting the class it had under its previous entity.
+   *
+   * Writes to the collection rather than returning a new annotation: the
+   * reassignment re-reads the live one to build its update body, so the write
+   * is what actually lands. Returns false — aborting the move — when the choice
+   * yields no usable class, since a classification asserting nothing is a row
+   * no one can act on.
    */
-  private _withChosenClass(
-    annotation: LocalAnnotation,
-    choice: PendingEntityChoice,
-  ): LocalAnnotation | null {
+  private _writeChosenClass(annotation: LocalAnnotation, choice: PendingEntityChoice): boolean {
     const label = this._labelFor(choice);
-    if (!label) return null;
+    if (!label) return false;
 
     const geometry: ClassificationGeometry = { labels: [label], confidences: [HUMAN_CONFIDENCE] };
-    // Written to the collection before the reassignment builds its update body,
-    // so one mutation carries both the new entity and the new labels.
     this.ctx.collection.setGeometry(annotation.id, geometry);
-    return { ...annotation, geometry };
+    return true;
   }
 
   private _labelFor(choice: PendingEntityChoice): string {
