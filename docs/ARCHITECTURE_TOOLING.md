@@ -109,9 +109,10 @@ scene/
   sceneContext.ts   SceneContextBase, MutationSink, LiveAnnotationDraft,
                     LiveDraftSource / LiveDraftChannel, Scene2DReadContext,
                     Scene2DContext, Scene3DContext
+  toolDefinition.ts ToolDefinition — the metadata 2D and 3D tools share (D3)
   renderer.ts       AnnotationRenderer2D + AnnotationEditor2D (+Factory),
                     AnnotationRenderer3DFactory
-  tool.ts           ToolDefinition, DEFAULT_TOOL_2D/3D, Tool2D/ToolHandler2D,
+  tool.ts           DEFAULT_TOOL_2D/3D, Tool2D/ToolHandler2D,
                     Tool3D/ToolHandle3D/AnnotationTool3DProps/ToolHudProps
   registry2d.ts     TOOLS_2D, RENDERER_FACTORIES_2D
   registry3d.ts     TOOLS_3D, RENDERER_FACTORIES_3D
@@ -241,9 +242,15 @@ which both `Scene2DContext` and the widgets' seam satisfy.
 
 ### Adding a new medium (e.g. text)
 
-`TextWidget` calls `buildSeam(manager, …)`, defines `SceneTextContext extends
-SceneContextBase` with its own engine handle (the editor/DOM node), and implements
-text renderer/tool interfaces mirroring the 2D/3D ones. Everything below the seam —
+> A `TextWidget.svelte` already exists (registered via `TextExtension`), but it is a
+> **display-only Tiptap host**: it calls no `buildSeam`, defines no scene context and
+> carries no renderer or tool. It is not an instance of what follows — text
+> *annotation* is still unbuilt.
+
+An annotating text widget would call `buildSeam(manager, …)`, define
+`SceneTextContext extends SceneContextBase` with its own engine handle (the
+editor/DOM node), and implement text renderer/tool interfaces mirroring the 2D/3D
+ones. Everything below the seam —
 `AnnotationCollection`, `MutationQueue`, seed loaders, payload builders, the
 `commit*` helpers, `buildSeam`, `<AnnotationToolbar>` — is reused unchanged. Per
 D10, those text interfaces are written against a real feature, not pre-declared.
@@ -348,7 +355,7 @@ check` at baseline error count and `vitest` green:
 - **DEBT-3 — renderer sync tests (partial → mostly resolved for 2D, 2026-07-30).**
   The 2D *editor* has coverage (`bboxEditor2D.test.ts` fires drag/transform → asserts
   the commit). `bbox3dRenderer2D` now has node-level tests too
-  (`bbox3dRenderer2D.test.ts`, 21 cases): projection math against hand-computed
+  (`bbox3dRenderer2D.test.ts`): projection math against hand-computed
   pixels, per-box independence of the shared scratch buffers, create/destroy
   lifecycle, entity-visibility filtering, degraded inputs (no calibration / no loaded
   image), rotation, and the whole `syncDraft` fast path including its gesture
