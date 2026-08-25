@@ -120,6 +120,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 
 ## Adding a whole new *medium* (e.g. text), not just a kind
 
+> Note: the existing `TextWidget.svelte` is a display-only Tiptap host — it has no
+> seam, renderer or tool, so it is not an example of this. Text *annotation* is
+> still unbuilt.
+
 That is a bigger job: build the widget with `buildSeam(manager, …)`, define a
 `Scene<Medium>Context extends SceneContextBase` with the medium's engine handle, and add
 renderer/tool interfaces mirroring the 2D/3D ones. Everything below the seam
