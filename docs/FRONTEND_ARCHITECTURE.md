@@ -11,8 +11,8 @@ on disk, through the FastAPI backend and the REST gateway, into the reactive
 workspace, and out to the widgets / tools / renderers the user interacts with.
 
 > Companion docs:
-> - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the *why* (refactor decisions D1–D6,
->   the plugin model, known debts).
+> - [`ARCHITECTURE_TOOLING.md`](./ARCHITECTURE_TOOLING.md) — the *why* (design
+>   decisions D1–D10, the plugin model, known debts).
 > - This file — the *how it connects* (the layers, the contracts, the flows).
 
 ---
@@ -80,8 +80,8 @@ Three ideas hold it together:
 - **LanceDB** tables hold the rows; **DuckDB** is used for analytics. Media is
   served separately via `MEDIA_DIR`.
 - Tables are organised into **`SchemaGroup`s**: `RECORD`, `VIEW`, `ENTITY`,
-  `ANNOTATION`, `ENTITY_DYNAMIC_STATE`, `EMBEDDING`. `dataset.info.groups.get(group)`
-  returns every table in a group — this is how the backend sweeps "all annotation
+  `ANNOTATION`, `ENTITY_DYNAMIC_STATE`, `EMBEDDING`, `TIMESERIES`.
+  `dataset.info.groups.get(group)` returns every table in a group — this is how the backend sweeps "all annotation
   tables" or "all entity tables" without hard-coding kinds.
 - A row's `entity_id` is the foreign key from an annotation to its entity.
 
@@ -101,17 +101,21 @@ Three ideas hold it together:
     entity from its `ENTITY` table. One mechanism, every kind, server-side (the
     only place that sees every reference — the frontend loads one record at a time).
 
-### REST surface the frontend uses (`ui/.../lib/api/annotations.ts`)
-| Function | HTTP | Notes |
-|---|---|---|
-| `getDataset` | `GET /datasets/{id}` | schema + views |
-| `listEntities` | `GET …/entities?record_id=` | record-scoped entity rows |
-| `listBBoxes` / `listBBox3Ds` | `GET …/bboxes?record_id=` | annotation rows |
-| `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `GET …/{view}` | media + calibration |
-| `createEntity` / `deleteEntity` | `POST/DELETE …/entities` | |
-| `createAnnotation` | `POST …/{resource}` | kind-generic (resource = table) |
-| `updateAnnotation` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
-| `deleteAnnotation` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | |
+### REST surface the frontend uses
+| Function | Defined in | HTTP | Notes |
+|---|---|---|---|
+| `getDataset` | `api/datasets.ts` | `GET /datasets/{id}` | schema + views |
+| `listEntities` | `api/annotations.ts` | `GET …/entities?record_id=` | record-scoped entity rows |
+| `listAnnotations<TRow>` | `api/annotations.ts` | `GET …/{resource}?record_id=` | **kind-generic** — the caller passes the `resource` its payload builder owns, so a new kind adds no method here |
+| `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `api/workspace.ts` | `GET …/{view}` | media + calibration |
+| `createEntity` / `deleteEntity` | `api/annotations.ts` | `POST/DELETE …/entities` | |
+| `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
+| `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
+| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | |
+
+Note `listAnnotations`' `view_name` query parameter actually filters the `view_id`
+column for annotations (legacy server-side naming — see `service.list` in
+`src/pixano/api/service.py`).
 
 ---
 
@@ -239,9 +243,11 @@ The one in-memory shape for **every** kind — pure data, no methods:
 ```ts
 { id, entityId, kind, viewId, geometry: G, persisted, entity? }
 ```
-- `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask"`).
+- `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask" | "keypoints" |
+  "multi_path" | "classification"`).
 - `geometry` is typed per kind via `GeometryByKind` (`bbox` → `[x,y,w,h]` norm;
-  `bbox3d` → `{coords, format, rotation}` in Lance space).
+  `bbox3d` → `{coords, format, rotation}` in Lance space; each other kind's shape
+  is declared in its own `kinds/<2d|3d>/<kind>/<kind>Types.ts`).
 - `persisted=false` ⇒ a **draft** (drawn but not yet POSTed). `entity` is a snapshot
   of the parent entity's fields so labels render without a refetch.
 
@@ -296,7 +302,7 @@ lines, with no widget, scene, or queue edits.
 
 ---
 
-## 8. End-to-end flows
+## 7. End-to-end flows
 
 ### A) Load a record
 ```
@@ -304,7 +310,7 @@ selectRecordInDataset(ds, rec)
   → RecordLoader.load
       ├─ gateway.getDataset + gateway.listEntities      → session.entities/schema
       ├─ per view: extension.addRecordSeed(...)          → widget seeds
-      ├─ SEED_LOADERS[kind].load(...)  (gateway.listBBoxes/listBBox3Ds)
+      ├─ SEED_LOADERS[kind].load(...)  (gateway.listAnnotations(resource, …))
       │      → map rows → session.annotations.add(LocalAnnotation, persisted:true)
       └─ create widgets (layoutPlanner)
   → widgets mount, build Scene2DContext, renderers.sync() draws the seeded boxes
@@ -364,7 +370,7 @@ reassignEntity(annotation, choice, ctx)
 
 ---
 
-## 9. Reactivity & rendering notes
+## 8. Reactivity & rendering notes
 
 - Stateful domain classes live in `.svelte.ts` files so the runes compiler picks
   up `$state`/`$derived`/`$effect` (`AnnotationCollection`, `MutationQueue`,
@@ -373,13 +379,16 @@ reassignEntity(annotation, choice, ctx)
   `annotations.items.length`, `annotations.selectedId`, and
   `manager.visibleEntityIds`; the renderer reconciles Konva nodes.
 - **3D**: `PointCloudScene` uses **Threlte on-demand rendering** — it redraws on
-  reactive invalidation. `allBboxes3d` (`$derived`) feeds the scene; the `BoxEditor`
-  owns pointer interaction and a reactive preview. (Implication: a thrown error in
-  a save-time recompute can stall the on-demand loop — see the freeze investigation.)
+  reactive invalidation. Nothing is pushed into the scene: it mounts one component
+  per `RENDERER_FACTORIES_3D` entry and each pulls its kind from
+  `ctx.collection.byKind(...)` (`BBox3DRenderer.svelte`). The `BoxEditor`
+  (`kinds/3d/bbox3d/boxEditor.svelte.ts`) owns pointer interaction and a reactive
+  preview. (Implication: a thrown error in a save-time recompute can stall the
+  on-demand loop — see the freeze investigation.)
 
 ---
 
-## 10. Where everything lives (file map)
+## 9. Where everything lives (file map)
 
 ```
 ui/apps/web/src/lib/
@@ -403,19 +412,25 @@ ui/apps/web/src/lib/
 │  │  ├─ registry2d.ts / registry3d.ts       TOOLS_*, RENDERER_FACTORIES_*
 │  │  ├─ sceneContext.ts                      SceneContextBase, Scene2DReadContext,
 │  │  │                                       Scene2DContext, Scene3DContext, MutationSink
+│  │  ├─ toolDefinition.ts                    ToolDefinition (shared 2D/3D metadata)
 │  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts
-│  │  └─ scene2dGeometry.ts                   pixel↔normalized helpers, PixelFrame
+│  │  ├─ selectTool2D.ts                      kind-agnostic select/delete tool
+│  │  ├─ flatCoordsEditor2D.ts                shared vertex editor (keypoints, multi-path)
+│  │  ├─ entityLabels2D.ts                    shared label rendering
+│  │  ├─ scene2dGeometry.ts                   pixel↔normalized helpers, PixelFrame
+│  │  └─ scene2dStyleConstants.ts             shared 2D draw styling
 │  └─ kinds/<2d|3d>/<kind>/                  per-kind: payloadBuilder, seedLoader,
 │                                            renderer, editor/tool (+ 3D: overlay/session/hud)
 └─ components/
    ├─ widgets/AnnotationToolbar.svelte        shared toolbar; sceneSeam.ts (buildSeam)
    ├─ widgets/image/ImageWidget.svelte        Konva host, builds Scene2DContext
-   └─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, boxEditor
+   ├─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, camera
+   └─ widgets/TextWidget.svelte               Tiptap host — display only, no seam yet
 ```
 
 ---
 
-## 11. Contracts cheat-sheet
+## 10. Contracts cheat-sheet
 
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
