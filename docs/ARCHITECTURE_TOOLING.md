@@ -6,7 +6,7 @@
 > *not* the app's generic frontend architecture (routing, panels, theming, data
 > layer) — for that see `FRONTEND_ARCHITECTURE.md`.
 >
-> **Status.** Implemented on `refactor/annotation-tools`. The original design
+> **Status.** Implemented and in use. The original design
 > (Phases 0–6, agreed 2026-06-11) plus the **2026-06-29 plugin-symmetry refactor**
 > (Stages 1–5) that brought the 3D pipeline to full parity with 2D, unified the
 > commit path, and extracted the shared widget shell. The seams are internal-only
