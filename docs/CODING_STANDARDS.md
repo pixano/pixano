@@ -6,10 +6,10 @@
 ## Architecture rules
 
 - **New annotation kinds are plugins.** A new kind lives entirely under
-  `lib/annotations/kinds/<kind>/` (geometry type, payload builder, renderer,
-  tools) plus registry registrations. If adding a kind requires editing a widget
-  component, a mode union, or the mutation queue, the change is wrong — fix the
-  seam instead.
+  `lib/annotations/kinds/<2d|3d>/<kind>/` (geometry type, payload builder,
+  seed loader, renderer, editor/tool) plus registry registrations. If adding a
+  kind requires editing a widget component, a mode union, or the mutation
+  queue, the change is wrong — fix the seam instead.
 - **Widgets are hosts, not tools.** Widget components own scene setup (Konva
   stage / Threlte canvas), layout, and delegation. They must not contain
   tool-specific branches (`if (mode === "draw-x")`) or annotation-kind logic.
