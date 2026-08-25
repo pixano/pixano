@@ -81,6 +81,8 @@ Python uses Ruff for linting and formatting, with a 119-character line limit, do
 
 Frontend code uses TypeScript, Svelte 5, ESLint, and Prettier. Name Svelte components `PascalCase.svelte`, helpers `camelCase.ts`, and Vitest files `*.test.ts` under `src/**/__tests__/`. Preserve the repository copyright header in `.py`, `.ts`, and `.svelte` files.
 
+UI text is written as literal strings. Neither app has an i18n layer and none is planned — there is no translation module, no message catalogue and no key indirection. Write the string where it is displayed.
+
 ## Testing Guidelines
 
 Add or update tests alongside the code you change. Backend tests should use `test_*.py` names under the matching `tests/` area. Frontend tests should stay colocated in `__tests__` directories. Tests marked `e2e` require a live inference server configured with `PIXANO_INFERENCE_URL`.
