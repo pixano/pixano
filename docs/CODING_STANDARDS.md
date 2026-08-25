@@ -6,10 +6,10 @@
 ## Architecture rules
 
 - **New annotation kinds are plugins.** A new kind lives entirely under
-  `lib/annotations/kinds/<kind>/` (geometry type, payload builder, renderer,
-  tools) plus registry registrations. If adding a kind requires editing a widget
-  component, a mode union, or the mutation queue, the change is wrong — fix the
-  seam instead.
+  `lib/annotations/kinds/<2d|3d>/<kind>/` (geometry type, payload builder,
+  seed loader, renderer, editor/tool) plus registry registrations. If adding a
+  kind requires editing a widget component, a mode union, or the mutation
+  queue, the change is wrong — fix the seam instead.
 - **Widgets are hosts, not tools.** Widget components own scene setup (Konva
   stage / Threlte canvas), layout, and delegation. They must not contain
   tool-specific branches (`if (mode === "draw-x")`) or annotation-kind logic.
@@ -33,8 +33,10 @@
 - Strict TypeScript: no implicit `any`, no `var`, prefer `const` and
   immutability. Geometry types are precise tuples (e.g.
   `[number, number, number, number]`), not `number[]`.
-- UI text goes through translation keys (`labelKey` on `ToolDefinition`), never
-  string literals in components.
+- **UI text is written as literal strings.** The app has no i18n layer and is
+  not getting one — there is no translation module, no message catalogue, and
+  no `labelKey` indirection. `ToolDefinition.label` is the displayed text.
+  Write the string where it is shown; do not add a key/lookup layer for it.
 - No magic numbers: named constants in a `*Constants.ts` module next to their
   consumer (existing pattern: `boxEditorConstants.ts`).
 - Pre-allocate Three.js scratch objects (vectors, quaternions, meshes) as class
@@ -53,7 +55,10 @@
 
 ## Process
 
-- Branch from `frontend/next-ui-init`; conventional commit messages; atomic
-  commits; self-review before each commit.
-- Refactoring phases (see ARCHITECTURE_TOOLING.md migration plan) land as separate PRs;
-  never mix a phase with feature work.
+- Branch from the integration branch the workspace app currently lives on
+  (see the repository's contributing guide — do not hardcode it here, the
+  previous name in this file outlived its branch); conventional commit
+  messages; atomic commits; self-review before each commit.
+- Structural refactors land as their own PRs, separate from feature work
+  (see the refactor history in ARCHITECTURE_TOOLING.md for how the earlier
+  phases were sequenced).

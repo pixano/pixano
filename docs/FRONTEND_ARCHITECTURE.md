@@ -11,8 +11,8 @@ on disk, through the FastAPI backend and the REST gateway, into the reactive
 workspace, and out to the widgets / tools / renderers the user interacts with.
 
 > Companion docs:
-> - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — the *why* (refactor decisions D1–D6,
->   the plugin model, known debts).
+> - [`ARCHITECTURE_TOOLING.md`](./ARCHITECTURE_TOOLING.md) — the *why* (design
+>   decisions D1–D10, the plugin model, known debts).
 > - This file — the *how it connects* (the layers, the contracts, the flows).
 
 ---
@@ -80,8 +80,8 @@ Three ideas hold it together:
 - **LanceDB** tables hold the rows; **DuckDB** is used for analytics. Media is
   served separately via `MEDIA_DIR`.
 - Tables are organised into **`SchemaGroup`s**: `RECORD`, `VIEW`, `ENTITY`,
-  `ANNOTATION`, `ENTITY_DYNAMIC_STATE`, `EMBEDDING`. `dataset.info.groups.get(group)`
-  returns every table in a group — this is how the backend sweeps "all annotation
+  `ANNOTATION`, `ENTITY_DYNAMIC_STATE`, `EMBEDDING`, `TIMESERIES`.
+  `dataset.info.groups.get(group)` returns every table in a group — this is how the backend sweeps "all annotation
   tables" or "all entity tables" without hard-coding kinds.
 - A row's `entity_id` is the foreign key from an annotation to its entity.
 
@@ -296,7 +296,7 @@ lines, with no widget, scene, or queue edits.
 
 ---
 
-## 8. End-to-end flows
+## 7. End-to-end flows
 
 ### A) Load a record
 ```
@@ -364,7 +364,7 @@ reassignEntity(annotation, choice, ctx)
 
 ---
 
-## 9. Reactivity & rendering notes
+## 8. Reactivity & rendering notes
 
 - Stateful domain classes live in `.svelte.ts` files so the runes compiler picks
   up `$state`/`$derived`/`$effect` (`AnnotationCollection`, `MutationQueue`,
@@ -373,13 +373,16 @@ reassignEntity(annotation, choice, ctx)
   `annotations.items.length`, `annotations.selectedId`, and
   `manager.visibleEntityIds`; the renderer reconciles Konva nodes.
 - **3D**: `PointCloudScene` uses **Threlte on-demand rendering** — it redraws on
-  reactive invalidation. `allBboxes3d` (`$derived`) feeds the scene; the `BoxEditor`
-  owns pointer interaction and a reactive preview. (Implication: a thrown error in
-  a save-time recompute can stall the on-demand loop — see the freeze investigation.)
+  reactive invalidation. Nothing is pushed into the scene: it mounts one component
+  per `RENDERER_FACTORIES_3D` entry and each pulls its kind from
+  `ctx.collection.byKind(...)` (`BBox3DRenderer.svelte`). The `BoxEditor`
+  (`kinds/3d/bbox3d/boxEditor.svelte.ts`) owns pointer interaction and a reactive
+  preview. (Implication: a thrown error in a save-time recompute can stall the
+  on-demand loop — see the freeze investigation.)
 
 ---
 
-## 10. Where everything lives (file map)
+## 9. Where everything lives (file map)
 
 ```
 ui/apps/web/src/lib/
@@ -403,19 +406,22 @@ ui/apps/web/src/lib/
 │  │  ├─ registry2d.ts / registry3d.ts       TOOLS_*, RENDERER_FACTORIES_*
 │  │  ├─ sceneContext.ts                      SceneContextBase, Scene2DReadContext,
 │  │  │                                       Scene2DContext, Scene3DContext, MutationSink
+│  │  ├─ toolDefinition.ts                    ToolDefinition (shared 2D/3D metadata)
 │  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts
+│  │  ├─ selectTool2D.ts                      kind-agnostic select/delete tool
 │  │  └─ scene2dGeometry.ts                   pixel↔normalized helpers, PixelFrame
 │  └─ kinds/<2d|3d>/<kind>/                  per-kind: payloadBuilder, seedLoader,
 │                                            renderer, editor/tool (+ 3D: overlay/session/hud)
 └─ components/
    ├─ widgets/AnnotationToolbar.svelte        shared toolbar; sceneSeam.ts (buildSeam)
    ├─ widgets/image/ImageWidget.svelte        Konva host, builds Scene2DContext
-   └─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, boxEditor
+   ├─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, camera
+   └─ widgets/TextWidget.svelte               Tiptap host — display only, no seam yet
 ```
 
 ---
 
-## 11. Contracts cheat-sheet
+## 10. Contracts cheat-sheet
 
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
