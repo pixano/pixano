@@ -33,8 +33,10 @@
 - Strict TypeScript: no implicit `any`, no `var`, prefer `const` and
   immutability. Geometry types are precise tuples (e.g.
   `[number, number, number, number]`), not `number[]`.
-- UI text goes through translation keys (`labelKey` on `ToolDefinition`), never
-  string literals in components.
+- **UI text is written as literal strings.** The app has no i18n layer and is
+  not getting one — there is no translation module, no message catalogue, and
+  no `labelKey` indirection. `ToolDefinition.label` is the displayed text.
+  Write the string where it is shown; do not add a key/lookup layer for it.
 - No magic numbers: named constants in a `*Constants.ts` module next to their
   consumer (existing pattern: `boxEditorConstants.ts`).
 - Pre-allocate Three.js scratch objects (vectors, quaternions, meshes) as class
