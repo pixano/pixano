@@ -55,7 +55,10 @@
 
 ## Process
 
-- Branch from `frontend/next-ui-init`; conventional commit messages; atomic
-  commits; self-review before each commit.
-- Refactoring phases (see ARCHITECTURE_TOOLING.md migration plan) land as separate PRs;
-  never mix a phase with feature work.
+- Branch from the integration branch the workspace app currently lives on
+  (see the repository's contributing guide — do not hardcode it here, the
+  previous name in this file outlived its branch); conventional commit
+  messages; atomic commits; self-review before each commit.
+- Structural refactors land as their own PRs, separate from feature work
+  (see the refactor history in ARCHITECTURE_TOOLING.md for how the earlier
+  phases were sequenced).
