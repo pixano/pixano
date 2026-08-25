@@ -6,14 +6,20 @@ Pixano is an open-source data engine for multi-modal AI development. It provides
 
 ## Project Structure & Module Organization
 
-Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm workspace for frontend code. It contains frontend applications under `ui/apps/` and may contain shared frontend packages under `ui/packages/` as the workspace grows. The documentation website is built with Astro and lives in `docs-astro/`.
+Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm + Turbo workspace holding two frontend applications, both bundled into the wheel by `hatch_build.py`:
+
+- `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. This is where current frontend work happens; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
+- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend"), being migrated away from. Do not add features here.
+
+There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The documentation website is built with Astro and lives in `docs-astro/`.
 
 Backend modules are organized as follows:
 
 - `src/pixano/api`: REST API module with FastAPI routers.
 - `src/pixano/cli`: Pixano CLI module.
-- `src/pixano/datasets`: dataset builders, exporters, and Python API.
+- `src/pixano/datasets`: LanceDB dataset engine and Python API. `datasets/io/` holds the 0.8.0 import/export engine (`formats/{pixano_jsonl,coco,lerobot}`); the v1 folder builders were removed in that redesign.
 - `src/pixano/inference`: adapters for AI model inference services.
+- `src/pixano/features`: annotation feature definitions.
 - `src/pixano/schemas`: Pixano database schemas.
 - `src/pixano/utils`: shared utilities.
 - `tests`: unit and e2e test modules.
@@ -22,7 +28,7 @@ Design specifications live in `docs/specs/`. Before planning or implementing cha
 
 ## Tech Stack
 
-The backend uses FastAPI for the server, LanceDB as the dataset engine, Python for implementation, and `uv` for dependency management and builds. The frontend uses SvelteKit 5, Svelte 5, TypeScript, and `pnpm`. Important UI libraries include bits-ui, Tailwind CSS, phosphor-svelte, KonvaJS, ThretleJS, and Tiptap.
+The backend uses FastAPI for the server, LanceDB as the dataset engine, Python for implementation, and `uv` for dependency management and builds. The frontend uses SvelteKit, Svelte 5, TypeScript, and `pnpm`. UI libraries differ per app: `ui/apps/web` uses Tailwind CSS, bits-ui, Konva, Three.js with Threlte, Tiptap and lucide-svelte; the legacy `ui/apps/pixano` uses Tailwind CSS, bits-ui, Konva with svelte-konva, D3/Chart.js, ONNX Runtime Web, Tiptap and phosphor-svelte.
 
 ## Build, Test, and Development Commands
 
@@ -53,27 +59,24 @@ When using an existing initialized Pixano data directory during backend developm
 uv run pixano server run /path/to/data
 ```
 
-For frontend development, start the standalone SvelteKit dev server from the pnpm workspace:
+For frontend development, start the dev server for the app you are working on:
 
 ```sh
 cd ui
 pnpm install
-cd apps/pixano
-pnpm run dev
+pnpm run dev:web      # the new workspace UI (ui/apps/web) — the usual target
+pnpm run dev:pixano   # the legacy app (ui/apps/pixano)
 ```
 
-Run backend tests with `uv run pytest --cov=src/pixano tests/`. Run frontend tests with `pnpm -C ui/apps/pixano test`. For broader checks, use `uv tool run pre-commit run --all-files`, `pnpm -C ui lint`, and `pnpm -C ui format_check`.
+Run backend tests with `uv run pytest --cov=src/pixano tests/`. Run frontend tests with `pnpm -C ui test` (Turbo, both apps) or `pnpm -C ui/apps/web test` for the new UI alone — note `pnpm -C ui/apps/pixano test` covers only the legacy app. Type-check the new UI with `pnpm -C ui/apps/web run check`. For broader checks, use `uv tool run pre-commit run --all-files`, `pnpm -C ui lint`, and `pnpm -C ui format_check`.
 
-For release builds, build the UI first, then build the Python wheel:
+For release builds, just build the Python wheel:
 
 ```sh
-cd ui/apps/pixano
-pnpm run build
-cd ../../..
 uv build
 ```
 
-The UI build copies frontend artifacts into `dist`; `uv build` bundles those artifacts with the backend code in the wheel.
+`hatch_build.py` runs `pnpm install --frozen-lockfile` and then builds **both** frontends (legacy then web) as part of the wheel build, so there is no separate UI step. It is skipped for editable installs — build the app you need by hand there (`pnpm -C ui/apps/web run build`).
 
 ## Coding Style & Naming Conventions
 
