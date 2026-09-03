@@ -66,12 +66,18 @@ jobs:
         with:
           ref: main
 
+      # Version comes from "packageManager" in docs-astro/package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: docs-astro/package.json
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: docs-astro/package-lock.json
+          cache: pnpm
+          cache-dependency-path: docs-astro/pnpm-lock.yaml
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
@@ -85,18 +91,18 @@ jobs:
         run: uv sync --group docs
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm i --frozen-lockfile
         working-directory: docs-astro
 
       - name: Generate API reference
         run: uv run python docs-astro/scripts/generate_api_docs.py
 
       - name: Build Astro site
-        run: npx astro build
+        run: pnpm exec astro build
         working-directory: docs-astro
 
       - name: Run Pagefind
-        run: npx pagefind --site dist
+        run: pnpm exec pagefind --site dist
         working-directory: docs-astro
 
       - name: Upload artifact
