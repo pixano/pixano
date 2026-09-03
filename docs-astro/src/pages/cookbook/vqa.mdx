@@ -88,7 +88,7 @@ Let's break this down:
 
 - **`workspace: image_vqa`** — Provides the single-image view and switches the UI to VQA mode: the image is displayed alongside a conversation panel for managing questions and answers.
 
-See [Importing Data](/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
+See [Importing Data](/pixano/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
 
 ## Import the dataset
 
@@ -191,7 +191,7 @@ The `entity_ids` field on messages lets you link a question to specific entities
 
 This is where Pixano differs from typical VQA annotation tools. Most VQA platforms only handle questions and answers — the visual content is view-only. Pixano treats VQA images as full annotation workspaces.
 
-Because the schema includes `BBox` and `CompressedRLE` alongside `Message`, you can:
+Because the schema lists `bbox` and `mask` alongside `message`, you can:
 
 - **Draw bounding boxes** around the objects that questions refer to
 - **Create segmentation masks** for precise spatial grounding
@@ -225,7 +225,7 @@ Let's connect the dots:
 
 - **VQAv2** is a visual question answering benchmark where each image is paired with natural language questions and multiple human answers, designed to test whether models truly ground their reasoning in visual content.
 - In Pixano, questions and answers are stored as **Message** annotations with types (`QUESTION`, `ANSWER`), grouped by `conversation_id`. The `IMAGE_VQA` workspace provides a dedicated conversation panel alongside the image.
-- Pixano's unique strength is **combining Q&A with spatial annotation**: by including `BBox` and `CompressedRLE` in the schema, you can annotate the entities that questions refer to, creating grounded VQA datasets.
+- Pixano's unique strength is **combining Q&A with spatial annotation**: by listing `bbox` and `mask` in the schema, you can annotate the entities that questions refer to, creating grounded VQA datasets.
 - **VLM integration** enables a human-in-the-loop workflow where models generate draft questions and answers that annotators review and correct.
 
 ## Next steps

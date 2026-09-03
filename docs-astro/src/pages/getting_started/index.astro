@@ -14,13 +14,19 @@ import Card from "../../components/Card.astro";
 
   <CardGrid>
     <Card title="Installation" href="/getting_started/installing_pixano/" icon="download">
-      Install Pixano with pip in a virtual environment.
+      Install Pixano and the optional format extras.
     </Card>
     <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
-      Import a dataset with pre-annotations and launch the app in minutes.
+      Define a schema, import your own images, and launch the app in minutes.
     </Card>
     <Card title="Key Concepts" href="/getting_started/key_concepts/" icon="lightbulb">
-      Understand the data model: items, views, entities, annotations, and more.
+      Understand the data model: records, views, entities, annotations, and more.
+    </Card>
+    <Card title="Importing & Exporting Data" href="/getting_started/importing_data/" icon="download">
+      The JSONL v2 format, the <code>pixano data</code> CLI, and round-trip export.
+    </Card>
+    <Card title="Custom Importers" href="/getting_started/custom_importers/" icon="code">
+      Write a <code>DatasetImporter</code> for a format Pixano does not ship.
     </Card>
   </CardGrid>
 

@@ -68,7 +68,7 @@ test = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/pixano/pixano#readme"
+Documentation = "https://pixano.github.io/pixano/"
 Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 

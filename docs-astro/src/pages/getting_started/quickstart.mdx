@@ -25,13 +25,14 @@ By the end of this page, you will have imported your own images into Pixano and 
 
 ## Step 1 — Initialize Pixano
 
-First, bootstrap Pixano by creating a **library** — the place where all your datasets will be stored:
+First, create a **data directory** — the place Pixano keeps everything it manages:
 
 ```bash
-pixano init ./my_library
+pixano init ./my_data
 ```
 
-This sets up your dataset library and runs all internal setup. From now on, `./my_library` is where Pixano manages your datasets and everything it needs to operate.
+This creates `library/` (your datasets), `media/`, and `models/` inside `./my_data`. Every other
+command takes this directory as its first argument.
 
 ## Step 2 — Define your dataset schema
 
@@ -100,14 +101,14 @@ Without a `metadata.jsonl` file, Pixano auto-discovers all supported images in e
 Now bring everything together:
 
 ```bash
-pixano data import ./my_library ./my_images
+pixano data import ./my_data ./my_images
 ```
 
 Here is what this command does:
 
 1. Reads your schema from `my_images/dataset.yaml`
 2. Scans `my_images/` for split folders and images, validates everything, and prints a plan
-3. After you confirm, creates a new dataset in `./my_library` with the tables you defined
+3. After you confirm, creates a new dataset in `./my_data` with the tables you defined
 4. Stores each image as a record with its associated view — media bytes embedded, fully self-contained
 
 Common import options:
@@ -117,21 +118,23 @@ Common import options:
 | `--spec` | Path to a `dataset.yaml` outside the source folder. |
 | `--name`, `--workspace` | Override the yaml (or replace it entirely for simple datasets). |
 | `--mode` | `create` (default), `overwrite`, or `add`. |
+| `--media` | `embed` (default, self-contained) or `uri` (store datalake URIs verbatim). |
 | `--dry-run` | Validate and print the plan without creating the dataset. |
+| `--yes`, `-y` | Skip the confirmation prompt — use this in scripts and CI. |
 
-To attach annotations at import time, add a `metadata.jsonl` per split — see [Importing Data](/getting_started/importing_data/).
+To attach annotations at import time, add a `metadata.jsonl` per split — see [Importing Data](/pixano/getting_started/importing_data/).
 
 ## Step 5 — Launch and explore
 
 Start the Pixano server:
 
 ```bash
-pixano server run ./my_library
+pixano server run ./my_data
 ```
 
 Open **http://127.0.0.1:7492** in your browser.
 
-You will see the Pixano home page with a card for your dataset. Click it to enter the dataset explorer, where you can browse your images, see their split and status, and open any image in the annotation workspace.
+You will see the Pixano **Library** with a card for your dataset. Click it to enter the dataset explorer, where you can browse your records, filter them by split and status, and open any one of them in the annotation workspace.
 
 Server options:
 
@@ -139,6 +142,7 @@ Server options:
 |--------|-------------|---------|
 | `--host` | Bind address (e.g. `0.0.0.0` for network access) | `127.0.0.1` |
 | `--port` | Port number | `7492` |
+| `--pixano-inference-url` | URL of a [pixano-inference](https://github.com/pixano/pixano-inference) server, which powers smart segmentation and semantic search | none |
 
 ## What just happened?
 
@@ -147,7 +151,7 @@ Let's connect the dots between what you did and how Pixano sees your data:
 - The **dataset.yaml** you wrote became a set of **database tables** — one for records, one for image views, one for entities, one for bounding boxes, and one for masks.
 - Each image you placed in `my_images/train/` became a **record** in the `train` split, with an associated **image view**.
 - The **entity** and **annotation** tables are empty for now — they will be populated as you (or a model) annotate objects in the UI.
-- Because you declared `BBox` and `CompressedRLE` in your schema, the annotation workspace knows to offer both bounding box and mask tools when you start labeling.
+- Because you declared `bbox` and `mask` in your schema, the annotation workspace knows to offer both bounding box and mask tools when you start labeling.
 
 You will learn more about this data model in [Key Concepts](/pixano/getting_started/key_concepts/).
 

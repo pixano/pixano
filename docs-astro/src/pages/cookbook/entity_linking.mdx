@@ -27,11 +27,16 @@ An entity-linking dataset has an image and a text document per item. Organize yo
 
 ```
 mel_source/
+  dataset.yaml
   train/
-    image_001.jpg
-    image_002.jpg
+    images/
+      image_001.jpg
+      image_002.jpg
     metadata.jsonl
 ```
+
+Media paths in `metadata.jsonl` are relative to the split folder, so `images/image_001.jpg`
+below resolves to `mel_source/train/images/image_001.jpg`.
 
 Each line in `metadata.jsonl` describes one item with both an image view and a text view, plus entities that link regions across both:
 
@@ -85,7 +90,7 @@ Key elements:
 - `text_span` is the annotation kind that marks character ranges in the text.
 - Entities can be linked to both a `bbox` (on the image) and a `text_span` (on the text).
 
-See [Importing Data](/getting_started/importing_data/) for the full reference.
+See [Importing Data](/pixano/getting_started/importing_data/) for the full reference.
 
 ### Run the import
 
@@ -103,30 +108,31 @@ pixano server run ./my_data
 
 ## Explore in the UI
 
-### Item page — entity linking mode
+### Workspace — entity linking mode
 
-When you open an item from an entity-linking dataset, you see:
+When you open a record from an entity-linking dataset, you see:
 
 - **Image** in the center — with bounding boxes and masks drawn on it.
-- **Text panel** on the left — displaying the full text with color-coded spans. Each text span is highlighted with the same color as its linked entity's bounding box.
+- **Text panel** on the side — displaying the full text with color-coded spans. Each text span is highlighted with the same color as its linked entity's bounding box.
 
 #### Text panel interactions
 
-- **Click a text span** to select the corresponding entity. The entity's bounding box highlights on the image, and its object card opens in the right panel.
-- **Select text and click "Tag Selected Text"** to create a new text span annotation. The creation panel opens so you can assign it to an existing entity or create a new one.
+- **Click a text span** to select the corresponding entity. The entity's bounding box highlights on the image, and its card opens in the right panel.
+- **Select text and click "Tag selection"** to create a new text span annotation. The creation form opens so you can assign it to an existing entity or create a new one.
 
-#### Object panel
+#### Entities tab
 
-The Object panel on the right shows all entities. Expand an entity card to see:
+The **Entities** tab on the right lists every entity in the record. Expand an entity card to see:
 
-- **Features** — entity attributes (name, etc.).
-- **Objects** — sub-objects (bounding boxes, masks, text spans).
-- **Text spans** — a table showing each text span's features alongside the highlighted text.
+- **Attributes** — the entity's fields (name, category, and anything else your schema declares).
+- **Annotations** — every annotation attached to it (bounding boxes, masks, text spans), with each text span showing its highlighted text.
+
+The neighbouring **Record** tab holds record-level information: status, record attributes, and per-view metadata.
 
 <Callout type="tip" title="Linking workflow">
-1. Select text in the text panel and click "Tag Selected Text".
-2. In the creation prompt, choose an existing entity (or create a new one).
-3. Draw a bounding box on the image for the same entity.
+1. Select text in the text panel and click **Tag selection**.
+2. In the creation form, pick an existing entity under **Parent entity**, or keep **Create new entity**.
+3. Draw a bounding box on the image and link it to the same entity.
 4. Both annotations are now linked through the shared entity.
 </Callout>
 
@@ -138,11 +144,11 @@ Use the **bounding box tool** on the image to draw regions around the entity. Wh
 
 ### Text spans
 
-Select text in the text panel and click **"Tag Selected Text"**. Choose the same entity that has the bounding box annotation.
+Select text in the text panel and click **Tag selection**. Choose the same entity that has the bounding box annotation.
 
 ### Masks
 
-If your dataset includes `CompressedRLE` masks, you can also use the polygon tool or SAM to create segmentation masks linked to entities.
+If your schema lists `mask`, you can also use the polygon tool or smart segmentation to create segmentation masks linked to entities.
 
 ## Next steps
 

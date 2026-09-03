@@ -22,16 +22,17 @@ Run the full stack with `pixano server run`, or use the Python backend directly 
 
 ## How data is organized
 
-A Pixano dataset is a collection of **tables** stored in a [LanceDB](https://lancedb.github.io/lancedb/) database. Each table belongs to one of six **schema groups**:
+A Pixano dataset is a collection of **tables** stored in a [LanceDB](https://lancedb.github.io/lancedb/) database. Each table belongs to one of seven **schema groups**:
 
 | Group | Purpose | Schema classes |
 |-------|---------|----------------|
 | **Record** | One row per dataset sample. Holds metadata, split, and workflow status. | `Record` |
 | **View** | Media files attached to a record. | `Image`, `Video`, `SequenceFrame`, `Text` |
 | **Entity** | An object observable in one or more views (e.g. a car, a person). | `Entity` |
-| **Annotation** | Labels attached to entities (bounding boxes, masks, keypoints, etc.). | `BBox`, `CompressedRLE`, `KeyPoints`, `TextSpan`, `Message`, `Tracklet` |
+| **Annotation** | Labels attached to entities (bounding boxes, masks, keypoints, etc.). | `BBox`, `CompressedRLE`, `KeyPoints`, `MultiPath`, `Classification`, `TextSpan`, `Message`, `Tracklet` |
 | **EntityDynamicState** | Per-frame state of an entity in video (e.g. visibility, pose). | `EntityDynamicState` |
-| **Embedding** | Vectors for semantic search. | `ViewEmbedding` |
+| **Timeseries** | Numeric signals sampled alongside a record (e.g. robot state). | `Timeseries` |
+| **Embedding** | Vectors for semantic search. | `RecordEmbedding` (record-level, used by the app), `ViewEmbedding` (legacy, per-view) |
 
 All schema classes live in `pixano.schemas` and are Pydantic models backed by LanceDB. You can subclass them to add custom fields.
 
@@ -63,7 +64,7 @@ schema:
   annotations: [bbox]
 ```
 
-The `workspace` selects the UI layout and provides default views. The `annotations` list determines which annotation tables are created in the database. See [Importing Data](/getting_started/importing_data/) for the full reference.
+The `workspace` selects the UI layout and provides default views. The `annotations` list determines which annotation tables are created in the database. See [Importing Data](/pixano/getting_started/importing_data/) for the full reference.
 
 ### Custom fields
 
@@ -93,7 +94,7 @@ The base `Record` class provides these fields out of the box:
 | `created_at` | `datetime` | now | Creation timestamp |
 | `updated_at` | `datetime` | now | Last modification timestamp |
 
-The `status` field is central to annotation campaigns: filter the dataset explorer by status to see which items still need work, and use the dashboard to track overall progress. You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for ground truth).
+The `status` field is central to annotation campaigns: filter the dataset explorer by status to see which records still need work, and the Split and Status facets show how many fall into each bucket. You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for ground truth).
 
 ## Annotation provenance
 
@@ -130,7 +131,8 @@ library/<dataset>/
   info.json               # Name, description, workspace type, schema
   features_values.json    # Value constraints for fields
   stats.json              # Dataset statistics
-  preview.png             # Thumbnail for the UI
+  embeddings.json         # Semantic-search sidecar (model, dimension, metric)
+  previews/               # Generated thumbnails for the UI
   db/                     # LanceDB tables (one per schema)
 ```
 
@@ -152,8 +154,9 @@ images = ds.get_data("image", limit=5)
 # Add annotations
 ds.add_data("bboxes", [bbox1, bbox2])
 
-# Semantic search (requires precomputed embeddings)
-records, distances, record_ids = ds.semantic_search("car on road", "image_embedding", limit=50)
+# Semantic search over record embeddings. The query vector comes from the
+# inference server; the app does this for you from the explorer's search bar.
+records, distances = ds.search_records(query_vector, k=50)
 ```
 
 ## Next steps
