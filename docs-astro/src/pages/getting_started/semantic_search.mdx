@@ -1,0 +1,103 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Semantic Search"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Semantic search
+
+Semantic search lets you find records by meaning rather than by field values — type
+"a red car at night" and get the records that look like that, or pick any record and ask for
+more like it.
+
+<Callout type="info" title="What you'll learn">
+
+- How Pixano stores embeddings and why no model runs inside Pixano
+- How to **enable** semantic search on a dataset
+- How to search by text and find **more like this**
+- How to **repair** or **update** embeddings
+
+</Callout>
+
+## How it works
+
+Pixano does not load an ML model. Embeddings are computed by a
+[pixano-inference](https://github.com/pixano/pixano-inference) server, and Pixano stores the
+resulting vectors in the dataset:
+
+- One vector per **record**, computed from its image view.
+- Vectors live in a `RecordEmbedding` table inside the dataset, described by an
+  `embeddings.json` sidecar recording the model, the vector dimension and the distance metric.
+- Because the sidecar carries that metadata, the table opens without registering an embedding
+  function — embeddings survive a restart, and an export/import round trip.
+
+<Callout type="note" title="Scope in 0.8">
+Search is **record-level** and works from the **image** view. Text-modality queries and
+per-view embeddings are planned for 0.9.
+</Callout>
+
+## Prerequisites
+
+An inference server with an embedding model must be reachable — see
+[Inference](/pixano/getting_started/inference/). Start Pixano with:
+
+```bash
+pixano server run ./my_data --pixano-inference-url http://localhost:7463
+```
+
+## Enable it on a dataset
+
+Open a dataset in the explorer. The search bar states where you stand:
+
+| Search bar says | Meaning |
+|-----------------|---------|
+| `Semantic search — not enabled yet` | No embeddings computed yet |
+| `Computing embeddings…` | A compute job is running |
+| `Search by meaning…` | Ready to search |
+| `Semantic search needs repair` | The embedding store is unusable |
+
+Click **Enable**. Pixano picks an embedding model from the connected server and starts a
+background job, showing `N / M records` and a percentage as it goes. The job is **resumable**:
+if it is interrupted, running it again skips records that already have a vector.
+
+## Search
+
+With embeddings ready, type into the search bar and press Enter. Results come back **ranked**,
+each carrying a rank and a distance chip. Ranked results ignore column sorting — the order *is*
+the answer.
+
+Active filter chips still apply, so you can combine "looks like this" with "and is in the
+validation split".
+
+## More like this
+
+Every record carries a **More like this** action — on its card in gallery view, and in the
+actions column in table view. It re-runs the search using that record as the query and shows a
+removable **Similar to &lt;id&gt;** chip so you always know what you are looking at.
+
+## Repair and update
+
+The embedding tools live in a popover next to the search bar:
+
+- **Update embeddings** — appears when only some records have vectors (for example after
+  importing more data in `add` mode). Computes the missing ones.
+- **Recompute** — rebuilds the store from scratch. Use it after switching models.
+- **Repair** — replaces the Enable button when the store is degraded (a missing or corrupt
+  table, or a vector dimension that no longer matches the model). It drops the store and
+  rebuilds it.
+
+Pixano refuses to silently mix embedding spaces: if you point a dataset at a different model
+without forcing a recompute, the request is rejected with an explanation rather than producing
+meaningless neighbours.
+
+## Next steps
+
+- [Using the App](/pixano/getting_started/using_the_app/) — the explorer and the workspace
+- [Inference](/pixano/getting_started/inference/) — connecting a model server
+
+<PrevNext
+  prev={{ title: "Inference", href: "/getting_started/inference/" }}
+  next={{ title: "Cookbook", href: "/cookbook/" }}
+/>
