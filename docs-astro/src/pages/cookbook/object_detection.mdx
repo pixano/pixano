@@ -79,7 +79,7 @@ Let's look at each piece:
 
 - **`workspace: image`** — Provides the single-image view named `"image"` and tells the UI to use the single-image viewer with annotation tools.
 
-See [Importing Data](/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
+See [Importing Data](/pixano/getting_started/importing_data/) for the full `dataset.yaml` and JSONL reference.
 
 ## Import the dataset
 
@@ -99,6 +99,7 @@ This produces a source folder organized by splits:
 
 ```
 voc_sample/
+  dataset.yaml
   train/
     000032.jpg
     000045.jpg
@@ -109,6 +110,9 @@ voc_sample/
     ...
     metadata.jsonl
 ```
+
+`dataset.yaml` sits at the root of the source folder — that is where `pixano data import`
+looks for it.
 
 ### What's inside metadata.jsonl
 
@@ -161,7 +165,7 @@ Open **http://127.0.0.1:7492** in your browser. You will see the Pixano library 
 
 The core annotation tool for object detection. In the annotation workspace, you draw rectangles over objects in the image. Each bounding box is linked to an entity, which carries the object's category and any custom fields you defined.
 
-Because annotations and entities are stored separately, you can attach multiple annotations to the same entity. For example, you could have a bounding box *and* a segmentation mask for the same "car" — each stored in its own table, both linked to the same entity. This is exactly why we included `CompressedRLE` in the schema even though VOC only provides bounding boxes.
+Because annotations and entities are stored separately, you can attach multiple annotations to the same entity. For example, you could have a bounding box *and* a segmentation mask for the same "car" — each stored in its own table, both linked to the same entity. This is exactly why we listed `mask` alongside `bbox` in the schema even though VOC only provides bounding boxes.
 
 ### Interactive segmentation with SAM
 

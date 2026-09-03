@@ -104,7 +104,7 @@ schema:
   annotations: [bbox]
 ```
 
-Note `views` has two entries: `"rgb"` and `"thermal"`, both images. This tells Pixano to display them side by side. See [Importing Data](/getting_started/importing_data/) for the full reference.
+Note `views` has two entries: `"rgb"` and `"thermal"`, both images. This tells Pixano to display them side by side. See [Importing Data](/pixano/getting_started/importing_data/) for the full reference.
 
 Import:
 
@@ -208,10 +208,10 @@ You can annotate objects in both the RGB and thermal views. Create a bounding bo
 All annotation tools work the same as in single-view mode:
 
 - **Bounding boxes** — click and drag on any view.
-- **Polygons and keypoints** — available per view.
-- **Smart segmentation** — if SAM embeddings are precomputed for a view, the magic wand tool works on that view.
+- **Polygons, polylines and brush** — available per view.
+- **Smart segmentation** — with a [pixano-inference](https://github.com/pixano/pixano-inference) server connected and a segmentation model available, the magic wand works on any view.
 
-In video mode, the associate tool lets you merge tracks across frames, just as with single-view video datasets.
+Every annotation you draw is linked to an entity, so the same entity can carry boxes in several views at once.
 
 ## Next steps
 

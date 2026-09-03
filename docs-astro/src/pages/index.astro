@@ -29,13 +29,12 @@ import Card from "../components/Card.astro";
 
   <h2>Cookbook</h2>
   <p>
-    Each guide walks you end-to-end through a real dataset: import, explore in
-    the UI, annotate, and use advanced features like pre-annotation and
-    semantic search.
+    Each guide walks you end-to-end through a real dataset: define the schema,
+    import it, explore it in the app, and annotate it.
   </p>
   <CardGrid columns={3}>
     <Card title="Object Detection" href="/cookbook/object_detection/" icon="target">
-      Pascal VOC 2007 with bounding boxes, YOLO pre-annotation, and semantic search.
+      Pascal VOC 2007 with bounding boxes, SAM-assisted masks, and annotation provenance.
     </Card>
     <Card title="Video Object Tracking" href="/cookbook/video_tracking/" icon="video">
       DAVIS 2017 with timeline annotations, tracklets, and SAM segmentation.
