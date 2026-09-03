@@ -1,0 +1,88 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Inference"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Inference
+
+Pixano's AI features — smart segmentation, video mask tracking, VLM answers and semantic
+search — are all served by a separate
+[pixano-inference](https://github.com/pixano/pixano-inference) server. **No model ever loads
+inside the Pixano process**, so Pixano stays light and you can put the GPU wherever you like.
+
+<Callout type="info" title="What you'll learn">
+
+- How to connect a model server
+- Which task each model provides, and what it unlocks in the app
+- How to check the connection at a glance
+
+</Callout>
+
+## Start a server
+
+Follow the pixano-inference instructions to run a server. For example, to serve a CLIP-style
+embedding model for semantic search:
+
+```bash
+pixano-inference --extra clip
+```
+
+## Connect from Pixano
+
+You can point Pixano at a server when you launch it:
+
+```bash
+pixano server run ./my_data --pixano-inference-url http://localhost:7463
+```
+
+Or connect from the app at any time. The **✦ inference chip** sits in the app header on every
+page; its dot is green when a server is connected and grey when none is. Click it to open the
+inference panel, which lists the registered servers and the models they expose, grouped by
+task. Use **Connect Server** (or **Add another server**) to register one.
+
+Supported provider types are `pixano-inference`, `vllm`, `lmstudio`, `ollama`, `litellm`,
+`openai` and `gemini`. Remote providers ask for an API key; local ones ask for a URL.
+
+<Callout type="note" title="Connections are not persisted">
+The server registry lives in memory. After restarting the Pixano backend you need to connect
+again — or pass `--pixano-inference-url` so it reconnects on start.
+</Callout>
+
+## Tasks
+
+Every model advertises a **task**. Pixano matches tasks to features:
+
+| Task | Unlocks |
+|------|---------|
+| `image_mask_generation` | Smart segmentation on images (the magic wand) |
+| `video_mask_generation` | Mask tracking across video frames |
+| `embedding` | [Semantic search](/pixano/getting_started/semantic_search/) and *More like this* |
+| `vlm` | Generated answers and questions in the VQA workspace |
+| `detection` | Model-produced bounding boxes |
+| `ner` | Named-entity extraction for text |
+
+If a feature is greyed out, it is because no connected model advertises the matching task. The
+magic wand, for instance, is disabled with the tooltip *"Connect an inference provider to use
+Smart Segmentation"* until an `image_mask_generation` model is available.
+
+## Choosing a model
+
+When several models serve the same task, pick one from the badge next to the tool in the
+workspace toolbar. The badge shows the active model, or tells you what is missing — `No server`
+when nothing is connected, `No image model` or `No tracking model` when the connected servers
+expose nothing suitable.
+
+Your choice is remembered per task on your machine.
+
+## Next steps
+
+- [Semantic Search](/pixano/getting_started/semantic_search/) — enable and use it
+- [Using the App](/pixano/getting_started/using_the_app/) — where each AI tool appears
+
+<PrevNext
+  prev={{ title: "Using the App", href: "/getting_started/using_the_app/" }}
+  next={{ title: "Semantic Search", href: "/getting_started/semantic_search/" }}
+/>

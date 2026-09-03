@@ -36,6 +36,15 @@ export const sidebarNav: Record<string, NavSection[]> = {
         { title: "Quickstart", href: "/getting_started/quickstart/" },
         { title: "Key Concepts", href: "/getting_started/key_concepts/" },
         {
+          title: "Using the App",
+          href: "/getting_started/using_the_app/",
+        },
+        { title: "Inference", href: "/getting_started/inference/" },
+        {
+          title: "Semantic Search",
+          href: "/getting_started/semantic_search/",
+        },
+        {
           title: "Importing & Exporting Data",
           href: "/getting_started/importing_data/",
         },
