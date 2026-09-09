@@ -82,6 +82,13 @@ export interface MutationSink {
     patch: Record<string, unknown>,
   ): void;
   dropForLocalAnnotation(localAnnotationId: string): void;
+  /**
+   * Drop a still-pending *entity* create queued for this annotation, if any.
+   *
+   * Narrower than `dropForLocalAnnotation` on purpose: that one also discards a
+   * pending geometry update, which a reassignment has no business undoing.
+   */
+  dropPendingEntityCreate(localAnnotationId: string): void;
 }
 
 /**

@@ -61,9 +61,9 @@ function makeRecordSetup(storedLayout?: DatasetLayout, viewCount = 2) {
     listEntities: () => Promise.resolve([]),
     loadImageByLogicalName: (_d: string, _r: string, name: string) =>
       Promise.resolve({ id: `img-${name}`, src: "/i.png", width: 100, height: 50 }),
-    listBBoxes: () => Promise.resolve([]),
     loadPointCloudByLogicalName: () => Promise.resolve(null),
-    listBBox3Ds: () => Promise.resolve([]),
+    loadTextByLogicalName: () => Promise.resolve(null),
+    listAnnotations: () => Promise.resolve([]),
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),
     createAnnotation: () => Promise.resolve({}),

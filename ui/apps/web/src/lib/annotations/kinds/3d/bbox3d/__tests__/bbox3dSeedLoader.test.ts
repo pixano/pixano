@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { BBOX3D_RESOURCE } from "../bbox3dPayloadBuilder.js";
 import { bbox3dSeedLoader } from "../bbox3dSeedLoader.js";
 import type { BBox3DGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import type { SeedLoadContext } from "$lib/annotations/seedLoaders.js";
@@ -18,8 +19,10 @@ function makeContext(rows: BBox3DRow[], entities: EntityRow[] = []): SeedLoadCon
     entitiesById: new Map(entities.map((e) => [e.id, e])),
     views: new Map(),
     gateway: {
-      listBBoxes: () => Promise.resolve([]),
-      listBBox3Ds: () => Promise.resolve(rows),
+      // Resource-aware so the test also pins down *which* table the loader
+      // reads: anything but "bbox3ds" comes back empty.
+      listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> =>
+        Promise.resolve((resource === BBOX3D_RESOURCE ? rows : []) as TRow[]),
     },
   };
 }
@@ -78,7 +81,7 @@ describe("bbox3dSeedLoader", () => {
 
   it("returns empty when the listing fails", async () => {
     const ctx = makeContext([]);
-    ctx.gateway = { ...ctx.gateway, listBBox3Ds: () => Promise.reject(new Error("boom")) };
+    ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
     expect(await bbox3dSeedLoader.load(ctx)).toEqual([]);
   });
 

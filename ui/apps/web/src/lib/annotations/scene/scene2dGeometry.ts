@@ -9,17 +9,6 @@ import type Konva from "konva";
 import type { CoordsNorm } from "$lib/annotations/types.js";
 
 export const PIXEL_THRESHOLD = 3;
-export const BBOX_COLOR_PERSISTED = "#22d3ee";
-export const BBOX_COLOR_DRAFT = "#f59e0b";
-
-/**
- * Dash pattern marking a shape as not-yet-saved: the draw tool's rubber band,
- * an unsaved bbox, and the live 3D preview all share it so "dashed = draft"
- * reads the same everywhere. Frozen because Konva keeps the array by reference
- * — a mutation here would silently restyle every draft on screen.
- */
-export const DRAFT_DASH: readonly number[] = Object.freeze([6, 4]);
-
 export interface PixelFrame {
   x: number;
   y: number;
@@ -66,6 +55,35 @@ export function normalizedPointToPixel(
   target.x = frame.x + x * frame.w;
   target.y = frame.y + y * frame.h;
   return target;
+}
+
+/**
+ * Stage pixels → normalized [0,1], the inverse of `normalizedPointToPixel`.
+ *
+ * Kinds whose geometry is a flat list of points (keypoints skeletons,
+ * multi-path rings) need this to turn a dragged handle back into stored
+ * coordinates. Clamped, because a handle can be dragged past the media edge and
+ * the backend validators reject a coordinate outside [0,1] — dropping the whole
+ * edit over a few pixels of overshoot would be worse than pinning it to the
+ * border.
+ */
+export function pixelPointToNormalized(x: number, y: number, frame: PixelFrame): PixelPoint {
+  return {
+    x: clampUnit((x - frame.x) / frame.w),
+    y: clampUnit((y - frame.y) / frame.h),
+  };
+}
+
+/**
+ * Pin a normalized coordinate inside [0, 1].
+ *
+ * Shared because every editor needs it for the same reason: a handle can be
+ * dragged past the media edge, and the backend validators reject a coordinate
+ * outside the unit square — losing a whole edit over a few pixels of overshoot
+ * would be worse than pinning it to the border.
+ */
+export function clampUnit(value: number): number {
+  return Math.min(1, Math.max(0, value));
 }
 
 export function pixelToNormalized(

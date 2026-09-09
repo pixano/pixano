@@ -275,12 +275,46 @@ export class WorkspaceManager {
     return this.mutations.dropForLocalAnnotation(localAnnotationId);
   }
 
+  /** Forget an entity a reassignment queued and then superseded. */
+  dropPendingEntityCreate(localAnnotationId: string): void {
+    this.mutations.dropPendingEntityCreate(localAnnotationId);
+  }
+
+  /**
+   * Throw away every unsaved edit and put the record back as it was last saved.
+   *
+   * The backend *is* that state, so the annotations are refetched rather than
+   * rolled back from a snapshot: an optimistic edit has already been applied in
+   * place, and reconstructing what it overwrote would mean keeping a shadow
+   * copy of the whole collection for a button most sessions never press.
+   *
+   * Only the annotations are reloaded — not the widgets, their arrangement or
+   * their active tools — so undoing an edit does not feel like reopening the
+   * record, which is the whole point of having this instead of a page refresh.
+   */
+  async discardChanges(): Promise<void> {
+    this.mutations.reset();
+    await this.loader.reloadAnnotations();
+    // The annotation that was selected may no longer exist (a discarded
+    // create) — and even when it does, the collection it belonged to is gone.
+    this.session.annotations.select(null);
+    this.pendingAnnotation?.onCancel();
+    this.pendingAnnotation = null;
+  }
+
   /** Flush every queued mutation to the backend. */
   async flushSave(): Promise<void> {
     await this.mutations.flush();
+    if (this.mutations.saveError) return;
     // Entity creates/prunes happen backend-side; refresh the local entity list
-    // so the panel and picker reflect them. Skip if the flush errored.
-    if (!this.mutations.saveError) await this.loader.reloadEntities();
+    // so the panel and picker reflect them. Skipped when the flush errored, so
+    // the failed work stays on screen exactly as the user left it.
+    await this.loader.reloadEntities();
+    // Saving ends the edit, so drop the selection: every kind's editing
+    // affordances — a bbox's transformer, a path's vertex handles — are tied to
+    // it, and a saved annotation should read as a finished outline rather than
+    // one still covered in grab points.
+    this.session.annotations.select(null);
   }
 
   // ─── Record loader forwarder ──────────────────────────────────────────────

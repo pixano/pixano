@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Save } from "lucide-svelte";
+  import { RotateCcw, Save } from "lucide-svelte";
   import type { Snippet } from "svelte";
 
   import type { ToolDefinition } from "$lib/annotations/scene/tool.js";
@@ -23,6 +23,8 @@ License: CECILL-C
     saving: boolean;
     saveError?: string | null;
     onSave: () => void;
+    /** Throw away every unsaved edit; absent for hosts that do not offer it. */
+    onDiscard?: () => void;
     ariaLabel: string;
     /** Widget-specific controls rendered right after the tool buttons. */
     controls?: Snippet;
@@ -38,6 +40,7 @@ License: CECILL-C
     saving,
     saveError = null,
     onSave,
+    onDiscard,
     ariaLabel,
     controls,
   }: Props = $props();
@@ -78,6 +81,17 @@ License: CECILL-C
     <span class="max-w-[200px] truncate text-[10px] text-destructive" title={saveError}>
       Save failed
     </span>
+  {/if}
+  {#if onDiscard}
+    <button
+      type="button"
+      onclick={onDiscard}
+      disabled={pendingCount === 0 || saving}
+      title="Discard unsaved changes and restore this record's saved annotations"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
+    >
+      <RotateCcw class="h-3.5 w-3.5" />
+    </button>
   {/if}
   <button
     type="button"

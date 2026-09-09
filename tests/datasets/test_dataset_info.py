@@ -7,6 +7,7 @@
 
 import json
 import tempfile
+import threading
 from pathlib import Path
 
 import pytest
@@ -121,6 +122,88 @@ class TestDatasetInfo:
         assert dumped["text_span"] is None
         assert dumped["timeseries"] is None
         assert dumped["views"] == {"image": {"base": "Image", "fields": {}}}
+
+    def test_to_json_leaves_no_temporary_file(self, tmp_path):
+        info = DatasetInfo(id="id", name="pascal", record=Record, views={"image": Image})
+        info_fp = tmp_path / "info.json"
+
+        info.to_json(info_fp)
+
+        assert [p.name for p in tmp_path.iterdir()] == ["info.json"]
+
+    def test_to_json_overwrites_a_longer_document_without_leftovers(self, tmp_path):
+        # A single writer shrinking the document was already safe (the previous
+        # `write_text` truncated too); this pins that the rename-based write
+        # keeps it so. The failure mode that actually bit is concurrency —
+        # covered by the test below.
+        info_fp = tmp_path / "info.json"
+        long_info = DatasetInfo(
+            id="id",
+            name="pascal",
+            description="a description long enough to make this dump the bigger one",
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            views={"image": Image, "second_image": Image, "third_image": Image},
+        )
+        long_info.to_json(info_fp)
+        long_size = info_fp.stat().st_size
+
+        short_info = DatasetInfo(id="id", name="pascal", record=Record, views={"image": Image})
+        short_info.to_json(info_fp)
+
+        assert info_fp.stat().st_size < long_size
+        # Parses, and carries only the second dump.
+        dumped = json.loads(info_fp.read_text())
+        assert dumped["views"] == {"image": {"base": "Image", "fields": {}}}
+        assert dumped["bbox"] is None
+
+    def test_to_json_is_atomic_under_concurrent_writers(self, tmp_path):
+        # `BaseService.resolve_table` persists a newly created slot from inside a
+        # read, so listing several absent resources at once makes several
+        # threads write this one file. Interleaved in-place writes used to leave
+        # a torn document; every observation must now parse.
+        info_fp = tmp_path / "info.json"
+        writers = [
+            DatasetInfo(
+                id="id",
+                name="pascal",
+                description="d" * (200 * index),
+                record=Record,
+                views={f"image_{i}": Image for i in range(index + 1)},
+            )
+            for index in range(8)
+        ]
+        # Seed the file so readers always have something to observe.
+        writers[0].to_json(info_fp)
+
+        failures: list[Exception] = []
+
+        def write_repeatedly(info: DatasetInfo) -> None:
+            try:
+                for _ in range(20):
+                    info.to_json(info_fp)
+            except Exception as exc:  # pragma: no cover - surfaced via `failures`
+                failures.append(exc)
+
+        def read_repeatedly() -> None:
+            try:
+                for _ in range(200):
+                    json.loads(info_fp.read_text())
+            except Exception as exc:
+                failures.append(exc)
+
+        threads = [threading.Thread(target=write_repeatedly, args=(info,)) for info in writers]
+        threads += [threading.Thread(target=read_repeatedly) for _ in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        assert failures == []
+        # The survivor is one of the writers' documents, whole.
+        assert json.loads(info_fp.read_text())["id"] == "id"
+        assert [p.name for p in tmp_path.iterdir()] == ["info.json"]
 
     def test_from_json(self):
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)

@@ -12,6 +12,8 @@ import { DATASET_LAYOUT_VERSION } from "../datasetLayout.js";
 import { planViewportLayouts } from "../layoutPlanner.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
+import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -39,9 +41,9 @@ function makeGateway(state: FakeGatewayState) {
     getDataset: 0,
     listEntities: 0,
     loadImageByLogicalName: 0,
-    listBBoxes: 0,
     loadPointCloudByLogicalName: 0,
-    listBBox3Ds: 0,
+    /** Per-resource listing counts, keyed by the annotation table name. */
+    listAnnotations: {} as Record<string, number>,
   };
   const gateway: DatasetGateway = {
     getDataset: () => {
@@ -56,17 +58,16 @@ function makeGateway(state: FakeGatewayState) {
       calls.loadImageByLogicalName++;
       return Promise.resolve(state.imagesByLogicalName.get(logicalName) ?? null);
     },
-    listBBoxes: () => {
-      calls.listBBoxes++;
-      return Promise.resolve(state.bboxes);
-    },
     loadPointCloudByLogicalName: (_, __, logicalName) => {
       calls.loadPointCloudByLogicalName++;
       return Promise.resolve(state.pointCloudsByLogicalName.get(logicalName) ?? null);
     },
-    listBBox3Ds: () => {
-      calls.listBBox3Ds++;
-      return Promise.resolve(state.bboxes3d);
+    loadTextByLogicalName: () => Promise.resolve(null),
+    listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
+      calls.listAnnotations[resource] = (calls.listAnnotations[resource] ?? 0) + 1;
+      if (resource === BBOX_RESOURCE) return Promise.resolve(state.bboxes as TRow[]);
+      if (resource === BBOX3D_RESOURCE) return Promise.resolve(state.bboxes3d as TRow[]);
+      return Promise.resolve([]);
     },
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),
@@ -470,7 +471,7 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
 
     expect(calls.listEntities).toBe(1);
-    expect(calls.listBBoxes).toBe(1);
+    expect(calls.listAnnotations[BBOX_RESOURCE]).toBe(1);
 
     expect(manager.annotations.byKind("bbox")).toHaveLength(1);
     expect(manager.annotations.find("bb-1")).toMatchObject({
@@ -548,6 +549,157 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     expect(manager.entities.map((e) => e.id)).toEqual(["ent-new"]);
   });
 
+  it("discards unsaved edits and restores what the backend last saved", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const state = {
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [
+        {
+          id: "saved-1",
+          record_id: "rec-1",
+          entity_id: "e1",
+          view_id: "img-front",
+          coords: [0, 0, 0.1, 0.1],
+          format: "xywh",
+          is_normalized: true,
+        } as unknown as BBoxRow,
+      ],
+      bboxes3d: [],
+    };
+    const { gateway } = makeGateway(state);
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+
+    // An unsaved edit: a locally drawn box plus its queued create.
+    manager.annotations.add({
+      id: "draft-1",
+      entityId: "e2",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0.5, 0.5, 0.2, 0.2],
+      persisted: false,
+    });
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "x", widgetId: "w" });
+    expect(manager.pendingCount).toBe(1);
+
+    await manager.discardChanges();
+
+    // The queue is empty and the collection holds what the backend has, not
+    // what the user was in the middle of.
+    expect(manager.pendingCount).toBe(0);
+    expect(manager.annotations.items.map((a) => a.id)).toEqual(["saved-1"]);
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("leaves widgets and their arrangement alone when discarding", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway, calls } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    const widgetsBefore = manager.widgets.length;
+    const datasetFetches = calls.getDataset;
+
+    await manager.discardChanges();
+
+    // Undoing an edit must not feel like reopening the record: no widget churn,
+    // no second dataset fetch — only the annotations come back.
+    expect(manager.widgets.length).toBe(widgetsBefore);
+    expect(calls.getDataset).toBe(datasetFetches);
+  });
+
+  it("drops the selection once a save succeeds, so editing handles retract", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.annotations.add({
+      id: "a1",
+      entityId: "e1",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0, 0, 0.1, 0.1],
+      persisted: true,
+    });
+    manager.annotations.select("a1");
+
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "a1", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(manager.annotations.selectedId).toBeNull();
+  });
+
+  it("keeps the selection when the save failed, leaving the work as it was", async () => {
+    const dataset = makeDataset({ cam_front: { base: "Image" } });
+    const { gateway } = makeGateway({
+      dataset,
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [],
+      bboxes3d: [],
+    });
+    // Make the flush fail: the annotation stays selected and still editable.
+    gateway.deleteAnnotation = () => Promise.reject(new Error("backend down"));
+
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    manager.annotations.add({
+      id: "a1",
+      entityId: "e1",
+      kind: "bbox",
+      viewId: "img-front",
+      geometry: [0, 0, 0.1, 0.1],
+      persisted: true,
+    });
+    manager.annotations.select("a1");
+
+    manager.queueMutation({ op: "delete", resource: "bboxes", id: "a1", widgetId: "w" });
+    await manager.flushSave();
+
+    expect(manager.saveError).not.toBeNull();
+    expect(manager.annotations.selectedId).toBe("a1");
+  });
+
   it("throws when the dataset has no renderable views", async () => {
     const dataset = makeDataset({ misc: { base: "UnknownBase" } });
     const { gateway } = makeGateway({
@@ -601,17 +753,14 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
           extrinsic_matrix: null,
           ego_to_world: null,
         } as CalibratedImageResponse),
-      listBBoxes: () => Promise.resolve([]),
       loadPointCloudByLogicalName: () => Promise.resolve(null),
-      listBBox3Ds: () => Promise.resolve([]),
+      loadTextByLogicalName: () => Promise.resolve(null),
+      listAnnotations: () => Promise.resolve([]),
       createEntity: () => Promise.resolve({}),
-      createBBox: () => Promise.resolve({}),
-      updateBBox: () => Promise.resolve({}),
-      deleteBBox: () => Promise.resolve(),
       deleteEntity: () => Promise.resolve(),
-      createBBox3D: () => Promise.resolve({}),
-      updateBBox3D: () => Promise.resolve({}),
-      deleteBBox3D: () => Promise.resolve(),
+      createAnnotation: () => Promise.resolve({}),
+      updateAnnotation: () => Promise.resolve({}),
+      deleteAnnotation: () => Promise.resolve(),
     };
 
     const manager = new WorkspaceManager(makeRegistry(), gateway);

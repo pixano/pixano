@@ -43,7 +43,7 @@ export class MutationQueue {
   ) {}
 
   /** Append a mutation to the queue. Order matters; `flush` re-orders only
-   * by resource (entities first, then bboxes, deletes last) via
+   * by resource (entities first, then annotations, deletes last) via
    * `sortMutations` — within a resource the original order is preserved. */
   queue(mutation: ResourceMutation): void {
     this.pending.push(mutation);
@@ -84,10 +84,31 @@ export class MutationQueue {
   }
 
   /**
-   * Drop every queued mutation that references the given local bbox id.
-   * Used when a bbox is deleted locally before it has been persisted, so
-   * we don't POST-then-DELETE it for nothing.
+   * Drop every queued mutation that references the given local annotation id.
+   * Used when an annotation is deleted locally before it has been persisted,
+   * so we don't POST-then-DELETE it for nothing.
    */
+  /**
+   * Forget an entity this annotation was going to be moved onto, because the
+   * user then picked a different one.
+   *
+   * Changing your mind twice before saving used to leave the first entity
+   * behind: `upsertUpdate` replaces the annotation's update so only the last
+   * choice is referenced, but the creates piled up, and the abandoned one was
+   * written to the dataset with nothing pointing at it. Correcting a mistake
+   * should not litter.
+   */
+  dropPendingEntityCreate(localAnnotationId: string): void {
+    this.pending = this.pending.filter(
+      (m) =>
+        !(
+          m.op === "create" &&
+          m.resource === ENTITY_RESOURCE &&
+          m.localAnnotationId === localAnnotationId
+        ),
+    );
+  }
+
   dropForLocalAnnotation(localAnnotationId: string): ResourceMutation[] {
     const dropped: ResourceMutation[] = [];
     this.pending = this.pending.filter((m) => {

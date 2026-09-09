@@ -6,23 +6,27 @@ License: CECILL-C
 
 import type { AnnotationKind, LocalAnnotation } from "./annotationCollection.svelte.js";
 import { bboxSeedLoader } from "./kinds/2d/bbox/bboxSeedLoader.js";
+import { classificationSeedLoader } from "./kinds/2d/classification/classificationSeedLoader.js";
+import { keypointsSeedLoader } from "./kinds/2d/keypoints/keypointsSeedLoader.js";
+import { maskSeedLoader } from "./kinds/2d/mask/maskSeedLoader.js";
+import { multiPathSeedLoader } from "./kinds/2d/multi-path/multiPathSeedLoader.js";
 import { bbox3dSeedLoader } from "./kinds/3d/bbox3d/bbox3dSeedLoader.js";
-import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
+import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
 
 /**
  * The data-layer slice seed loaders may touch (a structural subset of
  * `RecordReadGateway`, kept here so kind modules never depend on the
  * workspace layer).
+ *
+ * Deliberately kind-agnostic: a loader passes the `resource` its own payload
+ * builder owns, so a new annotation kind adds nothing to this interface.
  */
 export interface SeedListGateway {
-  listBBoxes(
+  listAnnotations<TRow>(
     datasetId: string,
-    params: { recordId?: string; viewId?: string; limit?: number },
-  ): Promise<BBoxRow[]>;
-  listBBox3Ds(
-    datasetId: string,
-    params: { recordId?: string; viewId?: string; limit?: number },
-  ): Promise<BBox3DRow[]>;
+    resource: string,
+    params: ListAnnotationsParams,
+  ): Promise<TRow[]>;
 }
 
 /** One displayed view of the loaded record, as claimed by an extension. */
@@ -61,4 +65,11 @@ export interface AnnotationSeedLoader {
 }
 
 /** Every seed loader; adding a kind means adding its import here. */
-export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [bboxSeedLoader, bbox3dSeedLoader];
+export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
+  bboxSeedLoader,
+  bbox3dSeedLoader,
+  maskSeedLoader,
+  keypointsSeedLoader,
+  multiPathSeedLoader,
+  classificationSeedLoader,
+];

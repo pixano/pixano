@@ -6,12 +6,12 @@ License: CECILL-C
 
 <script lang="ts">
   import Konva from "konva";
-  import { Trash2 } from "lucide-svelte";
+  import { Replace, Trash2 } from "lucide-svelte";
   import { getContext, onMount } from "svelte";
 
   import AnnotationToolbar from "../AnnotationToolbar.svelte";
   import { buildSeam } from "../sceneSeam.js";
-  import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+  import { beginEntityReassign, deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
   import {
     DEFAULT_TOOL_2D,
     getTool2D,
@@ -251,6 +251,15 @@ License: CECILL-C
     activeHandler = tool.createHandler(sceneContext);
     activeHandler.activate?.();
     if (containerEl) containerEl.style.cursor = tool.cursor ?? "default";
+
+    // While a creation tool is active, existing annotation nodes must not
+    // capture the pointer: a renderer's nodes are interactive (bbox rects are
+    // draggable, masks are click-to-select), so a gesture starting on top of one
+    // would be swallowed by that node instead of reaching the tool. Painting a
+    // mask over an object — the whole point of segmentation — hit exactly this.
+    // Scene-level rule, so it lives here rather than in any kind: the widget is
+    // the only place that knows both the layer and the active tool.
+    sceneContext.annotationLayer.listening(toolId === DEFAULT_TOOL_2D);
   });
 
   // Structural changes — membership, selection, the visible-entity filter — are
@@ -272,6 +281,18 @@ License: CECILL-C
   });
 
   const hasSelection = $derived(annotations.selectedId !== null);
+  // Reassignment only makes sense once the annotation exists server-side: a
+  // draft's entity is still being chosen by the create flow.
+  const canReassignEntity = $derived(annotations.selected?.persisted === true);
+  // A disabled button with no explanation reads as broken; say which of the two
+  // reasons it is, so the fix ("select something", "save first") is obvious.
+  const reassignEntityTitle = $derived(
+    canReassignEntity
+      ? "Change the entity this annotation belongs to (E)"
+      : hasSelection
+        ? "Save this annotation before moving it to another entity"
+        : "Select an annotation to change its entity",
+  );
   const widgetPending = $derived(
     new Set(
       manager.pendingMutations
@@ -292,9 +313,23 @@ License: CECILL-C
     saving={manager.saving}
     saveError={manager.saveError}
     onSave={() => manager.flushSave()}
+    onDiscard={() => manager.discardChanges()}
     ariaLabel="Image annotation tools"
   >
     {#snippet controls()}
+      <button
+        type="button"
+        onclick={() => {
+          const annotation = annotations.selected;
+          if (!annotation || !sceneContext) return;
+          beginEntityReassign(annotation, sceneContext, { label: "annotation entity" });
+        }}
+        disabled={!canReassignEntity}
+        title={reassignEntityTitle}
+        class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
+      >
+        <Replace class="h-3.5 w-3.5" />
+      </button>
       <button
         type="button"
         onclick={() => {
