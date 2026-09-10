@@ -19,7 +19,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   <link rel="canonical" href={canonicalURL} />
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href={`${import.meta.env.BASE_URL}assets/pixano.png`} />
+  <link rel="icon" type="image/png" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/assets/pixano.png`} />
 
   <!-- Preconnect to Google Fonts -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
