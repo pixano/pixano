@@ -53,6 +53,27 @@ When using an existing initialized Pixano data directory during backend developm
 uv run pixano server run /path/to/data
 ```
 
+To run the whole local stack — the app, the `pixano-worker` job runner, PostgreSQL and an
+inference server — use the compose files at the repository root. Copy `.env.example` to `.env`
+first; every address the components use to reach each other lives there, so the same stack
+runs against a remote database or a shared inference server without a code change.
+
+```sh
+cp .env.example .env
+
+# Against an inference server already running somewhere (set PIXANO_INFERENCE_URL).
+docker compose up
+
+# Or with an inference built and run on this machine (CPU variant, no GPU required).
+docker compose -f docker-compose.yml -f docker-compose.inference.yml up
+```
+
+The worker package lives in `packages/pixano-worker/` with its own lockfile and test suite:
+
+```sh
+uv run --directory packages/pixano-worker pytest
+```
+
 For frontend development, start the standalone SvelteKit dev server from the pnpm workspace:
 
 ```sh
