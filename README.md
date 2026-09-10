@@ -49,22 +49,21 @@ Then, install Pixano with pip:
 pip install pixano
 ```
 
-Init the database and start the Pixano server:
+Create a data directory and start the Pixano server, then open http://127.0.0.1:7492:
 
 ```shell
-pixano init path/to/database
-pixano server run path/to/database
+pixano init ./my_data
+pixano server run ./my_data
 ```
 
-Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases.
+Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases:
 
 ```shell
 docker pull pixano/pixano:stable
-docker run -p 7492:7492 -v /path/on/host:/library pixano/pixano:stable
+docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-In this example, `/path/on/host` is the directory on your machine where Pixano stores its library. Inside the
-container, Pixano always uses `/library`.
+`my_data` is a folder on your machine where Pixano keeps your datasets; the container creates it on first start.
 
 ## Development (from source)
 
@@ -87,16 +86,15 @@ This installs the project in editable mode with all dependencies pinned via `uv.
 Build the frontend UI assets:
 
 ```shell
-cd ui/apps/pixano
-pnpm i
-pnpm run build
+pnpm -C ui install
+pnpm -C ui/apps/pixano run build
 ```
 
-Init the data base and start the Pixano server:
+Create a data directory and start the Pixano server:
 
 ```shell
-uv run pixano init path/to/database
-uv run pixano server run path/to/database
+uv run pixano init ./my_data
+uv run pixano server run ./my_data
 ```
 
 For more details on running Pixano locally (frontend setup, testing, formatting), see [CONTRIBUTING.md](CONTRIBUTING.md).

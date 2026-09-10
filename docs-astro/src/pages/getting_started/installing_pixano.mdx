@@ -3,133 +3,67 @@ layout: ../../layouts/DocsLayout.astro
 title: "Installation"
 section: getting_started
 ---
-import Callout from '../../components/Callout.astro'
 import PrevNext from '../../components/PrevNext.astro'
 
 # Installation
 
-## Prerequisites
-
-- **Python 3.10 to 3.13** — check with `python --version`
-- **pip** (included with Python)
-- A modern browser (Chrome, Firefox, Safari, Edge)
-
-<Callout type="note" title="Operating system support">
-Pixano is tested on Linux and macOS. It should work on Windows but is not officially tested.
-</Callout>
-
-## Install with uv (recommended)
-
-Pixano depends on `pixano-inference-client`, which is not published to PyPI yet — it is
-pulled from git. [uv](https://docs.astral.sh/uv/) resolves that automatically, so it is the
-simplest way to install:
-
-```bash
-uv venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-uv pip install pixano
-```
+To install Pixano with pip you need a working Python installation. It currently requires
+**Python 3.10 to 3.13**. We encourage installing Pixano in a virtual environment, or using the
+Docker distribution. Pixano is supported on Linux and macOS, and on Windows with limited support.
 
 ## Install with pip
 
-pip does not read the git source declared in Pixano's metadata, so install that one
-dependency explicitly first:
+Create a virtual environment and activate it:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install "pixano-inference-client @ git+https://github.com/pixano/pixano-inference@production-hardening#subdirectory=packages/pixano-inference-client"
+python3 -m venv .venv
+```
+
+```bash
+source .venv/bin/activate
+```
+
+On Windows, activate with `.venv\Scripts\activate` instead.
+
+Install Pixano:
+
+```bash
 pip install pixano
 ```
 
-<Callout type="note" title="Why the extra step?">
-`pixano-inference-client` is the client library Pixano uses to talk to a
-[pixano-inference](https://github.com/pixano/pixano-inference) server. Once it is published to
-PyPI, a plain `pip install pixano` will be enough.
-</Callout>
-
-## Optional format extras
-
-The COCO and LeRobot importers need extra dependencies. Install the ones you need:
+Create a data directory — the folder where Pixano keeps your datasets:
 
 ```bash
-pip install "pixano[coco]"      # COCO import/export (ijson)
-pip install "pixano[lerobot]"   # LeRobot datasets, incl. Hugging Face Hub (huggingface_hub)
-pip install "pixano[coco,lerobot]"
+pixano init ./my_data
 ```
 
-Pixano tells you which extra is missing if you try to import one of these formats without it.
-
-## Install from source
-
-To work on Pixano itself, or to get the latest unreleased changes:
+Start the server:
 
 ```bash
-git clone https://github.com/pixano/pixano.git
-cd pixano
-uv sync
+pixano server run ./my_data
 ```
 
-## Verify the installation
+Open **http://127.0.0.1:7492** in your browser. You are on Pixano's home page, the Library —
+empty for now. Press `Ctrl-C` in the terminal to stop the server.
 
-```bash
-pip show pixano
-```
+Continue to the [Quickstart](/pixano/getting_started/quickstart/) to import your first dataset.
 
-You should see output including `Name: pixano` and `Version: 0.8.x`.
+## Run with Docker
 
-You can also check that the CLI is available:
-
-```bash
-pixano --help
-```
-
-## Docker
-
-Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases. Pull the
-`stable` tag to get the latest released version:
+Pull the image and start a container:
 
 ```bash
 docker pull pixano/pixano:stable
 ```
 
-If you need to pin a specific release, use the corresponding version tag instead of `stable`.
-
-<Callout type="note" title="Image availability">
-Official images are built per release. Until `pixano-inference-client` is on PyPI, an image for a
-given version is only available once that release has been built successfully.
-</Callout>
-
-Run the container with a mounted library directory:
-
 ```bash
-docker run -d \
-    --name pixano \
-    -p 7492:7492 \
-    -v ./my_library:/library \
-    pixano/pixano:stable
+docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-Open `http://localhost:7492` in your browser.
+`my_data` is a folder on your machine where Pixano keeps your datasets; it is created on first
+start. Open **http://localhost:7492** in your browser: the Library.
 
-In this example, `./my_library` is the directory on your machine where Pixano stores its library. Inside the
-container, Pixano always uses `/library`. Reusing the same mounted directory lets you keep your data across
-container restarts or upgrades.
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `pip install pixano` cannot resolve `pixano-inference-client` | Install it from git first (see [Install with pip](#install-with-pip)), or use `uv` |
-| `pip install pixano` fails with build errors | Make sure you have Python 3.10-3.13 and an up-to-date pip: `pip install --upgrade pip` |
-| `No module named 'ijson'` / `huggingface_hub` on import | Install the matching extra: `pip install "pixano[coco]"` or `"pixano[lerobot]"` |
-| `pixano` command not found after install | Activate your virtual environment: `source .venv/bin/activate` |
-| Port 7492 already in use | Use `--port 8000` or stop the other process |
-| Docker container exits immediately | Check logs with `docker logs pixano`, then verify that the mounted host directory exists and is writable |
-
-## Next steps
-
-You're ready to go. Head to the [Quickstart](/pixano/getting_started/quickstart/) to import your first dataset and launch the app.
+Stop the container with `docker stop pixano` and start it again with `docker start pixano`.
 
 <PrevNext
   prev={{ title: "Overview", href: "/getting_started/" }}
