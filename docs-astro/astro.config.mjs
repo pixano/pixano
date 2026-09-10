@@ -5,6 +5,7 @@ import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import expressiveCode from "astro-expressive-code";
+import remarkGfm from "remark-gfm";
 
 export default defineConfig({
   site: "https://pixano.github.io",
@@ -28,16 +29,12 @@ export default defineConfig({
         showCopyToClipboardButton: true,
       },
     }),
-    mdx(),
+    mdx({ remarkPlugins: [remarkGfm] }),
     svelte(),
     sitemap(),
   ],
   vite: {
     plugins: [tailwindcss()],
-  },
-  markdown: {
-    remarkPlugins: [],
-    rehypePlugins: [],
   },
   redirects: {
     "/": "/pixano/getting_started/",
