@@ -23,16 +23,17 @@ By the end of this page, you will have imported your own images into Pixano and 
 - Python 3.10–3.13 with Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
 - A few images (JPEG or PNG) on your computer — 3 to 5 is enough
 
-## Step 1 — Initialize Pixano
+## Step 1 — Have a data directory ready
 
-First, create a **data directory** — the place Pixano keeps everything it manages:
+If you followed [Installation](/pixano/getting_started/installing_pixano/), you already created
+one and saw the empty Library. If not:
 
 ```bash
 pixano init ./my_data
 ```
 
-This creates `library/` (your datasets), `media/`, and `models/` inside `./my_data`. Every other
-command takes this directory as its first argument.
+`./my_data` is Pixano's **data directory**: your datasets live in its `library/` subfolder, and
+every other command takes this directory as its first argument.
 
 ## Step 2 — Define your dataset schema
 
