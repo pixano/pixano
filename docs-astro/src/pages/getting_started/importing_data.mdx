@@ -62,8 +62,11 @@ text `.txt` `.md`. Anything else is skipped and counted.
 
 The task also pre-selects the annotation types — **Image annotation**: `bbox`, `mask`,
 `keypoint`, `classification`; **Video annotation**: `bbox`, `mask`, `keypoint`, `tracklet`;
-**Visual Q&A**: `message`; **Image–text linking**: `text_span`, `bbox`, `mask`. You can change
-the selection on the next step, except `message` and `text_span`, which their tasks require.
+**Visual Q&A**: `message`; **Image–text linking**: `text_span`, `bbox`, `mask`. The next step
+offers more chips per task — Image and Video annotation also list `multi_path` and `relation`,
+Visual Q&A also lists `bbox`, `mask` and `classification`, Image–text linking also lists
+`classification` — and lets you change the selection, except `message` and `text_span`, which
+their tasks require.
 
 ### The Source step
 
@@ -72,24 +75,27 @@ the selection on the next step, except `message` and `text_span`, which their ta
 - **Choose a folder on your computer…** — the only way to provide files. For Raw media the
   folder is checked against the task's layout before anything is sent, and only the matching
   media files are uploaded. The **Detected layout** panel shows the records, views and splits
-  found, and how many non-matching files were skipped. For LeRobot (and auto-detection) a
-  **Hugging Face hub** switch replaces the folder with a dataset id such as `org/name`, plus
-  **Episodes (optional)** (`0:4` or `1,3,7`) and **Max frames / episode (optional)**.
+  found, and how many non-matching files were skipped. LeRobot opens on a Hugging Face dataset
+  id such as `org/name` instead, with **Episodes (optional)** (`0:4` or `1,3,7`) and
+  **Max frames / episode (optional)**; **Upload a folder** switches back to the folder picker.
+  With auto-detection the folder picker is the default and **Hugging Face hub** switches to an
+  id.
 - **Dataset name (optional)** — defaults to the folder name.
-- **If the dataset exists** — **Fail (create only)** or **Overwrite it**. Adding records to an
-  existing dataset (`--mode add`) is command-line only.
+- **If the dataset exists** — **Fail (create only)** or **Overwrite it**. There is no *add*
+  option here: to add records to an existing dataset, use `--mode add` on the command line (or
+  `{"mode": "add"}` in the Advanced spec).
 - **Video handling** (Raw media with video files) — **Extract frames (annotate)**, with an
   optional cap on frames per video and a sampling FPS, or **Reference clips (metadata only)**,
   which cannot be played or annotated in this release. Folders of pre-extracted frames import as
-  frame sequences directly.
+  frame sequences directly, with the same cap on frames per video and an optional FPS for the
+  frame timestamps.
 - **Record attributes** and **Object attributes** (Raw media) — extra fields on every record or
   on every annotated object: a `snake_case` name, a type (`str`, `int`, `float`, `bool`), an
   optional list flag, a default value, and for object attributes a `required` flag.
 - **Annotations** (Raw media) — "Annotation types you plan to create in Pixano."
 - **Advanced spec (JSON)** — "Optional overrides merged over the fields above — the same keys as
   dataset.yaml (dataset, schema with any attributes, ids, options, media)." A `schema` key
-  there replaces the one built by the form. Media storage (`media: {mode: uri}`) is only
-  reachable here, and does not apply to Raw media.
+  there replaces the one built by the form. Media storage (`media`) is only reachable here.
 
 **Analyze** becomes available once a source is selected and the form is valid.
 
@@ -112,9 +118,9 @@ be resumed. Imports started from the app are the same jobs the command line list
 
 | You need | Use |
 |----------|-----|
-| Add records to an existing dataset (`--mode add`) | command line |
-| URI media storage for raw media, or a `dataset.yaml` kept outside the source (`--spec`) | command line |
-| A custom id namespace (`--namespace`) or a custom importer (`--importer`) | command line |
+| Add records to an existing dataset | `--mode add` on the command line, or `{"mode": "add"}` in the Advanced spec |
+| A `dataset.yaml` file kept outside the source (`--spec`) | command line; the app takes the same keys inline in the Advanced spec |
+| Custom Python importers (`--importer`, `--info-py`) | command line only — the app refuses them |
 | Data that sits on your own computer, no terminal | app |
 
 ## Import from the command line

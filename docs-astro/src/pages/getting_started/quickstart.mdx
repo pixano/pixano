@@ -11,9 +11,10 @@ import PrevNext from '../../components/PrevNext.astro'
 
 You are on Pixano's home page, the Library, and it is empty. In the next few minutes you will
 import a folder of your own photos from the app, open the result, then do the same import from
-the command line. All you need is a folder holding 3 to 5 JPEG or PNG photos and nothing else —
-no subfolders. We call it `my_photos` here. If you closed the server since
-[Installation](/pixano/getting_started/installing_pixano/), start it again the same way.
+the command line. All you need is a folder holding a few JPEG or PNG photos and nothing else —
+no subfolders. We use 3 photos in a folder called `my_photos`; the counts below follow your own.
+If you closed the server since [Installation](/pixano/getting_started/installing_pixano/), start
+it again the same way.
 
 ## Import your photos from the app
 
@@ -41,8 +42,8 @@ Each card takes you to the next step as soon as you click it.
    panel shows what Pixano found: 3 records, one `image` view.
 5. Leave **Dataset name (optional)** empty — the dataset takes the folder's name — and leave
    **If the dataset exists** on **Fail (create only)**. Under **Annotations**, the four
-   pre-selected chips (`bbox`, `mask`, `keypoint`, `classification`) are the tools the workspace
-   will offer; keep them.
+   pre-selected chips (`bbox`, `mask`, `keypoint`, `classification`) are the annotation tables
+   Pixano will create; keep them.
 
 <Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp" width={768}
   alt="The Source step after uploading the my_photos folder: 3 files uploaded and the Detected layout panel showing 3 records."
@@ -58,7 +59,7 @@ Each card takes you to the next step as soon as you click it.
    records**.
 
 <Figure src="getting_started/quickstart/03-wizard-review-plan.webp" width={768}
-  alt="Review the plan: 3 records, the schema Pixano will create, and three sample records."
+  alt="Review the plan: 3 records, the schema Pixano will create, and sample records."
   caption="Nothing has been created yet: this is the plan the import will execute." />
 
 8. Click **Start import**.
@@ -105,9 +106,10 @@ Explorer and the Workspace.
 
 The wizard uploads your folder through the browser. When the photos already sit on the machine
 that runs the server, or when you have many folders to import, the command line does the same
-job without a browser. Leave the server running and open a second terminal in the same folder,
-with the virtual environment activated. (With Docker, stay with the wizard: the commands below
-assume a pip install.)
+job without a browser. Leave the server running and open a second terminal in the folder that
+holds `my_data`, with the virtual environment activated. The commands below assume `my_photos`
+sits in that folder too; otherwise use its full path instead of `./my_photos`. (With Docker, stay
+with the wizard: the commands below assume a pip install.)
 
 The wizard already created `my_photos`, and Pixano never overwrites a dataset on its own, so
 this command gives the new one its own name — on an empty Library you could leave `--name` out:
