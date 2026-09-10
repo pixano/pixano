@@ -1,0 +1,63 @@
+---
+/**
+ * Figure — a base-safe image with an optional caption.
+ *
+ * Usage (MDX):
+ *   import Figure from '../../components/Figure.astro'
+ *   <Figure src="getting_started/quickstart/01-library-empty.webp" alt="…" caption="…" />
+ *   <Figure src="getting_started/quickstart/02-wizard-source.webp" alt="…" width={768} />
+ *
+ * `src` is relative to public/assets/ — no leading "/", no "assets/" prefix. The site base
+ * ("/pixano") is prepended here so pages never hardcode it and never lose it.
+ */
+
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  /** Rendered max width in CSS px (default: the content width). */
+  width?: number;
+}
+
+const { src, alt, caption, width } = Astro.props;
+
+if (!alt || !alt.trim()) {
+  throw new Error(`<Figure src="${src}"> needs an alt text.`);
+}
+if (/^(\/|https?:|assets\/)/.test(src)) {
+  throw new Error(`<Figure src="${src}">: use a path relative to public/assets/ (no leading "/", no "assets/").`);
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = `${base}/assets/${src}`;
+const style = width ? `max-width: ${width}px` : undefined;
+---
+
+<figure class="figure" style={style}>
+  <img src={href} alt={alt} loading="lazy" decoding="async" />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .figure {
+    width: 100%;
+    margin: 1.75rem auto;
+  }
+
+  .figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    /* border, radius and shadow come from the global img rule */
+  }
+
+  figcaption {
+    margin-top: 0.6rem;
+    font-family: var(--px-font-ui);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    text-align: center;
+    color: var(--px-text-muted);
+  }
+</style>
