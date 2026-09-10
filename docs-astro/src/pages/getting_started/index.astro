@@ -14,10 +14,10 @@ import Card from "../../components/Card.astro";
 
   <CardGrid>
     <Card title="Installation" href="/getting_started/installing_pixano/" icon="download">
-      Install Pixano and the optional format extras.
+      Install Pixano with pip or Docker and open the empty Library.
     </Card>
     <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
-      Define a schema, import your own images, and launch the app in minutes.
+      Import a folder of your own photos from the app, then learn the one-line command that does the same.
     </Card>
     <Card title="Key Concepts" href="/getting_started/key_concepts/" icon="lightbulb">
       Understand the data model: records, views, entities, annotations, and more.
@@ -32,7 +32,7 @@ import Card from "../../components/Card.astro";
       Find records by meaning, and ask for more like any record.
     </Card>
     <Card title="Importing & Exporting Data" href="/getting_started/importing_data/" icon="download">
-      The JSONL v2 format, the <code>pixano data</code> CLI, and round-trip export.
+      The import wizard, the <code>pixano data</code> CLI, the JSONL v2 format, and round-trip export.
     </Card>
     <Card title="Custom Importers" href="/getting_started/custom_importers/" icon="code">
       Write a <code>DatasetImporter</code> for a format Pixano does not ship.
@@ -41,6 +41,6 @@ import Card from "../../components/Card.astro";
 
   <p>
     Once you are comfortable with the basics, head over to the
-    <a href={`${import.meta.env.BASE_URL}cookbook/`}>Cookbook</a> for end-to-end walkthroughs with real datasets.
+    <a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/cookbook/`}>Cookbook</a> for end-to-end walkthroughs with real datasets.
   </p>
 </DocsLayout>
