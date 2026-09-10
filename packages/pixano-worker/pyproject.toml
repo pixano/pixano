@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pixano-worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg[binary]>=3.1",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+pixano-worker = "pixano_worker.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pixano_worker"]
+
+[dependency-groups]
+test = ["pytest"]
+
+[tool.uv]
+default-groups = ["test"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
