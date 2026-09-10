@@ -1,0 +1,106 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+# Pixano en mode local — le socle d'exécution des jobs (étape 1).
+#
+# Ce fichier décrit UNE liaison de l'architecture, pas l'architecture. Chaque lien entre
+# composants est une adresse + un secret, jamais une hypothèse de colocalisation : en
+# déploiement partagé (base et stockage communs, inference sur un serveur dimensionné) comme
+# en cloud, seules les valeurs de .env changent — aucun service décrit ici n'est réécrit.
+#
+#   docker compose up
+#       l'inference est un serveur déjà en place, désigné par PIXANO_INFERENCE_URL.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
+#       + une inference construite localement (variante CPU, sans GPU ni torch).
+
+services:
+  postgres:
+    image: postgres:16
+    # Lié à localhost : la base n'est jamais exposée hors de la machine par défaut.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?copiez .env.example en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copiez .env.example en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?copiez .env.example en .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  pixano:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.source
+    ports:
+      - "127.0.0.1:${PIXANO_PORT:-7492}:7492"
+    environment:
+      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
+      # L'app dépose les jobs dans la même file que le worker consomme.
+      PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
+      # Racine sous laquelle Pixano voit les médias accessibles par chemin. Le stockage
+      # monté ici en est un cas ; un dataset peut aussi vivre en stockage objet, ou rester
+      # sur la machine de son propriétaire (cf. lot 8, résolveur de médias).
+      PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
+    command:
+      - sh
+      - -c
+      - pixano init /data && pixano server run /data --host 0.0.0.0 --port 7492
+        --pixano-inference-url "$$PIXANO_INFERENCE_URL"
+    volumes:
+      # /data est la convention interne de l'image ; la racine médias, elle, doit suivre la
+      # variable, puisque c'est elle que le worker donne à l'inference.
+      - ${PIXANO_DATA_DIR:-./data}:/data
+      - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_MEDIA_ROOT:-/medias}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://localhost:7492/health", timeout=4)
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  pixano-worker:
+    build:
+      context: ./packages/pixano-worker
+    environment:
+      PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
+      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
+      PIXANO_INFERENCE_API_KEY: ${PIXANO_INFERENCE_API_KEY:-}
+      PIXANO_LIBRARY_DIR: ${PIXANO_LIBRARY_DIR:-/data/library}
+      # Quand worker et inference voient le même stockage, le worker traduit ses chemins
+      # vers la vue de l'inference avant chaque appel — ici les deux racines coïncident,
+      # ailleurs non. Les autres cas (stockage objet, médias restés chez l'utilisateur) sont
+      # d'autres stratégies du résolveur, pas d'autres valeurs de ces deux variables.
+      PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
+      PIXANO_INFERENCE_MEDIA_ROOT: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
+    volumes:
+      # /data est la convention interne de l'image ; la racine médias, elle, doit suivre la
+      # variable, puisque c'est elle que le worker donne à l'inference.
+      - ${PIXANO_DATA_DIR:-./data}:/data
+      - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_MEDIA_ROOT:-/medias}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-m", "pixano_worker.healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres-data:
