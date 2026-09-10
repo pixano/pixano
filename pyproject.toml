@@ -128,7 +128,7 @@ ignore = ["D205", "C901", "D100", "D104"]
 select = ["C", "E", "F", "I", "W", "D"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "C408", "C901", "F401"]
+"**/tests/*" = ["D", "C408", "C901", "F401"]
 "docs/*" = ["D", "F401"]
 
 [tool.ruff.lint.isort]
