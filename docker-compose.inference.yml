@@ -48,7 +48,8 @@ services:
       - pixano-inference-weights:/data
       - ${PIXANO_INFERENCE_REPO:-../pixano-inference}/docker/models.numpy.py:/config/models.py:ro
       - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}:ro
-    command: ["--host", "0.0.0.0", "--port", "7463", "--config", "/config/models.py"]
+    command:
+      ["--host", "0.0.0.0", "--port", "7463", "--config", "/config/models.py"]
     # Ray laisse des process enfants derrière lui ; Python n'est pas un init.
     init: true
     # L'object store de Ray vit dans /dev/shm, dont le défaut à 64 Mo est trop petit.
