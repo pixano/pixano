@@ -24,7 +24,13 @@ from pixano.api.settings import Settings
 # Media blobs are already compressed (JPEG/PNG/MP4); running them through gzip
 # burns request-thread CPU (which competes with background import jobs) for no
 # size win. Bypass by route shape — cheaper than sniffing content types.
-_GZIP_BYPASS_SUFFIXES = ("/blob", "/preview")
+#
+# Event streams are here for a different reason: gzip buffers, and a buffered
+# stream is not a stream. The browser never sees its first byte, so the
+# connection sits in CONNECTING and nothing ever arrives. It only shows with a
+# real client — curl sends no Accept-Encoding by default, so the middleware
+# passes it through untouched and the stream appears to work.
+_GZIP_BYPASS_SUFFIXES = ("/blob", "/preview", "/events")
 _GZIP_BYPASS_SEGMENTS = ("/sframes/batch", "/media/")
 
 
