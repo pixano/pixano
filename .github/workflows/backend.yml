@@ -95,6 +95,22 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+    services:
+      # L'application est cliente de la file de jobs : ses tests de mise en file ont besoin
+      # d'un vrai PostgreSQL, sans quoi ils sauteraient en silence.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pixano
+          POSTGRES_PASSWORD: pixano
+          POSTGRES_DB: pixano_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -113,7 +129,19 @@ jobs:
           sudo apt-get install -y ffmpeg
           uv sync --group test
 
+      # Le worker possède le schéma : l'application ne le crée jamais, pas même en test.
+      # Cette étape reproduit l'ordre réel — le worker installe, l'application consomme.
+      - name: Install the job schema with pixano-worker
+        env:
+          PIXANO_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
+        run: >-
+          uv run --directory packages/pixano-worker python -c "import os, psycopg;
+          from pixano_worker.schema import ensure_schema;
+          ensure_schema(psycopg.connect(os.environ['PIXANO_DATABASE_URL']))"
+
       - name: Test with pytest
+        env:
+          PIXANO_TEST_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
         run: uv run pytest --cov=src/pixano/ -m "not slow and not hub" tests/
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v5
