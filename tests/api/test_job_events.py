@@ -135,7 +135,7 @@ class TestBroker:
                     try:
                         await asyncio.wait_for(subscriber.queue.get(), timeout=2)
                         return False
-                    except TimeoutError:
+                    except asyncio.TimeoutError:
                         return True
             finally:
                 await broker.stop()
