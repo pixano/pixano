@@ -62,6 +62,18 @@ def _installed_version(cursor: psycopg.Cursor) -> int | None:
     return None if row is None else int(row[0])
 
 
+# `IF NOT EXISTS` n'est pas atomique face à un créateur concurrent : deux workers qui
+# démarrent ensemble sur une base vierge voient tous deux « la table n'existe pas », et le
+# second échoue à la création. PostgreSQL annule alors sa transaction — rien n'est appliqué
+# à moitié — et il suffit de recommencer pour prendre la branche « déjà installé ».
+_CONCURRENT_CREATION = (
+    psycopg.errors.UniqueViolation,
+    psycopg.errors.DuplicateSchema,
+    psycopg.errors.DuplicateTable,
+    psycopg.errors.DuplicateObject,
+)
+
+
 def ensure_schema(conn: psycopg.Connection) -> None:
     """Installer le schéma si besoin, et vérifier qu'il est celui qu'attend ce worker.
 
@@ -72,6 +84,20 @@ def ensure_schema(conn: psycopg.Connection) -> None:
         SchemaVersionError: La base porte une autre version que `SCHEMA_VERSION`. Rien
             n'est écrit dans ce cas : la transaction est annulée.
     """
+    try:
+        installed = _install(conn)
+    except _CONCURRENT_CREATION:
+        logger.info("schéma installé au même instant par un autre worker — nouvel essai")
+        installed = _install(conn)
+
+    if installed is None:
+        logger.info("schéma %s créé (version %s)", SCHEMA_NAME, SCHEMA_VERSION)
+    else:
+        logger.info("schéma %s déjà à la version %s", SCHEMA_NAME, SCHEMA_VERSION)
+
+
+def _install(conn: psycopg.Connection) -> int | None:
+    """Appliquer le fichier en une transaction, et renvoyer la version trouvée avant."""
     with conn.transaction(), conn.cursor() as cursor:
         installed = _installed_version(cursor)
 
@@ -94,7 +120,4 @@ def ensure_schema(conn: psycopg.Connection) -> None:
             (SCHEMA_VERSION,),
         )
 
-    if installed is None:
-        logger.info("schéma %s créé (version %s)", SCHEMA_NAME, SCHEMA_VERSION)
-    else:
-        logger.info("schéma %s déjà à la version %s", SCHEMA_NAME, SCHEMA_VERSION)
+    return installed
