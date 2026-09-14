@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from pixano.api import jobs
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
-from pixano.datasets import Dataset
 
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -26,21 +25,22 @@ class SubmitJobRequest(BaseModel):
     """What the interface sends to start a job.
 
     Attributes:
-        kind: Which processing to run. Not validated against a registry yet — the plugin
-            registry lands with the job kinds themselves.
+        kind: Which processing to run. Checked against what a worker has declared it can do.
         dataset_id: The dataset to run it on.
-        params: Parameters of the kind, stored as-is and read by the worker.
-        record_ids: An explicit selection. Omitted means the whole dataset.
-        where: A filter applied when no explicit selection is given.
-        chunk_size: Tasks per chunk. Left alone unless measuring throughput.
+        params: Parameters of the kind, checked against the schema the kind published. How
+            the work gets split lives in here, since splitting is the kind's business.
     """
 
     kind: str = Field(min_length=1)
     dataset_id: str = Field(min_length=1)
     params: dict[str, Any] = Field(default_factory=dict)
-    record_ids: list[str] | None = None
-    where: str | None = None
-    chunk_size: int = Field(default=jobs.DEFAULT_CHUNK_SIZE, ge=1, le=4096)
+
+
+class JobKindResponse(BaseModel):
+    """A kind a worker has declared, and the shape of its parameters."""
+
+    name: str
+    params_schema: dict[str, Any]
 
 
 class JobResponse(BaseModel):
@@ -81,30 +81,40 @@ def _connect(settings: Settings):
         raise HTTPException(status_code=503, detail=str(error)) from error
 
 
+@router.get("/kinds", operation_id="list_job_kinds")
+def list_job_kinds(settings: Annotated[Settings, Depends(get_settings)]) -> list[JobKindResponse]:
+    """List what the running workers declare they can execute.
+
+    Empty means no worker has started, or none carries any kind — in both cases nothing can
+    be submitted, and the interface should say so rather than offer a choice that will fail.
+    """
+    with _connect(settings) as conn:
+        try:
+            kinds = jobs.available_kinds(conn)
+        except jobs.QueueUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+    return [JobKindResponse(name=name, params_schema=schema) for name, schema in kinds.items()]
+
+
 @router.post("", status_code=202, operation_id="submit_job")
 def submit_job(
     request: SubmitJobRequest,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> JobResponse:
-    """Plan a job and put all of its chunks on the queue, in one transaction."""
-    dataset: Dataset = get_dataset_dep(request.dataset_id, settings)
+    """Record a job request. The worker splits it and runs it.
 
-    record_ids = request.record_ids
-    if record_ids is None:
-        record_ids = jobs.select_record_ids(dataset, request.where)
-    if not record_ids:
-        raise HTTPException(status_code=400, detail="la sélection est vide : rien à exécuter")
+    The dataset is resolved here so that a wrong identifier is a 404 now rather than a job
+    that fails once queued.
+    """
+    get_dataset_dep(request.dataset_id, settings)
 
     with _connect(settings) as conn:
         try:
-            record = jobs.enqueue(
-                conn,
-                kind=request.kind,
-                dataset_id=request.dataset_id,
-                item_ids=record_ids,
-                params=request.params,
-                chunk_size=request.chunk_size,
-            )
+            record = jobs.submit(conn, kind=request.kind, dataset_id=request.dataset_id, params=request.params)
+        except jobs.UnknownKindError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except jobs.InvalidParamsError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return JobResponse.of(record)

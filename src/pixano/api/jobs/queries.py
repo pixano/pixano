@@ -17,18 +17,18 @@ SCHEMA_NAME = "pixano_jobs"
 # `to_regclass` answers without raising on a database where the worker has never run.
 QUEUE_EXISTS = f"SELECT to_regclass('{SCHEMA_NAME}.jobs')"
 
-INSERT_JOB = f"""
-INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, total_tasks)
-VALUES (%s, %s, %s, %s)
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at
-"""
+# What kinds a worker has declared it can run. The application shares no code with the
+# worker, so this table is the only thing that can answer "is this job runnable at all".
+SELECT_KIND = f"SELECT params_schema FROM {SCHEMA_NAME}.job_kinds WHERE name = %s"
 
-# `unnest` of parallel arrays inserts every chunk in one statement. Sending them one by one
-# would be as many round trips, and a job of 50 000 images is 800 chunks.
-INSERT_CHUNKS = f"""
-INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, payload, task_count)
-SELECT %s, chunk.seq, chunk.payload, chunk.task_count
-FROM unnest(%s::int[], %s::jsonb[], %s::int[]) AS chunk(seq, payload, task_count)
+LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY name"
+
+# The job is recorded without chunks: the worker splits it, because splitting is
+# kind-specific logic and kind code only runs on that side.
+INSERT_JOB = f"""
+INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
+VALUES (%s, %s, %s, 'planning')
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at
 """
 
 SELECT_JOB = f"""
@@ -45,7 +45,7 @@ FROM {SCHEMA_NAME}.jobs ORDER BY created_at DESC LIMIT %s
 # lui-même entre deux lots.
 REQUEST_CANCEL = f"""
 UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), updated_at = now()
-WHERE id = %s AND state IN ('pending', 'running') AND cancel_requested_at IS NULL
+WHERE id = %s AND state IN ('planning', 'pending', 'running') AND cancel_requested_at IS NULL
 """
 
 # Les chunks en attente sortent de la file. C'est ce qui permet à la requête de réclamation
@@ -58,7 +58,7 @@ WHERE job_id = %s AND state = 'pending'
 # Un job dont plus rien ne tourne est terminal immédiatement.
 SETTLE_IF_IDLE = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', updated_at = now()
-WHERE id = %s AND state IN ('pending', 'running')
+WHERE id = %s AND state IN ('planning', 'pending', 'running')
   AND NOT EXISTS (
       SELECT 1 FROM {SCHEMA_NAME}.job_chunks
       WHERE job_id = %s AND state = 'running'

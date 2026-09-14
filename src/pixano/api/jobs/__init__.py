@@ -8,33 +8,35 @@
 
 from . import queries
 from .enqueue import (
-    DEFAULT_CHUNK_SIZE,
+    InvalidParamsError,
     JobNotFoundError,
     JobRecord,
     QueueUnavailableError,
+    UnknownKindError,
+    available_kinds,
     cancel,
+    check_params,
     connect,
-    enqueue,
     get,
     list_jobs,
-    plan_chunks,
-    select_record_ids,
+    submit,
 )
 from .queries import SCHEMA_NAME
 
 
 __all__ = [
-    "DEFAULT_CHUNK_SIZE",
-    "queries",
     "SCHEMA_NAME",
+    "InvalidParamsError",
     "JobNotFoundError",
     "JobRecord",
     "QueueUnavailableError",
+    "UnknownKindError",
+    "available_kinds",
     "cancel",
+    "check_params",
     "connect",
-    "enqueue",
     "get",
     "list_jobs",
-    "plan_chunks",
-    "select_record_ids",
+    "queries",
+    "submit",
 ]
