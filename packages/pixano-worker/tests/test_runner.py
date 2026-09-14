@@ -6,11 +6,13 @@
 
 """Tests de la boucle d'exécution : planification, exécution, annulation, reprise."""
 
+import json
+
 import psycopg
 import pytest
 from pixano_worker import queue, runner
 from pixano_worker.kinds import Registry, default_registry
-from pixano_worker.schema import SCHEMA_NAME
+from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
@@ -277,3 +279,44 @@ class TestRecovery:
 
         state, done, total = _state(declared, job)
         assert (state, done) == ("done", total)
+
+
+class TestNotification:
+    """La sonnette qui réveille l'interface."""
+
+    def test_an_event_rings_only_once_committed(self, declared: psycopg.Connection, postgres_url: str) -> None:
+        """PostgreSQL ne délivre un NOTIFY qu'au commit.
+
+        C'est ce qui garantit qu'un lecteur réveillé trouve toujours la ligne en base — sans
+        cette propriété il faudrait un accusé de réception applicatif.
+        """
+        job = _submit(declared)
+
+        with psycopg.connect(postgres_url, autocommit=True) as listener:
+            listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
+
+            with psycopg.connect(postgres_url) as writer:
+                runner.record_event(writer, job, "state", {"state": "planning"})
+                assert list(listener.notifies(timeout=0.3)) == [], "rien ne doit sonner avant le commit"
+                writer.commit()
+
+            received = list(listener.notifies(timeout=3, stop_after=1))
+
+        assert len(received) == 1
+        payload = json.loads(received[0].payload)
+        assert payload["job_id"] == job
+        assert payload["type"] == "state"
+        assert isinstance(payload["event_id"], int)
+
+    def test_the_payload_carries_identifiers_only(self, declared: psycopg.Connection, postgres_url: str) -> None:
+        """La charge d'un NOTIFY est plafonnée à 8 ko : y mettre le contenu serait un piège
+        qui se déclencherait le jour d'un message d'erreur un peu long."""
+        job = _submit(declared)
+
+        with psycopg.connect(postgres_url, autocommit=True) as listener:
+            listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
+            with psycopg.connect(postgres_url, autocommit=True) as writer:
+                runner.record_event(writer, job, "progress", {"done_tasks": 40, "total_tasks": 200})
+            received = list(listener.notifies(timeout=3, stop_after=1))
+
+        assert set(json.loads(received[0].payload)) == {"job_id", "event_id", "type"}

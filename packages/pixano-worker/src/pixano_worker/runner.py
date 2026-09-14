@@ -23,7 +23,7 @@ from psycopg.types.json import Jsonb
 
 from . import queue
 from .kinds import Registry
-from .schema import SCHEMA_NAME
+from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 log = logging.getLogger("pixano-worker")
@@ -56,8 +56,19 @@ FAIL_JOB = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'error', error = %s, updated_at = now() WHERE id = %s
 """
 
+# L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
+# ne délivre un NOTIFY qu'au commit, ce qui donne gratuitement la garantie « pas d'événement
+# annoncé avant d'être lisible ». La charge ne porte que des identifiants — elle est plafonnée
+# à 8 ko, et un lecteur doit de toute façon relire la ligne pour rattraper ce qu'il a manqué.
 RECORD_EVENT = f"""
-INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload) VALUES (%s, %s, %s)
+WITH inserted AS (
+    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
+    VALUES (%s, %s, %s)
+    RETURNING id, job_id, type
+)
+SELECT pg_notify(%s, json_build_object(
+    'job_id', job_id, 'event_id', id, 'type', type
+)::text) FROM inserted
 """
 
 # Un job dont plus aucun chunk n'attend ni ne tourne est terminé. L'annulation l'emporte sur
@@ -90,7 +101,7 @@ def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload
     événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
     remettre au suivant.
     """
-    conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload)))
+    conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
 
 def plan_one(conn: psycopg.Connection, registry: Registry) -> str | None:
