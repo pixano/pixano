@@ -15,12 +15,12 @@ lot des contrats gelés ne les fige.
 import time
 from typing import Any, Iterable
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from .base import Chunk, JobKind
+from .base import Chunk, JobKind, JobParams
 
 
-class FakeParams(BaseModel):
+class FakeParams(JobParams):
     """Paramètres du job factice.
 
     Attributes:

@@ -6,7 +6,7 @@
 
 """Les types de jobs que ce worker sait exécuter."""
 
-from .base import Chunk, JobKind
+from .base import Chunk, JobKind, JobParams
 from .fake import FakeKind, FakeParams
 from .registry import Registry
 
@@ -18,4 +18,4 @@ def default_registry() -> Registry:
     return registry
 
 
-__all__ = ["Chunk", "FakeKind", "FakeParams", "JobKind", "Registry", "default_registry"]
+__all__ = ["Chunk", "FakeKind", "FakeParams", "JobKind", "JobParams", "Registry", "default_registry"]

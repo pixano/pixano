@@ -58,6 +58,26 @@ class TestDeclaration:
         assert row[0] == "fake"
         assert row[1]["properties"]["task_count"]["type"] == "integer"
 
+    def test_the_published_schema_refuses_an_unknown_parameter(self, registry: Registry) -> None:
+        """C'est cette propriété qui permet à l'application d'attraper une faute de frappe.
+
+        Sans `additionalProperties: false` dans le schéma publié, un paramètre mal
+        orthographié passe la validation et se fait ignorer en silence à l'exécution.
+        """
+        kind = registry.get("fake")
+        assert kind is not None
+
+        assert kind.params_schema()["additionalProperties"] is False
+
+    def test_an_unknown_parameter_is_refused_at_execution_too(self, registry: Registry) -> None:
+        import pydantic
+
+        kind = registry.get("fake")
+        assert kind is not None
+
+        with pytest.raises(pydantic.ValidationError):
+            kind.validate_params({"task_count": 10, "tsak_size": 4})
+
     def test_declaring_again_refreshes_rather_than_duplicates(
         self, db: psycopg.Connection, registry: Registry
     ) -> None:

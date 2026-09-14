@@ -31,10 +31,22 @@ suffit à rendre le rejeu inoffensif.
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Iterable, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
-ParamsT = TypeVar("ParamsT", bound=BaseModel)
+class JobParams(BaseModel):
+    """Base des paramètres d'un type de job.
+
+    `extra="forbid"` n'est pas un détail de rigueur : c'est lui qui fait émettre
+    `additionalProperties: false` dans le schéma JSON publié, donc lui qui permet à
+    l'application de refuser un nom de paramètre mal orthographié. Sans ça, une faute de
+    frappe passe la validation et le paramètre est ignoré en silence à l'exécution.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+
+ParamsT = TypeVar("ParamsT", bound=JobParams)
 
 
 class Chunk(BaseModel):
