@@ -17,6 +17,7 @@ from pixano_worker.schema import (
     ensure_schema,
     read_schema_sql,
 )
+from psycopg.types.json import Jsonb
 
 
 TABLES = ("schema_version", "jobs", "job_chunks", "job_events")
@@ -116,3 +117,53 @@ class TestEnsureSchema:
         """La lecture de la version ne doit jamais être ambiguë."""
         with pytest.raises(psycopg.errors.UniqueViolation):
             db.execute(f"INSERT INTO {SCHEMA_NAME}.schema_version (version) VALUES (2)")
+
+    def test_the_whole_schema_is_all_or_nothing(self, blank_db: psycopg.Connection, postgres_url: str) -> None:
+        """La DDL de PostgreSQL est transactionnelle, et toute la stratégie repose dessus.
+
+        C'est ce qui permet de se passer d'un moteur de migrations : il n'existe pas d'état
+        à moitié appliqué sur lequel il faudrait raisonner.
+        """
+        with psycopg.connect(postgres_url) as conn:
+            conn.execute(read_schema_sql())
+            conn.rollback()
+
+        row = blank_db.execute(f"SELECT to_regclass('{SCHEMA_NAME}.jobs')").fetchone()
+        assert row is not None and row[0] is None
+
+    def test_reapplying_restores_an_index_dropped_by_hand(self, db: psycopg.Connection) -> None:
+        """Rejouer le fichier répare un objet manquant — mais jamais une colonne modifiée,
+        et c'est exactement le trou que couvre le numéro de version."""
+        db.execute(f"DROP INDEX {SCHEMA_NAME}.job_chunks_pending_idx")
+
+        ensure_schema(db)
+
+        row = db.execute(
+            "SELECT count(*) FROM pg_indexes WHERE schemaname = %s AND indexname = %s",
+            (SCHEMA_NAME, "job_chunks_pending_idx"),
+        ).fetchone()
+        assert row is not None and row[0] == 1
+
+    def test_a_payload_round_trips_without_manual_encoding(self, db: psycopg.Connection) -> None:
+        """`jsonb` et psycopg s'occupent de la conversion : un modèle pydantic fait l'aller
+        et le retour sans json.dumps, contrairement au magasin SQLite qui décode cinq
+        colonnes à la main."""
+        params = {"model": "clip", "batch": 16, "classes": ["chat", "chien"]}
+        row = db.execute(
+            f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, total_tasks) "
+            "VALUES ('k', 'd', %s, 1) RETURNING id",
+            (Jsonb(params),),
+        ).fetchone()
+        assert row is not None
+
+        stored = db.execute(f"SELECT params FROM {SCHEMA_NAME}.jobs WHERE id = %s", (row[0],)).fetchone()
+        assert stored is not None and stored[0] == params
+
+    def test_timestamps_come_from_the_database_clock(self, db: psycopg.Connection) -> None:
+        """Un worker à l'horloge décalée ne doit pas pouvoir prolonger ni voler un bail."""
+        row = db.execute(
+            f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks) "
+            "VALUES ('k', 'd', 1) RETURNING abs(extract(epoch from (created_at - now())))"
+        ).fetchone()
+
+        assert row is not None and float(row[0]) < 1
