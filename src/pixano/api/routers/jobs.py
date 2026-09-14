@@ -6,12 +6,15 @@
 
 """REST endpoints for the processing job queue."""
 
-from typing import Annotated, Any
+import asyncio
+from typing import Annotated, Any, AsyncIterator
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from pixano.api import jobs
+from pixano.api.jobs.events import EventBroker, read_since
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
 
@@ -132,6 +135,89 @@ def list_jobs(
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return [JobResponse.of(record) for record in records]
+
+
+# Sur le flux global, seuls les changements d'état passent. La progression d'un job émet un
+# événement par chunk : diffusée à tout le monde, elle noierait la liste des jobs sous des
+# messages dont elle n'a que faire.
+_LIST_EVENT_TYPES = frozenset({"state"})
+
+# Un commentaire SSE périodique, pour que les intermédiaires réseau ne referment pas un flux
+# qu'ils croient inactif, et pour détecter un client parti.
+_KEEPALIVE_S = 15.0
+
+
+def _last_event_id(request: Request) -> int:
+    """Où reprendre, d'après ce que le client dit avoir déjà reçu."""
+    raw = request.headers.get("last-event-id", "")
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+async def _stream(
+    broker: EventBroker,
+    database_url: str,
+    job_id: str | None,
+    types: frozenset[str] | None,
+    after_id: int,
+) -> AsyncIterator[str]:
+    """Serve one stream: catch up, then follow.
+
+    The order matters. Subscribing *before* reading the backlog is what closes the gap: an
+    event committed between the two is held in the queue rather than lost, and the identifier
+    filter drops the duplicate.
+    """
+    async with broker.subscribe(job_id, types) as subscriber:
+        delivered = after_id
+        if job_id is not None:
+            for event in await read_since(database_url, job_id, after_id):
+                delivered = event.id
+                yield event.to_sse()
+
+        while True:
+            try:
+                event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
+            except TimeoutError:
+                yield ": keepalive\n\n"
+                continue
+            if event.id <= delivered:
+                continue
+            delivered = event.id
+            yield event.to_sse()
+
+
+def _events_response(request: Request, settings: Settings, job_id: str | None, types) -> StreamingResponse:
+    """Build an SSE response, or refuse when no queue is configured."""
+    broker: EventBroker | None = getattr(request.app.state, "job_events", None)
+    if broker is None or not broker.enabled or settings.database_url is None:
+        raise HTTPException(status_code=503, detail="aucune file de jobs configurée")
+    return StreamingResponse(
+        _stream(broker, settings.database_url, job_id, types, _last_event_id(request)),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/events", operation_id="stream_job_events")
+async def stream_job_events(
+    request: Request, settings: Annotated[Settings, Depends(get_settings)]
+) -> StreamingResponse:
+    """Follow every job's state changes, for a list that stays current."""
+    return _events_response(request, settings, None, _LIST_EVENT_TYPES)
+
+
+@router.get("/{job_id}/events", operation_id="stream_one_job_events")
+async def stream_one_job_events(
+    job_id: str, request: Request, settings: Annotated[Settings, Depends(get_settings)]
+) -> StreamingResponse:
+    """Follow one job, progress included.
+
+    A client that reconnects sends `Last-Event-ID` and resumes exactly where it stopped:
+    the missed events are read from the table before the stream goes live.
+    """
+    return _events_response(request, settings, job_id, None)
 
 
 @router.get("/{job_id}", operation_id="get_job")
