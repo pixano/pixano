@@ -179,7 +179,10 @@ async def _stream(
         while True:
             try:
                 event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
-            except TimeoutError:
+            except asyncio.TimeoutError:
+                # asyncio.TimeoutError n'est le TimeoutError natif qu'à partir de Python 3.11,
+                # et le projet supporte 3.10 : capturer le natif y laisserait l'exception
+                # remonter et tuerait le flux au premier silence.
                 yield ": keepalive\n\n"
                 continue
             if event.id <= delivered:
