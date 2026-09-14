@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import boto3
-from pydantic import ConfigDict, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from s3path import S3Path, register_configuration_parameter
 from typing_extensions import Self
@@ -34,6 +34,9 @@ class Settings(BaseSettings):
         inference_providers: Dictionary of connected inference providers (InferenceProvider instances),
             keyed by name.
         default_inference_provider: Name of the default inference provider to use.
+        database_url: PostgreSQL connection URL of the job queue, shared with pixano-worker.
+            Unset means no queue is configured: the job endpoints answer 503 rather than
+            failing at request time.
         cors_origins: Explicit list of origins allowed to make cross-origin requests. Defaults to an
             empty list, which disables CORS entirely (the app is same-origin in both development,
             via the Vite dev proxy, and production, where the UI is bundled into this app). Set it
@@ -51,6 +54,9 @@ class Settings(BaseSettings):
     aws_region: str | None = None
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
+    # Le nom du champ donnerait DATABASE_URL ; l'alias impose la même variable que celle du
+    # worker, pour qu'une seule valeur configure les deux composants.
+    database_url: str | None = Field(default=None, validation_alias="PIXANO_DATABASE_URL")
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
     cors_origins: list[str] = []
