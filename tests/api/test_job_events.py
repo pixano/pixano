@@ -12,10 +12,12 @@ import os
 
 import psycopg
 import pytest
+from fastapi import HTTPException
 from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
 from pixano.api.jobs.events import NOTIFY_CHANNEL, EventBroker, JobEvent, read_since
+from pixano.api.routers.jobs import _requested_types
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
@@ -175,3 +177,28 @@ def _emit(url: str, job_id: str, event_type: str, payload: dict) -> None:
             """,
             (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL),
         )
+
+
+class TestTypeFilter:
+    """Le client dit ce qu'il veut entendre — le serveur refuse ce qu'il ne comprend pas."""
+
+    def test_no_filter_means_everything(self) -> None:
+        assert _requested_types(None) is None
+
+    def test_a_single_type_is_kept(self) -> None:
+        assert _requested_types("state") == frozenset({"state"})
+
+    def test_spaces_around_names_are_tolerated(self) -> None:
+        assert _requested_types(" state , progress ") == frozenset({"state", "progress"})
+
+    def test_an_empty_filter_means_everything(self) -> None:
+        assert _requested_types("") is None
+
+    def test_an_unknown_type_is_refused_rather_than_ignored(self) -> None:
+        """Ignorer `stat` produirait un flux muet, et le silence est le pire des diagnostics."""
+        with pytest.raises(HTTPException) as raised:
+            _requested_types("stat")
+
+        assert raised.value.status_code == 422
+        assert "stat" in raised.value.detail
+        assert "progress" in raised.value.detail, "le message doit nommer les valeurs acceptées"
