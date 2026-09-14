@@ -137,10 +137,9 @@ def list_jobs(
     return [JobResponse.of(record) for record in records]
 
 
-# Sur le flux global, seuls les changements d'état passent. La progression d'un job émet un
-# événement par chunk : diffusée à tout le monde, elle noierait la liste des jobs sous des
-# messages dont elle n'a que faire.
-_LIST_EVENT_TYPES = frozenset({"state"})
+# Les types d'événements qu'un flux peut porter. Un nom inconnu est refusé plutôt qu'ignoré :
+# `types=stat` produirait sinon un flux muet, et le silence est le pire des diagnostics.
+_EVENT_TYPES = frozenset({"state", "progress"})
 
 # Un commentaire SSE périodique, pour que les intermédiaires réseau ne referment pas un flux
 # qu'ils croient inactif, et pour détecter un client parti.
@@ -203,12 +202,38 @@ def _events_response(request: Request, settings: Settings, job_id: str | None, t
     )
 
 
+def _requested_types(types: str | None) -> frozenset[str] | None:
+    """Read the `types` filter, or None for everything.
+
+    A job emits one progress event per chunk, so a client watching every job at once should
+    say what it wants. Asking for nothing means asking for all of it.
+    """
+    if types is None:
+        return None
+    wanted = {name.strip() for name in types.split(",") if name.strip()}
+    unknown = wanted - _EVENT_TYPES
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"types d'événements inconnus : {', '.join(sorted(unknown))} — "
+            f"valeurs acceptées : {', '.join(sorted(_EVENT_TYPES))}",
+        )
+    return frozenset(wanted) if wanted else None
+
+
 @router.get("/events", operation_id="stream_job_events")
 async def stream_job_events(
-    request: Request, settings: Annotated[Settings, Depends(get_settings)]
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    types: Annotated[str | None, Query(description="Comma-separated event types to keep.")] = None,
 ) -> StreamingResponse:
-    """Follow every job's state changes, for a list that stays current."""
-    return _events_response(request, settings, None, _LIST_EVENT_TYPES)
+    """Follow every job at once.
+
+    A list view wants state changes to stay current, and progress only if it draws bars; both
+    are one connection, because browsers allow very few concurrent ones per host and a stream
+    per running job would starve the rest of the application.
+    """
+    return _events_response(request, settings, None, _requested_types(types))
 
 
 @router.get("/{job_id}/events", operation_id="stream_one_job_events")
