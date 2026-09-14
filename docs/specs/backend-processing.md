@@ -116,6 +116,40 @@ lifecycle. The cost we accept in exchange is owning the recovery of abandoned wo
   hold that chunk forever. The docker probe catches a dead worker, not a healthy worker with
   dead work. A maximum chunk duration, independent of the lease, is needed.
 
+## 5ter. The worker depends on `pixano` — decided on measurement
+
+The worker must write its results into LanceDB with the Pixano schemas, which raised the
+question of whether it should depend on the `pixano` package, on a set of optional extras, or
+on a shared package extracted for the purpose. The worry was that depending on `pixano` would
+drag the whole web application into the worker image to write a vector.
+
+Measurement settles it:
+
+|                                      |                                    |
+| ------------------------------------ | ---------------------------------- |
+| `pixano.schemas` loads               | 22 distributions                   |
+| `pixano.datasets.dataset` loads      | 25 distributions                   |
+| `pixano.api.main` loads              | 67 distributions                   |
+| `pixano` runtime closure on disk     | **647 MB** across 89 distributions |
+| The dataset layer alone              | **600 MB** across 29 distributions |
+| **What a shared package would save** | **47 MB — 7 %**                    |
+
+The web layer genuinely is not imported by the dataset layer. But the weight is not there: it
+is in polars (145 MB), opencv (119 MB), pyarrow (115 MB), lancedb (99 MB), pandas and duckdb —
+the dependencies of LanceDB itself, which the worker needs whatever we do. Extracting a third
+package to publish, version and keep in step, for 7 %, is not a good trade; optional extras
+would buy the same 7 % for the same carving.
+
+**So the worker depends on `pixano`.**
+
+**A better lever, noted and not taken:** `pixano/features/utils/image.py` imports cv2 at module
+level, and that file is imported by `schemas/views/image.py` — so opencv, 119 MB, is pulled
+into `pixano.schemas`. cv2 is used there by three functions (reading a depth image, applying a
+colour map, extracting mask contours). Making that import lazy would save more than twice what
+the whole shared-package exercise would, for a one-file change, and it would benefit every
+consumer rather than only the worker. It touches the core, so it deserves its own change and
+its own verification that nothing relies on the import's side effect.
+
 ## 6. Deliberate deferrals
 
 | Deferred                                    | Until                        | Why it is safe to wait                                                                                                                                                                                                                                                                                                              |
