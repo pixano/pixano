@@ -7,6 +7,7 @@
 """Tests de l'installation du schéma de la file de jobs."""
 
 import re
+import threading
 
 import psycopg
 import pytest
@@ -167,3 +168,32 @@ class TestEnsureSchema:
         ).fetchone()
 
         assert row is not None and float(row[0]) < 1
+
+    def test_two_workers_can_install_at_the_same_instant(
+        self, blank_db: psycopg.Connection, postgres_url: str
+    ) -> None:
+        """`IF NOT EXISTS` n'est pas atomique face à un créateur concurrent.
+
+        Sans reprise, le worker perdant sortait en erreur et ne revenait jamais : le compose
+        ne lui donne aucune politique de redémarrage. Il aurait fallu attendre l'étape 4 et
+        ses workers multiples pour s'en apercevoir.
+        """
+        outcomes: list[str] = []
+
+        def install() -> None:
+            try:
+                with psycopg.connect(postgres_url) as conn:
+                    ensure_schema(conn)
+                outcomes.append("ok")
+            except Exception as exc:  # pragma: no cover - remonté par l'assertion
+                outcomes.append(repr(exc))
+
+        threads = [threading.Thread(target=install) for _ in range(2)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        assert outcomes == ["ok", "ok"]
+        rows = blank_db.execute(f"SELECT version FROM {SCHEMA_NAME}.schema_version").fetchall()
+        assert rows == [(SCHEMA_VERSION,)]
