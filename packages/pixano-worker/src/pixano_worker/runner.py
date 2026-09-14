@@ -32,7 +32,7 @@ CLAIM_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'running', updated_at = now()
 WHERE id = (
     SELECT id FROM {SCHEMA_NAME}.jobs
-    WHERE state = 'planning'
+    WHERE state = 'planning' AND cancel_requested_at IS NULL
     ORDER BY created_at
     FOR UPDATE SKIP LOCKED
     LIMIT 1
@@ -73,7 +73,7 @@ SET state = CASE
         ELSE 'done' END,
     updated_at = now()
 WHERE j.id = %s
-  AND j.state IN ('pending', 'running')
+  AND j.state IN ('planning', 'pending', 'running')
   AND NOT EXISTS (
       SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
       WHERE c.job_id = j.id AND c.state IN ('pending', 'running')
@@ -163,7 +163,7 @@ def run_batch(conn: psycopg.Connection, registry: Registry, worker_id: str, batc
     for chunk in chunks:
         jobs_touched.add(chunk.job_id)
         if chunk.job_id in cancelled:
-            queue.release(conn, chunk)
+            queue.cancel_chunk(conn, chunk)
             continue
         _run_chunk(conn, registry, chunk)
 
