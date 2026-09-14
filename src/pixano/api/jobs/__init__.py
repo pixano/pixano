@@ -6,6 +6,7 @@
 
 """Submission of processing jobs to the queue shared with pixano-worker."""
 
+from . import queries
 from .enqueue import (
     DEFAULT_CHUNK_SIZE,
     JobNotFoundError,
@@ -24,6 +25,7 @@ from .queries import SCHEMA_NAME
 
 __all__ = [
     "DEFAULT_CHUNK_SIZE",
+    "queries",
     "SCHEMA_NAME",
     "JobNotFoundError",
     "JobRecord",
