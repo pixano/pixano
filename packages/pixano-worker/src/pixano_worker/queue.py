@@ -70,6 +70,15 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 RETURNING job_id
 """
 
+# Un chunk dont le job est annulé ne revient pas en file : il en sort. Le rendre « en
+# attente » le ferait reréclamer au tour suivant, relâcher, reréclamer — sans fin, et le job
+# ne se conclurait jamais faute de voir sa file se vider.
+CANCEL_CHUNK = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET state = 'cancelled', lease_until = NULL, claimed_by = NULL, updated_at = now()
+WHERE id = %s AND state = 'running' AND attempts = %s
+"""
+
 RELEASE = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
@@ -162,8 +171,13 @@ def fail(conn: psycopg.Connection, chunk: Chunk, error: dict[str, Any]) -> bool:
 
 
 def release(conn: psycopg.Connection, chunk: Chunk) -> bool:
-    """Rendre un chunk sans l'exécuter — le cas d'une annulation vue entre deux lots."""
+    """Remettre un chunk en file sans l'exécuter."""
     return conn.execute(RELEASE, (chunk.id, chunk.attempts)).rowcount > 0
+
+
+def cancel_chunk(conn: psycopg.Connection, chunk: Chunk) -> bool:
+    """Sortir de la file un chunk dont le job a été annulé."""
+    return conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts)).rowcount > 0
 
 
 def release_own(conn: psycopg.Connection, worker_id: str) -> int:

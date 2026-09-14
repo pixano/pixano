@@ -15,7 +15,8 @@ from pixano_worker.schema import SCHEMA_NAME
 
 def _enqueue(db: psycopg.Connection, chunks: int, tasks_per_chunk: int = 10) -> str:
     row = db.execute(
-        f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks) " "VALUES ('factice', 'ds', %s) RETURNING id",
+        f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks, state) "
+        "VALUES ('factice', 'ds', %s, 'pending') RETURNING id",
         (chunks * tasks_per_chunk,),
     ).fetchone()
     assert row is not None
