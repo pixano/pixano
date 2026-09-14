@@ -5,12 +5,21 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { ArrowLeft, Box, FolderOpen, LayoutGrid, Loader2, Search } from "lucide-svelte";
+  import {
+    ArrowLeft,
+    Box,
+    FolderOpen,
+    LayoutGrid,
+    ListChecks,
+    Loader2,
+    Search,
+  } from "lucide-svelte";
   import { onMount } from "svelte";
 
   import { intersect } from "$lib/actions/intersect";
   import { listDatasets, listRecords } from "$lib/api/datasets";
   import type { RecordResponse } from "$lib/api/restTypes";
+  import JobsPanel from "$lib/components/jobs/JobsPanel.svelte";
   import WidgetPalette from "$lib/components/sidebar/WidgetPalette.svelte";
   import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
   import type { DatasetInfo } from "$lib/types/dataset";
@@ -29,6 +38,7 @@ License: CECILL-C
     explorer: { label: "Explorer", icon: FolderOpen },
     widgets: { label: "Widgets", icon: LayoutGrid },
     search: { label: "Search", icon: Search },
+    jobs: { label: "Jobs", icon: ListChecks },
   };
 
   let section = $derived(sectionLabels[activeSection] ?? sectionLabels.widgets);
@@ -206,7 +216,9 @@ License: CECILL-C
 
   <!-- Panel content -->
   <div class="flex-1 overflow-y-auto">
-    {#if activeSection === "widgets"}
+    {#if activeSection === "jobs"}
+      <JobsPanel datasetId={selectedDataset?.id ?? null} />
+    {:else if activeSection === "widgets"}
       <WidgetPalette {registry} onWidgetAdd={handleWidgetAdd} />
     {:else if activeSection === "explorer"}
       {#if loading}

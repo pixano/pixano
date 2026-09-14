@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { FolderOpen, LayoutGrid, Search, Settings } from "lucide-svelte";
+  import { FolderOpen, LayoutGrid, ListChecks, Search, Settings } from "lucide-svelte";
 
   interface Props {
     activeSection: string;
@@ -19,6 +19,7 @@ License: CECILL-C
     { id: "explorer", icon: FolderOpen, label: "Explorer" },
     { id: "widgets", icon: LayoutGrid, label: "Widgets" },
     { id: "search", icon: Search, label: "Search" },
+    { id: "jobs", icon: ListChecks, label: "Jobs" },
   ] as const;
 </script>
 
