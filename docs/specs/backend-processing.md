@@ -82,6 +82,40 @@ What the version marker buys is that the failure is loud. `CREATE TABLE IF NOT E
 
 When this database does hold something irreplaceable, a real runner is added by _baseline_: a first migration containing the schema as it then stands, marked already-applied on existing databases and executed on new ones. That retrofit is cheap, which is what makes deferring it safe.
 
+## 5bis. The queue is home-grown — decided, not to be reopened
+
+Procrastinate was evaluated against this schema (version 3.9, a timeboxed spike). It is a
+capable library and offers, ready-made, the one thing we hand-roll: recovery of jobs left
+behind by a dead worker, through worker registration, heartbeats and a stall sweep. It also
+brings `LISTEN/NOTIFY`, retry strategies, and batch enqueuing.
+
+It was **not** adopted, for one structural reason and two practical ones:
+
+- **It owns the worker loop.** Step 4 requires a cap on in-flight calls _per model_, derived
+  from the replicas of the inference deployment: a worker claims a chunk only when a slot is
+  free. That is a pull policy gated by a per-model semaphore; Procrastinate exposes a global
+  concurrency setting. We would be fighting its loop exactly when step 4 becomes the subject.
+- **It does not replace our schema, it adds to it.** Four tables, three SQL types, 20 kB of
+  DDL — and our `jobs` table would still be needed, since Procrastinate has no notion of a
+  user-facing job made of N chunks with a progress bar. Two job models, two state
+  vocabularies to map.
+- **It fetches one job at a time.** Mapping one Procrastinate job to one of our chunks makes
+  that acceptable, but it forfeits the batch claim we already have and measured.
+
+Partial adoption is not on the table: the stall machinery is tied to its own tables and job
+lifecycle. The cost we accept in exchange is owning the recovery of abandoned work.
+
+**Two lessons taken from reading its queries, to apply when the lease lands:**
+
+- Its heartbeat is **per worker**, not per unit of work: one row refreshed per worker per
+  interval, whatever it holds. Our per-chunk lease refreshes one row per in-flight chunk.
+  Negligible with one or two workers; worth revisiting if workers ever number in the dozens.
+- It runs a **second, independent stall detector** — work whose start event is older than a
+  threshold, regardless of heartbeat. The gap it closes is ours too: a live worker that keeps
+  beating while one chunk hangs — blocked in an inference call that never returns — would
+  hold that chunk forever. The docker probe catches a dead worker, not a healthy worker with
+  dead work. A maximum chunk duration, independent of the lease, is needed.
+
 ## 6. Deliberate deferrals
 
 | Deferred                                    | Until                        | Why it is safe to wait                                                                                                                                                                                                                                                                                                              |
