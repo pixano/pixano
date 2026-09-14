@@ -4,12 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-"""Planning a job and putting it on the queue.
+"""Recording a job request on the queue.
 
-The application plans and inserts; the worker consumes. Planning belongs here because the
-user needs an answer straight away — "accepted, 12 340 images" — which means counting now,
-and because this process already has the dataset open. `Dataset.count_rows_where` uses
-LanceDB's native count, so planning costs no table materialization.
+The application records the request; the worker plans and executes it. Splitting work is
+kind-specific logic — by video, by image, by selection — and kind code only ever runs in the
+worker, so a job is written here without chunks, in state `planning`, and the worker expands
+it. What the application does own is refusing a request that cannot succeed: an unknown kind,
+or parameters that do not fit the kind's declared schema.
 
 The worker owns the schema: this module never creates anything. On a database where the
 worker has never run, the tables are simply absent and callers get `QueueUnavailableError`.
@@ -17,20 +18,14 @@ worker has never run, the tables are simply absent and callers get `QueueUnavail
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterator, Sequence
+from typing import Any, Sequence
 
+import jsonschema
 import psycopg
 from psycopg.types.json import Jsonb
 
-from pixano.datasets import Dataset
-from pixano.schemas.schema_group import SchemaGroup
-
 from . import queries
 
-
-# Un chunk porte assez de tâches pour amortir un aller-retour en base, sans être si gros
-# qu'une reprise après coupure refasse un travail considérable.
-DEFAULT_CHUNK_SIZE = 64
 
 MAX_LISTED_JOBS = 50
 
@@ -41,6 +36,14 @@ class QueueUnavailableError(RuntimeError):
 
 class JobNotFoundError(LookupError):
     """Aucun job ne porte cet identifiant."""
+
+
+class UnknownKindError(ValueError):
+    """Aucun worker n'a déclaré savoir exécuter ce type de job."""
+
+
+class InvalidParamsError(ValueError):
+    """Les paramètres ne respectent pas le schéma déclaré par le type."""
 
 
 @dataclass(frozen=True)
@@ -94,82 +97,56 @@ def _require_queue(conn: psycopg.Connection) -> None:
         )
 
 
-def plan_chunks(
-    item_ids: Sequence[str], chunk_size: int = DEFAULT_CHUNK_SIZE
-) -> Iterator[tuple[int, dict[str, Any], int]]:
-    """Découper une sélection d'items en chunks numérotés.
+def available_kinds(conn: psycopg.Connection) -> dict[str, dict[str, Any]]:
+    """Les types de jobs qu'un worker a déclaré savoir exécuter, et leurs schémas."""
+    _require_queue(conn)
+    return {row[0]: row[1] for row in conn.execute(queries.LIST_KINDS).fetchall()}
 
-    Le payload reste opaque pour le moteur : il porte les identifiants d'items, que le type
-    de job saura lire. Un découpage par plages serait plus compact, mais l'ordre des lignes
-    LanceDB n'est pas un contrat — une plage calculée à la soumission ne désignerait pas
-    forcément les mêmes lignes à l'exécution.
 
-    Args:
-        item_ids: Les items à traiter, dans l'ordre voulu.
-        chunk_size: Nombre de tâches par chunk.
+def check_params(conn: psycopg.Connection, kind: str, params: dict[str, Any]) -> None:
+    """Refuser une demande qu'aucun worker ne saurait exécuter.
 
-    Yields:
-        Le rang du chunk, son payload, et son nombre de tâches.
+    Valider ici épargne à l'utilisateur un job qui part en file pour échouer ensuite, et
+    épargne au worker de découvrir une erreur de saisie au moment de planifier.
+
+    Raises:
+        UnknownKindError: Aucun worker ne déclare ce type.
+        InvalidParamsError: Les paramètres ne respectent pas le schéma déclaré.
     """
-    if chunk_size < 1:
-        raise ValueError("chunk_size doit valoir au moins 1")
-    for seq, start in enumerate(range(0, len(item_ids), chunk_size)):
-        batch = list(item_ids[start : start + chunk_size])
-        yield seq, {"item_ids": batch}, len(batch)
+    _require_queue(conn)
+    row = conn.execute(queries.SELECT_KIND, (kind,)).fetchone()
+    if row is None:
+        declared = sorted(available_kinds(conn))
+        known = ", ".join(declared) if declared else "aucun"
+        raise UnknownKindError(f"aucun worker ne déclare le type de job '{kind}' — types connus : {known}")
+
+    try:
+        jsonschema.validate(params, row[0])
+    except jsonschema.ValidationError as error:
+        raise InvalidParamsError(f"paramètres invalides pour '{kind}' : {error.message}") from error
 
 
-def select_record_ids(dataset: Dataset, where: str | None = None) -> list[str]:
-    """Lister les enregistrements d'un dataset, éventuellement filtrés.
-
-    Le comptage passe par le `count_rows` natif de LanceDB, qui ne matérialise pas la table ;
-    c'est ce qui rend la planification assez peu coûteuse pour tenir dans une requête HTTP.
-    """
-    table = SchemaGroup.RECORD.value
-    total = dataset.count_rows_where(table, where)
-    records = dataset.get_data(table_name=table, limit=total, where=where)
-    return [record.id for record in records]
-
-
-def enqueue(
+def submit(
     conn: psycopg.Connection,
     *,
     kind: str,
     dataset_id: str,
-    item_ids: Sequence[str],
     params: dict[str, Any] | None = None,
-    chunk_size: int = DEFAULT_CHUNK_SIZE,
 ) -> JobRecord:
-    """Créer un job et mettre tous ses chunks en file, dans une seule transaction.
-
-    L'atomicité n'est pas un détail : un worker ne doit jamais pouvoir observer un job sans
-    son travail, sinon il le conclurait terminé avant qu'il ait commencé.
+    """Enregistrer une demande de job, à charge du worker de la découper.
 
     Raises:
         QueueUnavailableError: Le schéma n'est pas installé.
-        ValueError: La sélection est vide.
+        UnknownKindError: Aucun worker ne déclare ce type.
+        InvalidParamsError: Les paramètres ne respectent pas le schéma déclaré.
     """
-    if not item_ids:
-        raise ValueError("un job sans aucun item n'a rien à exécuter")
-
-    chunks = list(plan_chunks(item_ids, chunk_size))
-
+    params = params or {}
+    check_params(conn, kind, params)
     with conn.transaction():
-        _require_queue(conn)
-        row = conn.execute(queries.INSERT_JOB, (kind, dataset_id, Jsonb(params or {}), len(item_ids))).fetchone()
+        row = conn.execute(queries.INSERT_JOB, (kind, dataset_id, Jsonb(params))).fetchone()
         if row is None:  # pragma: no cover - RETURNING garantit une ligne
             raise RuntimeError("l'insertion du job n'a rien renvoyé")
-        job = JobRecord.from_row(row)
-
-        conn.execute(
-            queries.INSERT_CHUNKS,
-            (
-                job.id,
-                [seq for seq, _, _ in chunks],
-                [Jsonb(payload) for _, payload, _ in chunks],
-                [count for _, _, count in chunks],
-            ),
-        )
-    return job
+    return JobRecord.from_row(row)
 
 
 def get(conn: psycopg.Connection, job_id: str) -> JobRecord:

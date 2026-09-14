@@ -4,18 +4,27 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests for planning jobs and putting them on the queue."""
+"""Tests for recording job requests on the queue."""
 
 import os
 
 import psycopg
 import pytest
+from psycopg.types.json import Jsonb
 
 from pixano.api import jobs
-from pixano.api.jobs import SCHEMA_NAME, queries
+from pixano.api.jobs import SCHEMA_NAME
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
+
+# The shape a worker publishes for a kind, reduced to what these tests need.
+FAKE_SCHEMA = {
+    "type": "object",
+    "properties": {"task_count": {"type": "integer", "minimum": 1}},
+    "required": ["task_count"],
+    "additionalProperties": False,
+}
 
 
 @pytest.fixture
@@ -32,35 +41,19 @@ def queue() -> psycopg.Connection:
         exists = conn.execute(f"SELECT to_regclass('{SCHEMA_NAME}.jobs')").fetchone()
         if exists is None or exists[0] is None:
             pytest.skip("the queue schema is absent — pixano-worker installs it")
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs CASCADE")
+        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
         yield conn
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs CASCADE")
+        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
 
 
-class TestPlanChunks:
-    """Splitting a selection is pure arithmetic and needs no database."""
-
-    def test_splits_into_full_chunks_and_a_remainder(self) -> None:
-        chunks = list(jobs.plan_chunks([f"i{n}" for n in range(10)], chunk_size=4))
-
-        assert [count for _, _, count in chunks] == [4, 4, 2]
-        assert [seq for seq, _, _ in chunks] == [0, 1, 2]
-
-    def test_carries_the_identifiers_in_the_payload(self) -> None:
-        """The payload stays opaque to the engine; the job kind reads it."""
-        chunks = list(jobs.plan_chunks(["a", "b", "c"], chunk_size=2))
-
-        assert [payload for _, payload, _ in chunks] == [{"item_ids": ["a", "b"]}, {"item_ids": ["c"]}]
-
-    def test_a_single_item_is_one_chunk(self) -> None:
-        assert len(list(jobs.plan_chunks(["only"], chunk_size=64))) == 1
-
-    def test_an_empty_selection_plans_nothing(self) -> None:
-        assert list(jobs.plan_chunks([], chunk_size=8)) == []
-
-    def test_refuses_a_meaningless_chunk_size(self) -> None:
-        with pytest.raises(ValueError, match="chunk_size"):
-            list(jobs.plan_chunks(["a"], chunk_size=0))
+@pytest.fixture
+def declared(queue: psycopg.Connection) -> psycopg.Connection:
+    """A queue where a worker has declared it can run the fake kind."""
+    queue.execute(
+        f"INSERT INTO {SCHEMA_NAME}.job_kinds (name, params_schema, declared_by) VALUES (%s, %s, %s)",
+        ("fake", Jsonb(FAKE_SCHEMA), "worker-test"),
+    )
+    return queue
 
 
 class TestConnect:
@@ -75,107 +68,102 @@ class TestConnect:
             jobs.connect("postgresql://nobody@127.0.0.1:1/none?connect_timeout=1")
 
 
-class TestEnqueue:
-    def test_writes_the_job_and_all_of_its_chunks(self, queue: psycopg.Connection) -> None:
-        job = jobs.enqueue(
-            queue,
-            kind="fake",
-            dataset_id="ds",
-            item_ids=[f"i{n}" for n in range(100)],
-            chunk_size=16,
-        )
+class TestAvailableKinds:
+    def test_an_empty_registry_means_nothing_can_run(self, queue: psycopg.Connection) -> None:
+        assert jobs.available_kinds(queue) == {}
 
-        row = queue.execute(
-            f"SELECT count(*), sum(task_count) FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s",
-            (job.id,),
-        ).fetchone()
-        assert row == (7, 100)
-        assert job.total_tasks == 100
-        assert job.state == "pending"
+    def test_reports_what_a_worker_declared(self, declared: psycopg.Connection) -> None:
+        assert jobs.available_kinds(declared) == {"fake": FAKE_SCHEMA}
 
-    def test_the_job_and_its_chunks_land_together(
-        self, queue: psycopg.Connection, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A worker must never see a job without its work, or it would settle it as done.
 
-        The failure is forced into the chunk insert — after the job row exists — because
-        that is the only window where a non-transactional implementation would leave an
-        empty job behind.
-        """
-        monkeypatch.setattr(
-            queries,
-            "INSERT_CHUNKS",
-            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count) " "VALUES (%s, 0, 0), (%s, %s, %s)",
-        )
+class TestValidation:
+    """Refusing at submission beats queueing a job that cannot succeed."""
 
-        with pytest.raises(psycopg.Error):
-            jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=["a"])
+    def test_an_undeclared_kind_is_refused(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.UnknownKindError, match="ghost"):
+            jobs.check_params(declared, "ghost", {})
 
-        row = queue.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.jobs").fetchone()
+    def test_the_refusal_names_what_is_available(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.UnknownKindError, match="fake"):
+            jobs.check_params(declared, "ghost", {})
+
+    def test_params_must_match_the_declared_schema(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.InvalidParamsError):
+            jobs.check_params(declared, "fake", {"task_count": "beaucoup"})
+
+    def test_a_missing_required_parameter_is_refused(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.InvalidParamsError):
+            jobs.check_params(declared, "fake", {})
+
+    def test_an_unexpected_parameter_is_refused(self, declared: psycopg.Connection) -> None:
+        """A typo in a parameter name would otherwise be silently ignored by the worker."""
+        with pytest.raises(jobs.InvalidParamsError):
+            jobs.check_params(declared, "fake", {"task_count": 10, "tsak_size": 4})
+
+    def test_valid_params_pass(self, declared: psycopg.Connection) -> None:
+        jobs.check_params(declared, "fake", {"task_count": 10})
+
+
+class TestSubmit:
+    def test_records_the_request_without_chunks(self, declared: psycopg.Connection) -> None:
+        """The worker splits the work; the application only records what was asked."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 50})
+
+        assert job.state == "planning"
+        assert job.total_tasks == 0
+        row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == 0
 
-    def test_stores_the_parameters_as_given(self, queue: psycopg.Connection) -> None:
-        params = {"model": "clip", "batch": 16}
+    def test_stores_the_parameters_as_given(self, declared: psycopg.Connection) -> None:
+        params = {"task_count": 7}
 
-        job = jobs.enqueue(queue, kind="embed", dataset_id="ds", item_ids=["a"], params=params)
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params=params)
 
-        row = queue.execute(f"SELECT params FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job.id,)).fetchone()
+        row = declared.execute(f"SELECT params FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job.id,)).fetchone()
         assert row is not None and row[0] == params
 
-    def test_refuses_an_empty_selection(self, queue: psycopg.Connection) -> None:
-        with pytest.raises(ValueError, match="rien à exécuter"):
-            jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=[])
+    def test_nothing_is_written_when_the_kind_is_unknown(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.UnknownKindError):
+            jobs.submit(declared, kind="ghost", dataset_id="ds")
+
+        row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.jobs").fetchone()
+        assert row is not None and row[0] == 0
+
+    def test_nothing_is_written_when_the_params_are_invalid(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.InvalidParamsError):
+            jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": -1})
+
+        row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.jobs").fetchone()
+        assert row is not None and row[0] == 0
 
 
 class TestReadAndCancel:
-    def test_reads_a_job_back(self, queue: psycopg.Connection) -> None:
-        job = jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=["a", "b"])
+    def test_reads_a_job_back(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
 
-        assert jobs.get(queue, job.id) == job
+        assert jobs.get(declared, job.id) == job
 
-    def test_an_unknown_job_is_reported_as_missing(self, queue: psycopg.Connection) -> None:
+    def test_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
         with pytest.raises(jobs.JobNotFoundError):
-            jobs.get(queue, "00000000-0000-0000-0000-000000000000")
+            jobs.get(declared, "00000000-0000-0000-0000-000000000000")
 
-    def test_lists_the_most_recent_first(self, queue: psycopg.Connection) -> None:
-        first = jobs.enqueue(queue, kind="a", dataset_id="ds", item_ids=["x"])
-        second = jobs.enqueue(queue, kind="b", dataset_id="ds", item_ids=["y"])
+    def test_lists_the_most_recent_first(self, declared: psycopg.Connection) -> None:
+        first = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 1})
+        second = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 1})
 
-        assert [job.id for job in jobs.list_jobs(queue)][:2] == [second.id, first.id]
+        assert [job.id for job in jobs.list_jobs(declared)][:2] == [second.id, first.id]
 
-    def test_cancelling_empties_the_claimable_pool(self, queue: psycopg.Connection) -> None:
-        job = jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=[f"i{n}" for n in range(50)])
+    def test_cancelling_a_job_not_yet_planned_settles_it(self, declared: psycopg.Connection) -> None:
+        """A job cancelled before the worker reached it has nothing in flight to wait for."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
 
-        cancelled = jobs.cancel(queue, job.id)
+        cancelled = jobs.cancel(declared, job.id)
 
         assert cancelled.state == "cancelled"
-        row = queue.execute(
-            f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'pending'",
-            (job.id,),
-        ).fetchone()
-        assert row is not None and row[0] == 0
 
-    def test_a_job_with_work_in_flight_is_not_settled_yet(self, queue: psycopg.Connection) -> None:
-        """A running chunk is left to its worker, which gives it back between two batches."""
-        job = jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=["a", "b"], chunk_size=1)
-        queue.execute(
-            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'running', "
-            "lease_until = now() + interval '2 minutes' WHERE seq = 0"
-        )
+    def test_cancelling_twice_is_harmless(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 1})
 
-        cancelled = jobs.cancel(queue, job.id)
+        jobs.cancel(declared, job.id)
 
-        assert cancelled.state == "pending"
-        row = queue.execute(
-            f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'running'",
-            (job.id,),
-        ).fetchone()
-        assert row is not None and row[0] == 1
-
-    def test_cancelling_twice_is_harmless(self, queue: psycopg.Connection) -> None:
-        job = jobs.enqueue(queue, kind="fake", dataset_id="ds", item_ids=["a"])
-
-        jobs.cancel(queue, job.id)
-        again = jobs.cancel(queue, job.id)
-
-        assert again.state == "cancelled"
+        assert jobs.cancel(declared, job.id).state == "cancelled"
