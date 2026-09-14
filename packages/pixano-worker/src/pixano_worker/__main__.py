@@ -21,6 +21,7 @@ import httpx
 import psycopg
 
 from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
+from .schema import SchemaVersionError, ensure_schema
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -31,6 +32,7 @@ log = logging.getLogger("pixano-worker")
 # train d'attendre une dépendance absente soit déclaré mort.
 MAX_BACKOFF_S = MAX_HEARTBEAT_AGE_S / 3
 IDLE_POLL_INTERVAL_S = 5
+CONNECT_TIMEOUT_S = 5
 
 
 def _wait_for(label: str, probe: Callable[[], None], on_attempt: Callable[[], None]) -> None:
@@ -59,7 +61,7 @@ def wait_for_database(database_url: str, on_attempt: Callable[[], None]) -> None
     """Attendre que PostgreSQL accepte une connexion."""
 
     def probe() -> None:
-        with psycopg.connect(database_url, connect_timeout=3) as conn, conn.cursor() as cur:
+        with psycopg.connect(database_url, connect_timeout=CONNECT_TIMEOUT_S) as conn, conn.cursor() as cur:
             cur.execute("SELECT 1")
 
     _wait_for("postgresql", probe, on_attempt)
@@ -99,6 +101,21 @@ def main() -> int:
 
     alive()
     wait_for_database(config.database_url, alive)
+
+    # Le schéma se vérifie avant d'attendre l'inference : un schéma incompatible est fatal,
+    # et l'opérateur doit l'apprendre en deux secondes, pas après cinq minutes d'attente
+    # polie d'un serveur dont ce worker ne se servira jamais.
+    try:
+        with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S) as conn:
+            ensure_schema(conn)
+    except SchemaVersionError as exc:
+        log.error("%s", exc)
+        return 1
+    except psycopg.Error as exc:
+        log.error("impossible d'installer le schéma : %s", exc)
+        return 1
+
+    alive()
     wait_for_inference(config.inference_url, config.inference_api_key, alive)
 
     log.info("worker démarré, en attente de jobs")
