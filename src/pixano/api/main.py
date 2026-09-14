@@ -17,6 +17,7 @@ from s3path import S3Path
 from starlette.middleware.gzip import GZipMiddleware
 
 from pixano.__version__ import __version__
+from pixano.api.jobs.events import EventBroker
 from pixano.api.routers import include_api_routers
 from pixano.api.settings import Settings
 from pixano.datasets.utils.errors import DatasetBusyError
@@ -42,16 +43,30 @@ class SelectiveGZipMiddleware(GZipMiddleware):
         await super().__call__(scope, receive, send)
 
 
-@asynccontextmanager
-async def _widen_threadpool(_: FastAPI):
-    """Raise the sync-endpoint threadpool above anyio's 40-token default.
+def _lifespan(settings: Settings):
+    """Build the app lifespan: a wider threadpool, and the job event listener."""
 
-    Every data endpoint is sync `def`, and blob/frame downloads hold a token
-    for their full duration — a gallery plus a video workspace plus job polling
-    exhausts 40 while a background import competes for CPU.
-    """
-    anyio.to_thread.current_default_thread_limiter().total_tokens = 100
-    yield
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Raise the sync-endpoint threadpool above anyio's 40-token default.
+
+        Every data endpoint is sync `def`, and blob/frame downloads hold a token
+        for their full duration — a gallery plus a video workspace plus job polling
+        exhausts 40 while a background import competes for CPU.
+
+        The job event listener starts here so that one connection serves every open
+        stream, instead of one per browser tab.
+        """
+        anyio.to_thread.current_default_thread_limiter().total_tokens = 100
+        broker = EventBroker(settings.database_url)
+        broker.start()
+        app.state.job_events = broker
+        try:
+            yield
+        finally:
+            await broker.stop()
+
+    return lifespan
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
@@ -64,7 +79,12 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(title="Pixano", version=__version__, default_response_class=JSONResponse, lifespan=_widen_threadpool)
+    app = FastAPI(
+        title="Pixano",
+        version=__version__,
+        default_response_class=JSONResponse,
+        lifespan=_lifespan(settings),
+    )
 
     @app.exception_handler(DatasetBusyError)
     async def dataset_busy_handler(_request, error: DatasetBusyError):
