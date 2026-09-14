@@ -24,6 +24,21 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.schema_version (
     applied_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Ce que les workers savent exécuter. Chacun y déclare son registre au démarrage : c'est la
+-- source de vérité pour l'application, qui n'a aucun autre moyen de savoir si un type de job
+-- existe — elle ne partage aucun code avec le worker. La question posée à la soumission est
+-- « existe-t-il un worker capable de faire ça », pas « cette chaîne est-elle connue ».
+CREATE TABLE IF NOT EXISTS pixano_jobs.job_kinds (
+    name          text        PRIMARY KEY CHECK (name <> ''),
+    -- Le schéma JSON des paramètres du type, publié depuis son modèle pydantic. Il permet à
+    -- l'application de refuser des paramètres invalides à la soumission plutôt que de mettre
+    -- en file un job qui échouera à l'exécution.
+    params_schema jsonb       NOT NULL DEFAULT '{}'::jsonb
+                              CHECK (jsonb_typeof(params_schema) = 'object'),
+    declared_by   text        NOT NULL,
+    declared_at   timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS pixano_jobs.jobs (
     -- L'identifiant est produit par la base : ni l'application ni le worker n'ont besoin
     -- d'une bibliothèque d'identifiants pour créer un job.
@@ -32,7 +47,7 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.jobs (
     dataset             text        NOT NULL CHECK (dataset <> ''),
     params              jsonb       NOT NULL DEFAULT '{}'::jsonb
                                     CHECK (jsonb_typeof(params) = 'object'),
-    state               text        NOT NULL DEFAULT 'pending',
+    state               text        NOT NULL DEFAULT 'planning',
     -- L'annulation a sa propre colonne. L'instant est gratuit et répond en plus à
     -- « quand l'a-t-on demandée ? » ; `IS NOT NULL` tient lieu de booléen.
     cancel_requested_at timestamptz,
@@ -42,8 +57,11 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.jobs (
     created_at          timestamptz NOT NULL DEFAULT now(),
     updated_at          timestamptz NOT NULL DEFAULT now(),
 
+    -- `planning` précède `pending` : l'application enregistre la demande, le worker exécute le
+    -- planificateur du type et insère les chunks. Découper par vidéo ou par image est une
+    -- logique du type de job, qui ne s'exécute que côté worker.
     CONSTRAINT jobs_state_valid
-        CHECK (state IN ('pending', 'running', 'done', 'error', 'cancelled')),
+        CHECK (state IN ('planning', 'pending', 'running', 'done', 'error', 'cancelled')),
     -- Une annulation ne peut structurellement pas s'écrire dans la charge d'erreur : le
     -- défaut du magasin SQLite est interdit par une contrainte, pas par une convention.
     CONSTRAINT jobs_error_only_when_failed
@@ -105,6 +123,10 @@ CREATE INDEX IF NOT EXISTS job_chunks_pending_idx
 -- multiplié par la taille de lot : l'index reste minuscule.
 CREATE INDEX IF NOT EXISTS job_chunks_expired_lease_idx
     ON pixano_jobs.job_chunks (lease_until) WHERE state = 'running';
+
+-- Les jobs que le worker doit encore découper. L'ensemble est minuscule et se vide seul.
+CREATE INDEX IF NOT EXISTS jobs_to_plan_idx
+    ON pixano_jobs.jobs (created_at) WHERE state = 'planning';
 
 -- Liste des jobs dans l'interface.
 CREATE INDEX IF NOT EXISTS jobs_created_at_idx
