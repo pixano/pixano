@@ -150,8 +150,108 @@ class TestProvenance:
     """Aucune sortie de job ne doit atterrir dans un dataset sans qu'on sache d'où elle vient."""
 
     def test_names_the_kind_and_the_job(self, dataset: _FakeDataset) -> None:
-        provenance = _writer(dataset, "job-42").provenance()
+        provenance = JobWriter(lambda: dataset, "fake", "job-42", "other").provenance()
 
-        assert provenance["source_type"] == "job"
+        assert provenance["source_type"] == "other"
         assert provenance["source_name"] == "fake"
         assert json.loads(provenance["source_metadata"])["job_id"] == "job-42"
+
+
+class TestAgainstRealLance:
+    """Les tests précédents passent par un double ; ceux-ci écrivent dans un vrai LanceDB.
+
+    Le double reproduit les deux opérations dont l'écrivain se sert, mais pas les contrôles
+    d'intégrité de Pixano — et ce sont eux qui ont révélé qu'une sortie de job ne peut pas
+    inventer les enregistrements auxquels elle se rattache.
+    """
+
+    @pytest.fixture
+    def toy(self, tmp_path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.annotations.classification import Classification
+        from pixano.schemas.records import Record
+
+        dataset = Dataset.create(
+            tmp_path / "jouet",
+            DatasetInfo(id="jouet", name="Jouet", record=Record, classification=Classification),
+        )
+        dataset.add_data("records", [Record(id=f"task-{n}") for n in range(60)])
+        return dataset
+
+    @staticmethod
+    def _run(toy, job_id: str, task_count: int) -> None:
+        from pixano_worker.kinds import FakeKind, FakeParams
+
+        kind = FakeKind()
+        params = FakeParams(task_count=task_count, chunk_size=20, seconds_per_task=0.0, write_to="classifications")
+        for chunk in kind.plan("jouet", params):
+            writer = JobWriter(lambda: toy, kind.name, job_id, kind.source_type)
+            kind.write(writer, kind.process(chunk.payload, params), chunk.payload, params)
+
+    @staticmethod
+    def _fingerprint(toy) -> tuple[int, str]:
+        rows = toy.get_data("classifications", limit=10_000)
+        material = sorted((r.id, r.record_id, tuple(r.labels), r.source_name) for r in rows)
+        return len(rows), hashlib.sha256(repr(material).encode()).hexdigest()
+
+    def test_the_same_job_run_twice_writes_the_same_content(self, toy) -> None:
+        """La définition de fini du lot, contre le vrai magasin."""
+        self._run(toy, "job-1", 60)
+        first = self._fingerprint(toy)
+
+        self._run(toy, "job-1", 60)
+
+        assert self._fingerprint(toy) == first
+
+    def test_resubmitting_does_not_duplicate(self, toy) -> None:
+        self._run(toy, "job-1", 60)
+        first = self._fingerprint(toy)
+
+        self._run(toy, "job-2", 60)
+
+        assert self._fingerprint(toy) == first
+
+    def test_every_row_says_where_it_came_from(self, toy) -> None:
+        self._run(toy, "job-1", 20)
+
+        rows = toy.get_data("classifications", limit=100)
+        assert rows
+        for row in rows:
+            assert row.source_name == "fake"
+            assert json.loads(row.source_metadata)["job_id"] == "job-1"
+
+    def test_a_kind_that_runs_no_model_does_not_claim_to(self, toy) -> None:
+        """`model` désignerait une prédiction ; celle-ci n'en est pas une."""
+        self._run(toy, "job-1", 20)
+
+        assert toy.get_data("classifications", limit=1)[0].source_type == "other"
+
+    def test_it_cannot_write_into_a_dataset_it_was_not_built_for(self, toy, tmp_path) -> None:
+        """Le garde-fou est structurel, et vaut mieux qu'une convention de nommage.
+
+        Les noms de tables sont canoniques dans Pixano, donc « une table de jouet » n'existe
+        pas. Mais un dataset réel n'a pas les enregistrements que ce type invente, et le
+        contrôle d'intégrité refuse la sortie plutôt que de la laisser s'installer.
+        """
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.annotations.classification import Classification
+        from pixano.schemas.records import Record
+
+        autre = Dataset.create(
+            tmp_path / "autre",
+            DatasetInfo(id="autre", name="Autre", record=Record, classification=Classification),
+        )
+        autre.add_data("records", [Record(id="une-vraie-image")])
+
+        with pytest.raises(Exception):
+            self._run(autre, "job-1", 20)
+
+    def test_a_kind_declares_what_it_produces(self, dataset: _FakeDataset) -> None:
+        """Le vocabulaire est celui des schémas : model, human, ground_truth, other.
+
+        Écrire « job » y serait refusé, et c'est tant mieux — ce qui compte pour un relecteur
+        est de savoir si une annotation vient d'un modèle, pas quel rouage l'a écrite.
+        """
+        assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"

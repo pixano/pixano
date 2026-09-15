@@ -70,7 +70,9 @@ class JobWriter:
         job_id: Le job, conservé comme provenance.
     """
 
-    def __init__(self, open_dataset: Callable[[], Dataset], kind: str, job_id: str) -> None:
+    def __init__(
+        self, open_dataset: Callable[[], Dataset], kind: str, job_id: str, source_type: str = "model"
+    ) -> None:
         """Lier un écrivain à un job et à son dataset.
 
         Le dataset est ouvert au premier usage, pas à la construction : un type de job qui
@@ -81,6 +83,7 @@ class JobWriter:
         self._dataset: Dataset | None = None
         self.kind = kind
         self.job_id = job_id
+        self.source_type = source_type
 
     @property
     def dataset(self) -> Dataset:
@@ -94,10 +97,12 @@ class JobWriter:
 
         Les schémas d'annotation portent `source_type`, `source_name` et `source_metadata` ;
         les remplir ici plutôt que dans chaque type de job garantit qu'aucune sortie de job
-        n'atterrit dans un dataset sans qu'on sache d'où elle vient.
+        n'atterrit dans un dataset sans qu'on sache d'où elle vient. Le vocabulaire de
+        `source_type` est celui des schémas — `model`, `human`, `ground_truth`, `other` —
+        et c'est le type de job qui déclare lequel le décrit.
         """
         return {
-            "source_type": "job",
+            "source_type": self.source_type,
             "source_name": self.kind,
             "source_metadata": json.dumps({"job_id": self.job_id}),
         }

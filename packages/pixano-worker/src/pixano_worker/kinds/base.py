@@ -69,6 +69,11 @@ class JobKind(ABC, Generic[ParamsT]):
     name: str
     params_model: type[ParamsT]
 
+    #: Ce que produit ce type, dans le vocabulaire de provenance des schémas Pixano. La
+    #: plupart des types font tourner un modèle ; un type qui n'en fait pas tourner doit le
+    #: dire, pour qu'on ne prenne pas sa sortie pour une prédiction.
+    source_type: str = "model"
+
     @abstractmethod
     def plan(self, dataset_id: str, params: ParamsT) -> Iterable[Chunk]:
         """Découper le travail du job en chunks.

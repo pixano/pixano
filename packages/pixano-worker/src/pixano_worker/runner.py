@@ -169,7 +169,7 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
     return Dataset.find(dataset_id, library)
 
 
-def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str) -> JobWriter:
+def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
     """Lier un écrivain au dataset d'un job.
 
     L'ouverture est différée au premier usage : un type qui n'écrit rien ne doit pas échouer
@@ -181,7 +181,7 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str) -
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
         return _open_dataset(library, dataset_id)
 
-    return JobWriter(open_dataset, kind, job_id)
+    return JobWriter(open_dataset, kind, job_id, source_type)
 
 
 def run_batch(
@@ -228,7 +228,8 @@ def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk,
     try:
         params = kind.validate_params(row[1])
         result = kind.process(chunk.payload, params)
-        kind.write(_writer_for(library, row[2], row[0], chunk.job_id), result, chunk.payload, params)
+        writer = _writer_for(library, row[2], row[0], chunk.job_id, kind.source_type)
+        kind.write(writer, result, chunk.payload, params)
     except Exception as error:
         queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
