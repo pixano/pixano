@@ -33,6 +33,8 @@ from typing import Any, Generic, Iterable, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
+from ..writer import JobWriter
+
 
 class JobParams(BaseModel):
     """Base des paramètres d'un type de job.
@@ -88,15 +90,18 @@ class JobKind(ABC, Generic[ParamsT]):
         """
 
     @abstractmethod
-    def write(self, result: Any, payload: dict[str, Any], params: ParamsT, job_id: str, seq: int) -> None:
+    def write(self, writer: "JobWriter", result: Any, payload: dict[str, Any], params: ParamsT) -> None:
         """Écrire le résultat, de façon idempotente.
 
+        Le type ne sait pas ouvrir un dataset : il reçoit un écrivain, qui est le seul point
+        d'écriture du système. C'est ce qui rendra possible, plus tard, de sérialiser les
+        écritures d'un dataset entre plusieurs workers sans toucher au moindre type de job.
+
         Args:
+            writer: Par où écrire, déjà lié au dataset et au job.
             result: Ce que `process` a renvoyé.
             payload: Le chunk traité.
             params: Les paramètres validés.
-            job_id: Le job, pour dériver des identifiants stables.
-            seq: Le rang du chunk, même usage.
         """
 
     def params_schema(self) -> dict[str, Any]:
