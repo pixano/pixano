@@ -50,6 +50,8 @@ class FakeKind(JobKind[FakeParams]):
 
     name = "fake"
     params_model = FakeParams
+    # Aucun modèle ne tourne ici : ce que ce type écrit n'est pas une prédiction.
+    source_type = "other"
 
     def plan(self, dataset_id: str, params: FakeParams) -> Iterable[Chunk]:
         """Découper en chunks de taille fixe."""
