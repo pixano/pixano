@@ -24,9 +24,7 @@ toucher au moindre type de job.
 import hashlib
 import json
 import logging
-from typing import Any, Callable, Iterable, Sequence
-
-from pixano.datasets import Dataset
+from typing import Any, Callable, Iterable, Protocol, Sequence
 
 
 logger = logging.getLogger("pixano-worker")
@@ -39,6 +37,27 @@ _ID_LENGTH = 22
 # rétrécit le fait de quelques lignes, pas de cent ; au-delà, des restes subsistent, ce qui
 # vaut mieux que balayer la table à chaque écriture.
 _LEFTOVER_PROBE = 32
+
+
+class DatasetWriteTarget(Protocol):
+    """Les seules opérations dont l'écriture d'un job a besoin.
+
+    Dépendre de ce contrat plutôt que de `Dataset` suit la règle du projet — les frontières
+    dépendent d'interfaces — et permet à un test de fournir une doublure qui se comporte comme
+    LanceDB sans avoir à feindre d'être un dataset complet.
+    """
+
+    def update_data(self, table_name: str, data: list[Any]) -> Any:
+        """Écrire des lignes, en remplaçant celles qui portent déjà leur identifiant."""
+        ...
+
+    def delete_data(self, table_name: str, ids: list[str]) -> Any:
+        """Supprimer des lignes par identifiant."""
+        ...
+
+    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
+        """Lire les lignes portant ces identifiants."""
+        ...
 
 
 def derive_id(kind: str, key: str, index: int = 0) -> str:
@@ -71,7 +90,7 @@ class JobWriter:
     """
 
     def __init__(
-        self, open_dataset: Callable[[], Dataset], kind: str, job_id: str, source_type: str = "model"
+        self, open_dataset: Callable[[], DatasetWriteTarget], kind: str, job_id: str, source_type: str = "model"
     ) -> None:
         """Lier un écrivain à un job et à son dataset.
 
@@ -80,13 +99,13 @@ class JobWriter:
         écrivain pour chaque chunk sans savoir si celui-ci s'en servira.
         """
         self._open_dataset = open_dataset
-        self._dataset: Dataset | None = None
+        self._dataset: DatasetWriteTarget | None = None
         self.kind = kind
         self.job_id = job_id
         self.source_type = source_type
 
     @property
-    def dataset(self) -> Dataset:
+    def dataset(self) -> DatasetWriteTarget:
         """Le dataset visé, ouvert à la demande."""
         if self._dataset is None:
             self._dataset = self._open_dataset()

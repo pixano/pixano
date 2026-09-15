@@ -955,7 +955,7 @@ wheels = [
 
 [[package]]
 name = "pixano"
-source = { directory = "../../" }
+source = { editable = "../../" }
 dependencies = [
     { name = "boto3" },
     { name = "duckdb" },
@@ -1065,7 +1065,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
-    { name = "pixano", directory = "../../" },
+    { name = "pixano", editable = "../../" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1" },
     { name = "pydantic", specifier = ">=2.9,<3.0" },
 ]
