@@ -11,7 +11,15 @@ dependencies = [
     "httpx>=0.27",
     # Le contrat des paramètres d'un type de job, et le schéma JSON qu'on en publie.
     "pydantic>=2.9,<3.0",
+    # Les schémas et l'accès aux datasets. Mesuré avant de trancher : la couche dataset pèse
+    # 600 Mo des 647 Mo de pixano, parce que le poids est dans polars, opencv, pyarrow et
+    # lancedb — dont le worker a besoin quoi qu'il arrive. Un paquet partagé aurait économisé
+    # 7 %. Voir docs/specs/backend-processing.md §5ter.
+    "pixano",
 ]
+
+[tool.uv.sources]
+pixano = { path = "../..", editable = false }
 
 [project.scripts]
 pixano-worker = "pixano_worker.__main__:main"
