@@ -55,10 +55,11 @@ class TestDeclaration:
         """C'est le seul pont entre l'application et le worker : ils ne partagent aucun code."""
         registry.declare(db, "worker-test")
 
-        row = db.execute(f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds").fetchone()
-        assert row is not None
-        assert row[0] == "fake"
-        assert row[1]["properties"]["task_count"]["type"] == "integer"
+        rows = db.execute(f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY name").fetchall()
+
+        assert [row[0] for row in rows] == registry.names()
+        published = dict(rows)
+        assert published["fake"]["properties"]["task_count"]["type"] == "integer"
 
     def test_the_published_schema_refuses_an_unknown_parameter(self, registry: Registry) -> None:
         """C'est cette propriété qui permet à l'application d'attraper une faute de frappe.
@@ -87,8 +88,10 @@ class TestDeclaration:
         registry.declare(db, "worker-a")
         registry.declare(db, "worker-b")
 
-        row = db.execute(f"SELECT count(*), max(declared_by) FROM {SCHEMA_NAME}.job_kinds").fetchone()
-        assert row == (1, "worker-b")
+        row = db.execute(
+            f"SELECT count(*), count(DISTINCT declared_by), max(declared_by) " f"FROM {SCHEMA_NAME}.job_kinds"
+        ).fetchone()
+        assert row == (len(registry.names()), 1, "worker-b")
 
 
 class TestPlanning:
