@@ -1,0 +1,118 @@
+# Writing a job kind
+
+**Status:** Frozen contract. Changing it means changing every kind, so change it deliberately.
+**Audience:** anyone adding a processing to the backend — pre-annotation, statistics, indexing.
+
+A job kind is a plugin. It brings its parameters, knows how to split its work, how to process
+a batch and how to write what it produced. The engine — claiming, leasing, recovery, progress,
+cancellation — knows nothing of what is inside, and adding a kind must never require touching
+it. The proof is mechanical: `tests/test_kind_contract.py` runs the same suite over every
+registered kind, and adding a kind without an entry in `CONTRACT_EXAMPLES` fails it.
+
+---
+
+## 1. The three contracts
+
+### `Params` — a pydantic model, inheriting `JobParams`
+
+```python
+class MyParams(JobParams):
+    model: str = Field(default="clip")
+    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+```
+
+Inheriting `JobParams` is what forbids unknown fields, and that is not tidiness: it makes
+pydantic emit `additionalProperties: false` in the schema published to the application, which
+is what lets a misspelled parameter be refused at submission. Without it, `thresholdd` passes
+validation and is silently ignored — the user gets a job running on defaults with no
+indication why.
+
+### `plan(dataset_id, params) -> Iterable[Chunk]`
+
+Splits the work. It runs in the worker, not in the application: dividing by video, by image or
+by selection is the kind's business, and kind code only ever runs on that side.
+
+Two requirements the suite checks. **Every chunk carries at least one task**, or it consumes a
+turn without advancing anything. And **planning twice describes the same work**: a job
+replanned after an outage must not describe something different from what was partly executed.
+
+A chunk's payload is opaque to the engine, and must be a JSON object.
+
+### `process(payload, params)` then `write(writer, result, payload, params)`
+
+Separate because they fail differently. An inference call is transient and **retries in
+place** — the engine only replays chunks whose worker died, never ones whose plugin raised. A
+write must never be half done.
+
+`write` receives a writer, not a dataset: a kind cannot open a dataset itself. That is what
+will let a dataset's writes be serialised across workers one day without touching any kind.
+
+---
+
+## 2. Writing, and why it must be idempotent
+
+Results go to LanceDB while progress goes to PostgreSQL. Two stores, so the two writes cannot
+share a transaction: a worker that dies between them redoes the chunk, and a chunk whose lease
+expired can be taken over mid-flight. **Replaying must produce the same content, never
+duplicates.**
+
+`writer.replace(table, key, rows)` is how. It derives each row's identifier from the _work_ —
+the kind, the key, the rank — never from the job, so a resubmission replaces instead of
+minting new rows. Then it deletes what a previous run left beyond the current output, which is
+the step plain replacement misses: a model that detected five objects and now sees two would
+otherwise strand three rows nothing would ever clean up.
+
+**Choose the key carefully.** It should be the smallest thing the output is about — usually a
+record id. The `label` kind uses one key per record, so re-labelling one record does not depend
+on the chunking that first processed it; the `fake` kind uses one key per chunk, which is
+simpler and adequate because nothing ever re-runs a fraction of it.
+
+---
+
+## 3. Provenance
+
+Every row a job writes says where it came from. The writer fills it in, so no kind has to
+remember to:
+
+| Field             | Value                                                                |
+| ----------------- | -------------------------------------------------------------------- |
+| `source_type`     | what the kind declares — `model`, `human`, `ground_truth` or `other` |
+| `source_name`     | the kind's name                                                      |
+| `source_metadata` | the job identifier, as JSON                                          |
+
+`source_type` is the schemas' vocabulary, not ours: writing `job` is refused at write time, and
+rightly so. What matters to a reviewer is whether an annotation came from a model, not which
+cog wrote it. **A kind that runs no model must not claim `model`** — the fake and label kinds
+both declare `other`.
+
+---
+
+## 4. Review status — not yet
+
+The plan has every pre-annotation arriving in an "to review" state, with a queue to accept,
+correct or reject. **The schemas carry no such field today**, so nothing here can set one. It
+is a schema addition, and it belongs with the pre-annotation kinds that need it rather than
+with the engine.
+
+Until then, provenance is what tells a reviewer an annotation came from a job.
+
+---
+
+## 5. Registering
+
+```python
+# kinds/__init__.py
+def default_registry() -> Registry:
+    registry = Registry()
+    registry.register(FakeKind())
+    registry.register(MyKind())      # ← the only engine file a new kind touches
+    return registry
+```
+
+Each worker publishes its registry into `job_kinds` at startup, which is the only bridge
+between the application and the worker — they share no code. The application validates a
+submission against what a worker declared it can run, so a kind that no live worker carries is
+refused at submission rather than sitting in the queue forever.
+
+Then add an entry to `CONTRACT_EXAMPLES` in `tests/test_kind_contract.py`. A kind without one
+fails the suite on purpose: a kind nobody knows how to exercise has escaped the contract.
