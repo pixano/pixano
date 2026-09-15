@@ -16,14 +16,19 @@ l'unité atomique, l'interrompre laisserait un travail à moitié fait dont on n
 
 import logging
 import traceback
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import psycopg
 from psycopg.types.json import Jsonb
 
+from pixano.datasets import Dataset
+
 from . import queue
 from .kinds import Registry
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
+from .writer import JobWriter
 
 
 log = logging.getLogger("pixano-worker")
@@ -158,7 +163,34 @@ def _fail_job(conn: psycopg.Connection, job_id: str, error: dict[str, Any]) -> N
         record_event(conn, job_id, "state", {"state": "error", **error})
 
 
-def run_batch(conn: psycopg.Connection, registry: Registry, worker_id: str, batch_size: int) -> int:
+@lru_cache(maxsize=8)
+def _open_dataset(library: Path, dataset_id: str) -> Dataset:
+    """Ouvrir un dataset, une fois. Le worker en traite peu à la fois."""
+    return Dataset.find(dataset_id, library)
+
+
+def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str) -> JobWriter:
+    """Lier un écrivain au dataset d'un job.
+
+    L'ouverture est différée au premier usage : un type qui n'écrit rien ne doit pas échouer
+    faute de dataset, et l'absence de bibliothèque ne se manifeste que si quelqu'un écrit.
+    """
+
+    def open_dataset() -> Dataset:
+        if library is None:
+            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+        return _open_dataset(library, dataset_id)
+
+    return JobWriter(open_dataset, kind, job_id)
+
+
+def run_batch(
+    conn: psycopg.Connection,
+    registry: Registry,
+    worker_id: str,
+    batch_size: int,
+    library: Path | None = None,
+) -> int:
     """Réclamer un lot de chunks et l'exécuter.
 
     Returns:
@@ -176,16 +208,18 @@ def run_batch(conn: psycopg.Connection, registry: Registry, worker_id: str, batc
         if chunk.job_id in cancelled:
             queue.cancel_chunk(conn, chunk)
             continue
-        _run_chunk(conn, registry, chunk)
+        _run_chunk(conn, registry, chunk, library)
 
     for job_id in jobs_touched:
         _settle(conn, job_id)
     return len(chunks)
 
 
-def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk) -> None:
+def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk, library: Path | None) -> None:
     """Exécuter un chunk, et consigner ce qui en résulte."""
-    row = conn.execute(f"SELECT kind, params FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)).fetchone()
+    row = conn.execute(
+        f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
+    ).fetchone()
     kind = registry.get(row[0]) if row is not None else None
     if row is None or kind is None:
         queue.fail(conn, chunk, {"reason": "type de job inconnu"})
@@ -194,7 +228,7 @@ def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk)
     try:
         params = kind.validate_params(row[1])
         result = kind.process(chunk.payload, params)
-        kind.write(result, chunk.payload, params, chunk.job_id, chunk.seq)
+        kind.write(_writer_for(library, row[2], row[0], chunk.job_id), result, chunk.payload, params)
     except Exception as error:
         queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)

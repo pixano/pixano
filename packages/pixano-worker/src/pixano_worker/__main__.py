@@ -15,6 +15,7 @@ sort du mode local.
 import logging
 import sys
 import time
+from pathlib import Path
 from typing import Callable
 
 import httpx
@@ -138,16 +139,16 @@ def main() -> int:
             log.info("%d chunk(s) repris d'une exécution précédente", recovered)
 
         log.info("worker démarré, en attente de jobs")
-        _work_forever(conn, registry, worker_id, alive)
+        _work_forever(conn, registry, worker_id, alive, Path(config.library_dir))
     return 0
 
 
-def _work_forever(conn, registry, worker_id: str, alive) -> None:
+def _work_forever(conn, registry, worker_id: str, alive, library: Path) -> None:
     """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
     while True:
         alive()
         planned = runner.plan_one(conn, registry)
-        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE)
+        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library)
         if planned is None and processed == 0:
             reclaimed, abandoned = queue.reclaim_expired(conn)
             if reclaimed or abandoned:
