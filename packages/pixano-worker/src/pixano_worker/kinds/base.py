@@ -92,11 +92,15 @@ class JobKind(ABC, Generic[ParamsT]):
         """
 
     @abstractmethod
-    def process(self, payload: dict[str, Any], params: ParamsT) -> Any:
+    def process(self, reader: "JobReader", payload: dict[str, Any], params: ParamsT) -> Any:
         """Traiter un chunk et renvoyer son résultat, sans rien écrire.
 
         C'est ici que vivent les appels à l'inférence. Un échec transitoire doit être rejoué
         ici même : le moteur ne rejoue que les chunks dont le worker est mort.
+
+        Le lecteur est celui de `plan`. Il en faut un ici aussi : un chunk porte de quoi
+        désigner le travail, jamais les données elles-mêmes — mettre des images encodées dans
+        un payload gonflerait la table des chunks de tout le poids du dataset.
         """
 
     @abstractmethod

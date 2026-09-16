@@ -64,7 +64,7 @@ class FakeKind(JobKind[FakeParams]):
             first += size
             remaining -= size
 
-    def process(self, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
+    def process(self, reader: JobReader, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
         """Dormir le temps annoncé, puis rendre un résultat symbolique.
 
         Raises:

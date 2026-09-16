@@ -208,6 +208,7 @@ def run_batch(
     worker_id: str,
     batch_size: int,
     library: Path | None = None,
+    media: MediaResolver | None = None,
 ) -> int:
     """Réclamer un lot de chunks et l'exécuter.
 
@@ -226,14 +227,20 @@ def run_batch(
         if chunk.job_id in cancelled:
             queue.cancel_chunk(conn, chunk)
             continue
-        _run_chunk(conn, registry, chunk, library)
+        _run_chunk(conn, registry, chunk, library, media)
 
     for job_id in jobs_touched:
         _settle(conn, job_id)
     return len(chunks)
 
 
-def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk, library: Path | None) -> None:
+def _run_chunk(
+    conn: psycopg.Connection,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None,
+    media: MediaResolver | None,
+) -> None:
     """Exécuter un chunk, et consigner ce qui en résulte."""
     row = conn.execute(
         f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
@@ -245,7 +252,8 @@ def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk,
 
     try:
         params = kind.validate_params(row[1])
-        result = kind.process(chunk.payload, params)
+        reader = _reader_for(library, row[2], media)
+        result = kind.process(reader, chunk.payload, params)
         writer = _writer_for(library, row[2], row[0], chunk.job_id, kind.source_type)
         kind.write(writer, result, chunk.payload, params)
     except Exception as error:
