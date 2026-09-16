@@ -24,6 +24,7 @@ from typing import Callable
 
 import httpx
 import psycopg
+from psycopg_pool import AsyncConnectionPool
 
 from . import queue, runner
 from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
@@ -42,9 +43,10 @@ MAX_BACKOFF_S = MAX_HEARTBEAT_AGE_S / 3
 IDLE_POLL_INTERVAL_S = 5
 CONNECT_TIMEOUT_S = 5
 
-# Nombre de chunks réclamés d'un coup. Assez pour amortir l'aller-retour en base, assez peu
-# pour que l'annulation soit vue rapidement — elle ne se regarde qu'entre deux lots.
-BATCH_SIZE = 8
+# Le battement ne dépend plus d'un tour de boucle : un chunk long ne doit pas faire déclarer
+# mort un worker qui travaille. Ce qu'il prouve désormais, c'est que la boucle d'événements
+# n'est pas bloquée. Un chunk pendu, lui, relève de la durée maximale d'un chunk.
+HEARTBEAT_INTERVAL_S = MAX_HEARTBEAT_AGE_S / 3
 
 
 def _wait_for(label: str, probe: Callable[[], None], on_attempt: Callable[[], None]) -> None:
@@ -138,7 +140,9 @@ def main() -> int:
     log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
 
     media = MediaResolver(config.media_root, config.inference_media_root)
-    asyncio.run(serve(config.database_url, registry, worker_id, alive, Path(config.library_dir), media))
+    asyncio.run(
+        serve(config.database_url, registry, worker_id, alive, Path(config.library_dir), media, config.concurrency)
+    )
     return 0
 
 
@@ -149,27 +153,37 @@ async def serve(
     alive: Callable[[], None],
     library: Path,
     media: MediaResolver,
+    concurrency: int,
 ) -> None:
-    """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
-    async with await psycopg.AsyncConnection.connect(
-        database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True
-    ) as conn:
-        # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
-        # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
-        recovered = await queue.release_own(conn, worker_id)
+    """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
+    heartbeat = asyncio.create_task(_beat_forever(alive))
+
+    # Une connexion par chunk en vol, plus une pour planifier, réclamer et récupérer.
+    async with AsyncConnectionPool(
+        database_url,
+        min_size=1,
+        max_size=concurrency + 1,
+        kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S},
+        open=False,
+    ) as pool:
+        async with pool.connection() as conn:
+            # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
+            # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
+            recovered = await queue.release_own(conn, worker_id)
         if recovered:
             log.info("%d chunk(s) repris d'une exécution précédente", recovered)
 
         log.info("worker démarré, en attente de jobs")
-        while True:
-            alive()
-            planned = await runner.plan_one(conn, registry, library, media)
-            processed = await runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library, media)
-            if planned is None and processed == 0:
-                reclaimed, abandoned = await queue.reclaim_expired(conn)
-                if reclaimed or abandoned:
-                    log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
-                await asyncio.sleep(IDLE_POLL_INTERVAL_S)
+        try:
+            await runner.work(pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S)
+        finally:
+            heartbeat.cancel()
+
+
+async def _beat_forever(alive: Callable[[], None]) -> None:
+    while True:
+        alive()
+        await asyncio.sleep(HEARTBEAT_INTERVAL_S)
 
 
 if __name__ == "__main__":

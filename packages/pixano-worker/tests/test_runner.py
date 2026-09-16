@@ -6,6 +6,8 @@
 
 """Tests de la boucle d'exécution : planification, exécution, annulation, reprise."""
 
+import asyncio
+import contextlib
 import json
 
 import psycopg
@@ -13,6 +15,7 @@ import pytest
 from pixano_worker import queue, runner
 from pixano_worker.kinds import Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
+from psycopg_pool import AsyncConnectionPool
 
 
 FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
@@ -353,3 +356,70 @@ class TestNotification:
             received = list(listener.notifies(timeout=3, stop_after=1))
 
         assert set(json.loads(received[0].payload)) == {"job_id", "event_id", "type"}
+
+
+class TestConcurrency:
+    """Plusieurs chunks en vol, sans jamais en tenir plus que permis."""
+
+    @staticmethod
+    async def _run_until_settled(pool, registry: Registry, declared: psycopg.Connection, job: str, concurrency: int):
+        """Faire tourner la boucle réelle jusqu'à ce que le job conclue, en relevant l'occupation."""
+        worker = asyncio.create_task(runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05))
+        peak = 0
+        try:
+            for _ in range(400):
+                running = declared.execute(
+                    f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'running'"
+                ).fetchone()
+                peak = max(peak, running[0] if running else 0)
+                if _state(declared, job)[0] in ("done", "error", "cancelled"):
+                    break
+                await asyncio.sleep(0.02)
+        finally:
+            worker.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker
+        return peak
+
+    async def test_runs_several_chunks_at_once(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        """Le plafond est atteint, et jamais dépassé.
+
+        Chaque chunk dort un dixième de seconde : assez pour que la sonde voie les chunks se
+        chevaucher, si la boucle les chevauche vraiment.
+        """
+        job = _submit(declared, params={"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.005})
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=5, kwargs={"autocommit": True}) as pool:
+            peak = await self._run_until_settled(pool, registry, declared, job, concurrency=4)
+
+        assert _state(declared, job) == ("done", 200, 200)
+        assert 2 <= peak <= 4, f"occupation maximale observée : {peak}"
+
+    async def test_a_single_slot_runs_one_chunk_at_a_time(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={"task_count": 100, "chunk_size": 20, "seconds_per_task": 0.005})
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
+            peak = await self._run_until_settled(pool, registry, declared, job, concurrency=1)
+
+        assert _state(declared, job) == ("done", 100, 100)
+        assert peak == 1
+
+    async def test_no_task_is_counted_twice_under_concurrency(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        """Les progressions de chunks concurrents s'additionnent sans se marcher dessus."""
+        job = _submit(declared, params={"task_count": 500, "chunk_size": 10, "seconds_per_task": 0.0})
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=9, kwargs={"autocommit": True}) as pool:
+            await self._run_until_settled(pool, registry, declared, job, concurrency=8)
+
+        assert _state(declared, job) == ("done", 500, 500)
+        events = declared.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'progress'", (job,)
+        ).fetchall()
+        assert len(events) == 50
+        assert max(event[0]["done_tasks"] for event in events) == 500
