@@ -27,6 +27,8 @@ from pixano.datasets import Dataset
 
 from . import queue
 from .kinds import Registry
+from .media import MediaResolver
+from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from .writer import JobWriter
 
@@ -109,7 +111,12 @@ def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload
     conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
 
-def plan_one(conn: psycopg.Connection, registry: Registry) -> str | None:
+def plan_one(
+    conn: psycopg.Connection,
+    registry: Registry,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+) -> str | None:
     """Découper un job en attente de planification.
 
     Returns:
@@ -130,7 +137,7 @@ def plan_one(conn: psycopg.Connection, registry: Registry) -> str | None:
 
     try:
         params = kind.validate_params(raw_params)
-        chunks = list(kind.plan(dataset_id, params))
+        chunks = list(kind.plan(_reader_for(library, dataset_id, media), params))
     except Exception as error:
         _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
@@ -167,6 +174,17 @@ def _fail_job(conn: psycopg.Connection, job_id: str, error: dict[str, Any]) -> N
 def _open_dataset(library: Path, dataset_id: str) -> Dataset:
     """Ouvrir un dataset, une fois. Le worker en traite peu à la fois."""
     return Dataset.find(dataset_id, library)
+
+
+def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None) -> JobReader:
+    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert."""
+
+    def open_dataset() -> Dataset:
+        if library is None:
+            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+        return _open_dataset(library, dataset_id)
+
+    return JobReader(open_dataset, media or MediaResolver("/medias", "/medias"))
 
 
 def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:

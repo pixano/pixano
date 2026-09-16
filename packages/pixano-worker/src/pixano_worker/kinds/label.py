@@ -20,6 +20,7 @@ from pydantic import Field
 
 from pixano.schemas.annotations.classification import Classification
 
+from ..reader import JobReader
 from ..writer import JobWriter
 from .base import Chunk, JobKind, JobParams
 
@@ -50,8 +51,8 @@ class LabelKind(JobKind[LabelParams]):
     # Une étiquette posée par une règle n'est pas une prédiction de modèle.
     source_type = "other"
 
-    def plan(self, dataset_id: str, params: LabelParams) -> Iterable[Chunk]:
-        """Découper la sélection en chunks."""
+    def plan(self, reader: JobReader, params: LabelParams) -> Iterable[Chunk]:
+        """Découper la sélection en chunks. Rien à lire : la sélection est donnée."""
         ids = params.record_ids
         for start in range(0, len(ids), params.chunk_size):
             batch = ids[start : start + params.chunk_size]

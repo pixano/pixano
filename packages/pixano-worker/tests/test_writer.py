@@ -11,6 +11,7 @@ import json
 from typing import Any
 
 import pytest
+from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter, derive_id
 
 
@@ -53,6 +54,25 @@ class _FakeDataset:
 @pytest.fixture
 def dataset() -> _FakeDataset:
     return _FakeDataset()
+
+
+class _EmptySource:
+    """Un dataset vide : le type factice n'y lit rien, mais le contrat veut un lecteur."""
+
+    def count_rows_where(self, table_name, where=None):
+        return 0
+
+    def get_data(self, table_name, **kwargs):
+        return []
+
+    def get_view_binary(self, table_name, view_id):
+        return None
+
+
+def _reader() -> JobReader:
+    from pixano_worker.media import MediaResolver
+
+    return JobReader(lambda: _EmptySource(), MediaResolver("/medias", "/medias"))
 
 
 def _writer(dataset: _FakeDataset, job_id: str = "job-1") -> JobWriter:
@@ -185,7 +205,7 @@ class TestAgainstRealLance:
 
         kind = FakeKind()
         params = FakeParams(task_count=task_count, chunk_size=20, seconds_per_task=0.0, write_to="classifications")
-        for chunk in kind.plan("jouet", params):
+        for chunk in kind.plan(_reader(), params):
             writer = JobWriter(lambda: toy, kind.name, job_id, kind.source_type)
             kind.write(writer, kind.process(chunk.payload, params), chunk.payload, params)
 

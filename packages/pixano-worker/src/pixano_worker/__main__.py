@@ -24,6 +24,7 @@ import psycopg
 from . import queue, runner
 from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
 from .kinds import default_registry
+from .media import MediaResolver
 from .schema import SchemaVersionError, ensure_schema
 
 
@@ -139,15 +140,16 @@ def main() -> int:
             log.info("%d chunk(s) repris d'une exécution précédente", recovered)
 
         log.info("worker démarré, en attente de jobs")
-        _work_forever(conn, registry, worker_id, alive, Path(config.library_dir))
+        media = MediaResolver(config.media_root, config.inference_media_root)
+        _work_forever(conn, registry, worker_id, alive, Path(config.library_dir), media)
     return 0
 
 
-def _work_forever(conn, registry, worker_id: str, alive, library: Path) -> None:
+def _work_forever(conn, registry, worker_id: str, alive, library: Path, media: MediaResolver) -> None:
     """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
     while True:
         alive()
-        planned = runner.plan_one(conn, registry)
+        planned = runner.plan_one(conn, registry, library, media)
         processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library)
         if planned is None and processed == 0:
             reclaimed, abandoned = queue.reclaim_expired(conn)
