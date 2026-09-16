@@ -21,7 +21,7 @@ from pixano.schemas.annotations.classification import Classification
 
 from ..reader import JobReader
 from ..writer import JobWriter
-from .base import Chunk, JobKind, JobParams
+from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 
 
 class FakeParams(JobParams):
@@ -32,6 +32,11 @@ class FakeParams(JobParams):
         chunk_size: Tâches par chunk.
         seconds_per_task: Temps passé par tâche, pour observer une progression réaliste.
         fail_at_chunk: Rang d'un chunk qui doit échouer, pour éprouver la remontée d'erreur.
+        transient_at_chunk: Rang d'un chunk qui bute sur une panne passagère à chaque tentative,
+            pour éprouver le délai de reprise et l'abandon après épuisement.
+        skip_per_chunk: Tâches déclarées sans objet dans chaque chunk.
+        quarantine_per_chunk: Tâches déclarées en échec dans chaque chunk, pour éprouver la
+            quarantaine.
         write_to: Table de jouet où écrire des lignes sans signification, pour éprouver
             l'idempotence des écritures. Vide, le type n'écrit rien.
     """
@@ -40,6 +45,9 @@ class FakeParams(JobParams):
     chunk_size: int = Field(default=20, ge=1, le=10_000)
     seconds_per_task: float = Field(default=0.01, ge=0.0, le=60.0)
     fail_at_chunk: int | None = Field(default=None, ge=0)
+    transient_at_chunk: int | None = Field(default=None, ge=0)
+    skip_per_chunk: int = Field(default=0, ge=0)
+    quarantine_per_chunk: int = Field(default=0, ge=0)
     write_to: str | None = Field(
         default=None,
         description="Toy table to write meaningless rows into. Leave empty to write nothing.",
@@ -69,11 +77,31 @@ class FakeKind(JobKind[FakeParams]):
 
         Raises:
             RuntimeError: Le rang de ce chunk est celui qu'on a demandé de faire échouer.
+            TransientError: Le rang de ce chunk est celui qu'on a demandé de faire buter sur une
+                panne passagère.
         """
-        if params.fail_at_chunk is not None and payload.get("first_task") == params.fail_at_chunk * params.chunk_size:
+        rank = payload.get("first_task", 0) // params.chunk_size
+        if params.fail_at_chunk == rank:
             raise RuntimeError(f"échec demandé au chunk {params.fail_at_chunk}")
+        if params.transient_at_chunk == rank:
+            raise TransientError(f"panne passagère demandée au chunk {rank}")
         time.sleep(params.seconds_per_task * payload["task_count"])
-        return {"processed": payload["task_count"]}
+        skipped = min(params.skip_per_chunk, payload["task_count"])
+        quarantined = min(params.quarantine_per_chunk, payload["task_count"] - skipped)
+        return {"processed": payload["task_count"], "skipped": skipped, "quarantined": quarantined}
+
+    def outcome(self, result: dict[str, Any], payload: dict[str, Any], task_count: int) -> Outcome:
+        """Écarter puis mettre en quarantaine les premières tâches du chunk, comme `process` l'a décidé."""
+        skipped, quarantined = result["skipped"], result["quarantined"]
+        first = payload["first_task"]
+        return Outcome(
+            produced=task_count - skipped - quarantined,
+            skipped=skipped,
+            quarantined=[
+                QuarantinedItem(item_id=f"task-{first + skipped + offset}", reason="échec demandé")
+                for offset in range(quarantined)
+            ],
+        )
 
     def write(self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: FakeParams) -> None:
         """Écrire une classification sans signification dans une table de jouet.
