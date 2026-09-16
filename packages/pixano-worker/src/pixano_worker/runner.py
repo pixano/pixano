@@ -21,13 +21,16 @@ pour elle ce qui gagne à être asynchrone : la base, les délais et le bail.
 
 import asyncio
 import logging
+import threading
 import traceback
+from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import psycopg
 from psycopg.types.json import Jsonb
+from psycopg_pool import AsyncConnectionPool
 
 from pixano.datasets import Dataset
 
@@ -40,6 +43,22 @@ from .writer import JobWriter
 
 
 log = logging.getLogger("pixano-worker")
+
+# Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
+# qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
+RECLAIM_INTERVAL_S = 30.0
+
+# Les écritures d'un même dataset passent une à une. Plusieurs chunks d'un dataset tournent
+# en même temps, et LanceDB n'est pas fait pour des écritures concurrentes sur une même
+# table. Le verrou est un verrou de thread : c'est dans un thread que `write` s'exécute.
+_write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
+_write_locks_guard = threading.Lock()
+
+
+def _write_lock(dataset_id: str) -> threading.Lock:
+    with _write_locks_guard:
+        return _write_locks[dataset_id]
+
 
 CLAIM_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'running', updated_at = now()
@@ -209,6 +228,76 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
     return JobWriter(open_dataset, kind, job_id, source_type)
 
 
+async def work(
+    pool: AsyncConnectionPool,
+    registry: Registry,
+    worker_id: str,
+    concurrency: int,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+    idle_poll_s: float = 5.0,
+) -> None:
+    """Tenir jusqu'à `concurrency` chunks en vol, indéfiniment.
+
+    La réclamation ne prend jamais plus que les places libres : un chunk réclamé porte un bail
+    qui court, et le réclamer pour le laisser attendre une place l'exposerait à expirer avant
+    d'avoir commencé.
+    """
+    in_flight: set[asyncio.Task[None]] = set()
+    loop = asyncio.get_running_loop()
+    last_reclaim = loop.time()
+
+    while True:
+        async with pool.connection() as conn:
+            planned = await plan_one(conn, registry, library, media)
+
+        claimed: list[queue.Chunk] = []
+        free = concurrency - len(in_flight)
+        if free > 0:
+            async with pool.connection() as conn:
+                claimed = await queue.claim(conn, worker_id, free)
+        for chunk in claimed:
+            task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media))
+            in_flight.add(task)
+            task.add_done_callback(in_flight.discard)
+
+        if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
+            last_reclaim = loop.time()
+            async with pool.connection() as conn:
+                reclaimed, abandoned = await queue.reclaim_expired(conn)
+            if reclaimed or abandoned:
+                log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+
+        if len(in_flight) >= concurrency:
+            await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+        elif planned is None and not claimed:
+            # Rien de nouveau : attendre qu'une place se libère ou que du travail arrive.
+            if in_flight:
+                await asyncio.wait(in_flight, timeout=idle_poll_s, return_when=asyncio.FIRST_COMPLETED)
+            else:
+                await asyncio.sleep(idle_poll_s)
+
+
+async def _run_pooled(
+    pool: AsyncConnectionPool,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None,
+    media: MediaResolver | None,
+) -> None:
+    """Exécuter un chunk sur sa propre connexion, sans jamais faire tomber la boucle.
+
+    Une panne de base au milieu d'un chunk le laisse en cours avec son bail : l'expiration le
+    rendra. Laisser l'exception remonter ne le rendrait pas plus vite, et tuerait en silence
+    une tâche que personne n'attend.
+    """
+    try:
+        async with pool.connection() as conn:
+            await run_chunk(conn, registry, chunk, library, media)
+    except Exception:
+        log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
+
+
 async def run_batch(
     conn: psycopg.AsyncConnection,
     registry: Registry,
@@ -218,6 +307,9 @@ async def run_batch(
     media: MediaResolver | None = None,
 ) -> int:
     """Réclamer un lot de chunks et les exécuter l'un après l'autre sur une connexion.
+
+    La forme séquentielle de `work`, sans pool ni tâches : c'est elle que les tests pilotent,
+    parce qu'elle rend l'ordre des événements déterministe.
 
     Returns:
         Le nombre de chunks traités — zéro quand la file est vide.
@@ -263,9 +355,13 @@ async def _execute(
     def work() -> None:
         params = kind.validate_params(raw_params)
         result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
-        kind.write(
-            _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type), result, chunk.payload, params
-        )
+        with _write_lock(dataset_id):
+            kind.write(
+                _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
+                result,
+                chunk.payload,
+                params,
+            )
 
     try:
         await asyncio.to_thread(work)
