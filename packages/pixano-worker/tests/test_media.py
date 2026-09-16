@@ -25,9 +25,9 @@ class _Source:
         self.blobs = blobs or {}
         self.asked: list[str] = []
 
-    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
-        self.asked.append(view_id)
-        blob = self.blobs.get(view_id)
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
+        self.asked.append(row_id)
+        blob = self.blobs.get(row_id)
         return (blob, "image/jpeg") if blob else None
 
 
