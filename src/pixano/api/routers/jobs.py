@@ -22,6 +22,7 @@ from pixano.api.settings import Settings, get_settings
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 MAX_LISTED_JOBS = 200
+MAX_LISTED_ITEMS = 1000
 
 
 class SubmitJobRequest(BaseModel):
@@ -47,7 +48,15 @@ class JobKindResponse(BaseModel):
 
 
 class JobResponse(BaseModel):
-    """A job as the interface sees it."""
+    """A job as the interface sees it.
+
+    Attributes:
+        done_tasks: Tasks attempted so far — the progress bar.
+        produced: Tasks that gave a result.
+        skipped: Tasks the kind does not apply to, such as a record without an image for an
+            image job. Not a failure.
+        quarantined: Tasks that failed, readable one by one from the quarantine endpoint.
+    """
 
     id: str
     kind: str
@@ -55,6 +64,9 @@ class JobResponse(BaseModel):
     state: str
     total_tasks: int
     done_tasks: int
+    produced: int
+    skipped: int
+    quarantined: int
     created_at: str
 
     @classmethod
@@ -67,8 +79,20 @@ class JobResponse(BaseModel):
             state=record.state,
             total_tasks=record.total_tasks,
             done_tasks=record.done_tasks,
+            produced=record.produced,
+            skipped=record.skipped,
+            quarantined=record.quarantined,
             created_at=record.created_at.isoformat(),
         )
+
+
+class QuarantinedItemResponse(BaseModel):
+    """An item a job could not process."""
+
+    item_id: str
+    reason: str
+    detail: dict[str, Any] | None
+    created_at: str
 
 
 def _connect(settings: Settings):
@@ -261,12 +285,37 @@ def get_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -
     return JobResponse.of(record)
 
 
+@router.get("/{job_id}/quarantine", operation_id="list_job_quarantine")
+def list_job_quarantine(
+    job_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    limit: Annotated[int, Query(ge=1, le=MAX_LISTED_ITEMS)] = 100,
+) -> list[QuarantinedItemResponse]:
+    """List the items a job set aside, and why.
+
+    A quarantine nobody can read back is no better than dropping the items silently.
+    """
+    with _connect(settings) as conn:
+        try:
+            items = jobs.quarantine(conn, job_id, limit)
+        except jobs.JobNotFoundError as error:
+            raise HTTPException(status_code=404, detail=f"job inconnu : {job_id}") from error
+        except jobs.QueueUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+    return [
+        QuarantinedItemResponse(
+            item_id=item.item_id, reason=item.reason, detail=item.detail, created_at=item.created_at.isoformat()
+        )
+        for item in items
+    ]
+
+
 @router.post("/{job_id}/cancel", operation_id="cancel_job")
 def cancel_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
     """Ask for a job to stop.
 
     Pending chunks leave the queue at once; running ones are left to their worker, which
-    gives them back between two batches.
+    stops before its next chunk.
     """
     with _connect(settings) as conn:
         try:
