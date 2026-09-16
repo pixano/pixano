@@ -36,6 +36,11 @@ TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 # de droit, pas de route, pas de modèle. Découper le lot n'y changerait rien.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 
+# Le statut que le client donne à une erreur quand le serveur n'a rien répondu du tout —
+# connexion refusée, délai dépassé. Il l'enveloppe dans une PixanoInferenceError plutôt que de
+# laisser passer l'erreur httpx.
+NO_RESPONSE = 0
+
 
 class EmbeddingsParams(JobParams):
     """Paramètres du calcul d'embeddings.
@@ -188,6 +193,11 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         huit avec une image corrompue coûte sept appels au lieu d'un — mais seulement le jour où
         une image est corrompue, et les sept autres sont sauvées.
 
+        Une image n'est accusée que sur une **réponse** du serveur, jamais sur son silence. Une
+        panne de connexion au milieu de la recherche rend tout le chunk transitoire : coupée en
+        plein job, l'inférence redémarrait, un appel passait, les suivants trouvaient la
+        connexion refusée — et sept images saines partaient en quarantaine.
+
         Returns:
             Les vecteurs obtenus, et les enregistrements refusés avec le détail du refus.
 
@@ -203,6 +213,8 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         except httpx.TransportError as error:
             raise TransientError(f"l'inférence ne répond pas : {error}") from error
         except PixanoInferenceError as error:
+            if error.status_code == NO_RESPONSE:
+                raise TransientError(f"l'inférence ne répond pas : {error}") from error
             if error.status_code in TRANSIENT_STATUSES:
                 raise TransientError(f"l'inférence demande de revenir plus tard : {error}") from error
             if error.status_code in REQUEST_STATUSES:
