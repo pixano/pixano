@@ -33,6 +33,10 @@ class _Inference:
         self.bad: set[str] = set()
         self.status_for_everything: int | None = None
         self.unreachable = False
+        self.transport_error: Exception | None = None
+        # Rang de l'appel à partir duquel le serveur ne répond plus : le cas d'un service qui
+        # tombe, ou qui oscille en redémarrant, au milieu de la recherche d'une image fautive.
+        self.unreachable_from_call: int | None = None
         self.calls: list[list[str]] = []
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
@@ -41,8 +45,15 @@ class _Inference:
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
         self.calls.append(images)
-        if self.unreachable:
-            raise httpx.ConnectError("connexion refusée")
+        if self.unreachable or (
+            self.unreachable_from_call is not None and len(self.calls) > self.unreachable_from_call
+        ):
+            # Ce que le client officiel lève réellement : il enveloppe les erreurs de connexion
+            # dans une PixanoInferenceError de statut 0. Simuler un httpx.ConnectError, comme le
+            # faisait la première version de ce test, laissait passer le défaut en production.
+            raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
+        if self.transport_error is not None:
+            raise self.transport_error
         if self.status_for_everything is not None:
             raise PixanoInferenceError(self.status_for_everything, "erreur", "refusé")
         if self.bad & set(images):
@@ -147,6 +158,34 @@ class TestTransientFailures:
         inference.unreachable = True
 
         with pytest.raises(TransientError, match="ne répond pas"):
+            _run(_Reader())
+
+    @pytest.mark.parametrize("code", ["connection_error", "timeout"])
+    def test_no_answer_at_all_is_transient(self, inference: _Inference, code: str) -> None:
+        """Statut 0 : le client n'a reçu aucune réponse. Aucune image ne peut en être tenue responsable."""
+        inference.transport_error = PixanoInferenceError(0, code, "pas de réponse")
+
+        with pytest.raises(TransientError):
+            _run(_Reader())
+
+    def test_a_transport_error_the_client_lets_through_is_transient(self, inference: _Inference) -> None:
+        """Le client n'enveloppe que trois erreurs httpx ; les autres remontent brutes."""
+        inference.transport_error = httpx.RemoteProtocolError("connexion coupée en pleine réponse")
+
+        with pytest.raises(TransientError):
+            _run(_Reader())
+
+    def test_an_outage_during_the_search_is_not_blamed_on_the_images(self, inference: _Inference) -> None:
+        """Le défaut observé sur la pile réelle, en coupant l'inférence en plein job.
+
+        Un premier appel aboutit, les suivants trouvent la connexion refusée. Sept images
+        saines partaient en quarantaine parce que « tout n'avait pas échoué ». On n'accuse une
+        image que sur une réponse du serveur, jamais sur son silence.
+        """
+        inference.bad = {"/medias/r6.jpg"}
+        inference.unreachable_from_call = 2
+
+        with pytest.raises(TransientError):
             _run(_Reader())
 
     @pytest.mark.parametrize("status", [408, 429, 502, 503, 504])
