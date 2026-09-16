@@ -24,6 +24,8 @@ import logging
 import threading
 import traceback
 from collections import defaultdict
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -35,7 +37,7 @@ from psycopg_pool import AsyncConnectionPool
 from pixano.datasets import Dataset
 
 from . import queue
-from .kinds import Registry
+from .kinds import Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
@@ -122,6 +124,13 @@ WHERE j.id = %s
       WHERE c.job_id = j.id AND c.state IN ('pending', 'running')
   )
 RETURNING j.state
+"""
+
+
+OUTCOME = f"""
+SELECT coalesce(sum(produced), 0)::int, coalesce(sum(skipped), 0)::int,
+       (SELECT count(*) FROM {SCHEMA_NAME}.job_items WHERE job_id = %s)::int
+FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'done'
 """
 
 
@@ -236,6 +245,7 @@ async def work(
     library: Path | None = None,
     media: MediaResolver | None = None,
     idle_poll_s: float = 5.0,
+    chunk_timeout_s: float | None = None,
 ) -> None:
     """Tenir jusqu'à `concurrency` chunks en vol, indéfiniment.
 
@@ -257,7 +267,7 @@ async def work(
             async with pool.connection() as conn:
                 claimed = await queue.claim(conn, worker_id, free)
         for chunk in claimed:
-            task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media))
+            task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media, chunk_timeout_s))
             in_flight.add(task)
             task.add_done_callback(in_flight.discard)
 
@@ -284,6 +294,7 @@ async def _run_pooled(
     chunk: queue.Chunk,
     library: Path | None,
     media: MediaResolver | None,
+    chunk_timeout_s: float | None,
 ) -> None:
     """Exécuter un chunk sur sa propre connexion, sans jamais faire tomber la boucle.
 
@@ -293,7 +304,7 @@ async def _run_pooled(
     """
     try:
         async with pool.connection() as conn:
-            await run_chunk(conn, registry, chunk, library, media)
+            await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s)
     except Exception:
         log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
 
@@ -326,9 +337,20 @@ async def run_chunk(
     chunk: queue.Chunk,
     library: Path | None = None,
     media: MediaResolver | None = None,
+    timeout_s: float | None = None,
 ) -> None:
-    """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu."""
-    await _execute(conn, registry, chunk, library, media)
+    """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu.
+
+    Args:
+        conn: La connexion propre à ce chunk.
+        registry: Les types de jobs connus.
+        chunk: Le chunk réclamé.
+        library: La bibliothèque de datasets.
+        media: Le résolveur de médias.
+        timeout_s: Durée maximale du chunk. Au-delà, il est rendu à la file comme après une
+            panne passagère. None : pas de limite.
+    """
+    await _execute(conn, registry, chunk, library, media, timeout_s)
     await _settle(conn, chunk.job_id)
 
 
@@ -338,6 +360,7 @@ async def _execute(
     chunk: queue.Chunk,
     library: Path | None,
     media: MediaResolver | None,
+    timeout_s: float | None,
 ) -> None:
     if await queue.is_cancelled(conn, chunk.job_id):
         await queue.cancel_chunk(conn, chunk)
@@ -352,9 +375,17 @@ async def _execute(
         return
     kind_name, raw_params, dataset_id = row
 
-    def work() -> None:
+    def work() -> Outcome:
         params = kind.validate_params(raw_params)
         result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
+        outcome = kind.outcome(result, chunk.payload, chunk.task_count)
+        if outcome.total != chunk.task_count:
+            # Un bilan faux fausserait tout ce qu'on affiche du job ; mieux vaut un chunk en échec
+            # qui désigne le défaut du type qu'un compte qui ment sans bruit.
+            raise ValueError(
+                f"le bilan du type « {kind_name} » couvre {outcome.total} tâche(s), "
+                f"le chunk en compte {chunk.task_count}"
+            )
         with _write_lock(dataset_id):
             kind.write(
                 _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
@@ -362,18 +393,34 @@ async def _execute(
                 chunk.payload,
                 params,
             )
+        return outcome
 
     try:
-        await asyncio.to_thread(work)
+        async with _lease_kept(conn, chunk):
+            outcome = await asyncio.wait_for(asyncio.to_thread(work), timeout_s)
+    except TimeoutError:
+        # Le thread ne s'arrête pas : un appel bloqué ne s'interrompt pas de l'extérieur. Le
+        # chunk est rendu, et si le thread finit par aboutir, son résultat sera refusé par le
+        # jeton de garde — et son écriture, idempotente, n'aura rien doublé.
+        await _retry_later(conn, chunk, {"reason": "durée maximale dépassée", "timeout_s": timeout_s})
+        return
+    except TransientError as error:
+        await _retry_later(conn, chunk, {"reason": "panne passagère", "detail": str(error)})
+        return
     except Exception as error:
         await queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
         return
 
-    if not await queue.finish(conn, chunk):
+    finished = await queue.finish(
+        conn, chunk, produced=outcome.produced, skipped=outcome.skipped, quarantined=outcome.quarantined
+    )
+    if not finished:
         # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
         log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
         return
+    if outcome.quarantined:
+        log.info("chunk %s du job %s : %d item(s) en quarantaine", chunk.seq, chunk.job_id, len(outcome.quarantined))
 
     progress = await (
         await conn.execute(f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
@@ -382,9 +429,77 @@ async def _execute(
         await record_event(conn, chunk.job_id, "progress", {"done_tasks": progress[0], "total_tasks": progress[1]})
 
 
+async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error: dict[str, Any]) -> None:
+    state = await queue.retry_later(conn, chunk, error)
+    if state == "pending":
+        log.info(
+            "chunk %s du job %s rendu à la file (%s), tentative %d",
+            chunk.seq,
+            chunk.job_id,
+            error["reason"],
+            chunk.attempts,
+        )
+    elif state == "error":
+        log.warning(
+            "chunk %s du job %s écarté après %d tentatives : %s",
+            chunk.seq,
+            chunk.job_id,
+            chunk.attempts,
+            error["reason"],
+        )
+
+
+@asynccontextmanager
+async def _lease_kept(conn: psycopg.AsyncConnection, chunk: queue.Chunk) -> AsyncIterator[None]:
+    """Prolonger le bail du chunk tant que le bloc s'exécute.
+
+    Le rafraîchissement s'arrête par un signal, pas par une annulation : annuler une tâche au
+    milieu d'une requête peut laisser la connexion dans un état inutilisable, et c'est la
+    connexion que le chunk réutilise juste après.
+    """
+    stop = asyncio.Event()
+
+    async def keep() -> None:
+        interval = queue.LEASE_REFRESH_INTERVAL.total_seconds()
+        while not stop.is_set():
+            try:
+                await asyncio.wait_for(stop.wait(), interval)
+            except TimeoutError:
+                if not await queue.refresh_lease(conn, chunk):
+                    log.warning("chunk %s du job %s : bail perdu en cours d'exécution", chunk.seq, chunk.job_id)
+                    return
+
+    keeper = asyncio.create_task(keep())
+    try:
+        yield
+    finally:
+        stop.set()
+        await keeper
+
+
 async def _settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
-    """Conclure un job dont plus rien n'attend ni ne tourne."""
+    """Conclure un job dont plus rien n'attend ni ne tourne, en disant ce qu'il a produit."""
     row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
-    if row is not None:
-        await record_event(conn, job_id, "state", {"state": row[0]})
-        log.info("job %s terminé : %s", job_id, row[0])
+    if row is None:
+        return
+    outcome = await job_outcome(conn, job_id)
+    await record_event(conn, job_id, "state", {"state": row[0], **outcome})
+    log.info(
+        "job %s terminé : %s — %d produite(s), %d écartée(s), %d en quarantaine",
+        job_id,
+        row[0],
+        outcome["produced"],
+        outcome["skipped"],
+        outcome["quarantined"],
+    )
+
+
+async def job_outcome(conn: psycopg.AsyncConnection, job_id: str) -> dict[str, int]:
+    """Le bilan d'un job, agrégé depuis ses chunks et sa quarantaine.
+
+    Agrégé à la lecture plutôt que tenu en compteurs sur le job : c'est un compte de plus qui
+    ne pourrait pas dériver de ce qu'il résume.
+    """
+    row = await (await conn.execute(OUTCOME, (job_id, job_id))).fetchone()
+    assert row is not None
+    return {"produced": row[0], "skipped": row[1], "quarantined": row[2]}

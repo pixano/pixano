@@ -9,11 +9,12 @@
 import asyncio
 import contextlib
 import json
+from datetime import timedelta
 
 import psycopg
 import pytest
 from pixano_worker import queue, runner
-from pixano_worker.kinds import Registry, default_registry
+from pixano_worker.kinds import FakeKind, Outcome, Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from psycopg_pool import AsyncConnectionPool
 
@@ -423,3 +424,154 @@ class TestConcurrency:
         ).fetchall()
         assert len(events) == 50
         assert max(event[0]["done_tasks"] for event in events) == 500
+
+
+async def _drain(adb: psycopg.AsyncConnection, registry: Registry) -> None:
+    while await runner.run_batch(adb, registry, "worker-test", 8):
+        pass
+
+
+class TestTransientFailures:
+    """Une panne passagère n'est pas un échec du job."""
+
+    async def test_the_chunk_is_retried_later_instead_of_failing_the_job(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={**FAST, "transient_at_chunk": 3})
+        await runner.plan_one(adb, registry)
+
+        await _drain(adb, registry)
+
+        assert _state(declared, job)[0] == "running", "le job attend son chunk rejoué, il n'a pas échoué"
+        row = declared.execute(
+            f"SELECT state, attempts, error->>'reason' FROM {SCHEMA_NAME}.job_chunks WHERE seq = 3"
+        ).fetchone()
+        assert row == ("pending", 1, "panne passagère")
+
+    async def test_the_job_completes_once_the_failure_has_passed(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={**FAST, "transient_at_chunk": 3})
+        await runner.plan_one(adb, registry)
+        await _drain(adb, registry)
+
+        # La panne est passée : le même job, sans la panne, et le délai écoulé.
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET params = params - 'transient_at_chunk' WHERE id = %s", (job,))
+        declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
+        await _drain(adb, registry)
+
+        assert _state(declared, job) == ("done", 200, 200)
+
+    async def test_a_failure_that_never_passes_ends_in_error(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={**FAST, "transient_at_chunk": 3})
+        await runner.plan_one(adb, registry)
+
+        for _ in range(queue.MAX_ATTEMPTS):
+            await _drain(adb, registry)
+            declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
+
+        assert _state(declared, job)[0] == "error"
+        row = declared.execute(f"SELECT state, attempts FROM {SCHEMA_NAME}.job_chunks WHERE seq = 3").fetchone()
+        assert row == ("error", queue.MAX_ATTEMPTS)
+
+
+class TestOutcome:
+    """Un job dit ce qu'il a produit, pas seulement ce qu'il a tenté."""
+
+    async def test_the_final_event_carries_the_outcome(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={**FAST, "skip_per_chunk": 3, "quarantine_per_chunk": 1})
+        await runner.plan_one(adb, registry)
+
+        await _drain(adb, registry)
+
+        assert _state(declared, job) == ("done", 200, 200)
+        final = declared.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' "
+            "ORDER BY id DESC LIMIT 1",
+            (job,),
+        ).fetchone()
+        assert final is not None
+        assert final[0] == {"state": "done", "produced": 160, "skipped": 30, "quarantined": 10}
+
+    async def test_quarantined_items_can_be_read_back(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """Une quarantaine qu'on ne peut pas relire ne sert à rien."""
+        job = _submit(declared, params={**FAST, "quarantine_per_chunk": 1})
+        await runner.plan_one(adb, registry)
+
+        await _drain(adb, registry)
+
+        items = declared.execute(
+            f"SELECT item_id, reason FROM {SCHEMA_NAME}.job_items WHERE job_id = %s ORDER BY item_id", (job,)
+        ).fetchall()
+        assert len(items) == 10
+        assert items[0] == ("task-0", "échec demandé")
+
+    async def test_an_outcome_that_does_not_add_up_fails_the_chunk(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Un bilan faux fausserait tout ce qu'on affiche du job : c'est un défaut du type."""
+
+        class Miscounting(FakeKind):
+            def outcome(self, result, payload, task_count):  # noqa: ANN001, ANN202, D102
+                return Outcome(produced=task_count - 1)
+
+        registry = Registry()
+        registry.register(Miscounting())
+        job = _submit(declared)
+        await runner.plan_one(adb, registry)
+
+        await _drain(adb, registry)
+
+        assert _state(declared, job)[0] == "error"
+        row = declared.execute(f"SELECT error->>'reason' FROM {SCHEMA_NAME}.job_chunks LIMIT 1").fetchone()
+        assert row is not None and "bilan" in row[0]
+
+
+class TestChunkTimeLimit:
+    async def test_a_chunk_over_its_time_limit_is_sent_back(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """Le worker est vivant, la sonde de docker ne voit rien : seul ce plafond rend le chunk."""
+        job = _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.05})
+        await runner.plan_one(adb, registry)
+        chunk = (await queue.claim(adb, "worker-test", 1))[0]
+
+        await runner.run_chunk(adb, registry, chunk, timeout_s=0.1)
+
+        row = declared.execute(f"SELECT state, error->>'reason' FROM {SCHEMA_NAME}.job_chunks").fetchone()
+        assert row == ("pending", "durée maximale dépassée")
+        assert _state(declared, job)[0] == "pending"
+
+
+class TestLeaseKeptWhileRunning:
+    async def test_a_long_chunk_keeps_its_lease(
+        self,
+        declared: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Sans rafraîchissement, un chunk plus long que son bail serait repris en plein vol."""
+        monkeypatch.setattr(queue, "LEASE_REFRESH_INTERVAL", timedelta(milliseconds=50))
+        _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.02})
+        await runner.plan_one(adb, registry)
+        chunk = (await queue.claim(adb, "worker-test", 1))[0]
+        # Un bail presque échu, qui expirerait bien avant la fin du chunk s'il n'était pas prolongé.
+        declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() + interval '200 milliseconds'")
+
+        running = asyncio.create_task(runner.run_chunk(adb, registry, chunk))
+        await asyncio.sleep(0.25)
+        lease = declared.execute(
+            f"SELECT extract(epoch FROM lease_until - now()) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'running'"
+        ).fetchone()
+        await running
+
+        assert lease is not None and float(lease[0]) > 60, "le bail a été prolongé pendant l'exécution"
+        row = declared.execute(f"SELECT state FROM {SCHEMA_NAME}.job_chunks").fetchone()
+        assert row == ("done",)
