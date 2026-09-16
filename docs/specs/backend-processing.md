@@ -226,7 +226,7 @@ questions. Durations here are awake time.
 
 ## 6bis. Known defects, scheduled for the hardening lot
 
-Three are execution defects rather than choices, and the subsystem should not be called
+These are execution defects rather than choices, and the subsystem should not be called
 finished while they stand.
 
 - **A chunk outliving its lease is stolen mid-flight.** The lease is two minutes and nothing
@@ -242,6 +242,15 @@ finished while they stand.
   to saturate the inference instance"; the runner processes chunks one at a time. That is the
   difference between saturating a GPU and occupying five percent of it, and it is what the
   per-model in-flight cap of step 4 is meant to bound.
+- **A finished job reports how much was attempted, never what came out.** Progress counts
+  tasks planned, and a kind is free to skip a task it cannot serve. Run on nuScenes, the
+  embeddings job ends at a confident `26 766 / 26 766` having written 404 vectors — the other
+  26 362 records are lidar sweeps with no camera, silently skipped at `logger.debug`. Nothing
+  in the API, the panel or the log says so; only counting rows in LanceDB does. The counter is
+  not wrong, it answers a different question than the one the user is asking. A job needs an
+  outcome alongside its progress — produced, skipped, and why — which means the kind's result
+  must carry those counts and the engine must aggregate them. Found while measuring throughput
+  in lot 10.
 
 ## 7. Open questions
 
