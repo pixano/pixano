@@ -162,6 +162,19 @@ its own verification that nothing relies on the import's side effect.
 
 ## 7. Open questions
 
+- **`done_tasks` is an invariant the schema does not hold.** The counter on `jobs` is
+  denormalised to avoid summing chunks on every progress event, but nothing guarantees it
+  agrees with the chunks actually finished. Today both writes share a transaction, so it
+  holds; it is carried by the code rather than by the database, which is the kind of thing
+  that drifts. Either a test compares the counter against the sum after every scenario, or
+  the column goes and the aggregate is paid. Raised in review, not yet settled.
+- **Job identifiers are `uuid`, unlike every other identifier in Pixano**, which uses
+  shortuuid text. The original reason — that neither side would need an identifier library —
+  no longer holds now that both depend on `pixano`. What remains in favour is that the
+  database guarantees uniqueness unprompted; what remains against is that a job identifier
+  looks like nothing else in the system, in URLs and in logs. Raised in review, not yet
+  settled.
+
 - **Which component writes to PostgreSQL.** The worker owns the schema, but `POST /jobs` is an application endpoint that must insert a job and its chunks in one transaction, and the application has no PostgreSQL driver today. Either it gains one, or the endpoint proxies. To be settled when the queue lands.
 - **Fairness across jobs.** The claim orders by chunk identifier, so an older job drains before a newer one and a large job can starve a small one. Batching by job would give locality at the cost of arbitrary job order.
 - **Retry semantics.** A chunk whose plugin raised is a failure; a chunk whose worker died is retried through the lease. That distinction makes one attempt counter sufficient, but it means a plugin must retry its own transient failures — a flaky inference call is the plugin's problem.
