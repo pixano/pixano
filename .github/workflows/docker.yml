@@ -17,13 +17,18 @@ on:
       - "LICENSE"
       - "src/pixano/**"
       - "ui/**"
+      - "packages/**"
+      - "docker-compose*.yml"
       - ".github/workflows/docker.yml"
       - "pyproject.toml"
       - "hatch_build.py"
       - "uv.lock"
   pull_request:
     branches:
-      - main
+      - "main"
+      - "arch/**"
+      - "spec/**"
+      - "feat/**"
       - "releases/**"
     paths:
       - "dockerfiles/**"
@@ -32,6 +37,9 @@ on:
       - ".github/workflows/docker.yml"
       - "src/pixano/**"
       - "ui/**"
+      - "packages/**"
+      - "docker-compose*.yml"
+      - ".dockerignore"
       - "pyproject.toml"
       - "hatch_build.py"
       - "uv.lock"
@@ -76,3 +84,63 @@ jobs:
           echo "$RESPONSE" | grep -q '"status":"ok"'
           echo "Test passed"
           docker rm -f pixano
+
+  worker:
+    name: Worker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Le contexte est la racine : le worker dépend de la source de pixano par chemin, et un
+      # contexte réduit au paquet ne la voit pas. C'est précisément ce qui avait cassé l'image
+      # sans que rien ne le signale, faute d'un build en intégration continue.
+      - name: Build the worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/pixano-worker/Dockerfile
+          load: true
+          tags: pixano/pixano-worker:test
+
+      # Charger le registre exerce toute la chaîne d'imports, y compris les bibliothèques
+      # système qu'opencv réclame en arrivant par pixano.schemas. Une image qui démarre mais
+      # ne sait charger aucun type de job est cassée sans le dire.
+      - name: The job kinds load
+        run: |
+          docker run --rm pixano/pixano-worker:test python -c "
+          from pixano_worker.kinds import default_registry
+          names = default_registry().names()
+          print('kinds:', names)
+          assert names, 'no job kind could be loaded'
+          "
+
+      # Sans configuration, le worker doit refuser de démarrer en le disant — pas boucler ni
+      # se connecter au hasard.
+      - name: An unconfigured worker refuses to start
+        run: |
+          set +e
+          output=$(docker run --rm pixano/pixano-worker:test 2>&1)
+          status=$?
+          set -e
+          echo "$output"
+          test "$status" -eq 1
+          echo "$output" | grep -q "PIXANO_DATABASE_URL"
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Les fichiers compose interpolent des variables et en exigent certaines : une faute s'y
+      # voit au premier `up`, c'est-à-dire trop tard.
+      - name: The compose files resolve
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.inference.yml config --quiet
