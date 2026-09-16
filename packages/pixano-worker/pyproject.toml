@@ -7,7 +7,9 @@ name = "pixano-worker"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "psycopg[binary]>=3.1",
+    # Le pool donne une connexion à chaque chunk en vol : une connexion asynchrone ne sert
+    # qu'une requête à la fois, et le worker en fait tourner plusieurs.
+    "psycopg[binary,pool]>=3.1",
     "httpx>=0.27",
     # Le contrat des paramètres d'un type de job, et le schéma JSON qu'on en publie.
     "pydantic>=2.9,<3.0",
@@ -31,10 +33,13 @@ pixano-worker = "pixano_worker.__main__:main"
 packages = ["src/pixano_worker"]
 
 [dependency-groups]
-test = ["pytest"]
+test = ["pytest", "pytest-asyncio"]
 
 [tool.uv]
 default-groups = ["test"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Comme la suite de l'application : une coroutine de test s'exécute sans décorateur.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
