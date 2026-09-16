@@ -238,6 +238,14 @@ class TestExecution:
         for chunk in kind.plan(_reader(), params):
             kind.process(_reader(), chunk.payload, params)
 
+    def test_its_outcome_accounts_for_every_task(self, kind: JobKind) -> None:
+        """Le moteur refuse un bilan qui ne tombe pas juste ; mieux vaut l'apprendre ici qu'en production."""
+        params = _params(kind)
+
+        for chunk in kind.plan(_reader(), params):
+            result = kind.process(_reader(), chunk.payload, params)
+            assert kind.outcome(result, chunk.payload, chunk.task_count).total == chunk.task_count
+
     def test_writing_twice_changes_nothing(self, kind: JobKind) -> None:
         """L'idempotence, exigée de tous : les résultats vont dans LanceDB et l'avancement
         dans PostgreSQL, donc un worker qui meurt entre les deux refait le chunk."""
