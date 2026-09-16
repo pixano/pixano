@@ -18,6 +18,7 @@ endroit et échoue trois couches plus loin.
 import os
 import re
 from dataclasses import dataclass
+from typing import Callable, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 
 
@@ -34,6 +35,12 @@ MAX_HEARTBEAT_AGE_S = 30.0
 # presque vide. Quatre est un point de départ prudent, pas une mesure : la bonne valeur dépend
 # du serveur d'inférence que ce worker partage, et se règle par déploiement.
 DEFAULT_CONCURRENCY = 4
+
+# Durée au-delà de laquelle un chunk est tenu pour pendu et rendu à la file. Elle doit dépasser
+# le pire cas légitime d'un type de job — pour les embeddings, un appel et ses reprises, soit
+# un quart d'heure avec les délais par défaut — sans quoi on rendrait du travail lent mais sain.
+# Une demi-heure laisse cette marge et libère tout de même un chunk pendu dans la matinée.
+DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 
 
 def heartbeat_path() -> str:
@@ -52,16 +59,19 @@ def _required(name: str, hint: str) -> str:
     return value
 
 
-def _positive_int(name: str, default: int) -> int:
+NumberT = TypeVar("NumberT", int, float)
+
+
+def _positive(name: str, default: NumberT, cast: Callable[[str], NumberT]) -> NumberT:
     raw = os.environ.get(name, "").strip()
     if not raw:
         return default
     try:
-        value = int(raw)
+        value = cast(raw)
     except ValueError:
-        value = 0
-    if value < 1:
-        raise MissingConfigurationError(f"{name} doit être un entier strictement positif, reçu « {raw} »")
+        value = cast("0")
+    if value <= 0:
+        raise MissingConfigurationError(f"{name} doit être un nombre strictement positif, reçu « {raw} »")
     return value
 
 
@@ -96,6 +106,7 @@ class WorkerConfig:
             pas nécessairement le même stockage au même endroit.
         heartbeat_path: Fichier dont la fraîcheur sert de sonde de vivacité.
         concurrency: Nombre de chunks exécutés à la fois.
+        chunk_timeout_s: Durée maximale d'un chunk, au-delà de laquelle il est rendu à la file.
     """
 
     database_url: str
@@ -106,6 +117,7 @@ class WorkerConfig:
     inference_media_root: str
     heartbeat_path: str
     concurrency: int = DEFAULT_CONCURRENCY
+    chunk_timeout_s: float = DEFAULT_CHUNK_TIMEOUT_S
 
     @classmethod
     def from_env(cls) -> "WorkerConfig":
@@ -118,7 +130,8 @@ class WorkerConfig:
             media_root=_required("PIXANO_MEDIA_ROOT", "racine des médias vue par le worker"),
             inference_media_root=_required("PIXANO_INFERENCE_MEDIA_ROOT", "racine des médias vue par l'inference"),
             heartbeat_path=heartbeat_path(),
-            concurrency=_positive_int("PIXANO_WORKER_CONCURRENCY", DEFAULT_CONCURRENCY),
+            concurrency=_positive("PIXANO_WORKER_CONCURRENCY", DEFAULT_CONCURRENCY, int),
+            chunk_timeout_s=_positive("PIXANO_WORKER_CHUNK_TIMEOUT_S", DEFAULT_CHUNK_TIMEOUT_S, float),
         )
 
     def describe(self) -> str:
@@ -131,5 +144,6 @@ class WorkerConfig:
             f"  médias (worker)   : {self.media_root}",
             f"  médias (inference): {self.inference_media_root}",
             f"  concurrence       : {self.concurrency} chunk(s) à la fois",
+            f"  durée max. chunk  : {self.chunk_timeout_s:g} s",
         ]
         return "\n".join(lines)

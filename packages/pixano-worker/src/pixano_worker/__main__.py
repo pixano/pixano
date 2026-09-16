@@ -141,7 +141,16 @@ def main() -> int:
 
     media = MediaResolver(config.media_root, config.inference_media_root)
     asyncio.run(
-        serve(config.database_url, registry, worker_id, alive, Path(config.library_dir), media, config.concurrency)
+        serve(
+            config.database_url,
+            registry,
+            worker_id,
+            alive,
+            Path(config.library_dir),
+            media,
+            config.concurrency,
+            config.chunk_timeout_s,
+        )
     )
     return 0
 
@@ -154,6 +163,7 @@ async def serve(
     library: Path,
     media: MediaResolver,
     concurrency: int,
+    chunk_timeout_s: float,
 ) -> None:
     """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
     heartbeat = asyncio.create_task(_beat_forever(alive))
@@ -175,7 +185,9 @@ async def serve(
 
         log.info("worker démarré, en attente de jobs")
         try:
-            await runner.work(pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S)
+            await runner.work(
+                pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S, chunk_timeout_s
+            )
         finally:
             heartbeat.cancel()
 
