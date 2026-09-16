@@ -22,7 +22,7 @@ import os
 import socket
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any
+from typing import Any, Protocol, Sequence
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -35,9 +35,20 @@ from .schema import SCHEMA_NAME
 # un chunk serait volé avant même qu'on ait constaté que son porteur ne répond plus.
 LEASE_TTL = timedelta(seconds=max(120, MAX_HEARTBEAT_AGE_S * 4))
 
-# Au-delà, un chunk qui fait tomber son worker à chaque tentative est mis de côté plutôt que
-# de faire boucler la file indéfiniment.
-MAX_ATTEMPTS = 3
+# Un chunk qui tourne prolonge son bail bien avant qu'il expire : trois occasions par bail,
+# pour qu'une requête lente ou une connexion qui hoquette ne suffise pas à le perdre.
+LEASE_REFRESH_INTERVAL = LEASE_TTL / 3
+
+# Au-delà, un chunk est mis de côté plutôt que de faire boucler la file indéfiniment — qu'il
+# fasse tomber son worker à chaque tentative ou qu'il bute sur une panne qui ne passe pas.
+# Cinq, parce qu'avec le délai ci-dessous cela laisse près de quatre minutes à une inférence
+# pour revenir : le temps d'un redémarrage avec rechargement du modèle.
+MAX_ATTEMPTS = 5
+
+# Délai avant de rejouer un chunk après une panne passagère, doublé à chaque tentative. Le
+# plafond évite qu'un chunk disparaisse une heure pour une panne déjà réparée.
+RETRY_BASE_DELAY = timedelta(seconds=15)
+RETRY_MAX_DELAY = timedelta(minutes=5)
 
 CLAIM = f"""
 UPDATE {SCHEMA_NAME}.job_chunks AS c
@@ -48,7 +59,7 @@ SET state = 'running',
     updated_at = now()
 FROM (
     SELECT id FROM {SCHEMA_NAME}.job_chunks
-    WHERE state = 'pending'
+    WHERE state = 'pending' AND available_at <= now()
     ORDER BY id
     FOR UPDATE SKIP LOCKED
     LIMIT %s
@@ -61,9 +72,40 @@ RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts
 # travaillait ne doit pas écraser le résultat de celui qui a repris son chunk.
 FINISH = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
-SET state = 'done', lease_until = NULL, updated_at = now()
+SET state = 'done', lease_until = NULL, error = NULL, produced = %s, skipped = %s, updated_at = now()
 WHERE id = %s AND state = 'running' AND attempts = %s
 RETURNING job_id, task_count
+"""
+
+# Un item rejoué avec son chunk remplace sa ligne : la quarantaine reflète la dernière
+# tentative, pas l'historique de toutes.
+QUARANTINE = f"""
+INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason, detail)
+VALUES (%s, %s, %s, %s, %s)
+ON CONFLICT (job_id, item_id) DO UPDATE
+SET chunk_id = EXCLUDED.chunk_id, reason = EXCLUDED.reason, detail = EXCLUDED.detail, created_at = now()
+"""
+
+# Une panne passagère rend le chunk à la file après un délai — ou l'écarte, s'il a épuisé ses
+# tentatives. Même jeton de garde que FINISH.
+RETRY = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET state = CASE WHEN attempts < %(max_attempts)s THEN 'pending' ELSE 'error' END,
+    lease_until = NULL,
+    claimed_by = CASE WHEN attempts < %(max_attempts)s THEN NULL ELSE claimed_by END,
+    available_at = now() + least(%(base)s * power(2, attempts - 1), %(cap)s),
+    error = %(error)s,
+    updated_at = now()
+WHERE id = %(id)s AND state = 'running' AND attempts = %(attempts)s
+RETURNING state
+"""
+
+# Le bail d'un chunk qui tourne encore. Même jeton de garde : un worker qui a perdu son chunk
+# ne peut pas prolonger le bail de son successeur.
+REFRESH_LEASE = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET lease_until = now() + %s, updated_at = now()
+WHERE id = %s AND state = 'running' AND attempts = %s
 """
 
 FAIL = f"""
@@ -154,19 +196,94 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
     ]
 
 
-async def finish(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
-    """Marquer un chunk terminé et avancer la progression de son job.
+class QuarantinedItem(Protocol):
+    """Ce que la file lit d'un item en quarantaine.
+
+    Un protocole plutôt que le modèle du contrat des types de jobs : la file est la couche du
+    bas, elle ne doit rien importer de ce qui s'appuie sur elle.
+    """
+
+    @property
+    def item_id(self) -> str: ...  # noqa: D102
+
+    @property
+    def reason(self) -> str: ...  # noqa: D102
+
+    @property
+    def detail(self) -> dict[str, Any] | None: ...  # noqa: D102
+
+
+async def finish(
+    conn: psycopg.AsyncConnection,
+    chunk: Chunk,
+    produced: int | None = None,
+    skipped: int = 0,
+    quarantined: Sequence[QuarantinedItem] = (),
+) -> bool:
+    """Marquer un chunk terminé, consigner son bilan, et avancer la progression de son job.
+
+    Le bilan, la quarantaine et la progression s'écrivent dans une seule transaction : un
+    chunk ne peut pas être compté fait sans que ses items écartés soient consignés.
+
+    Args:
+        conn: La connexion du chunk.
+        chunk: Le chunk réclamé.
+        produced: Tâches produites. Par défaut, toutes celles qui ne sont ni écartées ni en
+            quarantaine.
+        skipped: Tâches sans objet.
+        quarantined: Items en échec.
 
     Returns:
         False si le chunk avait été repris par un autre worker entre-temps ; l'appelant doit
         alors jeter son résultat plutôt que d'écraser celui de son successeur.
     """
+    if produced is None:
+        produced = chunk.task_count - skipped - len(quarantined)
     async with conn.transaction():
-        row = await (await conn.execute(FINISH, (chunk.id, chunk.attempts))).fetchone()
+        row = await (await conn.execute(FINISH, (produced, skipped, chunk.id, chunk.attempts))).fetchone()
         if row is None:
             return False
+        for item in quarantined:
+            await conn.execute(
+                QUARANTINE,
+                (chunk.job_id, chunk.id, item.item_id, item.reason, Jsonb(item.detail) if item.detail else None),
+            )
         await conn.execute(ADVANCE_JOB, (row[1], row[0]))
     return True
+
+
+async def retry_later(
+    conn: psycopg.AsyncConnection, chunk: Chunk, error: dict[str, Any], max_attempts: int = MAX_ATTEMPTS
+) -> str | None:
+    """Rendre à la file, après un délai, un chunk qui a buté sur une panne passagère.
+
+    Returns:
+        `pending` s'il sera rejoué, `error` s'il a épuisé ses tentatives, None si le chunk
+        ne lui appartenait plus.
+    """
+    row = await (
+        await conn.execute(
+            RETRY,
+            {
+                "max_attempts": max_attempts,
+                "base": RETRY_BASE_DELAY,
+                "cap": RETRY_MAX_DELAY,
+                "error": Jsonb(error),
+                "id": chunk.id,
+                "attempts": chunk.attempts,
+            },
+        )
+    ).fetchone()
+    return row[0] if row is not None else None
+
+
+async def refresh_lease(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
+    """Prolonger le bail d'un chunk en cours.
+
+    Returns:
+        False si le chunk ne lui appartient plus : son bail a expiré et un autre l'a repris.
+    """
+    return (await conn.execute(REFRESH_LEASE, (LEASE_TTL, chunk.id, chunk.attempts))).rowcount > 0
 
 
 async def fail(conn: psycopg.AsyncConnection, chunk: Chunk, error: dict[str, Any]) -> bool:

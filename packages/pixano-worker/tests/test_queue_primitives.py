@@ -7,8 +7,10 @@
 """Tests des primitives de réclamation du worker."""
 
 import asyncio
+from dataclasses import dataclass
 
 import psycopg
+import pytest
 from pixano_worker import queue
 from pixano_worker.schema import SCHEMA_NAME
 
@@ -209,3 +211,140 @@ class TestLeaseDuration:
     def test_the_lease_outlives_the_liveness_window(self) -> None:
         """Un chunk ne doit pas être volé avant qu'on ait constaté que son porteur est mort."""
         assert queue.LEASE_TTL.total_seconds() > queue.MAX_HEARTBEAT_AGE_S
+
+
+class TestRetryLater:
+    """Une panne passagère rend le chunk à la file, mais pas tout de suite."""
+
+    async def test_the_chunk_goes_back_but_is_not_claimable_yet(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Rejoué dans la seconde contre une inférence qui redémarre, il épuiserait ses tentatives."""
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+
+        state = await queue.retry_later(adb, chunk, {"reason": "panne passagère"})
+
+        assert state == "pending"
+        assert await queue.claim(adb, "worker-a", 1) == []
+        row = db.execute(
+            f"SELECT extract(epoch FROM available_at - now()), error->>'reason' FROM {SCHEMA_NAME}.job_chunks"
+        ).fetchone()
+        assert row is not None
+        assert float(row[0]) == pytest.approx(queue.RETRY_BASE_DELAY.total_seconds(), abs=2)
+        assert row[1] == "panne passagère"
+
+    async def test_the_delay_doubles_with_each_attempt(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        delays = []
+        for _ in range(3):
+            chunk = (await queue.claim(adb, "worker-a", 1))[0]
+            await queue.retry_later(adb, chunk, {"reason": "panne passagère"})
+            row = db.execute(
+                f"SELECT extract(epoch FROM available_at - now()) FROM {SCHEMA_NAME}.job_chunks"
+            ).fetchone()
+            assert row is not None
+            delays.append(float(row[0]))
+            db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
+
+        base = queue.RETRY_BASE_DELAY.total_seconds()
+        assert delays == pytest.approx([base, base * 2, base * 4], abs=2)
+
+    async def test_a_failure_that_never_passes_is_set_aside(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        states = []
+        for _ in range(queue.MAX_ATTEMPTS):
+            chunk = (await queue.claim(adb, "worker-a", 1))[0]
+            states.append(await queue.retry_later(adb, chunk, {"reason": "panne passagère"}))
+            db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
+
+        assert states == ["pending"] * (queue.MAX_ATTEMPTS - 1) + ["error"]
+        assert await queue.claim(adb, "worker-a", 1) == []
+
+    async def test_a_stale_worker_cannot_send_back_a_stolen_chunk(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        await queue.release(adb, chunk)
+        await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.retry_later(adb, chunk, {"reason": "panne passagère"}) is None
+
+
+class TestLeaseRefresh:
+    async def test_extends_the_lease_of_a_running_chunk(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() + interval '5 seconds'")
+
+        assert await queue.refresh_lease(adb, chunk)
+
+        row = db.execute(f"SELECT extract(epoch FROM lease_until - now()) FROM {SCHEMA_NAME}.job_chunks").fetchone()
+        assert row is not None and float(row[0]) == pytest.approx(queue.LEASE_TTL.total_seconds(), abs=2)
+
+    async def test_a_worker_cannot_extend_the_lease_of_its_successor(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Sinon un worker qui a perdu son chunk le garderait indéfiniment hors de portée."""
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        await queue.release(adb, chunk)
+        await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.refresh_lease(adb, chunk) is False
+
+
+class TestOutcome:
+    @dataclass(frozen=True)
+    class Item:
+        item_id: str
+        reason: str
+        detail: dict | None = None
+
+    async def test_records_counts_and_quarantine(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
+        _enqueue(db, 1, tasks_per_chunk=10)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+
+        await queue.finish(
+            adb,
+            chunk,
+            produced=7,
+            skipped=1,
+            quarantined=[self.Item("a", "illisible"), self.Item("b", "illisible", {"code": 500})],
+        )
+
+        assert db.execute(f"SELECT produced, skipped FROM {SCHEMA_NAME}.job_chunks").fetchone() == (7, 1)
+        items = db.execute(f"SELECT item_id, reason, detail FROM {SCHEMA_NAME}.job_items ORDER BY item_id").fetchall()
+        assert items == [("a", "illisible", None), ("b", "illisible", {"code": 500})]
+
+    async def test_produced_defaults_to_what_is_left(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1, tasks_per_chunk=10)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+
+        await queue.finish(adb, chunk, skipped=2, quarantined=[self.Item("a", "illisible")])
+
+        assert db.execute(f"SELECT produced, skipped FROM {SCHEMA_NAME}.job_chunks").fetchone() == (7, 2)
+
+    async def test_a_replayed_chunk_replaces_its_quarantine(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Le cas du `kill -9` entre l'écriture LanceDB et le commit : le chunk est refait."""
+        job = _enqueue(db, 1, tasks_per_chunk=10)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        await queue.finish(adb, chunk, quarantined=[self.Item("a", "première fois")])
+        db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'pending', produced = NULL, skipped = NULL")
+        chunk = (await queue.claim(adb, "worker-b", 1))[0]
+
+        await queue.finish(adb, chunk, quarantined=[self.Item("a", "seconde fois")])
+
+        items = db.execute(f"SELECT item_id, reason FROM {SCHEMA_NAME}.job_items WHERE job_id = %s", (job,)).fetchall()
+        assert items == [("a", "seconde fois")]

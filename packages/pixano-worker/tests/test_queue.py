@@ -67,7 +67,7 @@ class TestClaim:
                         claimed[name].extend(ids)
                         conn.execute(
                             f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done', "
-                            "lease_until = NULL WHERE id = ANY(%s)",
+                            "lease_until = NULL, produced = task_count, skipped = 0 WHERE id = ANY(%s)",
                             (ids,),
                         )
             except Exception as exc:  # pragma: no cover - remonté par l'assertion
@@ -94,7 +94,9 @@ class TestClaim:
         choisit un balayage complet, et le test ne prouverait rien.
         """
         _job_with_chunks(db, 50_000)
-        db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done' WHERE seq < 49_000")
+        db.execute(
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done', produced = 10, skipped = 0 WHERE seq < 49_000"
+        )
         db.execute(f"ANALYZE {SCHEMA_NAME}.job_chunks")
 
         plan = db.execute(
@@ -174,7 +176,7 @@ class TestLease:
         )
 
         overwritten = db.execute(
-            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done', lease_until = NULL "
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done', lease_until = NULL, produced = 10, skipped = 0 "
             "WHERE id = %s AND state = 'running' AND attempts = %s RETURNING id",
             (chunk, stale_attempts),
         ).fetchall()
@@ -192,4 +194,7 @@ class TestLease:
         assert row is not None
 
         with pytest.raises(psycopg.errors.CheckViolation):
-            db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done' WHERE id = %s", (row[0],))
+            db.execute(
+                f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done', produced = 10, skipped = 0 WHERE id = %s",
+                (row[0],),
+            )

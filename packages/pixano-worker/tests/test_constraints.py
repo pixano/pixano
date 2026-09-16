@@ -111,3 +111,42 @@ class TestChunkConstraints:
         for table in ("job_chunks", "job_events"):
             row = db.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.{table}").fetchone()
             assert row is not None and row[0] == 0
+
+
+class TestOutcomeConstraints:
+    """Un bilan n'existe que pour un chunk terminé, et un item n'est en quarantaine qu'une fois."""
+
+    @staticmethod
+    def _chunk(db: psycopg.Connection) -> tuple[str, int]:
+        job = _new_job(db)
+        row = db.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count) VALUES (%s, 0, 10) RETURNING id",
+            (job,),
+        ).fetchone()
+        assert row is not None
+        return job, row[0]
+
+    def test_a_finished_chunk_must_say_what_it_produced(self, db: psycopg.Connection) -> None:
+        """Sans bilan, un job ne saurait dire que ce qu'il a tenté — le défaut du lot 10."""
+        _, chunk = self._chunk(db)
+
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'done' WHERE id = %s", (chunk,))
+
+    def test_a_chunk_sent_back_cannot_keep_an_earlier_outcome(self, db: psycopg.Connection) -> None:
+        _, chunk = self._chunk(db)
+
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET produced = 10, skipped = 0 WHERE id = %s", (chunk,))
+
+    def test_an_item_is_quarantined_once_per_job(self, db: psycopg.Connection) -> None:
+        """Un chunk rejoué après la mort de son worker ne doit pas doubler sa quarantaine."""
+        job, chunk = self._chunk(db)
+        insert = (
+            f"INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason) "
+            "VALUES (%s, %s, 'img-1', 'illisible')"
+        )
+        db.execute(insert, (job, chunk))
+
+        with pytest.raises(psycopg.errors.UniqueViolation):
+            db.execute(insert, (job, chunk))
