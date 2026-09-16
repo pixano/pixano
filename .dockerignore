@@ -23,8 +23,10 @@
 # que le démon reçoit à chaque build tant qu'ils sont dans le contexte.
 data/
 my_data/
-# Le worker a son propre contexte de build (packages/pixano-worker).
-packages/
+# Les artefacts de build du frontend : l'image de l'application les reconstruit, celle du
+# worker n'en a aucun usage.
+src/pixano/api/dist/
+src/pixano/api/legacy_dist/
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
