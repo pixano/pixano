@@ -415,10 +415,12 @@ async def _execute(
     finished = await queue.finish(
         conn, chunk, produced=outcome.produced, skipped=outcome.skipped, quarantined=outcome.quarantined
     )
-    if not finished:
+    if finished is None:
         # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
         log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
         return
+    if finished.started_job:
+        await record_event(conn, chunk.job_id, "state", {"state": "running"})
     if outcome.quarantined:
         log.info("chunk %s du job %s : %d item(s) en quarantaine", chunk.seq, chunk.job_id, len(outcome.quarantined))
 

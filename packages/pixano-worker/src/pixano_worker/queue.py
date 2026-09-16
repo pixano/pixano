@@ -154,12 +154,20 @@ WHERE state = 'running' AND lease_until < now() AND attempts >= %s
 RETURNING id
 """
 
+# Le premier chunk terminé fait passer le job en cours. L'ancien état est lu sous le verrou de
+# la ligne, pour que l'appelant sache si c'est lui qui a fait la transition — et l'annonce une
+# seule fois, même quand plusieurs chunks du job finissent ensemble.
 ADVANCE_JOB = f"""
-UPDATE {SCHEMA_NAME}.jobs
-SET done_tasks = done_tasks + %s,
-    state = CASE WHEN state = 'pending' THEN 'running' ELSE state END,
+WITH previous AS (
+    SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %(job)s FOR UPDATE
+)
+UPDATE {SCHEMA_NAME}.jobs AS j
+SET done_tasks = j.done_tasks + %(tasks)s,
+    state = CASE WHEN j.state = 'pending' THEN 'running' ELSE j.state END,
     updated_at = now()
-WHERE id = %s
+FROM previous
+WHERE j.id = %(job)s
+RETURNING previous.state = 'pending'
 """
 
 IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs WHERE id = %s"
@@ -196,6 +204,19 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
     ]
 
 
+@dataclass(frozen=True)
+class Finished:
+    """Ce qu'a produit la fin d'un chunk, au-delà du chunk lui-même.
+
+    Attributes:
+        started_job: Ce chunk est le premier terminé de son job, qui vient de passer en cours.
+            C'est le moment d'annoncer la transition : sans événement, une interface
+            continuerait d'afficher « en attente » sous une barre qui avance.
+    """
+
+    started_job: bool
+
+
 class QuarantinedItem(Protocol):
     """Ce que la file lit d'un item en quarantaine.
 
@@ -219,7 +240,7 @@ async def finish(
     produced: int | None = None,
     skipped: int = 0,
     quarantined: Sequence[QuarantinedItem] = (),
-) -> bool:
+) -> Finished | None:
     """Marquer un chunk terminé, consigner son bilan, et avancer la progression de son job.
 
     Le bilan, la quarantaine et la progression s'écrivent dans une seule transaction : un
@@ -234,7 +255,7 @@ async def finish(
         quarantined: Items en échec.
 
     Returns:
-        False si le chunk avait été repris par un autre worker entre-temps ; l'appelant doit
+        None si le chunk avait été repris par un autre worker entre-temps ; l'appelant doit
         alors jeter son résultat plutôt que d'écraser celui de son successeur.
     """
     if produced is None:
@@ -242,14 +263,14 @@ async def finish(
     async with conn.transaction():
         row = await (await conn.execute(FINISH, (produced, skipped, chunk.id, chunk.attempts))).fetchone()
         if row is None:
-            return False
+            return None
         for item in quarantined:
             await conn.execute(
                 QUARANTINE,
                 (chunk.job_id, chunk.id, item.item_id, item.reason, Jsonb(item.detail) if item.detail else None),
             )
-        await conn.execute(ADVANCE_JOB, (row[1], row[0]))
-    return True
+        advanced = await (await conn.execute(ADVANCE_JOB, {"job": row[0], "tasks": row[1]})).fetchone()
+    return Finished(started_job=bool(advanced and advanced[0]))
 
 
 async def retry_later(
