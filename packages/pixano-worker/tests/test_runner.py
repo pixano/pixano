@@ -89,16 +89,18 @@ class TestDeclaration:
         registry.declare(db, "worker-b")
 
         row = db.execute(
-            f"SELECT count(*), count(DISTINCT declared_by), max(declared_by) " f"FROM {SCHEMA_NAME}.job_kinds"
+            f"SELECT count(*), count(DISTINCT declared_by), max(declared_by) FROM {SCHEMA_NAME}.job_kinds"
         ).fetchone()
         assert row == (len(registry.names()), 1, "worker-b")
 
 
 class TestPlanning:
-    def test_splits_a_job_into_chunks(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_splits_a_job_into_chunks(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         job = _submit(declared)
 
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
         assert _state(declared, job) == ("pending", 0, 200)
         row = declared.execute(
@@ -106,69 +108,81 @@ class TestPlanning:
         ).fetchone()
         assert row == (10, 200)
 
-    def test_nothing_to_plan_returns_nothing(self, declared: psycopg.Connection, registry: Registry) -> None:
-        assert runner.plan_one(declared, registry) is None
+    async def test_nothing_to_plan_returns_nothing(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        assert await runner.plan_one(adb, registry) is None
 
-    def test_an_unknown_kind_fails_the_job_instead_of_stranding_it(
-        self, declared: psycopg.Connection, registry: Registry
+    async def test_an_unknown_kind_fails_the_job_instead_of_stranding_it(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
         """Sans ça, un job dont aucun worker ne connaît le type attendrait sans explication."""
         job = _submit(declared, kind="fantome")
 
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
         state, _, _ = _state(declared, job)
         assert state == "error"
         row = declared.execute(f"SELECT error FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
         assert row is not None and row[0]["kind"] == "fantome"
 
-    def test_invalid_parameters_fail_the_job(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_invalid_parameters_fail_the_job(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         job = _submit(declared, params={"task_count": -5})
 
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
         assert _state(declared, job)[0] == "error"
 
-    def test_a_cancelled_job_is_never_planned(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_a_cancelled_job_is_never_planned(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """Découper le travail d'un job qu'on vient d'arrêter n'a aucun sens."""
         job = _submit(declared)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
 
-        assert runner.plan_one(declared, registry) is None
+        assert await runner.plan_one(adb, registry) is None
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == 0
 
 
 class TestExecution:
-    def test_runs_a_job_to_completion(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_runs_a_job_to_completion(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """La première moitié de la DoD du lot : un job factice de 200 tâches va au bout."""
         job = _submit(declared)
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
-        while runner.run_batch(declared, registry, "worker-test", 8):
+        while await runner.run_batch(adb, registry, "worker-test", 8):
             pass
 
         assert _state(declared, job) == ("done", 200, 200)
 
-    def test_reports_progress_as_it_goes(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_reports_progress_as_it_goes(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         job = _submit(declared)
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
-        runner.run_batch(declared, registry, "worker-test", 3)
+        await runner.run_batch(adb, registry, "worker-test", 3)
 
         assert _state(declared, job)[1] == 60
         events = declared.execute(
-            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'progress' " "ORDER BY id",
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'progress' ORDER BY id",
             (job,),
         ).fetchall()
         assert [event[0]["done_tasks"] for event in events] == [20, 40, 60]
 
-    def test_progress_events_carry_absolute_counters(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_progress_events_carry_absolute_counters(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """Les identifiants de séquence sont attribués avant le commit : un lecteur peut en
         sauter un, et doit pouvoir s'en remettre au suivant. Des incréments l'interdiraient."""
         _submit(declared)
-        runner.plan_one(declared, registry)
-        runner.run_batch(declared, registry, "worker-test", 2)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", 2)
 
         events = declared.execute(
             f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE type = 'progress' ORDER BY id"
@@ -176,21 +190,25 @@ class TestExecution:
         assert all("total_tasks" in event[0] for event in events)
         assert [event[0]["done_tasks"] for event in events] == [20, 40]
 
-    def test_a_failing_chunk_fails_the_job(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_a_failing_chunk_fails_the_job(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         job = _submit(declared, params={**FAST, "fail_at_chunk": 3})
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
-        while runner.run_batch(declared, registry, "worker-test", 4):
+        while await runner.run_batch(adb, registry, "worker-test", 4):
             pass
 
         assert _state(declared, job)[0] == "error"
 
-    def test_the_other_chunks_still_run(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_the_other_chunks_still_run(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """Un job ne s'arrête pas au premier item corrompu : il finit et rapporte."""
         _submit(declared, params={**FAST, "fail_at_chunk": 3})
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
 
-        while runner.run_batch(declared, registry, "worker-test", 4):
+        while await runner.run_batch(adb, registry, "worker-test", 4):
             pass
 
         row = declared.execute(
@@ -201,18 +219,20 @@ class TestExecution:
 
 
 class TestCancellation:
-    def test_stops_between_batches(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_stops_between_batches(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """La deuxième partie de la DoD : une annulation en cours de route s'arrête proprement.
 
-        Le worker voit l'annulation au lot suivant : il sort ses chunks de la file plutôt que
-        de les exécuter, puis conclut le job.
+        Le worker voit l'annulation avant le chunk suivant : il le sort de la file plutôt que
+        de l'exécuter, puis conclut le job.
         """
         job = _submit(declared)
-        runner.plan_one(declared, registry)
-        runner.run_batch(declared, registry, "worker-test", 3)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", 3)
 
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
-        while runner.run_batch(declared, registry, "worker-test", 3):
+        while await runner.run_batch(adb, registry, "worker-test", 3):
             pass
 
         state, done, total = _state(declared, job)
@@ -220,28 +240,32 @@ class TestCancellation:
         assert done == 60, "le travail déjà fait reste compté"
         assert total == 200
 
-    def test_a_cancelled_chunk_never_comes_back(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_a_cancelled_chunk_never_comes_back(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """Le rendre « en attente » le ferait reréclamer sans fin, et le job ne conclurait jamais."""
         job = _submit(declared)
-        runner.plan_one(declared, registry)
+        await runner.plan_one(adb, registry)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
 
         tours = 0
-        while runner.run_batch(declared, registry, "worker-test", 4) and tours < 20:
+        while await runner.run_batch(adb, registry, "worker-test", 4) and tours < 20:
             tours += 1
 
         assert tours < 20, "la boucle ne se termine pas"
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'pending'").fetchone()
         assert row is not None and row[0] == 0
 
-    def test_work_already_done_is_not_undone(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_work_already_done_is_not_undone(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         job = _submit(declared)
-        runner.plan_one(declared, registry)
-        runner.run_batch(declared, registry, "worker-test", 2)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", 2)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
         declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'cancelled' WHERE state = 'pending'")
 
-        while runner.run_batch(declared, registry, "worker-test", 3):
+        while await runner.run_batch(adb, registry, "worker-test", 3):
             pass
 
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'done'").fetchone()
@@ -249,8 +273,8 @@ class TestCancellation:
 
 
 class TestRecovery:
-    def test_an_interrupted_job_resumes_where_it_stopped(
-        self, declared: psycopg.Connection, registry: Registry
+    async def test_an_interrupted_job_resumes_where_it_stopped(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
         """La troisième partie de la DoD, simulée : un worker meurt, un autre reprend.
 
@@ -258,26 +282,28 @@ class TestRecovery:
         worker qui redémarre rend les siens ; ceux d'un worker qui ne revient pas expirent.
         """
         job = _submit(declared)
-        runner.plan_one(declared, registry)
-        runner.run_batch(declared, registry, "worker-mort", 2)
-        queue.claim(declared, "worker-mort", 3)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-mort", 2)
+        await queue.claim(adb, "worker-mort", 3)
 
-        released = queue.release_own(declared, "worker-mort")
+        released = await queue.release_own(adb, "worker-mort")
         assert released == 3
-        while runner.run_batch(declared, registry, "worker-vivant", 8):
+        while await runner.run_batch(adb, registry, "worker-vivant", 8):
             pass
 
         assert _state(declared, job) == ("done", 200, 200)
 
-    def test_no_task_is_counted_twice_after_a_resume(self, declared: psycopg.Connection, registry: Registry) -> None:
+    async def test_no_task_is_counted_twice_after_a_resume(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
         """Reprendre ne doit pas gonfler la progression au-delà du total."""
         job = _submit(declared)
-        runner.plan_one(declared, registry)
-        runner.run_batch(declared, registry, "worker-mort", 4)
-        queue.claim(declared, "worker-mort", 2)
-        queue.release_own(declared, "worker-mort")
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-mort", 4)
+        await queue.claim(adb, "worker-mort", 2)
+        await queue.release_own(adb, "worker-mort")
 
-        while runner.run_batch(declared, registry, "worker-vivant", 8):
+        while await runner.run_batch(adb, registry, "worker-vivant", 8):
             pass
 
         state, done, total = _state(declared, job)
@@ -287,7 +313,9 @@ class TestRecovery:
 class TestNotification:
     """La sonnette qui réveille l'interface."""
 
-    def test_an_event_rings_only_once_committed(self, declared: psycopg.Connection, postgres_url: str) -> None:
+    async def test_an_event_rings_only_once_committed(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
+    ) -> None:
         """PostgreSQL ne délivre un NOTIFY qu'au commit.
 
         C'est ce qui garantit qu'un lecteur réveillé trouve toujours la ligne en base — sans
@@ -298,10 +326,10 @@ class TestNotification:
         with psycopg.connect(postgres_url, autocommit=True) as listener:
             listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
 
-            with psycopg.connect(postgres_url) as writer:
-                runner.record_event(writer, job, "state", {"state": "planning"})
+            async with await psycopg.AsyncConnection.connect(postgres_url) as writer:
+                await runner.record_event(writer, job, "state", {"state": "planning"})
                 assert list(listener.notifies(timeout=0.3)) == [], "rien ne doit sonner avant le commit"
-                writer.commit()
+                await writer.commit()
 
             received = list(listener.notifies(timeout=3, stop_after=1))
 
@@ -311,15 +339,17 @@ class TestNotification:
         assert payload["type"] == "state"
         assert isinstance(payload["event_id"], int)
 
-    def test_the_payload_carries_identifiers_only(self, declared: psycopg.Connection, postgres_url: str) -> None:
+    async def test_the_payload_carries_identifiers_only(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
+    ) -> None:
         """La charge d'un NOTIFY est plafonnée à 8 ko : y mettre le contenu serait un piège
         qui se déclencherait le jour d'un message d'erreur un peu long."""
         job = _submit(declared)
 
         with psycopg.connect(postgres_url, autocommit=True) as listener:
             listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
-            with psycopg.connect(postgres_url, autocommit=True) as writer:
-                runner.record_event(writer, job, "progress", {"done_tasks": 40, "total_tasks": 200})
+            async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as writer:
+                await runner.record_event(writer, job, "progress", {"done_tasks": 40, "total_tasks": 200})
             received = list(listener.notifies(timeout=3, stop_after=1))
 
         assert set(json.loads(received[0].payload)) == {"job_id", "event_id", "type"}

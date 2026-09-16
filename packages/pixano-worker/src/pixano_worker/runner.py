@@ -10,10 +10,16 @@ Deux travaux, dans cet ordre à chaque tour : découper les jobs qui attendent d
 consommer des chunks. La planification passe d'abord parce qu'un job non découpé n'a aucun
 chunk à réclamer — sans quoi un worker isolé pourrait dormir devant du travail en attente.
 
-L'annulation se regarde **entre les lots**, jamais au milieu d'un chunk : un chunk est
-l'unité atomique, l'interrompre laisserait un travail à moitié fait dont on ne saurait rien.
+L'annulation se regarde **avant chaque chunk**, jamais au milieu : un chunk est l'unité
+atomique, l'interrompre laisserait un travail à moitié fait dont on ne saurait rien.
+
+La boucle est asynchrone, le code des types de jobs ne l'est pas. `plan`, `process` et `write`
+sont des fonctions ordinaires — c'est le contrat publié, et la lecture comme l'écriture
+LanceDB sont bloquantes de toute façon. Elles partent donc dans un thread ; la boucle garde
+pour elle ce qui gagne à être asynchrone : la base, les délais et le bail.
 """
 
+import asyncio
 import logging
 import traceback
 from functools import lru_cache
@@ -100,7 +106,7 @@ RETURNING j.state
 """
 
 
-def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
+async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
     """Consigner un événement de progression.
 
     Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
@@ -108,11 +114,11 @@ def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload
     événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
     remettre au suivant.
     """
-    conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
+    await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
 
-def plan_one(
-    conn: psycopg.Connection,
+async def plan_one(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     library: Path | None = None,
     media: MediaResolver | None = None,
@@ -122,7 +128,7 @@ def plan_one(
     Returns:
         L'identifiant du job découpé, ou None s'il n'y en avait aucun.
     """
-    row = conn.execute(CLAIM_PLANNING).fetchone()
+    row = await (await conn.execute(CLAIM_PLANNING)).fetchone()
     if row is None:
         return None
     job_id, kind_name, dataset_id, raw_params = str(row[0]), row[1], row[2], row[3]
@@ -131,25 +137,26 @@ def plan_one(
     if kind is None:
         # Aucun worker vivant ne déclare ce type. Le job ne sera jamais exécutable : le dire
         # tout de suite vaut mieux que de le laisser en attente sans explication.
-        _fail_job(conn, job_id, {"reason": "type de job inconnu", "kind": kind_name})
+        await _fail_job(conn, job_id, {"reason": "type de job inconnu", "kind": kind_name})
         log.warning("job %s : type '%s' inconnu de ce worker", job_id, kind_name)
         return job_id
 
     try:
         params = kind.validate_params(raw_params)
-        chunks = list(kind.plan(_reader_for(library, dataset_id, media), params))
+        reader = _reader_for(library, dataset_id, media)
+        chunks = await asyncio.to_thread(lambda: list(kind.plan(reader, params)))
     except Exception as error:
-        _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
+        await _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
         return job_id
 
     if not chunks:
-        _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
+        await _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
         return job_id
 
     total = sum(chunk.task_count for chunk in chunks)
-    with conn.transaction():
-        conn.execute(
+    async with conn.transaction():
+        await conn.execute(
             INSERT_CHUNKS,
             (
                 job_id,
@@ -158,16 +165,16 @@ def plan_one(
                 [chunk.task_count for chunk in chunks],
             ),
         )
-        conn.execute(FINISH_PLANNING, (total, job_id))
-        record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
+        await conn.execute(FINISH_PLANNING, (total, job_id))
+        await record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
     log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), total)
     return job_id
 
 
-def _fail_job(conn: psycopg.Connection, job_id: str, error: dict[str, Any]) -> None:
-    with conn.transaction():
-        conn.execute(FAIL_JOB, (Jsonb(error), job_id))
-        record_event(conn, job_id, "state", {"state": "error", **error})
+async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str, Any]) -> None:
+    async with conn.transaction():
+        await conn.execute(FAIL_JOB, (Jsonb(error), job_id))
+        await record_event(conn, job_id, "state", {"state": "error", **error})
 
 
 @lru_cache(maxsize=8)
@@ -202,80 +209,86 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
     return JobWriter(open_dataset, kind, job_id, source_type)
 
 
-def run_batch(
-    conn: psycopg.Connection,
+async def run_batch(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     worker_id: str,
     batch_size: int,
     library: Path | None = None,
     media: MediaResolver | None = None,
 ) -> int:
-    """Réclamer un lot de chunks et l'exécuter.
+    """Réclamer un lot de chunks et les exécuter l'un après l'autre sur une connexion.
 
     Returns:
         Le nombre de chunks traités — zéro quand la file est vide.
     """
-    chunks = queue.claim(conn, worker_id, batch_size)
-    if not chunks:
-        return 0
-
-    cancelled = queue.cancelled_jobs(conn, [chunk.job_id for chunk in chunks])
-    jobs_touched = set()
-
+    chunks = await queue.claim(conn, worker_id, batch_size)
     for chunk in chunks:
-        jobs_touched.add(chunk.job_id)
-        if chunk.job_id in cancelled:
-            queue.cancel_chunk(conn, chunk)
-            continue
-        _run_chunk(conn, registry, chunk, library, media)
-
-    for job_id in jobs_touched:
-        _settle(conn, job_id)
+        await run_chunk(conn, registry, chunk, library, media)
     return len(chunks)
 
 
-def _run_chunk(
-    conn: psycopg.Connection,
+async def run_chunk(
+    conn: psycopg.AsyncConnection,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+) -> None:
+    """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu."""
+    await _execute(conn, registry, chunk, library, media)
+    await _settle(conn, chunk.job_id)
+
+
+async def _execute(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     chunk: queue.Chunk,
     library: Path | None,
     media: MediaResolver | None,
 ) -> None:
-    """Exécuter un chunk, et consigner ce qui en résulte."""
-    row = conn.execute(
-        f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
+    if await queue.is_cancelled(conn, chunk.job_id):
+        await queue.cancel_chunk(conn, chunk)
+        return
+
+    row = await (
+        await conn.execute(f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
     ).fetchone()
     kind = registry.get(row[0]) if row is not None else None
     if row is None or kind is None:
-        queue.fail(conn, chunk, {"reason": "type de job inconnu"})
+        await queue.fail(conn, chunk, {"reason": "type de job inconnu"})
         return
+    kind_name, raw_params, dataset_id = row
+
+    def work() -> None:
+        params = kind.validate_params(raw_params)
+        result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
+        kind.write(
+            _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type), result, chunk.payload, params
+        )
 
     try:
-        params = kind.validate_params(row[1])
-        reader = _reader_for(library, row[2], media)
-        result = kind.process(reader, chunk.payload, params)
-        writer = _writer_for(library, row[2], row[0], chunk.job_id, kind.source_type)
-        kind.write(writer, result, chunk.payload, params)
+        await asyncio.to_thread(work)
     except Exception as error:
-        queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
+        await queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
         return
 
-    if not queue.finish(conn, chunk):
+    if not await queue.finish(conn, chunk):
         # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
         log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
         return
 
-    row = conn.execute(
-        f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
+    progress = await (
+        await conn.execute(f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
     ).fetchone()
-    if row is not None:
-        record_event(conn, chunk.job_id, "progress", {"done_tasks": row[0], "total_tasks": row[1]})
+    if progress is not None:
+        await record_event(conn, chunk.job_id, "progress", {"done_tasks": progress[0], "total_tasks": progress[1]})
 
 
-def _settle(conn: psycopg.Connection, job_id: str) -> None:
+async def _settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
     """Conclure un job dont plus rien n'attend ni ne tourne."""
-    row = conn.execute(SETTLE, (job_id,)).fetchone()
+    row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
     if row is not None:
-        record_event(conn, job_id, "state", {"state": row[0]})
+        await record_event(conn, job_id, "state", {"state": row[0]})
         log.info("job %s terminé : %s", job_id, row[0])
