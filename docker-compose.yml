@@ -75,7 +75,9 @@ services:
 
   pixano-worker:
     build:
-      context: ./packages/pixano-worker
+      # La racine du dépôt, parce que le worker dépend de la source de pixano par chemin.
+      context: .
+      dockerfile: packages/pixano-worker/Dockerfile
     environment:
       PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
       PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
