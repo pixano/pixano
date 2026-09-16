@@ -6,7 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { isTerminal, progressOf } from "../jobs.svelte";
+import { isTerminal, outcomeOf, progressOf } from "../jobs.svelte";
 import type { Job } from "$lib/api/jobs";
 
 function job(overrides: Partial<Job> = {}): Job {
@@ -17,6 +17,9 @@ function job(overrides: Partial<Job> = {}): Job {
     state: "running",
     total_tasks: 200,
     done_tasks: 50,
+    produced: 0,
+    skipped: 0,
+    quarantined: 0,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
@@ -55,5 +58,27 @@ describe("isTerminal", () => {
     expect(isTerminal("planning")).toBe(false);
     expect(isTerminal("pending")).toBe(false);
     expect(isTerminal("running")).toBe(false);
+  });
+});
+
+describe("outcomeOf", () => {
+  it("says nothing while the job runs", () => {
+    // Counts in flight would read as final; the progress bar is what speaks until the end.
+    expect(outcomeOf(job({ state: "running", produced: 40 }))).toBeNull();
+  });
+
+  it("says what a finished job produced", () => {
+    expect(outcomeOf(job({ state: "done", produced: 200 }))).toBe("200 produced");
+  });
+
+  it("names skipped and quarantined tasks when there are any", () => {
+    // The nuScenes case: the bar reads full, and this line is what tells the truth.
+    expect(outcomeOf(job({ state: "done", produced: 404, skipped: 26_361, quarantined: 1 }))).toBe(
+      "404 produced · 26361 skipped · 1 quarantined",
+    );
+  });
+
+  it("reports what a cancelled job had produced before it stopped", () => {
+    expect(outcomeOf(job({ state: "cancelled", produced: 60 }))).toBe("60 produced");
   });
 });
