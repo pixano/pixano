@@ -11,6 +11,7 @@ from .enqueue import (
     InvalidParamsError,
     JobNotFoundError,
     JobRecord,
+    QuarantinedItem,
     QueueUnavailableError,
     UnknownKindError,
     available_kinds,
@@ -19,6 +20,7 @@ from .enqueue import (
     connect,
     get,
     list_jobs,
+    quarantine,
     submit,
 )
 from .queries import SCHEMA_NAME
@@ -29,6 +31,7 @@ __all__ = [
     "InvalidParamsError",
     "JobNotFoundError",
     "JobRecord",
+    "QuarantinedItem",
     "QueueUnavailableError",
     "UnknownKindError",
     "available_kinds",
@@ -37,6 +40,7 @@ __all__ = [
     "connect",
     "get",
     "list_jobs",
+    "quarantine",
     "queries",
     "submit",
 ]

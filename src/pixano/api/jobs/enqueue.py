@@ -57,6 +57,9 @@ class JobRecord:
     total_tasks: int
     done_tasks: int
     created_at: datetime
+    produced: int = 0
+    skipped: int = 0
+    quarantined: int = 0
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
@@ -69,7 +72,20 @@ class JobRecord:
             total_tasks=row[4],
             done_tasks=row[5],
             created_at=row[6],
+            produced=row[7],
+            skipped=row[8],
+            quarantined=row[9],
         )
+
+
+@dataclass(frozen=True)
+class QuarantinedItem:
+    """Un item qu'un job n'a pas su traiter, et pourquoi."""
+
+    item_id: str
+    reason: str
+    detail: dict[str, Any] | None
+    created_at: datetime
 
 
 def connect(database_url: str | None) -> psycopg.Connection:
@@ -168,11 +184,22 @@ def list_jobs(conn: psycopg.Connection, limit: int = MAX_LISTED_JOBS) -> list[Jo
     return [JobRecord.from_row(row) for row in conn.execute(queries.LIST_JOBS, (limit,)).fetchall()]
 
 
+def quarantine(conn: psycopg.Connection, job_id: str, limit: int) -> list[QuarantinedItem]:
+    """Les items qu'un job a mis en quarantaine.
+
+    Raises:
+        JobNotFoundError: Aucun job ne porte cet identifiant.
+    """
+    job = get(conn, job_id)
+    rows = conn.execute(queries.LIST_QUARANTINE, (job.id, limit)).fetchall()
+    return [QuarantinedItem(item_id=r[0], reason=r[1], detail=r[2], created_at=r[3]) for r in rows]
+
+
 def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
     """Demander l'annulation d'un job.
 
     Les chunks en attente sortent de la file immédiatement ; ceux qui tournent sont laissés
-    à leur worker, qui les rendra entre deux lots. Un job dont plus rien ne tourne devient
+    à leur worker, qui s'arrêtera avant le chunk suivant. Un job dont plus rien ne tourne devient
     terminal tout de suite.
 
     Raises:
