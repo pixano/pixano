@@ -7,10 +7,11 @@ License: CECILL-C
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
 
+  import JobOutcome from "./JobOutcome.svelte";
   import JobProgress from "./JobProgress.svelte";
   import SubmitJobForm from "./SubmitJobForm.svelte";
   import { isTerminal } from "$lib/api/jobs";
-  import { jobsStore } from "$lib/stores/jobs.svelte";
+  import { jobsStore, outcomeOf } from "$lib/stores/jobs.svelte";
 
   type Props = { datasetId: string | null };
   let { datasetId }: Props = $props();
@@ -55,6 +56,12 @@ License: CECILL-C
               <span class="shrink-0 text-xs text-muted-foreground">{job.state}</span>
             </div>
             <JobProgress {job} />
+            <JobOutcome
+              summary={outcomeOf(job)}
+              quarantined={job.quarantined}
+              items={jobsStore.quarantines[job.id]}
+              onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
+            />
             {#if !isTerminal(job.state)}
               <button
                 type="button"

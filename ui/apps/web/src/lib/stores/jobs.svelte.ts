@@ -8,12 +8,14 @@ import {
   cancelJob,
   isTerminal,
   listJobKinds,
+  listJobQuarantine,
   listJobs,
   openJobStream,
   submitJob,
   type Job,
   type JobEvent,
   type JobKind,
+  type QuarantinedItem,
 } from "$lib/api/jobs";
 
 /**
@@ -31,6 +33,8 @@ class JobsStore {
   error = $state<string | null>(null);
   /** True once the stream is carrying events. */
   live = $state(false);
+  /** The quarantine of each job someone asked to see, by job identifier. */
+  quarantines = $state<Record<string, QuarantinedItem[]>>({});
 
   #stream: EventSource | null = null;
 
@@ -71,6 +75,16 @@ class JobsStore {
     } catch (cause) {
       this.error = describe(cause);
       return false;
+    }
+  }
+
+  /** Fetch the items a job set aside. Read on demand: most jobs have none, and nobody looks. */
+  async loadQuarantine(jobId: string): Promise<void> {
+    try {
+      this.quarantines[jobId] = await listJobQuarantine(jobId);
+      this.error = null;
+    } catch (cause) {
+      this.error = describe(cause);
     }
   }
 
@@ -120,6 +134,9 @@ class JobsStore {
       state: event.state ?? current.state,
       done_tasks: event.done_tasks ?? current.done_tasks,
       total_tasks: event.total_tasks ?? current.total_tasks,
+      produced: event.produced ?? current.produced,
+      skipped: event.skipped ?? current.skipped,
+      quarantined: event.quarantined ?? current.quarantined,
     };
   }
 
@@ -149,6 +166,20 @@ function describe(cause: unknown): string {
 export function progressOf(job: Job): number {
   if (job.total_tasks <= 0) return 0;
   return Math.min(1, job.done_tasks / job.total_tasks);
+}
+
+/**
+ * What a finished job produced, in words — or null while it runs.
+ *
+ * Progress alone says how much was attempted: a job over a lidar dataset reaches
+ * 26 766 / 26 766 having embedded 404 images. This is the line that says so.
+ */
+export function outcomeOf(job: Job): string | null {
+  if (!isTerminal(job.state)) return null;
+  const parts = [`${job.produced} produced`];
+  if (job.skipped > 0) parts.push(`${job.skipped} skipped`);
+  if (job.quarantined > 0) parts.push(`${job.quarantined} quarantined`);
+  return parts.join(" · ");
 }
 
 export { isTerminal };
