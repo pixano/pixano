@@ -179,6 +179,26 @@ class TestExecution:
         ).fetchall()
         assert [event[0]["done_tasks"] for event in events] == [20, 40, 60]
 
+    async def test_the_job_announces_once_that_it_is_running(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """Sans cet événement, l'interface affiche « pending » sous une barre qui avance.
+
+        Vu dans le navigateur au lot 11 : le job passait bien en cours en base, sans que rien ne
+        le dise au flux.
+        """
+        job = _submit(declared)
+        await runner.plan_one(adb, registry)
+
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        states = declared.execute(
+            f"SELECT payload->>'state' FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id",
+            (job,),
+        ).fetchall()
+        assert [row[0] for row in states] == ["pending", "running", "done"]
+
     async def test_progress_events_carry_absolute_counters(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:

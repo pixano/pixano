@@ -96,8 +96,9 @@ class TestFinish:
         job = _enqueue(db, 5, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)
 
-        for chunk in chunks:
-            assert await queue.finish(adb, chunk)
+        outcomes = [await queue.finish(adb, chunk) for chunk in chunks]
+
+        assert [finished.started_job for finished in outcomes if finished] == [True, False]
 
         row = db.execute(f"SELECT state, done_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
         assert row == ("running", 20)
@@ -114,7 +115,7 @@ class TestFinish:
         await queue.reclaim_expired(adb)
         await queue.claim(adb, "worker-b", 1)
 
-        assert await queue.finish(adb, chunk) is False
+        assert await queue.finish(adb, chunk) is None
 
         row = db.execute(f"SELECT done_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
         assert row is not None and row[0] == 0
