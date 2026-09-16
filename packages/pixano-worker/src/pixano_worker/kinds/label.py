@@ -58,7 +58,7 @@ class LabelKind(JobKind[LabelParams]):
             batch = ids[start : start + params.chunk_size]
             yield Chunk(payload={"record_ids": batch}, task_count=len(batch))
 
-    def process(self, payload: dict[str, Any], params: LabelParams) -> dict[str, Any]:
+    def process(self, reader: JobReader, payload: dict[str, Any], params: LabelParams) -> dict[str, Any]:
         """Il n'y a rien à calculer : l'étiquette est dans les paramètres."""
         return {"label": params.label, "record_ids": payload["record_ids"]}
 

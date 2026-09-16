@@ -46,6 +46,9 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
 class _FakeRegistry:
     """Un registre qui ne déclare rien, pour isoler l'ordre de démarrage."""
 
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Le registre reçoit l'adresse de l'inference, qu'un faux ignore."""
+
     def declare(self, *_args: object) -> int:
         return 0
 

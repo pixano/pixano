@@ -126,7 +126,7 @@ def main() -> int:
     alive()
     wait_for_inference(config.inference_url, config.inference_api_key, alive)
 
-    registry = default_registry()
+    registry = default_registry(config.inference_url, config.inference_api_key)
     worker_id = queue.worker_identity()
 
     with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True) as conn:
@@ -150,7 +150,7 @@ def _work_forever(conn, registry, worker_id: str, alive, library: Path, media: M
     while True:
         alive()
         planned = runner.plan_one(conn, registry, library, media)
-        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library)
+        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library, media)
         if planned is None and processed == 0:
             reclaimed, abandoned = queue.reclaim_expired(conn)
             if reclaimed or abandoned:
