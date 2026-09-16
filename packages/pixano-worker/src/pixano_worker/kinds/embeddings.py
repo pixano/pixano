@@ -37,7 +37,11 @@ class EmbeddingsParams(JobParams):
     Attributes:
         model: Le nom du modèle tel que l'inference le déclare.
         chunk_size: Enregistrements par chunk. C'est aussi la taille du lot envoyé à
-            l'inference : un chunk est un appel.
+            l'inference : un chunk est un appel. Le défaut de 8 est mesuré, pas supposé —
+            voir « Chunk size, measured » dans docs/specs/backend-processing.md. Sur CPU,
+            grossir le lot ralentit le job au lieu de l'accélérer, et un petit chunk réduit
+            en prime ce qu'une reprise doit refaire. Sur GPU l'arbitrage s'inversera
+            probablement : c'est précisément pourquoi ce paramètre existe.
         normalize: Normaliser les vecteurs, pour que la similarité cosinus soit un produit
             scalaire.
         max_retries: Nombre de reprises d'un appel transitoire, à l'intérieur du chunk. Le
@@ -49,7 +53,7 @@ class EmbeddingsParams(JobParams):
     """
 
     model: str = Field(default="clip", min_length=1)
-    chunk_size: int = Field(default=16, ge=1, le=256)
+    chunk_size: int = Field(default=8, ge=1, le=256)
     normalize: bool = True
     max_retries: int = Field(default=3, ge=0, le=10)
     request_timeout_s: float = Field(default=300.0, gt=0)
