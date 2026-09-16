@@ -22,6 +22,8 @@ from typing import Any
 import pytest
 from pixano_worker.kinds import JobParams, default_registry
 from pixano_worker.kinds.base import JobKind
+from pixano_worker.media import MediaResolver
+from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
 
 
@@ -76,9 +78,27 @@ def _params(kind: JobKind) -> JobParams:
     return kind.validate_params(CONTRACT_EXAMPLES[kind.name])
 
 
+class _Source:
+    """Un dataset vide : les types-jouets n'ont rien à y lire, mais le contrat exige qu'on
+    leur passe un lecteur, pas une chaîne."""
+
+    def count_rows_where(self, table_name: str, where: str | None = None) -> int:
+        return 0
+
+    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+        return []
+
+    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+        return None
+
+
+def _reader() -> JobReader:
+    return JobReader(lambda: _Source(), MediaResolver("/medias", "/medias"))
+
+
 def _execute(kind: JobKind, target: _Target, job_id: str) -> None:
     params = _params(kind)
-    for chunk in kind.plan("dataset", params):
+    for chunk in kind.plan(_reader(), params):
         writer = JobWriter(lambda: target, kind.name, job_id, kind.source_type)
         kind.write(writer, kind.process(chunk.payload, params), chunk.payload, params)
 
@@ -114,30 +134,30 @@ class TestDeclaration:
 
 class TestPlanning:
     def test_it_produces_work(self, kind: JobKind) -> None:
-        assert list(kind.plan("dataset", _params(kind)))
+        assert list(kind.plan(_reader(), _params(kind)))
 
     def test_every_chunk_carries_at_least_one_task(self, kind: JobKind) -> None:
         """Un chunk vide bloquerait la progression : il consommerait un tour sans avancer."""
-        assert all(chunk.task_count > 0 for chunk in kind.plan("dataset", _params(kind)))
+        assert all(chunk.task_count > 0 for chunk in kind.plan(_reader(), _params(kind)))
 
     def test_planning_twice_gives_the_same_work(self, kind: JobKind) -> None:
         """La planification doit être reproductible : un job replanifié après une coupure
         ne doit pas décrire un travail différent de celui déjà en partie exécuté."""
-        first = [(c.payload, c.task_count) for c in kind.plan("dataset", _params(kind))]
-        second = [(c.payload, c.task_count) for c in kind.plan("dataset", _params(kind))]
+        first = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
+        second = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
 
         assert first == second
 
     def test_the_payload_is_an_object(self, kind: JobKind) -> None:
         """Le schéma contraint les payloads à des objets ; un scalaire serait refusé en base."""
-        assert all(isinstance(chunk.payload, dict) for chunk in kind.plan("dataset", _params(kind)))
+        assert all(isinstance(chunk.payload, dict) for chunk in kind.plan(_reader(), _params(kind)))
 
 
 class TestExecution:
     def test_it_processes_every_chunk(self, kind: JobKind) -> None:
         params = _params(kind)
 
-        for chunk in kind.plan("dataset", params):
+        for chunk in kind.plan(_reader(), params):
             kind.process(chunk.payload, params)
 
     def test_writing_twice_changes_nothing(self, kind: JobKind) -> None:
@@ -175,7 +195,7 @@ class TestExecution:
         params = kind.validate_params({**CONTRACT_EXAMPLES[kind.name], "write_to": None})
         target = _Target()
 
-        for chunk in kind.plan("dataset", params):
+        for chunk in kind.plan(_reader(), params):
             writer = JobWriter(lambda: target, kind.name, "job-1", kind.source_type)
             kind.write(writer, kind.process(chunk.payload, params), chunk.payload, params)
 

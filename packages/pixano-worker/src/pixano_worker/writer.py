@@ -39,6 +39,27 @@ _ID_LENGTH = 22
 _LEFTOVER_PROBE = 32
 
 
+class DatasetReadSource(Protocol):
+    """Les seules opérations dont la planification d'un job a besoin.
+
+    Un type de job doit pouvoir énumérer ce qu'il va traiter sans ouvrir un dataset lui-même :
+    c'est la même raison que pour l'écriture — un point unique, pour que sérialiser ou mettre
+    en cache les accès reste un jour une modification d'un seul fichier.
+    """
+
+    def count_rows_where(self, table_name: str, where: str | None = None) -> int:
+        """Compter les lignes d'une table, sans la matérialiser."""
+        ...
+
+    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+        """Lire des lignes d'une table."""
+        ...
+
+    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+        """Les octets d'une vue embarquée, et leur type."""
+        ...
+
+
 class DatasetWriteTarget(Protocol):
     """Les seules opérations dont l'écriture d'un job a besoin.
 

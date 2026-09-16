@@ -33,6 +33,7 @@ from typing import Any, Generic, Iterable, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
+from ..reader import JobReader
 from ..writer import JobWriter
 
 
@@ -75,11 +76,15 @@ class JobKind(ABC, Generic[ParamsT]):
     source_type: str = "model"
 
     @abstractmethod
-    def plan(self, dataset_id: str, params: ParamsT) -> Iterable[Chunk]:
+    def plan(self, reader: "JobReader", params: ParamsT) -> Iterable[Chunk]:
         """Découper le travail du job en chunks.
 
+        Le lecteur est symétrique de l'écrivain que reçoit `write` : un type énumère ce qu'il
+        va traiter sans ouvrir de dataset lui-même. Un type qui n'a rien à lire — son travail
+        tient dans ses paramètres — peut simplement l'ignorer.
+
         Args:
-            dataset_id: Le dataset visé.
+            reader: Par où lire le dataset visé.
             params: Les paramètres validés.
 
         Returns:
