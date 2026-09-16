@@ -85,7 +85,19 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     attempts    integer     NOT NULL DEFAULT 0 CHECK (attempts >= 0),
     claimed_by  text,
     lease_until timestamptz,
+    -- Une panne passagère rend le chunk à la file, mais pas tout de suite : rejoué dans la
+    -- seconde contre une inférence qui redémarre, il épuiserait ses tentatives avant qu'elle
+    -- soit revenue. Réclamable seulement une fois cet instant passé.
+    available_at timestamptz NOT NULL DEFAULT now(),
+    -- La dernière erreur, y compris celle d'une tentative qui sera rejouée : c'est ce qu'on
+    -- veut lire quand un chunk revient en file pour la troisième fois.
     error       jsonb       CHECK (error IS NULL OR jsonb_typeof(error) = 'object'),
+    -- Le bilan d'un chunk terminé. Une tâche est soit produite, soit écartée parce qu'elle
+    -- est sans objet (un enregistrement sans image pour un calcul sur les images), soit en
+    -- quarantaine dans `job_items`. Sans ces comptes, un job ne sait dire que ce qu'il a
+    -- tenté, jamais ce qu'il a produit.
+    produced    integer     CHECK (produced IS NULL OR produced >= 0),
+    skipped     integer     CHECK (skipped IS NULL OR skipped >= 0),
     updated_at  timestamptz NOT NULL DEFAULT now(),
 
     -- `cancelled` existe pour que la requête de réclamation n'ait jamais à joindre `jobs` :
@@ -98,7 +110,29 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     -- Un bail existe exactement pendant l'exécution. Un `done` qui oublierait d'effacer le
     -- sien, ou un `running` sans bail — donc jamais récupérable — sont refusés à l'écriture.
     CONSTRAINT chunks_lease_matches_state
-        CHECK ((state = 'running') = (lease_until IS NOT NULL))
+        CHECK ((state = 'running') = (lease_until IS NOT NULL)),
+    -- Le bilan n'existe que pour un chunk terminé : un chunk rejoué ne garde pas celui d'une
+    -- tentative précédente.
+    CONSTRAINT chunks_outcome_only_when_done
+        CHECK ((state = 'done') = (produced IS NOT NULL AND skipped IS NOT NULL))
+);
+
+-- La quarantaine : les items qu'un type de job n'a pas su traiter, un par ligne. Seuls les
+-- échecs y entrent — un item sans objet est compté dans `skipped`, pas stocké ici, sans quoi
+-- un dataset lidar remplirait la quarantaine de relevés qui ne sont pas des erreurs.
+-- Une table plutôt qu'un champ du chunk, parce qu'une quarantaine doit pouvoir se relire :
+-- « quels items de ce job ont échoué, et pourquoi », pour les corriger ou les rejouer.
+CREATE TABLE IF NOT EXISTS pixano_jobs.job_items (
+    job_id     uuid        NOT NULL REFERENCES pixano_jobs.jobs (id) ON DELETE CASCADE,
+    chunk_id   bigint      NOT NULL REFERENCES pixano_jobs.job_chunks (id) ON DELETE CASCADE,
+    -- L'identifiant de l'item dans le dataset, tel que le type de job le désigne.
+    item_id    text        NOT NULL CHECK (item_id <> ''),
+    reason     text        NOT NULL CHECK (reason <> ''),
+    detail     jsonb       CHECK (detail IS NULL OR jsonb_typeof(detail) = 'object'),
+    created_at timestamptz NOT NULL DEFAULT now(),
+    -- Un item n'est en quarantaine qu'une fois par job : un chunk rejoué après la mort de
+    -- son worker remplace la ligne au lieu de la doubler.
+    PRIMARY KEY (job_id, item_id)
 );
 
 -- Le journal que relit une interface qui se reconnecte. NOTIFY ne fait que sonner à la

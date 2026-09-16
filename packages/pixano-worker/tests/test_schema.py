@@ -21,7 +21,7 @@ from pixano_worker.schema import (
 from psycopg.types.json import Jsonb
 
 
-TABLES = ("schema_version", "job_kinds", "jobs", "job_chunks", "job_events")
+TABLES = ("schema_version", "job_kinds", "jobs", "job_chunks", "job_items", "job_events")
 INDEXES = (
     "job_chunks_pending_idx",
     "job_chunks_expired_lease_idx",
