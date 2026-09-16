@@ -150,6 +150,70 @@ the whole shared-package exercise would, for a one-file change, and it would ben
 consumer rather than only the worker. It touches the core, so it deserves its own change and
 its own verification that nothing relies on the import's side effect.
 
+## 5quater. Chunk size, measured
+
+`chunk_size` is the only knob of the embeddings kind that changes how the engine behaves rather
+than what it computes: it is at once the unit of work a retry must redo, the unit of progress a
+user watches, and the size of the batch sent to the inference server. The default was 16 by
+assumption. It is now 8 by measurement.
+
+The measurement is a committed script,
+[`packages/pixano-worker/scripts/measure_throughput.py`](../../packages/pixano-worker/scripts/measure_throughput.py),
+so the numbers can be challenged by re-running them rather than by argument.
+
+**The stack measured.** Docker with 8 CPUs and 8 GB, torch 2.14 CPU on aarch64, 8 threads, no
+GPU; MobileCLIP2-S2 through `pixano-inference`; two datasets carrying the same 60 VOC images,
+one with the bytes inline (~87 kB per image in `raw_bytes`), one referencing a path under the
+declared media root.
+
+| dataset            | media    | chunk | tasks | duration | tasks/s |
+| ------------------ | -------- | ----: | ----: | -------: | ------: |
+| VOC 2007 Sample    | inline   |     8 |    60 |   19.9 s |     3.0 |
+| VOC 2007 Sample    | inline   |    16 |    60 |   21.9 s |     2.7 |
+| VOC 2007 Sample    | inline   |    32 |    60 |   24.3 s |     2.5 |
+| VOC 2007 Sample    | inline   |    64 |    60 |   26.9 s |     2.2 |
+| VOC 2007 (uri)     | by path  |     8 |    60 |   19.1 s |     3.1 |
+| VOC 2007 (uri)     | by path  |    16 |    60 |   21.5 s |     2.8 |
+| VOC 2007 (uri)     | by path  |    32 |    60 |   26.4 s |     2.3 |
+| VOC 2007 (uri)     | by path  |    64 |    60 |   31.5 s |     1.9 |
+
+A partial replay of the extremes lands in the same place: chunk 8 measured four times gives
+19.1, 19.8, 19.9 and 19.9 s; chunk 64 measured three times gives 26.9, 31.2 and 31.5 s. The
+spread at 64 is wide, the ordering never varies.
+
+**Bigger batches are slower, not faster.** This is the opposite of what batching is supposed to
+buy, it is monotonic across four sizes, and it holds for both storage modes. **The mechanism is
+not established** — the measurement times whole jobs, so it cannot say whether the cost sits in
+the inference call, in preprocessing, or in the worker. Separating them needs per-phase timing,
+which the hardening lot is the right place for. Until then the number is a fact about this
+stack, not a law: on a GPU, where a batch amortises a kernel launch, the ordering will probably
+reverse. That is what the parameter is for.
+
+**Carrying the bytes costs nothing measurable here — and that does not validate the
+invariant.** The two modes are within noise of each other. It would be convenient to read this
+as "carrying bytes is free", and it would be wrong: both containers sit on one machine, so the
+inline mode's data URI never crosses a network and the path mode's file never leaves a local
+bind mount. The comparison this table makes is between two local paths. The invariant the plan
+states — that media should not transit through Pixano — is about a worker separated from its
+media by a network, which this stack does not have. **It remains unmeasured**, and step 4 is
+where it can honestly be measured.
+
+**Hence the default of 8.** It is the fastest measured, and it is also the smallest retry unit
+and the shortest exposure to the lease, so nothing pulls the other way at this scale. The
+choice is cheap to revisit: it is one field with a measurement behind it.
+
+**A task is a planned record, not a produced vector.** The rate column counts tasks, and a task
+is a record the planner scheduled. The embeddings kind drops records with no usable image, so
+the two numbers only coincide on a fully imaged dataset. Measured on nuScenes: 26 766 tasks
+produce 404 vectors, the rest being lidar sweeps with no camera. This is why the script refuses
+to run without an explicit `--datasets` — a throughput averaged over records that were skipped
+measures nothing.
+
+**One trap worth recording.** On macOS `time.monotonic()` does not advance while the host
+sleeps, whereas PostgreSQL `now()` is wall clock. A job that slept mid-run shows 31.5 s by the
+script and 54 minutes by its event timestamps. Neither clock is wrong; they answer different
+questions. Durations here are awake time.
+
 ## 6. Deliberate deferrals
 
 | Deferred                                    | Until                        | Why it is safe to wait                                                                                                                                                                                                                                                                                                              |
