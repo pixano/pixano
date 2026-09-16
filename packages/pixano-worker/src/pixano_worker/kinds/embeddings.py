@@ -16,6 +16,7 @@ import logging
 from typing import Any, Iterable
 
 import httpx
+from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
 
 from ..reader import JobReader
@@ -28,11 +29,6 @@ logger = logging.getLogger("pixano-worker")
 # La table des vues image, et celle des enregistrements. Ce sont les noms canoniques de Pixano.
 IMAGE_TABLE = "images"
 RECORD_TABLE = "records"
-
-# Codes que l'inference renvoie quand elle est saturée ou qu'une route a expiré. Ce sont des
-# échecs de circonstance, pas de contenu : les rejouer a du sens, contrairement à une image
-# illisible.
-TRANSIENT_STATUS = frozenset({502, 503, 504})
 
 
 class EmbeddingsParams(JobParams):
@@ -141,56 +137,29 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def _embed(self, references: list[str], params: EmbeddingsParams) -> list[list[float]]:
         """Appeler l'inference, en absorbant les échecs de circonstance.
 
-        Un 503 veut dire « reviens plus tard », pas « ce travail est impossible ». Le rejouer
-        ici évite de rendre le chunk au moteur, ce qui coûterait une réclamation complète et
-        finirait par épuiser son compteur de tentatives sur un incident passager.
+        Un service saturé ou une route expirée veut dire « reviens plus tard », pas « ce
+        travail est impossible ». Rejouer ici évite de rendre le chunk au moteur, ce qui
+        coûterait une réclamation complète et finirait par épuiser son compteur de tentatives
+        sur un incident passager.
+
+        L'appel passe par le client officiel plutôt que par une requête HTTP écrite à la
+        main : les vecteurs voyagent en tableau numpy encodé, et redeviner cet encodage serait
+        une supposition de plus à maintenir.
 
         Raises:
             RuntimeError: L'inference n'a pas répondu après les reprises prévues.
         """
-        payload = {"model": params.model, "image": references, "normalize": params.normalize}
+        client = SyncPixanoInferenceClient(self.inference_url, api_key=self.api_key or None)
+        request = EmbeddingRequest(model=params.model, image=references, normalize=params.normalize)
         last: Exception | None = None
 
         for attempt in range(params.max_retries + 1):
             try:
-                response = httpx.post(
-                    f"{self.inference_url}/v1/inference/embedding",
-                    json=payload,
-                    headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else {},
-                    timeout=params.request_timeout_s,
-                )
-                if response.status_code in TRANSIENT_STATUS:
-                    raise httpx.HTTPStatusError(
-                        f"inference saturée ({response.status_code})", request=response.request, response=response
-                    )
-                response.raise_for_status()
-                return _vectors_of(response.json())
-            except (httpx.HTTPStatusError, httpx.TransportError) as error:
+                response = client.embedding(request, timeout=params.request_timeout_s)
+                return [list(vector) for vector in response.data.embeddings.to_numpy()]
+            except (PixanoInferenceError, httpx.TransportError) as error:
                 last = error
                 if attempt < params.max_retries:
                     logger.info("appel d'embedding rejoué (%s), tentative %d", error, attempt + 2)
 
         raise RuntimeError(f"l'inference n'a pas répondu après {params.max_retries + 1} tentatives : {last}")
-
-
-def _vectors_of(body: dict[str, Any]) -> list[list[float]]:
-    """Extraire les vecteurs de la réponse, quelle que soit la forme qu'elle prend.
-
-    Raises:
-        RuntimeError: La réponse ne porte aucun vecteur.
-    """
-    data = body.get("data") or {}
-    embeddings = data.get("embeddings")
-    if embeddings is None:
-        raise RuntimeError(f"réponse d'embedding sans vecteurs : {str(body)[:200]}")
-    if not isinstance(embeddings, dict):
-        return [list(vector) for vector in embeddings]
-
-    values = embeddings.get("values")
-    shape = embeddings.get("shape")
-    if values is None:
-        raise RuntimeError(f"réponse d'embedding sans valeurs : {str(body)[:200]}")
-    if isinstance(shape, list) and len(shape) == 2:
-        width = int(shape[1])
-        return [list(values[i : i + width]) for i in range(0, len(values), width)]
-    return [list(vector) for vector in values]

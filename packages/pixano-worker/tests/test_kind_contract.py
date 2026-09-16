@@ -20,6 +20,7 @@ import hashlib
 from types import SimpleNamespace
 from typing import Any
 
+import numpy as np
 import pytest
 from pixano_worker.kinds import JobParams, default_registry
 from pixano_worker.kinds.base import JobKind
@@ -168,31 +169,16 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
     est vérifié de bout en bout ailleurs.
     """
 
-    class _Response:
-        status_code = 200
-        request = None
+    class _Client:
+        def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+            pass
 
-        def __init__(self, count: int) -> None:
-            self._count = count
+        def embedding(self, request: Any, **_kwargs: Any) -> Any:
+            count = len(request.image) if isinstance(request.image, list) else 1
+            vectors = np.full((count, FAKE_DIM), 0.1, dtype=np.float32)
+            return SimpleNamespace(data=SimpleNamespace(embeddings=SimpleNamespace(to_numpy=lambda: vectors)))
 
-        def raise_for_status(self) -> None:
-            return None
-
-        def json(self) -> dict[str, Any]:
-            return {
-                "status": "SUCCESS",
-                "data": {
-                    "embeddings": {
-                        "values": [0.1] * (self._count * FAKE_DIM),
-                        "shape": [self._count, FAKE_DIM],
-                    }
-                },
-            }
-
-    def _post(url: str, **kwargs: Any) -> _Response:
-        return _Response(len(kwargs.get("json", {}).get("image", [])))
-
-    monkeypatch.setattr("pixano_worker.kinds.embeddings.httpx.post", _post)
+    monkeypatch.setattr("pixano_worker.kinds.embeddings.SyncPixanoInferenceClient", _Client)
 
 
 @pytest.fixture(params=REGISTRY.names())
