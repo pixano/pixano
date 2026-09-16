@@ -40,9 +40,38 @@ A chunk's payload is opaque to the engine, and must be a JSON object.
 
 ### `process(payload, params)` then `write(writer, result, payload, params)`
 
-Separate because they fail differently. An inference call is transient and **retries in
-place** — the engine only replays chunks whose worker died, never ones whose plugin raised. A
-write must never be half done.
+Separate because they fail differently: an inference call can be retried, a write must never
+be half done. Both run in a thread — the contract stays synchronous, and the worker's event
+loop keeps the database, the lease and the time limit for itself.
+
+**How a failure is reported decides what the engine does with it.** Three families:
+
+| Family        | What the kind does                             | What the engine does                                                                  |
+| ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Transient** | raises `TransientError`                        | sends the chunk back after a growing delay; sets it aside only after its last attempt |
+| **Item**      | raises nothing; declares the item in `outcome` | finishes the chunk and puts the item in quarantine, with its reason                   |
+| **Fatal**     | raises anything else                           | fails the chunk, and the job with it                                                  |
+
+A brief hiccup can still be retried in place — the inference client already does so for 502,
+503 and 504. Raise `TransientError` for what outlasts that.
+
+**Blame an item only on an answer, never on a silence.** A server that refused a request has
+told you something about its content; a server that did not answer has told you nothing. The
+embeddings kind learnt this on the real stack: during an inference restart, one call went
+through and the next were refused, and "not every image failed" sent seven healthy images to
+quarantine.
+
+### `outcome(result, payload, task_count) -> Outcome`
+
+Optional. Says what each task of the chunk became: **produced**, **skipped** — the calculation
+does not apply, such as a record without an image for an image job, which is not a failure —
+or **quarantined**, one `QuarantinedItem` per failed item. The default is "every task
+produced", which is right for a kind that neither skips nor loses anything.
+
+The counts must add up to `task_count` exactly. The engine refuses a chunk whose outcome does
+not, and the contract suite checks it: an outcome that is quietly wrong would falsify everything
+shown about the job. It exists because progress alone cannot tell the truth — a job over a lidar
+dataset reaches 26 766 / 26 766 having embedded 404 images.
 
 `write` receives a writer, not a dataset: a kind cannot open a dataset itself. That is what
 will let a dataset's writes be serialised across workers one day without touching any kind.
