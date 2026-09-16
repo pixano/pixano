@@ -133,15 +133,21 @@ class _Source:
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
 
-    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+    def get_data(
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        record_ids: list[str] | None = None,
+    ) -> list[Any]:
         if table_name == "images":
-            ids = kwargs.get("record_ids") or []
-            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in ids]
-        limit = kwargs.get("limit", CONTRACT_RECORDS)
-        skip = kwargs.get("skip", 0)
-        return [_Row(f"rec-{n}") for n in range(skip, min(skip + limit, CONTRACT_RECORDS))]
+            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in record_ids or []]
+        end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+        return [_Row(f"rec-{n}") for n in range(skip, end)]
 
-    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
         return None
 
 

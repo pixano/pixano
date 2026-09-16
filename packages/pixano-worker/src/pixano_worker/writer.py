@@ -51,11 +51,23 @@ class DatasetReadSource(Protocol):
         """Compter les lignes d'une table, sans la matérialiser."""
         ...
 
-    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+    # Les paramètres reprennent ceux de `Dataset` un à un, noms compris. Un `**kwargs` ici
+    # exigerait d'un dataset qu'il accepte n'importe quel argument nommé, ce que le vrai ne fait
+    # pas : le protocole ne décrivait plus la classe qu'il abstrait, et seul mypy lancé sur tout
+    # le dépôt s'en apercevait.
+    def get_data(
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        record_ids: list[str] | None = None,
+    ) -> list[Any]:
         """Lire des lignes d'une table."""
         ...
 
-    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
         """Les octets d'une vue embarquée, et leur type."""
         ...
 

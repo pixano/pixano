@@ -75,13 +75,21 @@ def dataset() -> _FakeDataset:
 class _EmptySource:
     """Un dataset vide : le type factice n'y lit rien, mais le contrat veut un lecteur."""
 
-    def count_rows_where(self, table_name, where=None):
+    def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
 
-    def get_data(self, table_name, **kwargs):
+    def get_data(
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        record_ids: list[str] | None = None,
+    ) -> list[Any]:
         return []
 
-    def get_view_binary(self, table_name, view_id):
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
         return None
 
 

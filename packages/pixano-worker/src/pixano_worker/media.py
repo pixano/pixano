@@ -35,7 +35,7 @@ REMOTE_SCHEMES = ("http://", "https://", "s3://")
 class MediaSource(Protocol):
     """Le peu qu'il faut d'un dataset pour aller chercher un média embarqué."""
 
-    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
         """Les octets d'une vue, et leur type, ou None."""
         ...
 
