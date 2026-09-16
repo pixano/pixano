@@ -7,7 +7,7 @@
 """Accès à un PostgreSQL vivant pour les tests qui en ont besoin."""
 
 import os
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 
 import psycopg
 import pytest
@@ -62,3 +62,14 @@ def db(blank_db: psycopg.Connection) -> psycopg.Connection:
     """Connexion sur une base dont le schéma est installé."""
     ensure_schema(blank_db)
     return blank_db
+
+
+@pytest.fixture
+async def adb(db: psycopg.Connection, postgres_url: str) -> AsyncIterator[psycopg.AsyncConnection]:
+    """Connexion asynchrone sur la même base, pour la file et le runner.
+
+    Les deux connexions sont en autocommit : ce que le test prépare par `db` est visible
+    tout de suite par `adb`, et inversement.
+    """
+    async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as conn:
+        yield conn

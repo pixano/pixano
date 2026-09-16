@@ -10,8 +10,12 @@ Le worker attend ses dépendances, puis boucle. Il ne partage rien avec l'API : 
 ni mémoire, ni système de fichiers — tout passe par PostgreSQL. C'est ce qui lui permet de
 tourner sur une autre machine que l'application, ce qui est la situation normale dès qu'on
 sort du mode local.
+
+Le démarrage est synchrone — attendre ses dépendances, installer le schéma, déclarer ses
+types se fait une fois et dans l'ordre. Seule la boucle de travail est asynchrone.
 """
 
+import asyncio
 import logging
 import sys
 import time
@@ -23,7 +27,7 @@ import psycopg
 
 from . import queue, runner
 from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
-from .kinds import default_registry
+from .kinds import Registry, default_registry
 from .media import MediaResolver
 from .schema import SchemaVersionError, ensure_schema
 
@@ -131,31 +135,41 @@ def main() -> int:
 
     with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True) as conn:
         declared = registry.declare(conn, worker_id)
-        log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
+    log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
 
+    media = MediaResolver(config.media_root, config.inference_media_root)
+    asyncio.run(serve(config.database_url, registry, worker_id, alive, Path(config.library_dir), media))
+    return 0
+
+
+async def serve(
+    database_url: str,
+    registry: Registry,
+    worker_id: str,
+    alive: Callable[[], None],
+    library: Path,
+    media: MediaResolver,
+) -> None:
+    """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
+    async with await psycopg.AsyncConnection.connect(
+        database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True
+    ) as conn:
         # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
         # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
-        recovered = queue.release_own(conn, worker_id)
+        recovered = await queue.release_own(conn, worker_id)
         if recovered:
             log.info("%d chunk(s) repris d'une exécution précédente", recovered)
 
         log.info("worker démarré, en attente de jobs")
-        media = MediaResolver(config.media_root, config.inference_media_root)
-        _work_forever(conn, registry, worker_id, alive, Path(config.library_dir), media)
-    return 0
-
-
-def _work_forever(conn, registry, worker_id: str, alive, library: Path, media: MediaResolver) -> None:
-    """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
-    while True:
-        alive()
-        planned = runner.plan_one(conn, registry, library, media)
-        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library, media)
-        if planned is None and processed == 0:
-            reclaimed, abandoned = queue.reclaim_expired(conn)
-            if reclaimed or abandoned:
-                log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
-            time.sleep(IDLE_POLL_INTERVAL_S)
+        while True:
+            alive()
+            planned = await runner.plan_one(conn, registry, library, media)
+            processed = await runner.run_batch(conn, registry, worker_id, BATCH_SIZE, library, media)
+            if planned is None and processed == 0:
+                reclaimed, abandoned = await queue.reclaim_expired(conn)
+                if reclaimed or abandoned:
+                    log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+                await asyncio.sleep(IDLE_POLL_INTERVAL_S)
 
 
 if __name__ == "__main__":

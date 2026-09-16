@@ -6,9 +6,12 @@
 
 """Réclamation et restitution de chunks.
 
-Les primitives que le runner du lot suivant appellera. Elles sont ici, séparées de la boucle,
-parce qu'elles portent les seules propriétés qui comptent — aucun doublon, aucune perte, et
-une reprise qui ne dépend d'aucun process vivant — et qu'on veut les tester sans runner.
+Les primitives qu'appelle le runner. Elles sont ici, séparées de la boucle, parce qu'elles
+portent les seules propriétés qui comptent — aucun doublon, aucune perte, et une reprise qui
+ne dépend d'aucun process vivant — et qu'on veut les tester sans runner.
+
+Elles sont asynchrones parce que le runner l'est : il fait tourner plusieurs chunks à la fois,
+et chacun attend surtout du réseau.
 
 Rien ici ne joint la table des jobs. La réclamation doit rester une requête sur un seul index
 partiel : c'est pourquoi l'annulation d'un job bascule ses chunks en attente plutôt que de
@@ -19,7 +22,7 @@ import os
 import socket
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Sequence
+from typing import Any
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -137,75 +140,73 @@ def worker_identity() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"
 
 
-def claim(conn: psycopg.Connection, worker_id: str, batch_size: int) -> list[Chunk]:
+async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) -> list[Chunk]:
     """Réclamer jusqu'à `batch_size` chunks en attente.
 
     Deux workers qui réclament en même temps obtiennent des ensembles disjoints : le verrou
     de ligne et `SKIP LOCKED` s'en chargent, sans qu'aucun des deux n'attende l'autre.
     """
-    rows = conn.execute(CLAIM, (worker_id, LEASE_TTL, batch_size)).fetchall()
+    cursor = await conn.execute(CLAIM, (worker_id, LEASE_TTL, batch_size))
+    rows = await cursor.fetchall()
     return [
         Chunk(id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5])
         for row in rows
     ]
 
 
-def finish(conn: psycopg.Connection, chunk: Chunk) -> bool:
+async def finish(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
     """Marquer un chunk terminé et avancer la progression de son job.
 
     Returns:
         False si le chunk avait été repris par un autre worker entre-temps ; l'appelant doit
         alors jeter son résultat plutôt que d'écraser celui de son successeur.
     """
-    with conn.transaction():
-        row = conn.execute(FINISH, (chunk.id, chunk.attempts)).fetchone()
+    async with conn.transaction():
+        row = await (await conn.execute(FINISH, (chunk.id, chunk.attempts))).fetchone()
         if row is None:
             return False
-        conn.execute(ADVANCE_JOB, (row[1], row[0]))
+        await conn.execute(ADVANCE_JOB, (row[1], row[0]))
     return True
 
 
-def fail(conn: psycopg.Connection, chunk: Chunk, error: dict[str, Any]) -> bool:
+async def fail(conn: psycopg.AsyncConnection, chunk: Chunk, error: dict[str, Any]) -> bool:
     """Marquer un chunk en échec. Même garde que `finish`."""
-    return conn.execute(FAIL, (Jsonb(error), chunk.id, chunk.attempts)).fetchone() is not None
+    cursor = await conn.execute(FAIL, (Jsonb(error), chunk.id, chunk.attempts))
+    return await cursor.fetchone() is not None
 
 
-def release(conn: psycopg.Connection, chunk: Chunk) -> bool:
+async def release(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
     """Remettre un chunk en file sans l'exécuter."""
-    return conn.execute(RELEASE, (chunk.id, chunk.attempts)).rowcount > 0
+    return (await conn.execute(RELEASE, (chunk.id, chunk.attempts))).rowcount > 0
 
 
-def cancel_chunk(conn: psycopg.Connection, chunk: Chunk) -> bool:
+async def cancel_chunk(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
     """Sortir de la file un chunk dont le job a été annulé."""
-    return conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts)).rowcount > 0
+    return (await conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts))).rowcount > 0
 
 
-def release_own(conn: psycopg.Connection, worker_id: str) -> int:
+async def release_own(conn: psycopg.AsyncConnection, worker_id: str) -> int:
     """Rendre les chunks laissés par une exécution précédente de ce même worker.
 
     Le bail finirait par les libérer de toute façon ; les rendre au démarrage transforme une
     reprise de deux minutes en reprise immédiate.
     """
-    return len(conn.execute(RELEASE_OWN, (worker_id,)).fetchall())
+    return len(await (await conn.execute(RELEASE_OWN, (worker_id,))).fetchall())
 
 
-def reclaim_expired(conn: psycopg.Connection, max_attempts: int = MAX_ATTEMPTS) -> tuple[int, int]:
+async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> tuple[int, int]:
     """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent.
 
     Returns:
         Le nombre de chunks remis en file, et le nombre mis en échec.
     """
-    with conn.transaction():
-        reclaimed = len(conn.execute(RECLAIM_EXPIRED, (max_attempts,)).fetchall())
-        abandoned = len(conn.execute(ABANDON_EXHAUSTED, (max_attempts,)).fetchall())
+    async with conn.transaction():
+        reclaimed = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
+        abandoned = len(await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall())
     return reclaimed, abandoned
 
 
-def cancelled_jobs(conn: psycopg.Connection, job_ids: Sequence[str]) -> set[str]:
-    """Parmi ces jobs, lesquels ont une annulation demandée."""
-    cancelled = set()
-    for job_id in set(job_ids):
-        row = conn.execute(IS_CANCELLED, (job_id,)).fetchone()
-        if row is not None and row[0]:
-            cancelled.add(job_id)
-    return cancelled
+async def is_cancelled(conn: psycopg.AsyncConnection, job_id: str) -> bool:
+    """Une annulation a-t-elle été demandée pour ce job ?"""
+    row = await (await conn.execute(IS_CANCELLED, (job_id,))).fetchone()
+    return row is not None and bool(row[0])
