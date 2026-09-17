@@ -99,3 +99,20 @@ def test_a_database_failure_stops_the_worker(steps: list[str], monkeypatch: pyte
 
     assert entrypoint.main() == 1
     assert "inference" not in steps
+
+
+def test_a_saturated_worker_exits_without_waiting_for_its_threads(
+    steps: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Une sortie normale attendrait des threads qui ne reviennent pas : le worker ne quitterait jamais."""
+
+    async def saturated(*_args: object) -> int:
+        return entrypoint.EXIT_SATURATED
+
+    exits: list[int] = []
+    monkeypatch.setattr(entrypoint, "serve", saturated)
+    monkeypatch.setattr(entrypoint, "_exit_now", exits.append)
+
+    entrypoint.main()
+
+    assert exits == [entrypoint.EXIT_SATURATED]

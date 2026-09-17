@@ -9,6 +9,7 @@
 import asyncio
 import contextlib
 import json
+import threading
 from datetime import timedelta
 
 import psycopg
@@ -16,6 +17,7 @@ import pytest
 from pixano_worker import queue, runner
 from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
+from pixano_worker.threads import WorkerSaturatedError, WorkerThreads
 from psycopg_pool import AsyncConnectionPool
 
 
@@ -712,6 +714,27 @@ class TestLeaseKeptWhileRunning:
         assert lease is not None and float(lease[0]) > 60, "le bail a été prolongé pendant l'exécution"
         row = declared.execute(f"SELECT state FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row == ("done",)
+
+
+class TestSaturation:
+    """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy »."""
+
+    async def test_the_loop_stops_the_worker_once_too_many_threads_are_stuck(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        threads = WorkerThreads(workers=2, stuck_limit=1)
+        release = threading.Event()
+        with pytest.raises(TimeoutError):
+            await threads.run(release.wait, timeout_s=0.01)
+
+        try:
+            async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
+                with pytest.raises(WorkerSaturatedError):
+                    await asyncio.wait_for(
+                        runner.work(pool, registry, "worker-test", 1, idle_poll_s=0.01, threads=threads), timeout=5
+                    )
+        finally:
+            release.set()
 
 
 class TestDatabaseOutage:
