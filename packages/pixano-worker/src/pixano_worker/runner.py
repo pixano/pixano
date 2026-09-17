@@ -42,7 +42,7 @@ from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
-from .threads import WorkerSaturatedError, WorkerThreads
+from .threads import WorkerThreads
 from .writer import JobWriter
 
 
@@ -320,12 +320,33 @@ async def work(
     en vol `SHUTDOWN_GRACE_S` pour finir, puis rend la main. Ceux qui tournent encore restent
     réclamés par ce worker, à charge de l'appelant de les rendre.
 
-    Raises:
-        WorkerSaturatedError: Trop de threads restent bloqués sur des chunks rendus pour cause
-            de durée dépassée : le worker ne peut plus rien démarrer, et doit être relancé.
+    Un pool saturé — trop de threads bloqués sur des chunks rendus pour cause de durée dépassée —
+    est renouvelé sur place, et la boucle continue.
     """
+    owns_threads = threads is None
     threads = threads or WorkerThreads.for_concurrency(concurrency)
     stop = stop or asyncio.Event()
+    try:
+        await _loop(
+            pool, registry, worker_id, concurrency, library, media, idle_poll_s, chunk_timeout_s, threads, stop
+        )
+    finally:
+        if owns_threads:
+            threads.shutdown()
+
+
+async def _loop(
+    pool: AsyncConnectionPool,
+    registry: Registry,
+    worker_id: str,
+    concurrency: int,
+    library: Path | None,
+    media: MediaResolver | None,
+    idle_poll_s: float,
+    chunk_timeout_s: float | None,
+    threads: WorkerThreads,
+    stop: asyncio.Event,
+) -> None:
     in_flight: set[asyncio.Task[None]] = set()
     loop = asyncio.get_running_loop()
     last_reclaim = loop.time()
@@ -333,8 +354,11 @@ async def work(
 
     while not stop.is_set():
         if threads.saturated:
-            raise WorkerSaturatedError(
-                f"{threads.stuck} thread(s) bloqués sur des chunks rendus pour cause de durée dépassée"
+            abandoned = threads.renew()
+            log.error(
+                "%d thread(s) bloqués sur des chunks rendus pour cause de durée dépassée : abandonnés, "
+                "le worker repart avec des threads neufs",
+                abandoned,
             )
         # Une base qui redémarre ne doit pas tuer le worker : il attend qu'elle revienne, comme
         # au démarrage. Les chunks en vol ne sont pas touchés — chacun gère sa propre connexion,

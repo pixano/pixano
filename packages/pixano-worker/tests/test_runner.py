@@ -17,7 +17,7 @@ import pytest
 from pixano_worker import queue, runner
 from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
-from pixano_worker.threads import WorkerSaturatedError, WorkerThreads
+from pixano_worker.threads import WorkerThreads
 from psycopg_pool import AsyncConnectionPool
 
 
@@ -502,9 +502,13 @@ class TestConcurrency:
     """Plusieurs chunks en vol, sans jamais en tenir plus que permis."""
 
     @staticmethod
-    async def _run_until_settled(pool, registry: Registry, declared: psycopg.Connection, job: str, concurrency: int):
+    async def _run_until_settled(
+        pool, registry: Registry, declared: psycopg.Connection, job: str, concurrency: int, threads=None
+    ):
         """Faire tourner la boucle réelle jusqu'à ce que le job conclue, en relevant l'occupation."""
-        worker = asyncio.create_task(runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05))
+        worker = asyncio.create_task(
+            runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05, threads=threads)
+        )
         peak = 0
         try:
             for _ in range(400):
@@ -748,24 +752,30 @@ class TestLeaseRefreshOutage:
 
 
 class TestSaturation:
-    """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy »."""
+    """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy ».
 
-    async def test_the_loop_stops_the_worker_once_too_many_threads_are_stuck(
+    Seconde revue : renouveler le pool sur place plutôt que sortir du process — le redémarrage
+    automatique est borné, et un worker qui comptait dessus finissait arrêté pour de bon.
+    """
+
+    async def test_a_saturated_pool_is_renewed_and_the_worker_goes_on(
         self, declared: psycopg.Connection, postgres_url: str, registry: Registry
     ) -> None:
         threads = WorkerThreads(workers=2, stuck_limit=1)
         release = threading.Event()
         with pytest.raises(TimeoutError):
             await threads.run(release.wait, timeout_s=0.01)
+        assert threads.saturated
+        job = _submit(declared, params={"task_count": 20, "chunk_size": 10, "seconds_per_task": 0.0})
 
         try:
             async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
-                with pytest.raises(WorkerSaturatedError):
-                    await asyncio.wait_for(
-                        runner.work(pool, registry, "worker-test", 1, idle_poll_s=0.01, threads=threads), timeout=5
-                    )
+                await TestConcurrency._run_until_settled(pool, registry, declared, job, concurrency=1, threads=threads)
         finally:
             release.set()
+
+        assert _state(declared, job) == ("done", 20, 20), "le worker a continué à travailler après le renouvellement"
+        assert not threads.saturated
 
 
 class TestDatabaseOutage:

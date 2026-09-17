@@ -13,9 +13,11 @@ ces threads s'accumulent sans que rien ne le voie, jusqu'à ce que plus aucun tr
 démarrer, planification comprise ; et le battement, qui tourne sur la boucle d'événements,
 continue de dire que le worker va bien.
 
-Ici, les threads bloqués sont comptés. Passé un seuil, le pool se déclare saturé, et le worker
-s'arrête plutôt que de rester vivant sans rien pouvoir faire : relancé, il repart avec des
-threads neufs et reprend ses chunks.
+Ici, les threads bloqués sont comptés. Passé un seuil, le pool se déclare saturé et se
+renouvelle : les threads bloqués sont abandonnés à leur sort, un exécuteur neuf prend le relais,
+et le worker continue. Renouveler plutôt que sortir du process : le redémarrage automatique du
+compose est borné — Docker ne remet pas son compteur à zéro, vérifié — et un worker qui
+compterait dessus finirait arrêté pour de bon au troisième incident.
 """
 
 import asyncio
@@ -25,10 +27,6 @@ from typing import Callable, TypeVar
 
 
 T = TypeVar("T")
-
-
-class WorkerSaturatedError(RuntimeError):
-    """Trop de threads sont bloqués pour que le worker puisse encore travailler."""
 
 
 class WorkerThreads:
@@ -51,10 +49,17 @@ class WorkerThreads:
         """
         if workers <= stuck_limit:
             raise ValueError(f"{workers} thread(s) pour un seuil de saturation de {stuck_limit}")
-        self._executor = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="pixano-job")
+        self._workers = workers
+        self._executor = self._new_executor()
         self.stuck_limit = stuck_limit
         self._stuck = 0
+        # Incrémentée à chaque renouvellement : un thread abandonné qui finit après coup ne doit
+        # pas décrémenter le compteur de l'exécuteur qui l'a remplacé.
+        self._generation = 0
         self._lock = threading.Lock()
+
+    def _new_executor(self) -> ThreadPoolExecutor:
+        return ThreadPoolExecutor(max_workers=self._workers, thread_name_prefix="pixano-job")
 
     @classmethod
     def for_concurrency(cls, concurrency: int) -> "WorkerThreads":
@@ -82,27 +87,51 @@ class WorkerThreads:
 
         Raises:
             TimeoutError: Le délai est dépassé. Le thread, s'il avait commencé, continue et est
-                compté comme bloqué jusqu'à ce qu'il finisse.
+                compté comme bloqué jusqu'à ce qu'il finisse. Une annulation de l'attente — un
+                chunk abandonné à l'arrêt du worker — laisse le même thread derrière elle, et
+                le compte de la même façon.
         """
-        future = self._executor.submit(work)
+        with self._lock:
+            executor, generation = self._executor, self._generation
+        future = executor.submit(work)
         try:
             return await asyncio.wait_for(asyncio.wrap_future(future), timeout_s)
-        except TimeoutError:
+        except (TimeoutError, asyncio.CancelledError):
             # Un travail encore en file est annulé pour de bon et ne bloque rien ; seul un travail
             # déjà commencé laisse un thread derrière lui.
             if not future.cancelled():
-                self._count_stuck(future)
+                self._count_stuck(future, generation)
             raise
 
-    def _count_stuck(self, future: Future) -> None:
+    def _count_stuck(self, future: Future, generation: int) -> None:
         with self._lock:
-            self._stuck += 1
+            if generation == self._generation:
+                self._stuck += 1
 
         def release(_: Future) -> None:
             with self._lock:
-                self._stuck -= 1
+                if generation == self._generation:
+                    self._stuck -= 1
 
         future.add_done_callback(release)
+
+    def renew(self) -> int:
+        """Abandonner les threads bloqués et repartir avec un exécuteur neuf.
+
+        Les threads abandonnés continuent jusqu'à ce que leur appel revienne — l'appel
+        d'inférence a son propre délai, qui les libérera — mais ils ne comptent plus, et rien
+        ne les attend.
+
+        Returns:
+            Le nombre de threads abandonnés.
+        """
+        with self._lock:
+            abandoned = self._stuck
+            old, self._executor = self._executor, self._new_executor()
+            self._stuck = 0
+            self._generation += 1
+        old.shutdown(wait=False, cancel_futures=True)
+        return abandoned
 
     def shutdown(self) -> None:
         """Libérer le pool sans attendre les threads bloqués."""
