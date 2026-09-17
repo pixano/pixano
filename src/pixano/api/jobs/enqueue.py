@@ -135,7 +135,7 @@ def check_params(conn: psycopg.Connection, kind: str, params: dict[str, Any]) ->
     if row is None:
         declared = sorted(available_kinds(conn))
         known = ", ".join(declared) if declared else "none"
-        raise UnknownKindError(f"no running worker declares the job kind '{kind}' — known kinds: {known}")
+        raise UnknownKindError(f"no worker has declared the job kind '{kind}' — declared kinds: {known}")
 
     try:
         jsonschema.validate(params, row[0])

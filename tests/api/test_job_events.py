@@ -17,7 +17,7 @@ from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
 from pixano.api.jobs.events import _SUBSCRIBER_BACKLOG, NOTIFY_CHANNEL, EventBroker, JobEvent, SentWindow, read_since
-from pixano.api.routers.jobs import _requested_types, _stream
+from pixano.api.routers.jobs import _requested_types, _require_job_id, _stream
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
@@ -285,6 +285,19 @@ class TestSentWindow:
             window.mark(event_id)
 
         assert len(window) <= 20
+
+
+class TestJobIdentifierOnTheStream:
+    """Independent review v2, R1: a malformed identifier opened a stream that broke after the headers."""
+
+    def test_a_malformed_identifier_is_refused_before_the_stream_opens(self) -> None:
+        with pytest.raises(HTTPException) as refused:
+            _require_job_id("not-a-uuid")
+
+        assert refused.value.status_code == 404
+
+    def test_a_well_formed_identifier_passes(self) -> None:
+        _require_job_id("00000000-0000-0000-0000-000000000000")
 
 
 class TestTypeFilter:
