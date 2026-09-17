@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from pixano.api import jobs
-from pixano.api.jobs.events import EventBroker, read_since
+from pixano.api.jobs.events import EventBroker, SentWindow, read_since
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
 
@@ -204,14 +204,14 @@ async def _stream(
     Duplicates are dropped by identifier, never by order. Identifiers are handed out before
     commit, so a live event can arrive with an identifier below the last one sent; a filter on
     "greater than the last" threw it away — for a state event, for good (independent review,
-    D2). The set grows by one integer per event of this connection, a few thousand for the
-    largest job.
+    D2). The window forgets identifiers too old to arrive late, so a stream open for days
+    does not grow with every event it ever sent.
     """
     async with broker.subscribe(job_id, types) as subscriber:
-        sent: set[int] = set()
+        sent = SentWindow()
         if job_id is not None:
             for event in await read_since(database_url, job_id, after_id):
-                sent.add(event.id)
+                sent.mark(event.id)
                 yield event.to_sse()
 
         while True:
@@ -227,9 +227,9 @@ async def _stream(
                 # remonter et tuerait le flux au premier silence.
                 yield ": keepalive\n\n"
                 continue
-            if event.id in sent:
+            if sent.already_sent(event.id):
                 continue
-            sent.add(event.id)
+            sent.mark(event.id)
             yield event.to_sse()
 
 

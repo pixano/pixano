@@ -200,6 +200,39 @@ class EventBroker:
 CATCH_UP_SLACK = 100
 
 
+class SentWindow:
+    """The identifiers a stream has sent, kept only as far back as an event can arrive late.
+
+    A plain set would grow for the life of the connection — a panel left open for days on a
+    team running large jobs is tens of megabytes per tab. An event can only arrive late by
+    about `CATCH_UP_SLACK` identifiers, so anything below the highest identifier seen minus
+    that margin is treated as already sent, and forgotten.
+    """
+
+    def __init__(self, slack: int = CATCH_UP_SLACK) -> None:
+        """Create an empty window."""
+        self._slack = slack
+        self._sent: set[int] = set()
+        self._highest = 0
+
+    def already_sent(self, event_id: int) -> bool:
+        """Whether this identifier was sent, or is too old to be a late arrival."""
+        return event_id in self._sent or event_id <= self._highest - self._slack
+
+    def mark(self, event_id: int) -> None:
+        """Record an identifier as sent, and forget the ones now out of the window."""
+        self._sent.add(event_id)
+        if event_id > self._highest:
+            self._highest = event_id
+            floor = self._highest - self._slack
+            if len(self._sent) > 2 * self._slack:
+                self._sent = {sent for sent in self._sent if sent > floor}
+
+    def __len__(self) -> int:
+        """How many identifiers the window holds."""
+        return len(self._sent)
+
+
 async def read_since(database_url: str, job_id: str, after_id: int, slack: int = CATCH_UP_SLACK) -> list[JobEvent]:
     """Read the events a reconnecting client missed, and a few it may have seen."""
     async with await psycopg.AsyncConnection.connect(database_url) as conn:
