@@ -25,6 +25,7 @@ import threading
 import traceback
 from collections import defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import Set as AbstractSet
 from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
@@ -55,6 +56,11 @@ DATABASE_UNAVAILABLE = (psycopg.OperationalError, psycopg.InterfaceError)
 # application : un redémarrage de PostgreSQL dure quelques secondes, et un worker qui revient
 # vite reprend le travail là où il l'avait laissé.
 OUTAGE_BACKOFF_S = (1.0, 2.0, 5.0, 10.0)
+
+# Le temps laissé aux chunks en vol pour finir quand le worker est arrêté. En dessous du délai
+# que docker accorde avant de tuer le process (stop_grace_period du compose), pour que les
+# chunks qui n'ont pas fini à temps soient rendus à la file plutôt qu'abandonnés à leur bail.
+SHUTDOWN_GRACE_S = 30.0
 
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
@@ -302,24 +308,30 @@ async def work(
     idle_poll_s: float = 5.0,
     chunk_timeout_s: float | None = None,
     threads: WorkerThreads | None = None,
+    stop: asyncio.Event | None = None,
 ) -> None:
-    """Tenir jusqu'à `concurrency` chunks en vol, indéfiniment.
+    """Tenir jusqu'à `concurrency` chunks en vol, jusqu'à ce qu'on demande l'arrêt.
 
     La réclamation ne prend jamais plus que les places libres : un chunk réclamé porte un bail
     qui court, et le réclamer pour le laisser attendre une place l'exposerait à expirer avant
     d'avoir commencé.
+
+    Un arrêt demandé par `stop` ne coupe rien : la boucle cesse de réclamer, laisse aux chunks
+    en vol `SHUTDOWN_GRACE_S` pour finir, puis rend la main. Ceux qui tournent encore restent
+    réclamés par ce worker, à charge de l'appelant de les rendre.
 
     Raises:
         WorkerSaturatedError: Trop de threads restent bloqués sur des chunks rendus pour cause
             de durée dépassée : le worker ne peut plus rien démarrer, et doit être relancé.
     """
     threads = threads or WorkerThreads.for_concurrency(concurrency)
+    stop = stop or asyncio.Event()
     in_flight: set[asyncio.Task[None]] = set()
     loop = asyncio.get_running_loop()
     last_reclaim = loop.time()
     outages = 0
 
-    while True:
+    while not stop.is_set():
         if threads.saturated:
             raise WorkerSaturatedError(
                 f"{threads.stuck} thread(s) bloqués sur des chunks rendus pour cause de durée dépassée"
@@ -360,20 +372,41 @@ async def work(
             delay = OUTAGE_BACKOFF_S[min(outages, len(OUTAGE_BACKOFF_S) - 1)]
             outages += 1
             log.warning("base injoignable (%s) — nouvel essai dans %ss", error, delay)
-            await asyncio.sleep(delay)
+            await _pause(stop, delay)
             continue
         if outages:
             log.info("base de nouveau joignable après %d tentative(s)", outages)
             outages = 0
 
         if len(in_flight) >= concurrency:
-            await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+            await _pause(stop, None, in_flight)
         elif planned is None and not claimed:
             # Rien de nouveau : attendre qu'une place se libère ou que du travail arrive.
-            if in_flight:
-                await asyncio.wait(in_flight, timeout=idle_poll_s, return_when=asyncio.FIRST_COMPLETED)
-            else:
-                await asyncio.sleep(idle_poll_s)
+            await _pause(stop, idle_poll_s, in_flight)
+
+    if in_flight:
+        log.info("arrêt demandé : %d chunk(s) en vol, %ss pour finir", len(in_flight), SHUTDOWN_GRACE_S)
+        _, unfinished = await asyncio.wait(in_flight, timeout=SHUTDOWN_GRACE_S)
+        for task in unfinished:
+            task.cancel()
+        if unfinished:
+            await asyncio.wait(unfinished)
+            log.info("%d chunk(s) n'ont pas fini à temps", len(unfinished))
+
+
+async def _pause(
+    stop: asyncio.Event, timeout_s: float | None, in_flight: AbstractSet[asyncio.Task[None]] = frozenset()
+) -> None:
+    """Attendre qu'un chunk finisse, que le délai passe, ou qu'on demande l'arrêt.
+
+    L'arrêt interrompt l'attente : un worker qu'on arrête pendant une pause de plusieurs
+    secondes ne doit pas faire attendre docker pour rien.
+    """
+    stopping = asyncio.ensure_future(stop.wait())
+    try:
+        await asyncio.wait({stopping, *in_flight}, timeout=timeout_s, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        stopping.cancel()
 
 
 async def _run_pooled(
