@@ -60,6 +60,7 @@ class _Target:
     """Une cible d'écriture qui se comporte comme LanceDB sur les trois opérations utilisées."""
 
     def __init__(self) -> None:
+        self.compactions: list[str] = []
         self.rows: dict[str, Any] = {}
         self._embeddings_ready = False
         self.info = SimpleNamespace(tables={})
@@ -76,7 +77,7 @@ class _Target:
         return [self.rows[i] for i in ids if i in self.rows]
 
     def open_table(self, table_name: str) -> Any:
-        self.compactions = getattr(self, "compactions", []) + [table_name]
+        self.compactions.append(table_name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
     def has_record_embeddings(self) -> bool:
