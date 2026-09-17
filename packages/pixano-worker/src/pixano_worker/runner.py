@@ -225,7 +225,18 @@ async def plan_one(
         await _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
         return job_id
 
-    if await record_plan(conn, job_id, chunks):
+    try:
+        recorded = await record_plan(conn, job_id, chunks)
+    except DATABASE_UNAVAILABLE:
+        raise
+    except Exception as error:
+        # Un chunk que le schéma refuse — sans tâche, un payload qui ne se sérialise pas — est un
+        # défaut du type de job, pas du worker : le job échoue et le dit, le worker continue.
+        # Laissé remonter, il tuait le worker et laissait le job en planification sous son bail.
+        await _fail_job(conn, job_id, {"reason": "les chunks planifiés ont été refusés", "detail": str(error)})
+        log.exception("job %s : chunks refusés à l'enregistrement", job_id)
+        return job_id
+    if recorded:
         log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), sum(c.task_count for c in chunks))
     else:
         log.info("job %s : découpe abandonnée, le job n'est plus en planification", job_id)
@@ -397,6 +408,14 @@ async def _loop(
             outages += 1
             log.warning("base injoignable (%s) — nouvel essai dans %ss", error, delay)
             await _pause(stop, delay)
+            continue
+        except Exception:
+            # Un défaut inattendu dans un tour de boucle — une réponse de la base que le code ne
+            # prévoit pas, un bug — est journalisé avec sa trace, et le tour suivant a lieu. Le
+            # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
+            # rendre plus visible que cette trace.
+            log.exception("tour de boucle en échec, le worker continue")
+            await _pause(stop, OUTAGE_BACKOFF_S[0])
             continue
         if outages:
             log.info("base de nouveau joignable après %d tentative(s)", outages)

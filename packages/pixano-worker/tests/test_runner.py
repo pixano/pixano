@@ -772,6 +772,56 @@ class TestChunkFacingAnOutage:
         assert record.exc_info is None
 
 
+class TestPlanningRefusedByTheSchema:
+    """Revue indépendante, D1 : un chunk sans tâche tuait le worker et laissait le job sous bail."""
+
+    async def test_a_kind_planning_an_empty_chunk_fails_its_job_not_the_worker(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        class EmptyChunks(FakeKind):
+            def plan(self, reader, params):  # noqa: ANN001, ANN202, D102
+                yield Chunk(payload={"first_task": 0, "task_count": 0}, task_count=0)
+
+        registry = Registry()
+        registry.register(EmptyChunks())
+        job = _submit(declared)
+
+        await runner.plan_one(adb, registry)
+
+        state, _, _ = _state(declared, job)
+        assert state == "error"
+        row = declared.execute(
+            f"SELECT error->>'reason', planning_until FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)
+        ).fetchone()
+        assert row is not None and "refusés" in row[0] and row[1] is None
+
+    async def test_an_unexpected_error_in_the_loop_does_not_kill_the_worker(
+        self,
+        declared: psycopg.Connection,
+        postgres_url: str,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        job = _submit(declared, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0})
+        real_plan_one = runner.plan_one
+        failures = {"left": 2}
+
+        async def buggy_plan_one(*args: object, **kwargs: object) -> str | None:
+            if failures["left"] > 0:
+                failures["left"] -= 1
+                raise RuntimeError("un bug que personne n'avait prévu")
+            return await real_plan_one(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(runner, "plan_one", buggy_plan_one)
+        monkeypatch.setattr(runner, "OUTAGE_BACKOFF_S", (0.01,))
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
+            await TestConcurrency._run_until_settled(pool, registry, declared, job, concurrency=2)
+
+        assert failures["left"] == 0
+        assert _state(declared, job) == ("done", 40, 40)
+
+
 class TestSaturation:
     """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy ».
 
