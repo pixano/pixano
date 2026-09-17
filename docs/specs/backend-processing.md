@@ -298,10 +298,18 @@ what matters here is the decision each fix embodies.
   restarted worker taking its chunks back — now cap attempts and settle the jobs they touch. A
   job whose last chunk was abandoned used to stay running forever, and a chunk that crashed its
   worker looped for good once restarts were automatic.
-- **Stuck threads stop the worker.** Job code runs in a bounded pool that counts threads still
-  busy after their chunk timed out. When as many are stuck as there are chunks in flight, the
-  worker exits with code 3 so that it restarts with fresh threads, instead of staying
-  "healthy" with nothing able to start.
+- **Stuck threads are abandoned, not the worker.** Job code runs in a bounded pool that counts
+  threads still busy after their chunk timed out or was abandoned at shutdown. When as many are
+  stuck as there are chunks in flight, the pool is renewed in place — a fresh executor, the old
+  threads left to finish on their own — and the loop goes on. A first version exited the process
+  and relied on the restart policy; checked against Docker, `on-failure:N` never resets its
+  count after a healthy run, so that worker would have stayed down for good at its N-th
+  incident.
+- **A database outage is never the kind's failure.** A lease refresh that meets an outage is
+  logged and retried at the next interval; a database error raised anywhere around a chunk
+  propagates and leaves the chunk to its lease, instead of being filed as fatal. The first
+  version classified a chunk whose work had succeeded as failed because one refresh had
+  failed.
 - **SIGTERM stops the worker gracefully.** It stops claiming, gives chunks in flight 30 s,
   hands back what still runs, and exits; the compose allows 45 s. As the container's process 1
   without a handler, it used to ignore SIGTERM until docker killed it.
@@ -340,6 +348,11 @@ What remains, each noticed while resolving them:
 - **The concurrency default is not measured.** On the CPU stack, throughput already fell as
   batches grew (§5quater); whether four chunks in flight help or hurt there is unknown, and
   on a GPU the answer will differ.
+- **A worker claims planning for kinds it does not know**, and fails the job. Harmless with
+  one worker; at step 4, a worker without kind X would fail jobs another worker could run. The
+  planning claim should be restricted to the kinds this worker declares.
+- **The pool checks each connection before lending it** (`SELECT 1` per borrow). Negligible
+  today; to measure at step 4 if the claim rate ever matters.
 
 ## 7. Open questions
 
