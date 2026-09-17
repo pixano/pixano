@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
-from pixano.api.jobs.events import _SUBSCRIBER_BACKLOG, NOTIFY_CHANNEL, EventBroker, JobEvent, read_since
+from pixano.api.jobs.events import _SUBSCRIBER_BACKLOG, NOTIFY_CHANNEL, EventBroker, JobEvent, SentWindow, read_since
 from pixano.api.routers.jobs import _requested_types, _stream
 
 
@@ -255,6 +255,36 @@ class TestOutOfOrderEvents:
         caught_up = asyncio.run(read_since(url, job, last_seen, slack=2))
 
         assert [event.payload["done_tasks"] for event in caught_up] == [30, 40]
+
+
+class TestSentWindow:
+    """Third review: a plain set of sent identifiers grew for the life of the connection."""
+
+    def test_remembers_what_was_sent(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(5)
+
+        assert window.already_sent(5)
+        assert not window.already_sent(6)
+
+    def test_a_late_arrival_within_the_slack_is_new(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(100)
+
+        assert not window.already_sent(95)
+
+    def test_an_identifier_below_the_window_counts_as_sent(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(100)
+
+        assert window.already_sent(89)
+
+    def test_does_not_grow_with_the_life_of_the_connection(self) -> None:
+        window = SentWindow(slack=10)
+        for event_id in range(1, 10_001):
+            window.mark(event_id)
+
+        assert len(window) <= 20
 
 
 class TestTypeFilter:
