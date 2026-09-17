@@ -1,0 +1,179 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Using the App"
+section: getting_started
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Using the app
+
+A tour of the three screens you work in: the **Library**, the **Explorer**, and the
+**Workspace**.
+
+<Callout type="info" title="What you'll learn">
+
+- How to find a dataset in the Library and flag the ones you care about
+- How to filter, sort and browse records in the Explorer
+- How the annotation Workspace is laid out, and how to create an entity
+- Every keyboard shortcut
+
+</Callout>
+
+## The app header
+
+The header is the same on every screen:
+
+- The **Pixano logo** on the left returns to the Library.
+- The **✦ inference chip** shows whether a model server is connected — green dot for connected,
+  grey for not. Click it to manage servers and models; see
+  [Inference](/pixano/getting_started/inference/).
+- The **theme toggle** switches between light and dark.
+
+## Library
+
+The Library lists every dataset in your data directory.
+
+**Toolbar** — search datasets by name, sort by **Name** or **Date**, and **Import** a new
+dataset. The record total for the whole library sits on the right.
+
+**Tabs** — datasets can be flagged, and the tabs let you jump between those groups without
+scrolling: **All**, **Todo**, **New** and **Favorite**, each with a count. Flag a dataset by
+hovering its card and clicking one of the three coloured flags in the corner — blue for Todo,
+green for New, yellow for Favorite. Active flags stay visible; the rest appear on hover.
+
+Each card shows the dataset's preview, its type, the number of records, and a bar breaking the
+dataset down by split and annotation status. Click a card to open it.
+
+## Explorer
+
+The Explorer is where you browse and triage the records of one dataset.
+
+### Finding records
+
+- **Filters** — click **Filter** to add a typed condition (a column, an operator, a value).
+  Each condition becomes a chip you can edit or remove. Conditions are validated against the
+  dataset's columns, so a malformed query is rejected rather than half-applied.
+- **Split and Status facets** — one-click multi-select for the two fields you filter on most,
+  with counts.
+- **Search** — the search bar is semantic; see
+  [Semantic Search](/pixano/getting_started/semantic_search/).
+- **Sort** — pick a column and a direction. Sorting happens server-side, so it is correct
+  across pages, not just within the page you are looking at.
+
+Use **Clear all** to drop every filter at once.
+
+### Views
+
+Toggle between **gallery** and **table**:
+
+- **Gallery** shows one card per record, built from whatever previews it carries — a single
+  image, a multi-view mosaic, a video frame, or a text excerpt.
+- **Table** shows one row per record. The **column settings** popover lets you show, hide and
+  reorder columns.
+
+Both views let you choose how many records to show per page. Clicking a record opens it in the
+Workspace.
+
+## Workspace
+
+The Workspace is where annotation happens.
+
+### Header
+
+The header reads `← <dataset> · ‹ n / m ›`:
+
+- The **back arrow** and the **dataset name** both return to the Explorer, landing on the page
+  that contains this record under your active filters.
+- The **chevrons** step to the previous and next record *within the current filter and sort* —
+  not the whole dataset. Hover the counter to see the record's id.
+- On the right, **Save** shows how many changes are pending; when there is nothing to save it
+  reads **✓ Saved**.
+
+The annotation tools sit in the middle of the header.
+
+<Callout type="note" title="Nothing is lost by accident">
+Navigating away with unsaved changes prompts you to save, discard, or stay.
+</Callout>
+
+### Tools
+
+| Tool | Shortcut | Notes |
+|------|----------|-------|
+| Pan | `Esc` | Move and zoom the image |
+| Bounding box | `R` | Click and drag |
+| Polygon | `P` | Keep the raw polygon, or convert it to a mask |
+| Polyline | `L` | `N` finishes a sub-path |
+| Brush | `B` | `X` toggles pencil/eraser; `Q`/`E` resize |
+| Smart segmentation | `W` | Needs a connected model — see [Inference](/pixano/getting_started/inference/) |
+
+Two more controls sit at the end of the toolbar: **Display settings** (image smoothing,
+histogram equalization, brightness, contrast, RGB channels, and the 16-bit range) — these
+change how the image is displayed, never the data — and a **keyboard shortcuts** reference.
+
+### The side panel
+
+The panel on the right has two tabs:
+
+- **Entities** — every entity in the record. Expand a card for its **Attributes** (the entity's
+  fields) and its **Annotations** (the boxes, masks and text spans attached to it). A search box
+  filters entities by any attribute.
+- **Record** — everything about the record itself: its **Status**, its **Attributes**, and
+  per-**View** metadata.
+
+### Creating an entity
+
+Draw a shape and press `Enter`. The creation form opens:
+
+1. **Parent entity** — keep **Create new entity**, or attach the annotation to an existing one.
+   The picker shows a thumbnail, name and composition for each candidate, and marks whether
+   linking would **Move** the annotation, **Merge** it, or is blocked by a conflict.
+2. **Attributes** — fill in the entity's fields. Value pickers suggest what you have used
+   before, and offer an explicit `Create "…"` row for a genuinely new value.
+3. **Confirm** — the annotation is staged. Nothing is written until you press **Save** in the
+   header. `Esc` cancels.
+
+## Keyboard shortcuts
+
+| Category | Shortcut | Action |
+|----------|----------|--------|
+| General | `Esc` | Switch to the Pan tool |
+| | `Delete` / `Backspace` | Delete the selected point |
+| | `Ctrl+S` / `⌘+S` | Save all annotations |
+| | `Alt` (hold) | Peek at existing annotations |
+| Navigation | `Shift+→` | Next record |
+| | `Shift+←` | Previous record |
+| Bounding box | `R` | Activate the tool |
+| | `Enter` | Validate the box |
+| Polygon / polyline | `P` / `L` | Activate polygon / polyline |
+| | `N` | Finish a sub-path |
+| | `Enter` / `Esc` | Validate / cancel the path |
+| Brush | `B` | Activate the brush |
+| | `X` | Toggle draw / erase |
+| | `Q` `[` / `E` `]` | Smaller / larger brush |
+| | `S` / `Enter` | Save the mask |
+| Smart segmentation | `W` | Activate |
+| | `X` | Toggle the +/− point prompt |
+| | `R` | Box prompt |
+| | `Enter` | Validate the mask |
+| Video | `Space` | Play / pause |
+| | `→` / `D` | Next frame |
+| | `←` / `A` | Previous frame |
+
+## Video records
+
+Video records add a timeline below the image. Select an entity in the **Entities** tab to
+reveal its track along the timeline; pin up to two to compare them. Coloured segments are
+tracklets — continuous stretches where the entity is visible — and dots are keyframes. Right
+click a tracklet to add a point, split it, glue it to a neighbour, relink it, or delete it.
+
+## Next steps
+
+- [Inference](/pixano/getting_started/inference/) — connect a model server
+- [Semantic Search](/pixano/getting_started/semantic_search/) — search by meaning
+- [Cookbook](/pixano/cookbook/) — end-to-end walkthroughs
+
+<PrevNext
+  prev={{ title: "Key Concepts", href: "/getting_started/key_concepts/" }}
+  next={{ title: "Inference", href: "/getting_started/inference/" }}
+/>

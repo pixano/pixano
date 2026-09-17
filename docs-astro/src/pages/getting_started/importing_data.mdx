@@ -16,6 +16,7 @@ Pixano 0.8 imports and exports datasets as plain files — no Python required. Y
 - **Importing**: the folder layout, the `metadata.jsonl` line format (JSONL v2), the `dataset.yaml` schema spec, and media storage options
 - **Exporting**: how to export a dataset, including record base fields with `--include-record-field`
 - The CLI: `import`, `export`, `formats`, `jobs`, `migrate-jsonl`, `optimize`, and `fix-creation-dates`
+- **Jobs**: resuming, cancelling and rolling back an import
 
 </Callout>
 
@@ -366,6 +367,29 @@ pixano data import /path/to/data_dir ./exported   # id-identical dataset
 ```
 
 The export emits exactly this format, with explicit ids and its own `dataset.yaml`. Export output _is_ import input.
+
+## Jobs
+
+Imports and exports run as **durable jobs** recorded in a store shared by the CLI, the REST API
+and the app — so a job started from the import wizard is visible from the command line, and the
+other way round.
+
+```sh
+pixano data jobs /path/to/data_dir list             # every job and its state
+pixano data jobs /path/to/data_dir show <job_id>    # details and progress
+pixano data jobs /path/to/data_dir cancel <job_id>  # ask a running job to stop
+pixano data jobs /path/to/data_dir resume <job_id>  # continue from the last checkpoint
+pixano data jobs /path/to/data_dir rollback <job_id>
+```
+
+Two properties make this safe to interrupt:
+
+- **Resume** picks up from the last committed checkpoint rather than starting over.
+- **Rollback** undoes a completed import. For `--mode add` it removes only the rows that job
+  added, leaving edits made in the meantime intact.
+
+Cancellation is cooperative: the job stops at its next checkpoint, so the dataset is never left
+half-written.
 
 ## Migrating from Pixano 0.7
 
