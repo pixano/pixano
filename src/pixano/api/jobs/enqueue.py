@@ -222,9 +222,9 @@ def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
         job = get(conn, job_id)
         requested = conn.execute(queries.REQUEST_CANCEL, (job.id,)).rowcount
         conn.execute(queries.CANCEL_PENDING_CHUNKS, (job.id,))
-        conn.execute(queries.SETTLE_IF_IDLE, (job.id, job.id))
+        settled = conn.execute(queries.SETTLE_IF_IDLE, (job.id, job.id)).fetchone()
         if requested:
-            row = conn.execute(queries.SELECT_STATE, (job.id,)).fetchone()
-            payload = {"state": row[0] if row else job.state, "cancel_requested": True}
+            # Conclu sur-le-champ, ou encore dans l'état d'avant : l'annulation ne le change pas.
+            payload = {"state": settled[0] if settled else job.state, "cancel_requested": True}
             conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
     return get(conn, job_id)

@@ -61,9 +61,13 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
        (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int,
        j.cancel_requested_at IS NOT NULL,
        -- Why a job failed: its own error when planning failed, else the first chunk that did.
-       -- Without it a job read "error" and nothing else; only the worker's log knew.
-       coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
-                          WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
+       -- Without it a job read "error" and nothing else; only the worker's log knew. Looked up
+       -- only for failed jobs: the list is mostly finished ones, and this is one more
+       -- correlated subquery per listed row.
+       CASE WHEN j.state = 'error' THEN
+            coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
+                               WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
+       END
 FROM {SCHEMA_NAME}.jobs j
 """
 
@@ -102,6 +106,5 @@ WHERE id = %s AND state IN ('planning', 'pending', 'running')
       SELECT 1 FROM {SCHEMA_NAME}.job_chunks
       WHERE job_id = %s AND state = 'running'
   )
+RETURNING state
 """
-
-SELECT_STATE = f"SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %s"
