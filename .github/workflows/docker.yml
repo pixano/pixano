@@ -113,7 +113,7 @@ jobs:
         run: |
           docker run --rm pixano/pixano-worker:test python -c "
           from pixano_worker.kinds import default_registry
-          names = default_registry().names()
+          names = default_registry(demo_kinds=True).names()
           print('kinds:', names)
           assert names, 'no job kind could be loaded'
           "

@@ -135,7 +135,7 @@ def main() -> int:
     alive()
     wait_for_inference(config.inference_url, config.inference_api_key, alive)
 
-    registry = default_registry(config.inference_url, config.inference_api_key)
+    registry = default_registry(config.inference_url, config.inference_api_key, config.demo_kinds)
     worker_id = queue.worker_identity()
 
     with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True) as conn:

@@ -29,7 +29,7 @@ FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
 @pytest.fixture
 def registry() -> Registry:
     """Le registre livré avec le worker."""
-    return default_registry()
+    return default_registry(demo_kinds=True)
 
 
 @pytest.fixture
