@@ -530,7 +530,7 @@ class TestOutcome:
             f"SELECT item_id, reason FROM {SCHEMA_NAME}.job_items WHERE job_id = %s ORDER BY item_id", (job,)
         ).fetchall()
         assert len(items) == 10
-        assert items[0] == ("task-0", "échec demandé")
+        assert items[0] == ("task-0", "failure requested")
 
     async def test_an_outcome_that_does_not_add_up_fails_the_chunk(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
