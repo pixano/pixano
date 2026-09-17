@@ -7,50 +7,79 @@ import PrevNext from '../../components/PrevNext.astro'
 
 # Installation
 
-To install Pixano with pip you need a working Python installation. It currently requires
+To install Pixano you need a working Python installation. It currently requires
 **Python 3.10 to 3.13**. We encourage installing Pixano in a virtual environment, or using the
-Docker distribution. Pixano is supported on Linux and macOS, and on Windows with limited support.
+Docker distribution, which needs no Python at all. Pixano is supported on Linux and macOS, and
+on Windows with limited support.
 
 ## Install with pip
 
-Create a virtual environment and activate it:
+Open a terminal and check your Python version first:
+
+```bash
+python3 --version
+```
+
+If it is not between 3.10 and 3.13 (Python 3.14 is not supported yet), install a supported
+version from [python.org](https://www.python.org/downloads/) and use its own command below, for
+example `python3.13` instead of `python3`. Do not skip this check: with an unsupported Python,
+pip installs a very old Pixano without any warning.
+
+From the folder where you want to keep your Pixano files, create a virtual environment and
+activate it:
 
 ```bash
 python3 -m venv .venv
-```
-
-```bash
 source .venv/bin/activate
 ```
 
-On Windows, activate with `.venv\Scripts\activate` instead.
+On Windows, use `python` instead of `python3`, and activate with `.venv\Scripts\activate`.
 
-Install Pixano:
+Install with:
 
 ```bash
 pip install pixano
 ```
 
-Create a data directory — the folder where Pixano keeps your datasets:
+Then check it is correctly installed with:
+
+```bash
+pixano --help
+```
+
+```text
+ Usage: pixano [OPTIONS] COMMAND [ARGS]...
+
+ Pixano CLI
+```
+
+The list of commands that follows includes `init` and `server`, the two you need next.
+
+At this point you can start the Pixano server, by first initializing its data directory — the
+folder where Pixano keeps your datasets:
 
 ```bash
 pixano init ./my_data
 ```
 
-Start the server:
+and then running the server itself:
 
 ```bash
 pixano server run ./my_data
 ```
 
-Open **http://127.0.0.1:7492** in your browser. You are on Pixano's home page, the Library —
-empty for now. Press `Ctrl-C` in the terminal to stop the server.
+Open **http://127.0.0.1:7492** in your browser: this is the Library, Pixano's home page, empty
+for now. Continue to the [Quickstart](/pixano/getting_started/quickstart/) to import your first
+dataset.
 
-Continue to the [Quickstart](/pixano/getting_started/quickstart/) to import your first dataset.
+The server runs until you press `Ctrl-C` in the terminal. To start it again later, open a
+terminal in the same folder, activate the virtual environment and run
+`pixano server run ./my_data` — `pixano init` is only needed once.
 
 ## Run with Docker
 
-Pull the image and start a container:
+With [Docker](https://docs.docker.com/get-started/get-docker/) installed and running, pull the
+image and start a container:
 
 ```bash
 docker pull pixano/pixano:stable
@@ -60,8 +89,8 @@ docker pull pixano/pixano:stable
 docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-`my_data` is a folder on your machine where Pixano keeps your datasets; it is created on first
-start. Open **http://localhost:7492** in your browser: the Library.
+`my_data` is the folder where Pixano keeps your datasets; it is created in the current folder on
+first start. Open **http://localhost:7492** in your browser: the Library.
 
 Stop the container with `docker stop pixano` and start it again with `docker start pixano`.
 

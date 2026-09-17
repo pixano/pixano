@@ -269,6 +269,40 @@ p {
   max-width: var(--px-content-width);
 }
 
+/* Lists in page content: Tailwind's preflight strips markers and indentation.
+   :where() keeps the specificity low so components can still opt out. */
+.article :where(ul, ol) {
+  margin: 0 0 1.25rem;
+  padding-left: 1.5rem;
+  max-width: var(--px-content-width);
+}
+
+.article :where(ul) {
+  list-style: disc;
+}
+
+.article :where(ol) {
+  list-style: decimal;
+}
+
+.article :where(li) {
+  margin-bottom: 0.4rem;
+}
+
+.article :where(li > ul, li > ol) {
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+}
+
+/* A list that closes its container (a callout, a list item) leaves the spacing to it. */
+.article :where(ul, ol):last-child {
+  margin-bottom: 0;
+}
+
+.article :where(li)::marker {
+  color: var(--px-text-muted);
+}
+
 a {
   color: var(--px-primary);
   text-decoration: none;
