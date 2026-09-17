@@ -131,12 +131,22 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 """
 
 # Ce que le worker fait de ses propres chunks après un arrêt brutal : les rendre tout de
-# suite, au lieu d'attendre l'expiration de leur bail.
+# suite, au lieu d'attendre l'expiration de leur bail. Avec le même plafond que la reprise des
+# baux : un chunk qui fait tomber son worker à chaque tentative ferait sinon boucler un worker
+# redémarré automatiquement, puisque ce chemin ne regardait jamais les tentatives.
 RELEASE_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND claimed_by = %s
+WHERE state = 'running' AND claimed_by = %s AND attempts < %s
 RETURNING id
+"""
+
+ABANDON_OWN = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET state = 'error', lease_until = NULL, updated_at = now(),
+    error = jsonb_build_object('reason', 'abandonné', 'attempts', attempts)
+WHERE state = 'running' AND claimed_by = %s AND attempts >= %s
+RETURNING job_id
 """
 
 RECLAIM_EXPIRED = f"""
@@ -338,13 +348,17 @@ async def cancel_chunk(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
     return (await conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts))).rowcount > 0
 
 
-async def release_own(conn: psycopg.AsyncConnection, worker_id: str) -> int:
+async def release_own(conn: psycopg.AsyncConnection, worker_id: str, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
     """Rendre les chunks laissés par une exécution précédente de ce même worker.
 
     Le bail finirait par les libérer de toute façon ; les rendre au démarrage transforme une
-    reprise de deux minutes en reprise immédiate.
+    reprise de deux minutes en reprise immédiate. Ceux qui ont épuisé leurs tentatives sont
+    écartés, comme par la reprise des baux.
     """
-    return len(await (await conn.execute(RELEASE_OWN, (worker_id,))).fetchall())
+    async with conn.transaction():
+        requeued = len(await (await conn.execute(RELEASE_OWN, (worker_id, max_attempts))).fetchall())
+        abandoned = await (await conn.execute(ABANDON_OWN, (worker_id, max_attempts))).fetchall()
+    return Recovery(requeued=requeued, abandoned_jobs=frozenset(str(row[0]) for row in abandoned))
 
 
 async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> Recovery:

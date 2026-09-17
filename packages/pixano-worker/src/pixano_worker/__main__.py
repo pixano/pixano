@@ -182,9 +182,15 @@ async def serve(
         async with pool.connection() as conn:
             # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
             # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
-            recovered = await queue.release_own(conn, worker_id)
-        if recovered:
-            log.info("%d chunk(s) repris d'une exécution précédente", recovered)
+            recovery = await queue.release_own(conn, worker_id)
+            await runner.settle_abandoned(conn, recovery)
+        if recovery.requeued:
+            log.info("%d chunk(s) repris d'une exécution précédente", recovery.requeued)
+        if recovery.abandoned_jobs:
+            log.warning(
+                "%d job(s) avec un chunk écarté : il a fait tomber ce worker à chacune de ses tentatives",
+                len(recovery.abandoned_jobs),
+            )
 
         log.info("worker démarré, en attente de jobs")
         try:
