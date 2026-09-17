@@ -200,12 +200,22 @@ def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
     à leur worker, qui s'arrêtera avant le chunk suivant. Un job dont plus rien ne tourne devient
     terminal tout de suite.
 
+    L'annulation est annoncée sur le flux d'événements, dans la même transaction : c'est le
+    seul changement d'état que l'application fait elle-même, et sans événement les autres
+    clients gardaient un job « en cours » jusqu'à un rechargement. L'événement porte l'état
+    du job après l'annulation — conclu, ou encore en cours le temps que ses chunks finissent —
+    et le drapeau de demande.
+
     Raises:
         JobNotFoundError: Aucun job ne porte cet identifiant.
     """
     with conn.transaction():
         job = get(conn, job_id)
-        conn.execute(queries.REQUEST_CANCEL, (job.id,))
+        requested = conn.execute(queries.REQUEST_CANCEL, (job.id,)).rowcount
         conn.execute(queries.CANCEL_PENDING_CHUNKS, (job.id,))
         conn.execute(queries.SETTLE_IF_IDLE, (job.id, job.id))
+        if requested:
+            row = conn.execute(queries.SELECT_STATE, (job.id,)).fetchone()
+            payload = {"state": row[0] if row else job.state, "cancel_requested": True}
+            conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
     return get(conn, job_id)

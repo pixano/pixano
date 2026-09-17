@@ -258,3 +258,43 @@ class TestOutcome:
     def test_the_quarantine_of_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
         with pytest.raises(jobs.JobNotFoundError):
             jobs.quarantine(declared, "00000000-0000-0000-0000-000000000000", limit=10)
+
+
+class TestCancellationIsAnnounced:
+    """Independent review, D3: the application's cancellation rang no bell."""
+
+    @staticmethod
+    def _state_events(queue: psycopg.Connection, job_id: str) -> list[dict]:
+        rows = queue.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id", (job_id,)
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    def test_a_settled_cancellation_emits_its_final_state(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        jobs.cancel(declared, job.id)
+
+        assert self._state_events(declared, job.id) == [{"state": "cancelled", "cancel_requested": True}]
+
+    def test_a_cancellation_still_running_announces_the_request(self, declared: psycopg.Connection) -> None:
+        """Other clients can show "cancelling" while the chunks in flight finish."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, lease_until) "
+            "VALUES (%s, 0, 5, 'running', now() + interval '2 minutes')",
+            (job.id,),
+        )
+
+        jobs.cancel(declared, job.id)
+
+        assert self._state_events(declared, job.id) == [{"state": "running", "cancel_requested": True}]
+
+    def test_cancelling_twice_announces_once(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        jobs.cancel(declared, job.id)
+        jobs.cancel(declared, job.id)
+
+        assert len(self._state_events(declared, job.id)) == 1

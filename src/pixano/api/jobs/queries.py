@@ -14,6 +14,23 @@ schema itself.
 
 SCHEMA_NAME = "pixano_jobs"
 
+# The channel the worker rings on every event; the application rings it too for the one event
+# it produces itself, a cancellation.
+NOTIFY_CHANNEL = "pixano_jobs_events"
+
+# Same statement as the worker's: the insert and the bell in one transaction, so that nothing
+# is announced before it can be read. The two sides share no code, so the SQL is repeated.
+RECORD_EVENT = f"""
+WITH inserted AS (
+    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
+    VALUES (%s, %s, %s)
+    RETURNING id, job_id, type
+)
+SELECT pg_notify(%s, json_build_object(
+    'job_id', job_id, 'event_id', id, 'type', type
+)::text) FROM inserted
+"""
+
 # `to_regclass` answers without raising on a database where the worker has never run.
 QUEUE_EXISTS = f"SELECT to_regclass('{SCHEMA_NAME}.jobs')"
 
@@ -82,3 +99,5 @@ WHERE id = %s AND state IN ('planning', 'pending', 'running')
       WHERE job_id = %s AND state = 'running'
   )
 """
+
+SELECT_STATE = f"SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %s"
