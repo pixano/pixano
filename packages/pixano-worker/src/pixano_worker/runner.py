@@ -23,7 +23,7 @@ import asyncio
 import logging
 import threading
 import traceback
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable
 from collections.abc import Set as AbstractSet
 from contextlib import asynccontextmanager
@@ -255,15 +255,35 @@ async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str,
             await record_event(conn, job_id, "state", {"state": "error", **error})
 
 
-@lru_cache(maxsize=8)
+# Les datasets ouverts, peu nombreux à la fois : un worker en traite rarement plus de quelques-uns
+# dans une même période. Un dictionnaire ordonné plutôt qu'un `lru_cache`, pour pouvoir en
+# invalider un seul — vider tout le cache pour rouvrir un dataset faisait rouvrir les autres.
+_OPEN_DATASETS_MAX = 8
+_open_datasets: OrderedDict[tuple[Path, str], Dataset] = OrderedDict()
+_open_datasets_guard = threading.Lock()
+
+
 def _open_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Ouvrir un dataset, une fois. Le worker en traite peu à la fois."""
-    return Dataset.find(dataset_id, library)
+    """Ouvrir un dataset, une fois ; le rendre du cache ensuite."""
+    key = (library, dataset_id)
+    with _open_datasets_guard:
+        cached = _open_datasets.get(key)
+        if cached is not None:
+            _open_datasets.move_to_end(key)
+            return cached
+    opened = Dataset.find(dataset_id, library)
+    with _open_datasets_guard:
+        _open_datasets[key] = opened
+        _open_datasets.move_to_end(key)
+        while len(_open_datasets) > _OPEN_DATASETS_MAX:
+            _open_datasets.popitem(last=False)
+    return opened
 
 
 def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Rouvrir un dataset en ignorant le cache, et remplacer ce que le cache en tenait."""
-    _open_dataset.cache_clear()
+    """Rouvrir ce dataset en ignorant le cache, et remplacer ce que le cache en tenait."""
+    with _open_datasets_guard:
+        _open_datasets.pop((library, dataset_id), None)
     return _open_dataset(library, dataset_id)
 
 
@@ -295,7 +315,7 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
         return _reopen_dataset(library, dataset_id)
 
-    return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset)
+    return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset, dataset_id)
 
 
 async def work(
