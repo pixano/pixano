@@ -203,6 +203,50 @@ class TestInterruptedPlanning:
         assert row == (10,)
 
 
+class TestCancelledDuringPlanning:
+    """Revue de l'étape 1 : une annulation pendant la découpe ressuscitait le job en `pending`."""
+
+    @staticmethod
+    def _cancel_as_the_application_does(declared: psycopg.Connection, job: str) -> None:
+        declared.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), state = 'cancelled', "
+            "planning_until = NULL WHERE id = %s",
+            (job,),
+        )
+
+    async def test_a_plan_finished_after_a_cancel_is_dropped(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        job = _submit(declared)
+        declared.execute(runner.CLAIM_PLANNING, (queue.LEASE_TTL,))
+        self._cancel_as_the_application_does(declared, job)
+
+        recorded = await runner.record_plan(adb, job, [Chunk(payload={"first_task": 0}, task_count=200)])
+
+        assert recorded is False
+        assert _state(declared, job)[0] == "cancelled"
+        chunks = declared.execute(
+            f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s", (job,)
+        ).fetchone()
+        assert chunks == (0,)
+        states = declared.execute(
+            f"SELECT payload->>'state' FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state'", (job,)
+        ).fetchall()
+        assert ("pending",) not in states, "aucun événement ne doit annoncer le job de nouveau en attente"
+
+    async def test_a_planning_failure_after_a_cancel_does_not_turn_it_into_an_error(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Un job qu'on a arrêté n'est pas un job qui a échoué."""
+        job = _submit(declared)
+        declared.execute(runner.CLAIM_PLANNING, (queue.LEASE_TTL,))
+        self._cancel_as_the_application_does(declared, job)
+
+        await runner._fail_job(adb, job, {"reason": "la planification a échoué"})
+
+        assert _state(declared, job)[0] == "cancelled"
+
+
 class TestExecution:
     async def test_runs_a_job_to_completion(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
