@@ -217,7 +217,7 @@ License: CECILL-C
   <!-- Panel content -->
   <div class="flex-1 overflow-y-auto">
     {#if activeSection === "jobs"}
-      <JobsPanel datasetId={selectedDataset?.id ?? null} />
+      <JobsPanel dataset={selectedDataset} />
     {:else if activeSection === "widgets"}
       <WidgetPalette {registry} onWidgetAdd={handleWidgetAdd} />
     {:else if activeSection === "explorer"}

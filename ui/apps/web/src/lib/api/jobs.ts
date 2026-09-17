@@ -63,6 +63,9 @@ export type JsonSchema = {
   anyOf?: JsonSchema[];
 };
 
+/** The dataset a job would run on — the one last opened in the Explorer. */
+export type JobTarget = { id: string; name: string };
+
 export type SubmitJobRequest = {
   kind: string;
   dataset_id: string;

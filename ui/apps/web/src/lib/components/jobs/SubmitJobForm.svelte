@@ -7,15 +7,15 @@ License: CECILL-C
 <script lang="ts">
   import SchemaField from "./SchemaField.svelte";
   import { initialValues, missingRequired, requiredNames, toParams } from "./schemaForm";
-  import type { JobKind } from "$lib/api/jobs";
+  import type { JobKind, JobTarget } from "$lib/api/jobs";
 
   type Props = {
     kinds: JobKind[];
-    datasetId: string | null;
+    dataset: JobTarget | null;
     onSubmit: (kind: string, params: Record<string, unknown>) => Promise<boolean>;
   };
 
-  let { kinds, datasetId, onSubmit }: Props = $props();
+  let { kinds, dataset, onSubmit }: Props = $props();
 
   let selectedName = $state("");
   let values = $state<Record<string, unknown>>({});
@@ -44,7 +44,7 @@ License: CECILL-C
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
-    if (!selected || !datasetId || submitting) return;
+    if (!selected || !dataset || submitting) return;
     submitting = true;
     const accepted = await onSubmit(selected.name, toParams(selected.params_schema, values));
     submitting = false;
@@ -53,6 +53,21 @@ License: CECILL-C
 </script>
 
 <form class="flex flex-col gap-3 border-b border-border p-3" onsubmit={handleSubmit}>
+  <!--
+    Named before anything else: a job runs on the dataset last opened in the Explorer, and
+    nothing else on this form says which one that is.
+  -->
+  <div class="flex flex-col gap-1 text-sm">
+    <span class="font-medium">Dataset</span>
+    {#if dataset}
+      <span class="truncate rounded bg-muted px-2 py-1" title={dataset.name}>{dataset.name}</span>
+    {:else}
+      <span class="text-xs text-muted-foreground">
+        None — open a dataset in the Explorer to run a job on it.
+      </span>
+    {/if}
+  </div>
+
   <label class="flex flex-col gap-1 text-sm">
     <span class="font-medium">Processing</span>
     <select
@@ -76,16 +91,14 @@ License: CECILL-C
     />
   {/each}
 
-  {#if !datasetId}
-    <p class="text-xs text-muted-foreground">Open a dataset to run a job on it.</p>
-  {:else if missing.length > 0}
+  {#if dataset && missing.length > 0}
     <p class="text-xs text-muted-foreground">Fill in: {missing.join(", ")}</p>
   {/if}
 
   <button
     type="submit"
     class="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
-    disabled={!selected || !datasetId || missing.length > 0 || submitting}
+    disabled={!selected || !dataset || missing.length > 0 || submitting}
   >
     {submitting ? "Starting…" : "Run"}
   </button>
