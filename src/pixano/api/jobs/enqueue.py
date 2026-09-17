@@ -16,6 +16,7 @@ The worker owns the schema: this module never creates anything. On a database wh
 worker has never run, the tables are simply absent and callers get `QueueUnavailableError`.
 """
 
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Sequence
@@ -172,6 +173,12 @@ def get(conn: psycopg.Connection, job_id: str) -> JobRecord:
         JobNotFoundError: Aucun job ne porte cet identifiant.
     """
     _require_queue(conn)
+    try:
+        uuid.UUID(job_id)
+    except ValueError as error:
+        # Le schéma type l'identifiant en uuid : une chaîne d'une autre forme faisait échouer
+        # la requête, donc répondre 500 pour ce qui est un job inconnu.
+        raise JobNotFoundError(job_id) from error
     row = conn.execute(queries.SELECT_JOB, (job_id,)).fetchone()
     if row is None:
         raise JobNotFoundError(job_id)
