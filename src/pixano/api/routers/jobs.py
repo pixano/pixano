@@ -159,7 +159,7 @@ def submit_job(
 @router.get("", operation_id="list_jobs")
 def list_jobs(
     settings: Annotated[Settings, Depends(get_settings)],
-    limit: Annotated[int, Query(ge=1, le=MAX_LISTED_JOBS)] = 50,
+    limit: Annotated[int, Query(ge=1, le=MAX_LISTED_JOBS)] = jobs.DEFAULT_LISTED_JOBS,
 ) -> list[JobResponse]:
     """List jobs, most recent first."""
     with _connect(settings) as conn:

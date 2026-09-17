@@ -28,7 +28,7 @@ from psycopg.types.json import Jsonb
 from . import queries
 
 
-MAX_LISTED_JOBS = 50
+DEFAULT_LISTED_JOBS = 50
 
 
 class QueueUnavailableError(RuntimeError):
@@ -185,7 +185,7 @@ def get(conn: psycopg.Connection, job_id: str) -> JobRecord:
     return JobRecord.from_row(row)
 
 
-def list_jobs(conn: psycopg.Connection, limit: int = MAX_LISTED_JOBS) -> list[JobRecord]:
+def list_jobs(conn: psycopg.Connection, limit: int = DEFAULT_LISTED_JOBS) -> list[JobRecord]:
     """Lister les jobs, du plus récent au plus ancien."""
     _require_queue(conn)
     return [JobRecord.from_row(row) for row in conn.execute(queries.LIST_JOBS, (limit,)).fetchall()]

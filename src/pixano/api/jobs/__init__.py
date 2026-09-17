@@ -8,6 +8,7 @@
 
 from . import queries
 from .enqueue import (
+    DEFAULT_LISTED_JOBS,
     InvalidParamsError,
     JobNotFoundError,
     JobRecord,
@@ -27,6 +28,7 @@ from .queries import SCHEMA_NAME
 
 
 __all__ = [
+    "DEFAULT_LISTED_JOBS",
     "SCHEMA_NAME",
     "InvalidParamsError",
     "JobNotFoundError",
