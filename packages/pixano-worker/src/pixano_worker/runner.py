@@ -41,7 +41,7 @@ from . import queue
 from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
-from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
+from .schema import SCHEMA_NAME
 from .threads import WorkerThreads
 from .writer import JobWriter
 
@@ -128,21 +128,6 @@ WHERE id = %s AND state = 'planning'
 RETURNING id
 """
 
-# L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
-# ne délivre un NOTIFY qu'au commit, ce qui donne gratuitement la garantie « pas d'événement
-# annoncé avant d'être lisible ». La charge ne porte que des identifiants — elle est plafonnée
-# à 8 ko, et un lecteur doit de toute façon relire la ligne pour rattraper ce qu'il a manqué.
-RECORD_EVENT = f"""
-WITH inserted AS (
-    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
-    VALUES (%s, %s, %s)
-    RETURNING id, job_id, type
-)
-SELECT pg_notify(%s, json_build_object(
-    'job_id', job_id, 'event_id', id, 'type', type
-)::text) FROM inserted
-"""
-
 # Un job dont plus aucun chunk n'attend ni ne tourne est terminé. L'annulation l'emporte sur
 # l'erreur : un job qu'on a arrêté n'est pas un job qui a échoué.
 SETTLE = f"""
@@ -172,15 +157,8 @@ FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'done'
 """
 
 
-async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
-    """Consigner un événement de progression.
-
-    Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
-    sont attribués avant le commit, donc deux transactions concurrentes peuvent rendre leurs
-    événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
-    remettre au suivant.
-    """
-    await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
+# Le même que celui de la file, exposé ici pour les appelants du runner.
+record_event = queue.record_event
 
 
 async def plan_one(
@@ -596,16 +574,8 @@ async def _execute(
         # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
         log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
         return
-    if finished.started_job:
-        await record_event(conn, chunk.job_id, "state", {"state": "running"})
     if outcome.quarantined:
         log.info("chunk %s du job %s : %d item(s) en quarantaine", chunk.seq, chunk.job_id, len(outcome.quarantined))
-
-    progress = await (
-        await conn.execute(f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
-    ).fetchone()
-    if progress is not None:
-        await record_event(conn, chunk.job_id, "progress", {"done_tasks": progress[0], "total_tasks": progress[1]})
 
 
 async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error: dict[str, Any]) -> None:
@@ -682,11 +652,14 @@ async def settle_abandoned(conn: psycopg.AsyncConnection, recovery: queue.Recove
 
 async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
     """Conclure un job dont plus rien n'attend ni ne tourne, en disant ce qu'il a produit."""
-    row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
-    if row is None:
-        return
-    outcome = await job_outcome(conn, job_id)
-    await record_event(conn, job_id, "state", {"state": row[0], **outcome})
+    # Conclusion et événement dans une transaction : un worker tué entre les deux laissait un job
+    # `done` dont l'interface n'apprenait la fin qu'au rechargement — revue indépendante, D6.
+    async with conn.transaction():
+        row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
+        if row is None:
+            return
+        outcome = await job_outcome(conn, job_id)
+        await record_event(conn, job_id, "state", {"state": row[0], **outcome})
     log.info(
         "job %s terminé : %s — %d produite(s), %d écartée(s), %d en quarantaine",
         job_id,

@@ -569,6 +569,13 @@ class TestConcurrency:
         ).fetchall()
         assert len(events) == 50
         assert max(event[0]["done_tasks"] for event in events) == 500
+        # Les états, lus dans l'ordre des identifiants, sont dans l'ordre logique même quand huit
+        # chunks finissent ensemble : `running` s'écrit sous le verrou du job, avant tout `done`.
+        states = declared.execute(
+            f"SELECT payload->>'state' FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id",
+            (job,),
+        ).fetchall()
+        assert [row[0] for row in states] == ["pending", "running", "done"]
 
 
 async def _drain(adb: psycopg.AsyncConnection, registry: Registry) -> None:
