@@ -96,3 +96,28 @@ describe("jobsStore after a stream outage", () => {
     expect(api.listJobs).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("jobsStore facing a job it has never seen", () => {
+  it("reloads once for a burst of its events, not once per event", async () => {
+    const { store, stream } = await startedStore();
+    let finishReload: (jobs: Job[]) => void = () => {};
+    api.listJobs.mockReturnValue(new Promise<Job[]>((resolve) => (finishReload = resolve)));
+
+    for (let done = 8; done <= 160; done += 8) {
+      stream.emit("progress", { job_id: "someone-else", done_tasks: done, total_tasks: 400 });
+    }
+    finishReload([job(), job({ id: "someone-else" })]);
+    await vi.waitFor(() => expect(store.jobs).toHaveLength(2));
+
+    expect(api.listJobs).toHaveBeenCalledTimes(2);
+  });
+
+  it("can reload again once the previous reload has landed", async () => {
+    const { store } = await startedStore();
+
+    await store.refresh();
+    await store.refresh();
+
+    expect(api.listJobs).toHaveBeenCalledTimes(3);
+  });
+});
