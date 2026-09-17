@@ -67,6 +67,10 @@ SHUTDOWN_GRACE_S = 30.0
 # remplisse pas le journal.
 UNEXPECTED_ERROR_PAUSE_S = 1.0
 
+# Un défaut qui se répète à chaque tour est journalisé avec sa trace la première fois, puis
+# une fois toutes les N occurrences : le journal dit qu'il persiste, sans une trace par seconde.
+UNEXPECTED_ERROR_LOG_EVERY = 60
+
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
 RECLAIM_INTERVAL_S = 30.0
@@ -374,6 +378,7 @@ async def _loop(
     loop = asyncio.get_running_loop()
     last_reclaim = loop.time()
     outages = 0
+    failures = 0
 
     while not stop.is_set():
         if threads.saturated:
@@ -426,9 +431,14 @@ async def _loop(
             # prévoit pas, un bug — est journalisé avec sa trace, et le tour suivant a lieu. Le
             # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
             # rendre plus visible que cette trace.
-            log.exception("tour de boucle en échec, le worker continue")
+            failures += 1
+            if failures == 1 or failures % UNEXPECTED_ERROR_LOG_EVERY == 0:
+                log.exception("tour de boucle en échec (%d fois de suite), le worker continue", failures)
             await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
             continue
+        if failures:
+            log.info("la boucle repasse après %d tour(s) en échec", failures)
+            failures = 0
         if outages:
             log.info("base de nouveau joignable après %d tentative(s)", outages)
             outages = 0
