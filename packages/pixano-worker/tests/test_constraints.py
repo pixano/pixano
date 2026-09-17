@@ -11,6 +11,8 @@ de PostgreSQL : ce sont les garde-fous qui empêchent les lots suivants de réin
 problème qu'on a délibérément conçu hors d'atteinte.
 """
 
+from datetime import datetime, timezone
+
 import psycopg
 import pytest
 from pixano_worker.schema import SCHEMA_NAME
@@ -111,6 +113,13 @@ class TestChunkConstraints:
         for table in ("job_chunks", "job_events"):
             row = db.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.{table}").fetchone()
             assert row is not None and row[0] == 0
+
+
+class TestPlanningLease:
+    def test_a_planning_lease_only_exists_while_planning(self, db: psycopg.Connection) -> None:
+        """Un job découpé qui garderait son bail semblerait encore réservé par un worker."""
+        with pytest.raises(psycopg.errors.CheckViolation):
+            _new_job(db, state="pending", planning_until=datetime.now(timezone.utc))
 
 
 class TestOutcomeConstraints:

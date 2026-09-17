@@ -14,7 +14,7 @@ from datetime import timedelta
 import psycopg
 import pytest
 from pixano_worker import queue, runner
-from pixano_worker.kinds import FakeKind, Outcome, Registry, default_registry
+from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from psycopg_pool import AsyncConnectionPool
 
@@ -149,6 +149,58 @@ class TestPlanning:
         assert await runner.plan_one(adb, registry) is None
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == 0
+
+
+class TestInterruptedPlanning:
+    """Un worker qui meurt en pleine découpe ne doit pas laisser le job bloqué pour toujours."""
+
+    @staticmethod
+    def _claim_planning_and_die(declared: psycopg.Connection) -> None:
+        """Ce qu'un worker laisse derrière lui s'il meurt juste après avoir réclamé la découpe."""
+        declared.execute(runner.CLAIM_PLANNING, (queue.LEASE_TTL,))
+
+    async def test_the_job_stays_in_planning_while_it_is_split(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """Il était passé « en cours » avant même d'avoir un chunk — un état qu'aucune reprise ne voyait."""
+        job = _submit(declared)
+
+        self._claim_planning_and_die(declared)
+
+        assert _state(declared, job)[0] == "planning"
+
+    async def test_a_live_planning_lease_is_respected(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        _submit(declared)
+        self._claim_planning_and_die(declared)
+
+        assert await runner.plan_one(adb, registry) is None
+
+    async def test_a_job_whose_planner_died_is_planned_again(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared)
+        self._claim_planning_and_die(declared)
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() - interval '1 minute'")
+
+        await runner.plan_one(adb, registry)
+
+        assert _state(declared, job) == ("pending", 0, 200)
+
+    async def test_a_second_planner_does_not_double_the_chunks(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """Le premier planificateur, trop lent, finit après celui qui a repris son bail."""
+        job = _submit(declared)
+        await runner.plan_one(adb, registry)
+        late_chunks = [Chunk(payload={"first_task": 0, "task_count": 200}, task_count=200)]
+
+        recorded = await runner.record_plan(adb, job, late_chunks)
+
+        assert recorded is False
+        row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s", (job,)).fetchone()
+        assert row == (10,)
 
 
 class TestExecution:

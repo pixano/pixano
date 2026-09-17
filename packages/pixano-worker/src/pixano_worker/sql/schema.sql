@@ -51,6 +51,10 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.jobs (
     -- L'annulation a sa propre colonne. L'instant est gratuit et répond en plus à
     -- « quand l'a-t-on demandée ? » ; `IS NOT NULL` tient lieu de booléen.
     cancel_requested_at timestamptz,
+    -- Le bail de la planification. Un job reste en `planning` pendant qu'un worker le découpe ;
+    -- si ce worker meurt, le bail expire et un autre reprend la découpe. Sans lui, un job dont
+    -- le planificateur tombait restait « en cours » pour toujours, sans un seul chunk.
+    planning_until      timestamptz,
     total_tasks         integer     NOT NULL DEFAULT 0 CHECK (total_tasks >= 0),
     done_tasks          integer     NOT NULL DEFAULT 0 CHECK (done_tasks >= 0),
     error               jsonb       CHECK (error IS NULL OR jsonb_typeof(error) = 'object'),
@@ -65,7 +69,10 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.jobs (
     -- Une annulation ne peut structurellement pas s'écrire dans la charge d'erreur : le
     -- défaut du magasin SQLite est interdit par une contrainte, pas par une convention.
     CONSTRAINT jobs_error_only_when_failed
-        CHECK (error IS NULL OR state = 'error')
+        CHECK (error IS NULL OR state = 'error'),
+    -- Un bail de planification n'a de sens que pendant la planification.
+    CONSTRAINT jobs_planning_lease_only_when_planning
+        CHECK (planning_until IS NULL OR state = 'planning')
 );
 
 CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
