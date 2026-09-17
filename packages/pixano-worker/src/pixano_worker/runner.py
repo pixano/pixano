@@ -411,7 +411,9 @@ async def _loop(
             outages = 0
 
         if len(in_flight) >= concurrency:
-            await _pause(stop, None, in_flight)
+            # Borné : un worker plein doit quand même rendre les baux expirés et planifier. Sans
+            # borne, la reprise attendait la fin de son premier chunk — revue indépendante, D7.
+            await _pause(stop, RECLAIM_INTERVAL_S, in_flight)
         elif planned is None and not claimed:
             # Rien de nouveau : attendre qu'une place se libère ou que du travail arrive.
             await _pause(stop, idle_poll_s, in_flight)
