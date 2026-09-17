@@ -533,6 +533,9 @@ async def _execute(
     except TransientError as error:
         await _retry_later(conn, chunk, {"reason": "panne passagère", "detail": str(error)})
         return
+    except DATABASE_UNAVAILABLE:
+        # Jamais un échec du type de job : le chunk garde son bail, la reprise le rendra.
+        raise
     except Exception as error:
         await queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
@@ -585,6 +588,11 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
     milieu d'une requête peut laisser la connexion dans un état inutilisable, et c'est la
     connexion que l'appelant réutilise juste après.
 
+    Une base injoignable au moment de rafraîchir n'est pas une erreur du travail protégé : le
+    gardien la journalise et réessaie à l'intervalle suivant. La laisser remonter faisait
+    classer comme fatal un chunk dont le calcul avait réussi — vu en revue. Si la base reste
+    coupée, le bail expire et le jeton de garde refusera le résultat : c'est le chemin prévu.
+
     Args:
         refresh: Prolonge le bail ; rend False si le bail n'appartient plus à ce worker.
         label: Ce que le bail protège, pour le journal.
@@ -597,7 +605,12 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
             try:
                 await asyncio.wait_for(stop.wait(), interval)
             except TimeoutError:
-                if not await refresh():
+                try:
+                    kept = await refresh()
+                except DATABASE_UNAVAILABLE as error:
+                    log.warning("%s : bail non rafraîchi, base injoignable (%s)", label, error)
+                    continue
+                if not kept:
                     log.warning("%s : bail perdu en cours d'exécution", label)
                     return
 
