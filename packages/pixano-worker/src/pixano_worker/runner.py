@@ -24,7 +24,7 @@ import logging
 import threading
 import traceback
 from collections import defaultdict
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
@@ -37,7 +37,7 @@ from psycopg_pool import AsyncConnectionPool
 from pixano.datasets import Dataset
 
 from . import queue
-from .kinds import Outcome, Registry, TransientError
+from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
@@ -71,16 +71,25 @@ def _write_lock(dataset_id: str) -> threading.Lock:
         return _write_locks[dataset_id]
 
 
+# Le job reste en `planning` pendant la découpe : c'est le bail qui le réserve, pas un
+# changement d'état. Un planificateur qui meurt laisse expirer son bail, et le job redevient
+# réclamable — au lieu de rester « en cours » sans chunk, ce qu'aucune reprise ne voyait.
 CLAIM_PLANNING = f"""
-UPDATE {SCHEMA_NAME}.jobs SET state = 'running', updated_at = now()
+UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() + %s, updated_at = now()
 WHERE id = (
     SELECT id FROM {SCHEMA_NAME}.jobs
     WHERE state = 'planning' AND cancel_requested_at IS NULL
+      AND (planning_until IS NULL OR planning_until < now())
     ORDER BY created_at
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )
 RETURNING id, kind, dataset, params
+"""
+
+REFRESH_PLANNING = f"""
+UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() + %s
+WHERE id = %s AND state = 'planning'
 """
 
 INSERT_CHUNKS = f"""
@@ -89,14 +98,21 @@ SELECT %s, chunk.seq, chunk.payload, chunk.task_count
 FROM unnest(%s::int[], %s::jsonb[], %s::int[]) AS chunk(seq, payload, task_count)
 """
 
+# La fin de planification ne s'applique qu'à un job encore en planification. Deux
+# planificateurs peuvent se chevaucher — le premier trop lent, son bail repris par un second :
+# la mise à jour verrouille la ligne, le second attend, puis ne trouve plus le job en
+# `planning` et renonce au lieu de doubler les chunks.
 FINISH_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs
-SET state = 'pending', total_tasks = %s, updated_at = now()
-WHERE id = %s
+SET state = 'pending', total_tasks = %s, planning_until = NULL, updated_at = now()
+WHERE id = %s AND state = 'planning'
+RETURNING id
 """
 
 FAIL_JOB = f"""
-UPDATE {SCHEMA_NAME}.jobs SET state = 'error', error = %s, updated_at = now() WHERE id = %s
+UPDATE {SCHEMA_NAME}.jobs SET state = 'error', error = %s, planning_until = NULL, updated_at = now()
+WHERE id = %s AND state = 'planning'
+RETURNING id
 """
 
 # L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
@@ -165,7 +181,7 @@ async def plan_one(
     Returns:
         L'identifiant du job découpé, ou None s'il n'y en avait aucun.
     """
-    row = await (await conn.execute(CLAIM_PLANNING)).fetchone()
+    row = await (await conn.execute(CLAIM_PLANNING, (queue.LEASE_TTL,))).fetchone()
     if row is None:
         return None
     job_id, kind_name, dataset_id, raw_params = str(row[0]), row[1], row[2], row[3]
@@ -178,10 +194,14 @@ async def plan_one(
         log.warning("job %s : type '%s' inconnu de ce worker", job_id, kind_name)
         return job_id
 
+    async def refresh() -> bool:
+        return (await conn.execute(REFRESH_PLANNING, (queue.LEASE_TTL, job_id))).rowcount > 0
+
     try:
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media)
-        chunks = await asyncio.to_thread(lambda: list(kind.plan(reader, params)))
+        async with _kept_alive(refresh, f"planification du job {job_id}"):
+            chunks = await asyncio.to_thread(lambda: list(kind.plan(reader, params)))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
@@ -191,8 +211,28 @@ async def plan_one(
         await _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
         return job_id
 
+    if await record_plan(conn, job_id, chunks):
+        log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), sum(c.task_count for c in chunks))
+    else:
+        log.info("job %s : découpe abandonnée, le job n'est plus en planification", job_id)
+    return job_id
+
+
+async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk]) -> bool:
+    """Inscrire les chunks d'un job et le passer en attente, s'il est encore en planification.
+
+    La mise à jour du job passe en premier : elle verrouille sa ligne, si bien qu'un second
+    planificateur attend, puis constate que le job n'est plus à planifier.
+
+    Returns:
+        False si le job n'était plus en planification — déjà découpé par un autre worker —,
+        auquel cas rien n'est écrit.
+    """
     total = sum(chunk.task_count for chunk in chunks)
     async with conn.transaction():
+        finished = await (await conn.execute(FINISH_PLANNING, (total, job_id))).fetchone()
+        if finished is None:
+            return False
         await conn.execute(
             INSERT_CHUNKS,
             (
@@ -202,16 +242,14 @@ async def plan_one(
                 [chunk.task_count for chunk in chunks],
             ),
         )
-        await conn.execute(FINISH_PLANNING, (total, job_id))
         await record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
-    log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), total)
-    return job_id
+    return True
 
 
 async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str, Any]) -> None:
     async with conn.transaction():
-        await conn.execute(FAIL_JOB, (Jsonb(error), job_id))
-        await record_event(conn, job_id, "state", {"state": "error", **error})
+        if await (await conn.execute(FAIL_JOB, (Jsonb(error), job_id))).fetchone() is not None:
+            await record_event(conn, job_id, "state", {"state": "error", **error})
 
 
 @lru_cache(maxsize=8)
@@ -421,7 +459,7 @@ async def _execute(
         return outcome
 
     try:
-        async with _lease_kept(conn, chunk):
+        async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} du job {chunk.job_id}"):
             outcome = await asyncio.wait_for(asyncio.to_thread(work), timeout_s)
     except TimeoutError:
         # Le thread ne s'arrête pas : un appel bloqué ne s'interrompt pas de l'extérieur. Le
@@ -477,12 +515,16 @@ async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error:
 
 
 @asynccontextmanager
-async def _lease_kept(conn: psycopg.AsyncConnection, chunk: queue.Chunk) -> AsyncIterator[None]:
-    """Prolonger le bail du chunk tant que le bloc s'exécute.
+async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> AsyncIterator[None]:
+    """Prolonger un bail tant que le bloc s'exécute — celui d'un chunk ou d'une planification.
 
     Le rafraîchissement s'arrête par un signal, pas par une annulation : annuler une tâche au
     milieu d'une requête peut laisser la connexion dans un état inutilisable, et c'est la
-    connexion que le chunk réutilise juste après.
+    connexion que l'appelant réutilise juste après.
+
+    Args:
+        refresh: Prolonge le bail ; rend False si le bail n'appartient plus à ce worker.
+        label: Ce que le bail protège, pour le journal.
     """
     stop = asyncio.Event()
 
@@ -492,8 +534,8 @@ async def _lease_kept(conn: psycopg.AsyncConnection, chunk: queue.Chunk) -> Asyn
             try:
                 await asyncio.wait_for(stop.wait(), interval)
             except TimeoutError:
-                if not await queue.refresh_lease(conn, chunk):
-                    log.warning("chunk %s du job %s : bail perdu en cours d'exécution", chunk.seq, chunk.job_id)
+                if not await refresh():
+                    log.warning("%s : bail perdu en cours d'exécution", label)
                     return
 
     keeper = asyncio.create_task(keep())
