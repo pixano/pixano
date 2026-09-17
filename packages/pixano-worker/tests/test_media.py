@@ -51,6 +51,17 @@ class TestTranslate:
         """L'inference refuserait ce chemin ; autant le savoir ici et prendre l'autre route."""
         assert resolver.translate("/ailleurs/000001.jpg") is None
 
+    @pytest.mark.parametrize(
+        "escaping",
+        ["/medias/../etc/passwd", "/medias/voc/../../etc/passwd", "/medias/./../ailleurs/a.jpg"],
+    )
+    def test_refuses_a_path_that_climbs_out_of_the_root(self, resolver: MediaResolver, escaping: str) -> None:
+        """Revue de l'étape 1 : la comparaison lexicale laissait passer `..`."""
+        assert resolver.translate(escaping) is None
+
+    def test_a_path_that_climbs_back_into_the_root_is_normalised(self, resolver: MediaResolver) -> None:
+        assert resolver.translate("/medias/voc/../coco/a.jpg") == "/data/media/coco/a.jpg"
+
     def test_refuses_a_relative_path(self, resolver: MediaResolver) -> None:
         assert resolver.translate("voc/000001.jpg") is None
 
