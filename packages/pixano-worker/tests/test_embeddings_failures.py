@@ -213,3 +213,30 @@ class TestFatalFailures:
             _run(_Reader())
 
         assert len(inference.calls) == 1, "aucune recherche de coupable pour une erreur qui ne dépend d'aucune image"
+
+
+class TestModelOfTheExistingTable:
+    """Refusé à la planification, avant que l'inférence tourne sur tout le dataset."""
+
+    class _PlanningReader:
+        def __init__(self, space: dict[str, Any] | None) -> None:
+            self.dataset = SimpleNamespace(record_embedding_space=lambda: space)
+
+        def ids(self, table_name: str) -> list[str]:
+            return RECORDS
+
+    def test_a_dataset_without_embeddings_accepts_any_model(self) -> None:
+        chunks = list(KIND.plan(self._PlanningReader(None), PARAMS))  # type: ignore[arg-type]
+
+        assert sum(chunk.task_count for chunk in chunks) == len(RECORDS)
+
+    def test_the_same_model_is_planned(self) -> None:
+        reader = self._PlanningReader({"model_id": "clip", "dim": 512})
+
+        assert list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+
+    def test_another_model_fails_the_planning(self) -> None:
+        reader = self._PlanningReader({"model_id": "dinov2", "dim": 512})
+
+        with pytest.raises(ValueError, match="dinov2"):
+            list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]

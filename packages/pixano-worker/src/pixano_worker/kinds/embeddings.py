@@ -19,7 +19,7 @@ from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, Sync
 from pydantic import Field
 
 from ..reader import JobReader
-from ..writer import JobWriter
+from ..writer import JobWriter, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 
 
@@ -89,7 +89,15 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         Le chunk ne porte que des identifiants. Les images seront lues à l'exécution — y
         mettre les références résolues gonflerait la table des chunks du poids du dataset
         pour les datasets dont les médias sont embarqués.
+
+        Le modèle est vérifié ici, avant tout calcul : un job qui ne pourra pas écrire ses
+        vecteurs doit échouer à la planification, pas après avoir fait tourner l'inférence sur
+        tout le dataset.
+
+        Raises:
+            ValueError: Le dataset porte déjà des embeddings d'un autre modèle.
         """
+        check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         batch: list[str] = []
         for record_id in reader.ids(RECORD_TABLE):
             batch.append(record_id)

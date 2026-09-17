@@ -71,6 +71,10 @@ class DatasetReadSource(Protocol):
         """Les octets d'une vue embarquée, et leur type."""
         ...
 
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        ...
+
 
 class DatasetWriteTarget(Protocol):
     """Les seules opérations dont l'écriture d'un job a besoin.
@@ -100,10 +104,42 @@ class DatasetWriteTarget(Protocol):
         """Créer la table d'embeddings pour une largeur de vecteur donnée."""
         ...
 
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        ...
+
     @property
     def info(self) -> Any:
         """Les métadonnées du dataset, dont les schémas de tables."""
         ...
+
+
+def check_embedding_space(space: dict[str, Any] | None, model: str, dim: int | None = None) -> None:
+    """Refuser d'ajouter à une table d'embeddings des vecteurs d'un autre modèle.
+
+    Args:
+        space: Ce que le dataset déclare de sa table, ou None s'il n'en a pas.
+        model: Le modèle du job.
+        dim: La dimension des vecteurs, quand elle est connue.
+
+    Raises:
+        ValueError: La table porte un autre modèle ou une autre dimension.
+    """
+    if space is None:
+        return
+    existing_model = space.get("model_id")
+    if existing_model != model:
+        raise ValueError(
+            f"ce dataset porte déjà des embeddings du modèle « {existing_model} » : y ajouter ceux de "
+            f"« {model} » mélangerait deux modèles dans une même table et fausserait la recherche. "
+            "Supprimez la table d'embeddings existante, ou relancez le job avec ce modèle."
+        )
+    existing_dim = space.get("dim")
+    if dim is not None and existing_dim is not None and int(existing_dim) != dim:
+        raise ValueError(
+            f"le modèle « {model} » rend des vecteurs de dimension {dim}, la table existante est de "
+            f"dimension {existing_dim}"
+        )
 
 
 def derive_id(kind: str, key: str, index: int = 0) -> str:
@@ -235,8 +271,14 @@ class JobWriter:
         créée qu'une fois un premier vecteur connu. Créer au premier passage évite d'imposer
         au type de job de connaître la dimension de son modèle.
 
+        Une table existante n'accepte que les vecteurs du modèle et de la dimension qu'elle
+        déclare. Mélanger deux modèles dans une même table ne lève aucune erreur à l'écriture
+        quand leurs dimensions coïncident — et fausse en silence toute recherche par similarité,
+        puisque la table continue d'annoncer l'ancien modèle.
+
         Raises:
-            ValueError: Les vecteurs ne correspondent pas aux enregistrements.
+            ValueError: Les vecteurs ne correspondent pas aux enregistrements, ou la table
+                existante a été calculée avec un autre modèle ou une autre dimension.
         """
         if len(record_ids) != len(vectors):
             raise ValueError(f"{len(record_ids)} enregistrements pour {len(vectors)} vecteurs")
@@ -244,8 +286,11 @@ class JobWriter:
             return
 
         dataset = self.dataset
+        dim = len(vectors[0])
         if not dataset.has_record_embeddings():
-            dataset.create_record_embedding_table(dim=len(vectors[0]), model_id=model)
+            dataset.create_record_embedding_table(dim=dim, model_id=model)
+        else:
+            check_embedding_space(dataset.record_embedding_space(), model, dim)
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [

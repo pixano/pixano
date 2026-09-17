@@ -59,6 +59,10 @@ class _FakeDataset:
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
+        self.space = {"model_id": model_id, "dim": dim}
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return getattr(self, "space", None)
 
     def checksum(self, table_name: str) -> str:
         """Une empreinte du contenu, insensible à l'ordre d'écriture."""
@@ -77,6 +81,9 @@ class _EmptySource:
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return None
 
     def get_data(
         self,
@@ -299,3 +306,40 @@ class TestAgainstRealLance:
         est de savoir si une annotation vient d'un modèle, pas quel rouage l'a écrite.
         """
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
+
+
+class TestRecordEmbeddings:
+    """Une table d'embeddings n'accepte qu'un modèle."""
+
+    def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+
+        writer.write_record_embeddings(["r1", "r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
+
+        assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2}
+        assert len(dataset.tables["embeddings"]) == 2
+
+    def test_the_same_model_replaces_its_vectors(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        writer.write_record_embeddings(["r1"], [[0.5, 0.6]], model="clip")
+
+        assert len(dataset.tables["embeddings"]) == 1
+
+    def test_another_model_is_refused_rather_than_mixed_in(self, dataset: _FakeDataset) -> None:
+        """Même dimension, autre modèle : rien ne casserait à l'écriture, la recherche serait fausse."""
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        with pytest.raises(ValueError, match="dinov2"):
+            writer.write_record_embeddings(["r2"], [[0.3, 0.4]], model="dinov2")
+
+        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "r1", 0)]
+
+    def test_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        with pytest.raises(ValueError, match="dimension 3"):
+            writer.write_record_embeddings(["r2"], [[0.3, 0.4, 0.5]], model="clip")

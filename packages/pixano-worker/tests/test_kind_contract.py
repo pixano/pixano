@@ -81,6 +81,10 @@ class _Target:
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
+        self._space = {"model_id": model_id, "dim": dim}
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return getattr(self, "_space", None)
 
     def fingerprint(self) -> str:
         material = sorted(
@@ -132,6 +136,9 @@ class _Source:
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return None
 
     def get_data(
         self,
