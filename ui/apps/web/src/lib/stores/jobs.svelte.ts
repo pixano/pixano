@@ -169,6 +169,22 @@ export function progressOf(job: Job): number {
 }
 
 /**
+ * The state to show for a job.
+ *
+ * A cancelled job keeps running for a few seconds while its chunks in flight finish — nothing is
+ * interrupted mid-chunk. Showing "running" meanwhile makes the click look lost.
+ */
+export function stateLabelOf(job: Job): string {
+  if (job.cancel_requested && !isTerminal(job.state)) return "cancelling";
+  return job.state;
+}
+
+/** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */
+export function canCancel(job: Job): boolean {
+  return !isTerminal(job.state) && !job.cancel_requested;
+}
+
+/**
  * What a finished job produced, in words — or null while it runs.
  *
  * Progress alone says how much was attempted: a job over a lidar dataset reaches

@@ -10,8 +10,7 @@ License: CECILL-C
   import JobOutcome from "./JobOutcome.svelte";
   import JobProgress from "./JobProgress.svelte";
   import SubmitJobForm from "./SubmitJobForm.svelte";
-  import { isTerminal } from "$lib/api/jobs";
-  import { jobsStore, outcomeOf } from "$lib/stores/jobs.svelte";
+  import { canCancel, jobsStore, outcomeOf, stateLabelOf } from "$lib/stores/jobs.svelte";
 
   type Props = { datasetId: string | null };
   let { datasetId }: Props = $props();
@@ -53,7 +52,7 @@ License: CECILL-C
           <li class="flex flex-col gap-2 border-b border-border p-3">
             <div class="flex items-baseline justify-between gap-2">
               <span class="truncate text-sm font-medium">{job.kind}</span>
-              <span class="shrink-0 text-xs text-muted-foreground">{job.state}</span>
+              <span class="shrink-0 text-xs text-muted-foreground">{stateLabelOf(job)}</span>
             </div>
             <JobProgress {job} />
             <JobOutcome
@@ -62,7 +61,7 @@ License: CECILL-C
               items={jobsStore.quarantines[job.id]}
               onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
             />
-            {#if !isTerminal(job.state)}
+            {#if canCancel(job)}
               <button
                 type="button"
                 class="self-start rounded border border-input px-2 py-1 text-xs hover:bg-muted"

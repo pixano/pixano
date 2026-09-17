@@ -21,6 +21,8 @@ export type Job = {
   skipped: number;
   /** Tasks that failed, readable one by one from the quarantine. */
   quarantined: number;
+  /** Someone asked the job to stop; the chunks in flight are finishing. */
+  cancel_requested: boolean;
   created_at: string;
 };
 
