@@ -37,6 +37,7 @@ class _FakeDataset:
     dont l'écrivain se sert : l'upsert par identifiant et la suppression par identifiants."""
 
     def __init__(self) -> None:
+        self.compactions: list[str] = []
         self.tables: dict[str, dict[str, Any]] = {}
         self.info = SimpleNamespace(tables={})
 
@@ -55,7 +56,7 @@ class _FakeDataset:
         return [table[row_id] for row_id in ids if row_id in table]
 
     def open_table(self, table_name: str) -> Any:
-        self.compactions = getattr(self, "compactions", []) + [table_name]
+        self.compactions.append(table_name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
     def has_record_embeddings(self) -> bool:
@@ -362,7 +363,7 @@ class TestCompaction:
         for n in range(7):
             writer.replace("classifications", key=f"task-{n}", rows=[_FakeRow(f"r{n}")])
 
-        assert getattr(dataset, "compactions", []) == ["classifications", "classifications"]
+        assert dataset.compactions == ["classifications", "classifications"]
 
     def test_a_failed_compaction_does_not_fail_the_write(
         self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch
