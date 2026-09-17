@@ -171,17 +171,17 @@ def list_jobs(
     return [JobResponse.of(record) for record in records]
 
 
-# Les types d'événements qu'un flux peut porter. Un nom inconnu est refusé plutôt qu'ignoré :
-# `types=stat` produirait sinon un flux muet, et le silence est le pire des diagnostics.
+# The event types a stream can carry. An unknown name is refused rather than ignored:
+# `types=stat` would otherwise yield a silent stream, and silence is the worst diagnostic.
 _EVENT_TYPES = frozenset({"state", "progress"})
 
-# Un commentaire SSE périodique, pour que les intermédiaires réseau ne referment pas un flux
-# qu'ils croient inactif, et pour détecter un client parti.
+# A periodic SSE comment, so that network intermediaries do not close a stream they believe
+# idle, and to detect a client that left.
 _KEEPALIVE_S = 15.0
 
 
 def _last_event_id(request: Request) -> int:
-    """Où reprendre, d'après ce que le client dit avoir déjà reçu."""
+    """Where to resume, from what the client says it already received."""
     raw = request.headers.get("last-event-id", "")
     try:
         return max(0, int(raw))
@@ -223,9 +223,9 @@ async def _stream(
             try:
                 event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
             except asyncio.TimeoutError:
-                # asyncio.TimeoutError n'est le TimeoutError natif qu'à partir de Python 3.11,
-                # et le projet supporte 3.10 : capturer le natif y laisserait l'exception
-                # remonter et tuerait le flux au premier silence.
+                # asyncio.TimeoutError is the built-in TimeoutError only from Python 3.11, and
+                # the project supports 3.10: catching the built-in there would let the exception
+                # through and kill the stream at the first silence.
                 yield ": keepalive\n\n"
                 continue
             if sent.already_sent(event.id):

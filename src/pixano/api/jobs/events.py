@@ -30,13 +30,13 @@ from .queries import NOTIFY_CHANNEL, SCHEMA_NAME
 
 logger = logging.getLogger(__name__)
 
-# Espacement des tentatives quand la base est injoignable. Le plafond est bas : une écoute
-# interrompue ne perd rien — le rattrapage par identifiant répare le trou — mais elle laisse
-# les interfaces sans nouvelles, donc on revient vite.
+# Backoff while the database is unreachable. The cap is low: an interrupted listener loses
+# nothing — catching up by identifier repairs the gap — but it leaves the interfaces without
+# news, so it comes back quickly.
 _RETRY_BACKOFF_S = (1, 2, 5, 10)
 
-# Au-delà, un abonné qui ne lit pas assez vite est déconnecté plutôt que de faire grossir sa
-# file sans fin. Il se reconnectera et rattrapera par identifiant.
+# Beyond this, a subscriber that does not read fast enough is dropped rather than left to grow
+# its queue without end. It reconnects and catches up by identifier.
 _SUBSCRIBER_BACKLOG = 1000
 
 SELECT_SINCE = f"""
@@ -91,8 +91,8 @@ class _Subscriber:
         try:
             self.queue.put_nowait(event)
         except asyncio.QueueFull:
-            # Un abonné lent ne doit pas retarder les autres. On le lâche : son flux se ferme dès
-            # qu'il a vidé sa file, et sa reconnexion rattrapera ce qu'il a manqué.
+            # A slow subscriber must not delay the others. It is let go: its stream closes once
+            # it has drained its queue, and its reconnection catches up on what it missed.
             self.dropped = True
 
 
@@ -135,9 +135,9 @@ class EventBroker:
         attempt = 0
         while True:
             try:
-                # Deux connexions, et ce n'est pas du luxe : interroger la connexion qui écoute
-                # pendant qu'on itère ses notifications la bloque indéfiniment. La sonnette ne
-                # portant que des identifiants, la ligne doit être lue ailleurs.
+                # Two connections, and not a luxury: querying the listening connection while
+                # iterating its notifications blocks it forever. The bell carries identifiers
+                # only, so the row has to be read elsewhere.
                 listen = await psycopg.AsyncConnection.connect(self._database_url or "", autocommit=True)
                 read = await psycopg.AsyncConnection.connect(self._database_url or "", autocommit=True)
                 try:
