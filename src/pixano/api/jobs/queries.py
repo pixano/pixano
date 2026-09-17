@@ -28,7 +28,7 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 INSERT_JOB = f"""
 INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
 VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false
 """
 
 # What a job's tasks became, next to how many were attempted. Aggregated on read from the
@@ -41,7 +41,8 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
                  WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
        coalesce((SELECT sum(c.skipped) FROM {SCHEMA_NAME}.job_chunks c
                  WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
-       (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int
+       (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int,
+       j.cancel_requested_at IS NOT NULL
 FROM {SCHEMA_NAME}.jobs j
 """
 

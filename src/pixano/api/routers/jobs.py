@@ -56,6 +56,9 @@ class JobResponse(BaseModel):
         skipped: Tasks the kind does not apply to, such as a record without an image for an
             image job. Not a failure.
         quarantined: Tasks that failed, readable one by one from the quarantine endpoint.
+        cancel_requested: Someone asked the job to stop. Until its state says `cancelled`, the
+            chunks in flight are finishing — an interface should say so rather than leave the
+            job looking as if the request had been lost.
     """
 
     id: str
@@ -67,6 +70,7 @@ class JobResponse(BaseModel):
     produced: int
     skipped: int
     quarantined: int
+    cancel_requested: bool
     created_at: str
 
     @classmethod
@@ -82,6 +86,7 @@ class JobResponse(BaseModel):
             produced=record.produced,
             skipped=record.skipped,
             quarantined=record.quarantined,
+            cancel_requested=record.cancel_requested,
             created_at=record.created_at.isoformat(),
         )
 
