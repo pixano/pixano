@@ -62,8 +62,8 @@ Open <http://localhost:7492> and, in a second window, a terminal at the reposito
 2. In the activity bar, click the **Jobs** icon (the last one, a checklist).
 3. **Processing** is `embeddings`, **Chunk Size** `8`. Click **Run**.
 
-> The form does not name its dataset: **a job runs on the dataset last opened in the Explorer.**
-> Opening the right one first is what makes the job land where you expect.
+> The form opens with the **Dataset** it will run on: the one last opened in the Explorer. Check the
+> name before clicking Run.
 
 **What to point out:**
 
@@ -82,8 +82,9 @@ process serving the pages. Click **Jobs** again to come back to the bar.
 
 When the bar is around a third, click **Cancel**.
 
-**What to see:** for a few seconds the job still reads `running` — the chunks in flight are
-finishing — then it ends `cancelled`, with a line under the bar such as `176 produced`.
+**What to see:** the job reads `cancelling` at once and the button disappears. A few seconds later —
+the time for the chunks in flight to finish — it ends `cancelled`, with a line under the bar such as
+`176 produced`.
 
 **What to point out:** nothing is interrupted mid-chunk. The chunks already running finish and
 are kept; the ones still waiting leave the queue. The work done is not undone — its vectors are
