@@ -123,8 +123,9 @@ export type JobEvent = {
  * One connection for all jobs, on purpose: browsers allow very few concurrent connections
  * per host, so a stream per running job would starve the rest of the application.
  *
- * The returned EventSource reconnects on its own and resends `Last-Event-ID`, which is what
- * makes a dropped connection lose nothing.
+ * The returned EventSource reconnects on its own, but this stream does not catch up on what
+ * happened while it was down: resuming from `Last-Event-ID` is only implemented for the stream
+ * of a single job. A client that reconnects must reload what it shows.
  */
 export function openJobStream(types: string[] = ["state", "progress"]): EventSource {
   return new EventSource(`/jobs/events?types=${types.join(",")}`);

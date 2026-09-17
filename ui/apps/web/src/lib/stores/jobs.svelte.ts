@@ -22,8 +22,9 @@ import {
  * The jobs a user can see, kept current by one event stream.
  *
  * Polling is deliberately absent: the backend pushes an event per state change and per
- * finished chunk, and the stream reconnects on its own after an outage, resuming from the
- * last identifier it received. Refreshing the list on a timer would add load and still lag.
+ * finished chunk. The stream reconnects on its own after an outage but does not replay what it
+ * missed, so the list is reloaded once on each reconnection — not on a timer, which would add
+ * load and still lag.
  */
 class JobsStore {
   jobs = $state<Job[]>([]);
@@ -37,6 +38,8 @@ class JobsStore {
   quarantines = $state<Record<string, QuarantinedItem[]>>({});
 
   #stream: EventSource | null = null;
+  /** The stream failed since it last opened: whatever it opens next, events were missed. */
+  #missedEvents = false;
 
   /** Load the list and the runnable kinds, then follow along. */
   async start(): Promise<void> {
@@ -104,11 +107,18 @@ class JobsStore {
 
     stream.onopen = () => {
       this.live = true;
+      // A job that finished during the outage would otherwise read "running" until the panel is
+      // reopened: the global stream has no catch-up. Found in the step 1 code review.
+      if (this.#missedEvents) {
+        this.#missedEvents = false;
+        void this.refresh();
+      }
     };
     // EventSource retries on its own, so a drop is not an error to report — only a loss of
     // liveness. Saying "connection lost" on every hiccup would train the user to ignore it.
     stream.onerror = () => {
       this.live = false;
+      this.#missedEvents = true;
     };
     stream.addEventListener("state", (event) => this.#apply(event));
     stream.addEventListener("progress", (event) => this.#apply(event));
