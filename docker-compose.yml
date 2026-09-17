@@ -78,6 +78,11 @@ services:
       # La racine du dépôt, parce que le worker dépend de la source de pixano par chemin.
       context: .
       dockerfile: packages/pixano-worker/Dockerfile
+    # Redémarré s'il plante, mais pas indéfiniment. Un worker qui refuse un schéma incompatible
+    # sort en erreur exprès et doit rester arrêté, avec son message : trois essais le laissent
+    # arrêté assez vite pour qu'on lise la cause, au lieu de boucler sans fin dans les journaux.
+    # Les pannes passagères de la base, elles, sont absorbées par le worker sans redémarrer.
+    restart: on-failure:3
     environment:
       PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
       PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
