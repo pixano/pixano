@@ -43,7 +43,7 @@ Lives in a dedicated PostgreSQL schema, `pixano_jobs`, so that the accounts and 
 
 | Table        | Holds                                                                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `jobs`       | one row per submitted job: its kind, its dataset, its validated parameters, its state, its task counters                                                                |
+| `jobs`       | one row per submitted job: its kind, its dataset, its validated parameters, its state, its task counters, and the lease of the worker splitting it                      |
 | `job_chunks` | the queue: one row per batch of tasks, with its lease, its attempt count, when it may next be claimed, and — once done — how many of its tasks were produced or skipped |
 | `job_items`  | the quarantine: one row per item a kind could not process, with the reason                                                                                              |
 | `job_events` | the append-only progress log an interface replays when it reconnects                                                                                                    |
@@ -279,6 +279,40 @@ Local stack, CPU inference, concurrency 4.
 | **Transient** — inference stopped for 45 s mid-job, then started | nuScenes, 26 766 records, 404 with an image | `done`: 404 produced, 26 362 skipped, 0 quarantined; three chunks retried three times with a growing delay; LanceDB holds 404 distinct vectors       |
 | **Fatal** — worker killed with `SIGKILL` mid-job, then started   | nuScenes                                    | exit 137, four orphan chunks; on restart "4 chunks recovered" at once; chunks 38–41 redone, the 38 before them not; `done` with 404 distinct vectors |
 
+## 5sexies. What the step 1 code review changed
+
+A review of the whole step found defects no scenario had exercised. Each is fixed and tested;
+what matters here is the decision each fix embodies.
+
+- **The worker survives its database.** A PostgreSQL restart used to kill it for good —
+  checked on the running stack. The loop now waits with a short capped backoff, as startup
+  does, and the pool checks a connection before lending it.
+- **A crashed worker restarts, a bounded number of times.** `restart: on-failure:3`, not
+  `unless-stopped`: a worker refusing an incompatible schema exits on purpose and must stay down
+  with its message (§5).
+- **A job is split under a lease.** It stays in `planning` while a worker splits it, reserved
+  by a lease on the job (schema version 4). A planner that dies lets it expire; completing or
+  failing a plan applies only to a job still in planning, so two overlapping planners cannot
+  double the chunks, and a job cancelled mid-split stays cancelled.
+- **Setting a chunk aside settles its job.** Both recovery paths — expired leases and a
+  restarted worker taking its chunks back — now cap attempts and settle the jobs they touch. A
+  job whose last chunk was abandoned used to stay running forever, and a chunk that crashed its
+  worker looped for good once restarts were automatic.
+- **Stuck threads stop the worker.** Job code runs in a bounded pool that counts threads still
+  busy after their chunk timed out. When as many are stuck as there are chunks in flight, the
+  worker exits with code 3 so that it restarts with fresh threads, instead of staying
+  "healthy" with nothing able to start.
+- **SIGTERM stops the worker gracefully.** It stops claiming, gives chunks in flight 30 s,
+  hands back what still runs, and exits; the compose allows 45 s. As the container's process 1
+  without a handler, it used to ignore SIGTERM until docker killed it.
+- **An embeddings table holds one model.** A job with another model or dimension is refused —
+  at planning, before inference runs, and again at write time.
+- **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
+- **The stream of all jobs has no catch-up.** Resuming from `Last-Event-ID` exists for the
+  stream of one job only. The panel reloads its list when its stream reconnects, and shares
+  concurrent reloads; a subscriber that falls behind has its stream closed so that it
+  reconnects, instead of silently missing events.
+
 ## 6. Deliberate deferrals
 
 | Deferred                                    | Until                        | Why it is safe to wait                                                                                                                                                                                                                                                                                                              |
@@ -297,10 +331,6 @@ forever, no concurrency, and a job that could not say what it produced — are r
 
 What remains, each noticed while resolving them:
 
-- **A timed-out chunk's thread keeps running.** It cannot be interrupted from outside. Its
-  result is refused and its write is harmless, but a worker whose inference hangs repeatedly
-  accumulates threads until those calls return. Bounded in practice by the request timeout of
-  the kind; worth watching.
 - **The worker caches open datasets.** A dataset changed from outside — its embeddings table
   deleted, say — is seen in its old state until the worker restarts. Met while preparing the
   lot 11 scenarios.
