@@ -62,6 +62,11 @@ OUTAGE_BACKOFF_S = (1.0, 2.0, 5.0, 10.0)
 # chunks qui n'ont pas fini à temps soient rendus à la file plutôt qu'abandonnés à leur bail.
 SHUTDOWN_GRACE_S = 30.0
 
+# Pause après une exception inattendue dans un tour de boucle : courte, parce que le tour
+# suivant a toutes les chances de passer, et non nulle pour qu'un défaut qui se répète ne
+# remplisse pas le journal.
+UNEXPECTED_ERROR_PAUSE_S = 1.0
+
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
 RECLAIM_INTERVAL_S = 30.0
@@ -157,10 +162,6 @@ FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'done'
 """
 
 
-# Le même que celui de la file, exposé ici pour les appelants du runner.
-record_event = queue.record_event
-
-
 async def plan_one(
     conn: psycopg.AsyncConnection,
     registry: Registry,
@@ -245,14 +246,16 @@ async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[C
                 [chunk.task_count for chunk in chunks],
             ),
         )
-        await record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
+        await queue.record_event(
+            conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)}
+        )
     return True
 
 
 async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str, Any]) -> None:
     async with conn.transaction():
         if await (await conn.execute(FAIL_JOB, (Jsonb(error), job_id))).fetchone() is not None:
-            await record_event(conn, job_id, "state", {"state": "error", **error})
+            await queue.record_event(conn, job_id, "state", {"state": "error", **error})
 
 
 # Les datasets ouverts, peu nombreux à la fois : un worker en traite rarement plus de quelques-uns
@@ -424,7 +427,7 @@ async def _loop(
             # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
             # rendre plus visible que cette trace.
             log.exception("tour de boucle en échec, le worker continue")
-            await _pause(stop, OUTAGE_BACKOFF_S[0])
+            await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
             continue
         if outages:
             log.info("base de nouveau joignable après %d tentative(s)", outages)
@@ -692,7 +695,7 @@ async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
         if row is None:
             return
         outcome = await job_outcome(conn, job_id)
-        await record_event(conn, job_id, "state", {"state": row[0], **outcome})
+        await queue.record_event(conn, job_id, "state", {"state": row[0], **outcome})
     log.info(
         "job %s terminé : %s — %d produite(s), %d écartée(s), %d en quarantaine",
         job_id,

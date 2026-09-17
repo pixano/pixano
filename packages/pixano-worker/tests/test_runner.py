@@ -472,7 +472,7 @@ class TestNotification:
             listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
 
             async with await psycopg.AsyncConnection.connect(postgres_url) as writer:
-                await runner.record_event(writer, job, "state", {"state": "planning"})
+                await queue.record_event(writer, job, "state", {"state": "planning"})
                 assert list(listener.notifies(timeout=0.3)) == [], "rien ne doit sonner avant le commit"
                 await writer.commit()
 
@@ -494,7 +494,7 @@ class TestNotification:
         with psycopg.connect(postgres_url, autocommit=True) as listener:
             listener.execute(f"LISTEN {NOTIFY_CHANNEL}")
             async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as writer:
-                await runner.record_event(writer, job, "progress", {"done_tasks": 40, "total_tasks": 200})
+                await queue.record_event(writer, job, "progress", {"done_tasks": 40, "total_tasks": 200})
             received = list(listener.notifies(timeout=3, stop_after=1))
 
         assert set(json.loads(received[0].payload)) == {"job_id", "event_id", "type"}
