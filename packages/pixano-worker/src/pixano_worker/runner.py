@@ -451,6 +451,11 @@ async def _run_pooled(
     try:
         async with pool.connection() as conn:
             await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s, threads)
+    except DATABASE_UNAVAILABLE as error:
+        # Attendu pendant une panne : un avertissement, pas une trace par chunk en vol.
+        log.warning(
+            "chunk %s du job %s : base injoignable (%s), il reviendra par son bail", chunk.seq, chunk.job_id, error
+        )
     except Exception:
         log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
 

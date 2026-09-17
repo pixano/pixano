@@ -9,10 +9,12 @@
 import asyncio
 import contextlib
 import json
+import logging
 import threading
 from datetime import timedelta
 
 import psycopg
+import psycopg_pool
 import pytest
 from pixano_worker import queue, runner
 from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
@@ -749,6 +751,25 @@ class TestLeaseRefreshOutage:
 
         assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
         assert _state(declared, job) == ("done", 20, 20)
+
+
+class TestChunkFacingAnOutage:
+    async def test_an_unreachable_database_is_a_warning_not_a_traceback(
+        self, registry: Registry, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Vu sur la pile : chaque chunk en vol pendant une panne écrivait une trace complète."""
+
+        class _DeadPool:
+            def connection(self):  # noqa: ANN202
+                raise psycopg_pool.PoolTimeout("couldn't get a connection after 5.00 sec")
+
+        chunk = queue.Chunk(id=1, job_id="j", seq=0, payload={}, task_count=1, attempts=1)
+        with caplog.at_level(logging.WARNING, logger="pixano-worker"):
+            await runner._run_pooled(_DeadPool(), registry, chunk, None, None, None, WorkerThreads.for_concurrency(1))
+
+        [record] = caplog.records
+        assert record.levelno == logging.WARNING
+        assert record.exc_info is None
 
 
 class TestSaturation:
