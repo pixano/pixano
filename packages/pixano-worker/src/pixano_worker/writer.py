@@ -49,9 +49,9 @@ _LEFTOVER_PROBE = 32
 COMPACT_EVERY_WRITES = 64
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
-# Le compte d'écritures par table, par dataset ouvert. Le runner sérialise les écritures d'un
-# dataset, donc le verrou ici ne protège que le compteur lui-même.
-_writes_since_compaction: defaultdict[tuple[int, str], int] = defaultdict(int)
+# Le compte d'écritures par table, par dataset. Le runner sérialise les écritures d'un dataset,
+# donc le verrou ici ne protège que le compteur lui-même.
+_writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
 _writes_guard = threading.Lock()
 
 
@@ -198,6 +198,7 @@ class JobWriter:
         job_id: str,
         source_type: str = "model",
         reopen_dataset: Callable[[], DatasetWriteTarget] | None = None,
+        dataset_id: str | None = None,
     ) -> None:
         """Lier un écrivain à un job et à son dataset.
 
@@ -212,8 +213,11 @@ class JobWriter:
             source_type: Ce que le type déclare produire.
             reopen_dataset: Rouvre le dataset **en ignorant tout cache**, pour relire ce qu'un
                 autre process a pu y créer entre-temps. Sans lui, `open_dataset` fait foi.
+            dataset_id: L'identifiant du dataset, clé du compte d'écritures qui décide des
+                compactions. Sans lui, l'écrivain compte pour lui seul.
         """
         self._open_dataset = open_dataset
+        self._dataset_id = dataset_id
         self._reopen_dataset = reopen_dataset or open_dataset
         self._dataset: DatasetWriteTarget | None = None
         self.kind = kind
@@ -276,7 +280,9 @@ class JobWriter:
 
     def _count_write(self, table_name: str) -> None:
         """Compter une écriture, et compacter la table quand assez se sont accumulées."""
-        key = (id(self.dataset), table_name)
+        # Un identifiant plutôt que l'objet : un dataset rouvert est un autre objet pour la même
+        # table, et l'adresse d'un objet libéré est réutilisée.
+        key = (self._dataset_id or f"writer-{id(self)}", table_name)
         with _writes_guard:
             _writes_since_compaction[key] += 1
             due = _writes_since_compaction[key] >= COMPACT_EVERY_WRITES
