@@ -25,9 +25,13 @@ License: CECILL-C
       {#if items}
         <ul class="flex flex-col gap-0.5 rounded bg-muted p-2">
           {#each items as item (item.item_id)}
-            <li class="flex items-baseline justify-between gap-2 text-xs">
-              <span class="truncate font-mono">{item.item_id}</span>
-              <span class="shrink-0 text-muted-foreground">{item.reason}</span>
+            <!--
+              On two lines: the panel is narrow, and side by side a reason of any length squeezed
+              the identifier down to three characters — the one thing needed to find the item.
+            -->
+            <li class="flex flex-col text-xs">
+              <span class="truncate font-mono" title={item.item_id}>{item.item_id}</span>
+              <span class="text-muted-foreground">{item.reason}</span>
             </li>
           {/each}
           {#if items.length < quarantined}
