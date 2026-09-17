@@ -92,6 +92,25 @@ class TestClaim:
 
 
 class TestFinish:
+    async def test_announces_the_job_running_then_its_progress_in_the_same_transaction(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`."""
+        job = _enqueue(db, 2, tasks_per_chunk=10)
+        chunks = await queue.claim(adb, "worker-a", 2)
+
+        for chunk in chunks:
+            await queue.finish(adb, chunk)
+
+        events = db.execute(
+            f"SELECT type, payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s ORDER BY id", (job,)
+        ).fetchall()
+        assert events == [
+            ("state", {"state": "running"}),
+            ("progress", {"done_tasks": 10, "total_tasks": 20}),
+            ("progress", {"done_tasks": 20, "total_tasks": 20}),
+        ]
+
     async def test_advances_the_job_progress(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
         job = _enqueue(db, 5, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)

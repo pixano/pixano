@@ -28,7 +28,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from .config import MAX_HEARTBEAT_AGE_S
-from .schema import SCHEMA_NAME
+from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 # Le bail doit dépasser la fenêtre au bout de laquelle docker déclare le worker mort, sinon
@@ -177,7 +177,22 @@ SET done_tasks = j.done_tasks + %(tasks)s,
     updated_at = now()
 FROM previous
 WHERE j.id = %(job)s
-RETURNING previous.state = 'pending'
+RETURNING previous.state = 'pending', j.done_tasks, j.total_tasks
+"""
+
+# L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
+# ne délivre un NOTIFY qu'au commit, ce qui donne gratuitement la garantie « pas d'événement
+# annoncé avant d'être lisible ». La charge ne porte que des identifiants — elle est plafonnée
+# à 8 ko, et un lecteur doit de toute façon relire la ligne pour rattraper ce qu'il a manqué.
+RECORD_EVENT = f"""
+WITH inserted AS (
+    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
+    VALUES (%s, %s, %s)
+    RETURNING id, job_id, type
+)
+SELECT pg_notify(%s, json_build_object(
+    'job_id', job_id, 'event_id', id, 'type', type
+)::text) FROM inserted
 """
 
 IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs WHERE id = %s"
@@ -259,6 +274,20 @@ class QuarantinedItem(Protocol):
     def detail(self) -> dict[str, Any] | None: ...  # noqa: D102
 
 
+async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
+    """Consigner un événement de progression.
+
+    Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
+    sont attribués avant le commit, donc deux transactions concurrentes peuvent rendre leurs
+    événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
+    remettre au suivant.
+
+    Un événement **d'état**, lui, n'a pas de suivant qui le répare : il doit s'écrire dans la
+    transaction qui change l'état, pour que l'ordre des identifiants soit l'ordre des états.
+    """
+    await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
+
+
 async def finish(
     conn: psycopg.AsyncConnection,
     chunk: Chunk,
@@ -268,8 +297,11 @@ async def finish(
 ) -> Finished | None:
     """Marquer un chunk terminé, consigner son bilan, et avancer la progression de son job.
 
-    Le bilan, la quarantaine et la progression s'écrivent dans une seule transaction : un
-    chunk ne peut pas être compté fait sans que ses items écartés soient consignés.
+    Le bilan, la quarantaine, la progression et ses événements s'écrivent dans une seule
+    transaction : un chunk ne peut pas être compté fait sans que ses items écartés soient
+    consignés ni sans que l'interface l'apprenne. L'événement `running` du premier chunk terminé
+    est écrit ici aussi, sous le verrou de la ligne du job : c'est ce qui garantit que son
+    identifiant précède celui du `done` que le dernier chunk écrira — revue indépendante, D2/D6.
 
     Args:
         conn: La connexion du chunk.
@@ -295,7 +327,12 @@ async def finish(
                 (chunk.job_id, chunk.id, item.item_id, item.reason, Jsonb(item.detail) if item.detail else None),
             )
         advanced = await (await conn.execute(ADVANCE_JOB, {"job": row[0], "tasks": row[1]})).fetchone()
-    return Finished(started_job=bool(advanced and advanced[0]))
+        started = bool(advanced and advanced[0])
+        if started:
+            await record_event(conn, chunk.job_id, "state", {"state": "running"})
+        if advanced is not None:
+            await record_event(conn, chunk.job_id, "progress", {"done_tasks": advanced[1], "total_tasks": advanced[2]})
+    return Finished(started_job=started)
 
 
 async def retry_later(
