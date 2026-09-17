@@ -9,116 +9,101 @@ import PrevNext from '../../components/PrevNext.astro'
 
 # Quickstart
 
-You are on Pixano's home page, the Library, and it is empty. In the next few minutes you will
-import a folder of your own photos from the app, open the result, then do the same import from
-the command line. All you need is a folder holding a few JPEG or PNG photos and nothing else —
-no subfolders. We use 3 photos in a folder called `my_photos`; the counts below follow your own.
-If you closed the server since [Installation](/pixano/getting_started/installing_pixano/), start
-it again the same way.
+This guide walks through importing a local directory of images into Pixano and inspecting the
+dataset in the web explorer.
 
-## Import your photos from the app
+## Prerequisites
 
-### Open the wizard
+- Pixano running (see [Installation](/pixano/getting_started/installing_pixano/)).
+- A flat directory containing only JPEG or PNG files (no subdirectories).
 
-<Figure src="getting_started/quickstart/01-library-empty.webp"
-  alt="The empty Library: 'Your library is empty' with the Import dataset button."
-  caption="The Library before your first import." />
+<Callout type="note">
 
-1. Click **Import dataset**. The import wizard opens as a dialog.
-
-### Type and Task
-
-2. **What are you importing?** Click **Raw media** — a folder of images you will annotate from
-   scratch. The steps listed across the top of the dialog — **Type**, **Task**, **Source**,
-   **Review**, **Import** — are the headings that follow.
-3. **What are you building?** Click **Image annotation**.
-
-Each card takes you to the next step as soon as you click it.
-
-### Source
-
-4. Click **Choose a folder on your computer…** and select `my_photos`. A progress bar runs
-   until the panel confirms the upload — **3 files** and their size — and a **Detected layout**
-   panel shows what Pixano found: 3 records, one `image` view.
-5. Leave **Dataset name (optional)** empty — the dataset takes the folder's name — and leave
-   **If the dataset exists** on **Fail (create only)**. Under **Annotations**, the four
-   pre-selected chips (`bbox`, `mask`, `keypoint`, `classification`) are the annotation tables
-   Pixano will create; keep them.
-
-<Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp" width={768}
-  alt="The Source step after uploading the my_photos folder: 3 files uploaded and the Detected layout panel showing 3 records."
-  caption="Everything on this step is optional except the folder." />
-
-6. Click **Analyze**.
-
-### Review
-
-7. Pixano reads the folder without writing anything and shows the plan: **3 records**, the size
-   of the media, the detected format (`PIXANO_JSONL`), a **Schema** panel listing the tables it
-   will create — **Views**, **Record**, **Entity**, **Annotations** — and a few **Sample
-   records**.
-
-<Figure src="getting_started/quickstart/03-wizard-review-plan.webp" width={768}
-  alt="Review the plan: 3 records, the schema Pixano will create, and sample records."
-  caption="Nothing has been created yet: this is the plan the import will execute." />
-
-8. Click **Start import**.
-
-### Import
-
-9. The dataset is built on the server; for a handful of photos this takes a few seconds. (For
-   large imports, **Run in background** lets you keep using the app meanwhile.) When the card
-   reads **Dataset imported**, with a count per table, click **Done**.
-
-You are back in the Library, and your dataset card is there.
-
-<Figure src="getting_started/quickstart/04-library-dataset-card.webp"
-  alt="The Library with the new my_photos card."
-  caption="From now on, new imports start from the Import button in the toolbar." />
-
-<Callout type="note" title="Other data, other choices">
-
-The wizard's other cards import videos, Visual Q&A and image–text sources, or an existing
-dataset — a Pixano export, MS COCO or LeRobot. `train/`, `val/` and `test/` subfolders become
-splits; side-by-side folders such as `left/` and `right/` become views; **Record attributes**,
-**Object attributes** and **Advanced spec (JSON)** shape the schema before analysis. Every
-choice is described in
-[Import from the app](/pixano/getting_started/importing_data/#import-from-the-app).
+Examples use a sample folder named `my_images_dataset` containing three images. Metric counts in
+the interface will reflect your local files.
 
 </Callout>
 
-## Open your dataset
+## Import with the wizard
 
-Click the card. The **Explorer** shows your records — one per photo — in a gallery; click any
+1. Open Pixano in a browser. In the empty Library, click **Import dataset** to open the import
+   wizard.
+
+<Figure src="getting_started/quickstart/01-library-empty.webp"
+  alt="The empty Library: 'Your library is empty' with the Import dataset button."
+  caption="Empty Library." />
+
+2. **Type**: select **Raw media** (unlabeled images, videos, or text files to annotate in
+   Pixano).
+3. **Task**: select **Image annotation**.
+4. **Source**: click **Choose a folder on your computer…** and select `my_images_dataset`. After
+   the upload, **Detected layout** reports 3 records, each with one `image` view.
+5. Keep the defaults and click **Analyze**. The dataset takes the folder name. The pre-selected
+   **Annotations** chips (`bbox`, `mask`, `keypoint`, `classification`) define the annotation
+   tables to create.
+
+<Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp" width={768}
+  alt="The Source step after uploading the my_images_dataset folder: 3 files uploaded and the Detected layout panel showing 3 records."
+  caption="Source step. The folder is the only required input." />
+
+6. **Review**: nothing is written at this stage. Check the plan (record count, **Schema**,
+   **Sample records**), then click **Start import**.
+
+<Figure src="getting_started/quickstart/03-wizard-review-plan.webp" width={768}
+  alt="Review the plan: 3 records, the schema Pixano will create, and sample records."
+  caption="Review step. The import plan." />
+
+7. **Import**: when the wizard reports **Dataset imported**, click **Done**. The dataset appears
+   in the Library.
+
+<Figure src="getting_started/quickstart/04-library-dataset-card.webp"
+  alt="The Library with the new my_images_dataset card."
+  caption="Library after the import. Subsequent imports start from the Import button." />
+
+<Callout type="note">
+
+The wizard follows the same steps for other inputs: video, Visual Q&A, and image–text tasks
+(**Task** cards), and existing datasets in Pixano export, MS COCO, or LeRobot format (**Type**
+cards). In a raw media directory, `train/`, `val/`, and `test/` subdirectories become splits.
+
+</Callout>
+
+## Inspect the dataset
+
+Click the dataset card. The **Explorer** lists the records in a gallery, one per image. Click a
 record to open it in the annotation **Workspace**.
 
 <Figure src="getting_started/quickstart/05-explorer-records.webp"
-  alt="The Explorer showing the three imported records in the gallery."
-  caption="Your first dataset, ready to annotate." />
+  alt="The Explorer showing the three records of my_images_dataset in the gallery."
+  caption="Explorer, gallery view." />
 
-Each photo became a **record**; the photo itself is the record's **view**; the objects you will
-draw are **entities**, and every box or mask on them is an **annotation** — the four words you
-saw in the Review step. [Key Concepts](/pixano/getting_started/key_concepts/) explains how they
-fit together; [Using the App](/pixano/getting_started/using_the_app/) shows you around the
-Explorer and the Workspace.
+Each image is stored as a **record** with a single **view**. Annotated objects are **entities**;
+each bounding box, mask, or keypoint set attached to an entity is an **annotation**. These are
+the four schema sections listed in the Review step. See
+[Key Concepts](/pixano/getting_started/key_concepts/) for the data model.
 
-## Do the same from the command line
+{/* HIDDEN until the CLI import flow is re-verified. To restore: remove the two comment markers,
+    end the intro sentence with ", and reproducing the workflow using the CLI.", and mention the
+    command line again on the Quickstart card in getting_started/index.astro.
 
-The wizard uploads your folder through the browser. When the photos already sit on the machine
-that runs the server, or when you have many folders to import, the command line does the same
-job without a browser. Leave the server running and open a second terminal in the folder that
-holds `my_data`, with the virtual environment activated. The commands below assume `my_photos`
-sits in that folder too; otherwise use its full path instead of `./my_photos`. (With Docker, stay
-with the wizard: the commands below assume a pip install.)
+## Import with the CLI
 
-The wizard already created `my_photos`, and Pixano never overwrites a dataset on its own, so
-this command gives the new one its own name — on an empty Library you could leave `--name` out:
+The wizard uploads files through the browser. Use `pixano data import` when the data already
+resides on the server machine, or to script imports. The CLI requires the pip installation; with
+Docker, use the wizard.
+
+With the server running, open a second terminal in the directory containing `my_data`, activate
+the virtual environment, and run:
 
 ```bash
-pixano data import ./my_data ./my_photos --name my_photos_cli
+pixano data import ./my_data ./my_images_dataset --name my_images_dataset_cli
 ```
 
-Pixano analyzes the folder and prints its plan before writing anything:
+The dataset name defaults to the folder name. `--name` is needed here only because the wizard
+already created `my_images_dataset`: Pixano never overwrites an existing dataset implicitly. If
+`my_images_dataset` is located elsewhere, pass its full path.
+
+Pixano analyzes the source and prints the import plan before writing anything:
 
 ```text
 Format: pixano_jsonl (importer 1.0.0)
@@ -130,28 +115,27 @@ Schema (workspace: image):
 Proceed with the import? [Y/n]:
 ```
 
-No configuration file: the dataset takes the `image` workspace and the photos land in one split
-called `default`. Press Enter; a progress bar runs, then:
+Press Enter to confirm. On completion:
 
 ```text
-Dataset 'my_photos_cli' imported successfully (3 record(s), storage: embedded, job 97yWbnDErAxtCpXqP4Sy8L).
+Dataset 'my_images_dataset_cli' imported successfully (3 record(s), storage: embedded, job Z4sYXS4cHu5P5sZ3BYLdSP).
 ```
 
-Refresh the Library in your browser: the new card is there. No restart is needed.
+Reload the Library: the new dataset is listed. No server restart is required.
 
-The two paths import the same photos, but not with the same annotation tables: the wizard's
-image preset also created `mask` and `classification`, while the command line's default is
-`bbox` and `keypoint`. To decide yourself, describe the dataset in a file.
+### Define the schema with dataset.yaml
 
-### Describe the dataset in a dataset.yaml
+Without a configuration file, the CLI creates the `bbox` and `keypoint` annotation tables; the
+wizard's image preset also creates `mask` and `classification`. To control the schema, add a
+`dataset.yaml` at the root of the source directory.
 
-Create `my_photos/dataset.yaml`:
+Create `my_images_dataset/dataset.yaml`:
 
 ```yaml
 pixano: 2
 format: pixano_jsonl
 dataset:
-  name: my_photos_detection
+  name: my_images_dataset_detection
   workspace: image
 schema:
   entity:
@@ -160,32 +144,29 @@ schema:
   annotations: [bbox, mask]
 ```
 
-`dataset` sets what the wizard's cards set: the name and the workspace. `schema` is what the
-file is for: every object you annotate — every **entity** — gets a `category` text field, and
-only bounding-box and mask tables are created. Run the import again, without `--name` this time
-(the file provides it); the file is picked up because it sits at the root of the folder:
+- `dataset`: the name and the workspace (set by the cards in the wizard).
+- `schema`: adds a `category` string attribute to every entity and restricts the annotation
+  tables to `bbox` and `mask`.
+
+Pixano detects the file automatically. No option is needed; the name comes from the file:
 
 ```bash
-pixano data import ./my_data ./my_photos
+pixano data import ./my_data ./my_images_dataset
 ```
 
-The plan now ends with:
+The plan now reflects the file:
 
 ```text
+Schema (workspace: image):
+- View 'image': Image
 - Entity attrs: category: str
 - Annotations: bbox, mask
 ```
 
-[Importing Data](/pixano/getting_started/importing_data/) documents every key of this file, and
-how to bring existing annotations, COCO or LeRobot data along.
-[Key Concepts](/pixano/getting_started/key_concepts/) explains the schema it describes.
+See [Key Concepts](/pixano/getting_started/key_concepts/) for workspaces, entities, and
+annotation tables.
 
-## Next steps
-
-- [Using the App](/pixano/getting_started/using_the_app/) — create your first entity in the Workspace
-- [Key Concepts](/pixano/getting_started/key_concepts/) — records, views, entities and annotations, and how they are stored
-- [Importing Data](/pixano/getting_started/importing_data/) — every wizard choice, the JSONL format, other formats
-- [Object Detection](/pixano/cookbook/object_detection/) — a full walkthrough with pre-annotation and semantic search
+*/}
 
 <PrevNext
   prev={{ title: "Installation", href: "/getting_started/installing_pixano/" }}
