@@ -131,7 +131,7 @@ def check_params(conn: psycopg.Connection, kind: str, params: dict[str, Any]) ->
     row = conn.execute(queries.SELECT_KIND, (kind,)).fetchone()
     if row is None:
         declared = sorted(available_kinds(conn))
-        known = ", ".join(declared) if declared else "aucun"
+        known = ", ".join(declared) if declared else "none"
         raise UnknownKindError(f"no running worker declares the job kind '{kind}' — known kinds: {known}")
 
     try:

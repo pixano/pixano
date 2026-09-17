@@ -94,7 +94,7 @@ class TestEnsureSchema:
         message = str(raised.value)
         assert str(SCHEMA_VERSION) in message
         assert str(SCHEMA_VERSION + 1) in message
-        assert "docker compose down -v" in message
+        assert "DROP SCHEMA pixano_jobs CASCADE" in message
 
     def test_a_refusal_writes_nothing(self, db: psycopg.Connection) -> None:
         """Le refus doit être inoffensif : on ne touche pas à une base qu'on ne comprend pas."""
