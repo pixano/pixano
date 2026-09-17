@@ -157,7 +157,7 @@ class TestRecovery:
         assert outcomes[-1] == queue.Recovery(0, frozenset({job})), f"attendu un abandon au dernier tour : {outcomes}"
         row = db.execute(f"SELECT state, error FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == "error"
-        assert row[1]["reason"] == "abandonné"
+        assert row[1]["reason"] == "abandoned after its attempts"
         assert await queue.claim(adb, "worker-b", 1) == []
 
     async def test_a_restarted_worker_returns_its_own_chunks_at_once(
