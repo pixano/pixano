@@ -716,6 +716,37 @@ class TestLeaseKeptWhileRunning:
         assert row == ("done",)
 
 
+class TestLeaseRefreshOutage:
+    """Seconde revue : un rafraîchissement de bail raté classait un chunk réussi comme fatal."""
+
+    async def test_a_chunk_whose_work_succeeded_is_done_despite_a_failed_refresh(
+        self,
+        declared: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(queue, "LEASE_REFRESH_INTERVAL", timedelta(milliseconds=30))
+        job = _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.01})
+        await runner.plan_one(adb, registry)
+        chunk = (await queue.claim(adb, "worker-test", 1))[0]
+        real_refresh = queue.refresh_lease
+        outages = {"left": 2}
+
+        async def flaky_refresh(conn: psycopg.AsyncConnection, c: queue.Chunk) -> bool:
+            if outages["left"] > 0:
+                outages["left"] -= 1
+                raise psycopg.OperationalError("terminating connection due to administrator command")
+            return await real_refresh(conn, c)
+
+        monkeypatch.setattr(queue, "refresh_lease", flaky_refresh)
+
+        await runner.run_chunk(adb, registry, chunk)
+
+        assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
+        assert _state(declared, job) == ("done", 20, 20)
+
+
 class TestSaturation:
     """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy »."""
 
