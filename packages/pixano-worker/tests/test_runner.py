@@ -595,3 +595,33 @@ class TestLeaseKeptWhileRunning:
         assert lease is not None and float(lease[0]) > 60, "le bail a été prolongé pendant l'exécution"
         row = declared.execute(f"SELECT state FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row == ("done",)
+
+
+class TestDatabaseOutage:
+    """Vu sur la pile réelle : un `docker compose restart postgres` tuait le worker pour de bon."""
+
+    async def test_the_loop_waits_for_the_database_instead_of_dying(
+        self,
+        declared: psycopg.Connection,
+        postgres_url: str,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        job = _submit(declared, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0})
+        real_plan_one = runner.plan_one
+        outages = {"left": 3}
+
+        async def flaky_plan_one(*args: object, **kwargs: object) -> str | None:
+            if outages["left"] > 0:
+                outages["left"] -= 1
+                raise psycopg.errors.AdminShutdown("terminating connection due to administrator command")
+            return await real_plan_one(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(runner, "plan_one", flaky_plan_one)
+        monkeypatch.setattr(runner, "OUTAGE_BACKOFF_S", (0.01,))
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
+            await TestConcurrency._run_until_settled(pool, registry, declared, job, concurrency=2)
+
+        assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
+        assert _state(declared, job) == ("done", 40, 40)

@@ -46,6 +46,15 @@ from .writer import JobWriter
 
 log = logging.getLogger("pixano-worker")
 
+# Ce qu'une base injoignable lève : connexion coupée, serveur redémarré, pool sans connexion
+# disponible. Rien de ce que fait un type de job — seulement l'accès à la file.
+DATABASE_UNAVAILABLE = (psycopg.OperationalError, psycopg.InterfaceError)
+
+# Espacement des tentatives quand la base ne répond plus. Plafonné bas, comme l'écoute côté
+# application : un redémarrage de PostgreSQL dure quelques secondes, et un worker qui revient
+# vite reprend le travail là où il l'avait laissé.
+OUTAGE_BACKOFF_S = (1.0, 2.0, 5.0, 10.0)
+
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
 RECLAIM_INTERVAL_S = 30.0
@@ -256,27 +265,43 @@ async def work(
     in_flight: set[asyncio.Task[None]] = set()
     loop = asyncio.get_running_loop()
     last_reclaim = loop.time()
+    outages = 0
 
     while True:
-        async with pool.connection() as conn:
-            planned = await plan_one(conn, registry, library, media)
-
-        claimed: list[queue.Chunk] = []
-        free = concurrency - len(in_flight)
-        if free > 0:
+        # Une base qui redémarre ne doit pas tuer le worker : il attend qu'elle revienne, comme
+        # au démarrage. Les chunks en vol ne sont pas touchés — chacun gère sa propre connexion,
+        # et un chunk interrompu garde son bail jusqu'à ce que la reprise le rende.
+        try:
             async with pool.connection() as conn:
-                claimed = await queue.claim(conn, worker_id, free)
-        for chunk in claimed:
-            task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media, chunk_timeout_s))
-            in_flight.add(task)
-            task.add_done_callback(in_flight.discard)
+                planned = await plan_one(conn, registry, library, media)
 
-        if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
-            last_reclaim = loop.time()
-            async with pool.connection() as conn:
-                reclaimed, abandoned = await queue.reclaim_expired(conn)
-            if reclaimed or abandoned:
-                log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+            claimed: list[queue.Chunk] = []
+            free = concurrency - len(in_flight)
+            if free > 0:
+                async with pool.connection() as conn:
+                    claimed = await queue.claim(conn, worker_id, free)
+            # Lancés sitôt réclamés, avant tout autre accès à la base : un chunk réclamé porte un
+            # bail qui court, et une coupure juste après le laisserait sans personne pour le faire.
+            for chunk in claimed:
+                task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media, chunk_timeout_s))
+                in_flight.add(task)
+                task.add_done_callback(in_flight.discard)
+
+            if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
+                last_reclaim = loop.time()
+                async with pool.connection() as conn:
+                    reclaimed, abandoned = await queue.reclaim_expired(conn)
+                if reclaimed or abandoned:
+                    log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+        except DATABASE_UNAVAILABLE as error:
+            delay = OUTAGE_BACKOFF_S[min(outages, len(OUTAGE_BACKOFF_S) - 1)]
+            outages += 1
+            log.warning("base injoignable (%s) — nouvel essai dans %ss", error, delay)
+            await asyncio.sleep(delay)
+            continue
+        if outages:
+            log.info("base de nouveau joignable après %d tentative(s)", outages)
+            outages = 0
 
         if len(in_flight) >= concurrency:
             await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
