@@ -63,6 +63,7 @@ export type JsonSchema = {
   minimum?: number;
   maximum?: number;
   anyOf?: JsonSchema[];
+  items?: JsonSchema;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */

@@ -7,7 +7,14 @@ License: CECILL-C
 import type { JsonSchema } from "$lib/api/jobs";
 
 /** What a field renders as. `unsupported` is shown, never hidden. */
-export type FieldKind = "string" | "number" | "integer" | "boolean" | "enum" | "unsupported";
+export type FieldKind =
+  | "string"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "enum"
+  | "array"
+  | "unsupported";
 
 const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
 
@@ -22,7 +29,16 @@ export function fieldKind(schema: JsonSchema): FieldKind {
 
   const type = schema.type ?? nonNullType(schema.anyOf);
   if (type && RENDERABLE.has(type)) return type as FieldKind;
+  // A list of scalars — the record identifiers of a selection — is typed as text, one value
+  // per comma. Anything else inside a list stays unsupported rather than half-rendered.
+  if (type === "array" && schema.items && RENDERABLE.has(scalarType(schema.items) ?? ""))
+    return "array";
   return "unsupported";
+}
+
+function scalarType(schema: JsonSchema): string | undefined {
+  const type = schema.type ?? nonNullType(schema.anyOf);
+  return type === "boolean" ? undefined : type;
 }
 
 function nonNullType(branches: JsonSchema[] | undefined): string | undefined {
@@ -32,12 +48,17 @@ function nonNullType(branches: JsonSchema[] | undefined): string | undefined {
 
 /** The value a field starts at: its declared default, or an empty value of its kind. */
 export function initialValue(schema: JsonSchema): unknown {
+  // A list is edited as text, so its default — usually an empty list — becomes text too.
+  if (fieldKind(schema) === "array")
+    return schema.default === undefined ? "" : asText(schema.default);
   if (schema.default !== undefined) return schema.default;
   switch (fieldKind(schema)) {
     case "boolean":
       return false;
     case "enum":
       return schema.enum?.[0];
+    case "array":
+      return "";
     default:
       return "";
   }
@@ -72,9 +93,34 @@ export function toParams(
       if (!Number.isNaN(parsed)) params[name] = parsed;
       continue;
     }
+    if (kind === "array") {
+      const items = listItems(value, field.items);
+      if (items.length > 0) params[name] = items;
+      continue;
+    }
     params[name] = value;
   }
   return params;
+}
+
+/**
+ * Split what the user typed for a list, and cast each item to what the list holds.
+ *
+ * An item that does not parse as a number is dropped, as a lone number field would be; the
+ * backend refuses the whole job rather than guessing.
+ */
+function listItems(value: unknown, items: JsonSchema | undefined): unknown[] {
+  const raw = Array.isArray(value)
+    ? value.map(asText)
+    : String(value)
+        .split(",")
+        .map((item) => item.trim());
+  const kept = raw.filter((item) => item !== "");
+  const type = items ? scalarType(items) : "string";
+  if (type === "number" || type === "integer") {
+    return kept.map(Number).filter((item) => !Number.isNaN(item));
+  }
+  return kept;
 }
 
 /** Which parameters must be filled in for the job to be accepted. */
@@ -98,5 +144,6 @@ export function missingRequired(schema: JsonSchema, values: Record<string, unkno
 export function asText(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(asText).join(", ");
   return "";
 }

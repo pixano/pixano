@@ -62,6 +62,14 @@ License: CECILL-C
       value={asText(value)}
       onchange={(event) => onChange(event.currentTarget.value)}
     />
+  {:else if kind === "array"}
+    <input
+      type="text"
+      class="rounded border border-input bg-background px-2 py-1"
+      placeholder="One value per comma"
+      value={asText(value)}
+      onchange={(event) => onChange(event.currentTarget.value)}
+    />
   {:else}
     <!--
       Shown rather than hidden on purpose: silently dropping a parameter the form cannot
