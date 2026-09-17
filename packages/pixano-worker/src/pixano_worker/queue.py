@@ -151,7 +151,7 @@ UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
     error = jsonb_build_object('reason', 'abandonné', 'attempts', attempts)
 WHERE state = 'running' AND lease_until < now() AND attempts >= %s
-RETURNING id
+RETURNING job_id
 """
 
 # Le premier chunk terminé fait passer le job en cours. L'ancien état est lu sous le verrou de
@@ -202,6 +202,21 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
         Chunk(id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5])
         for row in rows
     ]
+
+
+@dataclass(frozen=True)
+class Recovery:
+    """Ce qu'une reprise de chunks orphelins a fait.
+
+    Attributes:
+        requeued: Chunks remis en file.
+        abandoned_jobs: Jobs dont au moins un chunk vient d'être écarté après ses tentatives.
+            Ce chunk était peut-être le dernier de son job : l'appelant doit conclure ces jobs,
+            sans quoi un job dont plus rien ne tourne resterait « en cours » pour toujours.
+    """
+
+    requeued: int
+    abandoned_jobs: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -332,16 +347,12 @@ async def release_own(conn: psycopg.AsyncConnection, worker_id: str) -> int:
     return len(await (await conn.execute(RELEASE_OWN, (worker_id,))).fetchall())
 
 
-async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> tuple[int, int]:
-    """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent.
-
-    Returns:
-        Le nombre de chunks remis en file, et le nombre mis en échec.
-    """
+async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
+    """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent."""
     async with conn.transaction():
-        reclaimed = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
-        abandoned = len(await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall())
-    return reclaimed, abandoned
+        requeued = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
+        abandoned = await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall()
+    return Recovery(requeued=requeued, abandoned_jobs=frozenset(str(row[0]) for row in abandoned))
 
 
 async def is_cancelled(conn: psycopg.AsyncConnection, job_id: str) -> bool:

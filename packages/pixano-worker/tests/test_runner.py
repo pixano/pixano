@@ -430,6 +430,27 @@ class TestRecovery:
         assert (state, done) == ("done", total)
 
 
+class TestAbandonedChunk:
+    """Revue de l'étape 1 : un chunk écarté par la reprise ne concluait pas son job."""
+
+    async def test_a_job_whose_last_chunk_is_set_aside_ends_in_error(
+        self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.0})
+        await runner.plan_one(adb, registry)
+        for _ in range(queue.MAX_ATTEMPTS):
+            await queue.claim(adb, "worker-qui-meurt", 1)
+            declared.execute(
+                f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() - interval '1 minute' "
+                "WHERE state = 'running'"
+            )
+            recovery = await queue.reclaim_expired(adb)
+
+        await runner.settle_abandoned(adb, recovery)
+
+        assert _state(declared, job)[0] == "error"
+
+
 class TestNotification:
     """La sonnette qui réveille l'interface."""
 
