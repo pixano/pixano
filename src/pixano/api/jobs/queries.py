@@ -85,23 +85,23 @@ FROM {SCHEMA_NAME}.job_items WHERE job_id = %s
 ORDER BY created_at, item_id LIMIT %s
 """
 
-# Demander l'annulation, sans toucher aux chunks en cours : leur worker les rendra de
-# lui-même avant le chunk suivant.
+# Ask for cancellation without touching the running chunks: their worker stops on its own
+# before the next one.
 REQUEST_CANCEL = f"""
 UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running') AND cancel_requested_at IS NULL
 """
 
-# Les chunks en attente sortent de la file. C'est ce qui permet à la requête de réclamation
-# du worker de ne jamais joindre la table des jobs.
+# Pending chunks leave the queue. This is what lets the worker's claim query never join the
+# jobs table.
 CANCEL_PENDING_CHUNKS = f"""
 UPDATE {SCHEMA_NAME}.job_chunks SET state = 'cancelled', updated_at = now()
 WHERE job_id = %s AND state = 'pending'
 """
 
-# Un job dont plus rien ne tourne est terminal immédiatement. Le bail de planification est
-# rendu avec l'état : le schéma refuse un bail hors de `planning`, et un job réclamé par un
-# planificateur au moment de l'annulation en porte un.
+# A job with nothing running is terminal immediately. The planning lease is given back with
+# the state: the schema refuses a lease outside `planning`, and a job claimed by a planner at
+# the moment of the cancellation carries one.
 SETTLE_IF_IDLE = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', planning_until = NULL, updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running')
