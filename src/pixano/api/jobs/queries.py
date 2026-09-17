@@ -45,7 +45,7 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 INSERT_JOB = f"""
 INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
 VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb
 """
 
 # What a job's tasks became, next to how many were attempted. Aggregated on read from the
@@ -59,7 +59,11 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
        coalesce((SELECT sum(c.skipped) FROM {SCHEMA_NAME}.job_chunks c
                  WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
        (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int,
-       j.cancel_requested_at IS NOT NULL
+       j.cancel_requested_at IS NOT NULL,
+       -- Why a job failed: its own error when planning failed, else the first chunk that did.
+       -- Without it a job read "error" and nothing else; only the worker's log knew.
+       coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
+                          WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
 FROM {SCHEMA_NAME}.jobs j
 """
 

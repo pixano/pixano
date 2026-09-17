@@ -56,6 +56,8 @@ class JobResponse(BaseModel):
         skipped: Tasks the kind does not apply to, such as a record without an image for an
             image job. Not a failure.
         quarantined: Tasks that failed, readable one by one from the quarantine endpoint.
+        error: Why the job failed, when it did: its own failure — planning — or the first of
+            its chunks that failed. Carries at least a `reason`.
         cancel_requested: Someone asked the job to stop. Until its state says `cancelled`, the
             chunks in flight are finishing — an interface should say so rather than leave the
             job looking as if the request had been lost.
@@ -71,6 +73,7 @@ class JobResponse(BaseModel):
     skipped: int
     quarantined: int
     cancel_requested: bool
+    error: dict[str, Any] | None
     created_at: str
 
     @classmethod
@@ -87,6 +90,7 @@ class JobResponse(BaseModel):
             skipped=record.skipped,
             quarantined=record.quarantined,
             cancel_requested=record.cancel_requested,
+            error=record.error,
             created_at=record.created_at.isoformat(),
         )
 

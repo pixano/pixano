@@ -61,6 +61,7 @@ class JobRecord:
     skipped: int = 0
     quarantined: int = 0
     cancel_requested: bool = False
+    error: dict[str, Any] | None = None
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
@@ -77,6 +78,7 @@ class JobRecord:
             skipped=row[8],
             quarantined=row[9],
             cancel_requested=row[10],
+            error=row[11],
         )
 
 
