@@ -198,14 +198,20 @@ async def _stream(
     """Serve one stream: catch up, then follow.
 
     The order matters. Subscribing *before* reading the backlog is what closes the gap: an
-    event committed between the two is held in the queue rather than lost, and the identifier
-    filter drops the duplicate.
+    event committed between the two is held in the queue rather than lost, and the set of
+    identifiers already sent drops the duplicate.
+
+    Duplicates are dropped by identifier, never by order. Identifiers are handed out before
+    commit, so a live event can arrive with an identifier below the last one sent; a filter on
+    "greater than the last" threw it away — for a state event, for good (independent review,
+    D2). The set grows by one integer per event of this connection, a few thousand for the
+    largest job.
     """
     async with broker.subscribe(job_id, types) as subscriber:
-        delivered = after_id
+        sent: set[int] = set()
         if job_id is not None:
             for event in await read_since(database_url, job_id, after_id):
-                delivered = event.id
+                sent.add(event.id)
                 yield event.to_sse()
 
         while True:
@@ -221,9 +227,9 @@ async def _stream(
                 # remonter et tuerait le flux au premier silence.
                 yield ": keepalive\n\n"
                 continue
-            if event.id <= delivered:
+            if event.id in sent:
                 continue
-            delivered = event.id
+            sent.add(event.id)
             yield event.to_sse()
 
 
