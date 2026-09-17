@@ -167,6 +167,22 @@ class TestReadAndCancel:
         assert job.cancel_requested is False
         assert jobs.get(declared, job.id).cancel_requested is False
 
+    def test_a_job_being_planned_can_be_cancelled(self, declared: psycopg.Connection) -> None:
+        """Second review of step 1: this answered 500 with a CheckViolation.
+
+        A job claimed by a planner carries a planning lease, and the schema refuses a lease
+        outside the planning state. The first test of this case simulated the cancellation by
+        hand and cleared the lease itself — which is exactly what hid the defect.
+        """
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() + interval '2 minutes' WHERE id = %s", (job.id,)
+        )
+
+        cancelled = jobs.cancel(declared, job.id)
+
+        assert cancelled.state == "cancelled"
+
     def test_a_running_job_reports_its_cancellation_before_it_ends(self, declared: psycopg.Connection) -> None:
         """The chunks in flight finish before the job settles; the request must be visible meanwhile."""
         job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
