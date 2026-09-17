@@ -261,6 +261,12 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
     return Dataset.find(dataset_id, library)
 
 
+def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
+    """Rouvrir un dataset en ignorant le cache, et remplacer ce que le cache en tenait."""
+    _open_dataset.cache_clear()
+    return _open_dataset(library, dataset_id)
+
+
 def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None) -> JobReader:
     """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert."""
 
@@ -284,7 +290,12 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
         return _open_dataset(library, dataset_id)
 
-    return JobWriter(open_dataset, kind, job_id, source_type)
+    def reopen_dataset() -> Dataset:
+        if library is None:
+            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+        return _reopen_dataset(library, dataset_id)
+
+    return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset)
 
 
 async def work(

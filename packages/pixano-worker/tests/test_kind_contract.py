@@ -75,6 +75,10 @@ class _Target:
     def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
         return [self.rows[i] for i in ids if i in self.rows]
 
+    def open_table(self, table_name: str) -> Any:
+        self.compactions = getattr(self, "compactions", []) + [table_name]
+        return SimpleNamespace(optimize=lambda **_kwargs: None)
+
     def has_record_embeddings(self) -> bool:
         return self._embeddings_ready
 

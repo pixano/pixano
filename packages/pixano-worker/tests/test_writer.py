@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -52,6 +53,10 @@ class _FakeDataset:
     def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
         table = self.tables.get(table_name, {})
         return [table[row_id] for row_id in ids if row_id in table]
+
+    def open_table(self, table_name: str) -> Any:
+        self.compactions = getattr(self, "compactions", []) + [table_name]
+        return SimpleNamespace(optimize=lambda **_kwargs: None)
 
     def has_record_embeddings(self) -> bool:
         return "embeddings" in self.tables
@@ -343,3 +348,72 @@ class TestRecordEmbeddings:
 
         with pytest.raises(ValueError, match="dimension 3"):
             writer.write_record_embeddings(["r2"], [[0.3, 0.4, 0.5]], model="clip")
+
+
+class TestCompaction:
+    """Revue indépendante, C5 : chaque écriture crée une version Lance, rien ne les résorbait."""
+
+    def test_compacts_after_enough_writes(self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pixano_worker import writer as writer_module
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 3)
+        writer = JobWriter(lambda: dataset, "label", "job-1", "other")
+
+        for n in range(7):
+            writer.replace("classifications", key=f"task-{n}", rows=[_FakeRow(f"r{n}")])
+
+        assert getattr(dataset, "compactions", []) == ["classifications", "classifications"]
+
+    def test_a_failed_compaction_does_not_fail_the_write(
+        self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pixano_worker import writer as writer_module
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 1)
+        dataset.open_table = lambda name: (_ for _ in ()).throw(RuntimeError("lance indisponible"))  # type: ignore[assignment]
+        writer = JobWriter(lambda: dataset, "label", "job-1", "other")
+
+        written = writer.replace("classifications", key="task-0", rows=[_FakeRow("r0")])
+
+        assert written and dataset.tables["classifications"]
+
+    def test_against_real_lance_keeps_the_version_count_bounded(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pixano_worker import writer as writer_module
+
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.annotations.classification import Classification
+        from pixano.schemas.records import Record
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 10)
+        monkeypatch.setattr(writer_module, "KEEP_OLD_VERSIONS_FOR", timedelta(0))
+        toy = Dataset.create(
+            tmp_path / "jouet", DatasetInfo(id="jouet", name="Jouet", record=Record, classification=Classification)
+        )
+        toy.add_data("records", [Record(id=f"task-{n}") for n in range(40)])
+        writer = JobWriter(lambda: toy, "label", "job-1", "other")
+
+        for n in range(40):
+            row = Classification(id="", record_id=f"task-{n}", labels=["x"], confidences=[1.0], **writer.provenance())
+            writer.replace("classifications", key=f"task-{n}", rows=[row])
+
+        versions = len(toy.open_table("classifications").list_versions())
+        assert versions < 40, f"{versions} versions pour 40 écritures : rien n'a été compacté"
+
+
+class TestEmbeddingTableCreatedElsewhere:
+    """Revue indépendante, étape 4 : un dataset en cache ne voyait pas la table créée par un autre worker."""
+
+    def test_rereads_the_dataset_before_creating(self, dataset: _FakeDataset) -> None:
+        fresh = _FakeDataset()
+        fresh.create_record_embedding_table(dim=2, model_id="clip")
+        created_on_stale = []
+        dataset.create_record_embedding_table = lambda dim, model_id: created_on_stale.append(model_id)  # type: ignore[assignment]
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: fresh)
+
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        assert created_on_stale == [], "la table existante aurait été écrasée"
+        assert len(fresh.tables["embeddings"]) == 1
