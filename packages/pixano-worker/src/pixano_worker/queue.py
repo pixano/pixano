@@ -144,7 +144,7 @@ RETURNING id
 ABANDON_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandonné', 'attempts', attempts)
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
 WHERE state = 'running' AND claimed_by = %s AND attempts >= %s
 RETURNING job_id
 """
@@ -159,7 +159,7 @@ RETURNING id
 ABANDON_EXHAUSTED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandonné', 'attempts', attempts)
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
 WHERE state = 'running' AND lease_until < now() AND attempts >= %s
 RETURNING job_id
 """
