@@ -591,7 +591,7 @@ class TestTransientFailures:
         row = declared.execute(
             f"SELECT state, attempts, error->>'reason' FROM {SCHEMA_NAME}.job_chunks WHERE seq = 3"
         ).fetchone()
-        assert row == ("pending", 1, "panne passagère")
+        assert row == ("pending", 1, "transient failure")
 
     async def test_the_job_completes_once_the_failure_has_passed(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
@@ -690,7 +690,7 @@ class TestChunkTimeLimit:
         await runner.run_chunk(adb, registry, chunk, timeout_s=0.1)
 
         row = declared.execute(f"SELECT state, error->>'reason' FROM {SCHEMA_NAME}.job_chunks").fetchone()
-        assert row == ("pending", "durée maximale dépassée")
+        assert row == ("pending", "time limit exceeded")
         assert _state(declared, job)[0] == "pending"
 
 
@@ -793,7 +793,7 @@ class TestPlanningRefusedByTheSchema:
         row = declared.execute(
             f"SELECT error->>'reason', planning_until FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)
         ).fetchone()
-        assert row is not None and "refusés" in row[0] and row[1] is None
+        assert row is not None and "refused" in row[0] and row[1] is None
 
     async def test_an_unexpected_error_in_the_loop_does_not_kill_the_worker(
         self,
