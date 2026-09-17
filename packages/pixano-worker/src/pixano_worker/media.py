@@ -18,6 +18,7 @@ soit mesurable et visible dans les logs au lieu d'être découvert sur un gros d
 """
 
 import logging
+import posixpath
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, Protocol
@@ -101,11 +102,15 @@ class MediaResolver:
     def translate(self, path: str) -> str | None:
         """Passer d'un chemin vu par le worker à un chemin vu par l'inference.
 
+        Le chemin est normalisé avant d'être comparé à la racine. La comparaison de
+        `PurePosixPath` est lexicale : sans normalisation, `/medias/../etc/passwd` passait pour
+        un chemin sous `/medias`, et partait tel quel vers l'inference.
+
         Returns:
             Le chemin traduit, ou None si ce chemin n'est pas sous la racine déclarée — auquel
             cas l'inference le refuserait, et mieux vaut le savoir ici.
         """
-        clean = PurePosixPath(path)
+        clean = PurePosixPath(posixpath.normpath(path))
         root = PurePosixPath(self.media_root)
         if not clean.is_absolute() or not clean.is_relative_to(root):
             return None
