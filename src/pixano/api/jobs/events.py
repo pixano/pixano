@@ -193,8 +193,15 @@ class EventBroker:
             self._subscribers.discard(subscriber)
 
 
-async def read_since(database_url: str, job_id: str, after_id: int) -> list[JobEvent]:
-    """Read the events a reconnecting client missed."""
+# Event identifiers are handed out before commit, so an event committed late can carry an
+# identifier below the last one a client saw. Catching up from that identifier alone would skip
+# it for good. Reading back a little further costs a few duplicates, which absolute counters
+# and identifier-ordered states make harmless.
+CATCH_UP_SLACK = 100
+
+
+async def read_since(database_url: str, job_id: str, after_id: int, slack: int = CATCH_UP_SLACK) -> list[JobEvent]:
+    """Read the events a reconnecting client missed, and a few it may have seen."""
     async with await psycopg.AsyncConnection.connect(database_url) as conn:
-        rows = await (await conn.execute(SELECT_SINCE, (job_id, after_id))).fetchall()
+        rows = await (await conn.execute(SELECT_SINCE, (job_id, max(0, after_id - slack)))).fetchall()
     return [JobEvent(id=row[0], job_id=str(row[1]), type=row[2], payload=row[3]) for row in rows]

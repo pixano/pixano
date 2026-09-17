@@ -78,12 +78,20 @@ class TestRendering:
 
 
 class TestCatchUp:
-    def test_reads_only_what_came_after(self, url: str) -> None:
+    def test_reads_what_came_after_without_slack(self, url: str) -> None:
         job, ids = _job_with_events(url, 5)
 
-        missed = asyncio.run(read_since(url, job, ids[1]))
+        missed = asyncio.run(read_since(url, job, ids[1], slack=0))
 
         assert [event.id for event in missed] == ids[2:]
+
+    def test_reads_back_a_little_by_default(self, url: str) -> None:
+        """A few events the client has seen come again; an event committed late is never lost."""
+        job, ids = _job_with_events(url, 5)
+
+        missed = asyncio.run(read_since(url, job, ids[3]))
+
+        assert [event.id for event in missed] == ids
 
     def test_a_fresh_client_gets_everything(self, url: str) -> None:
         job, ids = _job_with_events(url, 3)
@@ -201,6 +209,52 @@ class TestSlowSubscriber:
         received = asyncio.run(scenario())
 
         assert received[-1] == "closed"
+
+
+class TestOutOfOrderEvents:
+    """Independent review, D2: identifiers are handed out before commit, delivery follows commits."""
+
+    def test_a_live_event_with_a_lower_identifier_is_still_delivered(self) -> None:
+        async def scenario() -> list[str]:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            subscriber.offer(JobEvent(id=2, job_id="j", type="progress", payload={"done_tasks": 20}))
+            subscriber.offer(JobEvent(id=1, job_id="j", type="state", payload={"state": "running"}))
+            received = [await first]
+            received.append(await asyncio.wait_for(anext(stream), timeout=1))
+            return received
+
+        received = asyncio.run(scenario())
+
+        assert [line.split("\n")[0] for line in received] == ["id: 2", "id: 1"]
+
+    def test_the_same_event_is_never_sent_twice(self) -> None:
+        async def scenario() -> int:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            for _ in range(2):
+                subscriber.offer(JobEvent(id=7, job_id="j", type="progress", payload={}))
+            subscriber.offer(JobEvent(id=8, job_id="j", type="progress", payload={}))
+            await first
+            second = await asyncio.wait_for(anext(stream), timeout=1)
+            return int(second.split("\n")[0].removeprefix("id: "))
+
+        assert asyncio.run(scenario()) == 8
+
+    def test_catching_up_reads_back_a_little_before_the_last_seen_identifier(self, url: str) -> None:
+        """An event committed late carries an identifier the client has already passed."""
+        job, ids = _job_with_events(url, 4)
+        last_seen = ids[-1]
+
+        caught_up = asyncio.run(read_since(url, job, last_seen, slack=2))
+
+        assert [event.payload["done_tasks"] for event in caught_up] == [30, 40]
 
 
 class TestTypeFilter:
