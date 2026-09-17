@@ -23,6 +23,8 @@ export type Job = {
   quarantined: number;
   /** Someone asked the job to stop; the chunks in flight are finishing. */
   cancel_requested: boolean;
+  /** Why the job failed, when it did — at least a `reason`. Null otherwise. */
+  error: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -112,6 +114,7 @@ export type JobEvent = {
   total_tasks?: number;
   chunks?: number;
   reason?: string;
+  detail?: string;
   produced?: number;
   skipped?: number;
   quarantined?: number;

@@ -11,7 +11,13 @@ License: CECILL-C
   import JobProgress from "./JobProgress.svelte";
   import SubmitJobForm from "./SubmitJobForm.svelte";
   import type { JobTarget } from "$lib/api/jobs";
-  import { canCancel, jobsStore, outcomeOf, stateLabelOf } from "$lib/stores/jobs.svelte";
+  import {
+    canCancel,
+    failureOf,
+    jobsStore,
+    outcomeOf,
+    stateLabelOf,
+  } from "$lib/stores/jobs.svelte";
 
   type Props = { dataset: JobTarget | null };
   let { dataset }: Props = $props();
@@ -58,6 +64,7 @@ License: CECILL-C
             <JobProgress {job} />
             <JobOutcome
               summary={outcomeOf(job)}
+              failure={failureOf(job)}
               quarantined={job.quarantined}
               items={jobsStore.quarantines[job.id]}
               onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
