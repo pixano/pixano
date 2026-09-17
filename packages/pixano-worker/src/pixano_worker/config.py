@@ -37,9 +37,12 @@ MAX_HEARTBEAT_AGE_S = 30.0
 DEFAULT_CONCURRENCY = 4
 
 # Durée au-delà de laquelle un chunk est tenu pour pendu et rendu à la file. Elle doit dépasser
-# le pire cas légitime d'un type de job — pour les embeddings, un appel et ses reprises, soit
-# un quart d'heure avec les délais par défaut — sans quoi on rendrait du travail lent mais sain.
-# Une demi-heure laisse cette marge et libère tout de même un chunk pendu dans la matinée.
+# le pire cas légitime d'un type de job, sans quoi on rendrait du travail lent mais sain. Pour
+# les embeddings, un appel qui expire vaut `request_timeout_s` × (1 + `max_retries`), soit vingt
+# minutes avec les délais par défaut — puis le chunk est rendu comme passager, sans recherche
+# d'image fautive. Une demi-heure couvre ce cas et libère tout de même un chunk pendu dans la
+# matinée. Un serveur lent qui *répond* 500 à chaque appel peut faire plus (jusqu'à sept appels
+# pour isoler une image sur huit) : c'est alors la limite qui joue, et c'est voulu.
 DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 
 # Les types de jobs de démonstration — `fake`, qui ne calcule rien, et `label`, qui pose une
