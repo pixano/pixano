@@ -131,9 +131,9 @@ class TestRecovery:
             f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() - interval '1 minute' WHERE state = 'running'"
         )
 
-        reclaimed, abandoned = await queue.reclaim_expired(adb)
+        recovery = await queue.reclaim_expired(adb)
 
-        assert (reclaimed, abandoned) == (3, 0)
+        assert (recovery.requeued, recovery.abandoned_jobs) == (3, frozenset())
         assert len(await queue.claim(adb, "worker-b", 3)) == 3
 
     async def test_a_chunk_that_keeps_killing_workers_is_set_aside(
@@ -144,7 +144,7 @@ class TestRecovery:
         Le bail n'est antidaté que sur les chunks qui tournent : un chunk écarté n'en a plus,
         et la contrainte du schéma refuserait d'ailleurs de lui en rendre un.
         """
-        _enqueue(db, 1)
+        job = _enqueue(db, 1)
         outcomes = []
         for _ in range(queue.MAX_ATTEMPTS):
             await queue.claim(adb, "worker-a", 1)
@@ -154,7 +154,7 @@ class TestRecovery:
             )
             outcomes.append(await queue.reclaim_expired(adb))
 
-        assert outcomes[-1] == (0, 1), f"attendu un abandon au dernier tour, obtenu {outcomes}"
+        assert outcomes[-1] == queue.Recovery(0, frozenset({job})), f"attendu un abandon au dernier tour : {outcomes}"
         row = db.execute(f"SELECT state, error FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == "error"
         assert row[1]["reason"] == "abandonné"

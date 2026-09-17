@@ -328,9 +328,14 @@ async def work(
             if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
                 last_reclaim = loop.time()
                 async with pool.connection() as conn:
-                    reclaimed, abandoned = await queue.reclaim_expired(conn)
-                if reclaimed or abandoned:
-                    log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+                    recovery = await queue.reclaim_expired(conn)
+                    await settle_abandoned(conn, recovery)
+                if recovery.requeued or recovery.abandoned_jobs:
+                    log.info(
+                        "baux expirés : %d chunk(s) remis en file, %d job(s) avec un chunk écarté",
+                        recovery.requeued,
+                        len(recovery.abandoned_jobs),
+                    )
         except DATABASE_UNAVAILABLE as error:
             delay = OUTAGE_BACKOFF_S[min(outages, len(OUTAGE_BACKOFF_S) - 1)]
             outages += 1
@@ -414,7 +419,7 @@ async def run_chunk(
             panne passagère. None : pas de limite.
     """
     await _execute(conn, registry, chunk, library, media, timeout_s)
-    await _settle(conn, chunk.job_id)
+    await settle(conn, chunk.job_id)
 
 
 async def _execute(
@@ -546,7 +551,17 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
         await keeper
 
 
-async def _settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
+async def settle_abandoned(conn: psycopg.AsyncConnection, recovery: queue.Recovery) -> None:
+    """Conclure les jobs dont une reprise vient d'écarter un chunk.
+
+    Aucun chunk de ces jobs ne finira pour les conclure si celui-là était le dernier : c'est la
+    reprise elle-même qui doit s'en charger.
+    """
+    for job_id in sorted(recovery.abandoned_jobs):
+        await settle(conn, job_id)
+
+
+async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
     """Conclure un job dont plus rien n'attend ni ne tourne, en disant ce qu'il a produit."""
     row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
     if row is None:
