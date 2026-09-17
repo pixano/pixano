@@ -340,3 +340,15 @@ class TestFailureReason:
             )
 
         assert jobs.get(declared, job.id).error == {"reason": "kaboom"}
+
+
+class TestMalformedIdentifier:
+    """Independent review, D5: a job identifier that is not a uuid answered 500."""
+
+    def test_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.get(declared, "not-a-uuid")
+
+    def test_cannot_be_cancelled_either(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.cancel(declared, "not-a-uuid")
