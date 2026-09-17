@@ -30,10 +30,11 @@ permissions:
   pages: write
   id-token: write
 
-# One queue per ref: deploys from main are serialized and never cancelled,
-# while pull request builds run in their own group and supersede themselves.
+# Deploys share the "pages" queue with publish.yml so two workflows can never
+# publish to GitHub Pages at once; pull request builds get their own
+# cancellable group and never block a deploy.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: ${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
