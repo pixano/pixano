@@ -321,6 +321,40 @@ what matters here is the decision each fix embodies.
   concurrent reloads; a subscriber that falls behind has its stream closed so that it
   reconnects, instead of silently missing events.
 
+## 5septies. What the independent review changed
+
+An independent review of the whole step (`docs/reviews/etape1-revue-independante.md`) found
+what neither the author's reviews nor the scenarios had. The decisions behind the fixes:
+
+- **State events are written by the transaction that changes the state.** Identifiers are
+  handed out before commit, so events from different connections can become visible out of
+  identifier order. Counters survive it, being absolute; a state event has no later event to
+  repair it. `running` and `progress` are now written by the chunk's finishing transaction,
+  under the job row's lock, and `done` by the settling one: a job's state events carry
+  identifiers in their logical order whatever the concurrency. The stream, in turn, drops
+  duplicates by identifier only, never by order, and a catch-up reads back a hundred
+  identifiers before the client's last.
+- **The application announces its one state change.** A cancellation records a state event
+  in its transaction, carrying the job's state after it and the request flag, so every open
+  panel shows "cancelling" — not only the tab that clicked.
+- **A failed job says why.** The API exposes the job's error, or its first failed chunk's,
+  and the panel shows the reason. The worker's reasons are in English for that purpose.
+- **A refused plan fails the job, not the worker**, and an unexpected exception in a loop
+  turn is logged and survived: killing the worker made nothing more visible than its trace.
+- **Written tables are compacted** every 64 writes, old versions cleaned after an hour. A
+  write creates a Lance version; a job of 50 000 images would leave 6 250 of them.
+- **The demonstration kinds are opt-in** (`PIXANO_WORKER_DEMO_KINDS`), set by the local
+  compose. `fake` and `label` write wherever they are told; they are not for a shared
+  deployment.
+- **The writer rereads a dataset before creating its embeddings table**, since creating
+  overwrites: with two workers, the second's cached dataset would have erased the first's
+  vectors. Two simultaneous creations remain for the writer role of step 4.
+- **A full worker still reclaims expired leases**, on the reclaim interval, instead of
+  waiting for one of its own chunks to finish.
+- **A malformed job identifier is an unknown job**, answered 404.
+
+What the review raised and this step does not settle is in §7, under the questions it added.
+
 ## 6. Deliberate deferrals
 
 | Deferred                                    | Until                        | Why it is safe to wait                                                                                                                                                                                                                                                                                                              |
@@ -341,7 +375,8 @@ What remains, each noticed while resolving them:
 
 - **The worker caches open datasets.** A dataset changed from outside — its embeddings table
   deleted, say — is seen in its old state until the worker restarts. Met while preparing the
-  lot 11 scenarios.
+  lot 11 scenarios. The writer now rereads before creating an embeddings table, which covers
+  the one case that lost data; the rest stands.
 - **The inference answers 500 for a client error.** A corrupt image or a missing path should
   be a 4xx. The worker works around it by isolating the culprit, at the cost of extra calls;
   the fix belongs in pixano-inference.
@@ -355,6 +390,21 @@ What remains, each noticed while resolving them:
   today; to measure at step 4 if the claim rate ever matters.
 
 ## 7. Open questions
+
+Raised by the independent review, for the architect:
+
+- **Bytes or paths** (its Q1). The bytes route is the only one that serves existing datasets,
+  `embed` being the default import mode, and the demo runs on it; the plan's invariant is
+  therefore not exercised. Which step changes the default import mode?
+- **The pixano-inference fork** (Q2). The demo depends on it; is it to be merged upstream?
+- **Retention against provenance** (Q3). Jobs are cleaned by truncation, and `job_id` is the
+  only provenance of a job's outputs. One of the two has to change.
+- **Provenance of embeddings** (Q5). The model lives in the dataset's sidecar, not per row;
+  lot 9 asked for "full provenance". Enough, or per-row like annotations?
+- **The contract of `replace`** (Q6). Leftovers beyond 32 rows are not cleaned; a detection
+  that shrinks would leave ghost boxes. To settle before the first detection kind.
+- **Chunks have no dependency and no internal progress.** Video tracking by segments needs
+  both. The one piece of engine design step 2 must do first.
 
 - **`done_tasks` is an invariant the schema does not hold.** The counter on `jobs` is
   denormalised to avoid summing chunks on every progress event, but nothing guarantees it
