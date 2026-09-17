@@ -205,6 +205,10 @@ async def _stream(
                 yield event.to_sse()
 
         while True:
+            if subscriber.dropped:
+                # Its queue overflowed and events were lost. Ending the stream is what makes the
+                # browser reconnect and catch up; kept open, it would go on silently missing them.
+                return
             try:
                 event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
             except asyncio.TimeoutError:

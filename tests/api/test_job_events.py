@@ -16,8 +16,8 @@ from fastapi import HTTPException
 from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
-from pixano.api.jobs.events import NOTIFY_CHANNEL, EventBroker, JobEvent, read_since
-from pixano.api.routers.jobs import _requested_types
+from pixano.api.jobs.events import _SUBSCRIBER_BACKLOG, NOTIFY_CHANNEL, EventBroker, JobEvent, read_since
+from pixano.api.routers.jobs import _requested_types, _stream
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
@@ -177,6 +177,30 @@ def _emit(url: str, job_id: str, event_type: str, payload: dict) -> None:
             """,
             (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL),
         )
+
+
+class TestSlowSubscriber:
+    """Step 1 review: a subscriber whose queue overflowed was marked dropped and kept open."""
+
+    def test_an_overflowing_stream_is_closed_so_the_client_reconnects(self) -> None:
+        async def scenario() -> list[str]:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            for event_id in range(1, _SUBSCRIBER_BACKLOG + 2):
+                subscriber.offer(JobEvent(id=event_id, job_id="j", type="progress", payload={}))
+            received = [await first]
+            try:
+                received.append(await asyncio.wait_for(anext(stream), timeout=1))
+            except StopAsyncIteration:
+                received.append("closed")
+            return received
+
+        received = asyncio.run(scenario())
+
+        assert received[-1] == "closed"
 
 
 class TestTypeFilter:
