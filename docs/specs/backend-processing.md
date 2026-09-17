@@ -384,6 +384,16 @@ What remains, each noticed while resolving them:
   review at 256 000 chunks: 168–281 ms for fifty jobs, under the 500 ms p99 the project
   targets but with little margin at the cap of two hundred. Materialising the counters at
   chunk completion, or a covering index on `(job_id, state)`, are the two levers.
+- **Compaction runs under the dataset's write lock.** Every 64 writes, the other chunks of
+  the same dataset wait for `optimize` to finish — short on a vector table, unmeasured on a
+  large annotation table. At step 4, two workers compacting one table will meet a Lance
+  commit conflict: logged, no loss, to measure.
+- **The stream of one job replays its whole history on first connection.** 6 250 events for
+  a job of 50 000 images. Acceptable today; a bound or a `since` parameter is the obvious
+  fix, and it is a choice about what a fresh client sees.
+- **The lease derives from the docker probe** (`LEASE_TTL = max(120, 4 × MAX_HEARTBEAT_AGE_S)`).
+  Justified while every worker runs under the compose; to decouple when one runs without a
+  file probe, at step 4.
 - **The concurrency default is not measured.** On the CPU stack, throughput already fell as
   batches grew (§5quater); whether four chunks in flight help or hurt there is unknown, and
   on a GPU the answer will differ.

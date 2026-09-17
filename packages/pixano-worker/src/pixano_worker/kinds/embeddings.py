@@ -183,7 +183,13 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
     @staticmethod
     def _images_of(reader: JobReader, record_ids: list[str]) -> dict[str, Any]:
-        """La vue image de chaque enregistrement du lot, quand elle existe."""
+        """La vue image de chaque enregistrement du lot, quand elle existe.
+
+        Un enregistrement peut porter plusieurs vues image — nuScenes en a six, une par
+        caméra. Ce type en embarque **une**, la première que LanceDB rend, et n'offre pas encore
+        de quoi choisir laquelle : c'est un paramètre `view` à ajouter avec les types de l'étape
+        2, quand on saura ce que la pré-annotation attend d'un enregistrement multi-vues.
+        """
         rows = reader.dataset.get_data(IMAGE_TABLE, record_ids=list(record_ids)) or []
         by_record: dict[str, Any] = {}
         for row in rows:
