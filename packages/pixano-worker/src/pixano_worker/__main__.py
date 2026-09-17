@@ -17,6 +17,7 @@ types se fait une fois et dans l'ordre. Seule la boucle de travail est asynchron
 
 import asyncio
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -31,6 +32,7 @@ from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
 from .kinds import Registry, default_registry
 from .media import MediaResolver
 from .schema import SchemaVersionError, ensure_schema
+from .threads import WorkerSaturatedError, WorkerThreads
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -41,6 +43,10 @@ log = logging.getLogger("pixano-worker")
 # train d'attendre une dépendance absente soit déclaré mort.
 MAX_BACKOFF_S = MAX_HEARTBEAT_AGE_S / 3
 IDLE_POLL_INTERVAL_S = 5
+
+# Le code de sortie d'un worker qui s'arrête pour être relancé. Non nul, pour que la politique
+# de redémarrage du compose le relance.
+EXIT_SATURATED = 3
 CONNECT_TIMEOUT_S = 5
 
 # Le battement ne dépend plus d'un tour de boucle : un chunk long ne doit pas faire déclarer
@@ -140,7 +146,7 @@ def main() -> int:
     log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
 
     media = MediaResolver(config.media_root, config.inference_media_root)
-    asyncio.run(
+    code = asyncio.run(
         serve(
             config.database_url,
             registry,
@@ -152,7 +158,20 @@ def main() -> int:
             config.chunk_timeout_s,
         )
     )
+    if code:
+        _exit_now(code)
     return 0
+
+
+def _exit_now(code: int) -> None:
+    """Quitter sans attendre les threads.
+
+    Une sortie normale attend que tous les threads aient fini — or c'est justement parce que
+    certains ne finissent pas qu'on quitte. Les journaux sont vidés d'abord, pour que la cause
+    de l'arrêt soit lisible.
+    """
+    logging.shutdown()
+    os._exit(code)
 
 
 async def serve(
@@ -164,9 +183,14 @@ async def serve(
     media: MediaResolver,
     concurrency: int,
     chunk_timeout_s: float,
-) -> None:
-    """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
+) -> int:
+    """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné.
+
+    Returns:
+        Un code de sortie non nul si le worker doit s'arrêter pour être relancé.
+    """
     heartbeat = asyncio.create_task(_beat_forever(alive))
+    threads = WorkerThreads.for_concurrency(concurrency)
 
     # Une connexion par chunk en vol, plus une pour planifier, réclamer et récupérer.
     async with AsyncConnectionPool(
@@ -195,10 +219,17 @@ async def serve(
         log.info("worker démarré, en attente de jobs")
         try:
             await runner.work(
-                pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S, chunk_timeout_s
+                pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S, chunk_timeout_s, threads
             )
+        except WorkerSaturatedError as error:
+            # S'arrêter plutôt que de rester « vivant » sans pouvoir rien démarrer : relancé, le
+            # worker repart avec des threads neufs et reprend ses chunks tout de suite.
+            log.error("worker saturé, arrêt pour être relancé : %s", error)
+            return EXIT_SATURATED
         finally:
             heartbeat.cancel()
+            threads.shutdown()
+    return 0
 
 
 async def _beat_forever(alive: Callable[[], None]) -> None:

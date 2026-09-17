@@ -41,6 +41,7 @@ from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
+from .threads import WorkerSaturatedError, WorkerThreads
 from .writer import JobWriter
 
 
@@ -64,6 +65,12 @@ RECLAIM_INTERVAL_S = 30.0
 # table. Le verrou est un verrou de thread : c'est dans un thread que `write` s'exécute.
 _write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
 _write_locks_guard = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def default_threads() -> WorkerThreads:
+    """Le pool des appels qui n'en fournissent pas — les tests, et la forme séquentielle du runner."""
+    return WorkerThreads.for_concurrency(1)
 
 
 def _write_lock(dataset_id: str) -> threading.Lock:
@@ -175,6 +182,7 @@ async def plan_one(
     registry: Registry,
     library: Path | None = None,
     media: MediaResolver | None = None,
+    threads: WorkerThreads | None = None,
 ) -> str | None:
     """Découper un job en attente de planification.
 
@@ -201,7 +209,7 @@ async def plan_one(
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media)
         async with _kept_alive(refresh, f"planification du job {job_id}"):
-            chunks = await asyncio.to_thread(lambda: list(kind.plan(reader, params)))
+            chunks = await (threads or default_threads()).run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
@@ -293,25 +301,35 @@ async def work(
     media: MediaResolver | None = None,
     idle_poll_s: float = 5.0,
     chunk_timeout_s: float | None = None,
+    threads: WorkerThreads | None = None,
 ) -> None:
     """Tenir jusqu'à `concurrency` chunks en vol, indéfiniment.
 
     La réclamation ne prend jamais plus que les places libres : un chunk réclamé porte un bail
     qui court, et le réclamer pour le laisser attendre une place l'exposerait à expirer avant
     d'avoir commencé.
+
+    Raises:
+        WorkerSaturatedError: Trop de threads restent bloqués sur des chunks rendus pour cause
+            de durée dépassée : le worker ne peut plus rien démarrer, et doit être relancé.
     """
+    threads = threads or WorkerThreads.for_concurrency(concurrency)
     in_flight: set[asyncio.Task[None]] = set()
     loop = asyncio.get_running_loop()
     last_reclaim = loop.time()
     outages = 0
 
     while True:
+        if threads.saturated:
+            raise WorkerSaturatedError(
+                f"{threads.stuck} thread(s) bloqués sur des chunks rendus pour cause de durée dépassée"
+            )
         # Une base qui redémarre ne doit pas tuer le worker : il attend qu'elle revienne, comme
         # au démarrage. Les chunks en vol ne sont pas touchés — chacun gère sa propre connexion,
         # et un chunk interrompu garde son bail jusqu'à ce que la reprise le rende.
         try:
             async with pool.connection() as conn:
-                planned = await plan_one(conn, registry, library, media)
+                planned = await plan_one(conn, registry, library, media, threads)
 
             claimed: list[queue.Chunk] = []
             free = concurrency - len(in_flight)
@@ -321,7 +339,9 @@ async def work(
             # Lancés sitôt réclamés, avant tout autre accès à la base : un chunk réclamé porte un
             # bail qui court, et une coupure juste après le laisserait sans personne pour le faire.
             for chunk in claimed:
-                task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media, chunk_timeout_s))
+                task = asyncio.create_task(
+                    _run_pooled(pool, registry, chunk, library, media, chunk_timeout_s, threads)
+                )
                 in_flight.add(task)
                 task.add_done_callback(in_flight.discard)
 
@@ -363,6 +383,7 @@ async def _run_pooled(
     library: Path | None,
     media: MediaResolver | None,
     chunk_timeout_s: float | None,
+    threads: WorkerThreads,
 ) -> None:
     """Exécuter un chunk sur sa propre connexion, sans jamais faire tomber la boucle.
 
@@ -372,7 +393,7 @@ async def _run_pooled(
     """
     try:
         async with pool.connection() as conn:
-            await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s)
+            await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s, threads)
     except Exception:
         log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
 
@@ -406,6 +427,7 @@ async def run_chunk(
     library: Path | None = None,
     media: MediaResolver | None = None,
     timeout_s: float | None = None,
+    threads: WorkerThreads | None = None,
 ) -> None:
     """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu.
 
@@ -417,8 +439,9 @@ async def run_chunk(
         media: Le résolveur de médias.
         timeout_s: Durée maximale du chunk. Au-delà, il est rendu à la file comme après une
             panne passagère. None : pas de limite.
+        threads: Le pool où tourne le code du type de job.
     """
-    await _execute(conn, registry, chunk, library, media, timeout_s)
+    await _execute(conn, registry, chunk, library, media, timeout_s, threads or default_threads())
     await settle(conn, chunk.job_id)
 
 
@@ -429,6 +452,7 @@ async def _execute(
     library: Path | None,
     media: MediaResolver | None,
     timeout_s: float | None,
+    threads: WorkerThreads,
 ) -> None:
     if await queue.is_cancelled(conn, chunk.job_id):
         await queue.cancel_chunk(conn, chunk)
@@ -465,11 +489,12 @@ async def _execute(
 
     try:
         async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} du job {chunk.job_id}"):
-            outcome = await asyncio.wait_for(asyncio.to_thread(work), timeout_s)
+            outcome = await threads.run(work, timeout_s)
     except TimeoutError:
         # Le thread ne s'arrête pas : un appel bloqué ne s'interrompt pas de l'extérieur. Le
         # chunk est rendu, et si le thread finit par aboutir, son résultat sera refusé par le
-        # jeton de garde — et son écriture, idempotente, n'aura rien doublé.
+        # jeton de garde — et son écriture, idempotente, n'aura rien doublé. Le pool compte ce
+        # thread comme bloqué ; s'il y en a trop, la boucle arrêtera le worker.
         await _retry_later(conn, chunk, {"reason": "durée maximale dépassée", "timeout_s": timeout_s})
         return
     except TransientError as error:
