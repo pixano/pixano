@@ -60,6 +60,7 @@ class JobRecord:
     produced: int = 0
     skipped: int = 0
     quarantined: int = 0
+    cancel_requested: bool = False
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
@@ -75,6 +76,7 @@ class JobRecord:
             produced=row[7],
             skipped=row[8],
             quarantined=row[9],
+            cancel_requested=row[10],
         )
 
 

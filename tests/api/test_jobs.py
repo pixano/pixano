@@ -161,6 +161,26 @@ class TestReadAndCancel:
 
         assert cancelled.state == "cancelled"
 
+    def test_a_new_job_has_no_cancellation_requested(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        assert job.cancel_requested is False
+        assert jobs.get(declared, job.id).cancel_requested is False
+
+    def test_a_running_job_reports_its_cancellation_before_it_ends(self, declared: psycopg.Connection) -> None:
+        """The chunks in flight finish before the job settles; the request must be visible meanwhile."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, lease_until) "
+            "VALUES (%s, 0, 5, 'running', now() + interval '2 minutes')",
+            (job.id,),
+        )
+
+        cancelled = jobs.cancel(declared, job.id)
+
+        assert (cancelled.state, cancelled.cancel_requested) == ("running", True)
+
     def test_cancelling_twice_is_harmless(self, declared: psycopg.Connection) -> None:
         job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 1})
 
