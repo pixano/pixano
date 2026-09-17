@@ -199,6 +199,10 @@ async def serve(
         min_size=1,
         max_size=concurrency + 1,
         kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S},
+        # Le pool n'attend pas une connexion plus longtemps qu'on n'attend d'en ouvrir une. Son
+        # délai par défaut est de 30 s, subi à chaque emprunt pendant une panne : un arrêt demandé
+        # pendant la panne dépassait alors la grâce de docker et finissait tué.
+        timeout=CONNECT_TIMEOUT_S,
         # Vérifier une connexion avant de la prêter : après un redémarrage de PostgreSQL, le pool
         # garde des connexions mortes, et sans vérification il les rendrait une à une à la boucle.
         check=AsyncConnectionPool.check_connection,
