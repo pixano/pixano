@@ -167,9 +167,9 @@ class TestRecovery:
         _enqueue(db, 5)
         await queue.claim(adb, "worker-a", 3)
 
-        released = await queue.release_own(adb, "worker-a")
+        recovery = await queue.release_own(adb, "worker-a")
 
-        assert released == 3
+        assert recovery == queue.Recovery(3, frozenset())
         assert len(await queue.claim(adb, "worker-a", 5)) == 5
 
     async def test_another_workers_chunks_are_left_alone(
@@ -178,7 +178,24 @@ class TestRecovery:
         _enqueue(db, 4)
         await queue.claim(adb, "worker-a", 2)
 
-        assert await queue.release_own(adb, "worker-b") == 0
+        assert await queue.release_own(adb, "worker-b") == queue.Recovery(0, frozenset())
+
+    async def test_a_chunk_that_kills_its_worker_at_every_restart_is_set_aside(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue de l'étape 1 : ce chemin ne regardait pas les tentatives.
+
+        Avec un redémarrage automatique, un chunk qui fait planter son worker — une image qui
+        fait exploser la mémoire — le relançait sans fin : réclamé, crash, rendu, réclamé.
+        """
+        job = _enqueue(db, 1)
+        recoveries = []
+        for _ in range(queue.MAX_ATTEMPTS):
+            await queue.claim(adb, "worker-a", 1)
+            recoveries.append(await queue.release_own(adb, "worker-a"))
+
+        assert recoveries[-1] == queue.Recovery(0, frozenset({job}))
+        assert await queue.claim(adb, "worker-a", 1) == []
 
 
 class TestCancellation:

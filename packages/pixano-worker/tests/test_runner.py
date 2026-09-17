@@ -406,8 +406,8 @@ class TestRecovery:
         await runner.run_batch(adb, registry, "worker-mort", 2)
         await queue.claim(adb, "worker-mort", 3)
 
-        released = await queue.release_own(adb, "worker-mort")
-        assert released == 3
+        recovery = await queue.release_own(adb, "worker-mort")
+        assert recovery.requeued == 3
         while await runner.run_batch(adb, registry, "worker-vivant", 8):
             pass
 
