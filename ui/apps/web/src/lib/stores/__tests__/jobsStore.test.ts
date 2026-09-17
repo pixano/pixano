@@ -50,6 +50,7 @@ function job(overrides: Partial<Job> = {}): Job {
     skipped: 0,
     quarantined: 0,
     cancel_requested: false,
+    error: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
@@ -131,5 +132,20 @@ describe("jobsStore hearing a cancellation made elsewhere", () => {
 
     expect(store.jobs[0].cancel_requested).toBe(true);
     expect(store.jobs[0].state).toBe("running");
+  });
+});
+
+describe("jobsStore hearing a failure", () => {
+  it("keeps the reason the state event carries", async () => {
+    const { store, stream } = await startedStore();
+
+    stream.emit("state", {
+      job_id: "j1",
+      state: "error",
+      reason: "planning failed",
+      detail: "boom",
+    });
+
+    expect(store.jobs[0].error).toEqual({ reason: "planning failed", detail: "boom" });
   });
 });

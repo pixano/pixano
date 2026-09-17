@@ -150,6 +150,7 @@ class JobsStore {
       skipped: event.skipped ?? current.skipped,
       quarantined: event.quarantined ?? current.quarantined,
       cancel_requested: event.cancel_requested ?? current.cancel_requested,
+      error: event.reason ? { reason: event.reason, detail: event.detail } : current.error,
     };
   }
 
@@ -204,6 +205,13 @@ export function progressOf(job: Job): number {
 export function stateLabelOf(job: Job): string {
   if (job.cancel_requested && !isTerminal(job.state)) return "cancelling";
   return job.state;
+}
+
+/** Why a job failed, in one line — or null when it did not fail. */
+export function failureOf(job: Job): string | null {
+  if (job.state !== "error") return null;
+  const reason = job.error?.reason;
+  return typeof reason === "string" && reason ? reason : "failed for an unknown reason";
 }
 
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */

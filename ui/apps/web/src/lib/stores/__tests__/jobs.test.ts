@@ -6,7 +6,14 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { canCancel, isTerminal, outcomeOf, progressOf, stateLabelOf } from "../jobs.svelte";
+import {
+  canCancel,
+  failureOf,
+  isTerminal,
+  outcomeOf,
+  progressOf,
+  stateLabelOf,
+} from "../jobs.svelte";
 import type { Job } from "$lib/api/jobs";
 
 function job(overrides: Partial<Job> = {}): Job {
@@ -21,6 +28,7 @@ function job(overrides: Partial<Job> = {}): Job {
     skipped: 0,
     quarantined: 0,
     cancel_requested: false,
+    error: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
@@ -110,5 +118,22 @@ describe("canCancel", () => {
 
   it("does not offer it once the job has ended", () => {
     expect(canCancel(job({ state: "done" }))).toBe(false);
+  });
+});
+
+describe("failureOf", () => {
+  it("is silent for a job that did not fail", () => {
+    expect(failureOf(job({ state: "done" }))).toBeNull();
+  });
+
+  it("gives the reason of a failed job", () => {
+    // Independent review, D4: a failed job read "error" and nothing else.
+    expect(failureOf(job({ state: "error", error: { reason: "planning failed" } }))).toBe(
+      "planning failed",
+    );
+  });
+
+  it("says so when a failed job carries no reason", () => {
+    expect(failureOf(job({ state: "error", error: null }))).toBe("failed for an unknown reason");
   });
 });

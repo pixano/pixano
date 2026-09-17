@@ -10,16 +10,21 @@ License: CECILL-C
   type Props = {
     /** The outcome in words, or null while the job runs. */
     summary: string | null;
+    /** Why the job failed, or null. Shown above the outcome, since it is what matters then. */
+    failure: string | null;
     quarantined: number;
     /** The quarantine, once asked for. */
     items: QuarantinedItem[] | undefined;
     onShowQuarantine: () => void;
   };
-  let { summary, quarantined, items, onShowQuarantine }: Props = $props();
+  let { summary, failure, quarantined, items, onShowQuarantine }: Props = $props();
 </script>
 
 {#if summary}
   <div class="flex flex-col gap-1">
+    {#if failure}
+      <span class="text-xs text-destructive" title={failure}>{failure}</span>
+    {/if}
     <span class="text-xs text-muted-foreground">{summary}</span>
     {#if quarantined > 0}
       {#if items}
