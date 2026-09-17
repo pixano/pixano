@@ -40,6 +40,8 @@ class JobsStore {
   #stream: EventSource | null = null;
   /** The stream failed since it last opened: whatever it opens next, events were missed. */
   #missedEvents = false;
+  /** The reload in progress, shared by everyone who asks for one meanwhile. */
+  #refreshing: Promise<void> | null = null;
 
   /** Load the list and the runnable kinds, then follow along. */
   async start(): Promise<void> {
@@ -133,8 +135,8 @@ class JobsStore {
     }
     const index = this.jobs.findIndex((job) => job.id === event.job_id);
     if (index === -1) {
-      // A job someone else submitted. Fetching the whole list is heavy-handed, but it only
-      // happens on a job we have never seen, which is rare and never in a loop.
+      // A job someone else submitted. Its events keep coming until the reload lands, so the
+      // reload is shared rather than started once per event.
       void this.refresh();
       return;
     }
@@ -156,7 +158,21 @@ class JobsStore {
     else this.jobs[index] = job;
   }
 
-  async refresh(): Promise<void> {
+  /**
+   * Reload the list — once, however many callers ask at the same time.
+   *
+   * Every event of a job this panel has never seen asks for a reload, and a job submitted from
+   * elsewhere sends one per finished chunk: without sharing, that was a burst of identical
+   * requests, each opening a database connection on the server.
+   */
+  refresh(): Promise<void> {
+    this.#refreshing ??= this.#reload().finally(() => {
+      this.#refreshing = null;
+    });
+    return this.#refreshing;
+  }
+
+  async #reload(): Promise<void> {
     try {
       this.jobs = await listJobs();
       this.error = null;
