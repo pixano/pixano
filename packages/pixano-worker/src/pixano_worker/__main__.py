@@ -174,6 +174,9 @@ async def serve(
         min_size=1,
         max_size=concurrency + 1,
         kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S},
+        # Vérifier une connexion avant de la prêter : après un redémarrage de PostgreSQL, le pool
+        # garde des connexions mortes, et sans vérification il les rendrait une à une à la boucle.
+        check=AsyncConnectionPool.check_connection,
         open=False,
     ) as pool:
         async with pool.connection() as conn:
