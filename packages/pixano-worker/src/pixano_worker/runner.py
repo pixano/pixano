@@ -204,7 +204,7 @@ async def plan_one(
     if kind is None:
         # Aucun worker vivant ne déclare ce type. Le job ne sera jamais exécutable : le dire
         # tout de suite vaut mieux que de le laisser en attente sans explication.
-        await _fail_job(conn, job_id, {"reason": "type de job inconnu", "kind": kind_name})
+        await _fail_job(conn, job_id, {"reason": "unknown job kind", "kind": kind_name})
         log.warning("job %s : type '%s' inconnu de ce worker", job_id, kind_name)
         return job_id
 
@@ -217,12 +217,12 @@ async def plan_one(
         async with _kept_alive(refresh, f"planification du job {job_id}"):
             chunks = await (threads or default_threads()).run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
-        await _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
+        await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
         return job_id
 
     if not chunks:
-        await _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
+        await _fail_job(conn, job_id, {"reason": "planning produced no work"})
         return job_id
 
     try:
@@ -233,7 +233,7 @@ async def plan_one(
         # Un chunk que le schéma refuse — sans tâche, un payload qui ne se sérialise pas — est un
         # défaut du type de job, pas du worker : le job échoue et le dit, le worker continue.
         # Laissé remonter, il tuait le worker et laissait le job en planification sous son bail.
-        await _fail_job(conn, job_id, {"reason": "les chunks planifiés ont été refusés", "detail": str(error)})
+        await _fail_job(conn, job_id, {"reason": "the planned chunks were refused by the queue", "detail": str(error)})
         log.exception("job %s : chunks refusés à l'enregistrement", job_id)
         return job_id
     if recorded:
@@ -544,7 +544,7 @@ async def _execute(
     ).fetchone()
     kind = registry.get(row[0]) if row is not None else None
     if row is None or kind is None:
-        await queue.fail(conn, chunk, {"reason": "type de job inconnu"})
+        await queue.fail(conn, chunk, {"reason": "unknown job kind"})
         return
     kind_name, raw_params, dataset_id = row
 
@@ -576,10 +576,10 @@ async def _execute(
         # chunk est rendu, et si le thread finit par aboutir, son résultat sera refusé par le
         # jeton de garde — et son écriture, idempotente, n'aura rien doublé. Le pool compte ce
         # thread comme bloqué ; s'il y en a trop, la boucle arrêtera le worker.
-        await _retry_later(conn, chunk, {"reason": "durée maximale dépassée", "timeout_s": timeout_s})
+        await _retry_later(conn, chunk, {"reason": "time limit exceeded", "timeout_s": timeout_s})
         return
     except TransientError as error:
-        await _retry_later(conn, chunk, {"reason": "panne passagère", "detail": str(error)})
+        await _retry_later(conn, chunk, {"reason": "transient failure", "detail": str(error)})
         return
     except DATABASE_UNAVAILABLE:
         # Jamais un échec du type de job : le chunk garde son bail, la reprise le rendra.
