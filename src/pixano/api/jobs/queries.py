@@ -71,9 +71,11 @@ UPDATE {SCHEMA_NAME}.job_chunks SET state = 'cancelled', updated_at = now()
 WHERE job_id = %s AND state = 'pending'
 """
 
-# Un job dont plus rien ne tourne est terminal immédiatement.
+# Un job dont plus rien ne tourne est terminal immédiatement. Le bail de planification est
+# rendu avec l'état : le schéma refuse un bail hors de `planning`, et un job réclamé par un
+# planificateur au moment de l'annulation en porte un.
 SETTLE_IF_IDLE = f"""
-UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', updated_at = now()
+UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', planning_until = NULL, updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running')
   AND NOT EXISTS (
       SELECT 1 FROM {SCHEMA_NAME}.job_chunks
