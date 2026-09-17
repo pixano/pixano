@@ -115,6 +115,7 @@ export type JobEvent = {
   produced?: number;
   skipped?: number;
   quarantined?: number;
+  cancel_requested?: boolean;
 };
 
 /**
