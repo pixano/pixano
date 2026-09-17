@@ -93,8 +93,8 @@ class _Subscriber:
         try:
             self.queue.put_nowait(event)
         except asyncio.QueueFull:
-            # Un abonné lent ne doit pas retarder les autres. On le lâche ; sa reconnexion
-            # rattrapera ce qu'il a manqué par identifiant.
+            # Un abonné lent ne doit pas retarder les autres. On le lâche : son flux se ferme dès
+            # qu'il a vidé sa file, et sa reconnexion rattrapera ce qu'il a manqué.
             self.dropped = True
 
 
