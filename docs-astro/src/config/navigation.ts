@@ -35,23 +35,15 @@ export const sidebarNav: Record<string, NavSection[]> = {
         },
         { title: "Quickstart", href: "/getting_started/quickstart/" },
         { title: "Key Concepts", href: "/getting_started/key_concepts/" },
-        {
-          title: "Using the App",
-          href: "/getting_started/using_the_app/",
-        },
-        { title: "Inference", href: "/getting_started/inference/" },
-        {
-          title: "Semantic Search",
-          href: "/getting_started/semantic_search/",
-        },
-        {
-          title: "Importing & Exporting Data",
-          href: "/getting_started/importing_data/",
-        },
-        {
-          title: "Custom Importers",
-          href: "/getting_started/custom_importers/",
-        },
+        // Hidden until they are reworked for 0.8. Their page files are prefixed with "_"
+        // (src/pages/getting_started/_*.mdx), which keeps Astro from building them. To bring
+        // a chapter back: rename its file, restore its entry here and its card in
+        // src/pages/getting_started/index.astro.
+        // { title: "Using the App", href: "/getting_started/using_the_app/" },
+        // { title: "Inference", href: "/getting_started/inference/" },
+        // { title: "Semantic Search", href: "/getting_started/semantic_search/" },
+        // { title: "Importing & Exporting Data", href: "/getting_started/importing_data/" },
+        // { title: "Custom Importers", href: "/getting_started/custom_importers/" },
       ],
     },
   ],
