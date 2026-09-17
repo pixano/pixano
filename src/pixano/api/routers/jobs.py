@@ -223,7 +223,7 @@ def _events_response(request: Request, settings: Settings, job_id: str | None, t
     """Build an SSE response, or refuse when no queue is configured."""
     broker: EventBroker | None = getattr(request.app.state, "job_events", None)
     if broker is None or not broker.enabled or settings.database_url is None:
-        raise HTTPException(status_code=503, detail="aucune file de jobs configurée")
+        raise HTTPException(status_code=503, detail="no job queue is configured")
     return StreamingResponse(
         _stream(broker, settings.database_url, job_id, types, _last_event_id(request)),
         media_type="text/event-stream",
@@ -244,8 +244,8 @@ def _requested_types(types: str | None) -> frozenset[str] | None:
     if unknown:
         raise HTTPException(
             status_code=422,
-            detail=f"types d'événements inconnus : {', '.join(sorted(unknown))} — "
-            f"valeurs acceptées : {', '.join(sorted(_EVENT_TYPES))}",
+            detail=f"unknown event types: {', '.join(sorted(unknown))} — "
+            f"accepted values: {', '.join(sorted(_EVENT_TYPES))}",
         )
     return frozenset(wanted) if wanted else None
 
@@ -284,7 +284,7 @@ def get_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -
         try:
             record = jobs.get(conn, job_id)
         except jobs.JobNotFoundError as error:
-            raise HTTPException(status_code=404, detail=f"job inconnu : {job_id}") from error
+            raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return JobResponse.of(record)
@@ -304,7 +304,7 @@ def list_job_quarantine(
         try:
             items = jobs.quarantine(conn, job_id, limit)
         except jobs.JobNotFoundError as error:
-            raise HTTPException(status_code=404, detail=f"job inconnu : {job_id}") from error
+            raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return [
@@ -326,7 +326,7 @@ def cancel_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]
         try:
             record = jobs.cancel(conn, job_id)
         except jobs.JobNotFoundError as error:
-            raise HTTPException(status_code=404, detail=f"job inconnu : {job_id}") from error
+            raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return JobResponse.of(record)

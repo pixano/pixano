@@ -64,7 +64,7 @@ class TestConnect:
             jobs.connect(None)
 
     def test_an_unreachable_database_is_refused_clearly(self) -> None:
-        with pytest.raises(jobs.QueueUnavailableError, match="injoignable"):
+        with pytest.raises(jobs.QueueUnavailableError, match="unreachable"):
             jobs.connect("postgresql://nobody@127.0.0.1:1/none?connect_timeout=1")
 
 
