@@ -135,7 +135,7 @@ class TestItemFailures:
         _, outcome = _run(_Reader(lost={"r2"}))
 
         assert outcome.produced == 7
-        assert [(item.item_id, item.reason) for item in outcome.quarantined] == [("r2", "média introuvable")]
+        assert [(item.item_id, item.reason) for item in outcome.quarantined] == [("r2", "media not found")]
         assert "/medias/r2.jpg" not in inference.calls[0]
 
 

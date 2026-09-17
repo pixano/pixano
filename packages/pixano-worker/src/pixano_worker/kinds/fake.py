@@ -98,7 +98,7 @@ class FakeKind(JobKind[FakeParams]):
             produced=task_count - skipped - quarantined,
             skipped=skipped,
             quarantined=[
-                QuarantinedItem(item_id=f"task-{first + skipped + offset}", reason="échec demandé")
+                QuarantinedItem(item_id=f"task-{first + skipped + offset}", reason="failure requested")
                 for offset in range(quarantined)
             ],
         )

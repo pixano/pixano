@@ -125,7 +125,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 continue
             resolved = reader.resolve_media(IMAGE_TABLE, image)
             if resolved is None:
-                quarantined.append({"item_id": record_id, "reason": "média introuvable"})
+                quarantined.append({"item_id": record_id, "reason": "media not found"})
                 continue
             candidates.append((record_id, resolved.value))
             carried += int(resolved.carried_bytes)
@@ -140,7 +140,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file.
             raise TransientError(f"l'inférence refuse les {len(candidates)} image(s) du lot : {refused[0][1]}")
         quarantined.extend(
-            {"item_id": record_id, "reason": "refusée par l'inférence", "detail": detail}
+            {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
             for record_id, detail in refused
         )
 

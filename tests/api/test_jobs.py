@@ -208,7 +208,7 @@ class TestOutcome:
         for item in failed:
             queue.execute(
                 f"INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason, detail) "
-                "VALUES (%s, %s, %s, 'refusée par l''inférence', %s)",
+                "VALUES (%s, %s, %s, 'refused by the inference server', %s)",
                 (job_id, row[0], item, Jsonb({"status": 500})),
             )
 
@@ -235,8 +235,8 @@ class TestOutcome:
         items = jobs.quarantine(declared, job.id, limit=10)
 
         assert [(item.item_id, item.reason, item.detail) for item in items] == [
-            ("img-3", "refusée par l'inférence", {"status": 500}),
-            ("img-7", "refusée par l'inférence", {"status": 500}),
+            ("img-3", "refused by the inference server", {"status": 500}),
+            ("img-7", "refused by the inference server", {"status": 500}),
         ]
 
     def test_the_quarantine_of_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:

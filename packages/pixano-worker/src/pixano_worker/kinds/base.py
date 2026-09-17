@@ -86,7 +86,9 @@ class QuarantinedItem(BaseModel):
 
     Attributes:
         item_id: L'identifiant de l'item dans le dataset.
-        reason: Ce qui s'est passé, lisible par la personne qui ouvrira la quarantaine.
+        reason: Ce qui s'est passé, lisible par la personne qui ouvrira la quarantaine. **En
+            anglais** : l'interface l'affiche tel quel, et elle est en anglais. Le code reste
+            commenté en français, ce texte-là ne l'est pas parce qu'il n'est pas lu ici.
         detail: De quoi diagnostiquer, sans limite de forme.
     """
 
