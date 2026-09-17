@@ -7,6 +7,7 @@
 """REST endpoints for the processing job queue."""
 
 import asyncio
+import uuid
 from typing import Annotated, Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -233,8 +234,22 @@ async def _stream(
             yield event.to_sse()
 
 
+def _require_job_id(job_id: str) -> None:
+    """Refuse a malformed identifier before the stream opens.
+
+    The schema types identifiers as uuid. Inside the stream the query fails after the headers
+    are sent — a 200 that breaks, and a traceback in the log — so the check is made here.
+    """
+    try:
+        uuid.UUID(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
+
+
 def _events_response(request: Request, settings: Settings, job_id: str | None, types) -> StreamingResponse:
     """Build an SSE response, or refuse when no queue is configured."""
+    if job_id is not None:
+        _require_job_id(job_id)
     broker: EventBroker | None = getattr(request.app.state, "job_events", None)
     if broker is None or not broker.enabled or settings.database_url is None:
         raise HTTPException(status_code=503, detail="no job queue is configured")

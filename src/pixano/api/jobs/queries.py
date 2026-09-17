@@ -64,9 +64,12 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
        -- Without it a job read "error" and nothing else; only the worker's log knew. Looked up
        -- only for failed jobs: the list is mostly finished ones, and this is one more
        -- correlated subquery per listed row.
+       -- Without the chunk's stack trace: three frames of container paths are for the worker's
+       -- log, not for a browser.
        CASE WHEN j.state = 'error' THEN
             coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
                                WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
+            - 'trace'
        END
 FROM {SCHEMA_NAME}.jobs j
 """

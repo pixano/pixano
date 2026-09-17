@@ -341,6 +341,18 @@ class TestFailureReason:
 
         assert jobs.get(declared, job.id).error == {"reason": "kaboom"}
 
+    def test_the_stack_trace_of_a_failed_chunk_stays_in_the_worker(self, declared: psycopg.Connection) -> None:
+        """Independent review v2, R2: the API exposed three frames of container paths."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'error' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, error) "
+            "VALUES (%s, 0, 1, 'error', %s)",
+            (job.id, Jsonb({"reason": "kaboom", "trace": "Traceback (most recent call last) ..."})),
+        )
+
+        assert jobs.get(declared, job.id).error == {"reason": "kaboom"}
+
 
 class TestMalformedIdentifier:
     """Independent review, D5: a job identifier that is not a uuid answered 500."""
