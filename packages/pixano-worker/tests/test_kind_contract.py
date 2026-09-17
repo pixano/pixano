@@ -53,7 +53,7 @@ QUIET_EXAMPLES: dict[str, dict[str, Any]] = {
     "label": {**CONTRACT_EXAMPLES["label"], "write_to": None},
 }
 
-REGISTRY = default_registry()
+REGISTRY = default_registry(demo_kinds=True)
 
 
 class _Target:

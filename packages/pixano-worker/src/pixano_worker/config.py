@@ -42,6 +42,12 @@ DEFAULT_CONCURRENCY = 4
 # Une demi-heure laisse cette marge et libère tout de même un chunk pendu dans la matinée.
 DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 
+# Les types de jobs de démonstration — `fake`, qui ne calcule rien, et `label`, qui pose une
+# étiquette arbitraire — n'ont rien à faire dans un déploiement partagé : leur paramètre
+# `write_to` laisse écrire dans n'importe quelle table d'un dataset. Absents par défaut ; le
+# compose local les active pour la démo et les tests.
+DEMO_KINDS_FLAG = "PIXANO_WORKER_DEMO_KINDS"
+
 
 def heartbeat_path() -> str:
     """Emplacement du fichier de battement, partagé par le worker et sa sonde."""
@@ -60,6 +66,11 @@ def _required(name: str, hint: str) -> str:
 
 
 NumberT = TypeVar("NumberT", int, float)
+
+
+def _flag(name: str) -> bool:
+    """Un drapeau d'environnement : vrai pour `1`, `true`, `yes`, `on`, faux sinon."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _positive(name: str, default: NumberT, cast: Callable[[str], NumberT]) -> NumberT:
@@ -118,6 +129,7 @@ class WorkerConfig:
     heartbeat_path: str
     concurrency: int = DEFAULT_CONCURRENCY
     chunk_timeout_s: float = DEFAULT_CHUNK_TIMEOUT_S
+    demo_kinds: bool = False
 
     @classmethod
     def from_env(cls) -> "WorkerConfig":
@@ -132,6 +144,7 @@ class WorkerConfig:
             heartbeat_path=heartbeat_path(),
             concurrency=_positive("PIXANO_WORKER_CONCURRENCY", DEFAULT_CONCURRENCY, int),
             chunk_timeout_s=_positive("PIXANO_WORKER_CHUNK_TIMEOUT_S", DEFAULT_CHUNK_TIMEOUT_S, float),
+            demo_kinds=_flag(DEMO_KINDS_FLAG),
         )
 
     def describe(self) -> str:
@@ -144,6 +157,7 @@ class WorkerConfig:
             f"  médias (worker)   : {self.media_root}",
             f"  médias (inference): {self.inference_media_root}",
             f"  concurrence       : {self.concurrency} chunk(s) à la fois",
+            f"  types de démo     : {'activés' if self.demo_kinds else 'désactivés'}",
             f"  durée max. chunk  : {self.chunk_timeout_s:g} s",
         ]
         return "\n".join(lines)
