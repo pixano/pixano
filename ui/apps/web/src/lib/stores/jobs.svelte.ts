@@ -149,6 +149,7 @@ class JobsStore {
       produced: event.produced ?? current.produced,
       skipped: event.skipped ?? current.skipped,
       quarantined: event.quarantined ?? current.quarantined,
+      cancel_requested: event.cancel_requested ?? current.cancel_requested,
     };
   }
 

@@ -121,3 +121,15 @@ describe("jobsStore facing a job it has never seen", () => {
     expect(api.listJobs).toHaveBeenCalledTimes(3);
   });
 });
+
+describe("jobsStore hearing a cancellation made elsewhere", () => {
+  it("shows the job as cancelling from the event alone", async () => {
+    // Independent review, D3: only the tab that clicked knew; every other kept "running".
+    const { store, stream } = await startedStore();
+
+    stream.emit("state", { job_id: "j1", state: "running", cancel_requested: true });
+
+    expect(store.jobs[0].cancel_requested).toBe(true);
+    expect(store.jobs[0].state).toBe("running");
+  });
+});
