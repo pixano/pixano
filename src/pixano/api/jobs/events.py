@@ -25,12 +25,10 @@ from typing import Any, AsyncIterator
 
 import psycopg
 
-from .queries import SCHEMA_NAME
+from .queries import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 logger = logging.getLogger(__name__)
-
-NOTIFY_CHANNEL = "pixano_jobs_events"
 
 # Espacement des tentatives quand la base est injoignable. Le plafond est bas : une écoute
 # interrompue ne perd rien — le rattrapage par identifiant répare le trou — mais elle laisse
