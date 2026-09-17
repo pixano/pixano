@@ -83,6 +83,9 @@ services:
     # arrêté assez vite pour qu'on lise la cause, au lieu de boucler sans fin dans les journaux.
     # Les pannes passagères de la base, elles, sont absorbées par le worker sans redémarrer.
     restart: on-failure:3
+    # Au-dessus des 30 s que le worker laisse à ses chunks en vol pour finir (SHUTDOWN_GRACE_S) :
+    # sans cette marge, docker le tuerait avant qu'il ait rendu ceux qui n'ont pas fini.
+    stop_grace_period: 45s
     environment:
       PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
       PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}

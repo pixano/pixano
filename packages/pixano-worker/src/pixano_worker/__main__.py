@@ -18,6 +18,7 @@ types se fait une fois et dans l'ordre. Seule la boucle de travail est asynchron
 import asyncio
 import logging
 import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -158,9 +159,10 @@ def main() -> int:
             config.chunk_timeout_s,
         )
     )
-    if code:
-        _exit_now(code)
-    return 0
+    # Toujours sans attendre les threads : après un arrêt ou une saturation, certains peuvent
+    # rester bloqués sur un appel qui ne revient pas.
+    _exit_now(code)
+    return code
 
 
 def _exit_now(code: int) -> None:
@@ -192,6 +194,14 @@ async def serve(
     heartbeat = asyncio.create_task(_beat_forever(alive))
     threads = WorkerThreads.for_concurrency(concurrency)
 
+    # `docker compose stop` envoie SIGTERM. Le worker est le process 1 du conteneur, et le noyau
+    # ignore SIGTERM pour un process 1 sans gestionnaire : docker attendait son délai puis tuait
+    # le worker, chunks en cours compris.
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(signum, stop.set)
+
     # Une connexion par chunk en vol, plus une pour planifier, réclamer et récupérer.
     async with AsyncConnectionPool(
         database_url,
@@ -219,8 +229,24 @@ async def serve(
         log.info("worker démarré, en attente de jobs")
         try:
             await runner.work(
-                pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S, chunk_timeout_s, threads
+                pool,
+                registry,
+                worker_id,
+                concurrency,
+                library,
+                media,
+                IDLE_POLL_INTERVAL_S,
+                chunk_timeout_s,
+                threads,
+                stop,
             )
+            # Arrêt demandé. Ce qui tourne encore est rendu tout de suite : attendre l'expiration
+            # du bail coûterait deux minutes, et le prochain worker n'aura peut-être pas la même
+            # identité pour les reprendre au démarrage.
+            async with pool.connection() as conn:
+                handed_back = await queue.release_own(conn, worker_id)
+                await runner.settle_abandoned(conn, handed_back)
+            log.info("worker arrêté, %d chunk(s) rendu(s) à la file", handed_back.requeued)
         except WorkerSaturatedError as error:
             # S'arrêter plutôt que de rester « vivant » sans pouvoir rien démarrer : relancé, le
             # worker repart avec des threads neufs et reprend ses chunks tout de suite.

@@ -765,3 +765,69 @@ class TestDatabaseOutage:
 
         assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
         assert _state(declared, job) == ("done", 40, 40)
+
+
+class TestGracefulShutdown:
+    """Revue de l'étape 1 : `docker compose stop` coupait les chunks en cours sans les rendre."""
+
+    async def test_an_idle_worker_stops_at_once(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        """Pas d'attente de la pause en cours : docker ne doit pas attendre pour rien."""
+        stop = asyncio.Event()
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
+            worker = asyncio.create_task(runner.work(pool, registry, "worker-test", 1, idle_poll_s=60, stop=stop))
+            await asyncio.sleep(0.2)
+
+            stop.set()
+
+            await asyncio.wait_for(worker, timeout=2)
+
+    async def test_chunks_in_flight_finish_and_nothing_new_is_claimed(
+        self, declared: psycopg.Connection, postgres_url: str, registry: Registry
+    ) -> None:
+        job = _submit(declared, params={"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.01})
+        stop = asyncio.Event()
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
+            worker = asyncio.create_task(runner.work(pool, registry, "worker-test", 2, idle_poll_s=0.05, stop=stop))
+            for _ in range(200):
+                if _state(declared, job)[1] >= 40:
+                    break
+                await asyncio.sleep(0.02)
+
+            stop.set()
+            await asyncio.wait_for(worker, timeout=5)
+
+        states = dict(
+            declared.execute(f"SELECT state, count(*) FROM {SCHEMA_NAME}.job_chunks GROUP BY state").fetchall()
+        )
+        assert "running" not in states, "les chunks en vol ont fini avant l'arrêt"
+        assert states.get("pending", 0) > 0, "rien de nouveau n'a été réclamé après la demande d'arrêt"
+
+    async def test_chunks_that_outlast_the_grace_are_left_to_be_handed_back(
+        self,
+        declared: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        postgres_url: str,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(runner, "SHUTDOWN_GRACE_S", 0.05)
+        _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.1})
+        stop = asyncio.Event()
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
+            worker = asyncio.create_task(runner.work(pool, registry, "worker-test", 1, idle_poll_s=0.05, stop=stop))
+            for _ in range(100):
+                running = declared.execute(
+                    f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'running'"
+                ).fetchone()
+                if running and running[0]:
+                    break
+                await asyncio.sleep(0.02)
+
+            stop.set()
+            await asyncio.wait_for(worker, timeout=2)
+
+        recovery = await queue.release_own(adb, "worker-test")
+
+        assert recovery.requeued == 1
