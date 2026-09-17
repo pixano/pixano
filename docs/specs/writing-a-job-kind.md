@@ -147,8 +147,10 @@ enables them with `PIXANO_WORKER_DEMO_KINDS`.
 
 Each worker publishes its registry into `job_kinds` at startup, which is the only bridge
 between the application and the worker — they share no code. The application validates a
-submission against what a worker declared it can run, so a kind that no live worker carries is
-refused at submission rather than sitting in the queue forever.
+submission against what a worker has declared it can run, so a kind no worker has ever declared
+is refused at submission. A declaration is not withdrawn when its worker stops — liveness of
+workers is step 4's — so a job for a declared kind whose workers are all down is accepted, and
+waits until one returns.
 
 Then add an entry to `CONTRACT_EXAMPLES` in `tests/test_kind_contract.py`. A kind without one
 fails the suite on purpose: a kind nobody knows how to exercise has escaped the contract.
