@@ -380,6 +380,10 @@ What remains, each noticed while resolving them:
 - **The inference answers 500 for a client error.** A corrupt image or a missing path should
   be a 4xx. The worker works around it by isolating the culprit, at the cost of extra calls;
   the fix belongs in pixano-inference.
+- **Listing jobs costs three correlated subqueries per row.** Measured by the independent
+  review at 256 000 chunks: 168–281 ms for fifty jobs, under the 500 ms p99 the project
+  targets but with little margin at the cap of two hundred. Materialising the counters at
+  chunk completion, or a covering index on `(job_id, state)`, are the two levers.
 - **The concurrency default is not measured.** On the CPU stack, throughput already fell as
   batches grew (§5quater); whether four chunks in flight help or hurt there is unknown, and
   on a GPU the answer will differ.
