@@ -99,7 +99,7 @@ Compared to the image dataset schema, several things are new:
 
 - **`mask`** — Segmentation masks in compressed run-length encoding. Each mask is a per-frame annotation linked to a tracklet and entity.
 
-You could also add per-frame entity state (e.g. `entity_dynamic_state: { attrs: { occluded: { type: bool, default: false } } }`) — DAVIS doesn't need it beyond the mask itself. See [Importing Data](/getting_started/importing_data/) for the full reference.
+You could also add per-frame entity state (e.g. `entity_dynamic_state: { attrs: { occluded: { type: bool, default: false } } }`) — DAVIS doesn't need it beyond the mask itself. See [Importing Data](/pixano/getting_started/importing_data/) for the full reference.
 
 ## Import the dataset
 
@@ -179,13 +179,13 @@ Pixano validates every line first and prints a plan; use `--dry-run` to only val
 pixano server run ./my_library
 ```
 
-Open **http://127.0.0.1:7492** and click the DAVIS dataset card. When you open a video item, the UI switches to video mode: the current frame is displayed in the center, and the **Video Inspector** panel appears at the bottom with a timeline, track bars for each entity, and playback controls.
+Open **http://127.0.0.1:7492** and click the DAVIS dataset card. When you open a video record, the UI switches to video mode: the current frame is displayed in the center, and the **Video Inspector** appears at the bottom with the timeline and playback controls.
 
 ## Key Pixano features for video tracking
 
 ### Tracklets
 
-A tracklet is the core concept that connects single-frame annotations into a temporal identity. In the Video Inspector, each entity's track is displayed as a horizontal bar along the timeline. Colored segments within the bar represent tracklets — continuous periods where the entity is visible.
+A tracklet is the core concept that connects single-frame annotations into a temporal identity. Select an entity in the **Entities** tab to reveal its track as a horizontal bar along the timeline; you can pin up to two entities to compare them side by side. Colored segments within a bar represent tracklets — continuous periods where the entity is visible.
 
 Keyframes (frames with real annotations) are shown as dots on the tracklet. Frames between keyframes can be interpolated automatically for bounding boxes and keypoints.
 

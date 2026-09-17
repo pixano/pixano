@@ -15,7 +15,7 @@ Pixano 0.8 imports and exports datasets as plain files — no Python required. Y
 
 - **Importing**: the folder layout, the `metadata.jsonl` line format (JSONL v2), the `dataset.yaml` schema spec, and media storage options
 - **Exporting**: how to export a dataset, including record base fields with `--include-record-field`
-- The CLI: `import`, `export`, `formats`, and `migrate-jsonl`
+- The CLI: `import`, `export`, `formats`, `jobs`, `migrate-jsonl`, `optimize`, and `fix-creation-dates`
 
 </Callout>
 
@@ -227,6 +227,28 @@ Pixano stores media one of two ways (spec §6):
 
 Mixed datasets are legal: local images embed while, say, LeRobot episode videos stay as `https://` URIs. The dataset records itself as `mixed`.
 
+## Other import formats
+
+Besides JSONL v2, Pixano ships importers for two common formats. They are detected
+automatically, so the `import` command is the same — only the extra dependency differs.
+
+| Format | Install | Notes |
+|--------|---------|-------|
+| **COCO** | `pip install "pixano[coco]"` | Object-detection style JSON. Streamed in two passes, so very large annotation files work. |
+| **LeRobot** (v2.1 and v3) | `pip install "pixano[lerobot]"` | Robotics episodes become annotatable frame sequences; `action` and `observation.state` land in a `timeseries` table. |
+
+LeRobot datasets can be pulled straight from the Hugging Face Hub, downloading only the
+episodes you ask for:
+
+```sh
+pixano data import /path/to/data_dir org/dataset-name --episodes '0:4'
+```
+
+Use `--episodes '0:4'` or `--episodes '1,3'` to select a subset, and `--max-frames` to cap the
+number of frames per episode.
+
+Run `pixano data formats` to list every format available in your installation.
+
 ## Exporting Data
 
 ### General
@@ -238,6 +260,18 @@ pixano data export /path/to/data_dir <dataset_name> <dest>
 ```
 
 produces a self-contained source folder (JSONL files + `dataset.yaml`) ready for re-import or sharing.
+
+Two options control the output:
+
+| Option | Description |
+|--------|-------------|
+| `--format` | `pixano_jsonl` (default) or `coco`. |
+| `--media` | `files` (default — write embedded media out as files) or `uris` (write the stored URIs verbatim). |
+
+```sh
+# Export to COCO instead of JSONL v2
+pixano data export /path/to/data_dir my_dataset ./out --format coco
+```
 
 The exported JSONL contains every field Pixano stores — views, entities, annotations, and their ids — in the exact format described in the [Importing Data](#importing-data) section above.
 
@@ -350,6 +384,6 @@ Everything 0.7 silently guessed — bbox normalization from value ranges, mentio
 </Callout>
 
 <PrevNext
-  prev={{ href: "/getting_started/key_concepts/", label: "Key Concepts" }}
-  next={{ href: "/cookbook/", label: "Cookbook" }}
+  prev={{ title: "Key Concepts", href: "/getting_started/key_concepts/" }}
+  next={{ title: "Cookbook", href: "/cookbook/" }}
 />

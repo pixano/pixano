@@ -14,7 +14,7 @@
 [![Docker](https://img.shields.io/docker/v/pixano/pixano?sort=semver&label=release&logo=docker&logoColor=white)](https://hub.docker.com/r/pixano/pixano/)
 [![Coverage](https://img.shields.io/codecov/c/github/pixano/pixano/main?logo=codecov&logoColor=white)](https://codecov.io/github/pixano/pixano)
 [![Tests](https://img.shields.io/github/actions/workflow/status/pixano/pixano/backend.yml?label=tests&branch=main)](https://github.com/pixano/pixano/actions/workflows/backend.yml)
-[![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fpixano.github.io%2F&up_message=online&down_message=offline&label=docs)](https://pixano.github.io)
+[![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fpixano.github.io%2Fpixano%2F&up_message=online&down_message=offline&label=docs)](https://pixano.github.io/pixano/)
 [![Python version](https://img.shields.io/pypi/pyversions/pixano?color=blue&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-CeCILL--C-blue.svg)](LICENSE)
 
@@ -103,7 +103,7 @@ For more details on running Pixano locally (frontend setup, testing, formatting)
 
 # Using Pixano
 
-Please refer to our <a href="https://pixano.github.io/pixano/latest/getting_started/" target="_blank">Getting started</a> guide for information on how to launch and use the Pixano app, and how to create and use Pixano datasets.
+Please refer to our <a href="https://pixano.github.io/pixano/getting_started/" target="_blank">Getting started</a> guide for information on how to launch and use the Pixano app, and how to create and use Pixano datasets.
 
 # Contributing
 

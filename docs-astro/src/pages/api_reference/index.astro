@@ -6,19 +6,31 @@ import Card from "../../components/Card.astro";
 
 <DocsLayout title="API Reference" section="api_reference">
   <h1>Pixano API reference</h1>
-  <p>Here you will find the documentation for all of our Python API.</p>
+  <p>
+    Reference for Pixano's Python API, generated from the source. Every module is
+    also reachable from the sidebar and through search.
+  </p>
 
   <CardGrid>
-    <Card title="App" href="/api_reference/app/" icon="api">
-      The Pixano application, REST API, and CLI entry points.
+    <Card title="Datasets" href="/api_reference/module/datasets/dataset/" icon="database">
+      The <code>Dataset</code> class: open a dataset, query records, and manipulate tables.
     </Card>
-    <Card title="Datasets" href="/api_reference/datasets/" icon="database">
-      Backend to construct, import, export, and manipulate datasets.
+    <Card title="Import & export" href="/api_reference/module/datasets/io/api/" icon="download">
+      The <code>analyze → plan → ingest</code> core shared by the CLI, the REST API, and Python.
     </Card>
-    <Card title="Features" href="/api_reference/features/" icon="code">
-      Schemas and data types for items, views, annotations, and more.
+    <Card title="Schemas" href="/api_reference/module/schemas/schema_group/" icon="code">
+      The schema groups and the record, view, entity, and annotation types built on them.
     </Card>
-    <Card title="Utils" href="/api_reference/utils/" icon="wrench">
+    <Card title="REST API" href="/api_reference/module/api/main/" icon="api">
+      The FastAPI application and its routers.
+    </Card>
+    <Card title="CLI" href="/api_reference/module/cli/data/" icon="target">
+      The <code>pixano data</code> commands: import, export, jobs, and migration.
+    </Card>
+    <Card title="Inference" href="/api_reference/module/inference/provider/" icon="robot">
+      Providers and tasks used to reach a pixano-inference server.
+    </Card>
+    <Card title="Utils" href="/api_reference/module/utils/python/" icon="wrench">
       Utility functions at the library level.
     </Card>
   </CardGrid>

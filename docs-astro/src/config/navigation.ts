@@ -229,10 +229,6 @@ export const sidebarNav: Record<string, NavSection[]> = {
           href: "/api_reference/module/inference/registry/",
         },
         { title: "types", href: "/api_reference/module/inference/types/" },
-        {
-          title: "mask_generation",
-          href: "/api_reference/module/inference/mask_generation/",
-        },
       ],
     },
     {
