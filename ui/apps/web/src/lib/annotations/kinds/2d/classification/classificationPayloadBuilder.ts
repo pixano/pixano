@@ -112,7 +112,10 @@ export const classificationPayloadBuilder = {
    * the entity yields no usable class, since a classification asserting nothing
    * is a row no one can act on.
    */
-  geometryForEntity(_annotation, entity): ClassificationGeometry | null {
+  geometryForEntity(
+    _annotation: LocalAnnotation<ClassificationGeometry>,
+    entity: Record<string, unknown> | undefined,
+  ): ClassificationGeometry | null {
     const label = pickEntityLabel(entity).trim();
     if (!label) return null;
     return { labels: [label], confidences: [HUMAN_CONFIDENCE] };
