@@ -27,6 +27,8 @@ from pixano.datasets import Dataset
 
 from . import queue
 from .kinds import Registry
+from .media import MediaResolver
+from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from .writer import JobWriter
 
@@ -109,7 +111,12 @@ def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload
     conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
 
-def plan_one(conn: psycopg.Connection, registry: Registry) -> str | None:
+def plan_one(
+    conn: psycopg.Connection,
+    registry: Registry,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+) -> str | None:
     """Découper un job en attente de planification.
 
     Returns:
@@ -130,7 +137,7 @@ def plan_one(conn: psycopg.Connection, registry: Registry) -> str | None:
 
     try:
         params = kind.validate_params(raw_params)
-        chunks = list(kind.plan(dataset_id, params))
+        chunks = list(kind.plan(_reader_for(library, dataset_id, media), params))
     except Exception as error:
         _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
@@ -169,6 +176,17 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
     return Dataset.find(dataset_id, library)
 
 
+def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None) -> JobReader:
+    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert."""
+
+    def open_dataset() -> Dataset:
+        if library is None:
+            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+        return _open_dataset(library, dataset_id)
+
+    return JobReader(open_dataset, media or MediaResolver("/medias", "/medias"))
+
+
 def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
     """Lier un écrivain au dataset d'un job.
 
@@ -190,6 +208,7 @@ def run_batch(
     worker_id: str,
     batch_size: int,
     library: Path | None = None,
+    media: MediaResolver | None = None,
 ) -> int:
     """Réclamer un lot de chunks et l'exécuter.
 
@@ -208,14 +227,20 @@ def run_batch(
         if chunk.job_id in cancelled:
             queue.cancel_chunk(conn, chunk)
             continue
-        _run_chunk(conn, registry, chunk, library)
+        _run_chunk(conn, registry, chunk, library, media)
 
     for job_id in jobs_touched:
         _settle(conn, job_id)
     return len(chunks)
 
 
-def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk, library: Path | None) -> None:
+def _run_chunk(
+    conn: psycopg.Connection,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None,
+    media: MediaResolver | None,
+) -> None:
     """Exécuter un chunk, et consigner ce qui en résulte."""
     row = conn.execute(
         f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
@@ -227,7 +252,8 @@ def _run_chunk(conn: psycopg.Connection, registry: Registry, chunk: queue.Chunk,
 
     try:
         params = kind.validate_params(row[1])
-        result = kind.process(chunk.payload, params)
+        reader = _reader_for(library, row[2], media)
+        result = kind.process(reader, chunk.payload, params)
         writer = _writer_for(library, row[2], row[0], chunk.job_id, kind.source_type)
         kind.write(writer, result, chunk.payload, params)
     except Exception as error:

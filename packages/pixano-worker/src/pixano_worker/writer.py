@@ -39,6 +39,27 @@ _ID_LENGTH = 22
 _LEFTOVER_PROBE = 32
 
 
+class DatasetReadSource(Protocol):
+    """Les seules opérations dont la planification d'un job a besoin.
+
+    Un type de job doit pouvoir énumérer ce qu'il va traiter sans ouvrir un dataset lui-même :
+    c'est la même raison que pour l'écriture — un point unique, pour que sérialiser ou mettre
+    en cache les accès reste un jour une modification d'un seul fichier.
+    """
+
+    def count_rows_where(self, table_name: str, where: str | None = None) -> int:
+        """Compter les lignes d'une table, sans la matérialiser."""
+        ...
+
+    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+        """Lire des lignes d'une table."""
+        ...
+
+    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+        """Les octets d'une vue embarquée, et leur type."""
+        ...
+
+
 class DatasetWriteTarget(Protocol):
     """Les seules opérations dont l'écriture d'un job a besoin.
 
@@ -57,6 +78,19 @@ class DatasetWriteTarget(Protocol):
 
     def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
         """Lire les lignes portant ces identifiants."""
+        ...
+
+    def has_record_embeddings(self) -> bool:
+        """Si une table d'embeddings de records existe déjà."""
+        ...
+
+    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
+        """Créer la table d'embeddings pour une largeur de vecteur donnée."""
+        ...
+
+    @property
+    def info(self) -> Any:
+        """Les métadonnées du dataset, dont les schémas de tables."""
         ...
 
 
@@ -178,3 +212,32 @@ class JobWriter:
             return []
         found = self.dataset.get_data(table_name, ids=wanted)
         return [row.id for row in found]
+
+    # Le nom canonique de la table d'embeddings de records dans Pixano.
+    EMBEDDING_TABLE = "embeddings"
+
+    def write_record_embeddings(self, record_ids: Sequence[str], vectors: Sequence[Any], model: str) -> None:
+        """Écrire un vecteur par enregistrement, en remplaçant le précédent.
+
+        La table n'est pas ordinaire : sa largeur dépend du modèle, donc elle ne peut être
+        créée qu'une fois un premier vecteur connu. Créer au premier passage évite d'imposer
+        au type de job de connaître la dimension de son modèle.
+
+        Raises:
+            ValueError: Les vecteurs ne correspondent pas aux enregistrements.
+        """
+        if len(record_ids) != len(vectors):
+            raise ValueError(f"{len(record_ids)} enregistrements pour {len(vectors)} vecteurs")
+        if not vectors:
+            return
+
+        dataset = self.dataset
+        if not dataset.has_record_embeddings():
+            dataset.create_record_embedding_table(dim=len(vectors[0]), model_id=model)
+
+        schema = dataset.info.tables[self.EMBEDDING_TABLE]
+        rows = [
+            schema(id=derive_id(self.kind, record_id, 0), record_id=record_id, vector=list(vector))
+            for record_id, vector in zip(record_ids, vectors)
+        ]
+        dataset.update_data(self.EMBEDDING_TABLE, rows)

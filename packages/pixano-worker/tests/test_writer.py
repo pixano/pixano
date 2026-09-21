@@ -8,10 +8,19 @@
 
 import hashlib
 import json
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter, derive_id
+
+
+class _Vector:
+    """Une ligne d'embedding, pour la doublure."""
+
+    def __init__(self, id: str, record_id: str, vector: Any) -> None:
+        self.id, self.record_id, self.vector = id, record_id, vector
 
 
 class _FakeRow:
@@ -28,6 +37,7 @@ class _FakeDataset:
 
     def __init__(self) -> None:
         self.tables: dict[str, dict[str, Any]] = {}
+        self.info = SimpleNamespace(tables={})
 
     def update_data(self, table_name: str, data: list[Any]) -> None:
         table = self.tables.setdefault(table_name, {})
@@ -43,6 +53,13 @@ class _FakeDataset:
         table = self.tables.get(table_name, {})
         return [table[row_id] for row_id in ids if row_id in table]
 
+    def has_record_embeddings(self) -> bool:
+        return "embeddings" in self.tables
+
+    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
+        self.tables.setdefault("embeddings", {})
+        self.info.tables["embeddings"] = _Vector
+
     def checksum(self, table_name: str) -> str:
         """Une empreinte du contenu, insensible à l'ordre d'écriture."""
         table = self.tables.get(table_name, {})
@@ -53,6 +70,25 @@ class _FakeDataset:
 @pytest.fixture
 def dataset() -> _FakeDataset:
     return _FakeDataset()
+
+
+class _EmptySource:
+    """Un dataset vide : le type factice n'y lit rien, mais le contrat veut un lecteur."""
+
+    def count_rows_where(self, table_name, where=None):
+        return 0
+
+    def get_data(self, table_name, **kwargs):
+        return []
+
+    def get_view_binary(self, table_name, view_id):
+        return None
+
+
+def _reader() -> JobReader:
+    from pixano_worker.media import MediaResolver
+
+    return JobReader(lambda: _EmptySource(), MediaResolver("/medias", "/medias"))
 
 
 def _writer(dataset: _FakeDataset, job_id: str = "job-1") -> JobWriter:
@@ -185,9 +221,9 @@ class TestAgainstRealLance:
 
         kind = FakeKind()
         params = FakeParams(task_count=task_count, chunk_size=20, seconds_per_task=0.0, write_to="classifications")
-        for chunk in kind.plan("jouet", params):
+        for chunk in kind.plan(_reader(), params):
             writer = JobWriter(lambda: toy, kind.name, job_id, kind.source_type)
-            kind.write(writer, kind.process(chunk.payload, params), chunk.payload, params)
+            kind.write(writer, kind.process(_reader(), chunk.payload, params), chunk.payload, params)
 
     @staticmethod
     def _fingerprint(toy) -> tuple[int, str]:

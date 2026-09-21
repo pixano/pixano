@@ -19,6 +19,7 @@ from pydantic import Field
 
 from pixano.schemas.annotations.classification import Classification
 
+from ..reader import JobReader
 from ..writer import JobWriter
 from .base import Chunk, JobKind, JobParams
 
@@ -53,8 +54,8 @@ class FakeKind(JobKind[FakeParams]):
     # Aucun modèle ne tourne ici : ce que ce type écrit n'est pas une prédiction.
     source_type = "other"
 
-    def plan(self, dataset_id: str, params: FakeParams) -> Iterable[Chunk]:
-        """Découper en chunks de taille fixe."""
+    def plan(self, reader: JobReader, params: FakeParams) -> Iterable[Chunk]:
+        """Découper en chunks de taille fixe. Rien à lire : le compte est dans les paramètres."""
         remaining = params.task_count
         first = 0
         while remaining > 0:
@@ -63,7 +64,7 @@ class FakeKind(JobKind[FakeParams]):
             first += size
             remaining -= size
 
-    def process(self, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
+    def process(self, reader: JobReader, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
         """Dormir le temps annoncé, puis rendre un résultat symbolique.
 
         Raises:

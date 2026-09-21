@@ -160,7 +160,39 @@ its own verification that nothing relies on the import's side effect.
 | Event retention                             | step 6                       | Same reason                                                                                                                                                                                                                                                                                                                         |
 | Containers running as an unprivileged user  | before any shared deployment | Acceptable while everything is local; it stops being acceptable when the worker writes to shared storage                                                                                                                                                                                                                            |
 
+## 6bis. Known defects, scheduled for the hardening lot
+
+Three are execution defects rather than choices, and the subsystem should not be called
+finished while they stand.
+
+- **A chunk outliving its lease is stolen mid-flight.** The lease is two minutes and nothing
+  refreshes it while a chunk runs. It holds today — eight CLIP images take seconds — but a
+  larger chunk or a slower model would exceed it, another worker would take the chunk over,
+  and both would write. Idempotent writes save the data; the work is still done twice. The
+  fix is a refresh from the same place that already beats for the liveness probe.
+- **A live worker holding a hung chunk holds it forever.** Read off Procrastinate's queries
+  early on and never acted upon: the docker probe catches a dead worker, not a healthy one
+  whose inference call never returns. It needs a maximum chunk duration, independent of the
+  lease.
+- **The worker has no concurrency.** The plan asks for "a tunable internal concurrency, sized
+  to saturate the inference instance"; the runner processes chunks one at a time. That is the
+  difference between saturating a GPU and occupying five percent of it, and it is what the
+  per-model in-flight cap of step 4 is meant to bound.
+
 ## 7. Open questions
+
+- **`done_tasks` is an invariant the schema does not hold.** The counter on `jobs` is
+  denormalised to avoid summing chunks on every progress event, but nothing guarantees it
+  agrees with the chunks actually finished. Today both writes share a transaction, so it
+  holds; it is carried by the code rather than by the database, which is the kind of thing
+  that drifts. Either a test compares the counter against the sum after every scenario, or
+  the column goes and the aggregate is paid. Raised in review, not yet settled.
+- **Job identifiers are `uuid`, unlike every other identifier in Pixano**, which uses
+  shortuuid text. The original reason — that neither side would need an identifier library —
+  no longer holds now that both depend on `pixano`. What remains in favour is that the
+  database guarantees uniqueness unprompted; what remains against is that a job identifier
+  looks like nothing else in the system, in URLs and in logs. Raised in review, not yet
+  settled.
 
 - **Which component writes to PostgreSQL.** The worker owns the schema, but `POST /jobs` is an application endpoint that must insert a job and its chunks in one transaction, and the application has no PostgreSQL driver today. Either it gains one, or the endpoint proxies. To be settled when the queue lands.
 - **Fairness across jobs.** The claim orders by chunk identifier, so an older job drains before a newer one and a large job can starve a small one. Batching by job would give locality at the cost of arbitrary job order.
