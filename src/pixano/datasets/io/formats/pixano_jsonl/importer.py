@@ -139,6 +139,40 @@ class PixanoJsonlImporter(DatasetImporter):
     # Analyze
     # ------------------------------------------------------------------
 
+    def source_fingerprint(self, source: SourceRef, spec: ImportSpec) -> str:
+        """Include the source inventory and local media referenced outside it."""
+        from ...source_fingerprint import local_source_fingerprint
+
+        if source.path is None or not source.path.is_dir():
+            return ""
+        if is_media_only_source(source.path):
+            return local_source_fingerprint(source.path)
+        info = self.resolve_info(spec, source)
+
+        def dependencies():
+            for split_dir in _splits_of(source.path):
+                metadata_file = split_dir / METADATA_FILENAME
+                if not metadata_file.is_file():
+                    continue
+                report = PreflightReport()
+                context = _LineContext(info, spec, split_dir, self.effective_namespace(spec, source))
+                for line in parse_file(metadata_file, split_dir.name, context.view_kinds, report):
+                    for payload in line.views.values():
+                        uris = [getattr(payload, "uri", None)]
+                        uris.extend(frame.uri for frame in (getattr(payload, "frames", None) or []))
+                        for uri in uris:
+                            if uri and not uri.startswith(("http://", "https://", "s3://")):
+                                yield split_dir / uri
+                        pattern = getattr(payload, "frame_pattern", None)
+                        if pattern:
+                            yield from sorted(split_dir.glob(pattern))
+                    for sidecar in line.model.annotation_files:
+                        yield from sorted(split_dir.glob(sidecar.pattern))
+                if not report.is_valid:
+                    raise ValueError("Source metadata changed or cannot be verified")
+
+        return local_source_fingerprint(source.path, dependencies())
+
     def analyze(self, source: SourceRef, spec: ImportSpec, limits: AnalyzeLimits) -> ImportPlan:
         """Stream-validate every split with the ingest parser; never touch storage."""
         plan = ImportPlan(format=self.format_name, importer_version=self.importer_version)

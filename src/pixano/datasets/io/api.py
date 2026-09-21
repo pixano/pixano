@@ -58,6 +58,9 @@ def analyze(
     source_ref = SourceRef.from_string(str(source))
     resolved = _resolve_importer(source_ref, spec, importer)
     plan = resolved.analyze(source_ref, spec, limits or AnalyzeLimits())
+    plan.spec_fingerprint = spec.fingerprint()
+    if plan.report.is_valid:
+        plan.source_fingerprint = resolved.source_fingerprint(source_ref, spec)
     if plan.inferred_schema is None:
         # The schema the import would create, shown for confirmation (spec §4);
         # when it cannot resolve, the plan's findings already explain why.
@@ -115,7 +118,7 @@ def import_dataset(
     resolved = _resolve_importer(source_ref, spec, importer)
 
     if plan is None:
-        plan = resolved.analyze(source_ref, spec, AnalyzeLimits())
+        plan = analyze(source, spec, importer=resolved)
     if not plan.report.is_valid:
         raise SpecValidationError(
             f"Analysis found {plan.report.error_count} error(s); fix the source or inspect the plan report."

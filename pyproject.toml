@@ -92,6 +92,29 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 artifacts = ["src/pixano/api/dist"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/ui",
+  "/tests",
+  "/.gitignore",
+  "/CHANGELOG.md",
+  "/LICENSE",
+  "/README.md",
+  "/VERSION",
+  "/hatch_build.py",
+  "/pyproject.toml",
+  "/uv.lock",
+]
+exclude = [
+  "**/.svelte-kit",
+  "**/node_modules",
+  "**/__pycache__",
+  "**/.venv",
+  "**/.env",
+  "**/.env.*",
+]
+
 [tool.hatch.build.hooks.custom]
 
 [tool.hatch.version]

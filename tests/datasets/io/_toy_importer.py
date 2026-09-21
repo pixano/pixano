@@ -6,6 +6,7 @@
 
 """A minimal deterministic importer used by the engine tests and the kill-9 helper."""
 
+import hashlib
 from typing import Iterator
 
 from pixano.datasets.io import AnalyzeLimits, BatchBundle, DatasetImporter, ImportPlan, stable_id
@@ -38,6 +39,13 @@ class ToyImporter(DatasetImporter):
         plan = ImportPlan(format=self.format_name, importer_version=self.importer_version)
         plan.totals.records = self.num_records
         return plan
+
+    def source_fingerprint(self, source, spec) -> str:
+        from pixano.datasets.io.plan import fingerprint
+
+        return fingerprint(
+            [self.num_records, self.media, hashlib.sha256(self.image_bytes).hexdigest(), self.duplicate_record_ordinal]
+        )
 
     def iter_batches(self, source, spec, plan, cursor=None) -> Iterator[BatchBundle]:
         namespace = spec.ids.namespace or "toy"

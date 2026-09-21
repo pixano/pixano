@@ -90,8 +90,39 @@ class LeRobotImporter(DatasetImporter):
         if source.path is not None:
             return source.path
         if source.kind == "hf_hub" and source.url:
-            return materialize_meta(source.url)
+            if getattr(self, "_hub_repo", None) != source.url:
+                self._hub_root = materialize_meta(source.url)
+                self._hub_repo = source.url
+                commit = self._hub_root.name
+                self._hub_revision = (
+                    commit
+                    if self._hub_root.parent.name == "snapshots"
+                    and len(commit) == 40
+                    and all(char in "0123456789abcdef" for char in commit)
+                    else None
+                )
+            return self._hub_root
         raise MetadataError(f"Unsupported LeRobot source: {source.location()}")
+
+    def source_fingerprint(self, source: SourceRef, spec: ImportSpec) -> str:
+        """Bind Hub imports to a commit; inventory all local episode dependencies."""
+        from ...plan import fingerprint
+        from ...source_fingerprint import local_source_fingerprint
+
+        root = self._local_root(source)
+        if source.kind == "hf_hub":
+            revision = getattr(self, "_hub_revision", None)
+            return f"hub-v1:{fingerprint([source.url, revision])}" if revision else ""
+        layout = parse_layout(root)
+
+        def dependencies():
+            for episode in self._select_episodes(layout, spec):
+                for camera in episode.cameras.values():
+                    yield root / camera.video_path
+                if episode.data_path and self._frames_mode(spec) == "extract":
+                    yield root / episode.data_path
+
+        return local_source_fingerprint(root, dependencies())
 
     def probe(self, source: SourceRef) -> DetectResult | None:
         """Sniff for meta/info.json carrying a LeRobot codebase_version."""
@@ -347,7 +378,7 @@ class LeRobotImporter(DatasetImporter):
             needed = {camera.video_path for episode in episodes for camera in episode.cameras.values()}
             if mode == "extract":
                 needed |= {episode.data_path for episode in episodes if episode.data_path}
-            root = materialize_files(source.url, sorted(needed))
+            root = materialize_files(source.url, sorted(needed), revision=getattr(self, "_hub_revision", None))
         namespace = self.effective_namespace(spec, source)
         resolver = MediaResolver(spec.media, base_dir=root)
         resume_ordinal = int(cursor.get("episode_ordinal", 0)) if cursor else 0

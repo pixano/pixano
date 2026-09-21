@@ -194,6 +194,23 @@ class CocoImporter(DatasetImporter):
     # Analyze
     # ------------------------------------------------------------------
 
+    def source_fingerprint(self, source: SourceRef, spec: ImportSpec) -> str:
+        """Include local image dependencies as well as annotation metadata."""
+        from ...source_fingerprint import local_source_fingerprint
+
+        if source.path is None or not source.path.is_dir():
+            return ""
+
+        def dependencies():
+            for split, json_path in _find_annotation_files(source.path):
+                images, _ = _stream_array(json_path, "images")
+                for image in images:
+                    local = self._locate_image(source.path, split, str(image.get("file_name", "")))
+                    if local is not None:
+                        yield local
+
+        return local_source_fingerprint(source.path, dependencies())
+
     def analyze(self, source: SourceRef, spec: ImportSpec, limits: AnalyzeLimits) -> ImportPlan:
         """Count images/annotations per split; verify media and category references."""
         plan = ImportPlan(format=self.format_name, importer_version=self.importer_version)

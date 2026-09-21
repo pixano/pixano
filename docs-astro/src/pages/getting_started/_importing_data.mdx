@@ -408,7 +408,16 @@ Two options control the output:
 pixano data export /path/to/data_dir my_dataset ./out --format coco
 ```
 
-The exported JSONL contains every field Pixano stores — views, entities, annotations, and their ids — in the exact format described in [The line format (JSONL v2)](#the-line-format-jsonl-v2) above.
+The exported JSONL contains supported views, entities, and annotations in the format described
+in [The line format (JSONL v2)](#the-line-format-jsonl-v2) above.
+
+<Callout type="warning" title="LeRobot export limitation in 0.8">
+
+Pixano JSONL export omits LeRobot time-series data and can produce incomplete annotation
+schemas that fail on re-import. Do not use it as a LeRobot backup format. Complete
+LeRobot export/re-import support is deferred to 0.9.
+
+</Callout>
 
 A minimal exported line looks like:
 
@@ -493,14 +502,16 @@ The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as R
 
 ### Deterministic ids and round-trips
 
-You may provide explicit `id`s on any object; everything else gets a **deterministic** id derived from the source (namespace, split, file, line). Re-importing the same source produces the same ids — which makes `pixano data import --mode add` re-runs idempotent, and makes export/import a true round-trip:
+Explicit `id`s are preserved where supported; other ids are derived from the source
+(namespace, split, file, line). Re-importing the same source produces the same ids,
+making `pixano data import --mode add` re-runs idempotent:
 
 ```sh
 pixano data export /path/to/data_dir voc_2007 ./exported
-pixano data import /path/to/data_dir ./exported   # id-identical dataset
+pixano data import /path/to/data_dir ./exported
 ```
 
-The export emits exactly this format, with explicit ids and its own `dataset.yaml`. Export output _is_ import input.
+Exports include `dataset.yaml` for re-import. The LeRobot export limitation above applies.
 
 ## Jobs
 

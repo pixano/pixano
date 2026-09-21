@@ -40,8 +40,9 @@ The stack so far is additive plumbing: behavior must be identical to `arch/data-
 - [ ] A malformed line (unknown key/kind) fails with a `file:line` error and a
       did-you-mean suggestion; a v1-format file fails requiring JSONL v2.
 - [ ] Full import → dataset browsable in the UI (records, media, annotations).
-- [ ] `pixano data export … --format pixano_jsonl` then re-import → same record count,
-      same ids.
+- [ ] For supported JSONL v2 datasets, export with `--format pixano_jsonl` then
+      re-import → same record count and record ids. LeRobot JSONL export is excluded
+      from the 0.8 release gate and deferred to 0.9.
 - [ ] Re-running the same import with `--mode add` does not duplicate rows.
 - [ ] Rollback restores an unchanged add-mode dataset; later edits and resumed
       imports are refused without changing records or media.

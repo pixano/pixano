@@ -15,6 +15,7 @@ on:
       - ".pre-commit-config.yaml"
     branches:
       - "main"
+      - "releases/**"
   pull_request:
     paths:
       - "ui/**"

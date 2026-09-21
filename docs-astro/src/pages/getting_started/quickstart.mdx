@@ -9,8 +9,8 @@ import PrevNext from '../../components/PrevNext.astro'
 
 # Quickstart
 
-This guide walks through importing a local directory of images into Pixano and inspecting the
-dataset in the web explorer.
+Import a local image directory, configure its annotation schema, and inspect the dataset in
+the Explorer.
 
 ## Prerequisites
 
@@ -19,8 +19,8 @@ dataset in the web explorer.
 
 <Callout type="note">
 
-Examples use a sample folder named `my_images_dataset` containing three images. Metric counts in
-the interface will reflect your local files.
+The example folder, `my_images_dataset`, contains three images. Record counts depend on the
+selected files.
 
 </Callout>
 
@@ -33,38 +33,40 @@ the interface will reflect your local files.
   alt="The empty Library: 'Your library is empty' with the Import dataset button."
   caption="Empty Library." />
 
-2. **Type**: select **Raw media** (unlabeled images, videos, or text files to annotate in
-   Pixano).
-3. **Task**: select **Image annotation**.
-4. **Source**: click **Choose a folder on your computer…** and select `my_images_dataset`. After
-   the upload, **Detected layout** reports 3 records, each with one `image` view.
-5. Keep the defaults and click **Analyze**. The dataset takes the folder name. The pre-selected
-   **Annotations** chips (`bbox`, `mask`, `keypoint`, `classification`) define the annotation
-   tables to create.
+2. In **Setup**, use the **Source** pane on the left to select **Raw media**.
+3. In **Annotation setup** on the right, select **Image annotation**. **Bounding boxes** and
+   **Masks** are enabled by default; **Polygons & lines** is optional. Add **Object attributes**
+   such as `category` (String) if required by the annotation schema.
+4. In **Source**, click **Choose a folder** and select `my_images_dataset`. After upload,
+   **Detected layout** reports 3 records, each with one `image` view.
+5. Leave **Dataset name** empty to use the folder name. Keep **Overwrite existing dataset**
+   unchecked for a new dataset, then click **Review import**.
 
-<Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp" width={768}
-  alt="The Source step after uploading the my_images_dataset folder: 3 files uploaded and the Detected layout panel showing 3 records."
-  caption="Source step. The folder is the only required input." />
+<Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp"
+  alt="Setup with Source on the left and Annotation setup on the right: my_images_dataset is uploaded, 3 records are detected, and bounding boxes and masks are selected."
+  caption="Setup: source configuration and annotation schema." />
 
-6. **Review**: nothing is written at this stage. Check the plan (record count, **Schema**,
-   **Sample records**), then click **Start import**.
+6. In **Review**, check the record count, **Media views**, **Annotation setup**, and **Sample
+   records**. Analysis does not create the dataset. Use **Edit setup** to make changes, or click
+   **Start import**.
 
-<Figure src="getting_started/quickstart/03-wizard-review-plan.webp" width={768}
-  alt="Review the plan: 3 records, the schema Pixano will create, and sample records."
-  caption="Review step. The import plan." />
+<Figure src="getting_started/quickstart/03-wizard-review-plan.webp"
+  alt="Review import showing 3 records, the image view, bounding box and mask tools, and sample records."
+  caption="Review the import plan before starting the job." />
 
-7. **Import**: when the wizard reports **Dataset imported**, click **Done**. The dataset appears
-   in the Library.
+7. The wizard closes and the import runs in the background. The job tray shows progress and a
+   **Cancel** control. On completion, the Library updates automatically with the new dataset.
 
 <Figure src="getting_started/quickstart/04-library-dataset-card.webp"
-  alt="The Library with the new my_images_dataset card."
-  caption="Library after the import. Subsequent imports start from the Import button." />
+  alt="The Library with the new my_images_dataset card and an Imported status in the background job tray."
+  caption="The Library updates automatically when the background import completes." />
 
 <Callout type="note">
 
-The wizard follows the same steps for other inputs: video, Visual Q&A, and image–text tasks
-(**Task** cards), and existing datasets in Pixano export, MS COCO, or LeRobot format (**Type**
-cards). In a raw media directory, `train/`, `val/`, and `test/` subdirectories become splits.
+The same **Setup → Review** flow supports video, Visual Q&A, and image–text annotation tasks,
+plus existing Pixano, MS COCO, and LeRobot datasets. Select the data format in **Source** and
+configure applicable tools and attributes in **Annotation setup**. In a raw media directory,
+`train/`, `val/`, and `test/` subdirectories become splits.
 
 </Callout>
 
@@ -78,8 +80,8 @@ record to open it in the annotation **Workspace**.
   caption="Explorer, gallery view." />
 
 Each image is stored as a **record** with a single **view**. Annotated objects are **entities**;
-each bounding box, mask, or keypoint set attached to an entity is an **annotation**. These are
-the four schema sections listed in the Review step. See
+each bounding box, mask, or polygon attached to an entity is an **annotation**. Review summarizes
+the views, annotation tools, and custom attributes. See
 [Key Concepts](/pixano/getting_started/key_concepts/) for the data model.
 
 {/* HIDDEN until the CLI import flow is re-verified. To restore: remove the two comment markers,
@@ -126,7 +128,7 @@ Reload the Library: the new dataset is listed. No server restart is required.
 ### Define the schema with dataset.yaml
 
 Without a configuration file, the CLI creates the `bbox` and `keypoint` annotation tables; the
-wizard's image preset also creates `mask` and `classification`. To control the schema, add a
+wizard's image preset creates `bbox` and `mask`. To control the schema, add a
 `dataset.yaml` at the root of the source directory.
 
 Create `my_images_dataset/dataset.yaml`:

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0 — 2026-07-27
+## 0.8.0 (unreleased)
 
 Two redesigns. The data import/export core
 (`docs/specs/data-import-export.md`): one `analyze → plan → ingest` pipeline
@@ -13,7 +13,6 @@ library.
 - **JSONL v2** — a strict, hand-authorable annotation format (`metadata.jsonl`
   per split + a `dataset.yaml` manifest). Unknown keys and kinds are errors
   with did-you-mean suggestions; nothing is inferred from value shapes.
-  Import → export → import is id-identical.
 - **`pixano data` CLI** — `import` (analyze plan + confirmation, `--dry-run`),
   `export` (`pixano_jsonl`, `coco`), `formats`, and
   `jobs list|show|cancel|resume|rollback`.
@@ -107,8 +106,7 @@ library.
 - `DatasetBuilder` — implement a `pixano.datasets.io.DatasetImporter` instead
   (test harness in `pixano.datasets.io.testing`).
 - The GUI import alias `POST /datasets/import` + `GET /datasets/import/{id}`
-  — still served (backed by the shared job store) until the import wizard
-  replaces the modal.
+  — retained for compatibility; the import wizard uses `/io/*`.
 
 ### Removed
 
@@ -119,6 +117,13 @@ library.
 
 ### Fixed
 
+- Source distributions include only package sources, tests, and build files,
+  excluding local datasets and other untracked files outside those directories.
+- COCO export converts `xyxy` and `xywh` bounding boxes to pixel-space `xywh`
+  coordinates and computes the corresponding areas correctly.
+- Imports reject changed sources or settings before using a saved plan or resuming
+  a checkpoint. Local checks cover file metadata and referenced media; Hub downloads
+  use a pinned commit. Legacy checkpoints without source verification require a restart.
 - The LeRobot import wizard exposes object and record attributes and annotation
   types. Custom schemas retain discovered cameras, episode metadata, and
   state/action vectors through analysis and import. The annotation editor
@@ -155,10 +160,16 @@ library.
 
 ### Known limitations
 
+- Import progress is not restored after a browser refresh; jobs remain available
+  through the CLI/API. Expired review plans prevent resuming affected jobs after
+  24 hours. Abandoned uploads are collected during server startup.
+- LeRobot datasets do not support a complete Pixano JSONL export/re-import in
+  0.8: time-series data are omitted, and exported annotation schemas can be
+  incomplete. This is deferred to 0.9; JSONL export is not a LeRobot backup format.
 - AV1 video shards decode fine for frame extraction but do not play in
   Safari (upstream codec support).
 - 3D features (bbox3d, keypoints3d, camera calibration) are deferred to 0.9.
-- Semantic search is image-modality and record-level only; text-modality
-  queries and per-view embeddings are deferred to 0.9.
+- Semantic search indexes image records and supports text-to-image queries.
+  Indexing text records and per-view embeddings are deferred to 0.9.
 - The inference server registry is held in memory: registered servers are lost
   when the backend restarts and must be connected again.

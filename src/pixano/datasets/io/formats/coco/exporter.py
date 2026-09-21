@@ -86,7 +86,7 @@ class CocoExporter:
 
             width, height = image_row.width or 1, image_row.height or 1
             for box in bundle.components.get("bboxes", []):
-                x, y, w, h = box.coords
+                x, y, w, h = box.xywh_coords
                 if box.is_normalized:
                     x, y, w, h = x * width, y * height, w * width, h * height
                 entry(box.entity_id)["bbox"] = [round(v, 2) for v in (x, y, w, h)]

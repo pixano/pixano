@@ -13,15 +13,18 @@ on:
       - "tests/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
+      - "uv.lock"
       - ".pre-commit-config.yaml"
     branches:
       - "main"
+      - "releases/**"
   pull_request:
     paths:
       - "src/pixano/**"
       - "tests/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
+      - "uv.lock"
       - ".pre-commit-config.yaml"
     branches:
       - "main"

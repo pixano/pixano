@@ -10,14 +10,20 @@ on:
   push:
     branches:
       - main
+      - "releases/**"
     paths:
       - "docs-astro/**"
       - "src/pixano/**"
+      - ".github/workflows/docs.yml"
+      - "pyproject.toml"
+      - "uv.lock"
   pull_request:
     paths:
       - "docs-astro/**"
       - ".github/workflows/docs.yml"
       - "src/pixano/**"
+      - "pyproject.toml"
+      - "uv.lock"
     branches:
       - "main"
       - "arch/**"
@@ -30,12 +36,10 @@ permissions:
   pages: write
   id-token: write
 
-# Deploys share the "pages" queue with publish.yml so two workflows can never
-# publish to GitHub Pages at once; pull request builds get their own
-# cancellable group and never block a deploy.
+# Only main deploys. Release branches and PRs build without publishing.
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('docs-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
@@ -92,7 +96,7 @@ jobs:
   deploy:
     name: Deploy
     needs: build
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

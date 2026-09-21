@@ -2,6 +2,7 @@
 
 **Status:** Accepted — reference for implementation planning.
 **Release hardening amendment (2026-09-21):** JSONL v1 conversion is removed; imports require JSONL v2 and no migration guide is planned. Add-mode rollback uses exclusive dataset write locking and guarded version restoration only. Later edits, legacy manifests without locking evidence, and resumed imports make rollback ineligible. Namespace deletion is not a safe rollback mechanism.
+**Release scope amendment (2026-09-21):** Complete LeRobot → Pixano JSONL export/re-import is deferred to 0.9 and is not a 0.8 release gate. In 0.8, this export omits time-series data and can emit incomplete annotation schemas; it is not a supported LeRobot backup format.
 **Scope:** the complete redesign of dataset import and export for the 0.8.0 release (formerly planned as 0.7.3; renumbered — see §14.1).
 **Scope amendment (2026-07-05):** all 3D-related features are deferred to release 0.9 — the `bbox3d`/`keypoints3d` canonical families and slots, the `cam_calibration` view family with its `target_logical_name` binding and validator fixes, and the backend `WorkspaceType.PCL_3D` enum value. Dedicated 3D work is ongoing on a separate branch and 0.8.0 must not create conflicts or breaking changes there. `classification` and `relation` stay in 0.8.0 (general annotation types, not 3D). Sections referencing the deferred items are annotated in place.
 

@@ -51,12 +51,13 @@ from pixano.schemas import SchemaGroup, is_image, is_sequence_frame, is_view, sc
 from pixano.schemas.views.image import _generate_preview
 from pixano.utils import to_snake_case
 
-from .errors import JobStateError, ResumeError, SpecValidationError, UnsupportedStorageError
+from .errors import JobStateError, PlanMismatchError, ResumeError, SpecValidationError, UnsupportedStorageError
 from .ids import IdLedger
 from .importer import Cursor, DatasetImporter, SourceRef
 from .manifest import ImportManifest
 from .plan import ImportPlan
 from .progress import ProgressEvent, ProgressSink
+from .source_fingerprint import verify_import_source
 from .spec import ImportSpec
 
 
@@ -220,6 +221,36 @@ class ImportEngine:
         if not dataset_name:
             raise SpecValidationError("dataset.name must contain at least one alphanumeric character.")
         target_dir = self.library_dir / dataset_name
+
+        if (
+            source.path is not None
+            and source.path.is_dir()
+            and self.data_dir.resolve().is_relative_to(source.path.resolve())
+        ):
+            raise SpecValidationError(
+                "The output data directory must be outside the import source directory; "
+                "otherwise import state would change the source used for recovery."
+            )
+        if resume_cursor is not None and spec.mode != "add":
+            staging_dir = state_dir(self.data_dir) / "staging" / f"{dataset_name}-{job_id}"
+            if not staging_dir.exists():
+                raise ResumeError(
+                    f"No staging directory for job '{job_id}' — the build cannot resume; restart the import."
+                )
+        source_fingerprint = importer.source_fingerprint(source, spec)
+        if plan.source_fingerprint and plan.source_fingerprint != source_fingerprint:
+            raise PlanMismatchError("The source changed after analysis; analyze it again before importing.")
+        if plan.spec_fingerprint and plan.spec_fingerprint != spec.fingerprint():
+            raise PlanMismatchError("The import settings changed after analysis; analyze again before importing.")
+        verify_import_source(
+            state_dir(self.data_dir),
+            job_id,
+            source_fingerprint=source_fingerprint,
+            spec_fingerprint=spec.fingerprint(),
+            importer=importer.format_name,
+            importer_version=importer.importer_version,
+            resume=resume_cursor is not None,
+        )
 
         replay_journals(self.data_dir)
 

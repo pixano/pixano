@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - main
+      - "releases/**"
     paths:
       - "dockerfiles/**"
       - "src/pixano/**"
@@ -21,6 +22,7 @@ on:
   pull_request:
     branches:
       - main
+      - "releases/**"
     paths:
       - "dockerfiles/**"
       - ".github/workflows/docker.yml"

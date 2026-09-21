@@ -135,6 +135,14 @@ class DatasetImporter(ABC):
             return source.path.name
         return (source.url or "source").replace("/", "_")
 
+    def source_fingerprint(self, source: SourceRef, spec: "ImportSpec") -> str:
+        """Identify all inputs relevant to resume; empty means restart-only.
+
+        Custom importers must opt in with an identity covering their dependencies.
+        Built-in formats fingerprint local files or an immutable Hub revision.
+        """
+        return ""
+
     def resolve_info(self, spec: "ImportSpec", source: SourceRef | None = None) -> "DatasetInfo":
         """Resolve the target schema for this format.
 
