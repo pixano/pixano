@@ -32,9 +32,25 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
     monkeypatch.setattr(entrypoint, "wait_for_inference", lambda *a: order.append("inference"))
     monkeypatch.setattr(entrypoint, "psycopg", _FakePsycopg())
     monkeypatch.setattr(entrypoint, "ensure_schema", lambda conn: order.append("schema"))
-    # La boucle d'attente de jobs est infinie : on la fait sortir au premier tour.
-    monkeypatch.setattr(entrypoint.time, "sleep", lambda _: (_ for _ in ()).throw(KeyboardInterrupt))
+    monkeypatch.setattr(entrypoint, "default_registry", _FakeRegistry)
+    monkeypatch.setattr(entrypoint.queue, "release_own", lambda *a: 0)
+
+    def _stop(*_args: object) -> None:
+        order.append("boucle")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(entrypoint, "_work_forever", _stop)
     return order
+
+
+class _FakeRegistry:
+    """Un registre qui ne déclare rien, pour isoler l'ordre de démarrage."""
+
+    def declare(self, *_args: object) -> int:
+        return 0
+
+    def names(self) -> list[str]:
+        return []
 
 
 class _FakeConnection:
@@ -58,7 +74,7 @@ def test_the_schema_is_checked_between_the_two_waits(steps: list[str]) -> None:
     with pytest.raises(KeyboardInterrupt):
         entrypoint.main()
 
-    assert steps == ["database", "schema", "inference"]
+    assert steps == ["database", "schema", "inference", "boucle"]
 
 
 def test_an_incompatible_schema_stops_the_worker(steps: list[str], monkeypatch: pytest.MonkeyPatch) -> None:

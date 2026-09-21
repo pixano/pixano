@@ -20,7 +20,9 @@ from typing import Callable
 import httpx
 import psycopg
 
+from . import queue, runner
 from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
+from .kinds import default_registry
 from .schema import SchemaVersionError, ensure_schema
 
 
@@ -33,6 +35,10 @@ log = logging.getLogger("pixano-worker")
 MAX_BACKOFF_S = MAX_HEARTBEAT_AGE_S / 3
 IDLE_POLL_INTERVAL_S = 5
 CONNECT_TIMEOUT_S = 5
+
+# Nombre de chunks réclamés d'un coup. Assez pour amortir l'aller-retour en base, assez peu
+# pour que l'annulation soit vue rapidement — elle ne se regarde qu'entre deux lots.
+BATCH_SIZE = 8
 
 
 def _wait_for(label: str, probe: Callable[[], None], on_attempt: Callable[[], None]) -> None:
@@ -118,11 +124,35 @@ def main() -> int:
     alive()
     wait_for_inference(config.inference_url, config.inference_api_key, alive)
 
-    log.info("worker démarré, en attente de jobs")
+    registry = default_registry()
+    worker_id = queue.worker_identity()
+
+    with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True) as conn:
+        declared = registry.declare(conn, worker_id)
+        log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
+
+        # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
+        # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
+        recovered = queue.release_own(conn, worker_id)
+        if recovered:
+            log.info("%d chunk(s) repris d'une exécution précédente", recovered)
+
+        log.info("worker démarré, en attente de jobs")
+        _work_forever(conn, registry, worker_id, alive)
+    return 0
+
+
+def _work_forever(conn, registry, worker_id: str, alive) -> None:
+    """Planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
     while True:
-        # TODO lot 2 : réclamer un lot de chunks (SELECT ... FOR UPDATE SKIP LOCKED).
         alive()
-        time.sleep(IDLE_POLL_INTERVAL_S)
+        planned = runner.plan_one(conn, registry)
+        processed = runner.run_batch(conn, registry, worker_id, BATCH_SIZE)
+        if planned is None and processed == 0:
+            reclaimed, abandoned = queue.reclaim_expired(conn)
+            if reclaimed or abandoned:
+                log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+            time.sleep(IDLE_POLL_INTERVAL_S)
 
 
 if __name__ == "__main__":
