@@ -195,6 +195,32 @@ class TestTransientFailures:
         with pytest.raises(TransientError, match="revenir plus tard"):
             _run(_Reader())
 
+    def test_a_single_refused_image_is_quarantined_not_presumed_an_outage(self, inference: _Inference) -> None:
+        """Review de l'étape 1 : un lot d'une image corrompue faisait échouer tout le job.
+
+        Le dernier chunk d'un dataset n'a souvent qu'une image, et sur un dataset lidar la plupart
+        des chunks aussi. « Aucune image n'est passée » y était vrai dès la première image
+        abîmée : le chunk était rejoué jusqu'à l'échec, et le job finissait en erreur.
+        """
+        inference.bad = {"/medias/r0.jpg"}
+
+        _, outcome = _run(_Reader(), records=["r0"])
+
+        assert (outcome.produced, [item.item_id for item in outcome.quarantined]) == (0, ["r0"])
+
+    def test_a_single_image_among_records_without_image_is_quarantined_too(self, inference: _Inference) -> None:
+        inference.bad = {"/medias/r5.jpg"}
+
+        _, outcome = _run(_Reader(without_image=set(RECORDS) - {"r5"}))
+
+        assert (outcome.produced, outcome.skipped, len(outcome.quarantined)) == (0, 7, 1)
+
+    def test_two_images_both_refused_are_presumed_an_outage(self, inference: _Inference) -> None:
+        inference.bad = {"/medias/r0.jpg", "/medias/r1.jpg"}
+
+        with pytest.raises(TransientError, match="refuse les 2"):
+            _run(_Reader(), records=["r0", "r1"])
+
     def test_an_inference_refusing_every_image_is_presumed_down(self, inference: _Inference) -> None:
         """Toutes les images refusées une à une : une panne est bien plus probable qu'un lot entièrement corrompu."""
         inference.bad = {f"/medias/{r}.jpg" for r in RECORDS}
