@@ -21,6 +21,9 @@ const FAKE_SCHEMA: JsonSchema = {
     mode: { type: "string", enum: ["fast", "thorough"] },
     fail_at_chunk: { anyOf: [{ type: "integer" }, { type: "null" }], default: null },
     nested: { type: "object", properties: {} },
+    record_ids: { type: "array", items: { type: "string" }, default: [] },
+    ranks: { type: "array", items: { type: "integer" } },
+    matrix: { type: "array", items: { type: "array" } },
   },
   required: ["task_count", "label"],
 } as JsonSchema;
@@ -113,5 +116,38 @@ describe("missingRequired", () => {
     expect(
       missingRequired({ ...FAKE_SCHEMA, required: ["task_count"] }, { task_count: 0 }),
     ).toEqual([]);
+  });
+});
+
+describe("lists of scalars", () => {
+  // Independent review v2, C2: the record identifiers of a label job rendered as unsupported
+  // and were dropped from the request, so the job planned nothing and ended in error.
+  it("renders a list of scalars as a comma-separated field", () => {
+    expect(fieldKind({ type: "array", items: { type: "string" } })).toBe("array");
+    expect(fieldKind({ type: "array", items: { type: "integer" } })).toBe("array");
+  });
+
+  it("leaves a list of anything else unsupported", () => {
+    expect(fieldKind({ type: "array", items: { type: "array" } })).toBe("unsupported");
+    expect(fieldKind({ type: "array" })).toBe("unsupported");
+  });
+
+  it("splits what was typed on commas and trims it", () => {
+    expect(toParams(FAKE_SCHEMA, { record_ids: " a, b ,,c " })).toEqual({
+      record_ids: ["a", "b", "c"],
+    });
+  });
+
+  it("casts the items to what the list holds", () => {
+    expect(toParams(FAKE_SCHEMA, { ranks: "3, 1, deux" })).toEqual({ ranks: [3, 1] });
+  });
+
+  it("drops an empty list so the declared default applies", () => {
+    expect(toParams(FAKE_SCHEMA, { record_ids: "" })).toEqual({});
+    expect(toParams(FAKE_SCHEMA, { record_ids: [] })).toEqual({});
+  });
+
+  it("starts empty even when the default is an empty list", () => {
+    expect(initialValue({ type: "array", items: { type: "string" }, default: [] })).toBe("");
   });
 });

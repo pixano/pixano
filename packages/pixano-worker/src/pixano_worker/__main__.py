@@ -17,6 +17,8 @@ types se fait une fois et dans l'ordre. Seule la boucle de travail est asynchron
 
 import asyncio
 import logging
+import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -31,6 +33,7 @@ from .config import MAX_HEARTBEAT_AGE_S, MissingConfigurationError, WorkerConfig
 from .kinds import Registry, default_registry
 from .media import MediaResolver
 from .schema import SchemaVersionError, ensure_schema
+from .threads import WorkerThreads
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -132,7 +135,7 @@ def main() -> int:
     alive()
     wait_for_inference(config.inference_url, config.inference_api_key, alive)
 
-    registry = default_registry(config.inference_url, config.inference_api_key)
+    registry = default_registry(config.inference_url, config.inference_api_key, config.demo_kinds)
     worker_id = queue.worker_identity()
 
     with psycopg.connect(config.database_url, connect_timeout=CONNECT_TIMEOUT_S, autocommit=True) as conn:
@@ -152,7 +155,20 @@ def main() -> int:
             config.chunk_timeout_s,
         )
     )
+    # Sans attendre les threads : après un arrêt, certains peuvent rester bloqués sur un appel
+    # qui ne revient pas, et une sortie normale les attendrait indéfiniment.
+    _exit_now(0)
     return 0
+
+
+def _exit_now(code: int) -> None:
+    """Quitter sans attendre les threads.
+
+    Une sortie normale attend que tous les threads aient fini — or certains ne finissent pas.
+    Les journaux sont vidés d'abord, pour que le message d'arrêt soit lisible.
+    """
+    logging.shutdown()
+    os._exit(code)
 
 
 async def serve(
@@ -167,6 +183,15 @@ async def serve(
 ) -> None:
     """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
     heartbeat = asyncio.create_task(_beat_forever(alive))
+    threads = WorkerThreads.for_concurrency(concurrency)
+
+    # `docker compose stop` envoie SIGTERM. Le worker est le process 1 du conteneur, et le noyau
+    # ignore SIGTERM pour un process 1 sans gestionnaire : docker attendait son délai puis tuait
+    # le worker, chunks en cours compris.
+    stop = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    for signum in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(signum, stop.set)
 
     # Une connexion par chunk en vol, plus une pour planifier, réclamer et récupérer.
     async with AsyncConnectionPool(
@@ -174,22 +199,58 @@ async def serve(
         min_size=1,
         max_size=concurrency + 1,
         kwargs={"autocommit": True, "connect_timeout": CONNECT_TIMEOUT_S},
+        # Le pool n'attend pas une connexion plus longtemps qu'on n'attend d'en ouvrir une. Son
+        # délai par défaut est de 30 s, subi à chaque emprunt pendant une panne : un arrêt demandé
+        # pendant la panne dépassait alors la grâce de docker et finissait tué.
+        timeout=CONNECT_TIMEOUT_S,
+        # Vérifier une connexion avant de la prêter : après un redémarrage de PostgreSQL, le pool
+        # garde des connexions mortes, et sans vérification il les rendrait une à une à la boucle.
+        check=AsyncConnectionPool.check_connection,
         open=False,
     ) as pool:
         async with pool.connection() as conn:
             # Ce que cette même identité a laissé derrière elle lors d'un arrêt brutal. Le bail
             # finirait par les libérer ; les rendre tout de suite évite d'attendre son expiration.
-            recovered = await queue.release_own(conn, worker_id)
-        if recovered:
-            log.info("%d chunk(s) repris d'une exécution précédente", recovered)
+            recovery = await queue.release_own(conn, worker_id)
+            await runner.settle_abandoned(conn, recovery)
+        if recovery.requeued:
+            log.info("%d chunk(s) repris d'une exécution précédente", recovery.requeued)
+        if recovery.abandoned_jobs:
+            log.warning(
+                "%d job(s) avec un chunk écarté : il a fait tomber ce worker à chacune de ses tentatives",
+                len(recovery.abandoned_jobs),
+            )
 
         log.info("worker démarré, en attente de jobs")
         try:
             await runner.work(
-                pool, registry, worker_id, concurrency, library, media, IDLE_POLL_INTERVAL_S, chunk_timeout_s
+                pool,
+                registry,
+                worker_id,
+                concurrency,
+                library,
+                media,
+                IDLE_POLL_INTERVAL_S,
+                chunk_timeout_s,
+                threads,
+                stop,
             )
+            # Arrêt demandé. Ce qui tourne encore est rendu tout de suite : attendre l'expiration
+            # du bail coûterait deux minutes, et le prochain worker n'aura peut-être pas la même
+            # identité pour les reprendre au démarrage.
+            try:
+                async with pool.connection() as conn:
+                    handed_back = await queue.release_own(conn, worker_id)
+                    await runner.settle_abandoned(conn, handed_back)
+                log.info("worker arrêté, %d chunk(s) rendu(s) à la file", handed_back.requeued)
+            except runner.DATABASE_UNAVAILABLE as error:
+                # Arrêté pendant une panne de base : les chunks en cours reviendront par leur bail.
+                log.warning(
+                    "worker arrêté, base injoignable (%s) — les chunks en cours reviendront par leur bail", error
+                )
         finally:
             heartbeat.cancel()
+            threads.shutdown()
 
 
 async def _beat_forever(alive: Callable[[], None]) -> None:

@@ -22,8 +22,9 @@ import {
  * The jobs a user can see, kept current by one event stream.
  *
  * Polling is deliberately absent: the backend pushes an event per state change and per
- * finished chunk, and the stream reconnects on its own after an outage, resuming from the
- * last identifier it received. Refreshing the list on a timer would add load and still lag.
+ * finished chunk. The stream reconnects on its own after an outage but does not replay what it
+ * missed, so the list is reloaded once on each reconnection — not on a timer, which would add
+ * load and still lag.
  */
 class JobsStore {
   jobs = $state<Job[]>([]);
@@ -37,6 +38,10 @@ class JobsStore {
   quarantines = $state<Record<string, QuarantinedItem[]>>({});
 
   #stream: EventSource | null = null;
+  /** The stream failed since it last opened: whatever it opens next, events were missed. */
+  #missedEvents = false;
+  /** The reload in progress, shared by everyone who asks for one meanwhile. */
+  #refreshing: Promise<void> | null = null;
 
   /** Load the list and the runnable kinds, then follow along. */
   async start(): Promise<void> {
@@ -104,11 +109,18 @@ class JobsStore {
 
     stream.onopen = () => {
       this.live = true;
+      // A job that finished during the outage would otherwise read "running" until the panel is
+      // reopened: the global stream has no catch-up. Found in the step 1 code review.
+      if (this.#missedEvents) {
+        this.#missedEvents = false;
+        void this.refresh();
+      }
     };
     // EventSource retries on its own, so a drop is not an error to report — only a loss of
     // liveness. Saying "connection lost" on every hiccup would train the user to ignore it.
     stream.onerror = () => {
       this.live = false;
+      this.#missedEvents = true;
     };
     stream.addEventListener("state", (event) => this.#apply(event));
     stream.addEventListener("progress", (event) => this.#apply(event));
@@ -123,8 +135,8 @@ class JobsStore {
     }
     const index = this.jobs.findIndex((job) => job.id === event.job_id);
     if (index === -1) {
-      // A job someone else submitted. Fetching the whole list is heavy-handed, but it only
-      // happens on a job we have never seen, which is rare and never in a loop.
+      // A job someone else submitted. Its events keep coming until the reload lands, so the
+      // reload is shared rather than started once per event.
       void this.refresh();
       return;
     }
@@ -137,6 +149,8 @@ class JobsStore {
       produced: event.produced ?? current.produced,
       skipped: event.skipped ?? current.skipped,
       quarantined: event.quarantined ?? current.quarantined,
+      cancel_requested: event.cancel_requested ?? current.cancel_requested,
+      error: event.reason ? { reason: event.reason, detail: event.detail } : current.error,
     };
   }
 
@@ -146,7 +160,21 @@ class JobsStore {
     else this.jobs[index] = job;
   }
 
-  async refresh(): Promise<void> {
+  /**
+   * Reload the list — once, however many callers ask at the same time.
+   *
+   * Every event of a job this panel has never seen asks for a reload, and a job submitted from
+   * elsewhere sends one per finished chunk: without sharing, that was a burst of identical
+   * requests, each opening a database connection on the server.
+   */
+  refresh(): Promise<void> {
+    this.#refreshing ??= this.#reload().finally(() => {
+      this.#refreshing = null;
+    });
+    return this.#refreshing;
+  }
+
+  async #reload(): Promise<void> {
     try {
       this.jobs = await listJobs();
       this.error = null;
@@ -177,6 +205,13 @@ export function progressOf(job: Job): number {
 export function stateLabelOf(job: Job): string {
   if (job.cancel_requested && !isTerminal(job.state)) return "cancelling";
   return job.state;
+}
+
+/** Why a job failed, in one line — or null when it did not fail. */
+export function failureOf(job: Job): string | null {
+  if (job.state !== "error") return null;
+  const reason = job.error?.reason;
+  return typeof reason === "string" && reason ? reason : "failed for an unknown reason";
 }
 
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */

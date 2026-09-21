@@ -23,6 +23,8 @@ export type Job = {
   quarantined: number;
   /** Someone asked the job to stop; the chunks in flight are finishing. */
   cancel_requested: boolean;
+  /** Why the job failed, when it did — at least a `reason`. Null otherwise. */
+  error: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -61,6 +63,7 @@ export type JsonSchema = {
   minimum?: number;
   maximum?: number;
   anyOf?: JsonSchema[];
+  items?: JsonSchema;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */
@@ -112,9 +115,11 @@ export type JobEvent = {
   total_tasks?: number;
   chunks?: number;
   reason?: string;
+  detail?: string;
   produced?: number;
   skipped?: number;
   quarantined?: number;
+  cancel_requested?: boolean;
 };
 
 /**
@@ -123,8 +128,9 @@ export type JobEvent = {
  * One connection for all jobs, on purpose: browsers allow very few concurrent connections
  * per host, so a stream per running job would starve the rest of the application.
  *
- * The returned EventSource reconnects on its own and resends `Last-Event-ID`, which is what
- * makes a dropped connection lose nothing.
+ * The returned EventSource reconnects on its own, but this stream does not catch up on what
+ * happened while it was down: resuming from `Last-Event-ID` is only implemented for the stream
+ * of a single job. A client that reconnects must reload what it shows.
  */
 export function openJobStream(types: string[] = ["state", "progress"]): EventSource {
   return new EventSource(`/jobs/events?types=${types.join(",")}`);

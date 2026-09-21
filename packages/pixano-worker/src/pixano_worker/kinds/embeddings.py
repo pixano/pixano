@@ -19,7 +19,7 @@ from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, Sync
 from pydantic import Field
 
 from ..reader import JobReader
-from ..writer import JobWriter
+from ..writer import JobWriter, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 
 
@@ -35,6 +35,14 @@ TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 # Les réponses qui disent « cette requête ne passera jamais », quel que soit son contenu : pas
 # de droit, pas de route, pas de modèle. Découper le lot n'y changerait rien.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
+
+# À partir de combien d'images toutes refusées on présume une panne du serveur plutôt qu'un lot
+# entièrement corrompu. Deux images corrompues côte à côte restent rares ; une seule image
+# refusée, en revanche, est le cas ordinaire d'un fichier abîmé — et le dernier chunk d'un
+# dataset, comme la plupart des chunks d'un dataset où peu d'enregistrements portent une image,
+# n'en contient souvent qu'une. Provisoire : une requête témoin au serveur remplacera ce seuil,
+# pour que la décision ne dépende plus de la taille du lot.
+PRESUMED_OUTAGE_MIN_IMAGES = 2
 
 # Le statut que le client donne à une erreur quand le serveur n'a rien répondu du tout —
 # connexion refusée, délai dépassé. Il l'enveloppe dans une PixanoInferenceError plutôt que de
@@ -89,7 +97,15 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         Le chunk ne porte que des identifiants. Les images seront lues à l'exécution — y
         mettre les références résolues gonflerait la table des chunks du poids du dataset
         pour les datasets dont les médias sont embarqués.
+
+        Le modèle est vérifié ici, avant tout calcul : un job qui ne pourra pas écrire ses
+        vecteurs doit échouer à la planification, pas après avoir fait tourner l'inférence sur
+        tout le dataset.
+
+        Raises:
+            ValueError: Le dataset porte déjà des embeddings d'un autre modèle.
         """
+        check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         batch: list[str] = []
         for record_id in reader.ids(RECORD_TABLE):
             batch.append(record_id)
@@ -134,10 +150,12 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
         )
         embedded, refused = self._embed_isolating(client, candidates, params)
-        if candidates and not embedded:
+        if len(candidates) >= PRESUMED_OUTAGE_MIN_IMAGES and not embedded:
             # Tout le lot est refusé, image par image. Une inférence qui refuse toutes les images
             # est bien plus probablement en panne que ce lot n'est entièrement corrompu : on
-            # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file.
+            # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file. Une
+            # image seule, elle, part en quarantaine : sans ce seuil, elle faisait rejouer son
+            # chunk jusqu'à l'échec, et finir en erreur un job qui n'avait qu'un fichier abîmé.
             raise TransientError(f"l'inférence refuse les {len(candidates)} image(s) du lot : {refused[0][1]}")
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
@@ -175,7 +193,13 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
     @staticmethod
     def _images_of(reader: JobReader, record_ids: list[str]) -> dict[str, Any]:
-        """La vue image de chaque enregistrement du lot, quand elle existe."""
+        """La vue image de chaque enregistrement du lot, quand elle existe.
+
+        Un enregistrement peut porter plusieurs vues image — nuScenes en a six, une par
+        caméra. Ce type en embarque **une**, la première que LanceDB rend, et n'offre pas encore
+        de quoi choisir laquelle : c'est un paramètre `view` à ajouter avec les types de l'étape
+        2, quand on saura ce que la pré-annotation attend d'un enregistrement multi-vues.
+        """
         rows = reader.dataset.get_data(IMAGE_TABLE, record_ids=list(record_ids)) or []
         by_record: dict[str, Any] = {}
         for row in rows:

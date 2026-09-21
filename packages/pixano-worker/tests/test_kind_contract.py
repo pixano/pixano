@@ -53,13 +53,14 @@ QUIET_EXAMPLES: dict[str, dict[str, Any]] = {
     "label": {**CONTRACT_EXAMPLES["label"], "write_to": None},
 }
 
-REGISTRY = default_registry()
+REGISTRY = default_registry(demo_kinds=True)
 
 
 class _Target:
     """Une cible d'écriture qui se comporte comme LanceDB sur les trois opérations utilisées."""
 
     def __init__(self) -> None:
+        self.compactions: list[str] = []
         self.rows: dict[str, Any] = {}
         self._embeddings_ready = False
         self.info = SimpleNamespace(tables={})
@@ -75,12 +76,20 @@ class _Target:
     def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
         return [self.rows[i] for i in ids if i in self.rows]
 
+    def open_table(self, table_name: str) -> Any:
+        self.compactions.append(table_name)
+        return SimpleNamespace(optimize=lambda **_kwargs: None)
+
     def has_record_embeddings(self) -> bool:
         return self._embeddings_ready
 
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
+        self._space = {"model_id": model_id, "dim": dim}
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return getattr(self, "_space", None)
 
     def fingerprint(self) -> str:
         material = sorted(
@@ -132,6 +141,9 @@ class _Source:
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return None
 
     def get_data(
         self,

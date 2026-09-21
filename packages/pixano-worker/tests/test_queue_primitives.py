@@ -92,6 +92,25 @@ class TestClaim:
 
 
 class TestFinish:
+    async def test_announces_the_job_running_then_its_progress_in_the_same_transaction(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`."""
+        job = _enqueue(db, 2, tasks_per_chunk=10)
+        chunks = await queue.claim(adb, "worker-a", 2)
+
+        for chunk in chunks:
+            await queue.finish(adb, chunk)
+
+        events = db.execute(
+            f"SELECT type, payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s ORDER BY id", (job,)
+        ).fetchall()
+        assert events == [
+            ("state", {"state": "running"}),
+            ("progress", {"done_tasks": 10, "total_tasks": 20}),
+            ("progress", {"done_tasks": 20, "total_tasks": 20}),
+        ]
+
     async def test_advances_the_job_progress(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
         job = _enqueue(db, 5, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)
@@ -131,9 +150,9 @@ class TestRecovery:
             f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() - interval '1 minute' WHERE state = 'running'"
         )
 
-        reclaimed, abandoned = await queue.reclaim_expired(adb)
+        recovery = await queue.reclaim_expired(adb)
 
-        assert (reclaimed, abandoned) == (3, 0)
+        assert (recovery.requeued, recovery.abandoned_jobs) == (3, frozenset())
         assert len(await queue.claim(adb, "worker-b", 3)) == 3
 
     async def test_a_chunk_that_keeps_killing_workers_is_set_aside(
@@ -144,7 +163,7 @@ class TestRecovery:
         Le bail n'est antidaté que sur les chunks qui tournent : un chunk écarté n'en a plus,
         et la contrainte du schéma refuserait d'ailleurs de lui en rendre un.
         """
-        _enqueue(db, 1)
+        job = _enqueue(db, 1)
         outcomes = []
         for _ in range(queue.MAX_ATTEMPTS):
             await queue.claim(adb, "worker-a", 1)
@@ -154,10 +173,10 @@ class TestRecovery:
             )
             outcomes.append(await queue.reclaim_expired(adb))
 
-        assert outcomes[-1] == (0, 1), f"attendu un abandon au dernier tour, obtenu {outcomes}"
+        assert outcomes[-1] == queue.Recovery(0, frozenset({job})), f"attendu un abandon au dernier tour : {outcomes}"
         row = db.execute(f"SELECT state, error FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == "error"
-        assert row[1]["reason"] == "abandonné"
+        assert row[1]["reason"] == "abandoned after its attempts"
         assert await queue.claim(adb, "worker-b", 1) == []
 
     async def test_a_restarted_worker_returns_its_own_chunks_at_once(
@@ -167,9 +186,9 @@ class TestRecovery:
         _enqueue(db, 5)
         await queue.claim(adb, "worker-a", 3)
 
-        released = await queue.release_own(adb, "worker-a")
+        recovery = await queue.release_own(adb, "worker-a")
 
-        assert released == 3
+        assert recovery == queue.Recovery(3, frozenset())
         assert len(await queue.claim(adb, "worker-a", 5)) == 5
 
     async def test_another_workers_chunks_are_left_alone(
@@ -178,7 +197,24 @@ class TestRecovery:
         _enqueue(db, 4)
         await queue.claim(adb, "worker-a", 2)
 
-        assert await queue.release_own(adb, "worker-b") == 0
+        assert await queue.release_own(adb, "worker-b") == queue.Recovery(0, frozenset())
+
+    async def test_a_chunk_that_kills_its_worker_at_every_restart_is_set_aside(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue de l'étape 1 : ce chemin ne regardait pas les tentatives.
+
+        Avec un redémarrage automatique, un chunk qui fait planter son worker — une image qui
+        fait exploser la mémoire — le relançait sans fin : réclamé, crash, rendu, réclamé.
+        """
+        job = _enqueue(db, 1)
+        recoveries = []
+        for _ in range(queue.MAX_ATTEMPTS):
+            await queue.claim(adb, "worker-a", 1)
+            recoveries.append(await queue.release_own(adb, "worker-a"))
+
+        assert recoveries[-1] == queue.Recovery(0, frozenset({job}))
+        assert await queue.claim(adb, "worker-a", 1) == []
 
 
 class TestCancellation:

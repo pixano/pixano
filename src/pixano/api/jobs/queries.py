@@ -14,6 +14,23 @@ schema itself.
 
 SCHEMA_NAME = "pixano_jobs"
 
+# The channel the worker rings on every event; the application rings it too for the one event
+# it produces itself, a cancellation.
+NOTIFY_CHANNEL = "pixano_jobs_events"
+
+# Same statement as the worker's: the insert and the bell in one transaction, so that nothing
+# is announced before it can be read. The two sides share no code, so the SQL is repeated.
+RECORD_EVENT = f"""
+WITH inserted AS (
+    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
+    VALUES (%s, %s, %s)
+    RETURNING id, job_id, type
+)
+SELECT pg_notify(%s, json_build_object(
+    'job_id', job_id, 'event_id', id, 'type', type
+)::text) FROM inserted
+"""
+
 # `to_regclass` answers without raising on a database where the worker has never run.
 QUEUE_EXISTS = f"SELECT to_regclass('{SCHEMA_NAME}.jobs')"
 
@@ -28,7 +45,7 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 INSERT_JOB = f"""
 INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
 VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb
 """
 
 # What a job's tasks became, next to how many were attempted. Aggregated on read from the
@@ -42,7 +59,18 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
        coalesce((SELECT sum(c.skipped) FROM {SCHEMA_NAME}.job_chunks c
                  WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
        (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int,
-       j.cancel_requested_at IS NOT NULL
+       j.cancel_requested_at IS NOT NULL,
+       -- Why a job failed: its own error when planning failed, else the first chunk that did.
+       -- Without it a job read "error" and nothing else; only the worker's log knew. Looked up
+       -- only for failed jobs: the list is mostly finished ones, and this is one more
+       -- correlated subquery per listed row.
+       -- Without the chunk's stack trace: three frames of container paths are for the worker's
+       -- log, not for a browser.
+       CASE WHEN j.state = 'error' THEN
+            coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
+                               WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
+            - 'trace'
+       END
 FROM {SCHEMA_NAME}.jobs j
 """
 
@@ -57,26 +85,29 @@ FROM {SCHEMA_NAME}.job_items WHERE job_id = %s
 ORDER BY created_at, item_id LIMIT %s
 """
 
-# Demander l'annulation, sans toucher aux chunks en cours : leur worker les rendra de
-# lui-même avant le chunk suivant.
+# Ask for cancellation without touching the running chunks: their worker stops on its own
+# before the next one.
 REQUEST_CANCEL = f"""
 UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running') AND cancel_requested_at IS NULL
 """
 
-# Les chunks en attente sortent de la file. C'est ce qui permet à la requête de réclamation
-# du worker de ne jamais joindre la table des jobs.
+# Pending chunks leave the queue. This is what lets the worker's claim query never join the
+# jobs table.
 CANCEL_PENDING_CHUNKS = f"""
 UPDATE {SCHEMA_NAME}.job_chunks SET state = 'cancelled', updated_at = now()
 WHERE job_id = %s AND state = 'pending'
 """
 
-# Un job dont plus rien ne tourne est terminal immédiatement.
+# A job with nothing running is terminal immediately. The planning lease is given back with
+# the state: the schema refuses a lease outside `planning`, and a job claimed by a planner at
+# the moment of the cancellation carries one.
 SETTLE_IF_IDLE = f"""
-UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', updated_at = now()
+UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', planning_until = NULL, updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running')
   AND NOT EXISTS (
       SELECT 1 FROM {SCHEMA_NAME}.job_chunks
       WHERE job_id = %s AND state = 'running'
   )
+RETURNING state
 """

@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
 
@@ -36,6 +37,7 @@ class _FakeDataset:
     dont l'écrivain se sert : l'upsert par identifiant et la suppression par identifiants."""
 
     def __init__(self) -> None:
+        self.compactions: list[str] = []
         self.tables: dict[str, dict[str, Any]] = {}
         self.info = SimpleNamespace(tables={})
 
@@ -53,12 +55,20 @@ class _FakeDataset:
         table = self.tables.get(table_name, {})
         return [table[row_id] for row_id in ids if row_id in table]
 
+    def open_table(self, table_name: str) -> Any:
+        self.compactions.append(table_name)
+        return SimpleNamespace(optimize=lambda **_kwargs: None)
+
     def has_record_embeddings(self) -> bool:
         return "embeddings" in self.tables
 
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
+        self.space = {"model_id": model_id, "dim": dim}
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return getattr(self, "space", None)
 
     def checksum(self, table_name: str) -> str:
         """Une empreinte du contenu, insensible à l'ordre d'écriture."""
@@ -77,6 +87,9 @@ class _EmptySource:
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
+
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        return None
 
     def get_data(
         self,
@@ -299,3 +312,109 @@ class TestAgainstRealLance:
         est de savoir si une annotation vient d'un modèle, pas quel rouage l'a écrite.
         """
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
+
+
+class TestRecordEmbeddings:
+    """Une table d'embeddings n'accepte qu'un modèle."""
+
+    def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+
+        writer.write_record_embeddings(["r1", "r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
+
+        assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2}
+        assert len(dataset.tables["embeddings"]) == 2
+
+    def test_the_same_model_replaces_its_vectors(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        writer.write_record_embeddings(["r1"], [[0.5, 0.6]], model="clip")
+
+        assert len(dataset.tables["embeddings"]) == 1
+
+    def test_another_model_is_refused_rather_than_mixed_in(self, dataset: _FakeDataset) -> None:
+        """Même dimension, autre modèle : rien ne casserait à l'écriture, la recherche serait fausse."""
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        with pytest.raises(ValueError, match="dinov2"):
+            writer.write_record_embeddings(["r2"], [[0.3, 0.4]], model="dinov2")
+
+        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "r1", 0)]
+
+    def test_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        with pytest.raises(ValueError, match="dimension 3"):
+            writer.write_record_embeddings(["r2"], [[0.3, 0.4, 0.5]], model="clip")
+
+
+class TestCompaction:
+    """Revue indépendante, C5 : chaque écriture crée une version Lance, rien ne les résorbait."""
+
+    def test_compacts_after_enough_writes(self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch) -> None:
+        from pixano_worker import writer as writer_module
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 3)
+        writer = JobWriter(lambda: dataset, "label", "job-1", "other")
+
+        for n in range(7):
+            writer.replace("classifications", key=f"task-{n}", rows=[_FakeRow(f"r{n}")])
+
+        assert dataset.compactions == ["classifications", "classifications"]
+
+    def test_a_failed_compaction_does_not_fail_the_write(
+        self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pixano_worker import writer as writer_module
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 1)
+        dataset.open_table = lambda name: (_ for _ in ()).throw(RuntimeError("lance indisponible"))  # type: ignore[assignment]
+        writer = JobWriter(lambda: dataset, "label", "job-1", "other")
+
+        written = writer.replace("classifications", key="task-0", rows=[_FakeRow("r0")])
+
+        assert written and dataset.tables["classifications"]
+
+    def test_against_real_lance_keeps_the_version_count_bounded(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from pixano_worker import writer as writer_module
+
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.annotations.classification import Classification
+        from pixano.schemas.records import Record
+
+        monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 10)
+        monkeypatch.setattr(writer_module, "KEEP_OLD_VERSIONS_FOR", timedelta(0))
+        toy = Dataset.create(
+            tmp_path / "jouet", DatasetInfo(id="jouet", name="Jouet", record=Record, classification=Classification)
+        )
+        toy.add_data("records", [Record(id=f"task-{n}") for n in range(40)])
+        writer = JobWriter(lambda: toy, "label", "job-1", "other")
+
+        for n in range(40):
+            row = Classification(id="", record_id=f"task-{n}", labels=["x"], confidences=[1.0], **writer.provenance())
+            writer.replace("classifications", key=f"task-{n}", rows=[row])
+
+        versions = len(toy.open_table("classifications").list_versions())
+        assert versions < 40, f"{versions} versions pour 40 écritures : rien n'a été compacté"
+
+
+class TestEmbeddingTableCreatedElsewhere:
+    """Revue indépendante, étape 4 : un dataset en cache ne voyait pas la table créée par un autre worker."""
+
+    def test_rereads_the_dataset_before_creating(self, dataset: _FakeDataset) -> None:
+        fresh = _FakeDataset()
+        fresh.create_record_embedding_table(dim=2, model_id="clip")
+        created_on_stale = []
+        dataset.create_record_embedding_table = lambda dim, model_id: created_on_stale.append(model_id)  # type: ignore[assignment]
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: fresh)
+
+        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+
+        assert created_on_stale == [], "la table existante aurait été écrasée"
+        assert len(fresh.tables["embeddings"]) == 1

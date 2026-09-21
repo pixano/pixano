@@ -7,6 +7,7 @@
 """REST endpoints for the processing job queue."""
 
 import asyncio
+import uuid
 from typing import Annotated, Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -14,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from pixano.api import jobs
-from pixano.api.jobs.events import EventBroker, read_since
+from pixano.api.jobs.events import EventBroker, SentWindow, read_since
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
 
@@ -56,6 +57,8 @@ class JobResponse(BaseModel):
         skipped: Tasks the kind does not apply to, such as a record without an image for an
             image job. Not a failure.
         quarantined: Tasks that failed, readable one by one from the quarantine endpoint.
+        error: Why the job failed, when it did: its own failure — planning — or the first of
+            its chunks that failed. Carries at least a `reason`.
         cancel_requested: Someone asked the job to stop. Until its state says `cancelled`, the
             chunks in flight are finishing — an interface should say so rather than leave the
             job looking as if the request had been lost.
@@ -71,6 +74,7 @@ class JobResponse(BaseModel):
     skipped: int
     quarantined: int
     cancel_requested: bool
+    error: dict[str, Any] | None
     created_at: str
 
     @classmethod
@@ -87,6 +91,7 @@ class JobResponse(BaseModel):
             skipped=record.skipped,
             quarantined=record.quarantined,
             cancel_requested=record.cancel_requested,
+            error=record.error,
             created_at=record.created_at.isoformat(),
         )
 
@@ -155,7 +160,7 @@ def submit_job(
 @router.get("", operation_id="list_jobs")
 def list_jobs(
     settings: Annotated[Settings, Depends(get_settings)],
-    limit: Annotated[int, Query(ge=1, le=MAX_LISTED_JOBS)] = 50,
+    limit: Annotated[int, Query(ge=1, le=MAX_LISTED_JOBS)] = jobs.DEFAULT_LISTED_JOBS,
 ) -> list[JobResponse]:
     """List jobs, most recent first."""
     with _connect(settings) as conn:
@@ -166,17 +171,17 @@ def list_jobs(
     return [JobResponse.of(record) for record in records]
 
 
-# Les types d'événements qu'un flux peut porter. Un nom inconnu est refusé plutôt qu'ignoré :
-# `types=stat` produirait sinon un flux muet, et le silence est le pire des diagnostics.
+# The event types a stream can carry. An unknown name is refused rather than ignored:
+# `types=stat` would otherwise yield a silent stream, and silence is the worst diagnostic.
 _EVENT_TYPES = frozenset({"state", "progress"})
 
-# Un commentaire SSE périodique, pour que les intermédiaires réseau ne referment pas un flux
-# qu'ils croient inactif, et pour détecter un client parti.
+# A periodic SSE comment, so that network intermediaries do not close a stream they believe
+# idle, and to detect a client that left.
 _KEEPALIVE_S = 15.0
 
 
 def _last_event_id(request: Request) -> int:
-    """Où reprendre, d'après ce que le client dit avoir déjà reçu."""
+    """Where to resume, from what the client says it already received."""
     raw = request.headers.get("last-event-id", "")
     try:
         return max(0, int(raw))
@@ -194,33 +199,57 @@ async def _stream(
     """Serve one stream: catch up, then follow.
 
     The order matters. Subscribing *before* reading the backlog is what closes the gap: an
-    event committed between the two is held in the queue rather than lost, and the identifier
-    filter drops the duplicate.
+    event committed between the two is held in the queue rather than lost, and the set of
+    identifiers already sent drops the duplicate.
+
+    Duplicates are dropped by identifier, never by order. Identifiers are handed out before
+    commit, so a live event can arrive with an identifier below the last one sent; a filter on
+    "greater than the last" threw it away — for a state event, for good (independent review,
+    D2). The window forgets identifiers too old to arrive late, so a stream open for days
+    does not grow with every event it ever sent.
     """
     async with broker.subscribe(job_id, types) as subscriber:
-        delivered = after_id
+        sent = SentWindow()
         if job_id is not None:
             for event in await read_since(database_url, job_id, after_id):
-                delivered = event.id
+                sent.mark(event.id)
                 yield event.to_sse()
 
         while True:
+            if subscriber.dropped:
+                # Its queue overflowed and events were lost. Ending the stream is what makes the
+                # browser reconnect and catch up; kept open, it would go on silently missing them.
+                return
             try:
                 event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
             except asyncio.TimeoutError:
-                # asyncio.TimeoutError n'est le TimeoutError natif qu'à partir de Python 3.11,
-                # et le projet supporte 3.10 : capturer le natif y laisserait l'exception
-                # remonter et tuerait le flux au premier silence.
+                # asyncio.TimeoutError is the built-in TimeoutError only from Python 3.11, and
+                # the project supports 3.10: catching the built-in there would let the exception
+                # through and kill the stream at the first silence.
                 yield ": keepalive\n\n"
                 continue
-            if event.id <= delivered:
+            if sent.already_sent(event.id):
                 continue
-            delivered = event.id
+            sent.mark(event.id)
             yield event.to_sse()
+
+
+def _require_job_id(job_id: str) -> None:
+    """Refuse a malformed identifier before the stream opens.
+
+    The schema types identifiers as uuid. Inside the stream the query fails after the headers
+    are sent — a 200 that breaks, and a traceback in the log — so the check is made here.
+    """
+    try:
+        uuid.UUID(job_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
 
 
 def _events_response(request: Request, settings: Settings, job_id: str | None, types) -> StreamingResponse:
     """Build an SSE response, or refuse when no queue is configured."""
+    if job_id is not None:
+        _require_job_id(job_id)
     broker: EventBroker | None = getattr(request.app.state, "job_events", None)
     if broker is None or not broker.enabled or settings.database_url is None:
         raise HTTPException(status_code=503, detail="no job queue is configured")

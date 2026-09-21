@@ -29,7 +29,7 @@ import psycopg
 logger = logging.getLogger("pixano-worker")
 
 # Incrémenter à chaque modification de sql/schema.sql.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_NAME = "pixano_jobs"
 
@@ -105,9 +105,11 @@ def _install(conn: psycopg.Connection) -> int | None:
             raise SchemaVersionError(
                 f"schéma de base incompatible : la base porte la version {installed}, "
                 f"ce worker attend la version {SCHEMA_VERSION}.\n"
-                "Aucune migration n'est fournie à ce stade — rien de ce que contient cette "
-                "base ne peut être perdu, tout est recréé au prochain démarrage :\n"
-                "  docker compose down -v && docker compose up"
+                "Aucune migration n'est fournie à ce stade — la file de jobs ne contient rien "
+                "d'irremplaçable, elle est recréée vide au prochain démarrage :\n"
+                '  docker compose exec postgres psql -U pixano -d pixano -c "DROP SCHEMA pixano_jobs CASCADE"\n'
+                "  docker compose restart pixano-worker\n"
+                "(Pas docker compose down -v : il effacerait aussi les poids téléchargés du modèle d'inférence.)"
             )
 
         # Rejouer le fichier même quand la version correspond : c'est une poignée

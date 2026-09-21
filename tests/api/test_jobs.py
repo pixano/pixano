@@ -167,6 +167,22 @@ class TestReadAndCancel:
         assert job.cancel_requested is False
         assert jobs.get(declared, job.id).cancel_requested is False
 
+    def test_a_job_being_planned_can_be_cancelled(self, declared: psycopg.Connection) -> None:
+        """Second review of step 1: this answered 500 with a CheckViolation.
+
+        A job claimed by a planner carries a planning lease, and the schema refuses a lease
+        outside the planning state. The first test of this case simulated the cancellation by
+        hand and cleared the lease itself — which is exactly what hid the defect.
+        """
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() + interval '2 minutes' WHERE id = %s", (job.id,)
+        )
+
+        cancelled = jobs.cancel(declared, job.id)
+
+        assert cancelled.state == "cancelled"
+
     def test_a_running_job_reports_its_cancellation_before_it_ends(self, declared: psycopg.Connection) -> None:
         """The chunks in flight finish before the job settles; the request must be visible meanwhile."""
         job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
@@ -242,3 +258,109 @@ class TestOutcome:
     def test_the_quarantine_of_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
         with pytest.raises(jobs.JobNotFoundError):
             jobs.quarantine(declared, "00000000-0000-0000-0000-000000000000", limit=10)
+
+
+class TestCancellationIsAnnounced:
+    """Independent review, D3: the application's cancellation rang no bell."""
+
+    @staticmethod
+    def _state_events(queue: psycopg.Connection, job_id: str) -> list[dict]:
+        rows = queue.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id", (job_id,)
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    def test_a_settled_cancellation_emits_its_final_state(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        jobs.cancel(declared, job.id)
+
+        assert self._state_events(declared, job.id) == [{"state": "cancelled", "cancel_requested": True}]
+
+    def test_a_cancellation_still_running_announces_the_request(self, declared: psycopg.Connection) -> None:
+        """Other clients can show "cancelling" while the chunks in flight finish."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, lease_until) "
+            "VALUES (%s, 0, 5, 'running', now() + interval '2 minutes')",
+            (job.id,),
+        )
+
+        jobs.cancel(declared, job.id)
+
+        assert self._state_events(declared, job.id) == [{"state": "running", "cancel_requested": True}]
+
+    def test_cancelling_twice_announces_once(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        jobs.cancel(declared, job.id)
+        jobs.cancel(declared, job.id)
+
+        assert len(self._state_events(declared, job.id)) == 1
+
+
+class TestFailureReason:
+    """Independent review, D4: a failed job read "error" and nothing else."""
+
+    def test_a_healthy_job_has_no_error(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        assert job.error is None
+        assert jobs.get(declared, job.id).error is None
+
+    def test_a_failed_planning_exposes_its_reason(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET state = 'error', error = %s WHERE id = %s",
+            (Jsonb({"reason": "planning failed", "detail": "boom"}), job.id),
+        )
+
+        assert jobs.get(declared, job.id).error == {"reason": "planning failed", "detail": "boom"}
+
+    def test_a_failed_chunk_exposes_its_reason_on_the_job(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'error' WHERE id = %s", (job.id,))
+        for seq, state, error in (
+            (0, "done", None),
+            (1, "error", {"reason": "kaboom"}),
+            (2, "error", {"reason": "later"}),
+        ):
+            declared.execute(
+                f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, error, produced, skipped) "
+                "VALUES (%s, %s, 1, %s, %s, %s, %s)",
+                (
+                    job.id,
+                    seq,
+                    state,
+                    Jsonb(error) if error else None,
+                    1 if state == "done" else None,
+                    0 if state == "done" else None,
+                ),
+            )
+
+        assert jobs.get(declared, job.id).error == {"reason": "kaboom"}
+
+    def test_the_stack_trace_of_a_failed_chunk_stays_in_the_worker(self, declared: psycopg.Connection) -> None:
+        """Independent review v2, R2: the API exposed three frames of container paths."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'error' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, error) "
+            "VALUES (%s, 0, 1, 'error', %s)",
+            (job.id, Jsonb({"reason": "kaboom", "trace": "Traceback (most recent call last) ..."})),
+        )
+
+        assert jobs.get(declared, job.id).error == {"reason": "kaboom"}
+
+
+class TestMalformedIdentifier:
+    """Independent review, D5: a job identifier that is not a uuid answered 500."""
+
+    def test_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.get(declared, "not-a-uuid")
+
+    def test_cannot_be_cancelled_either(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.cancel(declared, "not-a-uuid")

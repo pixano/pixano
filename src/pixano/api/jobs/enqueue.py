@@ -16,6 +16,7 @@ The worker owns the schema: this module never creates anything. On a database wh
 worker has never run, the tables are simply absent and callers get `QueueUnavailableError`.
 """
 
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Sequence
@@ -27,23 +28,23 @@ from psycopg.types.json import Jsonb
 from . import queries
 
 
-MAX_LISTED_JOBS = 50
+DEFAULT_LISTED_JOBS = 50
 
 
 class QueueUnavailableError(RuntimeError):
-    """La file n'existe pas : le worker, qui possède le schéma, n'a jamais démarré."""
+    """The queue does not exist: the worker, which owns the schema, has never started."""
 
 
 class JobNotFoundError(LookupError):
-    """Aucun job ne porte cet identifiant."""
+    """No job carries this identifier."""
 
 
 class UnknownKindError(ValueError):
-    """Aucun worker n'a déclaré savoir exécuter ce type de job."""
+    """No worker has declared it can run this job kind."""
 
 
 class InvalidParamsError(ValueError):
-    """Les paramètres ne respectent pas le schéma déclaré par le type."""
+    """The parameters do not match the schema the kind declared."""
 
 
 @dataclass(frozen=True)
@@ -61,10 +62,11 @@ class JobRecord:
     skipped: int = 0
     quarantined: int = 0
     cancel_requested: bool = False
+    error: dict[str, Any] | None = None
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
-        """Construire depuis une ligne de la projection commune des requêtes."""
+        """Build from a row of the projection every query shares."""
         return cls(
             id=str(row[0]),
             kind=row[1],
@@ -77,6 +79,7 @@ class JobRecord:
             skipped=row[8],
             quarantined=row[9],
             cancel_requested=row[10],
+            error=row[11],
         )
 
 
@@ -91,10 +94,10 @@ class QuarantinedItem:
 
 
 def connect(database_url: str | None) -> psycopg.Connection:
-    """Ouvrir une connexion sur la file, ou refuser clairement.
+    """Open a connection to the queue, or refuse clearly.
 
     Raises:
-        QueueUnavailableError: Aucune URL n'est configurée, ou la base est injoignable.
+        QueueUnavailableError: No URL is configured, or the database is unreachable.
     """
     if not database_url:
         raise QueueUnavailableError("no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker")
@@ -105,34 +108,34 @@ def connect(database_url: str | None) -> psycopg.Connection:
 
 
 def _require_queue(conn: psycopg.Connection) -> None:
-    """Vérifier que le worker a déjà installé le schéma."""
+    """Check that the worker has installed the schema."""
     row = conn.execute(queries.QUEUE_EXISTS).fetchone()
     if row is None or row[0] is None:
         raise QueueUnavailableError("the job queue does not exist yet — start pixano-worker, which installs it")
 
 
 def available_kinds(conn: psycopg.Connection) -> dict[str, dict[str, Any]]:
-    """Les types de jobs qu'un worker a déclaré savoir exécuter, et leurs schémas."""
+    """The job kinds a worker has declared it can run, with their parameter schemas."""
     _require_queue(conn)
     return {row[0]: row[1] for row in conn.execute(queries.LIST_KINDS).fetchall()}
 
 
 def check_params(conn: psycopg.Connection, kind: str, params: dict[str, Any]) -> None:
-    """Refuser une demande qu'aucun worker ne saurait exécuter.
+    """Refuse a request no worker could run.
 
-    Valider ici épargne à l'utilisateur un job qui part en file pour échouer ensuite, et
-    épargne au worker de découvrir une erreur de saisie au moment de planifier.
+    Validating here spares the user a job that is queued only to fail, and spares the worker
+    discovering a typo at planning time.
 
     Raises:
-        UnknownKindError: Aucun worker ne déclare ce type.
-        InvalidParamsError: Les paramètres ne respectent pas le schéma déclaré.
+        UnknownKindError: No worker has declared this kind.
+        InvalidParamsError: The parameters do not match the declared schema.
     """
     _require_queue(conn)
     row = conn.execute(queries.SELECT_KIND, (kind,)).fetchone()
     if row is None:
         declared = sorted(available_kinds(conn))
-        known = ", ".join(declared) if declared else "aucun"
-        raise UnknownKindError(f"no running worker declares the job kind '{kind}' — known kinds: {known}")
+        known = ", ".join(declared) if declared else "none"
+        raise UnknownKindError(f"no worker has declared the job kind '{kind}' — declared kinds: {known}")
 
     try:
         jsonschema.validate(params, row[0])
@@ -147,46 +150,52 @@ def submit(
     dataset_id: str,
     params: dict[str, Any] | None = None,
 ) -> JobRecord:
-    """Enregistrer une demande de job, à charge du worker de la découper.
+    """Record a job request; splitting it is the worker's business.
 
     Raises:
-        QueueUnavailableError: Le schéma n'est pas installé.
-        UnknownKindError: Aucun worker ne déclare ce type.
-        InvalidParamsError: Les paramètres ne respectent pas le schéma déclaré.
+        QueueUnavailableError: The schema is not installed.
+        UnknownKindError: No worker has declared this kind.
+        InvalidParamsError: The parameters do not match the declared schema.
     """
     params = params or {}
     check_params(conn, kind, params)
     with conn.transaction():
         row = conn.execute(queries.INSERT_JOB, (kind, dataset_id, Jsonb(params))).fetchone()
-        if row is None:  # pragma: no cover - RETURNING garantit une ligne
-            raise RuntimeError("l'insertion du job n'a rien renvoyé")
+        if row is None:  # pragma: no cover - RETURNING guarantees a row
+            raise RuntimeError("inserting the job returned nothing")
     return JobRecord.from_row(row)
 
 
 def get(conn: psycopg.Connection, job_id: str) -> JobRecord:
-    """Lire un job.
+    """Read one job.
 
     Raises:
-        JobNotFoundError: Aucun job ne porte cet identifiant.
+        JobNotFoundError: No job carries this identifier.
     """
     _require_queue(conn)
+    try:
+        uuid.UUID(job_id)
+    except ValueError as error:
+        # The schema types the identifier as uuid: any other string made the query itself fail,
+        # answering 500 for what is an unknown job.
+        raise JobNotFoundError(job_id) from error
     row = conn.execute(queries.SELECT_JOB, (job_id,)).fetchone()
     if row is None:
         raise JobNotFoundError(job_id)
     return JobRecord.from_row(row)
 
 
-def list_jobs(conn: psycopg.Connection, limit: int = MAX_LISTED_JOBS) -> list[JobRecord]:
-    """Lister les jobs, du plus récent au plus ancien."""
+def list_jobs(conn: psycopg.Connection, limit: int = DEFAULT_LISTED_JOBS) -> list[JobRecord]:
+    """List jobs, most recent first."""
     _require_queue(conn)
     return [JobRecord.from_row(row) for row in conn.execute(queries.LIST_JOBS, (limit,)).fetchall()]
 
 
 def quarantine(conn: psycopg.Connection, job_id: str, limit: int) -> list[QuarantinedItem]:
-    """Les items qu'un job a mis en quarantaine.
+    """The items a job set aside.
 
     Raises:
-        JobNotFoundError: Aucun job ne porte cet identifiant.
+        JobNotFoundError: No job carries this identifier.
     """
     job = get(conn, job_id)
     rows = conn.execute(queries.LIST_QUARANTINE, (job.id, limit)).fetchall()
@@ -194,18 +203,26 @@ def quarantine(conn: psycopg.Connection, job_id: str, limit: int) -> list[Quaran
 
 
 def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
-    """Demander l'annulation d'un job.
+    """Ask for a job to stop.
 
-    Les chunks en attente sortent de la file immédiatement ; ceux qui tournent sont laissés
-    à leur worker, qui s'arrêtera avant le chunk suivant. Un job dont plus rien ne tourne devient
-    terminal tout de suite.
+    Pending chunks leave the queue at once; running ones are left to their worker, which stops
+    before its next chunk. A job with nothing running becomes terminal immediately.
+
+    The cancellation is announced on the event stream, in the same transaction: it is the one
+    state change the application makes itself, and without an event every other client kept
+    the job "running" until a reload. The event carries the job's state after the
+    cancellation — settled, or still running while its chunks finish — and the request flag.
 
     Raises:
-        JobNotFoundError: Aucun job ne porte cet identifiant.
+        JobNotFoundError: No job carries this identifier.
     """
     with conn.transaction():
         job = get(conn, job_id)
-        conn.execute(queries.REQUEST_CANCEL, (job.id,))
+        requested = conn.execute(queries.REQUEST_CANCEL, (job.id,)).rowcount
         conn.execute(queries.CANCEL_PENDING_CHUNKS, (job.id,))
-        conn.execute(queries.SETTLE_IF_IDLE, (job.id, job.id))
+        settled = conn.execute(queries.SETTLE_IF_IDLE, (job.id, job.id)).fetchone()
+        if requested:
+            # Settled on the spot, or still in its previous state: a cancellation does not change it.
+            payload = {"state": settled[0] if settled else job.state, "cancel_requested": True}
+            conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
     return get(conn, job_id)

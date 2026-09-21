@@ -28,7 +28,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from .config import MAX_HEARTBEAT_AGE_S
-from .schema import SCHEMA_NAME
+from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 # Le bail doit dépasser la fenêtre au bout de laquelle docker déclare le worker mort, sinon
@@ -131,12 +131,22 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 """
 
 # Ce que le worker fait de ses propres chunks après un arrêt brutal : les rendre tout de
-# suite, au lieu d'attendre l'expiration de leur bail.
+# suite, au lieu d'attendre l'expiration de leur bail. Avec le même plafond que la reprise des
+# baux : un chunk qui fait tomber son worker à chaque tentative ferait sinon boucler un worker
+# redémarré automatiquement, puisque ce chemin ne regardait jamais les tentatives.
 RELEASE_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND claimed_by = %s
+WHERE state = 'running' AND claimed_by = %s AND attempts < %s
 RETURNING id
+"""
+
+ABANDON_OWN = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET state = 'error', lease_until = NULL, updated_at = now(),
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
+WHERE state = 'running' AND claimed_by = %s AND attempts >= %s
+RETURNING job_id
 """
 
 RECLAIM_EXPIRED = f"""
@@ -149,9 +159,9 @@ RETURNING id
 ABANDON_EXHAUSTED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandonné', 'attempts', attempts)
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
 WHERE state = 'running' AND lease_until < now() AND attempts >= %s
-RETURNING id
+RETURNING job_id
 """
 
 # Le premier chunk terminé fait passer le job en cours. L'ancien état est lu sous le verrou de
@@ -167,7 +177,22 @@ SET done_tasks = j.done_tasks + %(tasks)s,
     updated_at = now()
 FROM previous
 WHERE j.id = %(job)s
-RETURNING previous.state = 'pending'
+RETURNING previous.state = 'pending', j.done_tasks, j.total_tasks
+"""
+
+# L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
+# ne délivre un NOTIFY qu'au commit, ce qui donne gratuitement la garantie « pas d'événement
+# annoncé avant d'être lisible ». La charge ne porte que des identifiants — elle est plafonnée
+# à 8 ko, et un lecteur doit de toute façon relire la ligne pour rattraper ce qu'il a manqué.
+RECORD_EVENT = f"""
+WITH inserted AS (
+    INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
+    VALUES (%s, %s, %s)
+    RETURNING id, job_id, type
+)
+SELECT pg_notify(%s, json_build_object(
+    'job_id', job_id, 'event_id', id, 'type', type
+)::text) FROM inserted
 """
 
 IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs WHERE id = %s"
@@ -205,6 +230,21 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
 
 
 @dataclass(frozen=True)
+class Recovery:
+    """Ce qu'une reprise de chunks orphelins a fait.
+
+    Attributes:
+        requeued: Chunks remis en file.
+        abandoned_jobs: Jobs dont au moins un chunk vient d'être écarté après ses tentatives.
+            Ce chunk était peut-être le dernier de son job : l'appelant doit conclure ces jobs,
+            sans quoi un job dont plus rien ne tourne resterait « en cours » pour toujours.
+    """
+
+    requeued: int
+    abandoned_jobs: frozenset[str]
+
+
+@dataclass(frozen=True)
 class Finished:
     """Ce qu'a produit la fin d'un chunk, au-delà du chunk lui-même.
 
@@ -234,6 +274,20 @@ class QuarantinedItem(Protocol):
     def detail(self) -> dict[str, Any] | None: ...  # noqa: D102
 
 
+async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
+    """Consigner un événement de progression.
+
+    Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
+    sont attribués avant le commit, donc deux transactions concurrentes peuvent rendre leurs
+    événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
+    remettre au suivant.
+
+    Un événement **d'état**, lui, n'a pas de suivant qui le répare : il doit s'écrire dans la
+    transaction qui change l'état, pour que l'ordre des identifiants soit l'ordre des états.
+    """
+    await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
+
+
 async def finish(
     conn: psycopg.AsyncConnection,
     chunk: Chunk,
@@ -243,8 +297,11 @@ async def finish(
 ) -> Finished | None:
     """Marquer un chunk terminé, consigner son bilan, et avancer la progression de son job.
 
-    Le bilan, la quarantaine et la progression s'écrivent dans une seule transaction : un
-    chunk ne peut pas être compté fait sans que ses items écartés soient consignés.
+    Le bilan, la quarantaine, la progression et ses événements s'écrivent dans une seule
+    transaction : un chunk ne peut pas être compté fait sans que ses items écartés soient
+    consignés ni sans que l'interface l'apprenne. L'événement `running` du premier chunk terminé
+    est écrit ici aussi, sous le verrou de la ligne du job : c'est ce qui garantit que son
+    identifiant précède celui du `done` que le dernier chunk écrira — revue indépendante, D2/D6.
 
     Args:
         conn: La connexion du chunk.
@@ -270,7 +327,12 @@ async def finish(
                 (chunk.job_id, chunk.id, item.item_id, item.reason, Jsonb(item.detail) if item.detail else None),
             )
         advanced = await (await conn.execute(ADVANCE_JOB, {"job": row[0], "tasks": row[1]})).fetchone()
-    return Finished(started_job=bool(advanced and advanced[0]))
+        started = bool(advanced and advanced[0])
+        if started:
+            await record_event(conn, chunk.job_id, "state", {"state": "running"})
+        if advanced is not None:
+            await record_event(conn, chunk.job_id, "progress", {"done_tasks": advanced[1], "total_tasks": advanced[2]})
+    return Finished(started_job=started)
 
 
 async def retry_later(
@@ -323,25 +385,25 @@ async def cancel_chunk(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
     return (await conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts))).rowcount > 0
 
 
-async def release_own(conn: psycopg.AsyncConnection, worker_id: str) -> int:
+async def release_own(conn: psycopg.AsyncConnection, worker_id: str, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
     """Rendre les chunks laissés par une exécution précédente de ce même worker.
 
     Le bail finirait par les libérer de toute façon ; les rendre au démarrage transforme une
-    reprise de deux minutes en reprise immédiate.
-    """
-    return len(await (await conn.execute(RELEASE_OWN, (worker_id,))).fetchall())
-
-
-async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> tuple[int, int]:
-    """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent.
-
-    Returns:
-        Le nombre de chunks remis en file, et le nombre mis en échec.
+    reprise de deux minutes en reprise immédiate. Ceux qui ont épuisé leurs tentatives sont
+    écartés, comme par la reprise des baux.
     """
     async with conn.transaction():
-        reclaimed = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
-        abandoned = len(await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall())
-    return reclaimed, abandoned
+        requeued = len(await (await conn.execute(RELEASE_OWN, (worker_id, max_attempts))).fetchall())
+        abandoned = await (await conn.execute(ABANDON_OWN, (worker_id, max_attempts))).fetchall()
+    return Recovery(requeued=requeued, abandoned_jobs=frozenset(str(row[0]) for row in abandoned))
+
+
+async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
+    """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent."""
+    async with conn.transaction():
+        requeued = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
+        abandoned = await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall()
+    return Recovery(requeued=requeued, abandoned_jobs=frozenset(str(row[0]) for row in abandoned))
 
 
 async def is_cancelled(conn: psycopg.AsyncConnection, job_id: str) -> bool:

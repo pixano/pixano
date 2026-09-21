@@ -25,20 +25,18 @@ from typing import Any, AsyncIterator
 
 import psycopg
 
-from .queries import SCHEMA_NAME
+from .queries import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
 logger = logging.getLogger(__name__)
 
-NOTIFY_CHANNEL = "pixano_jobs_events"
-
-# Espacement des tentatives quand la base est injoignable. Le plafond est bas : une écoute
-# interrompue ne perd rien — le rattrapage par identifiant répare le trou — mais elle laisse
-# les interfaces sans nouvelles, donc on revient vite.
+# Backoff while the database is unreachable. The cap is low: an interrupted listener loses
+# nothing — catching up by identifier repairs the gap — but it leaves the interfaces without
+# news, so it comes back quickly.
 _RETRY_BACKOFF_S = (1, 2, 5, 10)
 
-# Au-delà, un abonné qui ne lit pas assez vite est déconnecté plutôt que de faire grossir sa
-# file sans fin. Il se reconnectera et rattrapera par identifiant.
+# Beyond this, a subscriber that does not read fast enough is dropped rather than left to grow
+# its queue without end. It reconnects and catches up by identifier.
 _SUBSCRIBER_BACKLOG = 1000
 
 SELECT_SINCE = f"""
@@ -93,8 +91,8 @@ class _Subscriber:
         try:
             self.queue.put_nowait(event)
         except asyncio.QueueFull:
-            # Un abonné lent ne doit pas retarder les autres. On le lâche ; sa reconnexion
-            # rattrapera ce qu'il a manqué par identifiant.
+            # A slow subscriber must not delay the others. It is let go: its stream closes once
+            # it has drained its queue, and its reconnection catches up on what it missed.
             self.dropped = True
 
 
@@ -137,9 +135,9 @@ class EventBroker:
         attempt = 0
         while True:
             try:
-                # Deux connexions, et ce n'est pas du luxe : interroger la connexion qui écoute
-                # pendant qu'on itère ses notifications la bloque indéfiniment. La sonnette ne
-                # portant que des identifiants, la ligne doit être lue ailleurs.
+                # Two connections, and not a luxury: querying the listening connection while
+                # iterating its notifications blocks it forever. The bell carries identifiers
+                # only, so the row has to be read elsewhere.
                 listen = await psycopg.AsyncConnection.connect(self._database_url or "", autocommit=True)
                 read = await psycopg.AsyncConnection.connect(self._database_url or "", autocommit=True)
                 try:
@@ -195,8 +193,48 @@ class EventBroker:
             self._subscribers.discard(subscriber)
 
 
-async def read_since(database_url: str, job_id: str, after_id: int) -> list[JobEvent]:
-    """Read the events a reconnecting client missed."""
+# Event identifiers are handed out before commit, so an event committed late can carry an
+# identifier below the last one a client saw. Catching up from that identifier alone would skip
+# it for good. Reading back a little further costs a few duplicates, which absolute counters
+# and identifier-ordered states make harmless.
+CATCH_UP_SLACK = 100
+
+
+class SentWindow:
+    """The identifiers a stream has sent, kept only as far back as an event can arrive late.
+
+    A plain set would grow for the life of the connection — a panel left open for days on a
+    team running large jobs is tens of megabytes per tab. An event can only arrive late by
+    about `CATCH_UP_SLACK` identifiers, so anything below the highest identifier seen minus
+    that margin is treated as already sent, and forgotten.
+    """
+
+    def __init__(self, slack: int = CATCH_UP_SLACK) -> None:
+        """Create an empty window."""
+        self._slack = slack
+        self._sent: set[int] = set()
+        self._highest = 0
+
+    def already_sent(self, event_id: int) -> bool:
+        """Whether this identifier was sent, or is too old to be a late arrival."""
+        return event_id in self._sent or event_id <= self._highest - self._slack
+
+    def mark(self, event_id: int) -> None:
+        """Record an identifier as sent, and forget the ones now out of the window."""
+        self._sent.add(event_id)
+        if event_id > self._highest:
+            self._highest = event_id
+            floor = self._highest - self._slack
+            if len(self._sent) > 2 * self._slack:
+                self._sent = {sent for sent in self._sent if sent > floor}
+
+    def __len__(self) -> int:
+        """How many identifiers the window holds."""
+        return len(self._sent)
+
+
+async def read_since(database_url: str, job_id: str, after_id: int, slack: int = CATCH_UP_SLACK) -> list[JobEvent]:
+    """Read the events a reconnecting client missed, and a few it may have seen."""
     async with await psycopg.AsyncConnection.connect(database_url) as conn:
-        rows = await (await conn.execute(SELECT_SINCE, (job_id, after_id))).fetchall()
+        rows = await (await conn.execute(SELECT_SINCE, (job_id, max(0, after_id - slack)))).fetchall()
     return [JobEvent(id=row[0], job_id=str(row[1]), type=row[2], payload=row[3]) for row in rows]

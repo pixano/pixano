@@ -24,6 +24,9 @@ toucher au moindre type de job.
 import hashlib
 import json
 import logging
+import threading
+from collections import defaultdict
+from datetime import timedelta
 from typing import Any, Callable, Iterable, Protocol, Sequence
 
 
@@ -37,6 +40,19 @@ _ID_LENGTH = 22
 # rétrécit le fait de quelques lignes, pas de cent ; au-delà, des restes subsistent, ce qui
 # vaut mieux que balayer la table à chaque écriture.
 _LEFTOVER_PROBE = 32
+
+# Chaque écriture crée une version de la table Lance ; un job de 50 000 images en chunks de 8 en
+# crée 6 250, et rien ne les résorbait — 101 versions mesurées après deux jobs sur 400 images.
+# Une table fragmentée ralentit toutes les lectures de l'explorateur. On compacte donc à
+# intervalle régulier, en nombre d'écritures, et on efface les versions assez anciennes pour
+# qu'aucun lecteur ne les tienne encore.
+COMPACT_EVERY_WRITES = 64
+KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
+
+# Le compte d'écritures par table, par dataset. Le runner sérialise les écritures d'un dataset,
+# donc le verrou ici ne protège que le compteur lui-même.
+_writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
+_writes_guard = threading.Lock()
 
 
 class DatasetReadSource(Protocol):
@@ -71,6 +87,10 @@ class DatasetReadSource(Protocol):
         """Les octets d'une vue embarquée, et leur type."""
         ...
 
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        ...
+
 
 class DatasetWriteTarget(Protocol):
     """Les seules opérations dont l'écriture d'un job a besoin.
@@ -100,10 +120,46 @@ class DatasetWriteTarget(Protocol):
         """Créer la table d'embeddings pour une largeur de vecteur donnée."""
         ...
 
+    def record_embedding_space(self) -> dict[str, Any] | None:
+        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        ...
+
+    def open_table(self, name: str) -> Any:
+        """La table LanceDB elle-même, pour la compacter."""
+        ...
+
     @property
     def info(self) -> Any:
         """Les métadonnées du dataset, dont les schémas de tables."""
         ...
+
+
+def check_embedding_space(space: dict[str, Any] | None, model: str, dim: int | None = None) -> None:
+    """Refuser d'ajouter à une table d'embeddings des vecteurs d'un autre modèle.
+
+    Args:
+        space: Ce que le dataset déclare de sa table, ou None s'il n'en a pas.
+        model: Le modèle du job.
+        dim: La dimension des vecteurs, quand elle est connue.
+
+    Raises:
+        ValueError: La table porte un autre modèle ou une autre dimension.
+    """
+    if space is None:
+        return
+    existing_model = space.get("model_id")
+    if existing_model != model:
+        raise ValueError(
+            f"ce dataset porte déjà des embeddings du modèle « {existing_model} » : y ajouter ceux de "
+            f"« {model} » mélangerait deux modèles dans une même table et fausserait la recherche. "
+            "Supprimez la table d'embeddings existante, ou relancez le job avec ce modèle."
+        )
+    existing_dim = space.get("dim")
+    if dim is not None and existing_dim is not None and int(existing_dim) != dim:
+        raise ValueError(
+            f"le modèle « {model} » rend des vecteurs de dimension {dim}, la table existante est de "
+            f"dimension {existing_dim}"
+        )
 
 
 def derive_id(kind: str, key: str, index: int = 0) -> str:
@@ -136,15 +192,33 @@ class JobWriter:
     """
 
     def __init__(
-        self, open_dataset: Callable[[], DatasetWriteTarget], kind: str, job_id: str, source_type: str = "model"
+        self,
+        open_dataset: Callable[[], DatasetWriteTarget],
+        kind: str,
+        job_id: str,
+        source_type: str = "model",
+        reopen_dataset: Callable[[], DatasetWriteTarget] | None = None,
+        dataset_id: str | None = None,
     ) -> None:
         """Lier un écrivain à un job et à son dataset.
 
         Le dataset est ouvert au premier usage, pas à la construction : un type de job qui
         n'écrit rien ne doit pas exiger qu'un dataset existe, et le runner construit un
         écrivain pour chaque chunk sans savoir si celui-ci s'en servira.
+
+        Args:
+            open_dataset: Ouvre le dataset — d'un cache, en général.
+            kind: Le type de job qui écrit.
+            job_id: Le job, conservé comme provenance.
+            source_type: Ce que le type déclare produire.
+            reopen_dataset: Rouvre le dataset **en ignorant tout cache**, pour relire ce qu'un
+                autre process a pu y créer entre-temps. Sans lui, `open_dataset` fait foi.
+            dataset_id: L'identifiant du dataset, clé du compte d'écritures qui décide des
+                compactions. Sans lui, l'écrivain compte pour lui seul.
         """
         self._open_dataset = open_dataset
+        self._dataset_id = dataset_id
+        self._reopen_dataset = reopen_dataset or open_dataset
         self._dataset: DatasetWriteTarget | None = None
         self.kind = kind
         self.job_id = job_id
@@ -199,9 +273,34 @@ class JobWriter:
 
         if rows:
             self.dataset.update_data(table_name, list(rows))
+            self._count_write(table_name)
 
         self._drop_leftovers(table_name, key, kept=len(rows))
         return written
+
+    def _count_write(self, table_name: str) -> None:
+        """Compter une écriture, et compacter la table quand assez se sont accumulées."""
+        # Un identifiant plutôt que l'objet : un dataset rouvert est un autre objet pour la même
+        # table, et l'adresse d'un objet libéré est réutilisée.
+        key = (self._dataset_id or f"writer-{id(self)}", table_name)
+        with _writes_guard:
+            _writes_since_compaction[key] += 1
+            due = _writes_since_compaction[key] >= COMPACT_EVERY_WRITES
+            if due:
+                _writes_since_compaction[key] = 0
+        if due:
+            self.compact(table_name)
+
+    def compact(self, table_name: str) -> None:
+        """Fusionner les fragments d'une table et effacer ses versions anciennes.
+
+        Une compaction qui échoue n'est pas un échec du chunk : ses lignes sont écrites. On le
+        journalise, et la suivante réessaiera.
+        """
+        try:
+            self.dataset.open_table(table_name).optimize(cleanup_older_than=KEEP_OLD_VERSIONS_FOR)
+        except Exception as error:
+            logger.warning("job %s : compaction de %s impossible (%s)", self.job_id, table_name, error)
 
     def _drop_leftovers(self, table_name: str, key: str, kept: int) -> None:
         """Effacer ce qu'une exécution précédente avait écrit au-delà de `kept`.
@@ -235,8 +334,14 @@ class JobWriter:
         créée qu'une fois un premier vecteur connu. Créer au premier passage évite d'imposer
         au type de job de connaître la dimension de son modèle.
 
+        Une table existante n'accepte que les vecteurs du modèle et de la dimension qu'elle
+        déclare. Mélanger deux modèles dans une même table ne lève aucune erreur à l'écriture
+        quand leurs dimensions coïncident — et fausse en silence toute recherche par similarité,
+        puisque la table continue d'annoncer l'ancien modèle.
+
         Raises:
-            ValueError: Les vecteurs ne correspondent pas aux enregistrements.
+            ValueError: Les vecteurs ne correspondent pas aux enregistrements, ou la table
+                existante a été calculée avec un autre modèle ou une autre dimension.
         """
         if len(record_ids) != len(vectors):
             raise ValueError(f"{len(record_ids)} enregistrements pour {len(vectors)} vecteurs")
@@ -244,8 +349,17 @@ class JobWriter:
             return
 
         dataset = self.dataset
+        dim = len(vectors[0])
         if not dataset.has_record_embeddings():
-            dataset.create_record_embedding_table(dim=len(vectors[0]), model_id=model)
+            # Relire le dataset hors cache avant de créer : la création écrase une table qui
+            # existerait déjà, et un autre worker a pu la créer depuis que celui-ci a ouvert le
+            # dataset. Deux workers qui créent au même instant ne sont pas couverts — c'est le
+            # rôle d'écrivain par dataset que l'étape 4 doit décider.
+            dataset = self._dataset = self._reopen_dataset()
+        if not dataset.has_record_embeddings():
+            dataset.create_record_embedding_table(dim=dim, model_id=model)
+        else:
+            check_embedding_space(dataset.record_embedding_space(), model, dim)
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
@@ -253,3 +367,4 @@ class JobWriter:
             for record_id, vector in zip(record_ids, vectors)
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
+        self._count_write(self.EMBEDDING_TABLE)

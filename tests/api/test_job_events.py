@@ -16,8 +16,8 @@ from fastapi import HTTPException
 from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
-from pixano.api.jobs.events import NOTIFY_CHANNEL, EventBroker, JobEvent, read_since
-from pixano.api.routers.jobs import _requested_types
+from pixano.api.jobs.events import _SUBSCRIBER_BACKLOG, NOTIFY_CHANNEL, EventBroker, JobEvent, SentWindow, read_since
+from pixano.api.routers.jobs import _requested_types, _require_job_id, _stream
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
@@ -78,12 +78,20 @@ class TestRendering:
 
 
 class TestCatchUp:
-    def test_reads_only_what_came_after(self, url: str) -> None:
+    def test_reads_what_came_after_without_slack(self, url: str) -> None:
         job, ids = _job_with_events(url, 5)
 
-        missed = asyncio.run(read_since(url, job, ids[1]))
+        missed = asyncio.run(read_since(url, job, ids[1], slack=0))
 
         assert [event.id for event in missed] == ids[2:]
+
+    def test_reads_back_a_little_by_default(self, url: str) -> None:
+        """A few events the client has seen come again; an event committed late is never lost."""
+        job, ids = _job_with_events(url, 5)
+
+        missed = asyncio.run(read_since(url, job, ids[3]))
+
+        assert [event.id for event in missed] == ids
 
     def test_a_fresh_client_gets_everything(self, url: str) -> None:
         job, ids = _job_with_events(url, 3)
@@ -177,6 +185,119 @@ def _emit(url: str, job_id: str, event_type: str, payload: dict) -> None:
             """,
             (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL),
         )
+
+
+class TestSlowSubscriber:
+    """Step 1 review: a subscriber whose queue overflowed was marked dropped and kept open."""
+
+    def test_an_overflowing_stream_is_closed_so_the_client_reconnects(self) -> None:
+        async def scenario() -> list[str]:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            for event_id in range(1, _SUBSCRIBER_BACKLOG + 2):
+                subscriber.offer(JobEvent(id=event_id, job_id="j", type="progress", payload={}))
+            received = [await first]
+            try:
+                received.append(await asyncio.wait_for(anext(stream), timeout=1))
+            except StopAsyncIteration:
+                received.append("closed")
+            return received
+
+        received = asyncio.run(scenario())
+
+        assert received[-1] == "closed"
+
+
+class TestOutOfOrderEvents:
+    """Independent review, D2: identifiers are handed out before commit, delivery follows commits."""
+
+    def test_a_live_event_with_a_lower_identifier_is_still_delivered(self) -> None:
+        async def scenario() -> list[str]:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            subscriber.offer(JobEvent(id=2, job_id="j", type="progress", payload={"done_tasks": 20}))
+            subscriber.offer(JobEvent(id=1, job_id="j", type="state", payload={"state": "running"}))
+            received = [await first]
+            received.append(await asyncio.wait_for(anext(stream), timeout=1))
+            return received
+
+        received = asyncio.run(scenario())
+
+        assert [line.split("\n")[0] for line in received] == ["id: 2", "id: 1"]
+
+    def test_the_same_event_is_never_sent_twice(self) -> None:
+        async def scenario() -> int:
+            broker = EventBroker("postgresql://unused")
+            stream = _stream(broker, "postgresql://unused", None, None, 0)
+            first = asyncio.ensure_future(anext(stream))
+            await asyncio.sleep(0)
+            subscriber = next(iter(broker._subscribers))
+            for _ in range(2):
+                subscriber.offer(JobEvent(id=7, job_id="j", type="progress", payload={}))
+            subscriber.offer(JobEvent(id=8, job_id="j", type="progress", payload={}))
+            await first
+            second = await asyncio.wait_for(anext(stream), timeout=1)
+            return int(second.split("\n")[0].removeprefix("id: "))
+
+        assert asyncio.run(scenario()) == 8
+
+    def test_catching_up_reads_back_a_little_before_the_last_seen_identifier(self, url: str) -> None:
+        """An event committed late carries an identifier the client has already passed."""
+        job, ids = _job_with_events(url, 4)
+        last_seen = ids[-1]
+
+        caught_up = asyncio.run(read_since(url, job, last_seen, slack=2))
+
+        assert [event.payload["done_tasks"] for event in caught_up] == [30, 40]
+
+
+class TestSentWindow:
+    """Third review: a plain set of sent identifiers grew for the life of the connection."""
+
+    def test_remembers_what_was_sent(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(5)
+
+        assert window.already_sent(5)
+        assert not window.already_sent(6)
+
+    def test_a_late_arrival_within_the_slack_is_new(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(100)
+
+        assert not window.already_sent(95)
+
+    def test_an_identifier_below_the_window_counts_as_sent(self) -> None:
+        window = SentWindow(slack=10)
+        window.mark(100)
+
+        assert window.already_sent(89)
+
+    def test_does_not_grow_with_the_life_of_the_connection(self) -> None:
+        window = SentWindow(slack=10)
+        for event_id in range(1, 10_001):
+            window.mark(event_id)
+
+        assert len(window) <= 20
+
+
+class TestJobIdentifierOnTheStream:
+    """Independent review v2, R1: a malformed identifier opened a stream that broke after the headers."""
+
+    def test_a_malformed_identifier_is_refused_before_the_stream_opens(self) -> None:
+        with pytest.raises(HTTPException) as refused:
+            _require_job_id("not-a-uuid")
+
+        assert refused.value.status_code == 404
+
+    def test_a_well_formed_identifier_passes(self) -> None:
+        _require_job_id("00000000-0000-0000-0000-000000000000")
 
 
 class TestTypeFilter:
