@@ -36,6 +36,14 @@ TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 # de droit, pas de route, pas de modèle. Découper le lot n'y changerait rien.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 
+# À partir de combien d'images toutes refusées on présume une panne du serveur plutôt qu'un lot
+# entièrement corrompu. Deux images corrompues côte à côte restent rares ; une seule image
+# refusée, en revanche, est le cas ordinaire d'un fichier abîmé — et le dernier chunk d'un
+# dataset, comme la plupart des chunks d'un dataset où peu d'enregistrements portent une image,
+# n'en contient souvent qu'une. Provisoire : une requête témoin au serveur remplacera ce seuil,
+# pour que la décision ne dépende plus de la taille du lot.
+PRESUMED_OUTAGE_MIN_IMAGES = 2
+
 # Le statut que le client donne à une erreur quand le serveur n'a rien répondu du tout —
 # connexion refusée, délai dépassé. Il l'enveloppe dans une PixanoInferenceError plutôt que de
 # laisser passer l'erreur httpx.
@@ -142,10 +150,12 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
         )
         embedded, refused = self._embed_isolating(client, candidates, params)
-        if candidates and not embedded:
+        if len(candidates) >= PRESUMED_OUTAGE_MIN_IMAGES and not embedded:
             # Tout le lot est refusé, image par image. Une inférence qui refuse toutes les images
             # est bien plus probablement en panne que ce lot n'est entièrement corrompu : on
-            # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file.
+            # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file. Une
+            # image seule, elle, part en quarantaine : sans ce seuil, elle faisait rejouer son
+            # chunk jusqu'à l'échec, et finir en erreur un job qui n'avait qu'un fichier abîmé.
             raise TransientError(f"l'inférence refuse les {len(candidates)} image(s) du lot : {refused[0][1]}")
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
