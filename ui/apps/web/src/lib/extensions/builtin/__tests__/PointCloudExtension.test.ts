@@ -60,6 +60,7 @@ function makeGateway(options: GatewayOptions = {}): DatasetGateway {
     getDataset: () => Promise.resolve(null as never),
     listEntities: () => Promise.resolve([]),
     loadImageByLogicalName: () => Promise.resolve(null),
+    loadTextByLogicalName: () => Promise.resolve(null),
     listRecordImages: () =>
       options.imagesFail
         ? Promise.reject(new Error("cameras unavailable"))
