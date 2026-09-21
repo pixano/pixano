@@ -42,6 +42,8 @@ function makeHarness(backend: Partial<SegmentationBackend> = {}) {
   let pointer: { x: number; y: number } | null = null;
   let pending: PendingAnnotation | null = null;
   const spies = { setActiveTool: vi.fn(), requestRedraw: vi.fn() };
+  // Every overlay the tool draws — prompt markers, hint, error — goes through here.
+  const addToLayer = vi.fn();
   const calls: { segment: Parameters<SegmentationBackend["segment"]>[0][] } = { segment: [] };
 
   // One recording wrapper around whichever stub the test supplied, so every
@@ -70,7 +72,7 @@ function makeHarness(backend: Partial<SegmentationBackend> = {}) {
     },
     liveDraft: { get: () => null },
     stage: { getPointerPosition: () => pointer } as unknown as Konva.Stage,
-    annotationLayer: { add: vi.fn(), batchDraw: vi.fn() } as unknown as Konva.Layer,
+    annotationLayer: { add: addToLayer, batchDraw: vi.fn() } as unknown as Konva.Layer,
     camera: { imageWidth: 200, imageHeight: 400, calibration: null },
     getKonvaImage: () => fakeImage(),
     ...spies,
@@ -85,9 +87,13 @@ function makeHarness(backend: Partial<SegmentationBackend> = {}) {
     spies,
     calls,
     pendingLabel: () => pending?.label,
+    overlaysAdded: () => addToLayer.mock.calls.length,
     setPointer: (p: { x: number; y: number } | null) => (pointer = p),
   };
 }
+
+/** What the backend resolves with, named from its contract rather than re-imported. */
+type SegmentedMasks = Awaited<ReturnType<SegmentationBackend["segment"]>>;
 
 type PointerEvt = Parameters<NonNullable<ToolHandlerLike["onPointerDown"]>>[0];
 type ToolHandlerLike = ReturnType<typeof smartSegmentTool.createHandler>;
@@ -267,6 +273,51 @@ describe("smart segmentation failure paths", () => {
 
     expect(h.calls.segment).toHaveLength(0);
     expect(h.spies.setActiveTool).toHaveBeenCalledWith("select");
+  });
+
+  it("commits nothing when the user cancels while the model runs", async () => {
+    let answer: (masks: SegmentedMasks) => void = () => {};
+    const h = makeHarness({ segment: () => new Promise((resolve) => (answer = resolve)) });
+    clickAt(h, [{ x: 10, y: 10 }]);
+    h.handler.onKeyDown?.(key("Enter"));
+    await flush();
+
+    h.handler.onKeyDown?.(key("Escape"));
+    answer([SAMPLE_MASK]);
+    await flush();
+
+    expect(h.collection.byKind("mask")).toHaveLength(0);
+    expect(h.pendingLabel()).toBeUndefined();
+  });
+
+  it("draws no hint on a tool that was left while the model ran", async () => {
+    let answer: (masks: SegmentedMasks) => void = () => {};
+    const h = makeHarness({ segment: () => new Promise((resolve) => (answer = resolve)) });
+    clickAt(h, [{ x: 10, y: 10 }]);
+    h.handler.onKeyDown?.(key("Enter"));
+    await flush();
+
+    h.handler.deactivate?.();
+    const drawnBefore = h.overlaysAdded();
+    answer([SAMPLE_MASK]);
+    await flush();
+
+    expect(h.overlaysAdded()).toBe(drawnBefore);
+  });
+
+  it("ignores a late failure of a run that was cancelled", async () => {
+    let fail: (cause: Error) => void = () => {};
+    const h = makeHarness({ segment: () => new Promise((_, reject) => (fail = reject)) });
+    clickAt(h, [{ x: 10, y: 10 }]);
+    h.handler.onKeyDown?.(key("Enter"));
+    await flush();
+
+    h.handler.deactivate?.();
+    const drawnBefore = h.overlaysAdded();
+    fail(new Error("model crashed"));
+    await flush();
+
+    expect(h.overlaysAdded()).toBe(drawnBefore);
   });
 
   it("reports which keys it consumed", () => {
