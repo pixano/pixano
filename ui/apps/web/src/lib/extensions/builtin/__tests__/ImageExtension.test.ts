@@ -34,6 +34,7 @@ function makeGateway(image: CalibratedImageResponse | null): DatasetGateway {
     getDataset: () => Promise.resolve(null as never),
     listEntities: () => Promise.resolve([]),
     loadImageByLogicalName: () => Promise.resolve(image),
+    listRecordImages: () => Promise.resolve(image ? [image] : []),
     listBBoxes: () => Promise.resolve([]),
     loadPointCloudByLogicalName: () => Promise.resolve(null),
     listBBox3Ds: () => Promise.resolve([]),

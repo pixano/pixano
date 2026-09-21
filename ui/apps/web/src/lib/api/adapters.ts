@@ -5,7 +5,8 @@ License: CECILL-C
 -------------------------------------*/
 
 import { normalizeTableName } from "./resourceNames";
-import type { DatasetInfoResponse, DatasetResponse } from "./restTypes";
+import type { CalibratedImageResponse, DatasetInfoResponse, DatasetResponse } from "./restTypes";
+import type { CameraCalibration } from "$lib/annotations/types";
 import {
   BaseSchema,
   type Dataset,
@@ -160,5 +161,36 @@ export function toDataset(dto: DatasetResponse): Dataset {
     schema: toDatasetSchema(dto),
     featureValues: dto.feature_values,
     info: toDatasetInfo(dto.info),
+  };
+}
+
+// ─── Camera calibration ───────────────────────────────────────────────────────
+
+/**
+ * The camera calibration of an image row, or null when the row is a plain
+ * `Image` (the fields exist on `CalibratedImage` only).
+ *
+ * All-or-nothing on purpose: a projection needs the intrinsics *and* the
+ * extrinsics, so a partially-populated row is unusable and reads better as "not
+ * calibrated" than as a calibration that fails deep inside a projection loop.
+ */
+export function toCameraCalibration(
+  image: CalibratedImageResponse | null,
+): CameraCalibration | null {
+  if (
+    !image?.extrinsic_matrix ||
+    !image.ego_to_world ||
+    !image.f ||
+    !image.c ||
+    !image.distortion
+  ) {
+    return null;
+  }
+  return {
+    f: image.f,
+    c: image.c,
+    distortion: image.distortion,
+    extrinsicMatrix: image.extrinsic_matrix,
+    egoToWorld: image.ego_to_world,
   };
 }
