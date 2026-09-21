@@ -37,6 +37,7 @@ function makeSeam() {
       upsertUpdate: (m) => updates.push(m),
       patchPendingCreate: () => {},
       dropForLocalAnnotation: (id) => dropped.push(id),
+      dropPendingEntityCreate: () => {},
     },
     // Mirrors buildSeam: publish stamps this widget, clear only clears its own.
     liveDraft: {

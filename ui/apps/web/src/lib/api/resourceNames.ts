@@ -4,10 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-/** Canonical resource identifiers for mutation routing — single source of truth. */
+/**
+ * Entities are the one resource no annotation kind owns — every kind's create
+ * builder may emit one, so its name lives here. Annotation resource names are
+ * NOT declared here on purpose: each kind's payload builder owns its own
+ * (`BBOX_RESOURCE` in `kinds/2d/bbox/`, …), so adding a kind touches no shared
+ * file. Read one through `payloadBuilderFor(kind).resource`.
+ */
 export const ENTITY_RESOURCE = "entities";
-export const BBOX_RESOURCE = "bboxes";
-export const BBOX3D_RESOURCE = "bbox3ds";
 
 const TABLE_TO_RESOURCE_PATH: Record<string, string> = {
   entity_dynamic_states: "entity-dynamic-states",

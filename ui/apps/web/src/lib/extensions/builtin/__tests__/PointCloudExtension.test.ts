@@ -60,14 +60,14 @@ function makeGateway(options: GatewayOptions = {}): DatasetGateway {
     getDataset: () => Promise.resolve(null as never),
     listEntities: () => Promise.resolve([]),
     loadImageByLogicalName: () => Promise.resolve(null),
+    loadTextByLogicalName: () => Promise.resolve(null),
     listRecordImages: () =>
       options.imagesFail
         ? Promise.reject(new Error("cameras unavailable"))
         : Promise.resolve(options.images ?? []),
-    listBBoxes: () => Promise.resolve([]),
     loadPointCloudByLogicalName: () =>
       Promise.resolve(options.pointCloud === undefined ? POINT_CLOUD : options.pointCloud),
-    listBBox3Ds: () => Promise.resolve([]),
+    listAnnotations: () => Promise.resolve([]),
     createEntity: () => Promise.resolve({}),
     deleteEntity: () => Promise.resolve(),
     createAnnotation: () => Promise.resolve({}),

@@ -133,6 +133,7 @@ License: CECILL-C
     saving={manager.saving}
     saveError={manager.saveError}
     onSave={() => manager.flushSave()}
+    onDiscard={() => manager.discardChanges()}
     ariaLabel="Point cloud tools"
   >
     <!-- Pinned right, away from the tools: it changes what the points look

@@ -11,11 +11,11 @@ import {
   createEntity,
   deleteAnnotation,
   deleteEntity,
-  listBBox3Ds,
-  listBBoxes,
+  listAnnotations,
   listEntities,
   updateAnnotation,
 } from "../annotations";
+import type { BBox3DRow, BBoxRow } from "../annotations";
 import { ApiError } from "../apiClient";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -96,9 +96,11 @@ describe("listEntities", () => {
   });
 });
 
-// ─── listBBoxes ──────────────────────────────────────────────────────────────
+// ─── listAnnotations ─────────────────────────────────────────────────────────
+// One function serves every annotation table, so the cases below exercise it
+// through two different resources rather than through two functions.
 
-describe("listBBoxes", () => {
+describe("listAnnotations", () => {
   it("returns items from paginated response", async () => {
     const bboxes = [
       {
@@ -115,14 +117,23 @@ describe("listBBoxes", () => {
       okJson({ items: bboxes, total: 1, limit: 1000, offset: 0 }),
     );
 
-    const result = await listBBoxes(DS, { recordId: "r1" });
+    const result = await listAnnotations<BBoxRow>(DS, "bboxes", { recordId: "r1" });
     expect(result).toEqual(bboxes);
+  });
+
+  it("targets the resource it is given", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
+
+    await listAnnotations(DS, "masks", {});
+
+    const url = vi.mocked(fetch).mock.calls[0][0] as string;
+    expect(url).toContain(`/datasets/${DS}/masks`);
   });
 
   it("maps viewId to view_name query param", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
-    await listBBoxes(DS, { viewId: "cam-front" });
+    await listAnnotations(DS, "bboxes", { viewId: "cam-front" });
 
     const url = vi.mocked(fetch).mock.calls[0][0] as string;
     expect(url).toContain("view_name=cam-front");
@@ -131,22 +142,13 @@ describe("listBBoxes", () => {
   it("omits view_name when viewId is absent", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
 
-    await listBBoxes(DS);
+    await listAnnotations(DS, "bboxes", {});
 
     const url = vi.mocked(fetch).mock.calls[0][0] as string;
     expect(url).not.toContain("view_name");
   });
 
-  it("throws ApiError on HTTP error", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(errResponse(500, "Server Error"));
-    await expect(listBBoxes(DS)).rejects.toBeInstanceOf(ApiError);
-  });
-});
-
-// ─── listBBox3Ds ─────────────────────────────────────────────────────────────
-
-describe("listBBox3Ds", () => {
-  it("returns items from paginated response", async () => {
+  it("carries 3D rows through unchanged", async () => {
     const bboxes3d = [
       {
         id: "b3d-1",
@@ -163,25 +165,21 @@ describe("listBBox3Ds", () => {
       okJson({ items: bboxes3d, total: 1, limit: 1000, offset: 0 }),
     );
 
-    const result = await listBBox3Ds(DS, { recordId: "r1" });
+    const result = await listAnnotations<BBox3DRow>(DS, "bbox3ds", { viewId: "lidar" });
     expect(result).toEqual(bboxes3d);
-  });
-
-  it("maps viewId to view_name param", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(okJson({ items: [], total: 0, limit: 1000, offset: 0 }));
-
-    await listBBox3Ds(DS, { viewId: "lidar" });
-
-    const url = vi.mocked(fetch).mock.calls[0][0] as string;
-    expect(url).toContain("view_name=lidar");
-    expect(url).toContain(`/datasets/${DS}/bbox3ds`);
+    expect(vi.mocked(fetch).mock.calls[0][0] as string).toContain(`/datasets/${DS}/bbox3ds`);
   });
 
   it("returns empty array when items is null", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       okJson({ items: null, total: 0, limit: 1000, offset: 0 }),
     );
-    expect(await listBBox3Ds(DS)).toEqual([]);
+    expect(await listAnnotations(DS, "bbox3ds", {})).toEqual([]);
+  });
+
+  it("throws ApiError on HTTP error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(errResponse(500, "Server Error"));
+    await expect(listAnnotations(DS, "bboxes", {})).rejects.toBeInstanceOf(ApiError);
   });
 });
 

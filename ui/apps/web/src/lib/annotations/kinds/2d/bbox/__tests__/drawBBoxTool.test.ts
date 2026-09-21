@@ -75,6 +75,7 @@ function makeHarness(opts: { image?: Konva.Image | null } = {}) {
       upsertUpdate: vi.fn(),
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
+      dropPendingEntityCreate: vi.fn(),
     },
     liveDraft: { get: () => null },
     stage: { getPointerPosition: () => pointer } as unknown as Konva.Stage,

@@ -61,6 +61,12 @@ export class RecordLoader {
   // still holds the current token before mutating workspace state, so a
   // rapid record-switch never lets a stale load overwrite the newer one.
   private loadToken = 0;
+  /**
+   * The views the current record opened with, kept so annotations can be
+   * refetched without redoing the whole load: rebuilding widgets to undo an
+   * edit would throw away the user's arrangement and tool state along with it.
+   */
+  private currentViews: Map<string, ViewInfo> = new Map();
 
   constructor(deps: RecordLoaderDeps) {
     this.workspace = deps.workspace;
@@ -69,6 +75,38 @@ export class RecordLoader {
     this.readGateway = deps.gateway;
     this.session = deps.session;
     this.layoutRepository = deps.layoutRepository;
+  }
+
+  /**
+   * Refetch the current record's annotations, replacing whatever the collection
+   * holds — the backend is the last-saved state, so this is what "discard my
+   * edits" restores to.
+   *
+   * Narrower than a full `load()` on purpose: the widgets, their arrangement
+   * and their active tools are untouched, so undoing an edit does not feel like
+   * reopening the record.
+   */
+  async reloadAnnotations(): Promise<void> {
+    const datasetId = this.session.datasetId;
+    const recordId = this.session.recordId;
+    if (!datasetId || !recordId) return;
+    // Observe (don't bump) the load token, as `reloadEntities` does: a record
+    // switch mid-fetch must win over our stale result.
+    const token = this.loadToken;
+    try {
+      const seedContext = {
+        datasetId,
+        recordId,
+        gateway: this.readGateway,
+        entitiesById: new Map(this.session.entities.map((e) => [e.id, e])),
+        views: this.currentViews,
+      };
+      const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+      if (token !== this.loadToken) return;
+      this.session.annotations = new AnnotationCollection(loaded.flat());
+    } catch (err) {
+      console.error("Failed to reload annotations:", err);
+    }
   }
 
   /**
@@ -197,6 +235,7 @@ export class RecordLoader {
       entitiesById,
       views,
     };
+    this.currentViews = views;
     const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
 
     // A newer load() was started while annotations were fetching.

@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { BBOX3D_RESOURCE } from "./bbox3dPayloadBuilder.js";
 import type { LocalBBox3DAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
 import type { AnnotationSeedLoader, SeedLoadContext } from "$lib/annotations/seedLoaders.js";
 import type { Rotation3x3 } from "$lib/annotations/types.js";
@@ -37,7 +38,7 @@ export const bbox3dSeedLoader: AnnotationSeedLoader = {
 
   async load(ctx: SeedLoadContext) {
     const rows = await ctx.gateway
-      .listBBox3Ds(ctx.datasetId, { recordId: ctx.recordId })
+      .listAnnotations<BBox3DRow>(ctx.datasetId, BBOX3D_RESOURCE, { recordId: ctx.recordId })
       .catch(() => [] as BBox3DRow[]);
 
     return rows.map(

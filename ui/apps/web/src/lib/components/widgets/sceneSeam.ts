@@ -24,6 +24,7 @@ export function buildMutationSink(manager: WorkspaceManager): MutationSink {
     patchPendingCreate: (id, resource, patch) =>
       manager.patchPendingCreateMutation(id, resource, patch),
     dropForLocalAnnotation: (id) => void manager.dropMutationsForLocalAnnotation(id),
+    dropPendingEntityCreate: (id) => manager.dropPendingEntityCreate(id),
   };
 }
 

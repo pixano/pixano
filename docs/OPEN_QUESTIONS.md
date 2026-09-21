@@ -69,3 +69,35 @@ Options:
 **Leaning:** A (opt-in), but undecided — needs a team call. Whichever is chosen,
 declaring it in `pyproject.toml` also removes the current manual `pip install`
 step. Tested against `tri3d 0.2.2`.
+
+## Entity reassignment — a hook with a single caller
+
+**Status:** open (accepted deliberately; revisit if no second caller appears).
+
+A `PayloadBuilder` (`ui/apps/web/src/lib/annotations/payloadBuilders.ts`) may
+declare an optional `geometryForEntity` hook, and exactly one kind does:
+`classification`, whose labels mirror its entity's own label, so moving it
+without rewriting them would leave a chip asserting a class the annotation no
+longer belongs to. Every other kind carries geometry independent of its entity.
+
+The hook sits on the kind's builder, not on the call that opens the entity form.
+It was first an option of `beginEntityReassign`, passed by the chip's
+double-click alone; the widget toolbar and the `E` shortcut open the same form
+without knowing the kind, and saved the previous class under the new entity.
+
+An abstraction with one caller is normally speculative generality. It was kept
+because the concrete alternative is `if (annotation.kind === "classification")`
+inside shared code — the exact coupling the plugin architecture exists to
+prevent, and the point at which the next kind adds its own `else if`. The hook
+keeps the shared layer ignorant of which kinds exist.
+
+Two things to watch:
+
+- **If a second caller never appears**, and the classification kind's labels are
+  ever stored differently (or derived at render time from `annotation.entity`
+  rather than duplicated into `geometry`), the hook loses its only reason to
+  exist and should be removed with it.
+- **The shared layer applies the hook's answer by writing to the collection.**
+  That is deliberate — `reassignEntity` re-reads the live annotation so the
+  update body carries the entity id it just assigned. The hook itself is a pure
+  function returning the new geometry, or `null` to refuse the move.

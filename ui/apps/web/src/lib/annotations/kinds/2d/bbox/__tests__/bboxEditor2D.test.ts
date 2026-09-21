@@ -71,6 +71,7 @@ function makeHarness() {
       upsertUpdate: vi.fn(),
       patchPendingCreate: vi.fn(),
       dropForLocalAnnotation: vi.fn(),
+      dropPendingEntityCreate: vi.fn(),
     },
     stage: {} as unknown as Konva.Stage,
     annotationLayer: {

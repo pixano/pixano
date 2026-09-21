@@ -101,17 +101,21 @@ Three ideas hold it together:
     entity from its `ENTITY` table. One mechanism, every kind, server-side (the
     only place that sees every reference — the frontend loads one record at a time).
 
-### REST surface the frontend uses (`ui/.../lib/api/annotations.ts`)
-| Function | HTTP | Notes |
-|---|---|---|
-| `getDataset` | `GET /datasets/{id}` | schema + views |
-| `listEntities` | `GET …/entities?record_id=` | record-scoped entity rows |
-| `listBBoxes` / `listBBox3Ds` | `GET …/bboxes?record_id=` | annotation rows |
-| `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `GET …/{view}` | media + calibration |
-| `createEntity` / `deleteEntity` | `POST/DELETE …/entities` | |
-| `createAnnotation` | `POST …/{resource}` | kind-generic (resource = table) |
-| `updateAnnotation` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
-| `deleteAnnotation` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | |
+### REST surface the frontend uses
+| Function | Defined in | HTTP | Notes |
+|---|---|---|---|
+| `getDataset` | `api/datasets.ts` | `GET /datasets/{id}` | schema + views |
+| `listEntities` | `api/annotations.ts` | `GET …/entities?record_id=` | record-scoped entity rows |
+| `listAnnotations<TRow>` | `api/annotations.ts` | `GET …/{resource}?record_id=` | **kind-generic** — the caller passes the `resource` its payload builder owns, so a new kind adds no method here |
+| `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `api/workspace.ts` | `GET …/{view}` | media + calibration |
+| `createEntity` / `deleteEntity` | `api/annotations.ts` | `POST/DELETE …/entities` | |
+| `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
+| `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
+| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | |
+
+Note `listAnnotations`' `view_name` query parameter actually filters the `view_id`
+column for annotations (legacy server-side naming — see `service.list` in
+`src/pixano/api/service.py`).
 
 ---
 
@@ -239,9 +243,11 @@ The one in-memory shape for **every** kind — pure data, no methods:
 ```ts
 { id, entityId, kind, viewId, geometry: G, persisted, entity? }
 ```
-- `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask"`).
+- `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask" | "keypoints" |
+  "multi_path" | "classification"`).
 - `geometry` is typed per kind via `GeometryByKind` (`bbox` → `[x,y,w,h]` norm;
-  `bbox3d` → `{coords, format, rotation}` in Lance space).
+  `bbox3d` → `{coords, format, rotation}` in Lance space; each other kind's shape
+  is declared in its own `kinds/<2d|3d>/<kind>/<kind>Types.ts`).
 - `persisted=false` ⇒ a **draft** (drawn but not yet POSTed). `entity` is a snapshot
   of the parent entity's fields so labels render without a refetch.
 
@@ -304,7 +310,7 @@ selectRecordInDataset(ds, rec)
   → RecordLoader.load
       ├─ gateway.getDataset + gateway.listEntities      → session.entities/schema
       ├─ per view: extension.addRecordSeed(...)          → widget seeds
-      ├─ SEED_LOADERS[kind].load(...)  (gateway.listBBoxes/listBBox3Ds)
+      ├─ SEED_LOADERS[kind].load(...)  (gateway.listAnnotations(resource, …))
       │      → map rows → session.annotations.add(LocalAnnotation, persisted:true)
       └─ create widgets (layoutPlanner)
   → widgets mount, build Scene2DContext, renderers.sync() draws the seeded boxes
@@ -409,7 +415,10 @@ ui/apps/web/src/lib/
 │  │  ├─ toolDefinition.ts                    ToolDefinition (shared 2D/3D metadata)
 │  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts
 │  │  ├─ selectTool2D.ts                      kind-agnostic select/delete tool
-│  │  └─ scene2dGeometry.ts                   pixel↔normalized helpers, PixelFrame
+│  │  ├─ flatCoordsEditor2D.ts                shared vertex editor (keypoints, multi-path)
+│  │  ├─ entityLabels2D.ts                    shared label rendering
+│  │  ├─ scene2dGeometry.ts                   pixel↔normalized helpers, PixelFrame
+│  │  └─ scene2dStyleConstants.ts             shared 2D draw styling
 │  └─ kinds/<2d|3d>/<kind>/                  per-kind: payloadBuilder, seedLoader,
 │                                            renderer, editor/tool (+ 3D: overlay/session/hud)
 └─ components/
