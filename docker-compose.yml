@@ -89,6 +89,8 @@ services:
       # d'autres stratégies du résolveur, pas d'autres valeurs de ces deux variables.
       PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
       PIXANO_INFERENCE_MEDIA_ROOT: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
+      PIXANO_WORKER_CONCURRENCY: ${PIXANO_WORKER_CONCURRENCY:-4}
+      PIXANO_WORKER_CHUNK_TIMEOUT_S: ${PIXANO_WORKER_CHUNK_TIMEOUT_S:-1800}
     volumes:
       # /data est la convention interne de l'image ; la racine médias, elle, doit suivre la
       # variable, puisque c'est elle que le worker donne à l'inference.

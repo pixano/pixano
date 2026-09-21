@@ -10,23 +10,34 @@ Deux travaux, dans cet ordre à chaque tour : découper les jobs qui attendent d
 consommer des chunks. La planification passe d'abord parce qu'un job non découpé n'a aucun
 chunk à réclamer — sans quoi un worker isolé pourrait dormir devant du travail en attente.
 
-L'annulation se regarde **entre les lots**, jamais au milieu d'un chunk : un chunk est
-l'unité atomique, l'interrompre laisserait un travail à moitié fait dont on ne saurait rien.
+L'annulation se regarde **avant chaque chunk**, jamais au milieu : un chunk est l'unité
+atomique, l'interrompre laisserait un travail à moitié fait dont on ne saurait rien.
+
+La boucle est asynchrone, le code des types de jobs ne l'est pas. `plan`, `process` et `write`
+sont des fonctions ordinaires — c'est le contrat publié, et la lecture comme l'écriture
+LanceDB sont bloquantes de toute façon. Elles partent donc dans un thread ; la boucle garde
+pour elle ce qui gagne à être asynchrone : la base, les délais et le bail.
 """
 
+import asyncio
 import logging
+import threading
 import traceback
+from collections import defaultdict
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import psycopg
 from psycopg.types.json import Jsonb
+from psycopg_pool import AsyncConnectionPool
 
 from pixano.datasets import Dataset
 
 from . import queue
-from .kinds import Registry
+from .kinds import Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
@@ -34,6 +45,22 @@ from .writer import JobWriter
 
 
 log = logging.getLogger("pixano-worker")
+
+# Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
+# qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
+RECLAIM_INTERVAL_S = 30.0
+
+# Les écritures d'un même dataset passent une à une. Plusieurs chunks d'un dataset tournent
+# en même temps, et LanceDB n'est pas fait pour des écritures concurrentes sur une même
+# table. Le verrou est un verrou de thread : c'est dans un thread que `write` s'exécute.
+_write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
+_write_locks_guard = threading.Lock()
+
+
+def _write_lock(dataset_id: str) -> threading.Lock:
+    with _write_locks_guard:
+        return _write_locks[dataset_id]
+
 
 CLAIM_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs SET state = 'running', updated_at = now()
@@ -100,7 +127,14 @@ RETURNING j.state
 """
 
 
-def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
+OUTCOME = f"""
+SELECT coalesce(sum(produced), 0)::int, coalesce(sum(skipped), 0)::int,
+       (SELECT count(*) FROM {SCHEMA_NAME}.job_items WHERE job_id = %s)::int
+FROM {SCHEMA_NAME}.job_chunks WHERE job_id = %s AND state = 'done'
+"""
+
+
+async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
     """Consigner un événement de progression.
 
     Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
@@ -108,11 +142,11 @@ def record_event(conn: psycopg.Connection, job_id: str, event_type: str, payload
     événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
     remettre au suivant.
     """
-    conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
+    await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
 
-def plan_one(
-    conn: psycopg.Connection,
+async def plan_one(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     library: Path | None = None,
     media: MediaResolver | None = None,
@@ -122,7 +156,7 @@ def plan_one(
     Returns:
         L'identifiant du job découpé, ou None s'il n'y en avait aucun.
     """
-    row = conn.execute(CLAIM_PLANNING).fetchone()
+    row = await (await conn.execute(CLAIM_PLANNING)).fetchone()
     if row is None:
         return None
     job_id, kind_name, dataset_id, raw_params = str(row[0]), row[1], row[2], row[3]
@@ -131,25 +165,26 @@ def plan_one(
     if kind is None:
         # Aucun worker vivant ne déclare ce type. Le job ne sera jamais exécutable : le dire
         # tout de suite vaut mieux que de le laisser en attente sans explication.
-        _fail_job(conn, job_id, {"reason": "type de job inconnu", "kind": kind_name})
+        await _fail_job(conn, job_id, {"reason": "type de job inconnu", "kind": kind_name})
         log.warning("job %s : type '%s' inconnu de ce worker", job_id, kind_name)
         return job_id
 
     try:
         params = kind.validate_params(raw_params)
-        chunks = list(kind.plan(_reader_for(library, dataset_id, media), params))
+        reader = _reader_for(library, dataset_id, media)
+        chunks = await asyncio.to_thread(lambda: list(kind.plan(reader, params)))
     except Exception as error:
-        _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
+        await _fail_job(conn, job_id, {"reason": "la planification a échoué", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
         return job_id
 
     if not chunks:
-        _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
+        await _fail_job(conn, job_id, {"reason": "la planification n'a produit aucun travail"})
         return job_id
 
     total = sum(chunk.task_count for chunk in chunks)
-    with conn.transaction():
-        conn.execute(
+    async with conn.transaction():
+        await conn.execute(
             INSERT_CHUNKS,
             (
                 job_id,
@@ -158,16 +193,16 @@ def plan_one(
                 [chunk.task_count for chunk in chunks],
             ),
         )
-        conn.execute(FINISH_PLANNING, (total, job_id))
-        record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
+        await conn.execute(FINISH_PLANNING, (total, job_id))
+        await record_event(conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)})
     log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), total)
     return job_id
 
 
-def _fail_job(conn: psycopg.Connection, job_id: str, error: dict[str, Any]) -> None:
-    with conn.transaction():
-        conn.execute(FAIL_JOB, (Jsonb(error), job_id))
-        record_event(conn, job_id, "state", {"state": "error", **error})
+async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str, Any]) -> None:
+    async with conn.transaction():
+        await conn.execute(FAIL_JOB, (Jsonb(error), job_id))
+        await record_event(conn, job_id, "state", {"state": "error", **error})
 
 
 @lru_cache(maxsize=8)
@@ -202,80 +237,271 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
     return JobWriter(open_dataset, kind, job_id, source_type)
 
 
-def run_batch(
-    conn: psycopg.Connection,
+async def work(
+    pool: AsyncConnectionPool,
+    registry: Registry,
+    worker_id: str,
+    concurrency: int,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+    idle_poll_s: float = 5.0,
+    chunk_timeout_s: float | None = None,
+) -> None:
+    """Tenir jusqu'à `concurrency` chunks en vol, indéfiniment.
+
+    La réclamation ne prend jamais plus que les places libres : un chunk réclamé porte un bail
+    qui court, et le réclamer pour le laisser attendre une place l'exposerait à expirer avant
+    d'avoir commencé.
+    """
+    in_flight: set[asyncio.Task[None]] = set()
+    loop = asyncio.get_running_loop()
+    last_reclaim = loop.time()
+
+    while True:
+        async with pool.connection() as conn:
+            planned = await plan_one(conn, registry, library, media)
+
+        claimed: list[queue.Chunk] = []
+        free = concurrency - len(in_flight)
+        if free > 0:
+            async with pool.connection() as conn:
+                claimed = await queue.claim(conn, worker_id, free)
+        for chunk in claimed:
+            task = asyncio.create_task(_run_pooled(pool, registry, chunk, library, media, chunk_timeout_s))
+            in_flight.add(task)
+            task.add_done_callback(in_flight.discard)
+
+        if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
+            last_reclaim = loop.time()
+            async with pool.connection() as conn:
+                reclaimed, abandoned = await queue.reclaim_expired(conn)
+            if reclaimed or abandoned:
+                log.info("baux expirés : %d chunk(s) remis en file, %d écarté(s)", reclaimed, abandoned)
+
+        if len(in_flight) >= concurrency:
+            await asyncio.wait(in_flight, return_when=asyncio.FIRST_COMPLETED)
+        elif planned is None and not claimed:
+            # Rien de nouveau : attendre qu'une place se libère ou que du travail arrive.
+            if in_flight:
+                await asyncio.wait(in_flight, timeout=idle_poll_s, return_when=asyncio.FIRST_COMPLETED)
+            else:
+                await asyncio.sleep(idle_poll_s)
+
+
+async def _run_pooled(
+    pool: AsyncConnectionPool,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None,
+    media: MediaResolver | None,
+    chunk_timeout_s: float | None,
+) -> None:
+    """Exécuter un chunk sur sa propre connexion, sans jamais faire tomber la boucle.
+
+    Une panne de base au milieu d'un chunk le laisse en cours avec son bail : l'expiration le
+    rendra. Laisser l'exception remonter ne le rendrait pas plus vite, et tuerait en silence
+    une tâche que personne n'attend.
+    """
+    try:
+        async with pool.connection() as conn:
+            await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s)
+    except Exception:
+        log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
+
+
+async def run_batch(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     worker_id: str,
     batch_size: int,
     library: Path | None = None,
     media: MediaResolver | None = None,
 ) -> int:
-    """Réclamer un lot de chunks et l'exécuter.
+    """Réclamer un lot de chunks et les exécuter l'un après l'autre sur une connexion.
+
+    La forme séquentielle de `work`, sans pool ni tâches : c'est elle que les tests pilotent,
+    parce qu'elle rend l'ordre des événements déterministe.
 
     Returns:
         Le nombre de chunks traités — zéro quand la file est vide.
     """
-    chunks = queue.claim(conn, worker_id, batch_size)
-    if not chunks:
-        return 0
-
-    cancelled = queue.cancelled_jobs(conn, [chunk.job_id for chunk in chunks])
-    jobs_touched = set()
-
+    chunks = await queue.claim(conn, worker_id, batch_size)
     for chunk in chunks:
-        jobs_touched.add(chunk.job_id)
-        if chunk.job_id in cancelled:
-            queue.cancel_chunk(conn, chunk)
-            continue
-        _run_chunk(conn, registry, chunk, library, media)
-
-    for job_id in jobs_touched:
-        _settle(conn, job_id)
+        await run_chunk(conn, registry, chunk, library, media)
     return len(chunks)
 
 
-def _run_chunk(
-    conn: psycopg.Connection,
+async def run_chunk(
+    conn: psycopg.AsyncConnection,
+    registry: Registry,
+    chunk: queue.Chunk,
+    library: Path | None = None,
+    media: MediaResolver | None = None,
+    timeout_s: float | None = None,
+) -> None:
+    """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu.
+
+    Args:
+        conn: La connexion propre à ce chunk.
+        registry: Les types de jobs connus.
+        chunk: Le chunk réclamé.
+        library: La bibliothèque de datasets.
+        media: Le résolveur de médias.
+        timeout_s: Durée maximale du chunk. Au-delà, il est rendu à la file comme après une
+            panne passagère. None : pas de limite.
+    """
+    await _execute(conn, registry, chunk, library, media, timeout_s)
+    await _settle(conn, chunk.job_id)
+
+
+async def _execute(
+    conn: psycopg.AsyncConnection,
     registry: Registry,
     chunk: queue.Chunk,
     library: Path | None,
     media: MediaResolver | None,
+    timeout_s: float | None,
 ) -> None:
-    """Exécuter un chunk, et consigner ce qui en résulte."""
-    row = conn.execute(
-        f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
+    if await queue.is_cancelled(conn, chunk.job_id):
+        await queue.cancel_chunk(conn, chunk)
+        return
+
+    row = await (
+        await conn.execute(f"SELECT kind, params, dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
     ).fetchone()
     kind = registry.get(row[0]) if row is not None else None
     if row is None or kind is None:
-        queue.fail(conn, chunk, {"reason": "type de job inconnu"})
+        await queue.fail(conn, chunk, {"reason": "type de job inconnu"})
         return
+    kind_name, raw_params, dataset_id = row
+
+    def work() -> Outcome:
+        params = kind.validate_params(raw_params)
+        result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
+        outcome = kind.outcome(result, chunk.payload, chunk.task_count)
+        if outcome.total != chunk.task_count:
+            # Un bilan faux fausserait tout ce qu'on affiche du job ; mieux vaut un chunk en échec
+            # qui désigne le défaut du type qu'un compte qui ment sans bruit.
+            raise ValueError(
+                f"le bilan du type « {kind_name} » couvre {outcome.total} tâche(s), "
+                f"le chunk en compte {chunk.task_count}"
+            )
+        with _write_lock(dataset_id):
+            kind.write(
+                _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
+                result,
+                chunk.payload,
+                params,
+            )
+        return outcome
 
     try:
-        params = kind.validate_params(row[1])
-        reader = _reader_for(library, row[2], media)
-        result = kind.process(reader, chunk.payload, params)
-        writer = _writer_for(library, row[2], row[0], chunk.job_id, kind.source_type)
-        kind.write(writer, result, chunk.payload, params)
+        async with _lease_kept(conn, chunk):
+            outcome = await asyncio.wait_for(asyncio.to_thread(work), timeout_s)
+    except TimeoutError:
+        # Le thread ne s'arrête pas : un appel bloqué ne s'interrompt pas de l'extérieur. Le
+        # chunk est rendu, et si le thread finit par aboutir, son résultat sera refusé par le
+        # jeton de garde — et son écriture, idempotente, n'aura rien doublé.
+        await _retry_later(conn, chunk, {"reason": "durée maximale dépassée", "timeout_s": timeout_s})
+        return
+    except TransientError as error:
+        await _retry_later(conn, chunk, {"reason": "panne passagère", "detail": str(error)})
+        return
     except Exception as error:
-        queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
+        await queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
         log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
         return
 
-    if not queue.finish(conn, chunk):
+    finished = await queue.finish(
+        conn, chunk, produced=outcome.produced, skipped=outcome.skipped, quarantined=outcome.quarantined
+    )
+    if finished is None:
         # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
         log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
         return
+    if finished.started_job:
+        await record_event(conn, chunk.job_id, "state", {"state": "running"})
+    if outcome.quarantined:
+        log.info("chunk %s du job %s : %d item(s) en quarantaine", chunk.seq, chunk.job_id, len(outcome.quarantined))
 
-    row = conn.execute(
-        f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,)
+    progress = await (
+        await conn.execute(f"SELECT done_tasks, total_tasks FROM {SCHEMA_NAME}.jobs WHERE id = %s", (chunk.job_id,))
     ).fetchone()
-    if row is not None:
-        record_event(conn, chunk.job_id, "progress", {"done_tasks": row[0], "total_tasks": row[1]})
+    if progress is not None:
+        await record_event(conn, chunk.job_id, "progress", {"done_tasks": progress[0], "total_tasks": progress[1]})
 
 
-def _settle(conn: psycopg.Connection, job_id: str) -> None:
-    """Conclure un job dont plus rien n'attend ni ne tourne."""
-    row = conn.execute(SETTLE, (job_id,)).fetchone()
-    if row is not None:
-        record_event(conn, job_id, "state", {"state": row[0]})
-        log.info("job %s terminé : %s", job_id, row[0])
+async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error: dict[str, Any]) -> None:
+    state = await queue.retry_later(conn, chunk, error)
+    if state == "pending":
+        log.info(
+            "chunk %s du job %s rendu à la file (%s), tentative %d",
+            chunk.seq,
+            chunk.job_id,
+            error["reason"],
+            chunk.attempts,
+        )
+    elif state == "error":
+        log.warning(
+            "chunk %s du job %s écarté après %d tentatives : %s",
+            chunk.seq,
+            chunk.job_id,
+            chunk.attempts,
+            error["reason"],
+        )
+
+
+@asynccontextmanager
+async def _lease_kept(conn: psycopg.AsyncConnection, chunk: queue.Chunk) -> AsyncIterator[None]:
+    """Prolonger le bail du chunk tant que le bloc s'exécute.
+
+    Le rafraîchissement s'arrête par un signal, pas par une annulation : annuler une tâche au
+    milieu d'une requête peut laisser la connexion dans un état inutilisable, et c'est la
+    connexion que le chunk réutilise juste après.
+    """
+    stop = asyncio.Event()
+
+    async def keep() -> None:
+        interval = queue.LEASE_REFRESH_INTERVAL.total_seconds()
+        while not stop.is_set():
+            try:
+                await asyncio.wait_for(stop.wait(), interval)
+            except TimeoutError:
+                if not await queue.refresh_lease(conn, chunk):
+                    log.warning("chunk %s du job %s : bail perdu en cours d'exécution", chunk.seq, chunk.job_id)
+                    return
+
+    keeper = asyncio.create_task(keep())
+    try:
+        yield
+    finally:
+        stop.set()
+        await keeper
+
+
+async def _settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
+    """Conclure un job dont plus rien n'attend ni ne tourne, en disant ce qu'il a produit."""
+    row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
+    if row is None:
+        return
+    outcome = await job_outcome(conn, job_id)
+    await record_event(conn, job_id, "state", {"state": row[0], **outcome})
+    log.info(
+        "job %s terminé : %s — %d produite(s), %d écartée(s), %d en quarantaine",
+        job_id,
+        row[0],
+        outcome["produced"],
+        outcome["skipped"],
+        outcome["quarantined"],
+    )
+
+
+async def job_outcome(conn: psycopg.AsyncConnection, job_id: str) -> dict[str, int]:
+    """Le bilan d'un job, agrégé depuis ses chunks et sa quarantaine.
+
+    Agrégé à la lecture plutôt que tenu en compteurs sur le job : c'est un compte de plus qui
+    ne pourrait pas dériver de ce qu'il résume.
+    """
+    row = await (await conn.execute(OUTCOME, (job_id, job_id))).fetchone()
+    assert row is not None
+    return {"produced": row[0], "skipped": row[1], "quarantined": row[2]}

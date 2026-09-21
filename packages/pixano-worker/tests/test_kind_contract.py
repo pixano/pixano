@@ -133,15 +133,21 @@ class _Source:
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
 
-    def get_data(self, table_name: str, **kwargs: Any) -> list[Any]:
+    def get_data(
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        skip: int = 0,
+        where: str | None = None,
+        record_ids: list[str] | None = None,
+    ) -> list[Any]:
         if table_name == "images":
-            ids = kwargs.get("record_ids") or []
-            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in ids]
-        limit = kwargs.get("limit", CONTRACT_RECORDS)
-        skip = kwargs.get("skip", 0)
-        return [_Row(f"rec-{n}") for n in range(skip, min(skip + limit, CONTRACT_RECORDS))]
+            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in record_ids or []]
+        end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+        return [_Row(f"rec-{n}") for n in range(skip, end)]
 
-    def get_view_binary(self, table_name: str, view_id: str) -> tuple[bytes, str] | None:
+    def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
         return None
 
 
@@ -237,6 +243,14 @@ class TestExecution:
 
         for chunk in kind.plan(_reader(), params):
             kind.process(_reader(), chunk.payload, params)
+
+    def test_its_outcome_accounts_for_every_task(self, kind: JobKind) -> None:
+        """Le moteur refuse un bilan qui ne tombe pas juste ; mieux vaut l'apprendre ici qu'en production."""
+        params = _params(kind)
+
+        for chunk in kind.plan(_reader(), params):
+            result = kind.process(_reader(), chunk.payload, params)
+            assert kind.outcome(result, chunk.payload, chunk.task_count).total == chunk.task_count
 
     def test_writing_twice_changes_nothing(self, kind: JobKind) -> None:
         """L'idempotence, exigée de tous : les résultats vont dans LanceDB et l'avancement

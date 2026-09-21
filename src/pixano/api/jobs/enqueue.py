@@ -57,6 +57,10 @@ class JobRecord:
     total_tasks: int
     done_tasks: int
     created_at: datetime
+    produced: int = 0
+    skipped: int = 0
+    quarantined: int = 0
+    cancel_requested: bool = False
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
@@ -69,7 +73,21 @@ class JobRecord:
             total_tasks=row[4],
             done_tasks=row[5],
             created_at=row[6],
+            produced=row[7],
+            skipped=row[8],
+            quarantined=row[9],
+            cancel_requested=row[10],
         )
+
+
+@dataclass(frozen=True)
+class QuarantinedItem:
+    """Un item qu'un job n'a pas su traiter, et pourquoi."""
+
+    item_id: str
+    reason: str
+    detail: dict[str, Any] | None
+    created_at: datetime
 
 
 def connect(database_url: str | None) -> psycopg.Connection:
@@ -79,22 +97,18 @@ def connect(database_url: str | None) -> psycopg.Connection:
         QueueUnavailableError: Aucune URL n'est configurée, ou la base est injoignable.
     """
     if not database_url:
-        raise QueueUnavailableError(
-            "aucune file de jobs configurée — définissez PIXANO_DATABASE_URL et démarrez pixano-worker"
-        )
+        raise QueueUnavailableError("no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker")
     try:
         return psycopg.connect(database_url)
     except psycopg.Error as error:
-        raise QueueUnavailableError(f"file de jobs injoignable : {error}") from error
+        raise QueueUnavailableError(f"the job queue is unreachable: {error}") from error
 
 
 def _require_queue(conn: psycopg.Connection) -> None:
     """Vérifier que le worker a déjà installé le schéma."""
     row = conn.execute(queries.QUEUE_EXISTS).fetchone()
     if row is None or row[0] is None:
-        raise QueueUnavailableError(
-            "la file de jobs n'existe pas encore — démarrez pixano-worker, qui installe le schéma"
-        )
+        raise QueueUnavailableError("the job queue does not exist yet — start pixano-worker, which installs it")
 
 
 def available_kinds(conn: psycopg.Connection) -> dict[str, dict[str, Any]]:
@@ -118,12 +132,12 @@ def check_params(conn: psycopg.Connection, kind: str, params: dict[str, Any]) ->
     if row is None:
         declared = sorted(available_kinds(conn))
         known = ", ".join(declared) if declared else "aucun"
-        raise UnknownKindError(f"aucun worker ne déclare le type de job '{kind}' — types connus : {known}")
+        raise UnknownKindError(f"no running worker declares the job kind '{kind}' — known kinds: {known}")
 
     try:
         jsonschema.validate(params, row[0])
     except jsonschema.ValidationError as error:
-        raise InvalidParamsError(f"paramètres invalides pour '{kind}' : {error.message}") from error
+        raise InvalidParamsError(f"invalid parameters for '{kind}': {error.message}") from error
 
 
 def submit(
@@ -168,11 +182,22 @@ def list_jobs(conn: psycopg.Connection, limit: int = MAX_LISTED_JOBS) -> list[Jo
     return [JobRecord.from_row(row) for row in conn.execute(queries.LIST_JOBS, (limit,)).fetchall()]
 
 
+def quarantine(conn: psycopg.Connection, job_id: str, limit: int) -> list[QuarantinedItem]:
+    """Les items qu'un job a mis en quarantaine.
+
+    Raises:
+        JobNotFoundError: Aucun job ne porte cet identifiant.
+    """
+    job = get(conn, job_id)
+    rows = conn.execute(queries.LIST_QUARANTINE, (job.id, limit)).fetchall()
+    return [QuarantinedItem(item_id=r[0], reason=r[1], detail=r[2], created_at=r[3]) for r in rows]
+
+
 def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
     """Demander l'annulation d'un job.
 
     Les chunks en attente sortent de la file immédiatement ; ceux qui tournent sont laissés
-    à leur worker, qui les rendra entre deux lots. Un job dont plus rien ne tourne devient
+    à leur worker, qui s'arrêtera avant le chunk suivant. Un job dont plus rien ne tourne devient
     terminal tout de suite.
 
     Raises:

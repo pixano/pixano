@@ -7,13 +7,14 @@ License: CECILL-C
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
 
+  import JobOutcome from "./JobOutcome.svelte";
   import JobProgress from "./JobProgress.svelte";
   import SubmitJobForm from "./SubmitJobForm.svelte";
-  import { isTerminal } from "$lib/api/jobs";
-  import { jobsStore } from "$lib/stores/jobs.svelte";
+  import type { JobTarget } from "$lib/api/jobs";
+  import { canCancel, jobsStore, outcomeOf, stateLabelOf } from "$lib/stores/jobs.svelte";
 
-  type Props = { datasetId: string | null };
-  let { datasetId }: Props = $props();
+  type Props = { dataset: JobTarget | null };
+  let { dataset }: Props = $props();
 
   onMount(() => {
     void jobsStore.start();
@@ -21,14 +22,14 @@ License: CECILL-C
   onDestroy(() => jobsStore.stop());
 
   async function run(kind: string, params: Record<string, unknown>): Promise<boolean> {
-    if (!datasetId) return false;
-    return jobsStore.submit(kind, datasetId, params);
+    if (!dataset) return false;
+    return jobsStore.submit(kind, dataset.id, params);
   }
 </script>
 
 <div class="flex h-full flex-col overflow-hidden">
   {#if jobsStore.runnable}
-    <SubmitJobForm kinds={jobsStore.kinds} {datasetId} onSubmit={run} />
+    <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
       No worker is running, so nothing can be launched. Start pixano-worker and reopen this panel.
@@ -52,10 +53,16 @@ License: CECILL-C
           <li class="flex flex-col gap-2 border-b border-border p-3">
             <div class="flex items-baseline justify-between gap-2">
               <span class="truncate text-sm font-medium">{job.kind}</span>
-              <span class="shrink-0 text-xs text-muted-foreground">{job.state}</span>
+              <span class="shrink-0 text-xs text-muted-foreground">{stateLabelOf(job)}</span>
             </div>
             <JobProgress {job} />
-            {#if !isTerminal(job.state)}
+            <JobOutcome
+              summary={outcomeOf(job)}
+              quarantined={job.quarantined}
+              items={jobsStore.quarantines[job.id]}
+              onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
+            />
+            {#if canCancel(job)}
               <button
                 type="button"
                 class="self-start rounded border border-input px-2 py-1 text-xs hover:bg-muted"

@@ -13,7 +13,24 @@ export type Job = {
   dataset: string;
   state: JobState;
   total_tasks: number;
+  /** Tasks attempted so far — what the progress bar shows. */
   done_tasks: number;
+  /** Tasks that gave a result. */
+  produced: number;
+  /** Tasks the kind does not apply to, such as a record without an image. Not a failure. */
+  skipped: number;
+  /** Tasks that failed, readable one by one from the quarantine. */
+  quarantined: number;
+  /** Someone asked the job to stop; the chunks in flight are finishing. */
+  cancel_requested: boolean;
+  created_at: string;
+};
+
+/** An item a job could not process, and why. */
+export type QuarantinedItem = {
+  item_id: string;
+  reason: string;
+  detail: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -46,6 +63,9 @@ export type JsonSchema = {
   anyOf?: JsonSchema[];
 };
 
+/** The dataset a job would run on — the one last opened in the Explorer. */
+export type JobTarget = { id: string; name: string };
+
 export type SubmitJobRequest = {
   kind: string;
   dataset_id: string;
@@ -72,6 +92,14 @@ export function submitJob(request: SubmitJobRequest): Promise<Job> {
   );
 }
 
+export function listJobQuarantine(jobId: string, limit = 100): Promise<QuarantinedItem[]> {
+  return requestJson<QuarantinedItem[]>(
+    `/jobs/${jobId}/quarantine?limit=${limit}`,
+    {},
+    "listJobQuarantine",
+  );
+}
+
 export function cancelJob(jobId: string): Promise<Job> {
   return requestJson<Job>(`/jobs/${jobId}/cancel`, { method: "POST" }, "cancelJob");
 }
@@ -84,6 +112,9 @@ export type JobEvent = {
   total_tasks?: number;
   chunks?: number;
   reason?: string;
+  produced?: number;
+  skipped?: number;
+  quarantined?: number;
 };
 
 /**

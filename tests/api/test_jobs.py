@@ -64,7 +64,7 @@ class TestConnect:
             jobs.connect(None)
 
     def test_an_unreachable_database_is_refused_clearly(self) -> None:
-        with pytest.raises(jobs.QueueUnavailableError, match="injoignable"):
+        with pytest.raises(jobs.QueueUnavailableError, match="unreachable"):
             jobs.connect("postgresql://nobody@127.0.0.1:1/none?connect_timeout=1")
 
 
@@ -161,9 +161,84 @@ class TestReadAndCancel:
 
         assert cancelled.state == "cancelled"
 
+    def test_a_new_job_has_no_cancellation_requested(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        assert job.cancel_requested is False
+        assert jobs.get(declared, job.id).cancel_requested is False
+
+    def test_a_running_job_reports_its_cancellation_before_it_ends(self, declared: psycopg.Connection) -> None:
+        """The chunks in flight finish before the job settles; the request must be visible meanwhile."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running' WHERE id = %s", (job.id,))
+        declared.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, lease_until) "
+            "VALUES (%s, 0, 5, 'running', now() + interval '2 minutes')",
+            (job.id,),
+        )
+
+        cancelled = jobs.cancel(declared, job.id)
+
+        assert (cancelled.state, cancelled.cancel_requested) == ("running", True)
+
     def test_cancelling_twice_is_harmless(self, declared: psycopg.Connection) -> None:
         job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 1})
 
         jobs.cancel(declared, job.id)
 
         assert jobs.cancel(declared, job.id).state == "cancelled"
+
+
+class TestOutcome:
+    """A job says what it produced, not only what it attempted."""
+
+    @staticmethod
+    def _worker_finishes(
+        queue: psycopg.Connection, job_id: str, produced: int, skipped: int, failed: list[str]
+    ) -> None:
+        """Write what the worker writes once a chunk is done."""
+        task_count = produced + skipped + len(failed)
+        row = queue.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, produced, skipped) "
+            "VALUES (%s, (SELECT count(*) FROM pixano_jobs.job_chunks WHERE job_id = %s), %s, 'done', %s, %s) "
+            "RETURNING id",
+            (job_id, job_id, task_count, produced, skipped),
+        ).fetchone()
+        assert row is not None
+        for item in failed:
+            queue.execute(
+                f"INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason, detail) "
+                "VALUES (%s, %s, %s, 'refused by the inference server', %s)",
+                (job_id, row[0], item, Jsonb({"status": 500})),
+            )
+
+    def test_a_new_job_has_produced_nothing(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        assert (job.produced, job.skipped, job.quarantined) == (0, 0, 0)
+
+    def test_the_outcome_adds_up_across_chunks(self, declared: psycopg.Connection) -> None:
+        """The nuScenes case: most records skipped, a few produced, one image refused."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        self._worker_finishes(declared, job.id, produced=6, skipped=1, failed=["img-3"])
+        self._worker_finishes(declared, job.id, produced=1, skipped=7, failed=[])
+
+        read = jobs.get(declared, job.id)
+
+        assert (read.produced, read.skipped, read.quarantined) == (7, 8, 1)
+        assert jobs.list_jobs(declared)[0].quarantined == 1
+
+    def test_the_quarantine_can_be_read_back(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        self._worker_finishes(declared, job.id, produced=5, skipped=0, failed=["img-3", "img-7"])
+
+        items = jobs.quarantine(declared, job.id, limit=10)
+
+        assert [(item.item_id, item.reason, item.detail) for item in items] == [
+            ("img-3", "refused by the inference server", {"status": 500}),
+            ("img-7", "refused by the inference server", {"status": 500}),
+        ]
+
+    def test_the_quarantine_of_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.quarantine(declared, "00000000-0000-0000-0000-000000000000", limit=10)

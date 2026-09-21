@@ -28,21 +28,37 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 INSERT_JOB = f"""
 INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
 VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false
 """
 
-SELECT_JOB = f"""
-SELECT id, kind, dataset, state, total_tasks, done_tasks, created_at
-FROM {SCHEMA_NAME}.jobs WHERE id = %s
+# What a job's tasks became, next to how many were attempted. Aggregated on read from the
+# chunks and the quarantine rather than kept as counters on the job: a counter could drift
+# from what it summarises, an aggregate cannot. `done_tasks` alone reports 26 766 / 26 766 on
+# a dataset where 404 records carry an image — the outcome is what says so.
+_JOB_PROJECTION = f"""
+SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_at,
+       coalesce((SELECT sum(c.produced) FROM {SCHEMA_NAME}.job_chunks c
+                 WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
+       coalesce((SELECT sum(c.skipped) FROM {SCHEMA_NAME}.job_chunks c
+                 WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
+       (SELECT count(*) FROM {SCHEMA_NAME}.job_items i WHERE i.job_id = j.id)::int,
+       j.cancel_requested_at IS NOT NULL
+FROM {SCHEMA_NAME}.jobs j
 """
 
-LIST_JOBS = f"""
-SELECT id, kind, dataset, state, total_tasks, done_tasks, created_at
-FROM {SCHEMA_NAME}.jobs ORDER BY created_at DESC LIMIT %s
+SELECT_JOB = _JOB_PROJECTION + "WHERE j.id = %s"
+
+LIST_JOBS = _JOB_PROJECTION + "ORDER BY j.created_at DESC LIMIT %s"
+
+# The quarantine of a job, in the order items were set aside.
+LIST_QUARANTINE = f"""
+SELECT item_id, reason, detail, created_at
+FROM {SCHEMA_NAME}.job_items WHERE job_id = %s
+ORDER BY created_at, item_id LIMIT %s
 """
 
 # Demander l'annulation, sans toucher aux chunks en cours : leur worker les rendra de
-# lui-même entre deux lots.
+# lui-même avant le chunk suivant.
 REQUEST_CANCEL = f"""
 UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running') AND cancel_requested_at IS NULL

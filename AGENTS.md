@@ -68,6 +68,10 @@ docker compose up
 docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 ```
 
+A scripted walkthrough of the stack — a job submitted from the interface, cancelled, its worker
+killed and resumed, and failures that do not end the job — lives in
+[docs/demo-etape1.md](./docs/demo-etape1.md), with a script that prepares its datasets.
+
 The worker package lives in `packages/pixano-worker/` with its own lockfile and test suite:
 
 ```sh

@@ -33,13 +33,12 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
     monkeypatch.setattr(entrypoint, "psycopg", _FakePsycopg())
     monkeypatch.setattr(entrypoint, "ensure_schema", lambda conn: order.append("schema"))
     monkeypatch.setattr(entrypoint, "default_registry", _FakeRegistry)
-    monkeypatch.setattr(entrypoint.queue, "release_own", lambda *a: 0)
 
-    def _stop(*_args: object) -> None:
+    async def _stop(*_args: object) -> None:
         order.append("boucle")
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(entrypoint, "_work_forever", _stop)
+    monkeypatch.setattr(entrypoint, "serve", _stop)
     return order
 
 
