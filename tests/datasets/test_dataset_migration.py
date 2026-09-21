@@ -6,9 +6,12 @@
 
 import json
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Event
 
 from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets.locking import dataset_mutation_lock, mutation_token
 from pixano.schemas import Record, Video
 
 
@@ -144,3 +147,29 @@ class TestSpecVersion2Migration:
         dataset = Dataset(dataset_path)
         assert dataset.info.spec_version == 2
         assert "from_timestamp" in dataset.open_table("videos").schema.names
+
+    def test_waiting_opener_refreshes_completed_upgrade(self, tmp_path: Path, monkeypatch):
+        dataset_path = tmp_path / "video_ds"
+        _make_video_dataset(dataset_path)
+        _downgrade_to_spec_version_1(dataset_path)
+        connected = Event()
+        original_connect = Dataset._connect
+
+        def signal_connect(dataset):
+            connection = original_connect(dataset)
+            connected.set()
+            return connection
+
+        monkeypatch.setattr(Dataset, "_connect", signal_connect)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with dataset_mutation_lock(dataset_path):
+                waiting = pool.submit(Dataset, dataset_path)
+                assert connected.wait(timeout=5)
+                assert not waiting.done()
+                Dataset(dataset_path)
+                completed_token = mutation_token(dataset_path)
+            dataset = waiting.result(timeout=10)
+
+        assert dataset.info.spec_version == 2
+        assert "from_timestamp" in dataset.open_table("videos").schema.names
+        assert mutation_token(dataset_path) == completed_token

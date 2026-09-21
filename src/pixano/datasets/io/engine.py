@@ -41,9 +41,11 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import shortuuid
 from lancedb.pydantic import LanceModel
+from s3path import S3Path
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
+from pixano.datasets.locking import dataset_mutation_lock, mark_dataset_mutated, mutation_token
 from pixano.datasets.utils.integrity import validate_arrow_batch, validate_batch
 from pixano.schemas import SchemaGroup, is_image, is_sequence_frame, is_view, schema_to_group
 from pixano.schemas.views.image import _generate_preview
@@ -143,13 +145,14 @@ def replay_journals(data_dir: Path) -> None:
             target = Path(journal["target"])
             staging = Path(journal["staging"])
             trash = Path(journal["trash"])
-            if staging.exists() and not target.exists():
-                # Crashed between old→trash and staging→target: finish the swap.
-                os.rename(staging, target)
-            if target.exists() and trash.exists():
-                shutil.rmtree(trash, ignore_errors=True)
-            if target.exists() and not staging.exists():
-                journal_file.unlink(missing_ok=True)
+            with dataset_mutation_lock(target):
+                if staging.exists() and not target.exists():
+                    # Crashed between old→trash and staging→target: finish the swap.
+                    os.rename(staging, target)
+                if target.exists() and trash.exists():
+                    shutil.rmtree(trash, ignore_errors=True)
+                if target.exists() and not staging.exists():
+                    journal_file.unlink(missing_ok=True)
         except Exception as exc:
             logger.warning("Could not replay overwrite journal %s: %s", journal_file, exc)
 
@@ -174,7 +177,7 @@ class ImportEngine:
             checkpoint: Called after each committed flush with (cursor, table_counts).
             cancel_check: Polled at flush boundaries; True aborts the job.
         """
-        if not isinstance(data_dir, Path):
+        if not isinstance(data_dir, Path) or isinstance(data_dir, S3Path):
             raise UnsupportedStorageError("Import jobs require a local filesystem data directory.")
         self.data_dir = data_dir
         self.library_dir = data_dir / "library"
@@ -256,6 +259,38 @@ class ImportEngine:
         started_at: float,
         resume_cursor: Cursor | None = None,
     ) -> ImportResult:
+        staging_dir = state_dir(self.data_dir) / "staging" / f"{dataset_name}-{job_id}"
+        # Reserve staging for the whole build, including importer work between
+        # flushes and promotion. Python imports need not have a JobStore entry.
+        with dataset_mutation_lock(staging_dir):
+            return self._run_build_locked(
+                importer,
+                source,
+                spec,
+                plan,
+                info,
+                job_id,
+                dataset_name,
+                target_dir,
+                sinks,
+                started_at,
+                resume_cursor,
+            )
+
+    def _run_build_locked(
+        self,
+        importer: DatasetImporter,
+        source: SourceRef,
+        spec: ImportSpec,
+        plan: ImportPlan,
+        info: DatasetInfo,
+        job_id: str,
+        dataset_name: str,
+        target_dir: Path,
+        sinks: Sequence[ProgressSink],
+        started_at: float,
+        resume_cursor: Cursor | None = None,
+    ) -> ImportResult:
         if spec.mode == "create" and target_dir.exists() and resume_cursor is None:
             raise SpecValidationError(
                 f"Dataset '{dataset_name}' already exists at '{target_dir}'. Use mode 'overwrite' or 'add'."
@@ -314,7 +349,7 @@ class ImportEngine:
         ledger.close()
         shutil.rmtree(staging_dir / ".ledger", ignore_errors=True)
 
-        self._promote(staging_dir, target_dir, job_id)
+        self._promote(staging_dir, target_dir, job_id, overwrite=spec.mode == "overwrite")
         Dataset.invalidate_caches(dataset.info.id)
 
         return ImportResult(
@@ -327,8 +362,14 @@ class ImportEngine:
             storage_mode=dataset.info.storage_mode,
         )
 
-    def _promote(self, staging_dir: Path, target_dir: Path, job_id: str) -> None:
+    def _promote(self, staging_dir: Path, target_dir: Path, job_id: str, overwrite: bool = True) -> None:
         """Atomically move the staged dataset into the library (journaled for overwrite)."""
+        with dataset_mutation_lock(target_dir):
+            if not overwrite and target_dir.exists():
+                raise SpecValidationError(f"Dataset '{target_dir.name}' already exists; nothing was overwritten.")
+            self._promote_locked(staging_dir, target_dir, job_id)
+
+    def _promote_locked(self, staging_dir: Path, target_dir: Path, job_id: str) -> None:
         if not target_dir.exists():
             _rename_with_retry(staging_dir, target_dir)
             return
@@ -363,15 +404,36 @@ class ImportEngine:
         started_at: float,
         resume_cursor: Cursor | None = None,
     ) -> ImportResult:
+        with dataset_mutation_lock(target_dir):
+            return self._run_add_locked(
+                importer, source, spec, plan, job_id, target_dir, sinks, started_at, resume_cursor
+            )
+
+    def _run_add_locked(
+        self,
+        importer: DatasetImporter,
+        source: SourceRef,
+        spec: ImportSpec,
+        plan: ImportPlan,
+        job_id: str,
+        target_dir: Path,
+        sinks: Sequence[ProgressSink],
+        started_at: float,
+        resume_cursor: Cursor | None = None,
+    ) -> ImportResult:
         if not target_dir.exists():
             raise SpecValidationError(f"Dataset '{target_dir.name}' does not exist; use mode 'create'.")
         dataset = Dataset(target_dir)
 
         manifest_path = target_dir / "imports" / f"{job_id}.manifest.json"
-        if resume_cursor is not None and manifest_path.is_file():
+        if manifest_path.is_file():
             # Resume: keep the original manifest so pre-import versions (the
             # rollback anchor) still describe the state before the FIRST run.
             manifest = ImportManifest.load(manifest_path)
+            # The lock was released during interruption. The original anchor
+            # cannot distinguish user edits made before this resumed attempt.
+            manifest.rollback_safe = False
+            manifest.save(manifest_path)
         else:
             manifest = ImportManifest(
                 job_id=job_id,
@@ -380,6 +442,7 @@ class ImportEngine:
                 plan_fingerprint=plan.plan_fingerprint,
                 id_namespace=importer.effective_namespace(spec, source),
                 importer_version=importer.importer_version,
+                rollback_safe=resume_cursor is None,
                 pre_import_versions={name: dataset.open_table(name).version for name in dataset.info.tables},
             )
             manifest.save(manifest_path)
@@ -412,6 +475,7 @@ class ImportEngine:
             ledger.close()
 
         manifest.post_import_versions = {name: dataset.open_table(name).version for name in dataset.info.tables}
+        manifest.post_mutation_token = mutation_token(target_dir)
         manifest.save(manifest_path)
         Dataset.invalidate_caches(dataset.info.id)
 
@@ -447,7 +511,7 @@ class ImportEngine:
         row_buffers: dict[str, list[LanceModel]] = {}
         buffered_rows = 0
         buffered_bytes = 0
-        last_cursor: Cursor = {}
+        pending_cursor: Cursor | None = None
 
         def flush() -> None:
             nonlocal buffered_rows, buffered_bytes
@@ -460,8 +524,10 @@ class ImportEngine:
             self._emit_progress(sinks, plan, table_counts)
 
         for bundle in importer.iter_batches(source, spec, plan, cursor=start_cursor):
+            has_arrow = False
             for table_name, payload in bundle.tables.items():
                 if isinstance(payload, (pa.RecordBatch, pa.Table)):
+                    has_arrow = True
                     # Arrow payloads are pre-batched by the importer: write through.
                     flush()
                     self._flush_arrow(dataset, table_name, payload, ledger, table_counts, census, add_mode)
@@ -474,13 +540,17 @@ class ImportEngine:
                 buffered_rows += len(rows)
                 buffered_bytes += sum(_approx_row_bytes(row) for row in rows)
 
-            if buffered_rows >= self.flush_rows or buffered_bytes >= self.flush_bytes:
+            pending_cursor = dict(bundle.cursor)
+            # A cursor covers the whole bundle, including any row payloads
+            # following an Arrow table. Never checkpoint a partial bundle.
+            if has_arrow or buffered_rows >= self.flush_rows or buffered_bytes >= self.flush_bytes:
                 flush()
-                last_cursor = dict(bundle.cursor)
-                yield last_cursor
+                yield pending_cursor
+                pending_cursor = None
 
         flush()
-        yield dict(last_cursor)
+        if pending_cursor is not None:
+            yield pending_cursor
 
     def _flush_rows(
         self,
@@ -567,7 +637,7 @@ class ImportEngine:
             {},
             dataset,
             raise_or_warn="raise",
-            fk_lookup=ledger.fk_lookup,
+            fk_lookup=dataset.find_ids_in_table if add_mode else ledger.fk_lookup,
         )
 
         if add_mode:
@@ -643,59 +713,62 @@ class ImportEngine:
             )
 
     def rollback(self, target_dir: Path, job_id: str) -> dict[str, int]:
-        """Undo an add-mode import (spec §8, deviation D12).
+        """Restore an uninterrupted add import only when nothing has changed since.
 
-        Fast path: when every table still sits at the manifest's post-import
-        version, `checkout + restore` snaps back to the pre-import version.
-        Any drift (concurrent edits since the import) switches to the surgical
-        path: delete the import's namespace-prefixed rows in reverse FK order,
-        leaving later edits intact. Re-derives storage_mode afterwards.
-
-        Returns:
-            Rows removed per table (empty dict on the version-restore path).
+        Every table and historical version is checked before the first restore.
+        The shared writer lock excludes cooperative API, CLI and Python writers
+        until the complete restore and metadata update have finished.
         """
-        from .ids import namespace_prefix
+        with dataset_mutation_lock(target_dir):
+            return self._rollback_locked(target_dir, job_id)
 
+    def _rollback_locked(self, target_dir: Path, job_id: str) -> dict[str, int]:
         manifest_path = target_dir / "imports" / f"{job_id}.manifest.json"
         if not manifest_path.is_file():
             raise JobStateError(f"No import manifest for job '{job_id}' — only add-mode imports roll back.")
         manifest = ImportManifest.load(manifest_path)
+        if not manifest.rollback_safe:
+            raise JobStateError(
+                f"Job '{job_id}' cannot be rolled back safely: legacy or resumed imports may include other edits."
+            )
         if not manifest.post_import_versions:
-            raise JobStateError(f"Job '{job_id}' never finished its first flush; nothing to roll back.")
+            raise JobStateError(f"Job '{job_id}' did not complete; rollback is unavailable.")
         dataset = Dataset(target_dir)
-
-        untouched = all(
-            dataset.open_table(name).version == version
-            for name, version in manifest.post_import_versions.items()
-            if name in dataset.info.tables
-        )
-        removed: dict[str, int] = {}
-        if untouched:
-            for name, pre_version in manifest.pre_import_versions.items():
-                if name not in dataset.info.tables:
-                    continue
-                table = dataset.open_table(name)
-                table.checkout(pre_version)
-                table.restore()
-        else:
-            prefix = namespace_prefix(manifest.id_namespace) if manifest.id_namespace else ""
-            if not prefix:
+        expected_tables = set(manifest.post_import_versions)
+        if (
+            dataset.info.id != manifest.dataset_id
+            or set(manifest.pre_import_versions) != expected_tables
+            or set(dataset.info.tables) != expected_tables
+            or set(dataset._db_connection.table_names()) != expected_tables
+            or not manifest.post_mutation_token
+            or mutation_token(target_dir) != manifest.post_mutation_token
+        ):
+            raise JobStateError(f"Dataset changed since job '{job_id}'; rollback refused without changing any data.")
+        tables = {}
+        for name, version in manifest.post_import_versions.items():
+            table = dataset.open_table(name)
+            table.checkout_latest()
+            if table.version != version:
                 raise JobStateError(
-                    f"Job '{job_id}' has no id namespace recorded and the dataset changed since the "
-                    "import — cannot roll back safely."
+                    f"Table '{name}' changed since job '{job_id}'; rollback refused without changing any data."
                 )
-            for name in reversed(dataset._table_insert_order(list(dataset.info.tables))):
-                table = dataset.open_table(name)
-                predicate = f"id LIKE '{prefix}-%'"
-                before = table.count_rows(predicate)
-                if before:
-                    table.delete(predicate)
-                    removed[name] = before
-
+            tables[name] = table
+        # Checking out snapshots is read-only. Do it for ALL tables first, so
+        # an expired/missing anchor cannot leave a partially restored dataset.
+        for name, table in tables.items():
+            try:
+                table.checkout(manifest.pre_import_versions[name])
+            except Exception as error:
+                raise JobStateError(
+                    f"Rollback version for table '{name}' is unavailable; no data was changed."
+                ) from error
+        mark_dataset_mutated(target_dir)
+        for table in tables.values():
+            table.restore()
         self._restamp_storage_mode(dataset)
         manifest_path.unlink(missing_ok=True)
         Dataset.invalidate_caches(dataset.info.id)
-        return removed
+        return {}
 
     def _restamp_storage_mode(self, dataset: Dataset) -> None:
         """Re-derive storage_mode from the remaining view rows (cheap count pushdowns)."""

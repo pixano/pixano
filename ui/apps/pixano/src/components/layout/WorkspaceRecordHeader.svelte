@@ -39,9 +39,10 @@ License: CECILL-C
   }: Props = $props();
 
   const dirtyCount = $derived(saveData.value.length);
+  const recordPosition = $derived(getRecordPosition());
 
   const recordLabel = $derived.by(() => {
-    const { position, total } = getRecordPosition();
+    const { position, total } = recordPosition;
     return position != null && total != null ? `${position} / ${total}` : "— / —";
   });
 
@@ -109,6 +110,7 @@ License: CECILL-C
         <div class="flex shrink-0 items-center gap-1">
           <IconButton
             onclick={() => goToNeighborItem("previous")}
+            disabled={recordPosition.position === null}
             tooltipContent="Previous record (Shift + ←)"
             class="h-7 w-7 rounded-lg"
           >
@@ -122,6 +124,7 @@ License: CECILL-C
           </span>
           <IconButton
             onclick={() => goToNeighborItem("next")}
+            disabled={recordPosition.position === null}
             tooltipContent="Next record (Shift + →)"
             class="h-7 w-7 rounded-lg"
           >

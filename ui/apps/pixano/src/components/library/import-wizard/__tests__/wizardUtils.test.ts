@@ -16,7 +16,9 @@ import {
   isHubId,
   mergeSpec,
   parseAdvancedSpec,
+  parseEpisodeSelection,
   schemaSections,
+  setupValidationMessage,
   showsLerobotFields,
   type WizardFields,
 } from "../wizardUtils";
@@ -76,11 +78,103 @@ describe("mergeSpec", () => {
       media: { mode: "uri" },
       dataset: { name: "My DS" },
       options: { episodes: "0:4", max_frames_per_episode: 300 },
+      schema: { annotations: ["bbox", "mask", "tracklet"] },
     });
   });
 
   it("omits defaults entirely for auto-detect", () => {
     expect(mergeSpec(fields({}), "")).toEqual({});
+  });
+
+  it.each(["lerobot", "auto"] as const)(
+    "includes the annotation schema for %s Hub imports",
+    (intent) => {
+      const base = fields({ intent, source: "lerobot/robot_tasks", episodes: "0:2" });
+      base.lerobot.entityAttrs = [
+        { name: "category", type: "str", list: false, required: false, defaultValue: "cup" },
+      ];
+      base.lerobot.recordAttrs = [
+        { name: "reviewed", type: "bool", list: false, required: false, defaultValue: "false" },
+      ];
+      base.lerobot.annotations = ["bbox", "tracklet"];
+      expect(mergeSpec(base, "")).toEqual({
+        ...(intent === "lerobot" ? { format: "lerobot" } : {}),
+        options: { episodes: "0:2" },
+        schema: {
+          entity: { attrs: { category: { type: "str", default: "cup" } } },
+          record: { attrs: { reviewed: { type: "bool", default: false } } },
+          annotations: ["bbox", "tracklet"],
+        },
+      });
+    },
+  );
+
+  it("keeps LeRobot and raw schema settings separate when changing intent", () => {
+    const base = fields({ intent: "lerobot", source: "/staged/source", maxFrames: "15" });
+    base.raw.task = "video";
+    base.raw.maxFrames = "20";
+    base.raw.fps = "5";
+    base.raw.framesMode = "reference";
+    base.raw.annotations = ["multi_path"];
+    base.raw.recordAttrs = [
+      { name: "weather", type: "str", list: false, required: false, defaultValue: "sunny" },
+    ];
+    base.lerobot.entityAttrs = [
+      { name: "category", type: "str", list: false, required: false, defaultValue: "cup" },
+    ];
+    const lerobotSpec = mergeSpec(base, "");
+    expect(lerobotSpec).toEqual({
+      format: "lerobot",
+      options: { max_frames_per_episode: 15 },
+      schema: {
+        entity: { attrs: { category: { type: "str", default: "cup" } } },
+        annotations: ["bbox", "mask", "tracklet"],
+      },
+    });
+
+    base.intent = "raw";
+    expect(mergeSpec(base, "")).toEqual({
+      format: "pixano_jsonl",
+      dataset: { workspace: "video" },
+      options: { frames: "reference" },
+      schema: {
+        record: { attrs: { weather: { type: "str", default: "sunny" } } },
+        annotations: ["multi_path", "tracklet"],
+      },
+    });
+    base.intent = "lerobot";
+    expect(mergeSpec(base, "")).toEqual(lerobotSpec);
+  });
+
+  it.each(["coco", "pixano_jsonl", "auto"] as const)(
+    "ignores hidden LeRobot schema and options for a local %s source",
+    (intent) => {
+      const base = fields({ intent, source: "/staged/source", episodes: "0:2", maxFrames: "12" });
+      base.lerobot.entityAttrs = [
+        { name: "category", type: "str", list: false, required: false, defaultValue: "cup" },
+      ];
+      expect(mergeSpec(base, "")).toEqual(intent === "auto" ? {} : { format: intent });
+    },
+  );
+
+  it("honors advanced LeRobot schema and option overrides", () => {
+    const base = fields({ intent: "lerobot", source: "org/data", maxFrames: "12" });
+    base.lerobot.entityAttrs = [
+      { name: "category", type: "str", list: false, required: false, defaultValue: "cup" },
+    ];
+    expect(
+      mergeSpec(
+        base,
+        JSON.stringify({
+          schema: { entity: { attrs: { label: "str" } }, annotations: ["classification"] },
+          options: { max_frames_per_episode: 5 },
+        }),
+      ),
+    ).toEqual({
+      format: "lerobot",
+      schema: { entity: { attrs: { label: "str" } }, annotations: ["classification"] },
+      options: { max_frames_per_episode: 5 },
+    });
   });
 
   it("builds the raw multi-view image spec: preflight views + record/entity attrs", () => {
@@ -96,7 +190,7 @@ describe("mergeSpec", () => {
       { name: "category", type: "str", list: false, required: false, defaultValue: "" },
       { name: "tags", type: "str", list: true, required: false, defaultValue: "" },
     ];
-    base.raw.annotations = ["bbox", "classification"];
+    base.raw.annotations = ["bbox", "multi_path"];
     expect(mergeSpec(base, "")).toEqual({
       format: "pixano_jsonl",
       dataset: { workspace: "image" },
@@ -104,7 +198,7 @@ describe("mergeSpec", () => {
         views: { left: { kind: "image" }, right: { kind: "image" } },
         record: { attrs: { weather: { type: "str" } } },
         entity: { attrs: { category: { type: "str" }, tags: { type: "str", collection: true } } },
-        annotations: ["bbox", "classification"],
+        annotations: ["bbox", "multi_path"],
       },
     });
   });
@@ -129,7 +223,7 @@ describe("mergeSpec", () => {
     expect(mergeSpec(reference, "")).toEqual({
       format: "pixano_jsonl",
       dataset: { workspace: "video" },
-      schema: { annotations: ["bbox"] },
+      schema: { annotations: ["bbox", "tracklet"] },
       options: { frames: "reference" },
     });
   });
@@ -279,6 +373,42 @@ describe("formatBytes", () => {
 });
 
 describe("canAnalyze", () => {
+  it.each(["lerobot", "auto"] as const)(
+    "gates %s Hub imports on the visible schema, not hidden raw settings",
+    (intent) => {
+      const base = fields({ intent, source: "org/dataset" });
+      base.raw.annotations = [];
+      expect(canAnalyze(base, "")).toBe(true);
+      base.lerobot.entityAttrs = [
+        { name: "Bad Name", type: "str", list: false, required: false, defaultValue: "" },
+      ];
+      expect(canAnalyze(base, "")).toBe(false);
+      base.lerobot.entityAttrs = [];
+      base.lerobot.annotations = [];
+      expect(canAnalyze(base, "")).toBe(true); // Object tracking is always included.
+    },
+  );
+
+  it("ignores hidden LeRobot validation when the user changes import type", () => {
+    const base = fields({ intent: "raw", source: "/staged/source" });
+    base.lerobot.annotations = [];
+    expect(canAnalyze(base, "")).toBe(true);
+    base.intent = "auto";
+    expect(canAnalyze(base, "")).toBe(true);
+  });
+
+  it("requires a positive integer frame cap when set for LeRobot", () => {
+    const base = fields({ intent: "lerobot", source: "org/data" });
+    for (const value of ["0", "-1", "1.5", "oops", "9007199254740993"]) {
+      base.maxFrames = value;
+      expect(canAnalyze(base, "")).toBe(false);
+    }
+    for (const value of ["", "1", " 300 "]) {
+      base.maxFrames = value;
+      expect(canAnalyze(base, "")).toBe(true);
+    }
+  });
+
   it("needs a source and valid advanced JSON", () => {
     expect(canAnalyze(fields({}), "")).toBe(false);
     expect(canAnalyze(fields({ source: "/data" }), "")).toBe(true);
@@ -306,6 +436,60 @@ describe("canAnalyze", () => {
     );
     expect(blocked.raw.layout.ok).toBe(false);
     expect(canAnalyze(blocked, "")).toBe(false);
+  });
+});
+
+describe("setupValidationMessage", () => {
+  it("explains missing source, invalid overrides, and visible schema errors", () => {
+    const base = fields({ intent: "raw" });
+    expect(setupValidationMessage(base, "")).toContain("Choose a source");
+    base.source = "/staged/source";
+    expect(setupValidationMessage(base, "{bad")).toContain("Advanced JSON");
+    base.raw.entityAttrs = [
+      { name: "Bad Name", type: "str", list: false, required: false, defaultValue: "" },
+    ];
+    expect(setupValidationMessage(base, "")).toContain("Bad Name");
+    base.raw.entityAttrs = [];
+    expect(setupValidationMessage(base, "")).toBe("");
+  });
+});
+
+describe("wizard episode selection", () => {
+  it("serializes explicit numbers as a list and keeps inclusive ranges", () => {
+    for (const [input, expected] of [
+      ["1, 3,7", [1, 3, 7]],
+      ["3", [3]],
+      ["1,1", [1]],
+      [" 0 : 4 ", "0:4"],
+      [":4", ":4"],
+      ["2:", "2:"],
+    ] as const) {
+      expect(parseEpisodeSelection(input)).toEqual({ value: expected, error: "" });
+      const spec = mergeSpec(
+        fields({ intent: "lerobot", source: "org/robot", episodes: input }),
+        "",
+      );
+      expect(spec.options).toEqual({ episodes: expected });
+    }
+    expect(parseEpisodeSelection("")).toEqual({ error: "" });
+  });
+
+  it("blocks malformed, reversed, negative, or unsafe episode selections", () => {
+    for (const episodes of [
+      "1,",
+      "1:3,5",
+      "4:0",
+      "-1",
+      "1.5",
+      "oops",
+      "9007199254740993",
+      "1:2:3",
+    ]) {
+      const base = fields({ intent: "lerobot", source: "org/robot", episodes });
+      expect(parseEpisodeSelection(episodes).error).toBeTruthy();
+      expect(canAnalyze(base, "")).toBe(false);
+      expect(setupValidationMessage(base, "")).toContain("episode numbers");
+    }
   });
 });
 

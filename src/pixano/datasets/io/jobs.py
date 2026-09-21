@@ -29,6 +29,9 @@ from typing import Any, Callable, Sequence
 
 import shortuuid
 
+from pixano.datasets.locking import dataset_mutation_lock
+from pixano.datasets.utils.errors import DatasetBusyError
+
 from .errors import JobStateError, PixanoDataError
 from .plan import ImportPlan
 from .progress import ProgressEvent, ProgressSink, ThrottledSink
@@ -169,6 +172,16 @@ class JobStore:
         rows = self._connect().execute("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
         return [_decode(row) for row in rows]
 
+    def _jobs_in_states(self, states: Sequence[str]) -> list[JobRecord]:
+        """Read all jobs needing lifecycle work, independently of UI pagination."""
+        placeholders = ", ".join("?" for _ in states)
+        rows = (
+            self._connect()
+            .execute(f"SELECT * FROM jobs WHERE status IN ({placeholders}) ORDER BY created_at DESC", states)
+            .fetchall()
+        )
+        return [_decode(row) for row in rows]
+
     def update_job(self, job_id: str, **fields: Any) -> None:
         """Update columns; dict values are JSON-encoded into their *_json columns."""
         columns: list[str] = []
@@ -193,7 +206,7 @@ class JobStore:
             raise JobStateError(f"Unknown job '{job_id}'.")
         if job.status in _TERMINAL_STATES:
             raise JobStateError(f"Job '{job_id}' is already {job.status}.")
-        if job.status == "pending":
+        if job.status in ("pending", "interrupted"):
             self.update_job(job_id, status="cancelled")
         else:
             self.update_job(job_id, error={"cancel_requested": True})
@@ -213,10 +226,13 @@ class JobStore:
     def mark_interrupted_on_boot(self, pid_check: Callable[[int], bool] = _pid_alive) -> list[str]:
         """Flip running/pending jobs whose process is gone to `interrupted` (boot hook)."""
         flipped: list[str] = []
-        for job in self.list_jobs(limit=1000):
-            if job.status in ("running", "pending") and not pid_check(job.pid):
-                self.update_job(job.id, status="interrupted")
-                flipped.append(job.id)
+        for job in self._jobs_in_states(("running", "pending")):
+            if not pid_check(job.pid):
+                if job.error.get("cancel_requested"):
+                    self.update_job(job.id, status="cancelled")
+                else:
+                    self.update_job(job.id, status="interrupted")
+                    flipped.append(job.id)
         return flipped
 
     # ------------------------------------------------------------------
@@ -367,6 +383,7 @@ class JobRunner:
         with self._lock:  # concurrency 1: imports serialize
             if self.store.cancel_requested(job_id):
                 self.store.update_job(job_id, status="cancelled")
+                self._discard_upload_source(source)
                 return
             self.store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=time.time())
             try:
@@ -513,6 +530,21 @@ class JobRunner:
             thread.join(timeout)
 
 
+def _referenced_by_swap_journal(state: Path, artifact: Path) -> bool:
+    """Keep recovery artifacts whenever an unresolved journal may need them."""
+    for journal_file in (state / "journal").glob("*.json"):
+        try:
+            journal = json.loads(journal_file.read_text(encoding="utf-8"))
+            paths = {Path(journal[key]).resolve() for key in ("target", "staging", "trash")}
+        except FileNotFoundError:
+            continue  # another dataset's completed promotion removed its journal
+        except (OSError, ValueError, TypeError, KeyError):
+            return True  # an unreadable journal cannot prove anything is garbage
+        if artifact.resolve() in paths:
+            return True
+    return False
+
+
 def boot_recover(data_dir: Path) -> Sequence[str]:
     """Server-boot hook: replay journals, mark orphaned jobs, reclaim dead state dirs."""
     from .engine import replay_journals, state_dir
@@ -522,27 +554,61 @@ def boot_recover(data_dir: Path) -> Sequence[str]:
     store = JobStore.for_data_dir(data_dir)
     flipped = store.mark_interrupted_on_boot()
 
-    # Trash is always garbage after journal replay; staging dirs are kept only
-    # while their job can still resume (interrupted/pending/running).
+    # Replay may skip a busy target or fail. Clean individual artifacts only
+    # under their writer locks, then recheck journals and current job state.
     state = state_dir(data_dir)
-    shutil.rmtree(state / "trash", ignore_errors=True)
-    resumable = [job for job in store.list_jobs(limit=1000) if job.status in ("interrupted", "pending", "running")]
+    trash_root = state / "trash"
+    if trash_root.is_dir():
+        for trashed in trash_root.iterdir():
+            target = data_dir / "library" / trashed.name.partition("-")[0]
+            try:
+                with dataset_mutation_lock(target):
+                    if not _referenced_by_swap_journal(state, trashed):
+                        shutil.rmtree(trashed, ignore_errors=True)
+            except DatasetBusyError:
+                continue
+        try:
+            trash_root.rmdir()  # never remove entries created after our scan
+        except OSError:
+            pass
+    resumable = [
+        job
+        for job in store._jobs_in_states(("interrupted", "pending", "running", "error"))
+        if job.kind == "import" and (job.status != "error" or job.cursor)
+    ]
     staging_root = state / "staging"
     if staging_root.is_dir():
-        resumable_ids = {job.id for job in resumable}
         for staged in staging_root.iterdir():
-            job_id = staged.name.rsplit("-", 1)[-1]
-            if job_id not in resumable_ids:
-                shutil.rmtree(staged, ignore_errors=True)
+            dataset_name, _, job_id = staged.name.partition("-")
+            target = data_dir / "library" / dataset_name
+            try:
+                with dataset_mutation_lock(staged), dataset_mutation_lock(target):
+                    if _referenced_by_swap_journal(state, staged):
+                        continue
+                    job = store.get_job(job_id)
+                    if (
+                        job is not None
+                        and job.kind == "import"
+                        and (
+                            job.status in ("pending", "running", "interrupted")
+                            or (job.status == "error" and job.cursor)
+                        )
+                    ):
+                        continue
+                    shutil.rmtree(staged, ignore_errors=True)
+            except DatasetBusyError:
+                continue
 
     # Staged client uploads: kept while a resumable job imports from them, or
     # while fresh (an open wizard may still be uploading); orphans are garbage.
     uploads_root = state / "uploads"
     if uploads_root.is_dir():
-        resumable_sources = {str(job.spec.get("__source", "")) for job in resumable}
+        resumable_sources = {
+            str(Path(source).resolve()) for job in resumable if (source := str(job.spec.get("__source", "")))
+        }
         cutoff = time.time() - 24 * 3600
         for session_dir in uploads_root.iterdir():
-            if str(session_dir) in resumable_sources:
+            if str(session_dir.resolve()) in resumable_sources:
                 continue
             try:
                 if session_dir.stat().st_mtime >= cutoff:

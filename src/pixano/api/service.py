@@ -7,6 +7,7 @@
 """Generic CRUD service for the API."""
 
 import logging
+from functools import wraps
 from typing import Any
 
 from fastapi import HTTPException
@@ -26,6 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 MAX_QUERY_LIMIT = 1000
+
+
+def _service_write(method):
+    """Hold one lock for a resource operation's reads and writes."""
+
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self.dataset.write_lock():
+            return method(self, *args, **kwargs)
+
+    return locked
 
 
 class BaseService:
@@ -49,28 +61,22 @@ class BaseService:
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
             if self.resource.schema_group == SchemaGroup.ANNOTATION:
-                logger.warning(
-                    "Table '%s' does not exist in dataset '%s'. "
-                    "Auto-creating with base schema '%s'. "
-                    "To use a custom schema, recreate the dataset with "
-                    "DatasetInfo(%s=YourCustomSchema).",
-                    resolved_table,
-                    self.dataset.info.id,
-                    self.resource.schema_cls.__name__,
-                    self.resource.name,
-                )
-                self.dataset.create_table(
-                    resolved_table,
-                    self.resource.schema_cls,
-                    exist_ok=True,
-                )
-                # Ensure the DatasetInfo slot is set so the table
-                # survives serialisation to info.json across restarts.
-                slot_name = self.resource.name  # e.g. "multi_path"
-                if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
-                    setattr(self.dataset.info, slot_name, self.resource.schema_cls)
-                    self.dataset.info.to_json(self.dataset._info_file)
-                return resolved_table
+                with self.dataset.write_lock():
+                    if resolved_table in self.dataset.info.tables:
+                        return self.resolve_table()
+                    logger.warning(
+                        "Table '%s' does not exist in dataset '%s'. Auto-creating with base schema '%s'.",
+                        resolved_table,
+                        self.dataset.info.id,
+                        self.resource.schema_cls.__name__,
+                    )
+                    self.dataset.create_table(resolved_table, self.resource.schema_cls, exist_ok=True)
+                    # Persist the slot as well as the physical table.
+                    slot_name = self.resource.name
+                    if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
+                        setattr(self.dataset.info, slot_name, self.resource.schema_cls)
+                        self.dataset.info.to_json(self.dataset._info_file)
+                    return resolved_table
             raise HTTPException(status_code=404, detail=f"No table found for resource '{self.resource.path}'.")
         if not issubclass(schema_type, self.resource.schema_cls):
             raise HTTPException(
@@ -251,6 +257,7 @@ class BaseService:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
         return self._response(row)
 
+    @_service_write
     def create(self, data: dict[str, Any]) -> BaseModel:
         """Create a new resource row."""
         resolved_table = self.resolve_table()
@@ -265,6 +272,19 @@ class BaseService:
         except Exception as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        # A client-generated id makes a POST safe to retry after a lost response.
+        # Compare validated defaults and values, excluding only server timestamps.
+        if data.get("id"):
+            existing = self.dataset.get_data(resolved_table, ids=row.id)
+            if existing is not None:
+                ignored = {"created_at", "updated_at"}
+                if existing.model_dump(exclude=ignored) == row.model_dump(exclude=ignored):
+                    return self._response(existing)
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "id_conflict", "message": "A different resource already exists with this id."},
+                )
+
         try:
             created_rows = self.dataset.add_data(resolved_table, [row])
         except DatasetIntegrityError as err:
@@ -274,6 +294,7 @@ class BaseService:
 
         return self._response(created_rows[0])
 
+    @_service_write
     def update(self, id: str, data: dict[str, Any]) -> BaseModel:
         """Update an existing resource row."""
         resolved_table = self.resolve_table()
@@ -297,6 +318,7 @@ class BaseService:
 
         return self._response(updated_rows[0])
 
+    @_service_write
     def delete(self, id: str) -> None:
         """Delete a resource by ID."""
         resolved_table = self.resolve_table()

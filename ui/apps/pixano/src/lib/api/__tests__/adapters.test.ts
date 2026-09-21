@@ -6,8 +6,12 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { toDatasetBrowser } from "../adapters";
-import type { PaginatedResponse, RecordResponse } from "../restTypes";
+import { toDatasetBrowser, toDatasetSchema } from "../adapters";
+import type { DatasetResponse, PaginatedResponse, RecordResponse } from "../restTypes";
+import { BaseSchema, WorkspaceType } from "$lib/types/dataset";
+import { getEntityProperties, getValidationSchemaAndFormInputs } from "$lib/utils/featureMapping";
+import { validateEntityForm } from "$lib/utils/featureValidationSchemas";
+import { buildWorkspaceManifest } from "$lib/workspace/manifest";
 
 const paginated = (items: RecordResponse[]): PaginatedResponse<RecordResponse> => ({
   items,
@@ -18,6 +22,53 @@ const paginated = (items: RecordResponse[]): PaginatedResponse<RecordResponse> =
 
 const columnType = (browser: ReturnType<typeof toDatasetBrowser>, name: string) =>
   browser.table_data.columns.find((col) => col.name === name)?.type;
+
+it("preserves required attributes and typed defaults from the API through annotation forms", () => {
+  const dto: DatasetResponse = {
+    id: "dataset1",
+    path: "/data/library/robot",
+    previews_path: "",
+    thumbnail: "",
+    tables: { entities: "CustomEntity", bboxes: "BBox" },
+    feature_values: {},
+    info: {
+      id: "dataset1",
+      name: "Robot",
+      description: "",
+      size: "",
+      preview: "",
+      creation_date: "",
+      bookmarks: [],
+      workspace: "video",
+      storage_mode: "embedded",
+      num_records: 1,
+      entity: {
+        base: "Entity",
+        name: "CustomEntity",
+        fields: {
+          category: { type: "str", collection: false, required: true },
+          grasped: { type: "bool", collection: false, required: false, default: true },
+          tags: { type: "str", collection: true, required: false, default: ["wood", "red"] },
+          offsets: { type: "float", collection: true, required: false, default: [1.5, 2.5] },
+        },
+      },
+      bbox: { base: "BBox", fields: {} },
+    },
+  };
+  const manifest = buildWorkspaceManifest(toDatasetSchema(dto), WorkspaceType.VIDEO);
+  const { inputs } = getValidationSchemaAndFormInputs(manifest, BaseSchema.BBox);
+  expect(inputs.find((input) => input.name === "category")?.required).toBe(true);
+  const values = getEntityProperties(inputs, {}, {});
+  expect(values.entities).toEqual({
+    category: "",
+    grasped: true,
+    tags: ["wood", "red"],
+    offsets: [1.5, 2.5],
+  });
+  expect(validateEntityForm(inputs, values).success).toBe(false);
+  values.entities.category = "block";
+  expect(validateEntityForm(inputs, values).success).toBe(true);
+});
 
 describe("toDatasetBrowser list attributes", () => {
   it("renders a string[] attribute as a joined 'list' column", () => {

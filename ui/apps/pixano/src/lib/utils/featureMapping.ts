@@ -18,56 +18,53 @@ import {
   Tracklet,
   type FeatureList,
   type FeaturesValues,
+  type FieldInfo,
   type ItemFeature,
 } from "$lib/types/dataset";
+import type { FeatureValues } from "$lib/types/shapeTypes";
+import type { CreateEntityInputs, EntityProperties, Feature } from "$lib/types/workspace";
 import type {
-  CheckboxFeature,
-  CreateEntityInputs,
-  EntityProperties,
-  Feature,
-  FloatFeature,
-  IntFeature,
-  ListFeature,
-  TextFeature,
-} from "$lib/types/workspace";
-import type { InputFeatures } from "$lib/utils/featureValidationSchemas";
+  InputFeatures,
+  ScalarFeatureType,
+  TableInfo,
+} from "$lib/utils/featureValidationSchemas";
 import type { WorkspaceManifest } from "$lib/workspace/manifest";
+
+function fieldInput(name: string, field: FieldInfo, sch: TableInfo): InputFeatures[number] | null {
+  const common = {
+    name,
+    label: name,
+    required: field.required ?? false,
+    default: field.default,
+    sch,
+  };
+  if (["int", "float", "str", "bool"].includes(field.type)) {
+    const type = field.type as ScalarFeatureType;
+    return field.collection
+      ? { ...common, type: "collection", itemType: type }
+      : { ...common, type };
+  }
+  return field.type === "list" ? { ...common, type: "list", options: [] } : null;
+}
 
 export function createFeature(
   obj: Item | Entity | Annotation,
   workspaceManifest: WorkspaceManifest,
   additional_info: string = "",
 ): Feature[] {
-  const extraFields = obj.getDynamicFields();
-  const extraFieldsType = extraFields.reduce(
-    (acc, key) => {
-      acc[key] = workspaceManifest.tablesByName[obj.table_info.name]?.fields[key]?.type || "str";
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
-  const features: ItemFeature[] = [];
-  if (extraFields.length > 0) {
-    for (const field of extraFields)
-      features.push({
-        name: field,
-        dtype: extraFieldsType[field],
-        value: (obj.data as Record<string, unknown>)[field],
-      } as ItemFeature);
-  }
-  const display_info = additional_info !== "" ? "[" + additional_info + "] " : "";
-  const parsedFeatures = Object.values(features).map((feature) => ({
-    ...feature,
-    type: feature.dtype as "int" | "float" | "str" | "bool" | "list" | "SourceRef",
-    required: false,
-    sch: { name: "", group: "", base_schema: BaseSchema.Feature }, //not used here, we will pass obj below
-    label: `${display_info}${feature.name}`, //TMP //TODO WIP -- group display by table_info.name (&view?)
-  })) as InputFeatures;
-  return parsedFeatures.map((feature) => {
-    const value = (obj.data as Record<string, unknown>)[feature.name] as string; //TODO? type (feature.type to type)
-    if (feature.type === "list")
-      return { ...feature, options: feature.options, value, obj } as ListFeature;
-    return { ...feature, value, obj } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
+  const prefix = additional_info !== "" ? "[" + additional_info + "] " : "";
+  return obj.getDynamicFields().flatMap((name) => {
+    const field = workspaceManifest.tablesByName[obj.table_info.name]?.fields[name] ?? {
+      type: "str",
+      collection: false,
+    };
+    const input = fieldInput(name, field, {
+      name: obj.table_info.name,
+      group: obj.table_info.group,
+      base_schema: obj.table_info.base_schema,
+    });
+    if (!input) return [];
+    return [{ ...input, label: `${prefix}${name}`, value: obj.data[name], obj } as Feature];
   });
 }
 
@@ -81,7 +78,7 @@ export const mapShapeInputsToFeatures = (
       (acc, [key, value]) => {
         acc[key] = {
           name: key,
-          dtype: formInputs.find((o) => o.name === key)?.type as ItemFeature["dtype"],
+          dtype: formInputs.find((o) => o.name === key && o.sch.name === tname)?.type ?? "str",
           value,
         };
         return acc;
@@ -110,9 +107,7 @@ export const addNewInput = (
   }
 };
 export const mapFeatureList = (featureList: FeatureList = { restricted: false, values: [] }) => {
-  featureList.values ??= [];
-  featureList.restricted ??= false;
-  return featureList.values
+  return [...(featureList.values ?? [])]
     .sort((a, b) => a.localeCompare(b))
     .map((value) => ({
       value,
@@ -154,27 +149,12 @@ export const getValidationSchemaAndFormInputs = (
       //TODO: custom fields from other types
       for (const feat in sch.fields) {
         if (!nonFeatsFields.includes(feat)) {
-          if (["int", "float", "str", "bool"].includes(sch.fields[feat].type)) {
-            featuresArray.push({
-              name: feat,
-              required: false, //TODO (info not in datasetSchema (nowhere yet))
-              // Plain field name — table context lives in `sch.name` (rendered as a group
-              // header, never as a "[table] field" prefix leaking schema jargon).
-              label: feat,
-              type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
-              sch: { name: tname, group, base_schema: sch.base_schema },
-            });
-          }
-          if ("list" === sch.fields[feat].type) {
-            featuresArray.push({
-              name: feat,
-              required: false, //TODO (info not in datasetSchema (nowhere yet))
-              label: feat,
-              type: "list",
-              options: [], //TODO for list type (not covered yet)
-              sch: { name: tname, group, base_schema: sch.base_schema },
-            });
-          }
+          const input = fieldInput(feat, sch.fields[feat], {
+            name: tname,
+            group,
+            base_schema: sch.base_schema,
+          });
+          if (input) featuresArray.push(input);
         }
       }
     }
@@ -188,22 +168,26 @@ export const getEntityProperties = (
   objectProperties: EntityProperties,
 ) => {
   for (const feat of formInputs) {
+    if (!(feat.sch.name in objectProperties)) objectProperties[feat.sch.name] = {};
+    if (feat.name in objectProperties[feat.sch.name]) continue;
     if (feat.sch.name in initialValues && feat.name in initialValues[feat.sch.name]) {
-      if (typeof initialValues[feat.sch.name][feat.name].value !== "object") {
-        if (!(feat.sch.name in objectProperties)) objectProperties[feat.sch.name] = {};
-        if (!(feat.name in objectProperties[feat.sch.name])) {
-          objectProperties[feat.sch.name][feat.name] = initialValues[feat.sch.name][feat.name]
-            .value as string | number | boolean;
-        }
+      const value = initialValues[feat.sch.name][feat.name].value;
+      if (typeof value !== "object" || Array.isArray(value)) {
+        objectProperties[feat.sch.name][feat.name] = Array.isArray(value) ? [...value] : value;
       }
+    } else if (feat.default !== undefined) {
+      objectProperties[feat.sch.name][feat.name] = (
+        Array.isArray(feat.default)
+          ? [...(feat.default as Array<string | number | boolean>)]
+          : feat.default
+      ) as FeatureValues;
     } else {
-      if (!(feat.sch.name in objectProperties)) objectProperties[feat.sch.name] = {};
-      if (!(feat.name in objectProperties[feat.sch.name])) {
-        if (feat.type === "bool") objectProperties[feat.sch.name][feat.name] = false;
-        if (feat.type === "str") objectProperties[feat.sch.name][feat.name] = "";
-        if (feat.type === "int" || feat.type === "float")
-          objectProperties[feat.sch.name][feat.name] = 0;
-        if (feat.type === "list") objectProperties[feat.sch.name][feat.name] = ""; //TODO list case... ??
+      if (feat.type === "collection") objectProperties[feat.sch.name][feat.name] = [];
+      if (feat.type === "bool") objectProperties[feat.sch.name][feat.name] = false;
+      if (feat.type === "str" || feat.type === "list")
+        objectProperties[feat.sch.name][feat.name] = "";
+      if (!feat.required && (feat.type === "int" || feat.type === "float")) {
+        objectProperties[feat.sch.name][feat.name] = 0;
       }
     }
   }

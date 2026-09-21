@@ -11,9 +11,12 @@ import PIL.Image
 import pytest
 import yaml
 from fastapi.testclient import TestClient
+from s3path import S3Path
 
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
+from pixano.datasets import Dataset
+from tests.datasets.io.formats.test_lerobot_importer import make_v21_dataset, needs_ffmpeg
 
 
 @pytest.fixture()
@@ -41,6 +44,52 @@ def _wait_done(client: TestClient, job_id: str, timeout: float = 60.0) -> dict:
             return payload
         time.sleep(0.05)
     raise AssertionError(f"job {job_id} did not finish: {payload}")
+
+
+class TestS3LibraryGuards:
+    @staticmethod
+    def settings(tmp_path: Path) -> Settings:
+        # Bypass credential registration: these checks never access S3.
+        return Settings.model_construct(
+            library_dir=S3Path.from_uri("s3://test-bucket/data/library"),
+            models_dir=tmp_path / "models",
+        )
+
+    def test_server_skips_local_boot_recovery_for_s3(self, tmp_path: Path, monkeypatch):
+        recovered = []
+        monkeypatch.setattr("pixano.datasets.io.jobs.boot_recover", lambda path: recovered.append(path))
+        app = create_app(self.settings(tmp_path))
+        assert recovered == []
+        assert TestClient(app).get("/health").json() == {"status": "ok"}
+
+    def test_server_still_recovers_local_library(self, tmp_path: Path, monkeypatch):
+        recovered = []
+        monkeypatch.setattr("pixano.datasets.io.jobs.boot_recover", lambda path: recovered.append(path))
+        create_app(Settings(data_dir=tmp_path))
+        assert recovered == [tmp_path]
+
+    @pytest.mark.parametrize(
+        "method,path,payload",
+        [
+            ("GET", "/io/jobs", None),
+            ("POST", "/io/uploads", None),
+            ("POST", "/io/analyze", {"source": "/unused/source"}),
+            ("POST", "/io/imports", {"source": "/unused/source"}),
+        ],
+    )
+    def test_data_io_rejects_s3_before_creating_local_state(self, tmp_path: Path, monkeypatch, method, path, payload):
+        settings = self.settings(tmp_path)
+        app = create_app(settings)
+        app.dependency_overrides[get_settings] = lambda: settings
+
+        def unexpected_store(*args, **kwargs):
+            raise AssertionError("An S3 library must never create a local job store")
+
+        monkeypatch.setattr("pixano.datasets.io.jobs.JobStore.for_data_dir", unexpected_store)
+        response = TestClient(app).request(method, path, json=payload)
+        assert response.status_code == 400, response.text
+        assert "requires local storage" in response.json()["detail"]
+        assert not (tmp_path / ".pixano").exists()
 
 
 class TestIoRoutes:
@@ -92,6 +141,78 @@ class TestIoRoutes:
         assert final["status"] == "done", final["error"]
         assert final["progress"]["table_counts"] == {"records": 2, "images": 4}
         assert (data_dir / "library" / "raw_ds").is_dir()
+
+    @needs_ffmpeg
+    @pytest.mark.parametrize("frames", ["extract", "reference"])
+    def test_lerobot_custom_schema_survives_analyze_import_and_annotation(
+        self, client_and_dirs, tmp_path: Path, frames: str
+    ):
+        """The wizard's schema remains usable after executing the reviewed plan."""
+        client, data_dir, _ = client_and_dirs
+        source = make_v21_dataset(tmp_path / "robot_source", episodes=1)
+        spec = {
+            "format": "lerobot",
+            "dataset": {"name": "robot_schema"},
+            "options": {"frames": frames, "max_frames_per_episode": 2},
+            "schema": {
+                "record": {"attrs": {"reviewed": {"type": "bool", "default": False}}},
+                "entity": {
+                    "attrs": {
+                        "category": {"type": "str", "required": True},
+                        "occluded": {"type": "bool", "default": True},
+                        "tags": {"type": "str", "collection": True, "default": ["wood"]},
+                    }
+                },
+                "annotations": ["bbox", "tracklet", "classification"],
+            },
+        }
+        response = client.post("/io/analyze", json={"source": str(source), "spec": spec})
+        assert response.status_code == 200, response.text
+        plan = response.json()
+        assert plan["totals"]["records"] == 1
+        assert not plan["report"]["findings"], plan["report"]
+        schema = plan["inferred_schema"]
+        assert set(schema["views"]) == {"top"}
+        assert {"episode_index", "tasks", "length", "reviewed"} <= set(schema["record"]["fields"])
+        assert schema["entity"]["fields"]["category"]["required"] is True
+        assert "classification" in schema and "mask" not in schema
+        assert ("timeseries" in schema) == (frames == "extract")
+
+        started = client.post("/io/imports", json={"plan_id": plan["plan_id"], "source": str(source), "spec": spec})
+        assert started.status_code == 202, started.text
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        dataset = Dataset(data_dir / "library" / "robot_schema")
+        assert dataset.info.workspace.value == "video"
+        record = dataset.get_data("records")[0]
+        assert record.episode_index == 0
+        assert record.tasks == ["task 0"]
+        assert record.reviewed is False
+        assert set(dataset.info.views) == {"top"}
+        if frames == "extract":
+            assert dataset.open_table("sequence_frames").count_rows() == 2
+            assert dataset.open_table("timeseries").count_rows() == 2
+
+        details = client.get(f"/datasets/{dataset.info.id}")
+        assert details.status_code == 200, details.text
+        entity_fields = details.json()["info"]["entity"]["fields"]
+        assert entity_fields["category"]["required"] is True
+        assert entity_fields["occluded"]["default"] is True
+        assert entity_fields["tags"]["collection"] is True
+        assert entity_fields["tags"]["default"] == ["wood"]
+
+        entity_url = f"/datasets/{dataset.info.id}/entities"
+        created = client.post(entity_url, json={"id": "block", "record_id": record.id, "category": "block"})
+        assert created.status_code == 201, created.text
+        assert created.json()["occluded"] is True
+        assert created.json()["tags"] == ["wood"]
+        updated = client.put(f"{entity_url}/block", json={"occluded": False, "tags": ["wood", "red"]})
+        assert updated.status_code == 200, updated.text
+        saved = client.get(f"{entity_url}/block")
+        assert saved.status_code == 200, saved.text
+        assert saved.json()["category"] == "block"
+        assert saved.json()["occluded"] is False
+        assert saved.json()["tags"] == ["wood", "red"]
 
     def test_upload_analyze_import_and_eager_gc(self, client_and_dirs):
         """The wizard's client-upload flow: stage files, import, session removed."""

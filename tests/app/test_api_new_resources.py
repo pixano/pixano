@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets.locking import dataset_mutation_lock
 from pixano.schemas import Classification, Entity, Image, Record, Relation
 
 
@@ -78,6 +79,37 @@ def _crud_cycle(client: TestClient, path: str, create_payload: dict, update_payl
 
 
 class TestNewResourceRouters:
+    def test_repeated_post_with_same_id_and_normalized_payload_returns_existing(
+        self, client_with_classification_dataset
+    ):
+        client = client_with_classification_dataset
+        url = f"/datasets/{DATASET_ID}/classifications"
+        payload = {"id": "retry-id", "record_id": "rec1", "entity_id": "ent1", "labels": ["car"], "confidences": [1]}
+        first = client.post(url, json=payload)
+        assert first.status_code == 201, first.text
+        retried = client.post(url, json={**payload, "confidences": [1.0]})
+        assert retried.status_code == 201, retried.text
+        assert retried.json() == first.json()
+        assert client.get(url).json()["total"] == 1
+
+        conflicting = client.post(url, json={**payload, "labels": ["truck"]})
+        assert conflicting.status_code == 409
+        assert conflicting.json()["detail"]["code"] == "id_conflict"
+        assert client.get(f"{url}/retry-id").json()["labels"] == ["car"]
+
+    def test_writer_contention_returns_structured_409(self, client_with_classification_dataset):
+        client = client_with_classification_dataset
+        settings = client.app.dependency_overrides[get_settings]()
+        path = settings.library_dir / DATASET_ID
+        with dataset_mutation_lock(path):
+            response = client.post(
+                f"/datasets/{DATASET_ID}/entities",
+                json={"id": "blocked", "record_id": "rec1"},
+            )
+        assert response.status_code == 409, response.text
+        assert response.json()["detail"]["code"] == "dataset_busy"
+        assert Dataset(path).get_data("entities", ids="blocked") is None
+
     def test_classifications_crud(self, client_with_classification_dataset: TestClient):
         _crud_cycle(
             client_with_classification_dataset,

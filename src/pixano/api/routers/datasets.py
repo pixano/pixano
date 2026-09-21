@@ -16,6 +16,7 @@ from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.dataset_info import BOOKMARK_TYPES
 from pixano.datasets.dataset_stat import SplitStatusCount
+from pixano.datasets.locking import dataset_mutation_lock, mark_dataset_mutated
 from pixano.schemas.schema_group import SchemaGroup
 
 
@@ -182,11 +183,14 @@ def toggle_dataset_bookmark(
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Dataset '{id}' not found.") from exc
 
-    if bookmark in info.bookmarks:
-        info.bookmarks.remove(bookmark)
-    else:
-        info.bookmarks.append(bookmark)
-
-    info.to_json(path / "info.json")
+    with dataset_mutation_lock(path):
+        info = DatasetInfo.from_json(path / "info.json")
+        if bookmark in info.bookmarks:
+            info.bookmarks.remove(bookmark)
+        else:
+            info.bookmarks.append(bookmark)
+        mark_dataset_mutated(path)
+        info.to_json(path / "info.json")
+        Dataset.invalidate_caches(info.id)
 
     return DatasetInfoResponse.from_dataset_info(info, path)

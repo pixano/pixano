@@ -10,6 +10,7 @@ import io
 import json
 import logging
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
@@ -22,9 +23,10 @@ import shortuuid
 from lancedb.common import DATA
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
+from s3path import S3Path
 
 from pixano.datasets.queries import TableQueryBuilder
-from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError, DatasetReplacedError
 from pixano.datasets.utils.integrity import (
     IntegrityCheck,
     check_table_integrity,
@@ -51,6 +53,7 @@ from pixano.utils.python import to_sql_list, unique_list
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
 from .dataset_stat import DatasetStatistic, SplitStatusCount
+from .locking import dataset_mutation_lock, dataset_write
 
 
 if TYPE_CHECKING:
@@ -144,6 +147,15 @@ class Dataset:
         self._thumb_file = self.path / self._THUMB_FILE
         self._db_path = self.path / self._DB_PATH
 
+        # Capture identity BEFORE reading metadata: a concurrent promotion during
+        # construction must not bless an old schema with the new directory inode.
+        self._directory_identity = None
+        self._info_mtime_ns = None
+        if not isinstance(self.path, S3Path):
+            path_stat = self.path.stat()
+            self._directory_identity = (path_stat.st_dev, path_stat.st_ino)
+            self._info_mtime_ns = self._info_file.stat().st_mtime_ns
+        self._write_depth = 0
         self.info = DatasetInfo.from_json(self._info_file)
         validate_canonical_table_map(self.info.tables)
         # The record-embedding table is internal to the search engine (not part of the public
@@ -158,7 +170,12 @@ class Dataset:
         self._db_connection = self._connect()
         if self.info.spec_version < self._CURRENT_SPEC_VERSION:
             try:
-                self._migrate_storage_to_spec_version_2()
+                # Concurrent openers should observe the finished upgrade, not
+                # fall back to an obsolete schema while another opener writes.
+                with dataset_mutation_lock(self.path, timeout=5):
+                    with self.write_lock():
+                        if self.info.spec_version < self._CURRENT_SPEC_VERSION:
+                            self._migrate_storage_to_spec_version_2()
             except Exception as exc:
                 # A read-only dataset stays readable at the old layout; writes will
                 # surface the missing columns explicitly.
@@ -170,19 +187,59 @@ class Dataset:
                 )
         self._num_rows_cache: int | None = None
 
+    @contextmanager
+    def write_lock(self):
+        """Protect a mutation and refresh cached handles before its integrity reads.
+
+        Callers performing read/modify/write operations may hold this context
+        around several Dataset methods; nesting in the same thread is safe.
+        """
+        if isinstance(self.path, S3Path):
+            # Remote Dataset access predates local add/rollback jobs. Keep its
+            # existing semantics; a filesystem lock cannot protect S3 writers.
+            yield
+            return
+        with dataset_mutation_lock(self.path):
+            if self._write_depth == 0:
+                path_stat = self.path.stat()
+                identity = (path_stat.st_dev, path_stat.st_ino)
+                if identity != self._directory_identity:
+                    self.invalidate_caches(self.info.id)
+                    raise DatasetReplacedError("Dataset was replaced; reload it before retrying the operation.")
+                current_mtime = self._info_file.stat().st_mtime_ns
+                if current_mtime != self._info_mtime_ns:
+                    current_info = DatasetInfo.from_json(self._info_file)
+                    if current_info.id != self.info.id:
+                        self.invalidate_caches(self.info.id)
+                        raise DatasetReplacedError("Dataset was replaced; reload it before retrying the operation.")
+                    self.info = current_info
+                self._table_handles.clear()
+                self._num_rows_cache = None
+                self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
+                self.info.tables.pop(self._RECORD_EMBEDDING_TABLE, None)
+                self._record_embedding_space = None
+                self._load_record_embedding_space()
+            self._write_depth += 1
+            try:
+                yield
+            finally:
+                self._write_depth -= 1
+                self._info_mtime_ns = self._info_file.stat().st_mtime_ns
+
     # ------------------------------------------------------------------
     # Storage-layout migrations
     # ------------------------------------------------------------------
 
     _CURRENT_SPEC_VERSION: int = 2
 
+    @dataset_write
     def _migrate_storage_to_spec_version_2(self) -> None:
         """Backfill the ``Video`` time-window columns introduced in spec version 2.
 
-        Concurrency-safe: when several processes open the same pre-migration
-        dataset, losers of the ``add_columns`` race converge by re-reading the
-        table schema, and the ``info.json`` rewrite is atomic and idempotent
-        (all writers produce identical content).
+        Local openers serialize the upgrade and refresh the metadata before
+        calling this method. External ``add_columns`` races converge by
+        re-reading the table schema. The ``info.json`` rewrite is atomic and
+        idempotent (all writers produce identical content).
         """
         window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
         for table_name, schema_cls in self.info.tables.items():
@@ -244,6 +301,12 @@ class Dataset:
             FileExistsError: If ``path`` already exists.
             ValueError: If ``info.tables`` is empty or invalid.
         """
+        with dataset_mutation_lock(path):
+            return cls._create_locked(path, info)
+
+    @classmethod
+    def _create_locked(cls, path: Path, info: DatasetInfo) -> "Dataset":
+        """Create storage while the target path is reserved by the caller."""
         path = Path(path)
         if path.exists():
             raise FileExistsError(f"Dataset path already exists: {path}")
@@ -407,6 +470,7 @@ class Dataset:
         """
         return lancedb.connect(self._db_path)
 
+    @dataset_write
     def create_table(
         self,
         name: str,
@@ -510,6 +574,9 @@ class Dataset:
 
     def open_table(self, name: str) -> LanceTable:
         """Open a dataset table with LanceDB.
+
+        Hold :meth:`write_lock` when mutating the returned LanceDB handle so
+        local imports and rollback cannot run concurrently with that mutation.
 
         Args:
             name: Name of the table to open.
@@ -978,6 +1045,7 @@ class Dataset:
             "total": total,
         }
 
+    @dataset_write
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute the view embeddings via the embedding function stored in the table metadata.
 
@@ -1000,6 +1068,7 @@ class Dataset:
         table.add(data)
         return None
 
+    @dataset_write
     def add_data(
         self,
         table_name: str,
@@ -1075,6 +1144,7 @@ class Dataset:
     # Multi-table insert
     # ------------------------------------------------------------------
 
+    @dataset_write
     def add_records(
         self,
         data: dict[str, LanceModel | list[LanceModel]],
@@ -1164,6 +1234,7 @@ class Dataset:
         if SchemaGroup.RECORD.value in normalized:
             self._num_rows_cache = None
 
+    @dataset_write
     def merge_records(
         self,
         data: dict[str, LanceModel | list[LanceModel] | pa.RecordBatch | pa.Table],
@@ -1333,6 +1404,7 @@ class Dataset:
         "source_type": "BITMAP",
     }
 
+    @dataset_write
     def create_scalar_indexes(
         self,
         columns: Sequence[str] | None = None,
@@ -1382,6 +1454,7 @@ class Dataset:
             except Exception as exc:
                 logger.warning("Cache invalidation hook %r failed for dataset %s: %s", hook, dataset_id, exc)
 
+    @dataset_write
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.
 
@@ -1416,6 +1489,7 @@ class Dataset:
 
         return ids_not_found
 
+    @dataset_write
     def delete_records(self, ids: list[str]) -> list[str]:
         """Delete records and all associated data across all tables.
 
@@ -1468,6 +1542,7 @@ class Dataset:
         ignore_integrity_checks: list[IntegrityCheck] | None = None,
         raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> tuple[list[LanceModel], list[LanceModel]]: ...
+    @dataset_write
     def update_data(
         self,
         table_name: str,
@@ -1661,6 +1736,7 @@ class Dataset:
             }
         return {**base, "status": "ready"}
 
+    @dataset_write
     def drop_record_embeddings(self) -> None:
         """Delete the record-embedding table and its sidecar descriptor.
 
@@ -1676,6 +1752,7 @@ class Dataset:
         self._embeddings_file.unlink(missing_ok=True)
         self._record_embedding_space = None
 
+    @dataset_write
     def create_record_embedding_table(
         self,
         dim: int,
@@ -1706,6 +1783,7 @@ class Dataset:
         self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
         self._embeddings_file.write_text(json.dumps(self._record_embedding_space, indent=4), encoding="utf-8")
 
+    @dataset_write
     def add_record_embeddings(self, rows: list[dict[str, Any]]) -> None:
         """Append rows to the record-embedding table (plain float vectors, no model).
 
@@ -1727,6 +1805,7 @@ class Dataset:
         ]
         self.add_data(self._RECORD_EMBEDDING_TABLE, instances, raise_or_warn="none")
 
+    @dataset_write
     def build_record_embedding_index(self) -> None:
         """Build the vector + record_id indexes on the record-embedding table.
 
@@ -1852,6 +1931,7 @@ class Dataset:
             dataset_infos.append(DatasetInfo.from_json(json_fp))
         return dataset_infos
 
+    @dataset_write
     def add_constraint(
         self,
         table: TableName,
@@ -1882,6 +1962,7 @@ class Dataset:
             if constraint.name == field_name:
                 constraint.restricted = restricted
                 constraint.values = values
+                self.features_values.to_json(self._features_values_file)
                 return
 
         # Otherwise, add a new constraint

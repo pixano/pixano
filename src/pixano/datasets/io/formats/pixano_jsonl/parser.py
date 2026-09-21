@@ -40,10 +40,10 @@ from .spec import (
 
 
 # Top-level keys of the v1 metadata.jsonl dialect: their presence means the
-# file needs `pixano data migrate-jsonl`, not guessing.
+# file uses an unsupported dialect rather than the strict JSONL v2 grammar.
 _V1_MARKER_KEYS = frozenset({"objects", "object", "view", "messages", "status"})
 
-_MIGRATE_HINT = "This looks like the 0.7.x metadata.jsonl dialect; run `pixano data migrate-jsonl` to convert it."
+_V1_FORMAT_HINT = "The 0.7.x metadata.jsonl dialect is not supported. Author the metadata using the JSONL v2 format."
 
 
 def view_kinds_of(info: DatasetInfo) -> dict[str, str]:
@@ -80,7 +80,7 @@ def _validation_error_findings(exc: ValidationError, report: PreflightReport, pa
         if error["type"] == "extra_forbidden":
             unknown = str(error["loc"][-1])
             if unknown in _V1_MARKER_KEYS:
-                report.add("v1_format", provenance, suggestion=_MIGRATE_HINT)
+                report.add("v1_format", provenance, suggestion=_V1_FORMAT_HINT)
             else:
                 report.add(
                     "unknown_key",

@@ -41,6 +41,24 @@ Install with:
 pip install pixano
 ```
 
+Hugging Face Hub and LeRobot imports are included in this installation. When running
+from a source checkout, `uv sync` installs their dependencies as well.
+
+Video and LeRobot frame imports also need **FFmpeg**, including both `ffmpeg` and
+`ffprobe`, on your system's `PATH`. Install it with your system package manager:
+
+```bash
+# Ubuntu / Debian
+sudo apt-get install ffmpeg
+
+# macOS with Homebrew
+brew install ffmpeg
+```
+
+On Windows, install FFmpeg and add its `bin` directory to `PATH`. Verify the installation
+with `ffmpeg -version` and `ffprobe -version`. The Pixano Docker image already includes
+these tools. Image-only imports do not need them.
+
 Then check it is correctly installed with:
 
 ```bash

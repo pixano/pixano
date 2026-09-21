@@ -5,6 +5,7 @@
 # =====================================
 
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -13,12 +14,48 @@ import pytest
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
+from pixano.datasets.locking import dataset_mutation_lock
+from pixano.datasets.utils.errors import DatasetBusyError
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.features import Record
 from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint, DatasetBuilderVQA
 
 
 class TestDatasetBuilder:
+    def test_overwrite_cannot_delete_dataset_locked_by_another_writer(self, tmp_path):
+        dataset = Dataset.create(tmp_path / "ds", DatasetInfo(record=Record))
+        dataset.add_records({"records": Record(id="original")})
+
+        class Builder(DatasetBuilder):
+            def generate_data(self):
+                yield {"records": Record(id="replacement")}
+
+        builder = Builder(dataset.path, DatasetInfo(record=Record))
+        with dataset_mutation_lock(dataset.path), ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(builder.build, mode="overwrite")
+            with pytest.raises(DatasetBusyError):
+                future.result(timeout=10)
+        assert Dataset(dataset.path).get_records(ids="original") is not None
+
+    def test_builder_holds_write_lock_between_flushes(self, tmp_path):
+        dataset = Dataset.create(tmp_path / "ds", DatasetInfo(record=Record))
+        attempts = []
+
+        class Builder(DatasetBuilder):
+            def generate_data(self):
+                for ordinal in range(3):
+                    with ThreadPoolExecutor(max_workers=1) as pool:
+                        future = pool.submit(dataset.add_records, {"records": Record(id="interleaved")})
+                        with pytest.raises(DatasetBusyError):
+                            future.result(timeout=10)
+                    attempts.append(ordinal)
+                    yield {"records": Record(id=f"record-{ordinal}")}
+
+        result = Builder(dataset.path, DatasetInfo(record=Record)).build(mode="add", flush_every_n_samples=1)
+        assert attempts == [0, 1, 2]
+        assert result.num_rows == 3
+        assert result.get_records(ids="interleaved") is None
+
     def test_init_str(
         self,
         info_dataset_image_bboxes_keypoint,

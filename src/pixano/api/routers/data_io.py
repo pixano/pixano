@@ -24,6 +24,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
+from s3path import S3Path
 
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.io import FORMATS, ImportSpec, PixanoDataError, analyze
@@ -43,7 +44,7 @@ _runners_lock = threading.Lock()
 
 
 def _data_dir(settings: Settings) -> Path:
-    if not isinstance(settings.library_dir, Path):
+    if isinstance(settings.library_dir, S3Path) or not isinstance(settings.library_dir, Path):
         raise HTTPException(status_code=400, detail="Data IO requires local storage (S3 libraries are read-only).")
     if settings.library_dir.name != "library":
         raise HTTPException(status_code=400, detail="Data IO requires the standard <data_dir>/library layout.")
@@ -325,7 +326,7 @@ def resume_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]
 
 @router.delete("/jobs/{job_id}", operation_id="rollback_io_job")
 def rollback_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
-    """Roll back a completed add-mode import (version restore, else namespace delete)."""
+    """Roll back a completed add import only when the dataset has no later mutations."""
     store, runner = _runner(settings)
     try:
         runner.rollback(job_id)

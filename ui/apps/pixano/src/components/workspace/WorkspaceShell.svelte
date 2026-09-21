@@ -13,7 +13,7 @@ License: CECILL-C
 
   import WorkspaceInspectorPanel from "./Inspector/WorkspaceInspectorPanel.svelte";
   import LoadModelModal from "./LoadModelModal.svelte";
-  import type { ResourceMutation } from "$lib/api/resourcePayloads";
+  import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
@@ -26,6 +26,7 @@ License: CECILL-C
     resetWorkspaceStores,
     saveData,
     views,
+    workspaceSaveQueue,
   } from "$lib/stores/workspaceStores.svelte";
   import type { WorkspaceData } from "$lib/types/workspace";
   import { effectProbe, type FeaturesValues } from "$lib/ui";
@@ -38,7 +39,7 @@ License: CECILL-C
     featureValues: FeaturesValues;
     workspaceManifest: WorkspaceManifest;
     workspaceData: WorkspaceData;
-    handleSaveItem: (data: ResourceMutation[]) => Promise<void>;
+    handleSaveItem: () => Promise<void>;
     isLoading: boolean;
     viewer: Snippet<[{ resize: number }]>;
   }
@@ -100,7 +101,9 @@ License: CECILL-C
   // --- Data loading ---
 
   const loadData = () => {
-    saveData.value = [];
+    workspaceSaveQueue.reset();
+    isSaving = false;
+    saveErrorMessage = "";
     views.value = workspaceData.views;
 
     const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
@@ -125,7 +128,9 @@ License: CECILL-C
 
   let lastLoadedItemId: string | null = null;
   $effect(() => {
-    const currentItemId = workspaceData?.item?.id;
+    const currentItemId = workspaceData?.item?.id
+      ? `${workspaceData.ui.datasetId}/${workspaceData.item.id}`
+      : null;
     if (!currentItemId || currentItemId === lastLoadedItemId) return;
     lastLoadedItemId = currentItemId;
     untrack(() => {
@@ -147,22 +152,24 @@ License: CECILL-C
   // --- Save ---
 
   const onSave = async (requestId: number | null) => {
+    const generation = workspaceSaveQueue.generation;
     isSaving = true;
     try {
-      await handleSaveItem(saveData.value);
-      saveData.value = [];
+      await handleSaveItem();
+      if (workspaceSaveQueue.generation !== generation) return;
       saveErrorMessage = "";
       if (requestId !== null) {
-        currentItemSaveCoordinator.setSaveSucceeded(requestId);
+        currentItemSaveCoordinator.setSaveSucceeded(requestId, canSave.value);
       }
     } catch (error) {
+      if (workspaceSaveQueue.generation !== generation) return;
+      saveErrorMessage = describeSaveError(error);
       if (requestId !== null) {
-        currentItemSaveCoordinator.setSaveFailed(undefined, requestId);
+        currentItemSaveCoordinator.setSaveFailed(saveErrorMessage, requestId);
       }
       console.error(error);
-      saveErrorMessage = "Saving failed — your changes are still staged. Try again.";
     } finally {
-      isSaving = false;
+      if (workspaceSaveQueue.generation === generation) isSaving = false;
     }
   };
 

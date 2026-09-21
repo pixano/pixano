@@ -49,6 +49,12 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Verify clean wheel installation and startup
+        run: |
+          python -m venv "$RUNNER_TEMP/pixano-wheel-smoke"
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" -m pip --isolated install --index-url https://pypi.org/simple dist/pixano-*.whl
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" .github/scripts/smoke_wheel.py --expected-version "$(cat VERSION)"
+
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
 
@@ -116,12 +122,27 @@ jobs:
 
   publish_docker:
     name: Docker
+    needs: publish_pypi
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Set VERSION environment variable
         run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Wait for the released version on PyPI
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: |
+          for attempt in $(seq 1 30); do
+            if python -m pip --isolated download --index-url https://pypi.org/simple --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/pixano-pypi-check" "pixano==$VERSION"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "Pixano $VERSION is not available on PyPI after 30 attempts."
+              exit 1
+            fi
+            sleep 10
+          done
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx

@@ -34,6 +34,7 @@ License: CECILL-C
   {statusMessage}
   {statusTone}
   isBusy={isSaving}
+  closeOnAction={false}
   {onCancel}
   onAlternative={onDiscard}
   onConfirm={onSave}

@@ -27,3 +27,15 @@ class DatasetIntegrityError(ValueError):
     """Error raised when dataset integrity is compromised."""
 
     pass
+
+
+class DatasetBusyError(Exception):
+    """A dataset mutation cannot proceed while another writer holds its lock."""
+
+    code = "dataset_busy"
+
+
+class DatasetReplacedError(DatasetBusyError):
+    """A cached dataset was replaced and must be reopened before writing."""
+
+    code = "dataset_replaced"

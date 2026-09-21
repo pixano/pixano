@@ -11,9 +11,8 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { navigating } from "$app/state";
   import { persistSaveItems } from "$lib/api";
-  import type { ResourceMutation } from "$lib/api/resourcePayloads";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
-  import { canSave } from "$lib/stores/workspaceStores.svelte";
+  import { canSave, workspaceSaveQueue } from "$lib/stores/workspaceStores.svelte";
   import { PrimaryButton } from "$lib/ui";
   import { getExplorerRoute } from "$lib/utils/routes";
 
@@ -29,14 +28,16 @@ License: CECILL-C
   });
 
   $effect(() => {
-    const currentItemId = data.workspaceData?.item?.id ?? null;
+    const currentItemId = data.workspaceData?.item?.id
+      ? `${data.dataset.id}/${data.workspaceData.item.id}`
+      : null;
     if (currentItemId === lastObservedItemId) return;
     lastObservedItemId = currentItemId;
     currentItemSaveCoordinator.resetForItemChange();
   });
 
-  async function handleSaveItem(saveData: ResourceMutation[]) {
-    await persistSaveItems(saveData, data.dataset.id);
+  async function handleSaveItem() {
+    await persistSaveItems(workspaceSaveQueue, data.dataset.id);
   }
 </script>
 

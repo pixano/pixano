@@ -40,7 +40,7 @@ export const TASK_CARDS: {
   {
     task: "image",
     title: "Image annotation",
-    blurb: "Detect, segment, classify objects on images — one or several views per record.",
+    blurb: "Draw boxes, masks, and polygons on images — one or several views per record.",
     layoutHint:
       "photos/\n├─ a.jpg  b.jpg …      (single view)\n└─ or left/ right/ …   (views, same file names pair up)",
   },
@@ -67,33 +67,59 @@ export const TASK_CARDS: {
 
 /** Annotation slots pre-selected per task (what most users annotate). */
 export const DEFAULT_ANNOTATIONS: Record<RawTask, string[]> = {
-  image: ["bbox", "mask", "keypoint", "classification"],
-  video: ["bbox", "mask", "keypoint", "tracklet"],
+  image: ["bbox", "mask"],
+  video: ["bbox", "mask", "tracklet"],
   image_vqa: ["message"],
   image_text_entity_linking: ["text_span", "bbox", "mask"],
 };
 
 /** Annotation slots offered per task (the declarative-dialect subset that fits each). */
 export const ANNOTATION_CHOICES: Record<RawTask, string[]> = {
-  image: ["bbox", "mask", "keypoint", "multi_path", "classification", "relation"],
-  video: ["bbox", "mask", "keypoint", "multi_path", "classification", "tracklet", "relation"],
-  image_vqa: ["message", "bbox", "mask", "classification"],
-  image_text_entity_linking: ["text_span", "bbox", "mask", "classification"],
+  image: ["bbox", "mask", "multi_path"],
+  video: ["bbox", "mask", "multi_path", "tracklet"],
+  image_vqa: ["message", "bbox", "mask"],
+  image_text_entity_linking: ["text_span", "bbox", "mask"],
 };
 
 /**
- * Slots the task cannot work without (non-removable chips). A non-empty
+ * Slots the task cannot work without (always included). A non-empty
  * `schema.annotations` REPLACES the workspace preset's slots backend-side, so
  * the wizard must always re-list these.
  */
 export const LOCKED_ANNOTATIONS: Record<RawTask, string[]> = {
   image: [],
-  video: [],
+  video: ["tracklet"],
   image_vqa: ["message"],
   image_text_entity_linking: ["text_span"],
 };
 
 export const ATTR_TYPES: AttrType[] = ["str", "int", "float", "bool"];
+
+export const ATTR_TYPE_LABELS: Record<AttrType, string> = {
+  str: "String",
+  int: "Integer",
+  float: "Float",
+  bool: "Boolean",
+};
+
+export const ANNOTATION_TOOLS: Record<string, { label: string; description: string }> = {
+  bbox: { label: "Bounding boxes", description: "Rectangular object regions." },
+  mask: { label: "Masks", description: "Pixel-level segmentation." },
+  multi_path: { label: "Polygons & lines", description: "Polygon and polyline annotations." },
+  tracklet: { label: "Object tracks", description: "Object identities across frames." },
+  message: {
+    label: "Questions & answers",
+    description: "Image question-answer pairs.",
+  },
+  text_span: { label: "Text spans", description: "Text spans linked to image regions." },
+};
+
+/** Only supported tools are emitted, with task requirements included automatically. */
+export function annotationsForTask(task: RawTask, selected: string[]): string[] {
+  return ANNOTATION_CHOICES[task].filter(
+    (slot) => selected.includes(slot) || LOCKED_ANNOTATIONS[task].includes(slot),
+  );
+}
 
 export const DEFAULT_RAW_FIELDS: RawFields = {
   task: "image",
@@ -117,8 +143,11 @@ export function parseTypedValue(type: AttrType, value: string): unknown {
     if (text === "false") return false;
     return undefined;
   }
-  if (type === "int") return /^-?\d+$/.test(text) ? Number(text) : undefined;
-  return /^-?(\d+\.?\d*|\.\d+)$/.test(text) ? Number(text) : undefined;
+  const numeric = Number(text);
+  if (type === "int") {
+    return /^-?\d+$/.test(text) && Number.isSafeInteger(numeric) ? numeric : undefined;
+  }
+  return /^-?(\d+\.?\d*|\.\d+)$/.test(text) && Number.isFinite(numeric) ? numeric : undefined;
 }
 
 /** Parse a comma-separated list default (`a, b`); undefined when any element is invalid. */
@@ -140,7 +169,7 @@ export function validateAttrRows(rows: AttrRow[], label = "Attribute"): string {
     }
     if (seen.has(row.name)) return `${label} '${row.name}' is declared twice.`;
     seen.add(row.name);
-    if (row.defaultValue.trim()) {
+    if (!row.required && row.defaultValue.trim()) {
       const parsed = row.list
         ? parseTypedListValue(row.type, row.defaultValue)
         : parseTypedValue(row.type, row.defaultValue);
@@ -153,23 +182,42 @@ export function validateAttrRows(rows: AttrRow[], label = "Attribute"): string {
   return "";
 }
 
-/** One validation message for the whole raw form; "" when analyzable. */
-export function validateRawFields(raw: RawFields): string {
-  if (raw.task === "video" && raw.maxFrames.trim() && !/^\d+$/.test(raw.maxFrames.trim())) {
-    return "Max frames per video must be a whole number.";
+/** Validate source-side video options; hidden reference-mode options do not apply. */
+export function validateRawVideoOptions(raw: RawFields): string {
+  if (raw.task !== "video") return "";
+  const folders = raw.layout?.ok === true && raw.layout.encoding === "folders";
+  if (!folders && raw.framesMode === "reference") return "";
+  if (
+    raw.maxFrames.trim() &&
+    (!/^\d+$/.test(raw.maxFrames.trim()) ||
+      !Number.isSafeInteger(Number(raw.maxFrames)) ||
+      Number(raw.maxFrames) <= 0)
+  ) {
+    return "Max frames per video must be a positive whole number.";
   }
-  if (raw.task === "video" && raw.fps.trim() && !(Number(raw.fps.trim()) > 0)) {
+  if (raw.fps.trim() && (!Number.isFinite(Number(raw.fps)) || !(Number(raw.fps) > 0))) {
     return "FPS must be a positive number.";
   }
-  if (!raw.annotations.length) {
-    return "Select at least one annotation type.";
+  return "";
+}
+
+/** Validate only the annotation pane, independently of the source controls. */
+export function validateRawSchemaFields(raw: RawFields): string {
+  if (!annotationsForTask(raw.task, raw.annotations).length) {
+    return "Select at least one annotation tool.";
   }
   const recordError = validateAttrRows(raw.recordAttrs, "Record attribute");
   if (recordError) return recordError;
   return validateAttrRows(raw.entityAttrs, "Object attribute");
 }
 
-function attrsPayload(rows: AttrRow[]): Record<string, unknown> {
+/** One validation message for the whole raw form; "" when analyzable. */
+export function validateRawFields(raw: RawFields): string {
+  return validateRawVideoOptions(raw) || validateRawSchemaFields(raw);
+}
+
+/** Serialize an attrs editor's rows using the shared ImportSpec schema dialect. */
+export function attrsPayload(rows: AttrRow[]): Record<string, unknown> {
   const attrs: Record<string, unknown> = {};
   for (const row of rows) {
     const attr: Record<string, unknown> = { type: row.type };
@@ -192,7 +240,7 @@ function attrsPayload(rows: AttrRow[]): Record<string, unknown> {
  * the right annotation UI. Views are declared only when the preflight found
  * several (per-view folders); single-view sources rely on backend inference.
  * Annotations are always sent: a non-empty list replaces the preset's slots,
- * so the chips are the single source of truth for what gets created.
+ * so the form is the single source of truth for what gets created.
  */
 export function buildRawSchemaSpec(raw: RawFields): {
   schema: Record<string, unknown>;
@@ -217,10 +265,7 @@ export function buildRawSchemaSpec(raw: RawFields): {
 
   if (raw.recordAttrs.length) schema.record = { attrs: attrsPayload(raw.recordAttrs) };
   if (raw.entityAttrs.length) schema.entity = { attrs: attrsPayload(raw.entityAttrs) };
-  const annotations = [
-    ...LOCKED_ANNOTATIONS[raw.task].filter((slot) => !raw.annotations.includes(slot)),
-    ...raw.annotations,
-  ];
+  const annotations = annotationsForTask(raw.task, raw.annotations);
   if (annotations.length) schema.annotations = annotations;
 
   const options: Record<string, unknown> = {};

@@ -13,11 +13,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from s3path import S3Path
 from starlette.middleware.gzip import GZipMiddleware
 
 from pixano.__version__ import __version__
 from pixano.api.routers import include_api_routers
 from pixano.api.settings import Settings
+from pixano.datasets.utils.errors import DatasetBusyError
 
 
 # Media blobs are already compressed (JPEG/PNG/MP4); running them through gzip
@@ -64,9 +66,17 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     # Create app
     app = FastAPI(title="Pixano", version=__version__, default_response_class=JSONResponse, lifespan=_widen_threadpool)
 
+    @app.exception_handler(DatasetBusyError)
+    async def dataset_busy_handler(_request, error: DatasetBusyError):
+        return JSONResponse(status_code=409, content={"detail": {"code": error.code, "message": str(error)}})
+
     # Boot recovery: replay interrupted staging journals and mark orphaned
     # import jobs as interrupted (spec §8/§9).
-    if isinstance(settings.library_dir, Path) and settings.library_dir.name == "library":
+    if (
+        isinstance(settings.library_dir, Path)
+        and not isinstance(settings.library_dir, S3Path)
+        and settings.library_dir.name == "library"
+    ):
         try:
             from pixano.datasets.io.jobs import boot_recover
 

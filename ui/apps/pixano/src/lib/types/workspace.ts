@@ -19,6 +19,7 @@ import {
 import type { NDArrayPayload } from "$lib/types/inference";
 import type { FeatureValues } from "$lib/types/shapeTypes";
 import type {
+  CollectionInput,
   InputFeatures,
   ListInput as ListInputDef,
   OtherInput as OtherInputDef,
@@ -77,7 +78,17 @@ export type ListFeature = ListInput & {
   obj: Item | Entity | Annotation;
 };
 
-export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
+export type CollectionFeature = CollectionInput & {
+  value: Array<string | number | boolean>;
+  obj: Item | Entity | Annotation;
+};
+
+export type Feature =
+  | CheckboxFeature
+  | TextFeature
+  | NumberFeature
+  | ListFeature
+  | CollectionFeature;
 
 export interface InteractiveSegmentationEmbeddingCache {
   image_embedding: NDArrayPayload;

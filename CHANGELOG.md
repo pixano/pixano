@@ -15,9 +15,8 @@ library.
   with did-you-mean suggestions; nothing is inferred from value shapes.
   Import → export → import is id-identical.
 - **`pixano data` CLI** — `import` (analyze plan + confirmation, `--dry-run`),
-  `export` (`pixano_jsonl`, `coco`), `formats`, `migrate-jsonl` (0.7 → v2
-  converter; everything 0.7 guessed becomes an explicit needs-attention note),
-  and `jobs list|show|cancel|resume|rollback`.
+  `export` (`pixano_jsonl`, `coco`), `formats`, and
+  `jobs list|show|cancel|resume|rollback`.
 - **COCO** importer (two-pass streaming, SQLite spill for huge annotation
   files, `pixano[coco]` extra for ijson) and exporter with an id-traceable
   round-trip.
@@ -25,12 +24,13 @@ library.
   sequences sampled 1:1 with the data rows at their exact timestamps;
   `action`/`observation.state` land in a `timeseries` table with fixed-size
   vector columns; direct Hugging Face Hub import
-  (`pixano data import ./data org/name --episodes 0:4`, `pixano[lerobot]`
-  extra) downloads only the metadata and the selected episodes' shards.
+  (`pixano data import ./data org/name --episodes 0:4`) is included in the default
+  installation and downloads only metadata and the selected episodes' shards.
 - **Durable jobs** — SQLite store shared by the API and the CLI, `/io/*` REST
   routes (formats/analyze/imports/exports/jobs), cooperative cancel, resume
-  from the last committed checkpoint, and add-mode rollback (version restore,
-  or a namespace-scoped delete that preserves concurrent edits).
+  from the last committed checkpoint, and add-mode rollback through guarded
+  version restoration. Rollback refuses datasets changed since the import and
+  resumed imports; dataset write locks prevent interleaved edits during an add.
 - **Atomic ingestion** — staged builds with journaled overwrite swaps
   (crash-safe at every step, replayed at boot), idempotent add-mode re-runs
   via deterministic ids, per-image grid previews stamped at import.
@@ -82,6 +82,17 @@ library.
   policy, schema) — auto-discovered at the source root.
 - Import formats auto-detect; format-intrinsic schemas (COCO, LeRobot) apply
   automatically and default their natural UI workspace.
+- The import wizard uses one Setup screen with Source and Annotation panels,
+  followed by Review. Format icon cards sit in Source; task icon cards sit above
+  annotation tools and the compact attribute table. LeRobot shows a fixed video
+  task. Desktop panels scroll independently and stack on mobile; optional metadata
+  and Advanced JSON are collapsed. Edit setup preserves uploaded sources and
+  annotation settings. Required video tracks, Q&A, and text spans appear as quiet
+  Included labels; keypoints, relations, and classification are not offered in the
+  setup form. Imported schemas and backend format support are unchanged.
+- Starting an import closes the wizard once the server accepts the job. The
+  jobs tray shows progress, completion, errors, and cancellation; start-request
+  failures stay on Review for retry.
 - The inference integration is rebuilt on `pixano-inference-client` against the
   server's `/v1` API. A single `/inference` surface replaces `/app/inference/*`,
   and the task vocabulary is now `image_mask_generation`,
@@ -103,11 +114,28 @@ library.
 
 - The 0.7 folder builders (`ImageFolderBuilder`, `VideoFolderBuilder`,
   `VQAFolderBuilder`, `MelFolderBuilder`), the v1 metadata heuristics and
-  alias tables, `mosaic.py`, and the superseded JSONL exporter. Use
-  `pixano data migrate-jsonl` to convert 0.7 sources.
+  alias tables, `mosaic.py`, and the superseded JSONL exporter. Imports require
+  JSONL v2; no legacy JSONL converter is shipped.
 
 ### Fixed
 
+- The LeRobot import wizard exposes object and record attributes and annotation
+  types. Custom schemas retain discovered cameras, episode metadata, and
+  state/action vectors through analysis and import. The annotation editor
+  respects required fields, schema defaults, and typed list attributes.
+- Interrupted LeRobot imports retain the correct episode cursor; Arrow and
+  final buffered batches persist complete checkpoints. CLI imports use the
+  same durable job identity as their staging data, and failed resumable jobs
+  keep their staging and uploaded sources after server restart.
+- Annotation saves acknowledge each completed operation and preserve later
+  edits. Repeating an identical create request is safe after a lost response;
+  conflicting content for the same ID returns 409 without overwriting it.
+- Unsaved annotations are protected when leaving through the logo, links,
+  browser history, and record navigation.
+- Rapid record navigation no longer uses stale neighbors, and attribute
+  dropdowns sort their options without mutating reactive data.
+- Docker publication waits for the PyPI release. Package publication first
+  verifies installation and startup of the built wheel in a clean environment.
 - Explorer column settings changed nothing: the TanStack adapter eagerly
   spread the Svelte `$state` getters, so the table never depended on column
   order or visibility and never re-rendered. State is now merged through a

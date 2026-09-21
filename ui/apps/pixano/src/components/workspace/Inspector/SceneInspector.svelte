@@ -67,7 +67,10 @@ License: CECILL-C
     isEditing = !isEditing;
   };
 
-  const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
+  const handleTextInputChange = (
+    value: string | boolean | number | Array<string | number | boolean>,
+    propertyName: string,
+  ) => {
     itemMetas.update((oldMetas) => {
       if (!oldMetas) return oldMetas;
       const newMetas: ItemsMeta = { ...oldMetas };

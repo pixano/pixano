@@ -31,6 +31,7 @@ import {
   selectedTool,
   smartSegmentationUiState,
   views,
+  workspaceSaveQueue,
 } from "./workspaceBaseStores.svelte";
 import { panTool } from "$lib/tools";
 import { clearAnnotationMappingCaches } from "$lib/utils/annotationMapping";
@@ -59,6 +60,7 @@ export {
   smartSegmentationUiState,
   selectedTool,
   views,
+  workspaceSaveQueue,
 };
 
 // --- Color scale (accumulative derived with $effect + untrack) ---
@@ -132,7 +134,7 @@ export function resetWorkspaceStores() {
   imageSmoothing.value = true;
   brushSettings.value = { brushRadius: 20, lazyRadius: 10, friction: 0.15 };
   selectedKeypointsTemplate.value = null;
-  saveData.value = [];
+  workspaceSaveQueue.reset();
   interpolate.value = true;
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];

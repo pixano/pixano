@@ -26,9 +26,18 @@ from typing import Iterator
 from lancedb.pydantic import LanceModel
 
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.schemas import canonical_table_name_for_schema
+from pixano.schemas import (
+    Entity,
+    EntityDynamicState,
+    Record,
+    SequenceFrame,
+    Video,
+    canonical_table_name_for_schema,
+    supported_dataset_info_slots,
+)
+from pixano.schemas.table_names import supported_slot_schema
 
-from ...errors import MetadataError
+from ...errors import MetadataError, SpecValidationError
 from ...ids import stable_id
 from ...importer import BatchBundle, Cursor, DatasetImporter, DetectResult, SourceRef
 from ...media import MediaResolver, ffmpeg_available, ffprobe_available, probe_video
@@ -40,6 +49,28 @@ from .layout import Episode, LeRobotLayout, camera_view_name, parse_episode_sele
 
 
 _JPEG_BYTES_PER_PIXEL = 0.12  # rough JPEG size estimate for the analyze plan
+
+
+def _validate_custom_attrs(
+    label: str, attrs: object, base: type[LanceModel], reserved: set[str] | None = None
+) -> dict:
+    """Reject declarations that replace imported fields or Pydantic machinery."""
+    if not isinstance(attrs, dict):
+        raise SpecValidationError(f"LeRobot {label} attrs must be a mapping.")
+    protected = set(base.model_fields) | (reserved or set())
+    if collisions := protected.intersection(attrs):
+        raise SpecValidationError(
+            f"LeRobot {label} attrs cannot override source metadata: {', '.join(sorted(collisions))}."
+        )
+    for name in attrs:
+        if (
+            not isinstance(name, str)
+            or not name.isidentifier()
+            or name.startswith(("_", "model_"))
+            or hasattr(base, name)
+        ):
+            raise SpecValidationError(f"LeRobot {label} attr '{name}' is not a valid custom field name.")
+    return attrs
 
 
 class LeRobotImporter(DatasetImporter):
@@ -76,10 +107,14 @@ class LeRobotImporter(DatasetImporter):
         return None
 
     def resolve_info(self, spec: ImportSpec, source: SourceRef | None = None) -> DatasetInfo:
-        """LeRobot's schema depends on the source's cameras; a user schema still wins."""
-        if spec.schema_ is not None or spec.schema_manifest is not None or source is None:
+        """Extend the source-derived schema with declarative annotation settings."""
+        if spec.schema_manifest is not None or source is None:
             return resolve_dataset_info(spec)
         layout = parse_layout(self._local_root(source))
+        return self._resolve_layout_info(spec, layout)
+
+    def _resolve_layout_info(self, spec: ImportSpec, layout: LeRobotLayout) -> DatasetInfo:
+        """Keep source metadata while allowing custom fields and annotation slots."""
         view_kind = "sequence_frames" if self._frames_mode(spec) == "extract" else "video"
         payload = spec.model_dump(mode="json", exclude_none=True, by_alias=True)
         if payload.get("dataset", {}).get("workspace", "undefined") == "undefined":
@@ -96,7 +131,56 @@ class LeRobotImporter(DatasetImporter):
             },
             "annotations": ["bbox", "mask", "tracklet"],
         }
-        info = resolve_dataset_info(ImportSpec.model_validate(payload))
+        if spec.schema_ is not None:
+            custom = spec.schema_.model_dump(mode="json", exclude_unset=True, exclude_none=True)
+            record_attrs = _validate_custom_attrs(
+                "record", spec.schema_.record.get("attrs", {}), Record, set(payload["schema"]["record"]["attrs"])
+            )
+            payload["schema"]["record"]["attrs"].update(record_attrs)
+            view_base = SequenceFrame if view_kind == "sequence_frames" else Video
+            for name, declaration in spec.schema_.views.items():
+                if name not in payload["schema"]["views"]:
+                    raise SpecValidationError(f"LeRobot view '{name}' does not match a source camera.")
+                if not isinstance(declaration, (str, dict)):
+                    raise SpecValidationError(f"LeRobot view '{name}' must declare a kind or a mapping.")
+                view = {"kind": declaration} if isinstance(declaration, str) else dict(declaration or {})
+                if view.get("kind", view_kind) != view_kind:
+                    raise SpecValidationError(f"LeRobot view '{name}' must use kind '{view_kind}'.")
+                _validate_custom_attrs(f"view '{name}'", view.get("attrs", {}), view_base)
+                payload["schema"]["views"][name].update(view)
+            _validate_custom_attrs("entity", spec.schema_.entity.get("attrs", {}), Entity)
+            if spec.schema_.entity_dynamic_state is not None:
+                _validate_custom_attrs(
+                    "entity_dynamic_state", spec.schema_.entity_dynamic_state.get("attrs", {}), EntityDynamicState
+                )
+            if isinstance(spec.schema_.annotations, dict):
+                for slot, declaration in spec.schema_.annotations.items():
+                    if slot not in supported_dataset_info_slots():
+                        continue  # The schema compiler reports unknown slots.
+                    if declaration is not None and not isinstance(declaration, dict):
+                        raise SpecValidationError(f"LeRobot annotation '{slot}' must be a mapping.")
+                    _validate_custom_attrs(slot, (declaration or {}).get("attrs", {}), supported_slot_schema(slot))
+            for key in ("entity", "entity_dynamic_state", "annotations"):
+                if key in custom and (key != "annotations" or custom[key]):
+                    payload["schema"][key] = custom[key]
+        try:
+            info = resolve_dataset_info(ImportSpec.model_validate(payload))
+        except (TypeError, ValueError, NameError) as error:
+            raise SpecValidationError(f"Invalid LeRobot schema: {error}") from error
+        if spec.schema_ is not None:
+            # Imported rows supply only source fields. Custom record/view attrs
+            # must have defaults; entities and annotations are created later.
+            assert info.record is not None
+            imported_schemas: list[tuple[str, type[LanceModel]]] = [("record", info.record)]
+            imported_schemas.extend((f"view '{name}'", view) for name, view in info.views.items())
+            for label, schema in imported_schemas:
+                attrs = spec.schema_.record.get("attrs", {}) if label == "record" else {}
+                if label != "record":
+                    base = SequenceFrame if view_kind == "sequence_frames" else Video
+                    attrs = set(schema.model_fields) - set(base.model_fields)
+                for name in attrs:
+                    if schema.model_fields[name].is_required():
+                        raise SpecValidationError(f"LeRobot {label} attr '{name}' needs a default for imported rows.")
         if layout.feature_dims and self._frames_mode(spec) == "extract":
             # State/action vectors ride a timeseries table (fixed-size Vector
             # columns are outside the YAML dialect, so attach programmatically).
@@ -160,6 +244,13 @@ class LeRobotImporter(DatasetImporter):
             plan.report.add("invalid_layout", Provenance(file=str(root)), suggestion=str(error))
             return plan
         is_hub = source.kind == "hf_hub"
+
+        if spec.schema_ is not None and spec.schema_manifest is None:
+            try:
+                self._resolve_layout_info(spec, layout)
+            except SpecValidationError as error:
+                plan.report.add("invalid_schema", Provenance(file=str(root)), suggestion=str(error))
+                return plan
 
         episodes = self._select_episodes(layout, spec)
         mode = self._frames_mode(spec)
@@ -261,8 +352,8 @@ class LeRobotImporter(DatasetImporter):
         resolver = MediaResolver(spec.media, base_dir=root)
         resume_ordinal = int(cursor.get("episode_ordinal", 0)) if cursor else 0
 
-        for ordinal, episode in enumerate(episodes, start=1):
-            if ordinal <= resume_ordinal:
+        for episode_ordinal, episode in enumerate(episodes, start=1):
+            if episode_ordinal <= resume_ordinal:
                 continue
             record_id = stable_id(namespace, "train", episode.index)
             assert info.record is not None
@@ -287,8 +378,8 @@ class LeRobotImporter(DatasetImporter):
                     stride = len(selected) / cap
                     selected = [selected[int(position * stride)] for position in range(cap)]
                 series_rows = []
-                for ordinal, data_row in enumerate(selected):
-                    frame_index = int(data_row.get("frame_index", ordinal))
+                for row_ordinal, data_row in enumerate(selected):
+                    frame_index = int(data_row.get("frame_index", row_ordinal))
                     values = {
                         to_snake_case(key.replace(".", "_")): [float(v) for v in data_row.get(key, [])]
                         for key in layout.feature_dims
@@ -298,7 +389,7 @@ class LeRobotImporter(DatasetImporter):
                             id=stable_id(record_id, "ts", frame_index),
                             record_id=record_id,
                             frame_index=frame_index,
-                            timestamp=float(data_row.get("timestamp", ordinal)),
+                            timestamp=float(data_row.get("timestamp", row_ordinal)),
                             **values,
                         )
                     )
@@ -324,7 +415,7 @@ class LeRobotImporter(DatasetImporter):
                     tables.setdefault(canonical_table_name_for_schema(type(row)), []).append(row)
             yield BatchBundle(
                 tables=tables,
-                cursor={"episode_ordinal": ordinal},
+                cursor={"episode_ordinal": episode_ordinal},
                 provenance=Provenance(file=str(source.path), record_key=str(episode.index)),
             )
 

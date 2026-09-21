@@ -93,6 +93,19 @@ class TestJobStore:
         store.request_cancel(running.id)
         assert store.cancel_requested(running.id)
 
+        interrupted = store.create_job("import")
+        store.update_job(interrupted.id, status="interrupted", cursor={"ordinal": 1})
+        assert store.request_cancel(interrupted.id).status == "cancelled"
+        with pytest.raises(JobStateError, match="only interrupted/errored"):
+            JobRunner(store, store.db_path.parent.parent).submit_resume(interrupted.id)
+
+    def test_dead_cancelled_worker_becomes_cancelled_on_boot(self, store: JobStore):
+        job = store.create_job("import")
+        store.update_job(job.id, status="running", pid=999_999_999)
+        store.request_cancel(job.id)
+        assert store.mark_interrupted_on_boot(pid_check=lambda pid: False) == []
+        assert store.get_job(job.id).status == "cancelled"
+
 
 class TestJobRunner:
     def test_import_job_end_to_end(self, tmp_path: Path):
@@ -126,8 +139,11 @@ class TestJobRunner:
         store.update_job(job.id, status="cancelled")
         # A cancelled job never flips to running even if the worker picks it up.
         runner = JobRunner(store, tmp_path)
-        runner._run_import(job.id, str(tmp_path), {"format": "pixano_jsonl"}, "")
+        uploaded_source = tmp_path / ".pixano" / "uploads" / "session"
+        uploaded_source.mkdir(parents=True)
+        runner._run_import(job.id, str(uploaded_source), {"format": "pixano_jsonl"}, "")
         assert store.get_job(job.id).status == "cancelled"
+        assert not uploaded_source.exists()
 
     def test_error_recorded(self, tmp_path: Path):
         (tmp_path / "library").mkdir()

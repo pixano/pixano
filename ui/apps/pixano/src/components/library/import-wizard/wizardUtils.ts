@@ -5,6 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import {
+  buildLerobotSchemaSpec,
+  DEFAULT_LEROBOT_FIELDS,
+  validateLerobotFields,
+  type LerobotFields,
+} from "./lerobotSchema";
+import {
   buildRawSchemaSpec,
   DEFAULT_RAW_FIELDS,
   validateRawFields,
@@ -38,6 +44,7 @@ export interface WizardFields {
   media: "embed" | "uri";
   episodes: string; // LeRobot: "0:4" or "1,3"
   maxFrames: string; // LeRobot: cap per episode
+  lerobot: LerobotFields; // LeRobot annotation schema, separate from raw-media settings
   raw: RawFields; // raw-media schema builder state
 }
 
@@ -50,6 +57,7 @@ export const DEFAULT_FIELDS: WizardFields = {
   media: "embed",
   episodes: "",
   maxFrames: "",
+  lerobot: structuredClone(DEFAULT_LEROBOT_FIELDS),
   raw: structuredClone(DEFAULT_RAW_FIELDS),
 };
 
@@ -62,6 +70,37 @@ export function isHubId(source: string): boolean {
 /** True when the LeRobot-specific fields should be shown. */
 export function showsLerobotFields(fields: WizardFields): boolean {
   return fields.intent === "lerobot" || (fields.intent === "auto" && isHubId(fields.source));
+}
+
+export function validateLerobotMaxFrames(value: string): string {
+  const text = value.trim();
+  if (!text) return "";
+  return /^\d+$/.test(text) && Number.isSafeInteger(Number(text)) && Number(text) > 0
+    ? ""
+    : "Max frames per episode must be a positive whole number.";
+}
+
+/** Convert the wizard's episode list into the backend list/range dialect. */
+export function parseEpisodeSelection(value: string): {
+  value?: string | number[];
+  error: string;
+} {
+  const text = value.trim();
+  if (!text) return { error: "" };
+  const isIndex = (part: string) => /^\d+$/.test(part) && Number.isSafeInteger(Number(part));
+  if (text.includes(":")) {
+    const parts = text.split(":").map((part) => part.trim());
+    if (
+      parts.length === 2 &&
+      parts.every((part) => !part || isIndex(part)) &&
+      (!parts[0] || !parts[1] || Number(parts[0]) <= Number(parts[1]))
+    )
+      return { value: parts.join(":"), error: "" };
+  } else {
+    const parts = text.split(",").map((part) => part.trim());
+    if (parts.every(isIndex)) return { value: [...new Set(parts.map(Number))], error: "" };
+  }
+  return { error: "Use episode numbers such as 1,3,7 or an inclusive range such as 0:4." };
 }
 
 /**
@@ -79,7 +118,9 @@ export function mergeSpec(fields: WizardFields, advancedJson: string): Record<st
   else if (fields.sourceLabel.trim()) dataset.name = fields.sourceLabel.trim(); // staged dirs have opaque names
   const options: Record<string, unknown> = {};
   if (showsLerobotFields(fields)) {
-    if (fields.episodes.trim()) options.episodes = fields.episodes.trim();
+    spec.schema = buildLerobotSchemaSpec(fields.lerobot);
+    const episodes = parseEpisodeSelection(fields.episodes);
+    if (episodes.value !== undefined) options.episodes = episodes.value;
     if (fields.maxFrames.trim()) options.max_frames_per_episode = Number(fields.maxFrames);
   }
   if (fields.intent === "raw") {
@@ -158,12 +199,26 @@ export function sampleLocation(sample: { file?: string | null; line?: number | n
   return sample.line ? `${file}:${sample.line}` : file;
 }
 
-/** Source step gating: a source, valid Advanced JSON, a clean raw form, and a sound layout. */
+/** Explain the first incomplete requirement beside the Setup action. */
+export function setupValidationMessage(fields: WizardFields, advancedJson: string): string {
+  if (!fields.source.trim()) return "Choose a source to continue.";
+  if (parseAdvancedSpec(advancedJson).error) return "Fix the Advanced JSON to continue.";
+  if (showsLerobotFields(fields)) {
+    return (
+      parseEpisodeSelection(fields.episodes).error ||
+      validateLerobotMaxFrames(fields.maxFrames) ||
+      validateLerobotFields(fields.lerobot)
+    );
+  }
+  if (fields.intent !== "raw") return "";
+  if (fields.raw.layout !== null && !fields.raw.layout.ok)
+    return "Check the folder structure before continuing.";
+  return validateRawFields(fields.raw);
+}
+
+/** A source and valid configuration are required before analysis. */
 export function canAnalyze(fields: WizardFields, advancedJson: string): boolean {
-  if (!fields.source.trim() || parseAdvancedSpec(advancedJson).error) return false;
-  if (fields.intent !== "raw") return true;
-  if (fields.raw.layout !== null && !fields.raw.layout.ok) return false;
-  return validateRawFields(fields.raw) === "";
+  return setupValidationMessage(fields, advancedJson) === "";
 }
 
 /** One attribute chip of a schema entry. */

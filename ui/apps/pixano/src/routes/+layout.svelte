@@ -11,13 +11,14 @@ License: CECILL-C
   import pixanoFavicon from "../assets/favicon.ico";
   import InferenceStatusChip from "../components/inference/InferenceStatusChip.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
+  import UnsavedChangesGuard from "../components/layout/UnsavedChangesGuard.svelte";
   import ImportJobsTray from "../components/library/import-wizard/ImportJobsTray.svelte";
   import type { LayoutProps } from "./$types";
-  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { pixanoLogo } from "$lib/assets";
   import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
   import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
+  import { navigateToRoute } from "$lib/utils/navigation";
 
   import "./styles.css";
 
@@ -63,7 +64,7 @@ License: CECILL-C
   });
 
   async function navigateToHome() {
-    await goto("/");
+    await navigateToRoute("/");
   }
 </script>
 
@@ -110,4 +111,5 @@ License: CECILL-C
   </div>
 
   <ImportJobsTray />
+  <UnsavedChangesGuard />
 </Tooltip.Provider>

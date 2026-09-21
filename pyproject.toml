@@ -25,7 +25,9 @@ dependencies = [
   "boto3 >= 1.26.0, < 2.0.0",
   "duckdb >= 1.0.0, < 2.0.0",
   "httpx >= 0.25.0, < 1.0.0",
+  "huggingface_hub >= 0.20, < 1.0",
   "fastapi >= 0.103.0, < 1.0.0",
+  "filelock >= 3.13, < 4.0",
   "importlib-resources >= 5.12.0, < 6.0.0",
   "ipywidgets >= 8.0.0, < 9.0.0",
   "jinja2 >= 3.1.2, < 4.0.0",
@@ -52,7 +54,6 @@ dependencies = [
 
 [project.optional-dependencies]
 coco = ["ijson >= 3.2, < 4.0"]
-lerobot = ["huggingface_hub >= 0.20, < 1.0"]
 
 [dependency-groups]
 docs = [

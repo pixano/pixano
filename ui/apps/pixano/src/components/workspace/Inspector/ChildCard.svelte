@@ -77,7 +77,7 @@ License: CECILL-C
     subEntityFeatures?: Feature[];
     isEditing?: boolean;
     saveInputChange?: (
-      value: string | boolean | number,
+      value: string | boolean | number | Array<string | number | boolean>,
       propertyName: string,
       obj: Item | Entity | Annotation,
     ) => void;

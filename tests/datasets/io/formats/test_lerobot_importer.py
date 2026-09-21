@@ -13,7 +13,18 @@ import pyarrow.parquet as pq
 import pytest
 
 from pixano.datasets import Dataset
-from pixano.datasets.io import FORMATS, ImportSpec, SourceRef, ffmpeg_available, ffprobe_available, import_dataset
+from pixano.datasets.io import (
+    FORMATS,
+    AnalyzeLimits,
+    ImportPlan,
+    ImportSpec,
+    MetadataError,
+    SourceRef,
+    ffmpeg_available,
+    ffprobe_available,
+    import_dataset,
+)
+from pixano.datasets.io.engine import ImportEngine
 from pixano.datasets.io.formats.lerobot import LeRobotImporter
 from pixano.datasets.io.formats.lerobot.layout import parse_episode_selection, parse_layout
 from tests.assets.sample_data.metadata import VIDEO_MP4_ASSET_URL, VIDEO_MP4_METADATA
@@ -136,6 +147,62 @@ def _spec(name: str, **options) -> ImportSpec:
             "options": options,
         }
     )
+
+
+class TestLeRobotResume:
+    @pytest.mark.parametrize("selection,expected_indices", [(None, [0, 1, 2]), ([1, 2], [1, 2])])
+    def test_cursors_count_selected_episodes_not_sampled_frames(
+        self, tmp_path: Path, monkeypatch, selection, expected_indices
+    ):
+        source = SourceRef.from_string(str(make_v21_dataset(tmp_path / "ds", episodes=3)))
+        importer = LeRobotImporter()
+        monkeypatch.setattr(importer, "_extract_frames", lambda *args: [])
+        spec = _spec("lr_cursors", max_frames_per_episode=8, episodes=selection)
+        batches = list(importer.iter_batches(source, spec, ImportPlan(format="lerobot")))
+        assert [batch.tables["records"][0].episode_index for batch in batches] == expected_indices
+        assert [batch.cursor for batch in batches] == [
+            {"episode_ordinal": ordinal} for ordinal in range(1, len(expected_indices) + 1)
+        ]
+        resumed = list(importer.iter_batches(source, spec, ImportPlan(format="lerobot"), batches[0].cursor))
+        assert [batch.tables["records"][0].episode_index for batch in resumed] == expected_indices[1:]
+
+    @needs_ffmpeg
+    def test_resume_after_first_episode_matches_uninterrupted_import(self, tmp_path: Path):
+        class FailsAfterFirstEpisode(LeRobotImporter):
+            def iter_batches(self, source, spec, plan, cursor=None):
+                for ordinal, bundle in enumerate(super().iter_batches(source, spec, plan, cursor)):
+                    if ordinal == 1:
+                        raise RuntimeError("interrupted after first episode")
+                    yield bundle
+
+        source = make_v21_dataset(tmp_path / "src", episodes=3)
+        spec = _spec("lr_resume", max_frames_per_episode=8)
+        data_dir = tmp_path / "failed"
+        checkpoints = []
+        with pytest.raises(RuntimeError, match="interrupted"):
+            import_dataset(
+                source,
+                data_dir,
+                spec,
+                importer=FailsAfterFirstEpisode(),
+                job_id="lrjob",
+                engine=ImportEngine(
+                    data_dir, flush_rows=1, checkpoint=lambda cursor, counts: checkpoints.append(dict(cursor))
+                ),
+            )
+        assert checkpoints == [{"episode_ordinal": 1}]
+        resumed = import_dataset(source, data_dir, spec, job_id="lrjob", resume_cursor=checkpoints[-1])
+        control = import_dataset(source, tmp_path / "control", spec)
+        resumed_dataset, control_dataset = Dataset(resumed.dataset_path), Dataset(control.dataset_path)
+        assert resumed_dataset.open_table("records").count_rows() == 3
+        for name in control_dataset.info.tables:
+            expected = sorted(
+                row["id"] for row in control_dataset.open_table(name).search().select(["id"]).limit(None).to_list()
+            )
+            actual = sorted(
+                row["id"] for row in resumed_dataset.open_table(name).search().select(["id"]).limit(None).to_list()
+            )
+            assert actual == expected, name
 
 
 class TestLayoutParsing:
@@ -304,11 +371,33 @@ class TestHubSource:
         assert dataset.open_table("records").count_rows() == 1
         assert dataset.get_data("records")[0].episode_index == 1
 
+    def test_analyze_uses_installed_hub_client_for_metadata_only(self, tmp_path: Path, monkeypatch):
+        import huggingface_hub
+
+        dataset_root = make_v21_dataset(tmp_path / "hub_ds")
+        calls = []
+
+        def fake_snapshot(repo_id, **kwargs):
+            calls.append((repo_id, kwargs))
+            return str(dataset_root)
+
+        monkeypatch.setattr(huggingface_hub, "snapshot_download", fake_snapshot)
+        plan = LeRobotImporter().analyze(
+            SourceRef.from_string("hub://acme/robo"),
+            _spec("hub_plan", frames="reference"),
+            AnalyzeLimits(),
+        )
+
+        assert plan.totals.records == 2 and plan.report.is_valid
+        assert calls == [("acme/robo", {"repo_type": "dataset", "revision": None, "allow_patterns": ["meta/**"]})]
+
     def test_missing_hf_hub_is_a_typed_error(self, monkeypatch):
         import pixano.datasets.io.formats.lerobot.hub as hub_module
 
-        monkeypatch.setattr(hub_module, "_require_hf_hub", hub_module._require_hf_hub)
         monkeypatch.setitem(__import__("sys").modules, "huggingface_hub", None)
+        with pytest.raises(MetadataError, match="Pixano server environment") as error:
+            hub_module.materialize_meta("acme/robo")
+        assert "uv sync" in str(error.value)
         # is_hub_id stays available without the dependency
         assert hub_module.is_hub_id("lerobot/pusht")
         assert not hub_module.is_hub_id("not a hub id")
@@ -468,3 +557,148 @@ class TestBareHubIdRouting:
         plan = analyze("org/hub_ds", spec)  # bare id, format auto
         assert plan.format == "lerobot"
         assert plan.totals.records
+
+
+class TestLeRobotCustomSchema:
+    @pytest.mark.parametrize("frames", ["extract", "reference"])
+    def test_partial_schema_preserves_source_fields(self, tmp_path: Path, frames: str):
+        from pixano.datasets.workspaces import WorkspaceType
+        from pixano.schemas import SequenceFrame, Video
+
+        root = make_v3_dataset(tmp_path / "ds")
+        metadata_path = root / "meta" / "info.json"
+        metadata = json.loads(metadata_path.read_text())
+        metadata["features"]["observation.images.wrist"] = {"dtype": "video"}
+        metadata_path.write_text(json.dumps(metadata))
+        source = SourceRef.from_string(str(root))
+        spec = ImportSpec.model_validate(
+            {
+                "format": "lerobot",
+                "options": {"frames": frames},
+                "schema": {
+                    "record": {"attrs": {"reviewed": "bool"}},
+                    "entity": {"attrs": {"category": {"type": "str", "required": True}}},
+                    "entity_dynamic_state": {"attrs": {"occluded": "bool"}},
+                    "annotations": {"bbox": {"attrs": {"quality": "float"}}, "tracklet": {}},
+                },
+            }
+        )
+
+        info = LeRobotImporter().resolve_info(spec, source)
+
+        assert info.workspace == WorkspaceType.VIDEO
+        view_cls = SequenceFrame if frames == "extract" else Video
+        assert info.views == {"top": view_cls, "wrist": view_cls}
+        assert set(info.record.model_fields) >= {"episode_index", "tasks", "length", "reviewed"}
+        assert info.record().reviewed is False
+        assert info.entity.model_fields["category"].is_required()
+        assert info.entity_dynamic_state().occluded is False
+        assert info.bbox.model_fields["quality"].default == 0.0
+        assert info.tracklet is not None and info.mask is None
+        if frames == "extract":
+            assert set(info.timeseries.model_fields) >= {"action", "observation_state"}
+        else:
+            assert info.timeseries is None
+
+    def test_entity_only_keeps_default_annotations_and_explicit_workspace(self, tmp_path: Path):
+        from pixano.datasets.dataset_schema import serialize_dataset_info_schema
+        from pixano.datasets.workspaces import WorkspaceType
+
+        source = SourceRef.from_string(str(make_v21_dataset(tmp_path / "ds")))
+        spec = ImportSpec.model_validate(
+            {"dataset": {"workspace": "image"}, "schema": {"entity": {"attrs": {"category": "str"}}}}
+        )
+        info = LeRobotImporter().resolve_info(spec, source)
+        assert info.workspace == WorkspaceType.IMAGE
+        assert info.bbox is not None and info.mask is not None and info.tracklet is not None
+        assert set(info.views) == {"top"}
+        reloaded_spec = ImportSpec.model_validate(spec.model_dump(mode="json", by_alias=True))
+        reloaded_info = LeRobotImporter().resolve_info(reloaded_spec, source)
+        assert serialize_dataset_info_schema(reloaded_info) == serialize_dataset_info_schema(info)
+
+    def test_empty_annotations_keeps_defaults_and_vectors(self, tmp_path: Path):
+        source = SourceRef.from_string(str(make_v3_dataset(tmp_path / "ds")))
+        spec = ImportSpec.model_validate({"schema": {"annotations": []}})
+        info = LeRobotImporter().resolve_info(spec, source)
+        assert info.bbox is not None and info.mask is not None and info.tracklet is not None
+        assert info.timeseries is not None
+
+    @pytest.mark.parametrize(
+        "schema,message",
+        [
+            ({"record": {"attrs": {"episode_index": "str"}}}, "cannot override source metadata: episode_index"),
+            ({"record": {"attrs": {"tasks": "str"}}}, "cannot override source metadata: tasks"),
+            ({"record": {"attrs": {"id": "int"}}}, "cannot override source metadata: id"),
+            ({"record": {"attrs": {"reviewer": {"type": "str", "required": True}}}}, "needs a default"),
+            ({"entity": {"attrs": {"id": "int"}}}, "cannot override source metadata: id"),
+            ({"entity": {"attrs": {"model_dump": "str"}}}, "not a valid custom field name"),
+            ({"entity": {"attrs": {"_hidden": "str"}}}, "not a valid custom field name"),
+            ({"entity": {"attrs": ["category"]}}, "attrs must be a mapping"),
+            ({"entity": {"attrs": {"category": 42}}}, "Invalid LeRobot schema"),
+            ({"annotations": {"bbox": {"attrs": {"coords": "str"}}}}, "cannot override source metadata: coords"),
+            ({"views": {"other": {"kind": "sequence_frames"}}}, "does not match a source camera"),
+            ({"views": {"top": {"kind": "image"}}}, "must use kind 'sequence_frames'"),
+            ({"views": {"top": {"attrs": {"timestamp": "str"}}}}, "cannot override source metadata: timestamp"),
+            ({"views": {"top": {"attrs": {"quality": {"type": "float", "required": True}}}}}, "needs a default"),
+        ],
+    )
+    def test_invalid_schema_is_rejected_during_resolve_and_analyze(self, tmp_path: Path, schema, message):
+        from pixano.datasets.io.errors import SpecValidationError
+        from pixano.datasets.io.plan import AnalyzeLimits
+
+        source = SourceRef.from_string(str(make_v21_dataset(tmp_path / "ds", episodes=1)))
+        spec = ImportSpec.model_validate({"schema": schema})
+        importer = LeRobotImporter()
+        with pytest.raises(SpecValidationError, match=message):
+            importer.resolve_info(spec, source)
+        plan = importer.analyze(source, spec, AnalyzeLimits())
+        assert not plan.report.is_valid
+        assert message in plan.report.findings["invalid_schema"].suggestion
+
+    def test_schema_manifest_remains_an_exact_override(self, tmp_path: Path):
+        from pixano.schemas import Image
+
+        spec = ImportSpec.model_validate(
+            {
+                "schema_manifest": {
+                    "record": {"base": "Record", "fields": {}},
+                    "views": {"custom": {"base": "Image", "fields": {}}},
+                }
+            }
+        )
+        info = LeRobotImporter().resolve_info(spec, SourceRef(kind="local_dir", path=tmp_path / "missing"))
+        assert info.views == {"custom": Image}
+        assert "episode_index" not in info.record.model_fields
+        assert info.timeseries is None
+
+    @needs_ffmpeg
+    def test_custom_schema_import_persists_cameras_episode_fields_and_vectors(self, tmp_path: Path):
+        source = make_v3_dataset(tmp_path / "ds")
+        spec = ImportSpec.model_validate(
+            {
+                "dataset": {"name": "annotatable robot"},
+                "format": "lerobot",
+                "options": {"max_frames_per_episode": 3},
+                "schema": {
+                    "views": {"top": {"attrs": {"reviewed": "bool"}}},
+                    "record": {"attrs": {"reviewer": {"type": "str", "default": "unassigned"}}},
+                    "entity": {"attrs": {"category": "str", "is_difficult": "bool"}},
+                    "annotations": ["bbox", "mask", "tracklet"],
+                },
+            }
+        )
+        result = import_dataset(source, tmp_path / "data", spec)
+        dataset = Dataset(result.dataset_path)
+        assert set(dataset.info.views) == {"top"}
+        assert set(dataset.info.entity.model_fields) >= {"category", "is_difficult"}
+        records = sorted(dataset.get_data("records"), key=lambda row: row.episode_index)
+        assert [row.reviewer for row in records] == ["unassigned", "unassigned"]
+        assert [row.length for row in records] == [85, 100]
+        assert [row.tasks for row in records] == [["pick"], ["place"]]
+        assert dataset.open_table("sequence_frames").count_rows() == 6
+        assert all(not frame.reviewed for frame in dataset.get_data("sequence_frames"))
+        assert dataset.open_table("timeseries").count_rows() == 6
+        assert set(dataset.info.timeseries.model_fields) >= {"action", "observation_state"}
+        entity = dataset.info.entity(id="block-entity", record_id=records[0].id, category="block", is_difficult=True)
+        dataset.add_data("entities", [entity])
+        assert Dataset(result.dataset_path).get_data("entities")[0].category == "block"

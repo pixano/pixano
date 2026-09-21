@@ -16,6 +16,7 @@ import tqdm
 from lancedb.pydantic import LanceModel
 
 from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets.locking import dataset_mutation_lock
 from pixano.schemas import Record, SchemaGroup
 
 
@@ -103,23 +104,24 @@ class DatasetBuilder(ABC):
                 f"compact_every_n_transactions should be greater than 0 but got {compact_every_n_transactions}"
             )
 
-        dataset = self._prepare_dataset(mode)
-        buffers = self._initialize_buffers()
+        with dataset_mutation_lock(self.target_dir):
+            dataset = self._prepare_dataset(mode)
+            buffers = self._initialize_buffers()
 
-        logger.info("Building dataset %s", self.info.name)
-        self._active_dataset = dataset
-        try:
-            for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
-                self._accumulate_records(buffers, items)
-                if any(len(rows) >= flush_every_n_samples for rows in buffers.values()):
-                    self._flush_accumulated(buffers, dataset, check_integrity)
+            logger.info("Building dataset %s", self.info.name)
+            self._active_dataset = dataset
+            try:
+                for items in tqdm.tqdm(self.generate_data(), desc=f"Generate data for dataset {self.info.name}"):
+                    self._accumulate_records(buffers, items)
+                    if any(len(rows) >= flush_every_n_samples for rows in buffers.values()):
+                        self._flush_accumulated(buffers, dataset, check_integrity)
 
-            self._flush_accumulated(buffers, dataset, check_integrity)
-        finally:
-            self._active_dataset = None
+                self._flush_accumulated(buffers, dataset, check_integrity)
+            finally:
+                self._active_dataset = None
 
-        logger.info("Dataset %s built in %s with id %s", self.info.name, self.target_dir, self.info.id)
-        return dataset
+            logger.info("Dataset %s built in %s with id %s", self.info.name, self.target_dir, self.info.id)
+            return dataset
 
     def _prepare_dataset(self, mode: Literal["add", "create", "overwrite"]) -> Dataset:
         """Open or create the target dataset for the requested build mode."""

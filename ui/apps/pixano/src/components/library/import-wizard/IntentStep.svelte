@@ -5,81 +5,79 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Database, Images, MagicWand, Robot, Tag } from "phosphor-svelte";
+  import { Check, Database, Images, MagicWand, Robot, Tag } from "phosphor-svelte";
 
-  import type { ImportIntent } from "./wizardUtils";
-  import { intentToFormat } from "./wizardUtils";
+  import WizardChoiceCard from "./WizardChoiceCard.svelte";
+  import { WIZARD_LABEL_CLASS } from "./wizardStyles";
+  import { intentToFormat, type ImportIntent } from "./wizardUtils";
   import type { IoFormatResponse } from "$lib/api/restTypes";
 
   interface Props {
     formats: IoFormatResponse[] | null;
+    selected: ImportIntent | null;
     onSelect: (intent: ImportIntent) => void;
   }
 
-  let { formats, onSelect }: Props = $props();
+  let { formats, selected, onSelect }: Props = $props();
 
-  const CARDS: { intent: ImportIntent; title: string; blurb: string; icon: typeof Images }[] = [
+  const choices: {
+    intent: ImportIntent;
+    title: string;
+    description: string;
+    icon: typeof Images;
+  }[] = [
     {
       intent: "raw",
       title: "Raw media",
-      blurb:
-        "Start annotating from scratch: folders of images, videos, or text files — you define the schema.",
+      description: "Images, videos, or image–text pairs.",
       icon: Images,
-    },
-    {
-      intent: "pixano_jsonl",
-      title: "Pixano dataset",
-      blurb:
-        "A JSONL v2 export or any source with a dataset.yaml — schema and annotations included.",
-      icon: Database,
-    },
-    {
-      intent: "coco",
-      title: "MS COCO",
-      blurb: "COCO instances JSON + images; categories become entity attributes.",
-      icon: Tag,
     },
     {
       intent: "lerobot",
       title: "LeRobot",
-      blurb: "Robotics episodes (v2.1 / v3), from a local folder or the Hugging Face hub.",
+      description: "Robot episodes (folder or Hub).",
       icon: Robot,
     },
+    {
+      intent: "coco",
+      title: "MS COCO",
+      description: "Images with COCO annotations.",
+      icon: Tag,
+    },
+    {
+      intent: "pixano_jsonl",
+      title: "Pixano dataset",
+      description: "Existing schema and annotations.",
+      icon: Database,
+    },
   ];
-
-  /** An intent is offered once /io/formats confirms its backend format imports. */
-  function available(intent: ImportIntent): boolean {
-    if (formats === null) return true; // optimistic while loading
-    const format = intentToFormat(intent);
-    return formats.some((f) => f.name === format && f.can_import);
-  }
 </script>
 
-<div class="px-6 sm:px-7 pb-2 space-y-3">
-  <div class="grid gap-2 sm:grid-cols-2">
-    {#each CARDS as card (card.intent)}
-      {@const enabled = available(card.intent)}
-      <button
-        type="button"
-        class="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
-        disabled={!enabled}
-        onclick={() => onSelect(card.intent)}
-      >
-        <span class="flex items-center gap-2 text-sm font-medium text-foreground">
-          <card.icon weight="regular" class="h-5 w-5 shrink-0 text-primary" />
-          {card.title}
-        </span>
-        <span class="mt-1.5 block text-xs leading-relaxed text-muted-foreground">{card.blurb}</span>
-      </button>
+<fieldset class="min-w-0 space-y-2">
+  <legend class={WIZARD_LABEL_CLASS}>Data format</legend>
+  <div class="grid grid-cols-2 gap-2">
+    {#each choices as choice (choice.intent)}
+      <WizardChoiceCard
+        icon={choice.icon}
+        title={choice.title}
+        description={choice.description}
+        selected={selected === choice.intent}
+        disabled={formats !== null &&
+          !formats.some(
+            (format) => format.name === intentToFormat(choice.intent) && format.can_import,
+          )}
+        onclick={() => onSelect(choice.intent)}
+      />
     {/each}
   </div>
-
   <button
     type="button"
-    class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+    class={`inline-flex min-h-8 items-center gap-2 rounded text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${selected === "auto" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+    aria-pressed={selected === "auto"}
     onclick={() => onSelect("auto")}
   >
-    <MagicWand weight="regular" class="h-3.5 w-3.5" />
-    Not sure? Let Pixano detect the format.
+    <MagicWand size={16} weight="regular" aria-hidden="true" />
+    Detect automatically
+    {#if selected === "auto"}<Check size={14} weight="bold" aria-hidden="true" />{/if}
   </button>
-</div>
+</fieldset>

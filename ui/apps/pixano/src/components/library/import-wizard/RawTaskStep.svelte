@@ -8,44 +8,59 @@ License: CECILL-C
   import { ChatsCircle, Images, LinkSimple, VideoCamera } from "phosphor-svelte";
 
   import type { RawTask } from "./layoutPreflight";
-  import { TASK_CARDS } from "./rawSchema";
+  import WizardChoiceCard from "./WizardChoiceCard.svelte";
+  import { WIZARD_LABEL_CLASS } from "./wizardStyles";
 
   interface Props {
+    selected: RawTask;
     onSelect: (task: RawTask) => void;
   }
+  let { selected, onSelect }: Props = $props();
 
-  let { onSelect }: Props = $props();
-
-  const ICONS: Record<RawTask, typeof Images> = {
-    image: Images,
-    video: VideoCamera,
-    image_vqa: ChatsCircle,
-    image_text_entity_linking: LinkSimple,
-  };
+  const choices: {
+    task: RawTask;
+    title: string;
+    description: string;
+    icon: typeof Images;
+  }[] = [
+    {
+      task: "image",
+      title: "Image annotation",
+      description: "Boxes, masks, polygons.",
+      icon: Images,
+    },
+    {
+      task: "video",
+      title: "Video annotation",
+      description: "Object tracks across frames.",
+      icon: VideoCamera,
+    },
+    {
+      task: "image_vqa",
+      title: "Visual Q&A",
+      description: "Image questions and answers.",
+      icon: ChatsCircle,
+    },
+    {
+      task: "image_text_entity_linking",
+      title: "Image–text linking",
+      description: "Link text spans to image regions.",
+      icon: LinkSimple,
+    },
+  ];
 </script>
 
-<div class="px-6 sm:px-7 pb-2 space-y-3">
-  <div class="grid gap-2 sm:grid-cols-2">
-    {#each TASK_CARDS as card (card.task)}
-      {@const Icon = ICONS[card.task]}
-      <button
-        type="button"
-        class="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50"
-        onclick={() => onSelect(card.task)}
-      >
-        <span class="flex items-center gap-2 text-sm font-medium text-foreground">
-          <Icon weight="regular" class="h-5 w-5 shrink-0 text-primary" />
-          {card.title}
-        </span>
-        <span class="mt-1.5 block text-xs leading-relaxed text-muted-foreground">{card.blurb}</span>
-        <pre
-          class="mt-2 overflow-x-auto rounded-lg bg-surface-2 px-2.5 py-2 font-mono text-[10px] leading-relaxed text-muted-foreground">{card.layoutHint}</pre>
-      </button>
+<fieldset class="min-w-0 space-y-2">
+  <legend class={WIZARD_LABEL_CLASS}>Annotation task</legend>
+  <div class="grid grid-cols-2 gap-2">
+    {#each choices as choice (choice.task)}
+      <WizardChoiceCard
+        icon={choice.icon}
+        title={choice.title}
+        description={choice.description}
+        selected={selected === choice.task}
+        onclick={() => onSelect(choice.task)}
+      />
     {/each}
   </div>
-  <p class="text-xs text-muted-foreground">
-    Optional <span class="font-mono">train/ val/ test/</span>
-    folders can wrap either shape. Other data (e.g. plain text corpora) imports via the Advanced spec
-    or the CLI.
-  </p>
-</div>
+</fieldset>

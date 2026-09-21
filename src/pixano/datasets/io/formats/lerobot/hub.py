@@ -35,7 +35,9 @@ def _require_hf_hub():
         return huggingface_hub
     except ImportError:
         raise MetadataError(
-            "Importing from the Hugging Face Hub needs huggingface_hub: pip install pixano[lerobot]"
+            "The Hugging Face Hub client is missing from the Pixano server environment. "
+            "Run `uv sync` in a source checkout or `python -m pip install --upgrade pixano` "
+            "in the server's Python environment, then restart the server."
         ) from None
 
 

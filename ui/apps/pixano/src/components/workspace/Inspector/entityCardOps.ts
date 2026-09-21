@@ -118,7 +118,7 @@ export function handleSetDisplayControl(
  * Save a feature input change to entities or annotations.
  */
 export function saveInputChange(
-  value: string | boolean | number,
+  value: string | boolean | number | Array<string | number | boolean>,
   propertyName: string,
   obj: Item | Entity | Annotation,
   entitiesStore: ReactiveValue<Entity[]>,

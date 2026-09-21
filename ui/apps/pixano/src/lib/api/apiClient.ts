@@ -149,10 +149,11 @@ export async function apiMutate(
       if (acceptedErrorStatuses.includes(response.status)) {
         return;
       }
-      const details = [response.status, response.statusText, await response.text()];
+      const body = await response.text();
+      const details = [response.status, response.statusText, body];
       logApiError(label, details);
       if (throwOnError) {
-        throw new Error(`${label} failed: ${details.join(" ")}`);
+        throw new ApiError(`${label} failed: ${details.join(" ")}`, response.status, body);
       }
     }
   } catch (e) {

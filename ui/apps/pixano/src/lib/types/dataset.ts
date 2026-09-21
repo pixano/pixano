@@ -178,6 +178,8 @@ export class DatasetBrowser implements DatasetBrowserType {
 export interface FieldInfo {
   type: string;
   collection: boolean;
+  required?: boolean;
+  default?: unknown;
 }
 export interface DS_Schema {
   base_schema: BaseSchema;
@@ -244,7 +246,7 @@ export type LoadedImagesPerView = Record<string, LoadedImage[]>;
 export interface ItemFeature {
   name: string;
   dtype: string;
-  value: number | string | boolean | DatasetStat;
+  value: number | string | boolean | Array<string | number | boolean> | DatasetStat;
   required?: boolean;
 }
 

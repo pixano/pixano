@@ -5,14 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 export type CurrentItemSaveStatus = "idle" | "saving" | "failed";
-export type CurrentItemSaveGuardMode = "armed" | "bypassed";
 export type CurrentItemSaveResult = { ok: boolean };
 
 export interface CurrentItemSaveState {
   isDirty: boolean;
   status: CurrentItemSaveStatus;
   errorMessage: string | null;
-  guardMode: CurrentItemSaveGuardMode;
   activeRequestId: number | null;
 }
 
@@ -20,10 +18,8 @@ export interface CurrentItemSaveCoordinatorController {
   readonly value: CurrentItemSaveState;
   syncDirty: (isDirty: boolean) => void;
   requestSave: () => Promise<CurrentItemSaveResult>;
-  beginDiscardBypass: () => void;
-  endDiscardBypass: () => void;
   setSaveFailed: (message?: string, requestId?: number | null) => void;
-  setSaveSucceeded: (requestId?: number | null) => void;
+  setSaveSucceeded: (requestId?: number | null, isDirty?: boolean) => void;
   resetForItemChange: () => void;
 }
 
@@ -34,7 +30,6 @@ export function createInitialCurrentItemSaveState(): CurrentItemSaveState {
     isDirty: false,
     status: "idle",
     errorMessage: null,
-    guardMode: "armed",
     activeRequestId: null,
   };
 }
@@ -67,7 +62,6 @@ export function createCurrentItemSaveCoordinatorController(
       commit({
         ...state,
         isDirty,
-        guardMode: isDirty ? state.guardMode : "armed",
       });
       return;
     }
@@ -78,7 +72,6 @@ export function createCurrentItemSaveCoordinatorController(
         isDirty: false,
         status: "idle",
         errorMessage: null,
-        guardMode: "armed",
         activeRequestId: null,
       });
       return;
@@ -91,19 +84,16 @@ export function createCurrentItemSaveCoordinatorController(
   }
 
   function requestSave(): Promise<CurrentItemSaveResult> {
+    if (pendingRequest) return pendingRequest.promise;
+
     if (!state.isDirty) {
       commit({
         ...state,
         status: "idle",
         errorMessage: null,
-        guardMode: "armed",
         activeRequestId: null,
       });
       return Promise.resolve({ ok: true });
-    }
-
-    if (pendingRequest) {
-      return pendingRequest.promise;
     }
 
     const requestId = nextRequestId++;
@@ -123,56 +113,39 @@ export function createCurrentItemSaveCoordinatorController(
       ...state,
       status: "saving",
       errorMessage: null,
-      guardMode: "armed",
       activeRequestId: requestId,
     });
 
     return promise;
   }
 
-  function beginDiscardBypass() {
-    commit({
-      ...state,
-      guardMode: "bypassed",
-    });
-  }
-
-  function endDiscardBypass() {
-    commit({
-      ...state,
-      guardMode: "armed",
-    });
-  }
-
   function setSaveFailed(message = DEFAULT_SAVE_ERROR_MESSAGE, requestId = state.activeRequestId) {
     if (requestId == null) return;
-    if (pendingRequest && pendingRequest.id !== requestId) return;
+    if (pendingRequest?.id !== requestId || state.activeRequestId !== requestId) return;
 
     commit({
       ...state,
       status: "failed",
       errorMessage: message,
-      guardMode: "armed",
       activeRequestId: null,
     });
 
     resolvePending({ ok: false }, requestId);
   }
 
-  function setSaveSucceeded(requestId = state.activeRequestId) {
+  function setSaveSucceeded(requestId = state.activeRequestId, isDirty = false) {
     if (requestId == null) return;
-    if (pendingRequest && pendingRequest.id !== requestId) return;
+    if (pendingRequest?.id !== requestId || state.activeRequestId !== requestId) return;
 
     commit({
       ...state,
-      isDirty: false,
+      isDirty,
       status: "idle",
       errorMessage: null,
-      guardMode: "armed",
       activeRequestId: null,
     });
 
-    resolvePending({ ok: true }, requestId);
+    resolvePending({ ok: !isDirty }, requestId);
   }
 
   function resetForItemChange() {
@@ -186,8 +159,6 @@ export function createCurrentItemSaveCoordinatorController(
     },
     syncDirty,
     requestSave,
-    beginDiscardBypass,
-    endDiscardBypass,
     setSaveFailed,
     setSaveSucceeded,
     resetForItemChange,

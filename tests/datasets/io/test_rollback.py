@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.io import ImportSpec, import_dataset
 from pixano.datasets.io.engine import ImportEngine
 from pixano.datasets.io.errors import JobStateError
+from pixano.datasets.utils.errors import DatasetBusyError
 from tests.datasets.io._toy_importer import ToyImporter
 
 
@@ -53,7 +56,7 @@ class TestRollback:
         assert _counts(Dataset(result.dataset_path)) == before
         assert not (result.dataset_path / "imports" / "addjob.manifest.json").exists()
 
-    def test_rollback_after_concurrent_edit_takes_namespace_path(self, base_dataset):
+    def test_rollback_after_concurrent_edit_refuses_without_changes(self, base_dataset):
         tmp_path, before = base_dataset
         result = import_dataset(
             tmp_path / "src2",
@@ -69,11 +72,107 @@ class TestRollback:
 
         dataset.add_records({"records": Record(id="user_manual_row")}, check_integrity="none")
 
-        removed = ImportEngine(tmp_path / "data").rollback(result.dataset_path, "addjob2")
-        assert removed and removed["records"] == 7  # surgical path: namespace delete
+        versions = {name: dataset.open_table(name).version for name in dataset.info.tables}
+        with pytest.raises(JobStateError, match="changed since"):
+            ImportEngine(tmp_path / "data").rollback(result.dataset_path, "addjob2")
         after = Dataset(result.dataset_path)
-        assert after.open_table("records").count_rows() == before["records"] + 1
+        assert after.open_table("records").count_rows() == before["records"] + 8
         assert after.get_data("records", ids="user_manual_row") is not None  # edit survives
+        assert {name: after.open_table(name).version for name in after.info.tables} == versions
+        assert result.manifest_path.exists()
+
+    @pytest.mark.parametrize("invalid_anchor", ["legacy", "missing_table", "missing_version", "later_version"])
+    def test_prevalidates_every_table_before_restoring(self, base_dataset, invalid_anchor):
+        tmp_path, _ = base_dataset
+        result = import_dataset(
+            tmp_path / "src2",
+            tmp_path / "data",
+            _spec("ds", "add", "added"),
+            importer=ToyImporter(num_records=3),
+            job_id="guarded",
+        )
+        manifest = json.loads(result.manifest_path.read_text())
+        dataset = Dataset(result.dataset_path)
+        if invalid_anchor == "legacy":
+            manifest.pop("rollback_safe")
+        elif invalid_anchor == "missing_table":
+            dataset._db_connection.drop_table("images")
+        elif invalid_anchor == "missing_version":
+            manifest["pre_import_versions"]["images"] = 999999
+        else:
+            # Even a raw Lance write that bypasses Pixano's token is detected.
+            dataset.open_table("images").delete("id = 'missing'")
+        result.manifest_path.write_text(json.dumps(manifest))
+        names = [name for name in dataset.info.tables if name != "images" or invalid_anchor != "missing_table"]
+        versions = {name: Dataset(result.dataset_path).open_table(name).version for name in names}
+        with pytest.raises(JobStateError):
+            ImportEngine(tmp_path / "data").rollback(result.dataset_path, "guarded")
+        assert {name: Dataset(result.dataset_path).open_table(name).version for name in names} == versions
+
+    def test_rollback_holds_lock_through_restore(self, base_dataset, monkeypatch):
+        from lancedb.table import LanceTable
+
+        from pixano.schemas import Record
+
+        tmp_path, _ = base_dataset
+        result = import_dataset(
+            tmp_path / "src2",
+            tmp_path / "data",
+            _spec("ds", "add", "added"),
+            importer=ToyImporter(num_records=3),
+            job_id="locked",
+        )
+        writer = Dataset(result.dataset_path)
+        original_restore = LanceTable.restore
+        attempted = []
+
+        def restore_with_competing_writer(table, *args, **kwargs):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(writer.add_records, {"records": Record(id="later")}, check_integrity="none")
+                with pytest.raises(DatasetBusyError):
+                    future.result(timeout=10)
+            attempted.append(True)
+            return original_restore(table, *args, **kwargs)
+
+        monkeypatch.setattr(LanceTable, "restore", restore_with_competing_writer)
+        ImportEngine(tmp_path / "data").rollback(result.dataset_path, "locked")
+        assert attempted
+        assert Dataset(result.dataset_path).get_data("records", ids="later") is None
+
+    def test_resumed_add_cannot_rollback_edits_during_interruption(self, base_dataset):
+        from pixano.schemas import Record
+
+        tmp_path, _ = base_dataset
+        cursors = []
+
+        class Interrupted(ToyImporter):
+            def iter_batches(self, source, spec, plan, cursor=None):
+                for bundle in super().iter_batches(source, spec, plan, cursor):
+                    yield bundle
+                    raise RuntimeError("interrupted")
+
+        with pytest.raises(RuntimeError, match="interrupted"):
+            import_dataset(
+                tmp_path / "src2",
+                tmp_path / "data",
+                _spec("ds", "add", "added"),
+                importer=Interrupted(num_records=6, batch_size=2),
+                job_id="resumed",
+                engine=ImportEngine(tmp_path / "data", flush_rows=1, checkpoint=lambda c, n: cursors.append(c)),
+            )
+        dataset = Dataset(tmp_path / "data" / "library" / "ds")
+        dataset.add_records({"records": Record(id="during_gap")}, check_integrity="none")
+        result = import_dataset(
+            tmp_path / "src2",
+            tmp_path / "data",
+            _spec("ds", "add", "added"),
+            importer=ToyImporter(num_records=6, batch_size=2),
+            job_id="resumed",
+            resume_cursor=cursors[-1],
+        )
+        with pytest.raises(JobStateError, match="resumed"):
+            ImportEngine(tmp_path / "data").rollback(result.dataset_path, "resumed")
+        assert Dataset(result.dataset_path).get_data("records", ids="during_gap") is not None
 
     def test_rollback_without_manifest_is_a_typed_error(self, base_dataset):
         tmp_path, _ = base_dataset

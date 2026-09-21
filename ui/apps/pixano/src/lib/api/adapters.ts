@@ -13,6 +13,7 @@ import type {
   PaginatedResponse,
   RecordComponentResponse,
   RecordResponse,
+  SchemaFieldDescriptor,
   SFrameResponse,
   TextResponse,
 } from "./restTypes";
@@ -61,13 +62,15 @@ function mapWorkspace(workspace: string): DatasetInfo["workspace"] {
   return workspace as DatasetInfo["workspace"];
 }
 
-function toFields(fields: Record<string, { type?: string; collection?: boolean }> = {}) {
+function toFields(fields: Record<string, SchemaFieldDescriptor> = {}) {
   return Object.fromEntries(
     Object.entries(fields).map(([name, field]) => [
       name,
       {
         type: field.type ?? "str",
         collection: field.collection ?? false,
+        required: field.required ?? false,
+        default: field.default,
       },
     ]),
   );
@@ -75,7 +78,7 @@ function toFields(fields: Record<string, { type?: string; collection?: boolean }
 
 function toDatasetSchemaEntry(
   base: string | undefined,
-  fields: Record<string, { type?: string; collection?: boolean }> = {},
+  fields: Record<string, SchemaFieldDescriptor> = {},
   schemaName?: string,
 ): DS_Schema {
   return {

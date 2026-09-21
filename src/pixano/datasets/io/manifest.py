@@ -8,8 +8,8 @@
 
 Written **before** the first write of an add-mode import (spec §8). Records
 the spec/plan fingerprints, the id namespace prefix, and each table's Lance
-version before (and, at finalize, after) the import — enough to roll back via
-guarded version-restore or namespace-prefix deletion without enumerating ids.
+version before (and, at finalize, after) the import. Rollback requires an
+exclusive uninterrupted import and no subsequent dataset mutations.
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ class ImportManifest(BaseModel):
     importer_version: str = ""
     pre_import_versions: dict[str, int] = Field(default_factory=dict)
     post_import_versions: dict[str, int] | None = None
+    rollback_safe: bool = False
+    post_mutation_token: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def save(self, path: Path) -> None:

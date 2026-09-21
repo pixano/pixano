@@ -5,8 +5,10 @@
 # =====================================
 
 import json
+import threading
 from pathlib import Path
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -87,20 +89,32 @@ class TestFormatsCommand:
         assert "pixano_jsonl" in result.output
 
 
-class TestMigrateJsonlCommand:
-    def test_migrates_v1_tree(self, tmp_path: Path):
-        v1_root = Path(__file__).parents[1] / "assets" / "jsonl_v1" / "canonical"
-        destination = tmp_path / "migrated"
-        result = runner.invoke(app, ["data", "migrate-jsonl", str(v1_root), str(destination)])
-        assert result.exit_code == 0, result.output
-        assert "Migrated 1 line(s)" in result.output
+@pytest.mark.parametrize("command", ["optimize", "fix-creation-dates"])
+def test_dataset_maintenance_reports_busy_writer(tmp_path: Path, command: str):
+    from pixano.datasets.locking import dataset_mutation_lock
 
-        lines = (destination / "train" / "metadata.jsonl").read_text().splitlines()
-        assert json.loads(lines[0])["$pixano"] == "jsonl/2"
-        migrated = json.loads(lines[1])
-        assert migrated["attrs"]["status"] == "validated"
-        kinds = [a["kind"] for a in migrated["entities"][0]["annotations"]]
-        assert kinds == ["bbox", "keypoints"]
+    data_dir, source = _prepare_source(tmp_path)
+    assert runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"]).exit_code == 0
+    acquired, release = threading.Event(), threading.Event()
+
+    def writer():
+        with dataset_mutation_lock(data_dir / "library" / "voc_like"):
+            acquired.set()
+            release.wait(30)
+
+    thread = threading.Thread(target=writer)
+    thread.start()
+    try:
+        assert acquired.wait(10)
+        args = ["data", command, str(data_dir)]
+        if command == "optimize":
+            args.append("voc_like")
+        result = runner.invoke(app, args)
+        assert result.exit_code == 1, result.output
+        assert "being modified" in result.output and "retry" in result.output
+    finally:
+        release.set()
+        thread.join(timeout=10)
 
 
 class TestJobsCommand:
@@ -112,6 +126,8 @@ class TestJobsCommand:
 
         jobs = JobStore.for_data_dir(data_dir).list_jobs()
         assert jobs and jobs[0].status == "done" and jobs[0].kind == "import"
+        assert jobs[0].spec["__source"] == str(source.resolve())
+        assert jobs[0].cursor
 
         listing = runner.invoke(app, ["data", "jobs", str(data_dir), "list"])
         assert listing.exit_code == 0 and "done" in listing.output
@@ -130,6 +146,84 @@ class TestJobsCommand:
 
 
 class TestJobsCliRecovery:
+    def test_cli_failure_boot_and_resume_preserve_all_records(self, tmp_path: Path, monkeypatch):
+        import PIL.Image
+
+        from pixano.datasets.io.engine import ImportEngine, state_dir
+        from pixano.datasets.io.formats.pixano_jsonl.importer import PixanoJsonlImporter
+        from pixano.datasets.io.jobs import JobStore, boot_recover
+
+        source = tmp_path / "source"
+        source.mkdir()
+        for name in ("a", "b", "c"):
+            PIL.Image.new("RGB", (8, 8), "red").save(source / f"{name}.png")
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+        original_batches = PixanoJsonlImporter.iter_batches
+
+        def fail_after_first(self, source, spec, plan, cursor=None):
+            for ordinal, bundle in enumerate(original_batches(self, source, spec, plan, cursor)):
+                if ordinal == 1:
+                    raise RuntimeError("interrupted CLI import")
+                yield bundle
+
+        class SmallFlushEngine(ImportEngine):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, flush_rows=1, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(PixanoJsonlImporter, "iter_batches", fail_after_first)
+            patch.setattr("pixano.datasets.io.engine.ImportEngine", SmallFlushEngine)
+            imported = runner.invoke(app, ["data", "import", str(data_dir), "source", "--name", "ds", "--yes"])
+        assert imported.exit_code == 1, imported.output
+        store = JobStore.for_data_dir(data_dir)
+        job = store.list_jobs()[0]
+        assert job.status == "error" and job.cursor
+        assert job.spec["__source"] == str(source.resolve())
+        staged = state_dir(data_dir) / "staging" / f"ds-{job.id}"
+        assert Dataset(staged).open_table("records").count_rows() == 1
+        boot_recover(data_dir)
+        assert staged.exists()
+
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        resumed = runner.invoke(app, ["data", "jobs", str(data_dir), "resume", job.id])
+        assert resumed.exit_code == 0, resumed.output
+        assert store.get_job(job.id).status == "done"
+        dataset = Dataset(data_dir / "library" / "ds")
+        assert dataset.open_table("records").count_rows() == 3
+        assert dataset.open_table("images").count_rows() == 3
+        record_ids = {row.id for row in dataset.get_data("records")}
+        assert {row.record_id for row in dataset.get_data("images")} == record_ids
+
+    @pytest.mark.parametrize("python_option", ["--importer", "--info-py"])
+    def test_file_based_python_import_is_restart_only(self, tmp_path: Path, monkeypatch, python_option):
+        from pixano.datasets.io.engine import ImportEngine
+        from pixano.datasets.io.jobs import JobStore
+        from pixano.datasets.io.spec import ImportSpec, resolve_dataset_info
+        from tests.datasets.io._toy_importer import ToyImporter
+
+        data_dir, source = _prepare_source(tmp_path)
+        monkeypatch.setattr("pixano.cli._schema_loader.load_importer", lambda _: ToyImporter(num_records=2))
+        info = resolve_dataset_info(ImportSpec.model_validate(SPECS["voc_like"]))
+        monkeypatch.setattr("pixano.cli._schema_loader.load_info", lambda _: info)
+
+        def fail_at_finalize(self, *args, **kwargs):
+            raise RuntimeError("finalization interrupted")
+
+        monkeypatch.setattr(ImportEngine, "_finalize", fail_at_finalize)
+        imported = runner.invoke(
+            app, ["data", "import", str(data_dir), str(source), "--yes", python_option, "custom.py:Custom"]
+        )
+        assert imported.exit_code == 1, imported.output
+        job = JobStore.for_data_dir(data_dir).list_jobs()[0]
+        assert job.status == "error" and not job.cursor
+        resumed = runner.invoke(app, ["data", "jobs", str(data_dir), "resume", job.id])
+        assert resumed.exit_code == 1
+        assert "no committed checkpoint" in resumed.output
+
     def test_jobs_command_marks_dead_running_jobs_interrupted(self, tmp_path: Path):
         data_dir, source = _prepare_source(tmp_path)
         from pixano.datasets.io.jobs import JobStore

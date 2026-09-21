@@ -536,7 +536,7 @@ License: CECILL-C
 
   function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
-    handleFormSubmit();
+    if (isFormValid) handleFormSubmit();
   }
 
   //set specific header text for different kind of shape

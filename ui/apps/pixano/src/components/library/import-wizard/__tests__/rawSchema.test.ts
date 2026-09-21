@@ -8,6 +8,9 @@ import { describe, expect, it } from "vitest";
 
 import { preflightLayout } from "../layoutPreflight";
 import {
+  ANNOTATION_CHOICES,
+  ANNOTATION_TOOLS,
+  annotationsForTask,
   buildRawSchemaSpec,
   DEFAULT_ANNOTATIONS,
   DEFAULT_RAW_FIELDS,
@@ -15,6 +18,8 @@ import {
   parseTypedValue,
   validateAttrRows,
   validateRawFields,
+  validateRawSchemaFields,
+  validateRawVideoOptions,
   type AttrRow,
   type RawFields,
 } from "../rawSchema";
@@ -44,6 +49,12 @@ describe("parseTypedValue", () => {
     expect(parseTypedValue("float", "abc")).toBeUndefined();
     expect(parseTypedValue("bool", "true")).toBe(true);
     expect(parseTypedValue("bool", "yes")).toBeUndefined();
+  });
+
+  it("rejects defaults that would overflow JSON or lose integer precision", () => {
+    expect(parseTypedValue("int", "9007199254740993")).toBeUndefined();
+    expect(parseTypedValue("float", "9".repeat(400))).toBeUndefined();
+    expect(parseTypedListValue("int", "0, 9007199254740993")).toBeUndefined();
   });
 });
 
@@ -75,6 +86,69 @@ describe("validateAttrRows", () => {
     expect(validateAttrRows([attr({ name: "Bad" })], "Record attribute")).toContain(
       "Record attribute",
     );
+  });
+
+  it("ignores a hidden default when the attribute is required", () => {
+    expect(
+      validateAttrRows([attr({ type: "int", required: true, defaultValue: "old text" })]),
+    ).toBe("");
+  });
+});
+
+describe("annotation choices", () => {
+  it("only offers supported tools with readable labels", () => {
+    for (const task of Object.keys(ANNOTATION_CHOICES) as Array<keyof typeof ANNOTATION_CHOICES>) {
+      for (const slot of [...ANNOTATION_CHOICES[task], ...DEFAULT_ANNOTATIONS[task]]) {
+        expect(["keypoint", "classification", "relation"]).not.toContain(slot);
+        expect(ANNOTATION_TOOLS[slot]?.label).toBeTruthy();
+      }
+    }
+    expect(ANNOTATION_TOOLS.bbox.label).toBe("Bounding boxes");
+    expect(ANNOTATION_TOOLS.multi_path.label).toBe("Polygons & lines");
+  });
+
+  it("restores required tools and removes unsupported or task-inappropriate selections", () => {
+    expect(
+      annotationsForTask("video", ["bbox", "keypoint", "relation", "classification", "message"]),
+    ).toEqual(["bbox", "tracklet"]);
+    expect(annotationsForTask("image_vqa", [])).toEqual(["message"]);
+    expect(annotationsForTask("image_text_entity_linking", ["mask"])).toEqual([
+      "text_span",
+      "mask",
+    ]);
+    expect(annotationsForTask("image", ["bbox", "bbox", "tracklet"])).toEqual(["bbox"]);
+  });
+});
+
+describe("validateRawVideoOptions", () => {
+  it("requires a finite positive frame rate and positive integer cap", () => {
+    for (const maxFrames of ["0", "-1", "1.2", "9007199254740993"]) {
+      expect(validateRawVideoOptions(raw({ task: "video", maxFrames }))).toContain(
+        "positive whole number",
+      );
+    }
+    for (const fps of ["0", "-1", "Infinity", "oops"]) {
+      expect(validateRawVideoOptions(raw({ task: "video", fps }))).toContain("positive number");
+    }
+    expect(validateRawVideoOptions(raw({ task: "video", maxFrames: "20", fps: "12.5" }))).toBe("");
+  });
+
+  it("ignores hidden extraction settings in reference mode but retains folder-frame validation", () => {
+    const reference = raw({
+      task: "video",
+      framesMode: "reference",
+      maxFrames: "invalid",
+      fps: "invalid",
+    });
+    expect(validateRawVideoOptions(reference)).toBe("");
+    reference.layout = preflightLayout(entries("clip_a/f0.jpg", "clip_b/f0.jpg"), "video");
+    expect(validateRawVideoOptions(reference)).toContain("Max frames");
+  });
+
+  it("keeps source validation separate from annotation validation", () => {
+    const settings = raw({ task: "video", maxFrames: "invalid" });
+    expect(validateRawSchemaFields(settings)).toBe("");
+    expect(validateRawFields(settings)).toContain("Max frames");
   });
 });
 
@@ -160,6 +234,18 @@ describe("buildRawSchemaSpec", () => {
   it("always re-adds locked slots (a non-empty list replaces the preset backend-side)", () => {
     const spec = buildRawSchemaSpec(raw({ task: "image_vqa", annotations: ["bbox"] }));
     expect(spec.schema.annotations).toEqual(["message", "bbox"]);
+    expect(
+      buildRawSchemaSpec(raw({ task: "video", annotations: ["bbox"] })).schema.annotations,
+    ).toEqual(["bbox", "tracklet"]);
+    expect(buildRawSchemaSpec(raw({ task: "video", annotations: [] })).schema.annotations).toEqual([
+      "tracklet",
+    ]);
+  });
+
+  it("never serializes unsupported wizard tools from old form state", () => {
+    const selected = ["bbox", "keypoint", "classification", "relation"];
+    expect(buildRawSchemaSpec(raw({ annotations: selected })).schema.annotations).toEqual(["bbox"]);
+    expect(selected).toEqual(["bbox", "keypoint", "classification", "relation"]);
   });
 
   it("emits record and entity attrs, with list defaults as arrays", () => {

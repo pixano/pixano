@@ -103,11 +103,13 @@ class TestMutationSuite:
         assert "entities" in finding.suggestion  # did-you-mean
         assert finding.samples[0].line == 1
 
-    def test_v1_dialect_points_at_migrate_jsonl(self, tmp_path: Path):
+    def test_v1_dialect_requires_jsonl_v2(self, tmp_path: Path):
         v1_line = {"status": "validated", "views": {"image": "a.jpg"}, "objects": []}
         report = _report_for(v1_line, tmp_path=tmp_path)
         assert "v1_format" in report.findings
-        assert "migrate-jsonl" in report.findings["v1_format"].suggestion
+        assert report.findings["v1_format"].severity == "error"
+        assert "not supported" in report.findings["v1_format"].suggestion
+        assert "JSONL v2" in report.findings["v1_format"].suggestion
 
     def test_unknown_annotation_kind(self, tmp_path: Path):
         line = {"views": {"image": "a.jpg"}, "entities": [{"annotations": [{"kind": "boxx", "coords": [0, 0, 1, 1]}]}]}

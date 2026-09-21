@@ -22,97 +22,106 @@ Pixano 0.8 imports and exports datasets as plain files — no Python required. T
 
 ## Import from the app
 
-The Library's **Import** button (on an empty Library, **Import dataset**) opens the import wizard.
-It walks through **Type**, **Source**, **Review** and **Import**; choosing **Raw media** adds a
-**Task** step. The [Quickstart](/pixano/getting_started/quickstart/) runs through it once with a
-folder of images; this section lists every choice it offers.
+The Library's **Import** button (on an empty Library, **Import dataset**) opens a large
+**Setup** screen, followed by **Review**. Starting an import hands it over to the background
+jobs tray. On a wide screen, **Source** is on the left and **Annotation** is on the right,
+each with its own scroll area. On a smaller screen the panels stack. You can choose the data
+and its annotation settings together.
 
-### What to import
+### Source: format and files
 
-The first step asks **What are you importing?**
+Choose the format from the icon cards in Source:
 
-- **Raw media** — "Start annotating from scratch: folders of images, videos, or text files — you
-  define the schema." The next step asks for the task (below).
-- **Pixano dataset** — "A JSONL v2 export or any source with a dataset.yaml — schema and
-  annotations included." This is the format described under
-  [Import from the command line](#import-from-the-command-line).
-- **MS COCO** — "COCO instances JSON + images; categories become entity attributes."
-- **LeRobot** — "Robotics episodes (v2.1 / v3), from a local folder or the Hugging Face hub."
-- **Not sure? Let Pixano detect the format.** — the same auto-detection the command line uses.
+- **Raw media** — folders of images, videos, or text files to annotate from scratch.
+- **Pixano dataset** — a JSONL v2 export or a source with a `dataset.yaml`, including its schema
+  and annotations. See [Import from the command line](#import-from-the-command-line).
+- **MS COCO** — COCO instances JSON and images; categories become object attributes.
+- **LeRobot** — robotics episodes (v2.1 / v3), from a local folder or the Hugging Face Hub.
+- **Auto-detect** — let Pixano identify the source format during analysis.
 
-A card is greyed out when its format cannot import in your installation: COCO and LeRobot need
-their extras (see [Other import formats](#other-import-formats)).
+Raw-media layouts can be wrapped in optional `train/`, `val/` and `test/` folders; `training`,
+`valid`, `validation` and `testing` are recognised too. Supported media extensions are images `.jpg`
+`.jpeg` `.png` `.bmp` `.gif` `.tiff` `.webp`, videos `.mp4` `.avi` `.mov` `.mkv` `.webm` `.flv`
+`.vob`, and text `.txt` `.md`. Other files are skipped and counted.
 
-### Raw media: pick a task
+Choose a folder on your computer to upload it. Raw media is checked against the selected
+layout first, and only matching media files are uploaded. The detected layout shows the
+records, views, splits, and skipped files. LeRobot also accepts a Hugging Face dataset id such
+as `org/name`, with optional episode selection and a cap on frames per episode. **Episodes to
+import** accepts `0:4` (episodes 0 through 4) or `1,3,7` (only episodes 1, 3, and 7). Leave it
+blank to import all episodes.
 
-"What are you building? This sets the views, workspace, and annotation types." Each card shows
-the folder shapes it accepts:
+Source settings also include:
+
+- An optional dataset name, which defaults to the folder name.
+- **Overwrite existing dataset** checkbox. Unchecked, duplicate dataset names are rejected.
+  To append records, use `--mode add` or `{"mode": "add"}` in Advanced JSON.
+- For raw video files, frame extraction with an optional frame cap and sampling FPS, or clip
+  references for metadata-only imports. Folders of pre-extracted frames import directly,
+  with an optional frame cap and FPS for timestamps.
+
+### Annotation: task, tools, and attributes
+
+For Raw media, task icon cards appear at the top of Annotation, above the tools and attributes:
 
 - **Image annotation** — a folder of images (one view), or one subfolder per view (`left/`,
   `right/`, …) where files with the same name pair up.
-- **Video annotation** — video files, or one folder of frame images per video, or one subfolder
+- **Video annotation** — video files, one folder of frame images per video, or one subfolder
   per view.
-- **Visual Q&A** — a folder of images; the questions are added in Pixano.
+- **Visual Q&A** — a folder of images; questions and answers are added in Pixano.
 - **Image–text linking** — an `image/` folder and a `text/` folder whose file names pair up.
 
-Optional `train/`, `val/` and `test/` folders can wrap any of these shapes; `training`, `valid`,
-`validation` and `testing` are recognised too. Files that count as media: images `.jpg` `.jpeg`
-`.png` `.bmp` `.gif` `.tiff` `.webp`, videos `.mp4` `.avi` `.mov` `.mkv` `.webm` `.flv` `.vob`,
-text `.txt` `.md`. Anything else is skipped and counted.
+LeRobot shows a fixed **Video annotation** task summary. In Source, the raw-media task summary's
+**Change** link takes you to the task cards in Annotation without clearing the current setup.
 
-The task also pre-selects the annotation types — **Image annotation**: `bbox`, `mask`,
-`keypoint`, `classification`; **Video annotation**: `bbox`, `mask`, `keypoint`, `tracklet`;
-**Visual Q&A**: `message`; **Image–text linking**: `text_span`, `bbox`, `mask`. The next step
-offers more chips per task — Image and Video annotation also list `multi_path` and `relation`,
-Visual Q&A also lists `bbox`, `mask` and `classification`, Image–text linking also lists
-`classification` — and lets you change the selection, except `message` and `text_span`, which
-their tasks require.
+For Raw media and LeRobot, the Annotation panel lets you choose the tools you will use and
+define attributes for the objects you annotate. Tools use labels such as **Bounding boxes**,
+**Masks**, and **Polygons & lines**. Keypoints, relations, and
+classification are not offered by this setup form.
 
-### The Source step
+A compact **Included** summary lists the required task features: **Object tracks** for video
+and LeRobot, **Questions & answers** for Visual Q&A, and **Text spans** for image–text linking.
+These are included automatically; only optional tools need a choice.
 
-"Pick the data on your computer and describe it."
+Object attributes appear in a compact table with a name and type on each row. They can hold
+String, Integer, Float, or Boolean values. Expand a row's **Options** for
+**Multiple values**, **Required when annotating**, and **Default value**. For example, you can add
+a required `category` and a true/false `occluded` attribute. **Record attributes (optional)** for
+raw media and **Episode attributes
+(optional)** for LeRobot are collapsed initially. These metadata attributes cannot be required
+because their values are filled in after import.
 
-- **Choose a folder on your computer…** — the only way to provide files. For Raw media the
-  folder is checked against the task's layout before anything is sent, and only the matching
-  media files are uploaded. The **Detected layout** panel shows the records, views and splits
-  found, and how many non-matching files were skipped. LeRobot opens on a Hugging Face dataset
-  id such as `org/name` instead, with **Episodes (optional)** (`0:4` or `1,3,7`) and
-  **Max frames / episode (optional)**; **Upload a folder** switches back to the folder picker.
-  With auto-detection the folder picker is the default and **Hugging Face hub** switches to an
-  id.
-- **Dataset name (optional)** — defaults to the folder name.
-- **If the dataset exists** — **Fail (create only)** or **Overwrite it**. There is no *add*
-  option here: to add records to an existing dataset, use `--mode add` on the command line (or
-  `{"mode": "add"}` in the Advanced spec).
-- **Video handling** (Raw media with video files) — **Extract frames (annotate)**, with an
-  optional cap on frames per video and a sampling FPS, or **Reference clips (metadata only)**,
-  which cannot be played or annotated in this release. Folders of pre-extracted frames import as
-  frame sequences directly, with the same cap on frames per video and an optional FPS for the
-  frame timestamps.
-- **Record attributes** and **Object attributes** (Raw media) — extra fields on every record or
-  on every annotated object: a `snake_case` name, a type (`str`, `int`, `float`, `bool`), an
-  optional list flag, a default value, and for object attributes a `required` flag.
-- **Annotations** (Raw media) — "Annotation types you plan to create in Pixano."
-- **Advanced spec (JSON)** — "Optional overrides merged over the fields above — the same keys as
-  dataset.yaml (dataset, schema with any attributes, ids, options, media)." A `schema` key
-  there replaces the one built by the form. Media storage (`media`) is only reachable here.
+LeRobot camera views, episode metadata, and state/action vectors are discovered from the source
+and retained alongside your custom attributes. The record names `episode_index`, `tasks`, and
+`length` are reserved for episode metadata. Pixano and COCO imports retain the schemas and
+annotations supplied by their source; the tool choices for new annotations do not remove
+annotation types from imported schemas.
 
-**Analyze** becomes available once a source is selected and the form is valid.
+**Advanced JSON** is collapsed by default. It accepts optional overrides using the same keys
+as `dataset.yaml`, including `dataset`, `schema`, `ids`, `options`, and `media`. Media storage
+can be configured there.
 
-### Review, import, and background jobs
+**Review import** becomes available once a source is selected and the setup is valid. It checks the
+data and opens Review without starting the import.
 
-**Review the plan** — "Analysis runs without writing anything — this is the schema the import
-creates." It shows the record count, the media size, the detected format, the splits, the
+### Review and import jobs
+
+**Review** shows the record count, media size, detected format, splits, and the
 schema (views, record, entity, annotations), warnings and errors with their locations, and a
 few sample records. **Start import** stays disabled while the plan has errors.
 
-**Importing…** — "The dataset is built atomically on the server — you can keep using the app."
-**Run in background** closes the dialog; the import continues in a tray at the bottom right,
-where it can still be cancelled. When it finishes, **Dataset imported** lists the rows written
-per table and **Done** returns to the Library, where the new card appears — there is no
-automatic redirect. The uploaded copy of your folder is deleted once the import can no longer
-be resumed. Imports started from the app are the same jobs the command line lists under
-[Jobs](#jobs).
+**Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
+options, and annotation settings preserved. Adjust the setup and analyze again to review the
+updated plan; you do not need to upload the same folder again.
+
+**Start import** closes the wizard as soon as the server accepts the job. The import runs
+in the background, and the tray at the bottom right shows its progress, completion, or error.
+You can keep using the app and cancel an active import from the tray. When the import finishes,
+the Library refreshes with the new dataset card. If the start request fails, the wizard stays
+on **Review** with the error so you can retry.
+
+The uploaded copy of your folder is deleted once the import can no longer be resumed.
+Imports started from the app are the same jobs the command line lists under [Jobs](#jobs).
 
 ### App or command line?
 
@@ -355,12 +364,13 @@ Mixed datasets are legal: local images embed while, say, LeRobot episode videos 
 ## Other import formats
 
 Besides JSONL v2, Pixano ships importers for two common formats. They are detected
-automatically, so the `import` command is the same — only the extra dependency differs.
+automatically, so the `import` command is the same. LeRobot and Hugging Face Hub
+support are included in the default installation; COCO needs an extra dependency.
 
 | Format | Install | Notes |
 |--------|---------|-------|
 | **COCO** | `pip install "pixano[coco]"` | Object-detection style JSON. Streamed in two passes, so very large annotation files work. |
-| **LeRobot** (v2.1 and v3) | `pip install "pixano[lerobot]"` | Robotics episodes become annotatable frame sequences; `action` and `observation.state` land in a `timeseries` table. |
+| **LeRobot** (v2.1 and v3) | Included with `pixano` | Robotics episodes become annotatable frame sequences; `action` and `observation.state` land in a `timeseries` table. |
 
 LeRobot datasets can be pulled straight from the Hugging Face Hub, downloading only the
 episodes you ask for:
@@ -509,21 +519,14 @@ pixano data jobs /path/to/data_dir rollback <job_id>
 Two properties make this safe to interrupt:
 
 - **Resume** picks up from the last committed checkpoint rather than starting over.
-- **Rollback** undoes a completed import. For `--mode add` it removes only the rows that job
-  added, leaving edits made in the meantime intact.
+- **Rollback** restores the versions from before a completed `--mode add` import, provided
+  the dataset has not changed since. It refuses to run after later edits or a resumed import.
+  Writes to the same dataset are rejected with a retryable conflict while an add import or
+  rollback is in progress.
 
-Cancellation is cooperative: the job stops at its next checkpoint, so the dataset is never left
-half-written.
-
-## Migrating from Pixano 0.7
-
-The 0.7 `metadata.jsonl` dialect (bare `image:` keys, `objects` lists, `{path, fps}` globs, nested VQA messages) is converted by:
-
-```sh
-pixano data migrate-jsonl ./old_dataset ./migrated_dataset
-```
-
-Everything 0.7 silently guessed — bbox normalization from value ranges, mention-less text spans — is converted with an explicit **needs attention** note so you can verify it. Media files are not copied; point the import at the original media or copy them over.
+Cancellation is cooperative: a running job stops at its next checkpoint. Create and overwrite
+imports discard their staged dataset; an add import keeps writes that already committed.
+Imports started with a custom Python importer or schema file are restart-only.
 
 <Callout type="warning" title="Custom Python builders">
 

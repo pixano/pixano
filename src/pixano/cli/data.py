@@ -25,7 +25,6 @@ from pixano.datasets.io import (
     export_dataset,
     import_dataset,
 )
-from pixano.datasets.io.formats.pixano_jsonl.migrate import migrate_tree
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.utils import to_snake_case
 
@@ -155,6 +154,7 @@ def import_command(
 
     source_path = Path(source)
     if source_path.exists():
+        source_path = source_path.resolve()
         resolved_source = str(source_path)
     elif source.startswith("hub://") or is_hub_id(source):
         resolved_source = source if source.startswith("hub://") else f"hub://{source}"
@@ -201,12 +201,30 @@ def import_command(
     if not yes and not typer.confirm("Proceed with the import?", default=True):
         raise typer.Exit(code=0)
 
+    from pixano.datasets.io.engine import ImportEngine
     from pixano.datasets.io.jobs import JobSink, JobStore
 
     store = JobStore.for_data_dir(data_dir)
-    job = store.create_job("import", dataset=spec.dataset.name, spec=spec.model_dump(mode="json", by_alias=True))
+    job = store.create_job(
+        "import",
+        dataset=spec.dataset.name,
+        spec={**spec.model_dump(mode="json", by_alias=True), "__source": resolved_source},
+    )
     store.update_job(job.id, status="running")
     sink = TqdmSink()
+    job_sink = JobSink(store, job.id)
+    # File-based Python escape hatches cannot be reconstructed by the job
+    # worker safely. They stay restart-only; registered formats can resume.
+    checkpoint = (
+        (lambda cursor, counts: store.update_job(job.id, cursor=dict(cursor)))
+        if importer_spec is None and info_py is None
+        else None
+    )
+    engine = ImportEngine(
+        data_dir,
+        checkpoint=checkpoint,
+        cancel_check=lambda: store.cancel_requested(job.id),
+    )
     try:
         result = import_dataset(
             resolved_source,
@@ -215,18 +233,26 @@ def import_command(
             plan=plan,
             info=info,
             importer=importer,
-            sinks=[sink, JobSink(store, job.id)],
+            sinks=[sink, job_sink],
+            engine=engine,
+            job_id=job.id,
         )
-    except PixanoDataError as error:
-        store.update_job(job.id, status="error", error={"type": type(error).__name__, "message": str(error)})
+    except Exception as error:
+        store.update_job(
+            job.id,
+            status="cancelled" if store.cancel_requested(job.id) else "error",
+            error={"type": type(error).__name__, "message": str(error)},
+        )
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None
     finally:
         sink.close()
+        job_sink.close()
     store.update_job(
         job.id,
         status="done",
         dataset=result.dataset_id,
+        manifest_path=str(result.manifest_path or ""),
         progress={"phase": "done", "table_counts": result.table_counts, "final": True},
     )
     records = result.table_counts.get("records", 0)
@@ -283,16 +309,24 @@ def optimize_dataset(
 ) -> None:
     """Index the standard filter columns and compact a dataset (fast filtered pagination)."""
     from pixano.datasets import Dataset
+    from pixano.datasets.locking import dataset_mutation_lock, mark_dataset_mutated
+    from pixano.datasets.utils.errors import DatasetBusyError
 
     target = data_dir / "library" / dataset
     if not target.is_dir():
         typer.echo(f"Error: no dataset at '{target}'.", err=True)
         raise typer.Exit(code=1)
-    ds = Dataset(target)
-    ds.create_scalar_indexes()
-    for name in ds.info.tables:
-        ds.open_table(name).optimize()
-    Dataset.invalidate_caches(ds.info.id)
+    try:
+        with dataset_mutation_lock(target):
+            ds = Dataset(target)
+            mark_dataset_mutated(target)
+            ds.create_scalar_indexes()
+            for name in ds.info.tables:
+                ds.open_table(name).optimize()
+            Dataset.invalidate_caches(ds.info.id)
+    except DatasetBusyError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(code=1) from None
     typer.echo(f"Dataset '{dataset}' optimized ({len(ds.info.tables)} table(s) indexed and compacted).")
 
 
@@ -348,6 +382,10 @@ def jobs_command(
         runner.join()
         final = store.get_job(job_id)
         typer.echo(f"Job '{job_id}' -> {final.status if final else 'unknown'}.")
+        if final is None or final.status != "done":
+            if final is not None and final.error.get("message"):
+                typer.echo(f"Error: {final.error['message']}", err=True)
+            raise typer.Exit(code=1)
         return
     if action == "rollback":
         from pixano.datasets.io.jobs import JobRunner
@@ -363,22 +401,6 @@ def jobs_command(
     raise typer.BadParameter(f"Unknown action '{action}' (list, show, cancel, resume, rollback).")
 
 
-@data_app.command(name="migrate-jsonl")
-def migrate_jsonl_command(
-    source: Path = typer.Argument(..., exists=True, file_okay=False, help="v1 source directory (split folders)."),
-    destination: Optional[Path] = typer.Argument(None, help="Output directory (default: <source>_migrated)."),
-) -> None:
-    """Convert 0.7.x metadata.jsonl files to the JSONL v2 format (best effort)."""
-    target = destination if destination is not None else source.with_name(source.name + "_migrated")
-    report = migrate_tree(source, target)
-    typer.echo(f"Migrated {report.lines_migrated} line(s) across {report.files_migrated} file(s) to '{target}'.")
-    typer.echo("Media files are not copied: point the import at the original directory structure or copy them over.")
-    for note in report.needs_attention[:20]:
-        typer.echo(f"- Needs attention: {note}", err=True)
-    if report.needs_attention:
-        typer.echo(f"{len(report.needs_attention)} line(s) need manual attention.", err=True)
-
-
 @data_app.command(name="fix-creation-dates")
 def fix_creation_dates(
     data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Path to data directory."),
@@ -387,6 +409,8 @@ def fix_creation_dates(
     import os
 
     from pixano.datasets.dataset import Dataset
+    from pixano.datasets.locking import dataset_mutation_lock, mark_dataset_mutated
+    from pixano.datasets.utils.errors import DatasetBusyError
 
     library_dir = data_dir / "library"
     if not library_dir.is_dir():
@@ -399,55 +423,57 @@ def fix_creation_dates(
     for info_json in sorted(library_dir.glob("*/info.json")):
         dataset_name = info_json.parent.name
         try:
-            raw_info = json.loads(info_json.read_text(encoding="utf-8"))
-            if raw_info.get("creation_date", ""):
-                skipped += 1
-                continue
+            with dataset_mutation_lock(info_json.parent):
+                raw_info = json.loads(info_json.read_text(encoding="utf-8"))
+                if raw_info.get("creation_date", ""):
+                    skipped += 1
+                    continue
 
-            dataset = Dataset(info_json.parent)
-            if "records" not in dataset.info.tables:
-                typer.echo(f"Skipping '{dataset_name}': no records table.", err=True)
-                skipped += 1
-                continue
+                dataset = Dataset(info_json.parent)
+                if "records" not in dataset.info.tables:
+                    typer.echo(f"Skipping '{dataset_name}': no records table.", err=True)
+                    skipped += 1
+                    continue
 
-            table = dataset.open_table("records")
-            if table.count_rows() == 0:
-                typer.echo(f"Skipping '{dataset_name}': records table is empty.")
-                skipped += 1
-                continue
+                table = dataset.open_table("records")
+                if table.count_rows() == 0:
+                    typer.echo(f"Skipping '{dataset_name}': records table is empty.")
+                    skipped += 1
+                    continue
 
-            oldest_rows = dataset.get_data(
-                table_name="records",
-                sortcol="created_at",
-                order="asc",
-                limit=1,
-            )
-            if not oldest_rows:
-                typer.echo(f"Skipping '{dataset_name}': no records found.")
-                skipped += 1
-                continue
+                oldest_rows = dataset.get_data(
+                    table_name="records",
+                    sortcol="created_at",
+                    order="asc",
+                    limit=1,
+                )
+                if not oldest_rows:
+                    typer.echo(f"Skipping '{dataset_name}': no records found.")
+                    skipped += 1
+                    continue
 
-            # Naive timestamps were stamped in local time; astimezone converts
-            # (rather than relabels) them to UTC.
-            oldest_date = oldest_rows[0].created_at.astimezone(datetime.timezone.utc)
+                # Naive timestamps were stamped in local time; astimezone converts
+                # (rather than relabels) them to UTC.
+                oldest_date = oldest_rows[0].created_at.astimezone(datetime.timezone.utc)
 
-            backup_path = info_json.with_suffix(".json.bak")
-            shutil.copy2(info_json, backup_path)
+                mark_dataset_mutated(info_json.parent)
+                backup_path = info_json.with_suffix(".json.bak")
+                shutil.copy2(info_json, backup_path)
 
-            # Patch the RAW json: a DatasetInfo round-trip would silently drop
-            # unknown keys and undeserializable views (the read-time tolerance
-            # must not become a write-time deletion). Same pattern as
-            # Dataset._upgrade_spec_version.
-            raw_info["creation_date"] = oldest_date.isoformat()
-            tmp_file = info_json.with_suffix(".json.tmp")
-            tmp_file.write_text(json.dumps(raw_info, indent=4), encoding="utf-8")
-            os.replace(tmp_file, info_json)
-            typer.echo(
-                f"Updated '{dataset_name}': creation_date = {raw_info['creation_date']} "
-                f"(backup saved to {backup_path.name})"
-            )
-            updated += 1
+                # Patch the raw JSON without dropping unknown keys or schemas.
+                raw_info["creation_date"] = oldest_date.isoformat()
+                tmp_file = info_json.with_suffix(".json.tmp")
+                tmp_file.write_text(json.dumps(raw_info, indent=4), encoding="utf-8")
+                os.replace(tmp_file, info_json)
+                typer.echo(
+                    f"Updated '{dataset_name}': creation_date = {raw_info['creation_date']} "
+                    f"(backup saved to {backup_path.name})"
+                )
+                updated += 1
 
+        except DatasetBusyError as error:
+            typer.echo(f"Error processing '{dataset_name}': {error}", err=True)
+            raise typer.Exit(code=1) from None
         except Exception as e:
             typer.echo(f"Error processing '{dataset_name}': {e}", err=True)
             skipped += 1

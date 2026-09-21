@@ -13,14 +13,14 @@ License: CECILL-C
   let { steps, current }: Props = $props();
 </script>
 
-<div class="flex items-center gap-2 px-6 pb-3 sm:px-7" aria-label="Wizard progress">
+<div class="flex items-center gap-3" aria-label="Wizard progress">
   {#each steps as step, index (step)}
     {#if index > 0}
-      <div class={`h-px flex-1 ${index <= current ? "bg-primary/50" : "bg-border"}`}></div>
+      <div class={`h-px w-8 ${index <= current ? "bg-primary/50" : "bg-border"}`}></div>
     {/if}
-    <div class="flex items-center gap-1.5">
+    <div class="flex items-center gap-2" aria-current={index === current ? "step" : undefined}>
       <span
-        class={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ${
+        class={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
           index < current
             ? "bg-primary text-primary-foreground"
             : index === current
@@ -31,7 +31,7 @@ License: CECILL-C
         {index + 1}
       </span>
       <span
-        class={`text-[10px] font-medium uppercase tracking-widest ${
+        class={`text-sm font-medium ${
           index === current ? "text-foreground" : "text-muted-foreground"
         }`}
       >

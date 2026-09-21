@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { reactiveRawStore, reactiveStore } from "./reactiveStore.svelte";
+import { createSaveQueue } from "./saveQueue";
 import type { ResourceMutation } from "$lib/api/resourcePayloads";
 import type { InteractiveImageSegmenter } from "$lib/models";
 import { panTool, type SelectionTool } from "$lib/tools";
@@ -63,7 +64,15 @@ export const brushSettings = reactiveStore({ brushRadius: 20, lazyRadius: 10, fr
 export const selectedKeypointsTemplate = reactiveStore<KeypointAnnotation["template_id"] | null>(
   null,
 );
-export const saveData = reactiveStore<ResourceMutation[]>([]);
+const pendingSaveData = reactiveRawStore<ResourceMutation[]>([]);
+export const workspaceSaveQueue = createSaveQueue((mutations) => {
+  pendingSaveData.value = mutations;
+});
+export const saveData = {
+  get value() {
+    return pendingSaveData.value;
+  },
+};
 
 export const canSave = {
   get value() {

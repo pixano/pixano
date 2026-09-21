@@ -13,6 +13,7 @@ License: CECILL-C
   import type { NumberFeature, TextFeature } from "$lib/types/workspace";
   import { Annotation, Entity, Input, Item, type FeaturesValues } from "$lib/ui";
   import { addNewInput, mapFeatureList } from "$lib/utils/featureMapping";
+  import { validateEntityForm } from "$lib/utils/featureValidationSchemas";
 
   interface Props {
     feature: TextFeature | NumberFeature;
@@ -28,6 +29,13 @@ License: CECILL-C
   let { feature, isEditing, saveInputChange, featureClass }: Props = $props();
 
   let isSaved = $state(false);
+  let error = $state("");
+  $effect(() => {
+    if (!isEditing) {
+      error = "";
+      isSaved = false;
+    }
+  });
 
   const onTextInputChange = (
     value: string,
@@ -35,11 +43,15 @@ License: CECILL-C
     obj: Item | Entity | Annotation,
   ) => {
     let formattedValue: string | number = value;
-    if (feature.type === "int") {
-      formattedValue = Math.round(Number(value));
-    } else if (feature.type === "float") {
-      formattedValue = Number(value);
+    if (feature.type === "int" || feature.type === "float") {
+      formattedValue = value.trim() === "" ? "" : Number(value);
     }
+
+    const validation = validateEntityForm([feature], {
+      [feature.sch.name]: { [feature.name]: formattedValue },
+    });
+    error = validation.errors[0] ?? "";
+    if (!validation.success) return;
 
     if (typeof formattedValue === "string") {
       addNewInput(itemMetas.value?.featuresList, featureClass, propertyName, formattedValue);
@@ -84,3 +96,6 @@ License: CECILL-C
     </span>
   {/if}
 </div>
+{#if error}
+  <p class="text-xs text-destructive" role="alert">{error}</p>
+{/if}

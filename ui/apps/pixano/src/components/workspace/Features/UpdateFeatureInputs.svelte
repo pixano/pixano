@@ -9,8 +9,10 @@ License: CECILL-C
   import { Checkbox } from "bits-ui";
   import { Check } from "phosphor-svelte";
 
+  import CollectionFeatureInput from "./CollectionFeatureInput.svelte";
   import ListFeature from "./SelectFeatureInput.svelte";
   import FeatureTextInput from "./TextFeatureInput.svelte";
+  import type { FeatureValues } from "$lib/types/shapeTypes";
   import type { Feature } from "$lib/types/workspace";
   import { Annotation, Entity, Item, type FeaturesValues } from "$lib/ui";
 
@@ -19,7 +21,7 @@ License: CECILL-C
     featureClass: keyof FeaturesValues;
     isEditing: boolean;
     saveInputChange: (
-      value: string | boolean | number,
+      value: FeatureValues,
       propertyName: string,
       obj: Item | Entity | Annotation,
     ) => void;
@@ -60,6 +62,21 @@ License: CECILL-C
           handleInputChange={(value, name) => saveInputChange(value, name, feature.obj)}
           listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
         />
+      {/if}
+      {#if feature.type === "collection"}
+        {#if isEditing}
+          <CollectionFeatureInput
+            value={feature.value}
+            itemType={feature.itemType}
+            label={feature.label}
+            required={feature.required}
+            onCommit={(value) => saveInputChange(value, feature.name, feature.obj)}
+          />
+        {:else}
+          <span class="truncate" title={JSON.stringify(feature.value)}>
+            {JSON.stringify(feature.value)}
+          </span>
+        {/if}
       {/if}
       {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
         <FeatureTextInput {featureClass} {feature} {saveInputChange} {isEditing} />

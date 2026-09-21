@@ -149,7 +149,7 @@ ds = Dataset(Path("./my_data/library/my_dataset"))
 records = ds.get_records(limit=20, skip=0)
 
 # Read a specific table
-images = ds.get_data("image", limit=5)
+images = ds.get_data("images", limit=5)
 
 # Add annotations
 ds.add_data("bboxes", [bbox1, bbox2])

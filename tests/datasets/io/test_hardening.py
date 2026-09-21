@@ -8,6 +8,8 @@
 
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,7 @@ from pixano.datasets.io import ImportSpec, import_dataset
 from pixano.datasets.io.engine import ImportEngine, replay_journals, state_dir
 from pixano.datasets.io.errors import UnsupportedStorageError
 from pixano.datasets.io.jobs import JobStore, boot_recover
+from pixano.datasets.locking import dataset_mutation_lock
 from tests.datasets.io._toy_importer import ToyImporter
 
 
@@ -109,6 +112,60 @@ class TestWindowsRenameRetry:
 
 
 class TestBootGc:
+    @pytest.mark.parametrize("replay_failure", ["busy", "rename_error", "invalid_journal"])
+    def test_failed_or_busy_replay_preserves_both_swap_candidates(self, tmp_path, monkeypatch, replay_failure):
+        import pixano.datasets.io.engine as engine_module
+
+        target, staged, trash, journal = TestOverwriteSwapCrashCells()._seed(tmp_path)
+        os.rename(target, trash)
+        journal_contents = journal.read_text()
+        if replay_failure == "busy":
+            with dataset_mutation_lock(target), ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(boot_recover, tmp_path / "data").result(timeout=10)
+        elif replay_failure == "rename_error":
+            with monkeypatch.context() as patch:
+
+                def cannot_promote(*args):
+                    raise PermissionError("promotion temporarily unavailable")
+
+                patch.setattr(engine_module.os, "rename", cannot_promote)
+                boot_recover(tmp_path / "data")
+        else:
+            journal.write_text("{incomplete journal")
+            boot_recover(tmp_path / "data")
+
+        assert not target.exists()
+        assert Dataset(trash).open_table("records").count_rows() == 3
+        assert Dataset(staged).open_table("records").count_rows() == 5
+        assert journal.exists()
+
+        journal.write_text(journal_contents)
+        boot_recover(tmp_path / "data")
+        assert Dataset(target).open_table("records").count_rows() == 5
+        assert not staged.exists() and not trash.exists() and not journal.exists()
+
+    def test_python_build_without_job_row_survives_concurrent_boot_gc(self, tmp_path):
+        data_dir = tmp_path / "data"
+        staged = state_dir(data_dir) / "staging" / "ds-python-job"
+        checkpoints = []
+
+        def run_gc_between_flushes(cursor, counts):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                pool.submit(boot_recover, data_dir).result(timeout=10)
+            assert staged.is_dir()
+            checkpoints.append(cursor)
+
+        result = import_dataset(
+            tmp_path / "source",
+            data_dir,
+            _spec("ds"),
+            importer=ToyImporter(num_records=6, batch_size=2),
+            engine=ImportEngine(data_dir, flush_rows=1, checkpoint=run_gc_between_flushes),
+            job_id="python-job",
+        )
+        assert checkpoints
+        assert Dataset(result.dataset_path).open_table("records").count_rows() == 6
+
     def test_trash_and_dead_staging_reclaimed_resumable_kept(self, tmp_path: Path):
         data_dir = tmp_path / "data"
         (data_dir / "library").mkdir(parents=True)
@@ -128,6 +185,48 @@ class TestBootGc:
         assert not (state / "trash").exists()
         assert not (state / "staging" / "ds-deadjob").exists()  # no job -> reclaimed
         assert (state / "staging" / f"ds-{live.id}").exists()  # interrupted -> resumable, kept
+
+    def test_old_recoverable_jobs_survive_more_than_1000_completed_jobs(self, tmp_path: Path):
+        store = JobStore.for_data_dir(tmp_path)
+        state = state_dir(tmp_path)
+        upload = state / "uploads" / "old-session"
+        upload.mkdir(parents=True)
+        os.utime(upload, (time.time() - 48 * 3600,) * 2)
+        failed = store.create_job("import", spec={"__source": str(upload)})
+        store.update_job(failed.id, status="error", cursor={"ordinal": 1})
+        dead = store.create_job("import")
+        store.update_job(dead.id, status="running", pid=999_999_999)
+        for job in (failed, dead):
+            (state / "staging" / f"ds-{job.id}").mkdir(parents=True)
+        for _ in range(1001):
+            completed = store.create_job("import")
+            store.update_job(completed.id, status="done")
+
+        assert dead.id in boot_recover(tmp_path)
+        assert store.get_job(dead.id).status == "interrupted"
+        for job in (failed, dead):
+            assert (state / "staging" / f"ds-{job.id}").is_dir()
+        assert upload.is_dir()
+
+    @pytest.mark.parametrize("status", ["done", "cancelled", "rolled_back", "error"])
+    def test_non_resumable_staging_is_removed(self, tmp_path: Path, status: str):
+        store = JobStore.for_data_dir(tmp_path)
+        job = store.create_job("import")
+        store.update_job(job.id, status=status)
+        staged = state_dir(tmp_path) / "staging" / f"ds-{job.id}"
+        staged.mkdir(parents=True)
+        boot_recover(tmp_path)
+        assert not staged.exists()
+
+    def test_orphan_uploads_have_a_24_hour_grace_period(self, tmp_path: Path):
+        uploads = state_dir(tmp_path) / "uploads"
+        fresh, expired = uploads / "fresh", uploads / "expired"
+        fresh.mkdir(parents=True)
+        expired.mkdir()
+        os.utime(expired, (time.time() - 48 * 3600,) * 2)
+        boot_recover(tmp_path)
+        assert fresh.is_dir()
+        assert not expired.exists()
 
 
 class TestTypedStorageGuards:

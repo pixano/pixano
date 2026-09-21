@@ -45,7 +45,7 @@ class DatasetImporterTestCase:
         assert actual == self.expected_counts, f"table counts differ: {actual} != {self.expected_counts}"
 
     def assert_id_prefix(self, dataset: Dataset, ns8_prefix: str, table: str = "records") -> None:
-        """Assert derived ids carry the namespace prefix (rollback contract, spec §8)."""
+        """Assert derived ids carry the deterministic source namespace prefix."""
         ids = dataset.open_table(table).search().select(["id"]).limit(5).to_list()
         for row in ids:
             assert row["id"].startswith(f"{ns8_prefix}-"), f"id '{row['id']}' lacks prefix '{ns8_prefix}-'"
