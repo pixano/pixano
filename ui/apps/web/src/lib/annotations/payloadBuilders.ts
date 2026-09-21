@@ -42,6 +42,25 @@ export interface PayloadBuilder<G = unknown> {
   ): ResourceMutation[];
   /** Update body for an existing annotation whose geometry changed. */
   buildUpdate(ctx: BuildContext, annotation: LocalAnnotation<G>): Record<string, unknown>;
+  /**
+   * The geometry this annotation must take when it moves onto `entity`, or
+   * `null` to refuse the move. Only for a kind whose payload derives from its
+   * entity; every other kind carries geometry independent of it and leaves
+   * this out.
+   *
+   * Exists for one real case: a classification's labels *are* the entity's
+   * label, so moving it to another entity without rewriting them would leave a
+   * chip asserting a class the annotation no longer belongs to.
+   *
+   * It lives on the builder, not on the call that opens the entity form: a
+   * reassignment is reachable from the widget toolbar, a keyboard shortcut and
+   * a kind's own gesture, and a rule only one of those entry points knew about
+   * saved the stale class from the two others.
+   */
+  geometryForEntity?(
+    annotation: LocalAnnotation<G>,
+    entity: Record<string, unknown> | undefined,
+  ): G | null;
 }
 
 const PAYLOAD_BUILDERS: ReadonlyMap<AnnotationKind, PayloadBuilder> = new Map<
@@ -295,23 +314,30 @@ export interface EntityReassignContext extends ReassignEntityContext {
 export interface BeginEntityReassignOptions {
   /** Header shown above the entity form, e.g. "box entity". */
   label: string;
-  /**
-   * Last chance for a kind to bring its own payload in line with the chosen
-   * entity. **Applies its change by writing to the collection**, and returns
-   * whether the reassignment should go ahead — `false` aborts it.
-   *
-   * The write is the mechanism, not the return value: `reassignEntity` re-reads
-   * the live annotation to build its update body, precisely so that body
-   * carries the entity id just assigned. A hook that built a new annotation and
-   * returned it would type-check and silently do nothing, so this signature
-   * says "decide" rather than pretending to say "transform".
-   *
-   * Exists for one real case: a classification's labels *are* the entity's
-   * label, so moving it to another entity without rewriting them would leave a
-   * chip asserting a class the annotation no longer belongs to. Every other
-   * kind carries geometry independent of its entity and needs nothing here.
-   */
-  syncPayloadToEntity?: (annotation: LocalAnnotation, choice: PendingEntityChoice) => boolean;
+}
+
+/**
+ * Bring the annotation's payload in line with the chosen entity, for a kind
+ * that declares `geometryForEntity`. Returns whether the move should go ahead.
+ *
+ * **Applies the change by writing to the collection.** The write is the
+ * mechanism: `reassignEntity` re-reads the live annotation to build its update
+ * body, precisely so that body carries the entity id just assigned.
+ */
+function alignPayloadWithEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: EntityReassignContext,
+): boolean {
+  const builder = payloadBuilderFor(annotation.kind);
+  if (!builder.geometryForEntity) return true;
+
+  const entity = choice.mode === "new" ? choice.entityFields : ctx.findEntity(choice.entityId);
+  const geometry = builder.geometryForEntity(annotation, entity);
+  if (geometry === null) return false;
+
+  ctx.collection.setGeometry(annotation.id, geometry);
+  return true;
 }
 
 /**
@@ -338,7 +364,7 @@ export function beginEntityReassign(
   ctx.beginPendingAnnotation({
     label: opts.label,
     onConfirm: (choice) => {
-      if (opts.syncPayloadToEntity && !opts.syncPayloadToEntity(annotation, choice)) return;
+      if (!alignPayloadWithEntity(annotation, choice, ctx)) return;
       reassignEntity(annotation, choice, ctx);
     },
     // Nothing to undo: unlike creation there is no draft waiting on this

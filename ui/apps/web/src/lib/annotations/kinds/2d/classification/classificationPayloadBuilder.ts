@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { ClassificationGeometry } from "./classificationTypes.js";
+import { HUMAN_CONFIDENCE, type ClassificationGeometry } from "./classificationTypes.js";
 import type { LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
 import {
   buildCreateMutations,
@@ -15,7 +15,7 @@ import {
   type BuildContext,
   type EntityCreateChoice,
 } from "$lib/annotations/buildPayloads.js";
-import type { ResourceMutation } from "$lib/annotations/types.js";
+import { pickEntityLabel, type ResourceMutation } from "$lib/annotations/types.js";
 
 /** Backend table this kind writes to. Owned here — nothing else declares it. */
 export const CLASSIFICATION_RESOURCE = "classifications";
@@ -104,5 +104,17 @@ export const classificationPayloadBuilder = {
     annotation: LocalAnnotation<ClassificationGeometry>,
   ): Record<string, unknown> {
     return buildClassificationBody(ctx, annotation.id, annotation.entityId, annotation.geometry);
+  },
+
+  /**
+   * The class name *is* the entity's label, so a classification moved onto
+   * another entity takes that entity's label. Refuses the move — `null` — when
+   * the entity yields no usable class, since a classification asserting nothing
+   * is a row no one can act on.
+   */
+  geometryForEntity(_annotation, entity): ClassificationGeometry | null {
+    const label = pickEntityLabel(entity).trim();
+    if (!label) return null;
+    return { labels: [label], confidences: [HUMAN_CONFIDENCE] };
   },
 };
