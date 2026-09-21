@@ -41,6 +41,18 @@ interface GridPoint {
   y: number;
 }
 
+/** Bit of `MouseEvent.buttons` set while the primary button is held. */
+const PRIMARY_BUTTON_MASK = 1;
+
+/**
+ * Whether the event says the primary button is up. An event that carries no
+ * button state — a synthetic one — says nothing, and is not taken as a release.
+ */
+function primaryButtonReleased(event?: Konva.KonvaEventObject<MouseEvent>): boolean {
+  const buttons: unknown = event?.evt?.buttons;
+  return typeof buttons === "number" && (buttons & PRIMARY_BUTTON_MASK) === 0;
+}
+
 /**
  * Freehand mask painting. Pointer down starts a stroke on an offscreen raster
  * sized to the image grid, move extends it, up encodes the raster to RLE and
@@ -89,10 +101,15 @@ class DrawMaskHandler implements ToolHandler2D {
     this._refreshCursor();
   }
 
-  onPointerMove(): void {
+  onPointerMove(event?: Konva.KonvaEventObject<MouseEvent>): void {
     // The cursor tracks the pointer whether or not a stroke is in progress —
     // seeing the brush size *before* committing to a stroke is the point of it.
     this._refreshCursor();
+    // Konva listens on the stage's own element, so a button released outside
+    // the canvas never reaches `onPointerUp`. Without this the stroke stayed
+    // armed: coming back drew a straight band from where the pointer had left
+    // to where it re-entered, then kept painting with no button held.
+    if (this.painting && primaryButtonReleased(event)) this.onPointerUp();
     if (!this.painting || !this.canvas) return;
     const frame = this._frame();
     if (!frame) return;
