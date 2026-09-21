@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 
 from pixano.__version__ import __version__
+from pixano.api.jobs.events import EventBroker
 from pixano.api.routers import include_api_routers
 from pixano.api.settings import Settings
 
@@ -23,7 +24,13 @@ from pixano.api.settings import Settings
 # Media blobs are already compressed (JPEG/PNG/MP4); running them through gzip
 # burns request-thread CPU (which competes with background import jobs) for no
 # size win. Bypass by route shape — cheaper than sniffing content types.
-_GZIP_BYPASS_SUFFIXES = ("/blob", "/preview")
+#
+# Event streams are here for a different reason: gzip buffers, and a buffered
+# stream is not a stream. The browser never sees its first byte, so the
+# connection sits in CONNECTING and nothing ever arrives. It only shows with a
+# real client — curl sends no Accept-Encoding by default, so the middleware
+# passes it through untouched and the stream appears to work.
+_GZIP_BYPASS_SUFFIXES = ("/blob", "/preview", "/events")
 _GZIP_BYPASS_SEGMENTS = ("/sframes/batch", "/media/")
 
 
@@ -40,16 +47,30 @@ class SelectiveGZipMiddleware(GZipMiddleware):
         await super().__call__(scope, receive, send)
 
 
-@asynccontextmanager
-async def _widen_threadpool(_: FastAPI):
-    """Raise the sync-endpoint threadpool above anyio's 40-token default.
+def _lifespan(settings: Settings):
+    """Build the app lifespan: a wider threadpool, and the job event listener."""
 
-    Every data endpoint is sync `def`, and blob/frame downloads hold a token
-    for their full duration — a gallery plus a video workspace plus job polling
-    exhausts 40 while a background import competes for CPU.
-    """
-    anyio.to_thread.current_default_thread_limiter().total_tokens = 100
-    yield
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Raise the sync-endpoint threadpool above anyio's 40-token default.
+
+        Every data endpoint is sync `def`, and blob/frame downloads hold a token
+        for their full duration — a gallery plus a video workspace plus job polling
+        exhausts 40 while a background import competes for CPU.
+
+        The job event listener starts here so that one connection serves every open
+        stream, instead of one per browser tab.
+        """
+        anyio.to_thread.current_default_thread_limiter().total_tokens = 100
+        broker = EventBroker(settings.database_url)
+        broker.start()
+        app.state.job_events = broker
+        try:
+            yield
+        finally:
+            await broker.stop()
+
+    return lifespan
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
@@ -62,7 +83,12 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         The Pixano app.
     """
     # Create app
-    app = FastAPI(title="Pixano", version=__version__, default_response_class=JSONResponse, lifespan=_widen_threadpool)
+    app = FastAPI(
+        title="Pixano",
+        version=__version__,
+        default_response_class=JSONResponse,
+        lifespan=_lifespan(settings),
+    )
 
     # Boot recovery: replay interrupted staging journals and mark orphaned
     # import jobs as interrupted (spec §8/§9).

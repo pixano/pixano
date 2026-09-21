@@ -74,6 +74,43 @@ The worker package lives in `packages/pixano-worker/` with its own lockfile and 
 uv run --directory packages/pixano-worker pytest
 ```
 
+### Tests that need a live PostgreSQL
+
+Both suites have tests that talk to the job queue. They read `PIXANO_TEST_DATABASE_URL` and
+skip when it is unset — never `PIXANO_DATABASE_URL`, so that running the tests cannot wipe
+the database of a running stack. The worker suite goes further and refuses outright a database
+that already holds jobs, since it drops the schema.
+
+**Point the two suites at two different databases.** The worker suite drops and recreates the
+`pixano_jobs` schema around each test, while the application suite needs it to exist — the
+worker owns the schema and the application never creates it. Sharing one database means
+whichever suite runs second skips everything. CI gives each job its own database for the same
+reason.
+
+```sh
+# Once, against the compose PostgreSQL.
+docker compose exec postgres psql -U pixano -d postgres \
+  -c 'CREATE DATABASE pixano_worker_test' -c 'CREATE DATABASE pixano_api_test'
+
+# The worker suite manages its own schema.
+PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_worker_test \
+  uv run --directory packages/pixano-worker pytest
+
+# The application suite needs the schema installed first, as in production.
+PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_test \
+  uv run --directory packages/pixano-worker python -c \
+  "import os, psycopg; from pixano_worker.schema import ensure_schema; \
+   ensure_schema(psycopg.connect(os.environ['PIXANO_DATABASE_URL']))"
+PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_test \
+  uv run pytest tests/
+```
+
+Changing `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means bumping
+`SCHEMA_VERSION` in the same commit. There is no migration engine on purpose: until the
+database holds something irreplaceable, wiping and recreating is the migration strategy, and
+the version marker is what turns a stale schema into a clear refusal at startup instead of a
+failure far from its cause. See [docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
+
 For frontend development, start the standalone SvelteKit dev server from the pnpm workspace:
 
 ```sh

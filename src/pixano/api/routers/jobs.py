@@ -6,12 +6,15 @@
 
 """REST endpoints for the processing job queue."""
 
-from typing import Annotated, Any
+import asyncio
+from typing import Annotated, Any, AsyncIterator
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from pixano.api import jobs
+from pixano.api.jobs.events import EventBroker, read_since
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
 
@@ -132,6 +135,117 @@ def list_jobs(
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return [JobResponse.of(record) for record in records]
+
+
+# Les types d'événements qu'un flux peut porter. Un nom inconnu est refusé plutôt qu'ignoré :
+# `types=stat` produirait sinon un flux muet, et le silence est le pire des diagnostics.
+_EVENT_TYPES = frozenset({"state", "progress"})
+
+# Un commentaire SSE périodique, pour que les intermédiaires réseau ne referment pas un flux
+# qu'ils croient inactif, et pour détecter un client parti.
+_KEEPALIVE_S = 15.0
+
+
+def _last_event_id(request: Request) -> int:
+    """Où reprendre, d'après ce que le client dit avoir déjà reçu."""
+    raw = request.headers.get("last-event-id", "")
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+async def _stream(
+    broker: EventBroker,
+    database_url: str,
+    job_id: str | None,
+    types: frozenset[str] | None,
+    after_id: int,
+) -> AsyncIterator[str]:
+    """Serve one stream: catch up, then follow.
+
+    The order matters. Subscribing *before* reading the backlog is what closes the gap: an
+    event committed between the two is held in the queue rather than lost, and the identifier
+    filter drops the duplicate.
+    """
+    async with broker.subscribe(job_id, types) as subscriber:
+        delivered = after_id
+        if job_id is not None:
+            for event in await read_since(database_url, job_id, after_id):
+                delivered = event.id
+                yield event.to_sse()
+
+        while True:
+            try:
+                event = await asyncio.wait_for(subscriber.queue.get(), timeout=_KEEPALIVE_S)
+            except asyncio.TimeoutError:
+                # asyncio.TimeoutError n'est le TimeoutError natif qu'à partir de Python 3.11,
+                # et le projet supporte 3.10 : capturer le natif y laisserait l'exception
+                # remonter et tuerait le flux au premier silence.
+                yield ": keepalive\n\n"
+                continue
+            if event.id <= delivered:
+                continue
+            delivered = event.id
+            yield event.to_sse()
+
+
+def _events_response(request: Request, settings: Settings, job_id: str | None, types) -> StreamingResponse:
+    """Build an SSE response, or refuse when no queue is configured."""
+    broker: EventBroker | None = getattr(request.app.state, "job_events", None)
+    if broker is None or not broker.enabled or settings.database_url is None:
+        raise HTTPException(status_code=503, detail="aucune file de jobs configurée")
+    return StreamingResponse(
+        _stream(broker, settings.database_url, job_id, types, _last_event_id(request)),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _requested_types(types: str | None) -> frozenset[str] | None:
+    """Read the `types` filter, or None for everything.
+
+    A job emits one progress event per chunk, so a client watching every job at once should
+    say what it wants. Asking for nothing means asking for all of it.
+    """
+    if types is None:
+        return None
+    wanted = {name.strip() for name in types.split(",") if name.strip()}
+    unknown = wanted - _EVENT_TYPES
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"types d'événements inconnus : {', '.join(sorted(unknown))} — "
+            f"valeurs acceptées : {', '.join(sorted(_EVENT_TYPES))}",
+        )
+    return frozenset(wanted) if wanted else None
+
+
+@router.get("/events", operation_id="stream_job_events")
+async def stream_job_events(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    types: Annotated[str | None, Query(description="Comma-separated event types to keep.")] = None,
+) -> StreamingResponse:
+    """Follow every job at once.
+
+    A list view wants state changes to stay current, and progress only if it draws bars; both
+    are one connection, because browsers allow very few concurrent ones per host and a stream
+    per running job would starve the rest of the application.
+    """
+    return _events_response(request, settings, None, _requested_types(types))
+
+
+@router.get("/{job_id}/events", operation_id="stream_one_job_events")
+async def stream_one_job_events(
+    job_id: str, request: Request, settings: Annotated[Settings, Depends(get_settings)]
+) -> StreamingResponse:
+    """Follow one job, progress included.
+
+    A client that reconnects sends `Last-Event-ID` and resumes exactly where it stopped:
+    the missed events are read from the table before the stream goes live.
+    """
+    return _events_response(request, settings, job_id, None)
 
 
 @router.get("/{job_id}", operation_id="get_job")
