@@ -78,6 +78,13 @@ export class SmartSegmentHandler implements ToolHandler2D {
   private busy = false;
   private error: string | null = null;
   private overlay: Konva.Group | null = null;
+  /**
+   * Bumped by every reset. An inference call outlives the state that launched
+   * it — the user can press Escape or pick another tool while it runs — so a
+   * call compares the session it started in with the current one before it
+   * touches anything.
+   */
+  private session = 0;
 
   constructor(
     private readonly ctx: Scene2DContext,
@@ -176,8 +183,12 @@ export class SmartSegmentHandler implements ToolHandler2D {
     this.error = null;
     this._refreshOverlay();
 
+    const session = this.session;
+    const abandoned = () => session !== this.session;
+
     try {
       const models = await this.backend.listModels(MASK_GENERATION_TASK);
+      if (abandoned()) return;
       const model = models[0]?.name;
       if (!model) {
         this.error = "No segmentation model connected";
@@ -193,6 +204,10 @@ export class SmartSegmentHandler implements ToolHandler2D {
           labels: this.prompts.map((p): 0 | 1 => (p.positive ? 1 : 0)),
         },
       });
+      // Cancelled while the model ran: the mask answers prompts that are gone,
+      // and committing it would drop a draft and open the entity form on a user
+      // who has moved on.
+      if (abandoned()) return;
 
       const geometry = this._toGeometry(masks[0]);
       if (!geometry) {
@@ -201,10 +216,15 @@ export class SmartSegmentHandler implements ToolHandler2D {
       }
       this._commit(geometry);
     } catch (cause) {
+      if (abandoned()) return;
       this.error = cause instanceof Error ? cause.message : "Segmentation failed";
     } finally {
-      this.busy = false;
-      this._refreshOverlay();
+      // Nothing to restore once the session is over — a reset already cleared
+      // it, and redrawing here would leave a hint on a tool no longer active.
+      if (!abandoned()) {
+        this.busy = false;
+        this._refreshOverlay();
+      }
     }
   }
 
@@ -299,6 +319,7 @@ export class SmartSegmentHandler implements ToolHandler2D {
   }
 
   private _reset(): void {
+    this.session += 1;
     this.overlay?.destroy();
     this.overlay = null;
     this.prompts = [];
