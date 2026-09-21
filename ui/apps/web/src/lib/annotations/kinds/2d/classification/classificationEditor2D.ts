@@ -6,17 +6,10 @@ License: CECILL-C
 
 import type Konva from "konva";
 
-import {
-  CLASSIFICATION_ID_ATTR,
-  CLASSIFICATION_NODE_NAME,
-  HUMAN_CONFIDENCE,
-  type ClassificationGeometry,
-} from "./classificationTypes.js";
-import type { LocalAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { CLASSIFICATION_ID_ATTR, CLASSIFICATION_NODE_NAME } from "./classificationTypes.js";
 import { beginEntityReassign } from "$lib/annotations/payloadBuilders.js";
 import type { AnnotationEditor2D } from "$lib/annotations/scene/renderer.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-import { pickEntityLabel, type PendingEntityChoice } from "$lib/annotations/types.js";
 
 /**
  * Editing input for the "classification" kind: double-click a chip to change
@@ -57,12 +50,10 @@ class ClassificationEditor2D implements AnnotationEditor2D {
     if (!annotation) return;
 
     this.ctx.collection.select(id);
-    // Same flow as the toolbar button and the 3D HUD; this kind only adds the
-    // label rewrite, because its class name *is* the entity's label.
-    beginEntityReassign(annotation, this.ctx, {
-      label: "classification",
-      syncPayloadToEntity: (current, choice) => this._writeChosenClass(current, choice),
-    });
+    // Same flow as the toolbar button and the 3D HUD. The label rewrite this
+    // kind needs is declared by its payload builder (`geometryForEntity`), so it
+    // applies whichever way the reassignment was opened.
+    beginEntityReassign(annotation, this.ctx, { label: "classification" });
   }
 
   private _annotationIdOf(node: Konva.Node): string | null {
@@ -74,30 +65,6 @@ class ClassificationEditor2D implements AnnotationEditor2D {
       current = current.getParent() as Konva.Node | null;
     }
     return null;
-  }
-
-  /**
-   * Rewrite the classification's labels from the chosen entity, so the chip
-   * cannot keep asserting the class it had under its previous entity.
-   *
-   * Writes to the collection rather than returning a new annotation: the
-   * reassignment re-reads the live one to build its update body, so the write
-   * is what actually lands. Returns false — aborting the move — when the choice
-   * yields no usable class, since a classification asserting nothing is a row
-   * no one can act on.
-   */
-  private _writeChosenClass(annotation: LocalAnnotation, choice: PendingEntityChoice): boolean {
-    const label = this._labelFor(choice);
-    if (!label) return false;
-
-    const geometry: ClassificationGeometry = { labels: [label], confidences: [HUMAN_CONFIDENCE] };
-    this.ctx.collection.setGeometry(annotation.id, geometry);
-    return true;
-  }
-
-  private _labelFor(choice: PendingEntityChoice): string {
-    if (choice.mode === "new") return pickEntityLabel(choice.entityFields).trim();
-    return pickEntityLabel(this.ctx.findEntity(choice.entityId)).trim();
   }
 }
 
