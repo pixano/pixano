@@ -32,6 +32,11 @@ export interface ProjectionCameraSpec {
  * between modes does not re-download six images. Failures resolve to `null`
  * rather than rejecting — one unreadable camera should cost its own colours,
  * not the whole colouring pass.
+ *
+ * A decode cut short by its signal is the one result that is not kept: it says
+ * nothing about the image. Remembering it would leave the camera without pixels
+ * for the life of the record as soon as the user left the projection mode while
+ * its images were still loading.
  */
 export function createProjectionCamera(spec: ProjectionCameraSpec): ProjectionCamera {
   let pending: Promise<PixelGrid | null> | null = null;
@@ -43,7 +48,13 @@ export function createProjectionCamera(spec: ProjectionCameraSpec): ProjectionCa
     imageHeight: spec.imageHeight,
     calibration: spec.calibration,
     loadPixels(signal: AbortSignal) {
-      pending ??= decodeImage(spec.url, signal);
+      if (pending === null) {
+        const attempt = decodeImage(spec.url, signal).then((pixels) => {
+          if (pixels === null && signal.aborted && pending === attempt) pending = null;
+          return pixels;
+        });
+        pending = attempt;
+      }
       return pending;
     },
   };
@@ -62,7 +73,13 @@ function decodeImage(url: string, signal: AbortSignal): Promise<PixelGrid | null
     // canvas, which the try/catch below turns into "this camera has no pixels".
     image.crossOrigin = "anonymous";
 
-    const onAbort = () => resolve(null);
+    const onAbort = () => {
+      // Nobody waits for this image any more: stop the download as well.
+      image.onload = null;
+      image.onerror = null;
+      image.src = "";
+      resolve(null);
+    };
     signal.addEventListener("abort", onAbort, { once: true });
     const settle = (value: PixelGrid | null) => {
       signal.removeEventListener("abort", onAbort);
