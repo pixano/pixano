@@ -2,10 +2,11 @@
 
 Companion to [data-import-export.md](./data-import-export.md).
 
-> **Status: completed.** The redesign shipped in 0.8.0; the `arch/data-import` PR stack is
-> merged and the branch is gone. This checklist is kept as the reusable manual-validation
-> procedure for the import/export path — re-run the relevant checkpoints when touching
-> `datasets/io/`, not as a gate on unmerged work.
+> **Status: integrated, not released.** The `arch/data-import` work is in `releases/0.8`, and
+> its import/export engine is on `releases/v1.0-alpha`. It is not in `main`, and 0.8.0 has not
+> been published: Checkpoint E below is still the gate for that merge. The earlier checkpoints
+> double as the reusable manual-validation procedure for the import/export path — re-run the
+> relevant ones when touching `datasets/io/`.
 
 Automated gates (full pytest suite locally and in CI on every PR) run first — this
 checklist covers what automation cannot: a human confirming the real app behaves

@@ -72,6 +72,7 @@ function makeGateway(opts: GatewayOpts = {}): DatasetGateway {
     getDataset: () => Promise.resolve(opts.dataset ?? makeDataset({})),
     listEntities: () => Promise.resolve(opts.entities ?? []),
     loadImageByLogicalName: (_, __, name) => Promise.resolve(opts.images?.get(name) ?? null),
+    listRecordImages: () => Promise.resolve([...(opts.images?.values() ?? [])]),
     loadPointCloudByLogicalName: (_, __, name) =>
       Promise.resolve(opts.pointClouds?.get(name) ?? null),
     loadTextByLogicalName: () => Promise.resolve(null),

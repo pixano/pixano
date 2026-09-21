@@ -26,6 +26,13 @@ License: CECILL-C
     /** Throw away every unsaved edit; absent for hosts that do not offer it. */
     onDiscard?: () => void;
     ariaLabel: string;
+    /**
+     * Widget-specific controls pinned to the toolbar's right edge, past the
+     * spacer. The distance is the point: a control here is not a tool — it does
+     * not change what a click on the canvas does — and putting the whole width
+     * of the bar between it and the tool group says so without needing a label.
+     */
+    trailingControls?: Snippet;
     /** Widget-specific controls rendered right after the tool buttons. */
     controls?: Snippet;
   }
@@ -42,6 +49,7 @@ License: CECILL-C
     onSave,
     onDiscard,
     ariaLabel,
+    trailingControls,
     controls,
   }: Props = $props();
 </script>
@@ -73,6 +81,11 @@ License: CECILL-C
   {/if}
 
   <div class="flex-1"></div>
+
+  {#if trailingControls}
+    {@render trailingControls()}
+    <span class="mx-1 h-4 w-px bg-border"></span>
+  {/if}
 
   {#if pendingCount > 0}
     <span class="text-[10px] text-muted-foreground">{pendingCount} unsaved</span>
