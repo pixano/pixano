@@ -11,6 +11,7 @@ on:
     paths:
       - "src/pixano/**"
       - "tests/**"
+      - "packages/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
@@ -20,6 +21,7 @@ on:
     paths:
       - "src/pixano/**"
       - "tests/**"
+      - "packages/**"
       - ".github/workflows/backend.yml"
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
@@ -114,3 +116,43 @@ jobs:
         uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  worker:
+    name: Worker
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Le paquet exige Python 3.11 ; la matrice ci-dessus descend à 3.10.
+        python-version: ["3.11", "3.12", "3.13"]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: pixano
+          POSTGRES_PASSWORD: pixano
+          POSTGRES_DB: pixano_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Test with pytest
+        # Variable dédiée : les tests ne doivent jamais pouvoir viser la base d'un
+        # déploiement, fût-il local.
+        env:
+          PIXANO_TEST_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
+        run: uv run --directory packages/pixano-worker pytest

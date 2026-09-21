@@ -12,6 +12,10 @@ RUN npm i -g corepack@latest && corepack enable && corepack use pnpm@10.4.1
 COPY --from=python:3.12-slim /usr/local/ /usr/local/
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
+# Vite compile les deux applications dans le même process ; le tas par défaut de Node ne
+# suffit pas pour l'application legacy et le build meurt en SIGABRT.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 WORKDIR /app
 COPY src/ ./src/
 COPY ui/ ./ui/
@@ -19,16 +23,24 @@ COPY pyproject.toml uv.lock hatch_build.py README.md ./
 
 RUN uv build --wheel
 
+# Les dépendances sont exportées depuis uv.lock : pixano-inference-client n'est pas publié
+# sur PyPI et n'est résoluble que par la source git déclarée dans [tool.uv.sources].
+RUN uv export --frozen --no-dev --no-emit-project --format requirements-txt -o requirements.txt
+
 # Stage 2: Runtime (install the wheel and system dependencies)
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 && \
+RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/dist/pixano-*.whl /tmp/
-RUN uv pip install --system /tmp/pixano-*.whl && rm /tmp/pixano-*.whl
+COPY --from=builder /app/dist/pixano-*.whl /app/requirements.txt /tmp/
+# Les dépendances viennent du lock ; le wheel s'installe sans re-résolution, sinon uv
+# repartirait chercher pixano-inference-client sur PyPI.
+RUN uv pip install --system -r /tmp/requirements.txt && \
+    uv pip install --system --no-deps /tmp/pixano-*.whl && \
+    rm /tmp/pixano-*.whl /tmp/requirements.txt
 
 ARG DATA_DIR=/library
 ENV DATA_DIR=${DATA_DIR}

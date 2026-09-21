@@ -19,6 +19,12 @@
 **/compose*
 **/node_modules
 **/npm-debug.log
+# Bibliothèques de datasets et médias : plusieurs Go qui n'entrent dans aucune image, mais
+# que le démon reçoit à chaque build tant qu'ils sont dans le contexte.
+data/
+my_data/
+# Le worker a son propre contexte de build (packages/pixano-worker).
+packages/
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml

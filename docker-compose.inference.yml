@@ -1,0 +1,84 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+# Overlay : une inference construite et exécutée sur cette machine.
+#
+# À n'utiliser qu'en mode local. En labo et en cloud, pixano-inference est un déploiement
+# à part avec sa propre capacité GPU : on retire cet overlay et on pointe simplement
+# PIXANO_INFERENCE_URL vers lui.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
+#
+# La variante construite par défaut est la variante CPU (torch CPU), avec le plugin numpy
+# d'exemple : elle suffit à tout ce qui précède le job d'embeddings, et elle démarre sur une
+# machine sans GPU. Pour une vraie capacité, passer les build args en GPU (voir plus bas) et
+# monter docker/models.py à la place de docker/models.numpy.py.
+#
+# La variante « sans framework » (TORCH_INDEX_URL vide) ne démarre pas : Ray Serve importe
+# jinja2 dans son module haproxy sans le déclarer dans ray[serve], et c'est torch qui
+# l'apporte incidemment. À signaler au dépôt pixano-inference.
+
+services:
+  pixano-inference:
+    build:
+      context: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
+      dockerfile: Dockerfile
+      args:
+        # Variante CPU : torch CPU, pas de SAM2, plugin numpy d'exemple.
+        # Variante GPU : retirer ces quatre lignes (les défauts du Dockerfile sont GPU+SAM).
+        TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
+        PIXANO_EXTRAS: ""
+        INSTALL_SAM: "false"
+        INSTALL_EXAMPLE: "true"
+    ports:
+      - "127.0.0.1:${PIXANO_INFERENCE_PORT:-7463}:7463"
+    environment:
+      # Sans clé, toutes les routes sont ouvertes — acceptable sur une machine, jamais dès
+      # que l'inference est partagée. La variable traverse dès maintenant pour qu'il n'y ait
+      # rien à câbler le jour où elle devient obligatoire.
+      PIXANO_INFERENCE_API_KEYS: ${PIXANO_INFERENCE_API_KEYS:-}
+      # Racine sous laquelle l'inference accepte des médias par chemin. C'est la contrepartie
+      # de PIXANO_INFERENCE_MEDIA_ROOT côté worker : les pixels ne transitent jamais par Pixano.
+      PIXANO_INFERENCE_MEDIA_ROOTS: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - pixano-inference-weights:/data
+      - ${PIXANO_INFERENCE_REPO:-../pixano-inference}/docker/models.numpy.py:/config/models.py:ro
+      - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}:ro
+    command:
+      ["--host", "0.0.0.0", "--port", "7463", "--config", "/config/models.py"]
+    # Ray laisse des process enfants derrière lui ; Python n'est pas un init.
+    init: true
+    # L'object store de Ray vit dans /dev/shm, dont le défaut à 64 Mo est trop petit.
+    shm_size: "8gb"
+    stop_grace_period: 90s
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7463/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    # Variante GPU : décommenter et repasser les build args aux défauts du Dockerfile.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  pixano:
+    depends_on:
+      pixano-inference:
+        condition: service_healthy
+
+  pixano-worker:
+    depends_on:
+      pixano-inference:
+        condition: service_healthy
+
+volumes:
+  pixano-inference-weights:
