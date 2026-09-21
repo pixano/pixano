@@ -212,6 +212,14 @@ type PointerEvt = Parameters<
 
 const evt = () => ({ cancelBubble: false }) as PointerEvt;
 
+/** `MouseEvent.buttons` values: nothing held, and the primary button held. */
+const NO_BUTTON = 0;
+const PRIMARY_BUTTON = 1;
+
+/** A move as the browser reports it, carrying which buttons are down. */
+const moveWithButtons = (buttons: number) =>
+  ({ cancelBubble: false, evt: { buttons } }) as unknown as PointerEvt;
+
 /** Paint a short stroke, then finish it. */
 function paintStroke(
   handler: ReturnType<typeof drawMaskTool.createHandler>,
@@ -303,6 +311,39 @@ describe("drawMaskTool painting", () => {
     const masks = collection.byKind("mask");
     expect(masks).toHaveLength(2);
     expect(masks[0].geometry.counts).not.toBe(masks[1].geometry.counts);
+  });
+
+  it("ends a stroke whose button was released outside the canvas", () => {
+    const { ctx, setPointer } = makeHarness();
+    const handler = drawMaskTool.createHandler(ctx);
+    handler.activate?.();
+
+    setPointer({ x: 10, y: 10 });
+    handler.onPointerDown?.(evt());
+    const segmentsBeforeLeaving = recorded.lineWidths.length;
+
+    // The pointer leaves, the button goes up out there — no `onPointerUp` —
+    // and the pointer comes back with nothing held.
+    setPointer({ x: 80, y: 80 });
+    handler.onPointerMove?.(moveWithButtons(NO_BUTTON));
+    setPointer({ x: 85, y: 85 });
+    handler.onPointerMove?.(moveWithButtons(NO_BUTTON));
+
+    expect(recorded.lineWidths).toHaveLength(segmentsBeforeLeaving);
+  });
+
+  it("keeps painting while the button is held", () => {
+    const { ctx, setPointer } = makeHarness();
+    const handler = drawMaskTool.createHandler(ctx);
+    handler.activate?.();
+
+    setPointer({ x: 10, y: 10 });
+    handler.onPointerDown?.(evt());
+    const segmentsAfterDown = recorded.lineWidths.length;
+    setPointer({ x: 20, y: 20 });
+    handler.onPointerMove?.(moveWithButtons(PRIMARY_BUTTON));
+
+    expect(recorded.lineWidths).toHaveLength(segmentsAfterDown + 1);
   });
 
   it("paints nothing when the image frame is unavailable", () => {
