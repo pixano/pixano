@@ -33,6 +33,8 @@ from typing import Any, Generic, Iterable, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
+from ..writer import JobWriter
+
 
 class JobParams(BaseModel):
     """Base des paramètres d'un type de job.
@@ -67,6 +69,11 @@ class JobKind(ABC, Generic[ParamsT]):
     name: str
     params_model: type[ParamsT]
 
+    #: Ce que produit ce type, dans le vocabulaire de provenance des schémas Pixano. La
+    #: plupart des types font tourner un modèle ; un type qui n'en fait pas tourner doit le
+    #: dire, pour qu'on ne prenne pas sa sortie pour une prédiction.
+    source_type: str = "model"
+
     @abstractmethod
     def plan(self, dataset_id: str, params: ParamsT) -> Iterable[Chunk]:
         """Découper le travail du job en chunks.
@@ -88,15 +95,18 @@ class JobKind(ABC, Generic[ParamsT]):
         """
 
     @abstractmethod
-    def write(self, result: Any, payload: dict[str, Any], params: ParamsT, job_id: str, seq: int) -> None:
+    def write(self, writer: "JobWriter", result: Any, payload: dict[str, Any], params: ParamsT) -> None:
         """Écrire le résultat, de façon idempotente.
 
+        Le type ne sait pas ouvrir un dataset : il reçoit un écrivain, qui est le seul point
+        d'écriture du système. C'est ce qui rendra possible, plus tard, de sérialiser les
+        écritures d'un dataset entre plusieurs workers sans toucher au moindre type de job.
+
         Args:
+            writer: Par où écrire, déjà lié au dataset et au job.
             result: Ce que `process` a renvoyé.
             payload: Le chunk traité.
             params: Les paramètres validés.
-            job_id: Le job, pour dériver des identifiants stables.
-            seq: Le rang du chunk, même usage.
         """
 
     def params_schema(self) -> dict[str, Any]:
