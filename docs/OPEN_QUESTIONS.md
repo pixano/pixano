@@ -28,11 +28,6 @@ accepted to keep the first version small — each is a decision, not an oversigh
   it onto. "Fit layout" does re-tile them on screen; they just are not persisted.
 - **Concurrent tabs: last writer wins.** No `storage` event listener, so two tabs
   on the same dataset overwrite each other's arrangement.
-- **UI strings are literals.** `ui/apps/web` has no i18n infrastructure at all
-  (no translation module, no `labelKey` usage), so the layout controls follow the
-  app's existing convention and violate CODING_STANDARDS.md's translation-key
-  rule along with every other component. Introducing i18n is its own piece of
-  work, tracked here rather than silently accepted.
 - **The arrangement no longer adapts to the viewport.** Before this feature every
   record opened with a placement recomputed for the current screen. Once a
   dataset has been arranged, its records replay cell coordinates captured on
