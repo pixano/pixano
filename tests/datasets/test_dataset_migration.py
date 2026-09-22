@@ -12,7 +12,7 @@ from threading import Event
 
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.locking import dataset_mutation_lock, mutation_token
-from pixano.schemas import Record, Video
+from pixano.schemas import BBox, Image, Record, Video
 
 
 def _make_video_dataset(path: Path) -> Dataset:
@@ -69,13 +69,13 @@ class TestSpecVersion2Migration:
 
         dataset = Dataset(dataset_path)
 
-        assert dataset.info.spec_version == 2
+        assert dataset.info.spec_version == Dataset._CURRENT_SPEC_VERSION
         schema_names = dataset.open_table("videos").schema.names
         assert "from_timestamp" in schema_names
         assert "to_timestamp" in schema_names
 
         info_json = json.loads((dataset_path / Dataset._INFO_FILE).read_text(encoding="utf-8"))
-        assert info_json["spec_version"] == 2
+        assert info_json["spec_version"] == Dataset._CURRENT_SPEC_VERSION
 
         videos = dataset.get_data("videos")
         assert len(videos) == 1
@@ -128,7 +128,7 @@ class TestSpecVersion2Migration:
         _make_video_dataset(dataset_path)
 
         dataset = Dataset(dataset_path)
-        assert dataset.info.spec_version == 2
+        assert dataset.info.spec_version == Dataset._CURRENT_SPEC_VERSION
         assert not (dataset_path / (Dataset._INFO_FILE + ".tmp")).exists()
 
     def test_concurrent_opens_converge(self, tmp_path: Path):
@@ -145,7 +145,7 @@ class TestSpecVersion2Migration:
 
         assert all(worker.exitcode == 0 for worker in workers)
         dataset = Dataset(dataset_path)
-        assert dataset.info.spec_version == 2
+        assert dataset.info.spec_version == Dataset._CURRENT_SPEC_VERSION
         assert "from_timestamp" in dataset.open_table("videos").schema.names
 
     def test_waiting_opener_refreshes_completed_upgrade(self, tmp_path: Path, monkeypatch):
@@ -170,6 +170,81 @@ class TestSpecVersion2Migration:
                 completed_token = mutation_token(dataset_path)
             dataset = waiting.result(timeout=10)
 
-        assert dataset.info.spec_version == 2
+        assert dataset.info.spec_version == Dataset._CURRENT_SPEC_VERSION
         assert "from_timestamp" in dataset.open_table("videos").schema.names
         assert mutation_token(dataset_path) == completed_token
+
+
+def _make_bbox_dataset(path: Path) -> Dataset:
+    info = DatasetInfo(name="bbox_ds", record=Record, views={"image": Image}, bbox=BBox)
+    dataset = Dataset.create(path, info)
+    dataset.add_records(
+        {
+            "records": Record(id="rec1"),
+            "images": Image(id="img1", record_id="rec1", logical_name="image", uri="a.jpg", width=8, height=8),
+            "bboxes": BBox(
+                id="box1", record_id="rec1", view_id="img1", coords=[0, 0, 1, 1], format="xyxy", is_normalized=True
+            ),
+        },
+        check_integrity="none",
+    )
+    return dataset
+
+
+def _downgrade_to_spec_version_2(path: Path) -> None:
+    """Rewrite a fresh dataset into the layout before review_status existed."""
+    dataset = Dataset(path)
+    dataset.open_table("bboxes").drop_columns(["review_status"])
+    info_file = path / Dataset._INFO_FILE
+    info_json = json.loads(info_file.read_text(encoding="utf-8"))
+    info_json["spec_version"] = 2
+    info_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+
+
+class TestSpecVersion3Migration:
+    """Step 2, lot 0: every entity annotation gains a review status, empty for what a human made."""
+
+    def test_backfills_review_status_on_open(self, tmp_path: Path):
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+
+        dataset = Dataset(dataset_path)
+
+        assert dataset.info.spec_version == 3
+        assert "review_status" in dataset.open_table("bboxes").schema.names
+        assert [box.review_status for box in dataset.get_data("bboxes")] == [""]
+
+    def test_a_version_1_dataset_goes_through_both_steps(self, tmp_path: Path):
+        dataset_path = tmp_path / "video_ds"
+        _make_video_dataset(dataset_path)
+        _downgrade_to_spec_version_1(dataset_path)
+
+        dataset = Dataset(dataset_path)
+
+        assert dataset.info.spec_version == 3
+        assert "from_timestamp" in dataset.open_table("videos").schema.names
+
+    def test_a_reviewed_box_can_be_written_after_migration(self, tmp_path: Path):
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+
+        dataset = Dataset(dataset_path)
+        dataset.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id="box2",
+                    record_id="rec1",
+                    view_id="img1",
+                    coords=[0, 0, 1, 1],
+                    format="xyxy",
+                    is_normalized=True,
+                    review_status="pending",
+                )
+            ],
+            raise_or_warn="none",
+        )
+
+        assert {box.id: box.review_status for box in dataset.get_data("bboxes")} == {"box1": "", "box2": "pending"}

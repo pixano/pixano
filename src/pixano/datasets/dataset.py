@@ -42,6 +42,7 @@ from pixano.schemas import (
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    is_entity_annotation,
     is_image,
     is_sequence_frame,
     is_video,
@@ -175,7 +176,7 @@ class Dataset:
                 with dataset_mutation_lock(self.path, timeout=5):
                     with self.write_lock():
                         if self.info.spec_version < self._CURRENT_SPEC_VERSION:
-                            self._migrate_storage_to_spec_version_2()
+                            self._migrate_storage()
             except Exception as exc:
                 # A read-only dataset stays readable at the old layout; writes will
                 # surface the missing columns explicitly.
@@ -230,23 +231,48 @@ class Dataset:
     # Storage-layout migrations
     # ------------------------------------------------------------------
 
-    _CURRENT_SPEC_VERSION: int = 2
+    _CURRENT_SPEC_VERSION: int = 3
 
     @dataset_write
-    def _migrate_storage_to_spec_version_2(self) -> None:
-        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+    def _migrate_storage(self) -> None:
+        """Bring an older on-disk layout up to the current spec version.
+
+        Each version adds columns that its schemas expect, backfilled with the value the
+        schema defaults to: version 2 the ``Video`` time window, version 3 the
+        ``review_status`` of entity annotations. Every step is idempotent, so a dataset opened
+        at version 1 goes through both.
 
         Local openers serialize the upgrade and refresh the metadata before
         calling this method. External ``add_columns`` races converge by
         re-reading the table schema. The ``info.json`` rewrite is atomic and
         idempotent (all writers produce identical content).
         """
-        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        if self.info.spec_version < 2:
+            self._backfill_columns(is_video, {"from_timestamp": "0.0", "to_timestamp": "-1.0"})
+        if self.info.spec_version < 3:
+            self._backfill_columns(is_entity_annotation, {"review_status": "''"})
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
+        """Add the columns missing from every table whose schema ``applies_to`` selects.
+
+        Args:
+            applies_to: Which table schemas get the columns.
+            columns: Column name to the SQL expression of its backfilled value.
+        """
         for table_name, schema_cls in self.info.tables.items():
-            if not is_video(schema_cls):
+            if not applies_to(schema_cls):
                 continue
             table = self.open_table(table_name)
-            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            missing = {column: expr for column, expr in columns.items() if column not in table.schema.names}
             if not missing:
                 continue
             try:
@@ -260,15 +286,6 @@ class Dataset:
                     raise
             finally:
                 self._table_handles.pop(table_name, None)
-
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
-        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory

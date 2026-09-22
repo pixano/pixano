@@ -20,6 +20,7 @@ from .annotations import (
     PerFrameAnnotation,
     QuestionType,
     Relation,
+    ReviewStatus,
     TextSpan,
     Tracklet,
     create_bbox,
@@ -104,6 +105,7 @@ from .views import (
 
 __all__ = [
     "AnnotationSourceKind",
+    "ReviewStatus",
     "EntityAnnotation",
     "EntityGroupAnnotation",
     "PerFrameAnnotation",

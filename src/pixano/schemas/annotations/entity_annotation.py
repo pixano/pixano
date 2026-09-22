@@ -31,6 +31,28 @@ class AnnotationSourceKind(Enum):
     OTHER = "other"
 
 
+class ReviewStatus(Enum):
+    """Where an annotation produced by a model stands with its human reviewer.
+
+    A human annotation carries no status (the empty string): there is nothing to review. A
+    model's output arrives ``pending``; a reviewer accepts it as is, corrects it — the row keeps
+    ``source_type = model`` and the model's trace, so corrections can be counted — or rejects
+    it, in which case the row stays, marked, so that a rerun of the model does not recreate it
+    as new. A rerun replaces ``pending`` rows only: reviewed rows are frozen for that kind.
+
+    Attributes:
+        PENDING: Produced by a model, not yet reviewed.
+        ACCEPTED: Reviewed and kept as is.
+        CORRECTED: Reviewed and edited by a human.
+        REJECTED: Reviewed and refused; kept, marked.
+    """
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    CORRECTED = "corrected"
+    REJECTED = "rejected"
+
+
 class EntityAnnotation(RecordComponent):
     """Entity annotation.
 
@@ -40,6 +62,8 @@ class EntityAnnotation(RecordComponent):
         source_name: Name of the annotation source.
         source_metadata: Metadata of the annotation source (JSON string).
         view_id: ID of the view from which the annotation is derived.
+        review_status: Review status of a model's output (pending, accepted, corrected,
+            rejected); empty for an annotation that was never a model's.
     """
 
     entity_id: str = ""
@@ -47,6 +71,24 @@ class EntityAnnotation(RecordComponent):
     source_name: str = ""
     source_metadata: str = json.dumps({})
     view_id: str = ""
+    review_status: str = ""
+
+    @field_validator("review_status", mode="before")
+    @classmethod
+    def _validate_review_status_before(cls, v: Any) -> Any:
+        if isinstance(v, ReviewStatus):
+            return v.value
+        return v
+
+    @field_validator("review_status")
+    @classmethod
+    def _validate_review_status(cls, v: str) -> str:
+        if v == "":
+            return v
+        valid = [k.value for k in ReviewStatus]
+        if v not in valid:
+            raise ValueError(f"review_status '{v}' is not valid. Must be one of {valid} or empty.")
+        return v
 
     @field_validator("source_type", mode="before")
     @classmethod
