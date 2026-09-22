@@ -4,19 +4,19 @@
 # License: CECILL-C
 # =====================================
 
-"""La boucle d'exécution du worker.
+"""The worker's execution loop.
 
-Deux travaux, dans cet ordre à chaque tour : découper les jobs qui attendent de l'être, puis
-consommer des chunks. La planification passe d'abord parce qu'un job non découpé n'a aucun
-chunk à réclamer — sans quoi un worker isolé pourrait dormir devant du travail en attente.
+Two jobs, in this order on every turn: split the jobs waiting to be split, then consume chunks.
+Planning goes first because a job that has not been split has no chunk to claim — otherwise a
+lone worker could sleep in front of pending work.
 
-L'annulation se regarde **avant chaque chunk**, jamais au milieu : un chunk est l'unité
-atomique, l'interrompre laisserait un travail à moitié fait dont on ne saurait rien.
+Cancellation is checked **before each chunk**, never in the middle: a chunk is the atomic unit,
+and interrupting it would leave half-done work nobody knows anything about.
 
-La boucle est asynchrone, le code des types de jobs ne l'est pas. `plan`, `process` et `write`
-sont des fonctions ordinaires — c'est le contrat publié, et la lecture comme l'écriture
-LanceDB sont bloquantes de toute façon. Elles partent donc dans un thread ; la boucle garde
-pour elle ce qui gagne à être asynchrone : la base, les délais et le bail.
+The loop is asynchronous, the job kinds' code is not. `plan`, `process` and `write` are ordinary
+functions — that is the published contract, and LanceDB reads and writes are blocking anyway.
+So they go to a thread; the loop keeps for itself what benefits from being asynchronous: the
+database, the delays and the lease.
 """
 
 import asyncio
@@ -48,49 +48,48 @@ from .writer import JobWriter
 
 log = logging.getLogger("pixano-worker")
 
-# Ce qu'une base injoignable lève : connexion coupée, serveur redémarré, pool sans connexion
-# disponible. Rien de ce que fait un type de job — seulement l'accès à la file.
+# What an unreachable database raises: connection dropped, server restarted, pool with no
+# connection available. Nothing a job kind does — only access to the queue.
 DATABASE_UNAVAILABLE = (psycopg.OperationalError, psycopg.InterfaceError)
 
-# Espacement des tentatives quand la base ne répond plus. Plafonné bas, comme l'écoute côté
-# application : un redémarrage de PostgreSQL dure quelques secondes, et un worker qui revient
-# vite reprend le travail là où il l'avait laissé.
+# Spacing of the attempts when the database stops answering. Capped low, like the listener on
+# the application side: a PostgreSQL restart lasts a few seconds, and a worker that comes back
+# quickly resumes the work where it left it.
 OUTAGE_BACKOFF_S = (1.0, 2.0, 5.0, 10.0)
 
-# Le temps laissé aux chunks en vol pour finir quand le worker est arrêté. En dessous du délai
-# que docker accorde avant de tuer le process (stop_grace_period du compose), pour que les
-# chunks qui n'ont pas fini à temps soient rendus à la file plutôt qu'abandonnés à leur bail.
+# The time left to in-flight chunks to finish when the worker is stopped. Below the delay docker
+# grants before killing the process (the compose's stop_grace_period), so that the chunks that
+# did not finish in time are handed back to the queue rather than abandoned to their lease.
 SHUTDOWN_GRACE_S = 30.0
 
-# Pause après une exception inattendue dans un tour de boucle : courte, parce que le tour
-# suivant a toutes les chances de passer, et non nulle pour qu'un défaut qui se répète ne
-# remplisse pas le journal.
+# Pause after an unexpected exception in a loop turn: short, because the next turn has every
+# chance of passing, and non-zero so that a fault that repeats does not fill the log.
 UNEXPECTED_ERROR_PAUSE_S = 1.0
 
-# Un défaut qui se répète à chaque tour est journalisé avec sa trace la première fois, puis
-# une fois toutes les N occurrences : le journal dit qu'il persiste, sans une trace par seconde.
+# A fault that repeats on every turn is logged with its traceback the first time, then once
+# every N occurrences: the log says it persists, without a traceback per second.
 UNEXPECTED_ERROR_LOG_EVERY = 60
 
-# Autant d'échecs de suite — une minute, avec la pause ci-dessus — et le worker s'arrête
-# proprement en erreur : un défaut qui ne passe pas en une minute ne passera pas en une heure,
-# et un process neuf, relancé par la politique de redémarrage, a plus de chances qu'un tour de
-# plus. Les chunks en vol ont leur grâce, puis sont rendus, comme à tout arrêt.
+# That many failures in a row — one minute, with the pause above — and the worker stops cleanly
+# in error: a fault that does not pass in one minute will not pass in one hour, and a fresh
+# process, relaunched by the restart policy, stands a better chance than one more turn. The
+# in-flight chunks get their grace, then are handed back, as on any stop.
 UNEXPECTED_ERROR_LIMIT = 60
 
-# Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
-# qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
+# Beyond this delay, the queue is re-examined even with nothing new to do there: this is what
+# hands the expired leases of a dead worker back to a busy worker, not only to an idle one.
 RECLAIM_INTERVAL_S = 30.0
 
-# Les écritures d'un même dataset passent une à une. Plusieurs chunks d'un dataset tournent
-# en même temps, et LanceDB n'est pas fait pour des écritures concurrentes sur une même
-# table. Le verrou est un verrou de thread : c'est dans un thread que `write` s'exécute.
+# Writes to a same dataset go one at a time. Several chunks of a dataset run at the same time,
+# and LanceDB is not made for concurrent writes on a same table. The lock is a thread lock:
+# `write` runs in a thread.
 _write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
 _write_locks_guard = threading.Lock()
 
 
 @lru_cache(maxsize=1)
 def default_threads() -> WorkerThreads:
-    """Le pool des appels qui n'en fournissent pas — les tests, et la forme séquentielle du runner."""
+    """The pool for the calls that do not supply one — the tests, and the sequential form of the runner."""
     return WorkerThreads.for_concurrency(1)
 
 
@@ -99,9 +98,9 @@ def _write_lock(dataset_id: str) -> threading.Lock:
         return _write_locks[dataset_id]
 
 
-# Le job reste en `planning` pendant la découpe : c'est le bail qui le réserve, pas un
-# changement d'état. Un planificateur qui meurt laisse expirer son bail, et le job redevient
-# réclamable — au lieu de rester « en cours » sans chunk, ce qu'aucune reprise ne voyait.
+# The job stays in `planning` while it is split: it is the lease that reserves it, not a state
+# change. A planner that dies lets its lease expire, and the job becomes claimable again —
+# instead of staying "running" with no chunk, which no recovery saw.
 CLAIM_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() + %s, updated_at = now()
 WHERE id = (
@@ -126,10 +125,10 @@ SELECT %s, chunk.seq, chunk.payload, chunk.task_count
 FROM unnest(%s::int[], %s::jsonb[], %s::int[]) AS chunk(seq, payload, task_count)
 """
 
-# La fin de planification ne s'applique qu'à un job encore en planification. Deux
-# planificateurs peuvent se chevaucher — le premier trop lent, son bail repris par un second :
-# la mise à jour verrouille la ligne, le second attend, puis ne trouve plus le job en
-# `planning` et renonce au lieu de doubler les chunks.
+# Finishing the planning only applies to a job still being planned. Two planners can overlap —
+# the first too slow, its lease taken over by a second: the update locks the row, the second
+# waits, then no longer finds the job in `planning` and gives up instead of doubling the
+# chunks.
 FINISH_PLANNING = f"""
 UPDATE {SCHEMA_NAME}.jobs
 SET state = 'pending', total_tasks = %s, planning_until = NULL, updated_at = now()
@@ -143,8 +142,8 @@ WHERE id = %s AND state = 'planning'
 RETURNING id
 """
 
-# Un job dont plus aucun chunk n'attend ni ne tourne est terminé. L'annulation l'emporte sur
-# l'erreur : un job qu'on a arrêté n'est pas un job qui a échoué.
+# A job with no chunk left pending or running is finished. Cancellation wins over error: a job
+# that was stopped is not a job that failed.
 SETTLE = f"""
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = CASE
@@ -179,10 +178,10 @@ async def plan_one(
     media: MediaResolver | None = None,
     threads: WorkerThreads | None = None,
 ) -> str | None:
-    """Découper un job en attente de planification.
+    """Split a job waiting to be planned.
 
     Returns:
-        L'identifiant du job découpé, ou None s'il n'y en avait aucun.
+        The identifier of the job that was split, or None if there was none.
     """
     row = await (await conn.execute(CLAIM_PLANNING, (queue.LEASE_TTL,))).fetchone()
     if row is None:
@@ -191,10 +190,10 @@ async def plan_one(
 
     kind = registry.get(kind_name)
     if kind is None:
-        # Aucun worker vivant ne déclare ce type. Le job ne sera jamais exécutable : le dire
-        # tout de suite vaut mieux que de le laisser en attente sans explication.
+        # No live worker declares this kind. The job will never be runnable: saying so right
+        # away is better than leaving it waiting with no explanation.
         await _fail_job(conn, job_id, {"reason": "unknown job kind", "kind": kind_name})
-        log.warning("job %s : type '%s' inconnu de ce worker", job_id, kind_name)
+        log.warning("job %s: kind '%s' unknown to this worker", job_id, kind_name)
         return job_id
 
     async def refresh() -> bool:
@@ -204,16 +203,16 @@ async def plan_one(
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media, fresh=True)
         writer = _writer_for(library, dataset_id, kind_name, job_id, kind.source_type)
-        async with _kept_alive(refresh, f"planification du job {job_id}"):
+        async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
-            # La remise en état précède le découpage, sous le même bail : un planificateur qui
-            # meurt entre les deux laisse un `prepare` fait et aucun chunk, et le suivant refait
-            # les deux — c'est pour cela que `prepare` doit être idempotent.
+            # Preparation precedes the split, under the same lease: a planner that dies between
+            # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
+            # is why `prepare` must be idempotent.
             await pool.run(lambda: kind.prepare(writer, params))
             chunks = await pool.run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
-        log.exception("job %s : planification impossible", job_id)
+        log.exception("job %s: planning failed", job_id)
         return job_id
 
     if not chunks:
@@ -225,28 +224,28 @@ async def plan_one(
     except DATABASE_UNAVAILABLE:
         raise
     except Exception as error:
-        # Un chunk que le schéma refuse — sans tâche, un payload qui ne se sérialise pas — est un
-        # défaut du type de job, pas du worker : le job échoue et le dit, le worker continue.
-        # Laissé remonter, il tuait le worker et laissait le job en planification sous son bail.
+        # A chunk the schema refuses — with no task, a payload that does not serialise — is a
+        # fault of the job kind, not of the worker: the job fails and says so, the worker goes
+        # on. Left to propagate, it killed the worker and left the job in planning under its lease.
         await _fail_job(conn, job_id, {"reason": "the planned chunks were refused by the queue", "detail": str(error)})
-        log.exception("job %s : chunks refusés à l'enregistrement", job_id)
+        log.exception("job %s: chunks refused at recording", job_id)
         return job_id
     if recorded:
-        log.info("job %s découpé en %d chunks (%d tâches)", job_id, len(chunks), sum(c.task_count for c in chunks))
+        log.info("job %s split into %d chunks (%d tasks)", job_id, len(chunks), sum(c.task_count for c in chunks))
     else:
-        log.info("job %s : découpe abandonnée, le job n'est plus en planification", job_id)
+        log.info("job %s: split abandoned, the job is no longer in planning", job_id)
     return job_id
 
 
 async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk]) -> bool:
-    """Inscrire les chunks d'un job et le passer en attente, s'il est encore en planification.
+    """Record a job's chunks and move it to pending, if it is still in planning.
 
-    La mise à jour du job passe en premier : elle verrouille sa ligne, si bien qu'un second
-    planificateur attend, puis constate que le job n'est plus à planifier.
+    The job update goes first: it locks its row, so that a second planner waits, then finds
+    that the job is no longer to be planned.
 
     Returns:
-        False si le job n'était plus en planification — déjà découpé par un autre worker —,
-        auquel cas rien n'est écrit.
+        False if the job was no longer in planning — already split by another worker —, in
+        which case nothing is written.
     """
     total = sum(chunk.task_count for chunk in chunks)
     async with conn.transaction():
@@ -274,16 +273,16 @@ async def _fail_job(conn: psycopg.AsyncConnection, job_id: str, error: dict[str,
             await queue.record_event(conn, job_id, "state", {"state": "error", **error})
 
 
-# Les datasets ouverts, peu nombreux à la fois : un worker en traite rarement plus de quelques-uns
-# dans une même période. Un dictionnaire ordonné plutôt qu'un `lru_cache`, pour pouvoir en
-# invalider un seul — vider tout le cache pour rouvrir un dataset faisait rouvrir les autres.
+# The open datasets, few at a time: a worker rarely handles more than a handful in a same
+# period. An ordered dictionary rather than an `lru_cache`, to be able to invalidate a single
+# one — clearing the whole cache to reopen one dataset made the others reopen too.
 _OPEN_DATASETS_MAX = 8
 _open_datasets: OrderedDict[tuple[Path, str], Dataset] = OrderedDict()
 _open_datasets_guard = threading.Lock()
 
 
 def _open_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Ouvrir un dataset, une fois ; le rendre du cache ensuite."""
+    """Open a dataset, once; serve it from the cache afterwards."""
     key = (library, dataset_id)
     with _open_datasets_guard:
         cached = _open_datasets.get(key)
@@ -300,49 +299,49 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
 
 
 def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Rouvrir ce dataset en ignorant le cache, et remplacer ce que le cache en tenait."""
+    """Reopen this dataset bypassing the cache, and replace what the cache held of it."""
     with _open_datasets_guard:
         _open_datasets.pop((library, dataset_id), None)
     return _open_dataset(library, dataset_id)
 
 
 def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None, fresh: bool = False) -> JobReader:
-    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert.
+    """Bind a reader to a job's dataset, opened only if the kind uses it.
 
     Args:
-        library: La bibliothèque de datasets ; None si aucune n'est configurée.
-        dataset_id: Le dataset du job.
-        media: Le résolveur de médias.
-        fresh: Rouvrir le dataset en ignorant le cache. La planification le demande : elle est
-            le premier regard d'un job sur son dataset, et un dataset recréé sous le worker —
-            réimporté, sa table d'embeddings supprimée — était sinon vu tel qu'il était à
-            l'ouverture précédente, jusqu'au redémarrage du worker. Les chunks, eux, lisent
-            ce que la planification a rouvert.
+        library: The dataset library; None if none is configured.
+        dataset_id: The job's dataset.
+        media: The media resolver.
+        fresh: Reopen the dataset bypassing the cache. Planning asks for it: it is a job's
+            first look at its dataset, and a dataset recreated under the worker — reimported,
+            its embeddings table dropped — was otherwise seen as it was at the previous
+            opening, until the worker restarted. The chunks, for their part, read what
+            planning reopened.
     """
 
     def open_dataset() -> Dataset:
         if library is None:
-            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+            raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _reopen_dataset(library, dataset_id) if fresh else _open_dataset(library, dataset_id)
 
     return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
 def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
-    """Lier un écrivain au dataset d'un job.
+    """Bind a writer to a job's dataset.
 
-    L'ouverture est différée au premier usage : un type qui n'écrit rien ne doit pas échouer
-    faute de dataset, et l'absence de bibliothèque ne se manifeste que si quelqu'un écrit.
+    Opening is deferred to first use: a kind that writes nothing must not fail for lack of a
+    dataset, and the absence of a library only shows if someone writes.
     """
 
     def open_dataset() -> Dataset:
         if library is None:
-            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+            raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _open_dataset(library, dataset_id)
 
     def reopen_dataset() -> Dataset:
         if library is None:
-            raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
+            raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _reopen_dataset(library, dataset_id)
 
     return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset, dataset_id)
@@ -360,22 +359,22 @@ async def work(
     threads: WorkerThreads | None = None,
     stop: asyncio.Event | None = None,
 ) -> None:
-    """Tenir jusqu'à `concurrency` chunks en vol, jusqu'à ce qu'on demande l'arrêt.
+    """Keep up to `concurrency` chunks in flight, until a stop is requested.
 
-    La réclamation ne prend jamais plus que les places libres : un chunk réclamé porte un bail
-    qui court, et le réclamer pour le laisser attendre une place l'exposerait à expirer avant
-    d'avoir commencé.
+    Claiming never takes more than the free slots: a claimed chunk carries a running lease, and
+    claiming it to leave it waiting for a slot would expose it to expiring before it started.
 
-    Un arrêt demandé par `stop` ne coupe rien : la boucle cesse de réclamer, laisse aux chunks
-    en vol `SHUTDOWN_GRACE_S` pour finir, puis rend la main. Ceux qui tournent encore restent
-    réclamés par ce worker, à charge de l'appelant de les rendre.
+    A stop requested through `stop` cuts nothing: the loop stops claiming, gives the in-flight
+    chunks `SHUTDOWN_GRACE_S` to finish, then returns. Those still running remain claimed by
+    this worker; it is up to the caller to hand them back.
 
-    Un pool saturé — trop de threads bloqués sur des chunks rendus pour cause de durée dépassée —
-    est renouvelé sur place, et la boucle continue.
+    A saturated pool — too many threads stuck on chunks handed back for exceeding their time
+    limit — is renewed in place, and the loop goes on.
 
     Raises:
-        PersistentFailure: La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite. Les chunks
-            en vol ont eu leur grâce ; l'appelant rend ceux qui restent, comme à tout arrêt.
+        PersistentFailure: The loop failed `UNEXPECTED_ERROR_LIMIT` times in a row. The
+            in-flight chunks had their grace; the caller hands back those that remain, as on
+            any stop.
     """
     owns_threads = threads is None
     threads = threads or WorkerThreads.for_concurrency(concurrency)
@@ -390,7 +389,7 @@ async def work(
 
 
 class PersistentFailure(RuntimeError):
-    """La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite et s'est arrêtée."""
+    """The loop failed `UNEXPECTED_ERROR_LIMIT` times in a row and stopped."""
 
 
 async def _loop(
@@ -416,13 +415,13 @@ async def _loop(
         if threads.saturated:
             abandoned = threads.renew()
             log.error(
-                "%d thread(s) bloqués sur des chunks rendus pour cause de durée dépassée : abandonnés, "
-                "le worker repart avec des threads neufs",
+                "%d thread(s) stuck on chunks handed back for exceeding their time limit: abandoned, "
+                "the worker starts over with fresh threads",
                 abandoned,
             )
-        # Une base qui redémarre ne doit pas tuer le worker : il attend qu'elle revienne, comme
-        # au démarrage. Les chunks en vol ne sont pas touchés — chacun gère sa propre connexion,
-        # et un chunk interrompu garde son bail jusqu'à ce que la reprise le rende.
+        # A database that restarts must not kill the worker: it waits for it to come back, as at
+        # startup. In-flight chunks are not touched — each manages its own connection, and an
+        # interrupted chunk keeps its lease until recovery hands it back.
         try:
             async with pool.connection() as conn:
                 planned = await plan_one(conn, registry, library, media, threads)
@@ -432,16 +431,17 @@ async def _loop(
             if free > 0:
                 async with pool.connection() as conn:
                     claimed = await queue.claim(conn, worker_id, free)
-            # Lancés sitôt réclamés, avant tout autre accès à la base : un chunk réclamé porte un
-            # bail qui court, et une coupure juste après le laisserait sans personne pour le faire.
+            # Started as soon as claimed, before any other database access: a claimed chunk
+            # carries a running lease, and an outage right after would leave it with nobody to
+            # do it.
             for chunk in claimed:
                 task = asyncio.create_task(
                     _run_pooled(pool, registry, chunk, library, media, chunk_timeout_s, threads)
                 )
                 in_flight.add(task)
                 task.add_done_callback(in_flight.discard)
-            # Une fois les tâches lancées seulement : leurs jobs passent en cours, et l'interface
-            # l'apprend, sans que le travail dépende de cette seconde requête.
+            # Only once the tasks are started: their jobs move to running, and the interface
+            # learns it, without the work depending on this second query.
             if claimed:
                 async with pool.connection() as conn:
                     await queue.start_jobs(conn, (chunk.job_id for chunk in claimed))
@@ -453,65 +453,65 @@ async def _loop(
                     await settle_abandoned(conn, recovery)
                 if recovery.requeued or recovery.abandoned_jobs:
                     log.info(
-                        "baux expirés : %d chunk(s) remis en file, %d job(s) avec un chunk écarté",
+                        "expired leases: %d chunk(s) put back in the queue, %d job(s) with a chunk set aside",
                         recovery.requeued,
                         len(recovery.abandoned_jobs),
                     )
         except DATABASE_UNAVAILABLE as error:
             delay = OUTAGE_BACKOFF_S[min(outages, len(OUTAGE_BACKOFF_S) - 1)]
             outages += 1
-            log.warning("base injoignable (%s) — nouvel essai dans %ss", error, delay)
+            log.warning("database unreachable (%s) — retrying in %ss", error, delay)
             await _pause(stop, delay)
             continue
         except Exception:
-            # Un défaut inattendu dans un tour de boucle — une réponse de la base que le code ne
-            # prévoit pas, un bug — est journalisé avec sa trace, et le tour suivant a lieu. Le
-            # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
-            # rendre plus visible que cette trace.
+            # An unexpected fault in a loop turn — a database response the code does not
+            # anticipate, a bug — is logged with its traceback, and the next turn takes place.
+            # Letting it propagate stopped the worker for good, in-flight chunks included,
+            # without making anything more visible than that traceback.
             failures += 1
             if failures >= UNEXPECTED_ERROR_LIMIT:
-                log.exception("tour de boucle en échec %d fois de suite : le worker s'arrête", failures)
+                log.exception("loop turn failed %d times in a row: the worker stops", failures)
                 stop.set()
                 broken = True
                 break
             if failures == 1 or failures % UNEXPECTED_ERROR_LOG_EVERY == 0:
-                log.exception("tour de boucle en échec (%d fois de suite), le worker continue", failures)
+                log.exception("loop turn failed (%d times in a row), the worker goes on", failures)
             await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
             continue
         if failures:
-            log.info("la boucle repasse après %d tour(s) en échec", failures)
+            log.info("the loop passes again after %d failed turn(s)", failures)
             failures = 0
         if outages:
-            log.info("base de nouveau joignable après %d tentative(s)", outages)
+            log.info("database reachable again after %d attempt(s)", outages)
             outages = 0
 
         if len(in_flight) >= concurrency:
-            # Borné : un worker plein doit quand même rendre les baux expirés et planifier. Sans
-            # borne, la reprise attendait la fin de son premier chunk — revue indépendante, D7.
+            # Bounded: a full worker must still hand back expired leases and plan. Without a
+            # bound, recovery waited for the end of its first chunk — independent review, D7.
             await _pause(stop, RECLAIM_INTERVAL_S, in_flight)
         elif planned is None and not claimed:
-            # Rien de nouveau : attendre qu'une place se libère ou que du travail arrive.
+            # Nothing new: wait for a slot to free up or for work to arrive.
             await _pause(stop, idle_poll_s, in_flight)
 
     if in_flight:
-        log.info("arrêt demandé : %d chunk(s) en vol, %ss pour finir", len(in_flight), SHUTDOWN_GRACE_S)
+        log.info("stop requested: %d chunk(s) in flight, %ss to finish", len(in_flight), SHUTDOWN_GRACE_S)
         _, unfinished = await asyncio.wait(in_flight, timeout=SHUTDOWN_GRACE_S)
         for task in unfinished:
             task.cancel()
         if unfinished:
             await asyncio.wait(unfinished)
-            log.info("%d chunk(s) n'ont pas fini à temps", len(unfinished))
+            log.info("%d chunk(s) did not finish in time", len(unfinished))
     if broken:
-        raise PersistentFailure(f"{UNEXPECTED_ERROR_LIMIT} tours de boucle en échec de suite")
+        raise PersistentFailure(f"{UNEXPECTED_ERROR_LIMIT} loop turns failed in a row")
 
 
 async def _pause(
     stop: asyncio.Event, timeout_s: float | None, in_flight: AbstractSet[asyncio.Task[None]] = frozenset()
 ) -> None:
-    """Attendre qu'un chunk finisse, que le délai passe, ou qu'on demande l'arrêt.
+    """Wait for a chunk to finish, for the delay to pass, or for a stop to be requested.
 
-    L'arrêt interrompt l'attente : un worker qu'on arrête pendant une pause de plusieurs
-    secondes ne doit pas faire attendre docker pour rien.
+    A stop interrupts the wait: a worker stopped during a pause of several seconds must not
+    make docker wait for nothing.
     """
     stopping = asyncio.ensure_future(stop.wait())
     try:
@@ -529,22 +529,25 @@ async def _run_pooled(
     chunk_timeout_s: float | None,
     threads: WorkerThreads,
 ) -> None:
-    """Exécuter un chunk sur sa propre connexion, sans jamais faire tomber la boucle.
+    """Run a chunk on its own connection, without ever bringing the loop down.
 
-    Une panne de base au milieu d'un chunk le laisse en cours avec son bail : l'expiration le
-    rendra. Laisser l'exception remonter ne le rendrait pas plus vite, et tuerait en silence
-    une tâche que personne n'attend.
+    A database outage in the middle of a chunk leaves it running with its lease: expiry will
+    hand it back. Letting the exception propagate would not hand it back any sooner, and would
+    silently kill a task nobody awaits.
     """
     try:
         async with pool.connection() as conn:
             await run_chunk(conn, registry, chunk, library, media, chunk_timeout_s, threads)
     except DATABASE_UNAVAILABLE as error:
-        # Attendu pendant une panne : un avertissement, pas une trace par chunk en vol.
+        # Expected during an outage: a warning, not a traceback per in-flight chunk.
         log.warning(
-            "chunk %s du job %s : base injoignable (%s), il reviendra par son bail", chunk.seq, chunk.job_id, error
+            "chunk %s of job %s: database unreachable (%s), it will come back through its lease",
+            chunk.seq,
+            chunk.job_id,
+            error,
         )
     except Exception:
-        log.exception("chunk %s du job %s : panne hors du type de job", chunk.seq, chunk.job_id)
+        log.exception("chunk %s of job %s: failure outside the job kind", chunk.seq, chunk.job_id)
 
 
 async def run_batch(
@@ -555,13 +558,13 @@ async def run_batch(
     library: Path | None = None,
     media: MediaResolver | None = None,
 ) -> int:
-    """Réclamer un lot de chunks et les exécuter l'un après l'autre sur une connexion.
+    """Claim a batch of chunks and run them one after the other on one connection.
 
-    La forme séquentielle de `work`, sans pool ni tâches : c'est elle que les tests pilotent,
-    parce qu'elle rend l'ordre des événements déterministe.
+    The sequential form of `work`, with no pool and no tasks: it is the one the tests drive,
+    because it makes the order of events deterministic.
 
     Returns:
-        Le nombre de chunks traités — zéro quand la file est vide.
+        The number of chunks processed — zero when the queue is empty.
     """
     chunks = await queue.claim(conn, worker_id, batch_size)
     await queue.start_jobs(conn, (chunk.job_id for chunk in chunks))
@@ -579,17 +582,17 @@ async def run_chunk(
     timeout_s: float | None = None,
     threads: WorkerThreads | None = None,
 ) -> None:
-    """Exécuter un chunk réclamé, consigner ce qui en résulte, et conclure son job s'il y a lieu.
+    """Run a claimed chunk, record what comes out of it, and settle its job if need be.
 
     Args:
-        conn: La connexion propre à ce chunk.
-        registry: Les types de jobs connus.
-        chunk: Le chunk réclamé.
-        library: La bibliothèque de datasets.
-        media: Le résolveur de médias.
-        timeout_s: Durée maximale du chunk. Au-delà, il est rendu à la file comme après une
-            panne passagère. None : pas de limite.
-        threads: Le pool où tourne le code du type de job.
+        conn: The connection specific to this chunk.
+        registry: The known job kinds.
+        chunk: The claimed chunk.
+        library: The dataset library.
+        media: The media resolver.
+        timeout_s: Maximum duration of the chunk. Beyond it, it is handed back to the queue as
+            after a transient failure. None: no limit.
+        threads: The pool where the job kind's code runs.
     """
     await _execute(conn, registry, chunk, library, media, timeout_s, threads or default_threads())
     await settle(conn, chunk.job_id)
@@ -622,11 +625,11 @@ async def _execute(
         result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
         outcome = kind.outcome(result, chunk.payload, chunk.task_count)
         if outcome.total != chunk.task_count:
-            # Un bilan faux fausserait tout ce qu'on affiche du job ; mieux vaut un chunk en échec
-            # qui désigne le défaut du type qu'un compte qui ment sans bruit.
+            # A wrong outcome would distort everything displayed about the job; better a failed
+            # chunk that points at the kind's fault than a count that lies silently.
             raise ValueError(
-                f"le bilan du type « {kind_name} » couvre {outcome.total} tâche(s), "
-                f"le chunk en compte {chunk.task_count}"
+                f"the outcome of kind '{kind_name}' covers {outcome.total} task(s), "
+                f"the chunk counts {chunk.task_count}"
             )
         with _write_lock(dataset_id):
             kind.write(
@@ -638,42 +641,43 @@ async def _execute(
         return outcome
 
     try:
-        async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} du job {chunk.job_id}"):
+        async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} of job {chunk.job_id}"):
             outcome = await threads.run(work, timeout_s)
     except TimeoutError:
-        # Le thread ne s'arrête pas : un appel bloqué ne s'interrompt pas de l'extérieur. Le
-        # chunk est rendu, et si le thread finit par aboutir, son résultat sera refusé par le
-        # jeton de garde — et son écriture, idempotente, n'aura rien doublé. Le pool compte ce
-        # thread comme bloqué ; s'il y en a trop, la boucle arrêtera le worker.
+        # The thread does not stop: a blocked call cannot be interrupted from the outside. The
+        # chunk is handed back, and if the thread eventually completes, its result will be
+        # refused by the guard token — and its write, idempotent, will have doubled nothing. The
+        # pool counts this thread as stuck; if there are too many, the loop will stop the worker.
         await _retry_later(conn, chunk, {"reason": "time limit exceeded", "timeout_s": timeout_s})
         return
     except TransientError as error:
         await _retry_later(conn, chunk, {"reason": "transient failure", "detail": str(error)})
         return
     except DATABASE_UNAVAILABLE:
-        # Jamais un échec du type de job : le chunk garde son bail, la reprise le rendra.
+        # Never a failure of the job kind: the chunk keeps its lease, recovery will hand it back.
         raise
     except Exception as error:
         await queue.fail(conn, chunk, {"reason": str(error), "trace": traceback.format_exc(limit=3)})
-        log.warning("chunk %s du job %s en échec : %s", chunk.seq, chunk.job_id, error)
+        log.warning("chunk %s of job %s failed: %s", chunk.seq, chunk.job_id, error)
         return
 
     finished = await queue.finish(
         conn, chunk, produced=outcome.produced, skipped=outcome.skipped, quarantined=outcome.quarantined
     )
     if finished is None:
-        # Le bail avait expiré et un autre worker a repris le chunk : son résultat fait foi.
-        log.info("chunk %s du job %s repris ailleurs, résultat abandonné", chunk.seq, chunk.job_id)
+        # The lease had expired and another worker took the chunk over: its result is
+        # authoritative.
+        log.info("chunk %s of job %s taken over elsewhere, result dropped", chunk.seq, chunk.job_id)
         return
     if outcome.quarantined:
-        log.info("chunk %s du job %s : %d item(s) en quarantaine", chunk.seq, chunk.job_id, len(outcome.quarantined))
+        log.info("chunk %s of job %s: %d item(s) quarantined", chunk.seq, chunk.job_id, len(outcome.quarantined))
 
 
 async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error: dict[str, Any]) -> None:
     state = await queue.retry_later(conn, chunk, error)
     if state == "pending":
         log.info(
-            "chunk %s du job %s rendu à la file (%s), tentative %d",
+            "chunk %s of job %s handed back to the queue (%s), attempt %d",
             chunk.seq,
             chunk.job_id,
             error["reason"],
@@ -681,7 +685,7 @@ async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error:
         )
     elif state == "error":
         log.warning(
-            "chunk %s du job %s écarté après %d tentatives : %s",
+            "chunk %s of job %s set aside after %d attempts: %s",
             chunk.seq,
             chunk.job_id,
             chunk.attempts,
@@ -691,20 +695,21 @@ async def _retry_later(conn: psycopg.AsyncConnection, chunk: queue.Chunk, error:
 
 @asynccontextmanager
 async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> AsyncIterator[None]:
-    """Prolonger un bail tant que le bloc s'exécute — celui d'un chunk ou d'une planification.
+    """Extend a lease as long as the block runs — a chunk's or a planning's.
 
-    Le rafraîchissement s'arrête par un signal, pas par une annulation : annuler une tâche au
-    milieu d'une requête peut laisser la connexion dans un état inutilisable, et c'est la
-    connexion que l'appelant réutilise juste après.
+    Refreshing stops through a signal, not a cancellation: cancelling a task in the middle of a
+    query can leave the connection in an unusable state, and it is that connection the caller
+    reuses right after.
 
-    Une base injoignable au moment de rafraîchir n'est pas une erreur du travail protégé : le
-    gardien la journalise et réessaie à l'intervalle suivant. La laisser remonter faisait
-    classer comme fatal un chunk dont le calcul avait réussi — vu en revue. Si la base reste
-    coupée, le bail expire et le jeton de garde refusera le résultat : c'est le chemin prévu.
+    A database unreachable at refresh time is not an error of the protected work: the keeper
+    logs it and retries at the next interval. Letting it propagate made a chunk whose
+    computation had succeeded be classed as fatal — seen in review. If the database stays
+    down, the lease expires and the guard token will refuse the result: that is the intended
+    path.
 
     Args:
-        refresh: Prolonge le bail ; rend False si le bail n'appartient plus à ce worker.
-        label: Ce que le bail protège, pour le journal.
+        refresh: Extends the lease; returns False if the lease no longer belongs to this worker.
+        label: What the lease protects, for the log.
     """
     stop = asyncio.Event()
 
@@ -717,10 +722,10 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
                 try:
                     kept = await refresh()
                 except DATABASE_UNAVAILABLE as error:
-                    log.warning("%s : bail non rafraîchi, base injoignable (%s)", label, error)
+                    log.warning("%s: lease not refreshed, database unreachable (%s)", label, error)
                     continue
                 if not kept:
-                    log.warning("%s : bail perdu en cours d'exécution", label)
+                    log.warning("%s: lease lost while running", label)
                     return
 
     keeper = asyncio.create_task(keep())
@@ -732,19 +737,19 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
 
 
 async def settle_abandoned(conn: psycopg.AsyncConnection, recovery: queue.Recovery) -> None:
-    """Conclure les jobs dont une reprise vient d'écarter un chunk.
+    """Settle the jobs from which a recovery has just set a chunk aside.
 
-    Aucun chunk de ces jobs ne finira pour les conclure si celui-là était le dernier : c'est la
-    reprise elle-même qui doit s'en charger.
+    No chunk of these jobs will finish to settle them if that one was the last: recovery itself
+    has to take care of it.
     """
     for job_id in sorted(recovery.abandoned_jobs):
         await settle(conn, job_id)
 
 
 async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
-    """Conclure un job dont plus rien n'attend ni ne tourne, en disant ce qu'il a produit."""
-    # Conclusion et événement dans une transaction : un worker tué entre les deux laissait un job
-    # `done` dont l'interface n'apprenait la fin qu'au rechargement — revue indépendante, D6.
+    """Settle a job with nothing left pending or running, saying what it produced."""
+    # Settlement and event in one transaction: a worker killed between the two left a `done` job
+    # whose end the interface only learned on reload — independent review, D6.
     async with conn.transaction():
         row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
         if row is None:
@@ -752,7 +757,7 @@ async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
         outcome = await job_outcome(conn, job_id)
         await queue.record_event(conn, job_id, "state", {"state": row[0], **outcome})
     log.info(
-        "job %s terminé : %s — %d produite(s), %d écartée(s), %d en quarantaine",
+        "job %s finished: %s — %d produced, %d skipped, %d quarantined",
         job_id,
         row[0],
         outcome["produced"],
@@ -762,10 +767,10 @@ async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
 
 
 async def job_outcome(conn: psycopg.AsyncConnection, job_id: str) -> dict[str, int]:
-    """Le bilan d'un job, agrégé depuis ses chunks et sa quarantaine.
+    """A job's outcome, aggregated from its chunks and its quarantine.
 
-    Agrégé à la lecture plutôt que tenu en compteurs sur le job : c'est un compte de plus qui
-    ne pourrait pas dériver de ce qu'il résume.
+    Aggregated at read time rather than kept as counters on the job: that would be one more
+    count that could drift from what it summarises.
     """
     row = await (await conn.execute(OUTCOME, (job_id, job_id))).fetchone()
     assert row is not None

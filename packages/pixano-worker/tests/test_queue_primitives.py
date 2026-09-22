@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests des primitives de réclamation du worker."""
+"""Tests of the worker's claim primitives."""
 
 import asyncio
 import os
@@ -19,7 +19,7 @@ from pixano_worker.schema import SCHEMA_NAME
 def _enqueue(db: psycopg.Connection, chunks: int, tasks_per_chunk: int = 10) -> str:
     row = db.execute(
         f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks, state) "
-        "VALUES ('factice', 'ds', %s, 'pending') RETURNING id",
+        "VALUES ('dummy', 'ds', %s, 'pending') RETURNING id",
         (chunks * tasks_per_chunk,),
     ).fetchone()
     assert row is not None
@@ -34,7 +34,7 @@ def _enqueue(db: psycopg.Connection, chunks: int, tasks_per_chunk: int = 10) -> 
 
 
 class TestWorkerIdentity:
-    """Un worker lancé à la main change de pid à chaque relance : son identité doit pouvoir être donnée."""
+    """A worker launched by hand changes pid on every relaunch: it must be possible to give it its identity."""
 
     def test_defaults_to_host_and_pid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(queue.WORKER_ID_VARIABLE, raising=False)
@@ -49,7 +49,7 @@ class TestWorkerIdentity:
     async def test_a_given_identity_takes_its_chunks_back_after_a_restart(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """C'est ce que l'identité achète : la reprise immédiate, sans attendre le bail."""
+        """This is what the identity buys: immediate recovery, without waiting for the lease."""
         monkeypatch.setenv(queue.WORKER_ID_VARIABLE, "worker-by-hand")
         _enqueue(db, 2)
         await queue.claim(adb, queue.worker_identity(), 2)
@@ -70,7 +70,7 @@ class TestClaim:
         assert claimed[0].payload == {"item_ids": [0]}
 
     async def test_claims_in_order(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
-        """L'ordre FIFO : un job soumis avant est servi avant."""
+        """FIFO order: a job submitted earlier is served earlier."""
         _enqueue(db, 10)
 
         claimed = await queue.claim(adb, "worker-a", 3)
@@ -80,7 +80,7 @@ class TestClaim:
     async def test_a_claimed_job_is_running_before_any_of_its_chunks_finishes(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Revue d'architecture, point 17 : un premier chunk long laissait le job « pending »."""
+        """Architecture review, point 17: a long first chunk left the job "pending"."""
         job = _enqueue(db, 4)
         claimed = await queue.claim(adb, "worker-a", 2)
 
@@ -97,7 +97,7 @@ class TestClaim:
     async def test_starting_a_job_twice_announces_it_once(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Deux workers réclament des chunks du même job : un seul fait la transition."""
+        """Two workers claim chunks of the same job: only one makes the transition."""
         job = _enqueue(db, 4)
         first = await queue.claim(adb, "worker-a", 1)
         second = await queue.claim(adb, "worker-b", 1)
@@ -122,7 +122,7 @@ class TestClaim:
     async def test_two_workers_never_take_the_same_chunk(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
     ) -> None:
-        """La propriété centrale de la file, à travers le vrai code cette fois."""
+        """The queue's central property, through the real code this time."""
         _enqueue(db, 300)
         taken: dict[str, list[int]] = {"a": [], "b": []}
         failures: list[str] = []
@@ -137,7 +137,7 @@ class TestClaim:
                         taken[name].extend(chunk.id for chunk in chunks)
                         for chunk in chunks:
                             await queue.finish(conn, chunk)
-            except Exception as exc:  # pragma: no cover - remonté par l'assertion
+            except Exception as exc:  # pragma: no cover - surfaced by the assertion
                 failures.append(f"{name}: {exc!r}")
 
         await asyncio.gather(*(drain(name) for name in taken))
@@ -153,10 +153,10 @@ class TestFinish:
     async def test_announces_the_job_running_then_its_progress_in_the_same_transaction(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`.
+        """Independent review, D2/D6: emitted after the fact, `running` could follow `done`.
 
-        C'est le filet du cas où la marque posée à la réclamation a manqué : ici elle n'est
-        pas posée du tout, et c'est le premier chunk terminé qui doit l'annoncer.
+        This is the safety net for the case where the mark set at claim time was missed: here
+        it is not set at all, and it is the first finished chunk that must announce it.
         """
         job = _enqueue(db, 2, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)
@@ -187,7 +187,7 @@ class TestFinish:
     async def test_a_stale_worker_cannot_finish_a_stolen_chunk(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Sans ce garde, un worker lent écraserait le résultat de son successeur."""
+        """Without this guard, a slow worker would overwrite its successor's result."""
         job = _enqueue(db, 1)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
         db.execute(
@@ -220,10 +220,10 @@ class TestRecovery:
     async def test_a_chunk_that_keeps_killing_workers_is_set_aside(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Sans plafond, un chunk qui fait tomber son worker ferait boucler la file.
+        """Without a cap, a chunk that brings its worker down would make the queue loop.
 
-        Le bail n'est antidaté que sur les chunks qui tournent : un chunk écarté n'en a plus,
-        et la contrainte du schéma refuserait d'ailleurs de lui en rendre un.
+        The lease is only backdated on running chunks: a set-aside chunk no longer has one,
+        and the schema constraint would in any case refuse to give it one back.
         """
         job = _enqueue(db, 1)
         outcomes = []
@@ -235,7 +235,7 @@ class TestRecovery:
             )
             outcomes.append(await queue.reclaim_expired(adb))
 
-        assert outcomes[-1] == queue.Recovery(0, frozenset({job})), f"attendu un abandon au dernier tour : {outcomes}"
+        assert outcomes[-1] == queue.Recovery(0, frozenset({job})), f"expected abandon on the last round: {outcomes}"
         row = db.execute(f"SELECT state, error FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == "error"
         assert row[1]["reason"] == "abandoned after its attempts"
@@ -244,7 +244,7 @@ class TestRecovery:
     async def test_a_restarted_worker_returns_its_own_chunks_at_once(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Le bail finirait par les rendre ; les rendre au démarrage évite deux minutes d'attente."""
+        """The lease would eventually return them; returning them at startup avoids a two-minute wait."""
         _enqueue(db, 5)
         await queue.claim(adb, "worker-a", 3)
 
@@ -264,10 +264,10 @@ class TestRecovery:
     async def test_a_chunk_that_kills_its_worker_at_every_restart_is_set_aside(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Revue de l'étape 1 : ce chemin ne regardait pas les tentatives.
+        """Step 1 review: this path did not look at the attempts.
 
-        Avec un redémarrage automatique, un chunk qui fait planter son worker — une image qui
-        fait exploser la mémoire — le relançait sans fin : réclamé, crash, rendu, réclamé.
+        With an automatic restart, a chunk that crashes its worker — an image that blows up
+        the memory — relaunched it endlessly: claimed, crash, returned, claimed.
         """
         job = _enqueue(db, 1)
         recoveries = []
@@ -293,7 +293,7 @@ class TestCancellation:
     async def test_a_released_chunk_goes_back_to_the_queue(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Ce que fait un worker qui voit l'annulation entre deux lots."""
+        """What a worker does when it sees the cancellation between two batches."""
         _enqueue(db, 2)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
 
@@ -308,21 +308,21 @@ class TestCancellation:
 
 class TestLeaseDuration:
     def test_the_lease_outlives_the_liveness_window(self) -> None:
-        """Un chunk ne doit pas être volé avant qu'on ait constaté que son porteur est mort."""
+        """A chunk must not be stolen before we have noticed that its holder is dead."""
         assert queue.LEASE_TTL.total_seconds() > queue.MAX_HEARTBEAT_AGE_S
 
 
 class TestRetryLater:
-    """Une panne passagère rend le chunk à la file, mais pas tout de suite."""
+    """A transient failure returns the chunk to the queue, but not right away."""
 
     async def test_the_chunk_goes_back_but_is_not_claimable_yet(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Rejoué dans la seconde contre une inférence qui redémarre, il épuiserait ses tentatives."""
+        """Replayed within the second against an inference that is restarting, it would use up its attempts."""
         _enqueue(db, 1)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
 
-        state = await queue.retry_later(adb, chunk, {"reason": "panne passagère"})
+        state = await queue.retry_later(adb, chunk, {"reason": "transient failure"})
 
         assert state == "pending"
         assert await queue.claim(adb, "worker-a", 1) == []
@@ -331,7 +331,7 @@ class TestRetryLater:
         ).fetchone()
         assert row is not None
         assert float(row[0]) == pytest.approx(queue.RETRY_BASE_DELAY.total_seconds(), abs=2)
-        assert row[1] == "panne passagère"
+        assert row[1] == "transient failure"
 
     async def test_the_delay_doubles_with_each_attempt(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
@@ -340,7 +340,7 @@ class TestRetryLater:
         delays = []
         for _ in range(3):
             chunk = (await queue.claim(adb, "worker-a", 1))[0]
-            await queue.retry_later(adb, chunk, {"reason": "panne passagère"})
+            await queue.retry_later(adb, chunk, {"reason": "transient failure"})
             row = db.execute(
                 f"SELECT extract(epoch FROM available_at - now()) FROM {SCHEMA_NAME}.job_chunks"
             ).fetchone()
@@ -358,7 +358,7 @@ class TestRetryLater:
         states = []
         for _ in range(queue.MAX_ATTEMPTS):
             chunk = (await queue.claim(adb, "worker-a", 1))[0]
-            states.append(await queue.retry_later(adb, chunk, {"reason": "panne passagère"}))
+            states.append(await queue.retry_later(adb, chunk, {"reason": "transient failure"}))
             db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
 
         assert states == ["pending"] * (queue.MAX_ATTEMPTS - 1) + ["error"]
@@ -372,13 +372,14 @@ class TestRetryLater:
         await queue.release(adb, chunk)
         await queue.claim(adb, "worker-b", 1)
 
-        assert await queue.retry_later(adb, chunk, {"reason": "panne passagère"}) is None
+        assert await queue.retry_later(adb, chunk, {"reason": "transient failure"}) is None
 
 
 class TestRetriedJob:
-    """Un job relancé par l'API rouvre ses chunks avec un compte de tentatives neuf.
+    """A job retried through the API reopens its chunks with a fresh attempts count.
 
-    `attempts` ne recule jamais — c'est le jeton de garde — donc le compte repart d'un plancher.
+    `attempts` never goes backwards — it is the fencing token — so the count starts over from
+    a floor.
     """
 
     @staticmethod
@@ -401,8 +402,8 @@ class TestRetriedJob:
         self._reopen_like_the_api(db, chunk.id)
         again = (await queue.claim(adb, "worker-a", 1))[0]
 
-        # Première tentative du nouveau compte : rendu à la file, pas écarté, et sans délai
-        # hérité de l'ancien compte.
+        # First attempt of the new count: returned to the queue, not set aside, and with no
+        # delay inherited from the old count.
         assert again.attempts == queue.MAX_ATTEMPTS + 1
         assert await queue.retry_later(adb, again, {"reason": "x"}) == "pending"
         delay = db.execute(
@@ -413,7 +414,7 @@ class TestRetriedJob:
     async def test_the_fencing_token_still_holds_across_a_retry(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Un worker de l'exécution précédente, revenu tard, ne peut pas écrire sur la nouvelle."""
+        """A worker from the previous run, coming back late, cannot write over the new one."""
         _enqueue(db, 1)
         stale = (await queue.claim(adb, "worker-a", 1))[0]
         db.execute(
@@ -441,7 +442,7 @@ class TestLeaseRefresh:
     async def test_a_worker_cannot_extend_the_lease_of_its_successor(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Sinon un worker qui a perdu son chunk le garderait indéfiniment hors de portée."""
+        """Otherwise a worker that lost its chunk would keep it out of reach indefinitely."""
         _enqueue(db, 1)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
         await queue.release(adb, chunk)
@@ -466,12 +467,12 @@ class TestOutcome:
             chunk,
             produced=7,
             skipped=1,
-            quarantined=[self.Item("a", "illisible"), self.Item("b", "illisible", {"code": 500})],
+            quarantined=[self.Item("a", "unreadable"), self.Item("b", "unreadable", {"code": 500})],
         )
 
         assert db.execute(f"SELECT produced, skipped FROM {SCHEMA_NAME}.job_chunks").fetchone() == (7, 1)
         items = db.execute(f"SELECT item_id, reason, detail FROM {SCHEMA_NAME}.job_items ORDER BY item_id").fetchall()
-        assert items == [("a", "illisible", None), ("b", "illisible", {"code": 500})]
+        assert items == [("a", "unreadable", None), ("b", "unreadable", {"code": 500})]
 
     async def test_produced_defaults_to_what_is_left(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
@@ -479,21 +480,21 @@ class TestOutcome:
         _enqueue(db, 1, tasks_per_chunk=10)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
 
-        await queue.finish(adb, chunk, skipped=2, quarantined=[self.Item("a", "illisible")])
+        await queue.finish(adb, chunk, skipped=2, quarantined=[self.Item("a", "unreadable")])
 
         assert db.execute(f"SELECT produced, skipped FROM {SCHEMA_NAME}.job_chunks").fetchone() == (7, 2)
 
     async def test_a_replayed_chunk_replaces_its_quarantine(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Le cas du `kill -9` entre l'écriture LanceDB et le commit : le chunk est refait."""
+        """The `kill -9` case between the LanceDB write and the commit: the chunk is redone."""
         job = _enqueue(db, 1, tasks_per_chunk=10)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
-        await queue.finish(adb, chunk, quarantined=[self.Item("a", "première fois")])
+        await queue.finish(adb, chunk, quarantined=[self.Item("a", "first time")])
         db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'pending', produced = NULL, skipped = NULL")
         chunk = (await queue.claim(adb, "worker-b", 1))[0]
 
-        await queue.finish(adb, chunk, quarantined=[self.Item("a", "seconde fois")])
+        await queue.finish(adb, chunk, quarantined=[self.Item("a", "second time")])
 
         items = db.execute(f"SELECT item_id, reason FROM {SCHEMA_NAME}.job_items WHERE job_id = %s", (job,)).fetchall()
-        assert items == [("a", "seconde fois")]
+        assert items == [("a", "second time")]

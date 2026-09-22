@@ -4,12 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-"""Calcul d'embeddings : un vecteur par enregistrement, depuis sa vue image.
+"""Embeddings computation: one vector per record, from its image view.
 
-Le premier type de job réel. Il sert de référence aux suivants — pré-annotation, suivi vidéo —
-parce qu'il exerce tout ce qu'ils exerceront : lire un dataset, désigner des médias sans faire
-transiter d'octets quand c'est évitable, appeler l'inférence par lots, distinguer un échec
-transitoire d'un échec définitif, et écrire un résultat que rejouer ne duplique pas.
+The first real job kind. It serves as the reference for the next ones — pre-annotation, video
+tracking — because it exercises everything they will: reading a dataset, designating media
+without moving bytes around when that can be avoided, calling the inference in batches, telling
+a transient failure from a definitive one, and writing a result that replaying does not
+duplicate.
 """
 
 import io
@@ -32,37 +33,36 @@ from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, Transient
 
 log = logging.getLogger("pixano-worker")
 
-# La table des vues image, et celle des enregistrements. Ce sont les noms canoniques de Pixano.
+# The image views table, and the records table. These are Pixano's canonical names.
 IMAGE_TABLE = "images"
 RECORD_TABLE = "records"
 
-# Les réponses qui disent « reviens plus tard » : délai dépassé, trop de requêtes, service
-# indisponible. Le client rejoue déjà seul les 502, 503 et 504 ; ce qui arrive jusqu'ici a
-# survécu à ses reprises et relève de la file.
+# The answers that say "come back later": timeout, too many requests, service unavailable. The
+# client already replays 502, 503 and 504 on its own; what reaches this point has survived its
+# retries and belongs to the queue.
 TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 
-# Les réponses qui disent « cette requête ne passera jamais », quel que soit son contenu : pas
-# de droit, pas de route, pas de modèle. Découper le lot n'y changerait rien.
+# The answers that say "this request will never pass", whatever its content: no permission, no
+# route, no model. Splitting the batch would change nothing.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 
-# Côté de l'image témoin : la plus petite que le serveur accepte sans discuter. Elle ne sert
-# qu'à savoir si le serveur embarque encore quelque chose, pas à produire un vecteur.
+# Side of the witness image: the smallest the server accepts without arguing. It only serves to
+# find out whether the server can still embed anything, not to produce a vector.
 WITNESS_IMAGE_SIDE = 16
 
-# Le statut que le client donne à une erreur quand le serveur n'a rien répondu du tout —
-# connexion refusée, délai dépassé. Il l'enveloppe dans une PixanoInferenceError plutôt que de
-# laisser passer l'erreur httpx.
+# The status the client gives an error when the server answered nothing at all — connection
+# refused, timeout. It wraps it in a PixanoInferenceError rather than letting the httpx error
+# through.
 NO_RESPONSE = 0
 
 
 @cache
 def witness_image() -> str:
-    """Une image générée, en octets, que le serveur doit savoir embarquer.
+    """A generated image, as bytes, that the server must be able to embed.
 
-    Quand un lot entier est refusé image par image, elle départage la panne de l'inférence du lot
-    réellement corrompu : le seuil « deux images refusées valent une panne » qu'elle remplace
-    faisait dépendre la décision de la taille du lot, et le dernier chunk d'un dataset n'a
-    souvent qu'une image.
+    When a whole batch is refused image by image, it tells an inference outage from a batch that
+    is really corrupt: the "two refused images count as an outage" threshold it replaces made the
+    decision depend on the batch size, and the last chunk of a dataset often has only one image.
     """
     image = Image.new("RGB", (WITNESS_IMAGE_SIDE, WITNESS_IMAGE_SIDE), (128, 128, 128))
     buffer = io.BytesIO()
@@ -71,24 +71,22 @@ def witness_image() -> str:
 
 
 class EmbeddingsParams(JobParams):
-    """Paramètres du calcul d'embeddings.
+    """Parameters of the embeddings computation.
 
     Attributes:
-        model: Le nom du modèle tel que l'inference le déclare.
-        chunk_size: Enregistrements par chunk. C'est aussi la taille du lot envoyé à
-            l'inference : un chunk est un appel. Le défaut de 8 est mesuré, pas supposé —
-            voir « Chunk size, measured » dans docs/specs/backend-processing.md. Sur CPU,
-            grossir le lot ralentit le job au lieu de l'accélérer, et un petit chunk réduit
-            en prime ce qu'une reprise doit refaire. Sur GPU l'arbitrage s'inversera
-            probablement : c'est précisément pourquoi ce paramètre existe.
-        normalize: Normaliser les vecteurs, pour que la similarité cosinus soit un produit
-            scalaire.
-        max_retries: Reprises courtes d'un appel en échec passager, faites par le client
-            d'inférence avant de rendre la main. Au-delà, le chunk est rendu à la file, qui le
-            rejouera plus tard.
-        request_timeout_s: Au-delà, l'appel est considéré perdu. Généreux, parce qu'un modèle
-            sur CPU met du temps et qu'abandonner trop tôt transformerait de la lenteur en
-            échec.
+        model: The model name as the inference declares it.
+        chunk_size: Records per chunk. It is also the size of the batch sent to the
+            inference: one chunk is one call. The default of 8 is measured, not assumed —
+            see "Chunk size, measured" in docs/specs/backend-processing.md. On CPU, growing
+            the batch slows the job down instead of speeding it up, and a small chunk also
+            reduces what a resumption has to redo. On GPU the trade-off will probably flip:
+            that is precisely why this parameter exists.
+        normalize: Normalise the vectors, so that cosine similarity is a dot product.
+        max_retries: Short retries of a call that failed transiently, done by the inference
+            client before handing back. Beyond that, the chunk is handed back to the queue,
+            which will replay it later.
+        request_timeout_s: Beyond this, the call is considered lost. Generous, because a model
+            on CPU takes time and giving up too early would turn slowness into failure.
     """
 
     model: str = Field(default="clip", min_length=1)
@@ -99,31 +97,31 @@ class EmbeddingsParams(JobParams):
 
 
 class EmbeddingsKind(JobKind[EmbeddingsParams]):
-    """Calcule un vecteur par enregistrement et l'écrit dans le dataset."""
+    """Computes one vector per record and writes it into the dataset."""
 
     name = "embeddings"
     params_model = EmbeddingsParams
-    # Un embedding est bien la sortie d'un modèle.
+    # An embedding is indeed the output of a model.
     source_type = "model"
 
     def __init__(self, inference_url: str = "", api_key: str = "") -> None:
-        """Lier ce type au serveur d'inférence que le worker connaît."""
+        """Bind this kind to the inference server the worker knows."""
         self.inference_url = inference_url.rstrip("/")
         self.api_key = api_key
 
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
-        """Découper les enregistrements du dataset en lots.
+        """Split the dataset's records into batches.
 
-        Le chunk ne porte que des identifiants. Les images seront lues à l'exécution — y
-        mettre les références résolues gonflerait la table des chunks du poids du dataset
-        pour les datasets dont les médias sont embarqués.
+        The chunk carries identifiers only. The images will be read at execution — putting the
+        resolved references in it would swell the chunk table by the weight of the dataset for
+        datasets whose media are embedded.
 
-        Le modèle est vérifié ici, avant tout calcul : un job qui ne pourra pas écrire ses
-        vecteurs doit échouer à la planification, pas après avoir fait tourner l'inférence sur
-        tout le dataset.
+        The model is checked here, before any computation: a job that will not be able to write
+        its vectors must fail at planning, not after having run the inference over the whole
+        dataset.
 
         Raises:
-            ValueError: Le dataset porte déjà des embeddings d'un autre modèle.
+            ValueError: The dataset already carries embeddings from another model.
         """
         check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         batch: list[str] = []
@@ -136,27 +134,27 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             yield Chunk(payload={"record_ids": batch}, task_count=len(batch))
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: EmbeddingsParams) -> dict[str, Any]:
-        """Embarquer un lot d'images et rendre leurs vecteurs, avec le sort de chaque enregistrement.
+        """Embed a batch of images and return their vectors, with the fate of each record.
 
-        Trois issues par enregistrement. Sans vue image, il est **écarté** : ce n'est pas une
-        erreur, c'est un enregistrement auquel ce calcul ne s'applique pas. Avec une image
-        introuvable ou que l'inférence refuse, il part en **quarantaine**. Sinon il est
-        **produit**.
+        Three outcomes per record. Without an image view, it is **skipped**: this is not an
+        error, it is a record this computation does not apply to. With an image that cannot be
+        found or that the inference refuses, it goes to **quarantine**. Otherwise it is
+        **produced**.
 
         Raises:
-            TransientError: L'inférence ne répond pas, ou refuse tout le lot sans qu'aucune
-                image n'y soit pour rien.
+            TransientError: The inference does not answer, or refuses the whole batch through no
+                fault of any image.
         """
         record_ids: list[str] = payload["record_ids"]
-        # Chronométré par phase — lecture du dataset, appel d'inférence, puis l'écriture dans
-        # `write` — parce que la mesure du lot 10 ne datait que des jobs entiers, et ne savait
-        # pas dire où passait le temps quand un lot plus gros se révélait plus lent.
+        # Timed per phase — reading the dataset, inference call, then the write in `write` —
+        # because the lot 10 measurement only dated whole jobs, and could not say where the time
+        # went when a bigger batch turned out to be slower.
         started = time.perf_counter()
         images = self._images_of(reader, record_ids) if record_ids else {}
 
         candidates: list[tuple[str, str]] = []
-        # Les images envoyées par chemin, pour pouvoir en renvoyer une en octets si le serveur
-        # les refuse toutes alors qu'il embarque encore l'image témoin.
+        # The images sent by path, so that one can be resent as bytes if the server refuses them
+        # all while it still embeds the witness image.
         by_path: dict[str, Any] = {}
         quarantined: list[dict[str, Any]] = []
         skipped = 0
@@ -184,10 +182,10 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         embedded, refused = self._embed_isolating(client, candidates, params)
         inference_s = time.perf_counter() - started
         if refused and not embedded:
-            # Tout le lot est refusé, image par image. Une inférence en panne refuse tout ; un
-            # lot entièrement corrompu aussi. Ce n'est pas la taille du lot qui départage — le
-            # dernier chunk d'un dataset n'a souvent qu'une image — mais le serveur lui-même,
-            # sur une image qu'on sait bonne.
+            # The whole batch is refused, image by image. A broken inference refuses everything;
+            # so does an entirely corrupt batch. What tells them apart is not the batch size —
+            # the last chunk of a dataset often has only one image — but the server itself, on an
+            # image known to be good.
             self._blame_the_server_or_the_images(client, reader, refused, by_path, params)
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
@@ -204,7 +202,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         }
 
     def outcome(self, result: dict[str, Any], payload: dict[str, Any], task_count: int) -> Outcome:
-        """Ce que `process` a constaté pour chaque enregistrement."""
+        """What `process` observed for each record."""
         return Outcome(
             produced=len(result["vectors"]),
             skipped=result["skipped"],
@@ -214,19 +212,19 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def write(
         self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: EmbeddingsParams
     ) -> None:
-        """Écrire un vecteur par enregistrement, en remplaçant le précédent.
+        """Write one vector per record, replacing the previous one.
 
-        La clé est l'enregistrement : recalculer les embeddings d'un dataset remplace les
-        vecteurs au lieu d'en empiler une seconde série.
+        The key is the record: recomputing a dataset's embeddings replaces the vectors instead
+        of stacking a second series.
         """
         vectors = result["vectors"]
         started = time.perf_counter()
         if vectors:
             writer.write_record_embeddings(record_ids=result["record_ids"], vectors=vectors, model=params.model)
         phases = result.get("phases_s", {})
-        # Une ligne par chunk, avec le job : c'est ce que scripts/measure_throughput.py additionne.
+        # One line per chunk, with the job: this is what scripts/measure_throughput.py adds up.
         log.info(
-            "job %s : phases lecture %.3f s, inférence %.3f s, écriture %.3f s (%d vecteur(s), %d image(s) en octets)",
+            "job %s: phases read %.3f s, inference %.3f s, write %.3f s (%d vector(s), %d image(s) as bytes)",
             writer.job_id,
             phases.get("read", 0.0),
             phases.get("inference", 0.0),
@@ -243,22 +241,23 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         by_path: dict[str, Any],
         params: EmbeddingsParams,
     ) -> None:
-        """Décider, sur un lot entièrement refusé, si c'est le serveur ou les images.
+        """Decide, on an entirely refused batch, whether the server or the images are to blame.
 
-        Une image témoin, générée ici, est envoyée en octets : refusée, le serveur ne va pas
-        bien et le chunk est rejoué plus tard. Acceptée, les images sont en cause — sauf si
-        elles avaient été désignées par chemin : le serveur peut ne pas lire le stockage qu'on
-        lui a dit de monter, et refuser alors tout chemin sans qu'aucune image n'y soit pour
-        rien. L'une d'elles est donc renvoyée en octets ; si elle passe, c'est le montage, et le
-        chunk est rejoué avec la raison, plutôt que trois cents images saines en quarantaine.
+        A witness image, generated here, is sent as bytes: refused, the server is not well and
+        the chunk is replayed later. Accepted, the images are at fault — unless they had been
+        designated by path: the server may not read the storage it was told to mount, and then
+        refuses every path through no fault of any image. So one of them is resent as bytes; if
+        it passes, the mount is the cause, and the chunk is replayed with the reason, rather than
+        three hundred healthy images going to quarantine.
 
         Raises:
-            TransientError: Le serveur refuse l'image témoin, ou ne lit pas ses médias par chemin.
+            TransientError: The server refuses the witness image, or does not read its media by
+                path.
         """
         try:
             self._embed(client, [witness_image()], params)
         except (httpx.TransportError, PixanoInferenceError) as error:
-            raise TransientError(f"l'inférence refuse même l'image témoin : {error}") from error
+            raise TransientError(f"the inference refuses even the witness image: {error}") from error
 
         first_by_path = next((record_id for record_id, _ in refused if record_id in by_path), None)
         if first_by_path is None:
@@ -269,21 +268,21 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         try:
             self._embed(client, [bytes_to_data_uri(found[0])], params)
         except (httpx.TransportError, PixanoInferenceError):
-            # Refusée en octets aussi : l'image est bien en cause.
+            # Refused as bytes too: the image really is at fault.
             return
         raise TransientError(
-            f"l'inférence refuse les images par chemin mais accepte la même en octets ({first_by_path}) : "
-            "elle ne lit pas le stockage des médias — vérifier PIXANO_INFERENCE_MEDIA_ROOT et son montage"
+            f"the inference refuses images by path but accepts the same one as bytes ({first_by_path}): "
+            "it does not read the media storage — check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
         )
 
     @staticmethod
     def _images_of(reader: JobReader, record_ids: list[str]) -> dict[str, Any]:
-        """La vue image de chaque enregistrement du lot, quand elle existe.
+        """The image view of each record in the batch, when it exists.
 
-        Un enregistrement peut porter plusieurs vues image — nuScenes en a six, une par
-        caméra. Ce type en embarque **une**, la première que LanceDB rend, et n'offre pas encore
-        de quoi choisir laquelle : c'est un paramètre `view` à ajouter avec les types de l'étape
-        2, quand on saura ce que la pré-annotation attend d'un enregistrement multi-vues.
+        A record may carry several image views — nuScenes has six, one per camera. This kind
+        embeds **one**, the first LanceDB returns, and does not yet offer a way to choose which:
+        that is a `view` parameter to add with the step 2 kinds, once we know what pre-annotation
+        expects from a multi-view record.
         """
         rows = reader.dataset.get_data(IMAGE_TABLE, record_ids=list(record_ids)) or []
         by_record: dict[str, Any] = {}
@@ -294,38 +293,38 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def _embed_isolating(
         self, client: SyncPixanoInferenceClient, candidates: list[tuple[str, str]], params: EmbeddingsParams
     ) -> tuple[list[tuple[str, list[float]]], list[tuple[str, dict[str, Any]]]]:
-        """Embarquer un lot, et s'il est refusé, trouver la ou les images en cause.
+        """Embed a batch, and if it is refused, find the image or images at fault.
 
-        L'inférence répond 500 aussi bien pour une image corrompue que pour un chemin absent, et
-        refuse alors le lot entier : son code de retour ne désigne pas le coupable. On coupe le
-        lot en deux et on recommence, jusqu'à isoler les images qui échouent seules. Un lot de
-        huit avec une image corrompue coûte sept appels au lieu d'un — mais seulement le jour où
-        une image est corrompue, et les sept autres sont sauvées.
+        The inference answers 500 for a corrupt image as well as for a missing path, and then
+        refuses the whole batch: its return code does not point at the culprit. We cut the batch
+        in two and start again, until the images that fail on their own are isolated. A batch of
+        eight with one corrupt image costs seven calls instead of one — but only on the day an
+        image is corrupt, and the seven others are saved.
 
-        Une image n'est accusée que sur une **réponse** du serveur, jamais sur son silence. Une
-        panne de connexion au milieu de la recherche rend tout le chunk transitoire : coupée en
-        plein job, l'inférence redémarrait, un appel passait, les suivants trouvaient la
-        connexion refusée — et sept images saines partaient en quarantaine.
+        An image is only blamed on an **answer** from the server, never on its silence. A
+        connection outage in the middle of the search makes the whole chunk transient: cut off
+        mid-job, the inference was restarting, one call passed, the next ones found the
+        connection refused — and seven healthy images went to quarantine.
 
         Returns:
-            Les vecteurs obtenus, et les enregistrements refusés avec le détail du refus.
+            The vectors obtained, and the refused records with the detail of the refusal.
 
         Raises:
-            TransientError: L'inférence ne répond pas ou demande de revenir plus tard.
-            PixanoInferenceError: Une erreur qui ne dépend d'aucune image — un modèle inconnu,
-                un accès refusé. Elle est fatale au chunk.
+            TransientError: The inference does not answer or asks to come back later.
+            PixanoInferenceError: An error that depends on no image — an unknown model, a denied
+                access. It is fatal to the chunk.
         """
         if not candidates:
             return [], []
         try:
             vectors = self._embed(client, [reference for _, reference in candidates], params)
         except httpx.TransportError as error:
-            raise TransientError(f"l'inférence ne répond pas : {error}") from error
+            raise TransientError(f"the inference does not answer: {error}") from error
         except PixanoInferenceError as error:
             if error.status_code == NO_RESPONSE:
-                raise TransientError(f"l'inférence ne répond pas : {error}") from error
+                raise TransientError(f"the inference does not answer: {error}") from error
             if error.status_code in TRANSIENT_STATUSES:
-                raise TransientError(f"l'inférence demande de revenir plus tard : {error}") from error
+                raise TransientError(f"the inference asks to come back later: {error}") from error
             if error.status_code in REQUEST_STATUSES:
                 raise
             if len(candidates) == 1:
@@ -341,11 +340,11 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def _embed(
         client: SyncPixanoInferenceClient, references: list[str], params: EmbeddingsParams
     ) -> list[list[float]]:
-        """Un appel d'embedding.
+        """One embedding call.
 
-        L'appel passe par le client officiel plutôt que par une requête HTTP écrite à la main :
-        les vecteurs voyagent en tableau numpy encodé, et redeviner cet encodage serait une
-        supposition de plus à maintenir. Le client rejoue lui-même les échecs brefs.
+        The call goes through the official client rather than a hand-written HTTP request: the
+        vectors travel as an encoded numpy array, and guessing that encoding again would be one
+        more assumption to maintain. The client replays brief failures on its own.
         """
         request = EmbeddingRequest(model=params.model, image=references, normalize=params.normalize)
         response = client.embedding(request, timeout=params.request_timeout_s)

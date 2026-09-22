@@ -4,15 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-"""Configuration du worker, lue depuis l'environnement.
+"""Worker configuration, read from the environment.
 
-Le worker ne suppose jamais où tournent ses dépendances : il ne connaît que des adresses.
-C'est ce qui permet au même binaire de tourner dans le compose local, à côté d'un NAS et
-d'un serveur GPU en mode labo, ou dans le cloud — sans modification de code.
+The worker never assumes where its dependencies run: it only knows addresses. This is what
+lets the same binary run in the local compose, next to a NAS and a GPU server in lab mode,
+or in the cloud — without a code change.
 
-Les variables sans valeur par défaut sont obligatoires : un défaut qui ne vaut qu'en local
-ne provoque pas d'erreur au démarrage, il connecte silencieusement le worker au mauvais
-endroit et échoue trois couches plus loin.
+Variables without a default value are mandatory: a default that is only right locally does
+not raise an error at startup, it silently connects the worker to the wrong place and fails
+three layers further.
 """
 
 import os
@@ -22,49 +22,49 @@ from typing import Callable, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 
 
-# Fichier éphémère, propre au conteneur : sa date de modification est la sonde de vivacité.
+# Ephemeral file, local to the container: its modification time is the liveness probe.
 _HEARTBEAT_PATH_DEFAULT = "/tmp/pixano-worker.heartbeat"  # noqa: S108
 
-# Âge au-delà duquel un worker est considéré mort. Le worker doit battre plus souvent que
-# cela quoi qu'il fasse : voir MAX_BACKOFF_S, qui en dérive.
+# Age beyond which a worker is considered dead. The worker must beat more often than this
+# whatever it does: see MAX_BACKOFF_S, which derives from it.
 MAX_HEARTBEAT_AGE_S = 30.0
 
 
-# Chunks exécutés à la fois par défaut. Le temps d'un chunk se passe surtout à attendre
-# l'inférence, donc plusieurs chunks en vol remplissent un serveur qu'un seul laisserait
-# presque vide. Quatre est un point de départ prudent, pas une mesure : la bonne valeur dépend
-# du serveur d'inférence que ce worker partage, et se règle par déploiement.
+# Chunks executed at a time by default. A chunk's time is mostly spent waiting for the
+# inference, so several in-flight chunks fill a server that a single one would leave almost
+# empty. Four is a cautious starting point, not a measurement: the right value depends on the
+# inference server this worker shares, and is tuned per deployment.
 DEFAULT_CONCURRENCY = 4
 
-# Durée au-delà de laquelle un chunk est tenu pour pendu et rendu à la file. Elle doit dépasser
-# le pire cas légitime d'un type de job, sans quoi on rendrait du travail lent mais sain. Pour
-# les embeddings, un appel qui expire vaut `request_timeout_s` × (1 + `max_retries`), soit vingt
-# minutes avec les délais par défaut — puis le chunk est rendu comme passager, sans recherche
-# d'image fautive. Une demi-heure couvre ce cas et libère tout de même un chunk pendu dans la
-# matinée. Un serveur lent qui *répond* 500 à chaque appel peut faire plus (jusqu'à sept appels
-# pour isoler une image sur huit) : c'est alors la limite qui joue, et c'est voulu.
+# Duration beyond which a chunk is held to be hung and handed back to the queue. It must exceed
+# the legitimate worst case of a job kind, otherwise we would hand back slow but healthy work.
+# For embeddings, a call that times out is worth `request_timeout_s` × (1 + `max_retries`), that
+# is twenty minutes with the default timeouts — then the chunk is handed back as transient,
+# without looking for a faulty image. Half an hour covers this case and still frees a hung chunk
+# within the morning. A slow server that *answers* 500 on every call can do more (up to seven
+# calls to isolate one image out of eight): the limit is then what applies, and that is intended.
 DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 
-# Les types de jobs de démonstration — `fake`, qui ne calcule rien, et `label`, qui pose une
-# étiquette arbitraire — n'ont rien à faire dans un déploiement partagé : leur paramètre
-# `write_to` laisse écrire dans n'importe quelle table d'un dataset. Absents par défaut ; le
-# compose local les active pour la démo et les tests.
+# The demonstration job kinds — `fake`, which computes nothing, and `label`, which sets an
+# arbitrary label — have no business in a shared deployment: their `write_to` parameter lets
+# them write into any table of a dataset. Absent by default; the local compose enables them for
+# the demo and the tests.
 DEMO_KINDS_FLAG = "PIXANO_WORKER_DEMO_KINDS"
 
 
 def heartbeat_path() -> str:
-    """Emplacement du fichier de battement, partagé par le worker et sa sonde."""
+    """Location of the heartbeat file, shared by the worker and its probe."""
     return os.environ.get("PIXANO_WORKER_HEARTBEAT", _HEARTBEAT_PATH_DEFAULT)
 
 
 class MissingConfigurationError(RuntimeError):
-    """Une variable d'environnement obligatoire est absente ou vide."""
+    """A mandatory environment variable is absent or empty."""
 
 
 def _required(name: str, hint: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
-        raise MissingConfigurationError(f"{name} est obligatoire — {hint}")
+        raise MissingConfigurationError(f"{name} is mandatory — {hint}")
     return value
 
 
@@ -72,7 +72,7 @@ NumberT = TypeVar("NumberT", int, float)
 
 
 def _flag(name: str) -> bool:
-    """Un drapeau d'environnement : vrai pour `1`, `true`, `yes`, `on`, faux sinon."""
+    """An environment flag: true for `1`, `true`, `yes`, `on`, false otherwise."""
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -85,18 +85,18 @@ def _positive(name: str, default: NumberT, cast: Callable[[str], NumberT]) -> Nu
     except ValueError:
         value = cast("0")
     if value <= 0:
-        raise MissingConfigurationError(f"{name} doit être un nombre strictement positif, reçu « {raw} »")
+        raise MissingConfigurationError(f"{name} must be a strictly positive number, got '{raw}'")
     return value
 
 
-# psycopg accepte deux écritures : l'URL (postgresql://...) et la forme mot-clé de libpq
-# (host=... password=...). Les deux doivent être masquées, sinon un mot de passe finit en
-# clair dans les logs le jour où quelqu'un configure la seconde.
+# psycopg accepts two spellings: the URL (postgresql://...) and libpq's keyword form
+# (host=... password=...). Both must be masked, otherwise a password ends up in clear in the
+# logs the day someone configures the second one.
 _KEYWORD_PASSWORD = re.compile(r"(?i)\bpassword\s*=\s*(?:'(?:[^'\\]|\\.)*'|\S+)")
 
 
 def redact_dsn(dsn: str) -> str:
-    """Remplacer le mot de passe d'une chaîne de connexion par des astérisques."""
+    """Replace the password of a connection string with asterisks."""
     parts = urlsplit(dsn)
     if parts.password is not None:
         user = f"{parts.username}:***" if parts.username else "***"
@@ -107,20 +107,20 @@ def redact_dsn(dsn: str) -> str:
 
 @dataclass(frozen=True)
 class WorkerConfig:
-    """Tout ce que le worker doit connaître de son environnement de déploiement.
+    """Everything the worker must know about its deployment environment.
 
     Attributes:
-        database_url: URL de connexion PostgreSQL — file de jobs, état et événements.
-        inference_url: URL du serveur pixano-inference.
-        inference_api_key: Clé d'API de l'inference. Vide quand elle n'est pas protégée.
-        library_dir: Répertoire de la bibliothèque LanceDB, vu par le worker.
-        media_root: Racine des médias telle que le worker la voit.
-        inference_media_root: La même racine, telle que l'inference la voit. Le worker
-            traduit de l'une vers l'autre avant chaque appel : les deux côtés ne montent
-            pas nécessairement le même stockage au même endroit.
-        heartbeat_path: Fichier dont la fraîcheur sert de sonde de vivacité.
-        concurrency: Nombre de chunks exécutés à la fois.
-        chunk_timeout_s: Durée maximale d'un chunk, au-delà de laquelle il est rendu à la file.
+        database_url: PostgreSQL connection URL — job queue, state and events.
+        inference_url: URL of the pixano-inference server.
+        inference_api_key: API key of the inference. Empty when it is not protected.
+        library_dir: Directory of the LanceDB library, as seen by the worker.
+        media_root: Media root as the worker sees it.
+        inference_media_root: The same root, as the inference sees it. The worker translates
+            from one to the other before each call: the two sides do not necessarily mount
+            the same storage at the same place.
+        heartbeat_path: File whose freshness serves as the liveness probe.
+        concurrency: Number of chunks executed at a time.
+        chunk_timeout_s: Maximum duration of a chunk, beyond which it is handed back to the queue.
     """
 
     database_url: str
@@ -136,14 +136,14 @@ class WorkerConfig:
 
     @classmethod
     def from_env(cls) -> "WorkerConfig":
-        """Construire la configuration depuis l'environnement, ou échouer clairement."""
+        """Build the configuration from the environment, or fail clearly."""
         return cls(
-            database_url=_required("PIXANO_DATABASE_URL", "URL de connexion PostgreSQL"),
-            inference_url=_required("PIXANO_INFERENCE_URL", "adresse du serveur pixano-inference"),
+            database_url=_required("PIXANO_DATABASE_URL", "PostgreSQL connection URL"),
+            inference_url=_required("PIXANO_INFERENCE_URL", "address of the pixano-inference server"),
             inference_api_key=os.environ.get("PIXANO_INFERENCE_API_KEY", ""),
-            library_dir=_required("PIXANO_LIBRARY_DIR", "répertoire de la bibliothèque LanceDB"),
-            media_root=_required("PIXANO_MEDIA_ROOT", "racine des médias vue par le worker"),
-            inference_media_root=_required("PIXANO_INFERENCE_MEDIA_ROOT", "racine des médias vue par l'inference"),
+            library_dir=_required("PIXANO_LIBRARY_DIR", "directory of the LanceDB library"),
+            media_root=_required("PIXANO_MEDIA_ROOT", "media root as seen by the worker"),
+            inference_media_root=_required("PIXANO_INFERENCE_MEDIA_ROOT", "media root as seen by the inference"),
             heartbeat_path=heartbeat_path(),
             concurrency=_positive("PIXANO_WORKER_CONCURRENCY", DEFAULT_CONCURRENCY, int),
             chunk_timeout_s=_positive("PIXANO_WORKER_CHUNK_TIMEOUT_S", DEFAULT_CHUNK_TIMEOUT_S, float),
@@ -151,16 +151,16 @@ class WorkerConfig:
         )
 
     def describe(self) -> str:
-        """Rendre la configuration lisible dans les logs, sans divulguer de secret."""
+        """Make the configuration readable in the logs, without disclosing any secret."""
         lines = [
-            f"  base de données   : {redact_dsn(self.database_url)}",
+            f"  database          : {redact_dsn(self.database_url)}",
             f"  inference         : {self.inference_url}"
-            + (" (authentifiée)" if self.inference_api_key else " (sans clé d'API)"),
-            f"  bibliothèque      : {self.library_dir}",
-            f"  médias (worker)   : {self.media_root}",
-            f"  médias (inference): {self.inference_media_root}",
-            f"  concurrence       : {self.concurrency} chunk(s) à la fois",
-            f"  types de démo     : {'activés' if self.demo_kinds else 'désactivés'}",
-            f"  durée max. chunk  : {self.chunk_timeout_s:g} s",
+            + (" (authenticated)" if self.inference_api_key else " (no API key)"),
+            f"  library           : {self.library_dir}",
+            f"  media (worker)    : {self.media_root}",
+            f"  media (inference) : {self.inference_media_root}",
+            f"  concurrency       : {self.concurrency} chunk(s) at a time",
+            f"  demo kinds        : {'enabled' if self.demo_kinds else 'disabled'}",
+            f"  chunk time limit  : {self.chunk_timeout_s:g} s",
         ]
         return "\n".join(lines)

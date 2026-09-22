@@ -4,16 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-"""La suite que tout type de job doit passer.
+"""The suite every job kind must pass.
 
-Elle est paramétrée sur le registre, pas sur une liste écrite à la main : enregistrer un
-nouveau type l'y soumet automatiquement, et c'est la seule façon qu'un contrat gelé le reste.
-Un type qui échouerait ici casserait le moteur en production, pas seulement ses propres
-résultats.
+It is parametrised on the registry, not on a hand-written list: registering a new kind submits
+it automatically, and that is the only way a frozen contract stays frozen. A kind that failed
+here would break the engine in production, not only its own results.
 
-Les exemples de paramètres vivent dans `CONTRACT_EXAMPLES`. Un type sans exemple fait échouer
-la suite délibérément : ajouter un type sans dire comment l'exercer reviendrait à le
-soustraire au contrat.
+The parameter examples live in `CONTRACT_EXAMPLES`. A kind without an example fails the suite
+deliberately: adding a kind without saying how to exercise it would amount to exempting it
+from the contract.
 """
 
 import hashlib
@@ -29,25 +28,25 @@ from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
 
 
-#: Le vocabulaire de provenance des schémas Pixano. Écrire autre chose est refusé à l'écriture.
+#: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
 SOURCE_TYPES = {"model", "human", "ground_truth", "other"}
 
-#: De quoi exercer chaque type : des paramètres valides, et une table où écrire.
+#: What it takes to exercise each kind: valid parameters, and a table to write into.
 CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     "fake": {"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0, "write_to": "toy"},
-    # Le dataset du contrat est vide, donc la planification ne produit aucun chunk et rien
-    # n'est appelé sur l'inference — ce qui est le but : le contrat éprouve la forme, pas le
-    # modèle. Le chemin réel est vérifié de bout en bout dans la démonstration du lot.
+    # The contract's dataset is empty, so planning produces no chunk and nothing is called on
+    # the inference — which is the point: the contract exercises the shape, not the model. The
+    # real path is checked end to end in the lot's demonstration.
     "embeddings": {"model": "clip", "chunk_size": 8},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
-        "label": "à-relire",
+        "label": "to-review",
         "chunk_size": 10,
         "write_to": "toy",
     },
 }
 
-#: Les types qui savent ne rien écrire, et comment le leur demander.
+#: The kinds that know how to write nothing, and how to ask them to.
 QUIET_EXAMPLES: dict[str, dict[str, Any]] = {
     "fake": {**CONTRACT_EXAMPLES["fake"], "write_to": None},
     "label": {**CONTRACT_EXAMPLES["label"], "write_to": None},
@@ -57,7 +56,7 @@ REGISTRY = default_registry(demo_kinds=True)
 
 
 class _Target:
-    """Une cible d'écriture qui se comporte comme LanceDB sur les trois opérations utilisées."""
+    """A write target that behaves like LanceDB on the three operations used."""
 
     def __init__(self) -> None:
         self.compactions: list[str] = []
@@ -102,23 +101,22 @@ class _Target:
 def _params(kind: JobKind) -> JobParams:
     if kind.name not in CONTRACT_EXAMPLES:
         pytest.fail(
-            f"le type '{kind.name}' n'a pas d'exemple dans CONTRACT_EXAMPLES — "
-            "un type sans exemple échappe au contrat"
+            f"the kind '{kind.name}' has no example in CONTRACT_EXAMPLES — "
+            "a kind without an example escapes the contract"
         )
     return kind.validate_params(CONTRACT_EXAMPLES[kind.name])
 
 
-#: Le dataset que voit le contrat. Non vide, parce qu'un type piloté par les données ne
-#: produit rien sur un dataset vide — et que le contrat doit exercer ces types-là aussi.
+#: The dataset the contract sees. Non-empty, because a data-driven kind produces nothing on an
+#: empty dataset — and the contract must exercise those kinds too.
 CONTRACT_RECORDS = 25
 
 
 class _Vector:
-    """Une ligne d'embedding : pas de provenance, seulement un vecteur.
+    """An embedding row: no provenance, only a vector.
 
-    Cette absence n'est pas un oubli du schéma Pixano — un embedding n'est pas une
-    annotation, personne ne le relit, et le modèle qui l'a produit est décrit une fois pour
-    toute la table.
+    This absence is not an oversight of the Pixano schema — an embedding is not an annotation,
+    nobody reviews it, and the model that produced it is described once for the whole table.
     """
 
     def __init__(self, id: str, record_id: str, vector: Any) -> None:
@@ -133,10 +131,10 @@ class _Row:
 
 
 class _Source:
-    """Un dataset de vingt-cinq enregistrements, chacun avec une image désignée par chemin.
+    """A dataset of twenty-five records, each with an image designated by path.
 
-    Par chemin et non par octets, pour que le contrat n'ait pas à simuler des images : ce que
-    le résolveur en fait est éprouvé ailleurs.
+    By path and not by bytes, so that the contract does not have to simulate images: what the
+    resolver does with them is exercised elsewhere.
     """
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
@@ -172,7 +170,7 @@ def _writer(kind: JobKind, target: _Target, job_id: str) -> JobWriter:
 
 
 def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1) -> None:
-    """Un job entier, comme le moteur le déroule : préparer, découper, puis chaque chunk."""
+    """A whole job, as the engine runs it: prepare, split, then every chunk."""
     params = _params(kind)
     for _ in range(prepare_times):
         kind.prepare(_writer(kind, target, job_id), params)
@@ -182,17 +180,17 @@ def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1
         )
 
 
-#: Largeur des vecteurs que l'inference simulée renvoie.
+#: Width of the vectors the simulated inference returns.
 FAKE_DIM = 8
 
 
 @pytest.fixture(autouse=True)
 def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Répondre à la place de l'inference.
+    """Answer in place of the inference.
 
-    Le contrat éprouve la forme d'un type, pas la qualité d'un modèle : il doit tourner sans
-    serveur, en une seconde, sur la machine de n'importe qui. Ce que le vrai modèle produit
-    est vérifié de bout en bout ailleurs.
+    The contract exercises the shape of a kind, not the quality of a model: it must run without
+    a server, in one second, on anybody's machine. What the real model produces is checked end
+    to end elsewhere.
     """
 
     class _Client:
@@ -209,7 +207,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(params=REGISTRY.names())
 def kind(request: pytest.FixtureRequest) -> JobKind:
-    """Chaque type enregistré, à son tour."""
+    """Each registered kind, in turn."""
     registered = REGISTRY.get(request.param)
     assert registered is not None
     return registered
@@ -220,16 +218,16 @@ class TestDeclaration:
         assert kind.name
 
     def test_its_parameters_forbid_unknown_fields(self, kind: JobKind) -> None:
-        """C'est ce qui permet à l'application de refuser une faute de frappe à la soumission.
+        """This is what lets the application refuse a typo at submission.
 
-        Sans cette propriété, un paramètre mal orthographié passe la validation et se fait
-        ignorer en silence : l'utilisateur obtient un job qui tourne avec d'autres réglages
-        que ceux qu'il croit avoir posés.
+        Without this property, a misspelled parameter passes validation and gets silently
+        ignored: the user gets a job that runs with other settings than the ones they believe
+        they set.
         """
         assert kind.params_schema()["additionalProperties"] is False
 
     def test_it_declares_a_provenance_the_schemas_accept(self, kind: JobKind) -> None:
-        """Un type qui déclarerait autre chose verrait ses écritures refusées à l'exécution."""
+        """A kind that declared anything else would see its writes refused at execution."""
         assert kind.source_type in SOURCE_TYPES
 
     def test_its_parameter_example_is_valid(self, kind: JobKind) -> None:
@@ -237,7 +235,7 @@ class TestDeclaration:
 
 
 class TestPreparation:
-    """Le crochet `prepare` : rien par défaut, et jamais deux états différents pour deux appels."""
+    """The `prepare` hook: nothing by default, and never two different states for two calls."""
 
     def test_preparing_with_default_parameters_destroys_nothing(self, kind: JobKind) -> None:
         target = _Target()
@@ -249,7 +247,7 @@ class TestPreparation:
         assert target.fingerprint() == before
 
     def test_preparing_twice_is_the_same_as_once(self, kind: JobKind) -> None:
-        """Un planificateur mort après `prepare` laisse le suivant tout refaire."""
+        """A planner that died after `prepare` lets the next one redo everything."""
         once, twice = _Target(), _Target()
         _execute(kind, once, "job-1")
         _execute(kind, twice, "job-1", prepare_times=2)
@@ -262,19 +260,19 @@ class TestPlanning:
         assert list(kind.plan(_reader(), _params(kind)))
 
     def test_every_chunk_carries_at_least_one_task(self, kind: JobKind) -> None:
-        """Un chunk vide bloquerait la progression : il consommerait un tour sans avancer."""
+        """An empty chunk would block progress: it would consume a turn without advancing."""
         assert all(chunk.task_count > 0 for chunk in kind.plan(_reader(), _params(kind)))
 
     def test_planning_twice_gives_the_same_work(self, kind: JobKind) -> None:
-        """La planification doit être reproductible : un job replanifié après une coupure
-        ne doit pas décrire un travail différent de celui déjà en partie exécuté."""
+        """Planning must be reproducible: a job replanned after an outage must not describe
+        work different from the one already partly executed."""
         first = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
         second = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
 
         assert first == second
 
     def test_the_payload_is_an_object(self, kind: JobKind) -> None:
-        """Le schéma contraint les payloads à des objets ; un scalaire serait refusé en base."""
+        """The schema constrains payloads to objects; a scalar would be refused by the database."""
         assert all(isinstance(chunk.payload, dict) for chunk in kind.plan(_reader(), _params(kind)))
 
 
@@ -286,7 +284,7 @@ class TestExecution:
             kind.process(_reader(), chunk.payload, params)
 
     def test_its_outcome_accounts_for_every_task(self, kind: JobKind) -> None:
-        """Le moteur refuse un bilan qui ne tombe pas juste ; mieux vaut l'apprendre ici qu'en production."""
+        """The engine refuses an outcome that does not add up; better to learn it here than in production."""
         params = _params(kind)
 
         for chunk in kind.plan(_reader(), params):
@@ -294,8 +292,8 @@ class TestExecution:
             assert kind.outcome(result, chunk.payload, chunk.task_count).total == chunk.task_count
 
     def test_writing_twice_changes_nothing(self, kind: JobKind) -> None:
-        """L'idempotence, exigée de tous : les résultats vont dans LanceDB et l'avancement
-        dans PostgreSQL, donc un worker qui meurt entre les deux refait le chunk."""
+        """Idempotence, required of all: results go to LanceDB and progress to PostgreSQL,
+        so a worker that dies between the two redoes the chunk."""
         target = _Target()
         _execute(kind, target, "job-1")
         first = (len(target.rows), target.fingerprint())
@@ -314,17 +312,17 @@ class TestExecution:
         assert (len(target.rows), target.fingerprint()) == first
 
     def test_every_annotation_says_where_it_came_from(self, kind: JobKind) -> None:
-        """La provenance est exigée des annotations, pas de toute sortie.
+        """Provenance is required of annotations, not of every output.
 
-        Un embedding n'en porte pas, et c'est cohérent : personne ne le relit, et le modèle
-        qui l'a produit est décrit une fois pour toute la table plutôt que sur chaque ligne.
-        Le contrat vérifie donc que ce qui *peut* porter une provenance en porte une juste.
+        An embedding carries none, and that is consistent: nobody reviews it, and the model
+        that produced it is described once for the whole table rather than on every row. The
+        contract therefore checks that what *can* carry a provenance carries a correct one.
         """
         target = _Target()
 
         _execute(kind, target, "job-1")
 
-        assert target.rows, "un type qui écrit doit écrire quelque chose avec cet exemple"
+        assert target.rows, "a kind that writes must write something with this example"
         for row in target.rows.values():
             if not hasattr(row, "source_name"):
                 continue
@@ -332,10 +330,10 @@ class TestExecution:
             assert row.source_type == kind.source_type
 
     def test_a_kind_can_be_told_to_write_nothing(self, kind: JobKind) -> None:
-        """Certains types savent se taire — une statistique, un essai à blanc. Ceux qui ne le
-        savent pas sont ignorés ici : c'est une capacité, pas une obligation du contrat."""
+        """Some kinds know how to stay quiet — a statistic, a dry run. Those that do not are
+        ignored here: it is a capability, not an obligation of the contract."""
         if kind.name not in QUIET_EXAMPLES:
-            pytest.skip(f"'{kind.name}' n'a pas de mode silencieux")
+            pytest.skip(f"'{kind.name}' has no quiet mode")
         params = kind.validate_params(QUIET_EXAMPLES[kind.name])
         target = _Target()
 
@@ -348,7 +346,7 @@ class TestExecution:
 
 class TestRegistry:
     def test_every_registered_kind_is_covered(self) -> None:
-        """Le garde-fou du contrat : un type ajouté sans exemple fait échouer la suite."""
+        """The contract's safeguard: a kind added without an example fails the suite."""
         assert set(REGISTRY.names()) <= set(CONTRACT_EXAMPLES)
 
     def test_two_kinds_cannot_share_a_name(self) -> None:
@@ -357,5 +355,5 @@ class TestRegistry:
         registry = Registry()
         registry.register(FakeKind())
 
-        with pytest.raises(ValueError, match="déjà enregistré"):
+        with pytest.raises(ValueError, match="already registered"):
             registry.register(FakeKind())

@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests de l'écriture idempotente des résultats de jobs."""
+"""Tests of the idempotent writing of job results."""
 
 import hashlib
 import json
@@ -18,14 +18,14 @@ from pixano_worker.writer import JobWriter, derive_id
 
 
 class _Vector:
-    """Une ligne d'embedding, pour la doublure."""
+    """An embedding row, for the stand-in."""
 
     def __init__(self, id: str, record_id: str, vector: Any) -> None:
         self.id, self.record_id, self.vector = id, record_id, vector
 
 
 class _FakeRow:
-    """Une ligne quelconque, avec l'identifiant que l'écrivain lui pose."""
+    """Any row, with the identifier the writer sets on it."""
 
     def __init__(self, payload: str) -> None:
         self.id = ""
@@ -33,8 +33,8 @@ class _FakeRow:
 
 
 class _FakeDataset:
-    """Un dataset en mémoire, qui se comporte comme LanceDB sur les deux seules opérations
-    dont l'écrivain se sert : l'upsert par identifiant et la suppression par identifiants."""
+    """An in-memory dataset, which behaves like LanceDB on the only two operations the writer
+    uses: upsert by identifier and deletion by identifiers."""
 
     def __init__(self) -> None:
         self.compactions: list[str] = []
@@ -71,7 +71,7 @@ class _FakeDataset:
         return getattr(self, "space", None)
 
     def checksum(self, table_name: str) -> str:
-        """Une empreinte du contenu, insensible à l'ordre d'écriture."""
+        """A fingerprint of the content, insensitive to the write order."""
         table = self.tables.get(table_name, {})
         material = json.dumps(sorted((row_id, row.payload) for row_id, row in table.items()))
         return hashlib.sha256(material.encode()).hexdigest()
@@ -83,7 +83,7 @@ def dataset() -> _FakeDataset:
 
 
 class _EmptySource:
-    """Un dataset vide : le type factice n'y lit rien, mais le contrat veut un lecteur."""
+    """An empty dataset: the fake kind reads nothing from it, but the contract wants a reader."""
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
@@ -117,7 +117,7 @@ def _writer(dataset: _FakeDataset, job_id: str = "job-1") -> JobWriter:
 
 
 class TestDeriveId:
-    """L'identité vient du travail, pas de l'exécution qui l'a produit."""
+    """Identity comes from the work, not from the execution that produced it."""
 
     def test_is_stable_across_calls(self) -> None:
         assert derive_id("fake", "item-1", 0) == derive_id("fake", "item-1", 0)
@@ -129,14 +129,14 @@ class TestDeriveId:
         assert derive_id("fake", "item-1", 0) != derive_id("fake", "item-2", 0)
 
     def test_separates_kinds(self) -> None:
-        """Deux traitements sur le même item ne doivent pas s'écraser l'un l'autre."""
+        """Two processings on the same item must not overwrite each other."""
         assert derive_id("fake", "item-1", 0) != derive_id("embeddings", "item-1", 0)
 
     def test_does_not_depend_on_the_job(self) -> None:
-        """La propriété centrale du lot : resoumettre remplace au lieu de dupliquer.
+        """The lot's central property: resubmitting replaces instead of duplicating.
 
-        Un identifiant qui porterait le job produirait des lignes neuves à chaque
-        soumission, et le même traitement relancé doublerait le contenu du dataset.
+        An identifier that carried the job would produce new rows on every submission, and
+        the same processing rerun would double the dataset's content.
         """
         first = _writer(_FakeDataset(), job_id="job-1").ids_for("item-1", 3)
         second = _writer(_FakeDataset(), job_id="job-2").ids_for("item-1", 3)
@@ -145,7 +145,7 @@ class TestDeriveId:
 
 
 class TestReplay:
-    """« Le même job lancé deux fois » — la définition de fini du lot."""
+    """'The same job run twice' — the lot's definition of done."""
 
     def test_a_second_run_changes_nothing(self, dataset: _FakeDataset) -> None:
         rows = lambda: [_FakeRow("a"), _FakeRow("b"), _FakeRow("c")]  # noqa: E731
@@ -157,7 +157,7 @@ class TestReplay:
         assert (len(dataset.tables["toy"]), dataset.checksum("toy")) == first
 
     def test_a_different_job_does_not_duplicate(self, dataset: _FakeDataset) -> None:
-        """Une resoumission est un job différent, et ne doit pas doubler le contenu."""
+        """A resubmission is a different job, and must not double the content."""
         _writer(dataset, "job-1").replace("toy", "item-1", [_FakeRow("a"), _FakeRow("b")])
         before = dataset.checksum("toy")
 
@@ -167,17 +167,17 @@ class TestReplay:
         assert dataset.checksum("toy") == before
 
     def test_a_changed_result_replaces_the_old_one(self, dataset: _FakeDataset) -> None:
-        _writer(dataset).replace("toy", "item-1", [_FakeRow("avant")])
+        _writer(dataset).replace("toy", "item-1", [_FakeRow("before")])
 
-        _writer(dataset).replace("toy", "item-1", [_FakeRow("après")])
+        _writer(dataset).replace("toy", "item-1", [_FakeRow("after")])
 
-        assert [row.payload for row in dataset.tables["toy"].values()] == ["après"]
+        assert [row.payload for row in dataset.tables["toy"].values()] == ["after"]
 
     def test_a_shorter_result_leaves_nothing_behind(self, dataset: _FakeDataset) -> None:
-        """Le cas que le simple remplacement ne couvre pas.
+        """The case that plain replacement does not cover.
 
-        Un modèle qui détectait cinq objets et n'en voit plus que deux laisserait trois
-        lignes orphelines que rien ne viendrait jamais nettoyer.
+        A model that detected five objects and now sees only two would leave three orphan
+        rows that nothing would ever clean up.
         """
         _writer(dataset).replace("toy", "item-1", [_FakeRow(str(n)) for n in range(5)])
 
@@ -193,8 +193,8 @@ class TestReplay:
         assert dataset.tables["toy"] == {}
 
     def test_other_keys_are_untouched(self, dataset: _FakeDataset) -> None:
-        """Le nettoyage est cadré à la clé : effacer les sorties d'un item ne doit pas
-        toucher à celles d'un autre, ni à celles d'un autre chunk du même job."""
+        """Cleanup is scoped to the key: erasing one item's outputs must not touch those of
+        another, nor those of another chunk of the same job."""
         _writer(dataset).replace("toy", "item-1", [_FakeRow("a"), _FakeRow("b")])
         _writer(dataset).replace("toy", "item-2", [_FakeRow("c")])
 
@@ -204,7 +204,7 @@ class TestReplay:
 
 
 class TestProvenance:
-    """Aucune sortie de job ne doit atterrir dans un dataset sans qu'on sache d'où elle vient."""
+    """No job output must land in a dataset without knowing where it came from."""
 
     def test_names_the_kind_and_the_job(self, dataset: _FakeDataset) -> None:
         provenance = JobWriter(lambda: dataset, "fake", "job-42", "other").provenance()
@@ -215,11 +215,11 @@ class TestProvenance:
 
 
 class TestAgainstRealLance:
-    """Les tests précédents passent par un double ; ceux-ci écrivent dans un vrai LanceDB.
+    """The previous tests go through a stand-in; these write into a real LanceDB.
 
-    Le double reproduit les deux opérations dont l'écrivain se sert, mais pas les contrôles
-    d'intégrité de Pixano — et ce sont eux qui ont révélé qu'une sortie de job ne peut pas
-    inventer les enregistrements auxquels elle se rattache.
+    The stand-in reproduces the two operations the writer uses, but not Pixano's integrity
+    checks — and those are what revealed that a job output cannot invent the records it
+    attaches to.
     """
 
     @pytest.fixture
@@ -253,7 +253,7 @@ class TestAgainstRealLance:
         return len(rows), hashlib.sha256(repr(material).encode()).hexdigest()
 
     def test_the_same_job_run_twice_writes_the_same_content(self, toy) -> None:
-        """La définition de fini du lot, contre le vrai magasin."""
+        """The lot's definition of done, against the real store."""
         self._run(toy, "job-1", 60)
         first = self._fingerprint(toy)
 
@@ -279,17 +279,17 @@ class TestAgainstRealLance:
             assert json.loads(row.source_metadata)["job_id"] == "job-1"
 
     def test_a_kind_that_runs_no_model_does_not_claim_to(self, toy) -> None:
-        """`model` désignerait une prédiction ; celle-ci n'en est pas une."""
+        """`model` would designate a prediction; this one is not one."""
         self._run(toy, "job-1", 20)
 
         assert toy.get_data("classifications", limit=1)[0].source_type == "other"
 
     def test_it_cannot_write_into_a_dataset_it_was_not_built_for(self, toy, tmp_path) -> None:
-        """Le garde-fou est structurel, et vaut mieux qu'une convention de nommage.
+        """The guard is structural, and is worth more than a naming convention.
 
-        Les noms de tables sont canoniques dans Pixano, donc « une table de jouet » n'existe
-        pas. Mais un dataset réel n'a pas les enregistrements que ce type invente, et le
-        contrôle d'intégrité refuse la sortie plutôt que de la laisser s'installer.
+        Table names are canonical in Pixano, so "a toy table" does not exist. But a real
+        dataset does not have the records this kind invents, and the integrity check refuses
+        the output rather than letting it settle in.
         """
         from pixano.datasets import Dataset
         from pixano.datasets.dataset_info import DatasetInfo
@@ -306,16 +306,16 @@ class TestAgainstRealLance:
             self._run(autre, "job-1", 20)
 
     def test_a_kind_declares_what_it_produces(self, dataset: _FakeDataset) -> None:
-        """Le vocabulaire est celui des schémas : model, human, ground_truth, other.
+        """The vocabulary is that of the schemas: model, human, ground_truth, other.
 
-        Écrire « job » y serait refusé, et c'est tant mieux — ce qui compte pour un relecteur
-        est de savoir si une annotation vient d'un modèle, pas quel rouage l'a écrite.
+        Writing "job" there would be refused, and so much the better — what matters to a
+        reviewer is knowing whether an annotation comes from a model, not which cog wrote it.
         """
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
 
 
 class TestRecordEmbeddings:
-    """Une table d'embeddings n'accepte qu'un modèle."""
+    """An embeddings table accepts only one model."""
 
     def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
@@ -334,7 +334,7 @@ class TestRecordEmbeddings:
         assert len(dataset.tables["embeddings"]) == 1
 
     def test_another_model_is_refused_rather_than_mixed_in(self, dataset: _FakeDataset) -> None:
-        """Même dimension, autre modèle : rien ne casserait à l'écriture, la recherche serait fausse."""
+        """Same dimension, other model: nothing would break on write, the search would be wrong."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
         writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
 
@@ -352,7 +352,7 @@ class TestRecordEmbeddings:
 
 
 class TestCompaction:
-    """Revue indépendante, C5 : chaque écriture crée une version Lance, rien ne les résorbait."""
+    """Independent review, C5: every write creates a Lance version, nothing reclaimed them."""
 
     def test_compacts_after_enough_writes(self, dataset: _FakeDataset, monkeypatch: pytest.MonkeyPatch) -> None:
         from pixano_worker import writer as writer_module
@@ -371,7 +371,7 @@ class TestCompaction:
         from pixano_worker import writer as writer_module
 
         monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 1)
-        dataset.open_table = lambda name: (_ for _ in ()).throw(RuntimeError("lance indisponible"))  # type: ignore[assignment]
+        dataset.open_table = lambda name: (_ for _ in ()).throw(RuntimeError("lance unavailable"))  # type: ignore[assignment]
         writer = JobWriter(lambda: dataset, "label", "job-1", "other")
 
         written = writer.replace("classifications", key="task-0", rows=[_FakeRow("r0")])
@@ -401,11 +401,11 @@ class TestCompaction:
             writer.replace("classifications", key=f"task-{n}", rows=[row])
 
         versions = len(toy.open_table("classifications").list_versions())
-        assert versions < 40, f"{versions} versions pour 40 écritures : rien n'a été compacté"
+        assert versions < 40, f"{versions} versions for 40 writes: nothing was compacted"
 
 
 class TestEmbeddingTableCreatedElsewhere:
-    """Revue indépendante, étape 4 : un dataset en cache ne voyait pas la table créée par un autre worker."""
+    """Independent review, step 4: a cached dataset did not see the table created by another worker."""
 
     def test_rereads_the_dataset_before_creating(self, dataset: _FakeDataset) -> None:
         fresh = _FakeDataset()
@@ -416,5 +416,5 @@ class TestEmbeddingTableCreatedElsewhere:
 
         writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
 
-        assert created_on_stale == [], "la table existante aurait été écrasée"
+        assert created_on_stale == [], "the existing table would have been overwritten"
         assert len(fresh.tables["embeddings"]) == 1

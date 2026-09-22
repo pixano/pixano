@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests de la boucle d'exécution : planification, exécution, annulation, reprise."""
+"""Tests of the execution loop: planning, execution, cancellation, recovery."""
 
 import asyncio
 import contextlib
@@ -29,13 +29,13 @@ FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
 
 @pytest.fixture
 def registry() -> Registry:
-    """Le registre livré avec le worker."""
+    """The registry shipped with the worker."""
     return default_registry(demo_kinds=True)
 
 
 @pytest.fixture
 def declared(db: psycopg.Connection, registry: Registry) -> psycopg.Connection:
-    """Une base où ce worker a déclaré ce qu'il sait faire."""
+    """A database where this worker has declared what it can do."""
     registry.declare(db, "worker-test")
     return db
 
@@ -61,7 +61,7 @@ def _state(db: psycopg.Connection, job_id: str) -> tuple:
 
 class TestDeclaration:
     def test_publishes_every_kind_with_its_parameter_schema(self, db: psycopg.Connection, registry: Registry) -> None:
-        """C'est le seul pont entre l'application et le worker : ils ne partagent aucun code."""
+        """This is the only bridge between the application and the worker: they share no code."""
         registry.declare(db, "worker-test")
 
         rows = db.execute(f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY name").fetchall()
@@ -71,10 +71,10 @@ class TestDeclaration:
         assert published["fake"]["properties"]["task_count"]["type"] == "integer"
 
     def test_the_published_schema_refuses_an_unknown_parameter(self, registry: Registry) -> None:
-        """C'est cette propriété qui permet à l'application d'attraper une faute de frappe.
+        """This is the property that lets the application catch a typo.
 
-        Sans `additionalProperties: false` dans le schéma publié, un paramètre mal
-        orthographié passe la validation et se fait ignorer en silence à l'exécution.
+        Without `additionalProperties: false` in the published schema, a misspelled parameter
+        passes validation and gets silently ignored at execution.
         """
         kind = registry.get("fake")
         assert kind is not None
@@ -93,7 +93,7 @@ class TestDeclaration:
     def test_declaring_again_refreshes_rather_than_duplicates(
         self, db: psycopg.Connection, registry: Registry
     ) -> None:
-        """Un worker redéployé met son schéma à jour sans intervention."""
+        """A redeployed worker updates its schema with no intervention."""
         registry.declare(db, "worker-a")
         registry.declare(db, "worker-b")
 
@@ -125,7 +125,7 @@ class TestPlanning:
     async def test_an_unknown_kind_fails_the_job_instead_of_stranding_it(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Sans ça, un job dont aucun worker ne connaît le type attendrait sans explication."""
+        """Without this, a job whose kind no worker knows would wait with no explanation."""
         job = _submit(declared, kind="fantome")
 
         await runner.plan_one(adb, registry)
@@ -147,7 +147,7 @@ class TestPlanning:
     async def test_a_cancelled_job_is_never_planned(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Découper le travail d'un job qu'on vient d'arrêter n'a aucun sens."""
+        """Splitting the work of a job that was just stopped makes no sense."""
         job = _submit(declared)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
 
@@ -157,15 +157,15 @@ class TestPlanning:
 
 
 class TestPlanningSeesTheDatasetAsItIs:
-    """Revue d'architecture, point 5 : la planification rouvre le dataset hors du cache du worker.
+    """Architecture review, point 5: planning reopens the dataset outside the worker's cache.
 
-    Un dataset recréé sous le worker — réimporté, sa table d'embeddings supprimée — était vu tel
-    qu'à son ouverture précédente jusqu'au redémarrage du worker ; rencontré en préparant les
-    scénarios du lot 11.
+    A dataset recreated under the worker — reimported, its embeddings table dropped — was seen
+    as at its previous opening until the worker restarted; met while preparing the scenarios
+    of lot 11.
     """
 
     class _ReadsAtPlanning(FakeKind):
-        """Le kind factice, mais dont le plan regarde le dataset et se souvient de ce qu'il a vu."""
+        """The fake kind, but whose plan looks at the dataset and remembers what it saw."""
 
         name = "reads-at-planning"
         seen: list[object] = []
@@ -189,7 +189,7 @@ class TestPlanningSeesTheDatasetAsItIs:
 
         versions = iter(["as first opened", "as it is now"])
         monkeypatch.setattr(runner.Dataset, "find", lambda _id, _library: next(versions))
-        # Ce que le worker en tenait avant : ouvert par un job précédent, resté en cache.
+        # What the worker held of it before: opened by a previous job, left in the cache.
         stale = runner._open_dataset(tmp_path, "ds")
         assert stale == "as first opened"
 
@@ -197,11 +197,11 @@ class TestPlanningSeesTheDatasetAsItIs:
 
         assert _state(db, job)[0] == "pending"
         assert kind.seen == ["as it is now"]
-        assert runner._open_dataset(tmp_path, "ds") == "as it is now", "le cache tient désormais la version relue"
+        assert runner._open_dataset(tmp_path, "ds") == "as it is now", "the cache now holds the reread version"
 
 
 class TestPreparation:
-    """Revue d'architecture, point 4 : `prepare` court une fois par job, à la planification."""
+    """Architecture review, point 4: `prepare` runs once per job, at planning."""
 
     class _Prepares(FakeKind):
         name = "prepares"
@@ -232,16 +232,16 @@ class TestPreparation:
             pass
 
         assert _state(db, job)[0] == "done"
-        assert kind.prepared == [job], "aucun chunk ne prépare"
+        assert kind.prepared == [job], "no chunk prepares"
 
     async def test_a_retried_job_with_chunks_is_not_prepared_again(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
     ) -> None:
-        """La relance remet les chunks en file sans repasser par la planification."""
+        """A retry puts the chunks back in the queue without going through planning again."""
         registry, kind = kind_registry
         job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
         await runner.plan_one(adb, registry)
-        # Ce que fait POST /jobs/{id}/retry sur un job qui a déjà ses chunks.
+        # What POST /jobs/{id}/retry does on a job that already has its chunks.
         db.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'pending' WHERE id = %s", (job,))
 
         await runner.plan_one(adb, registry)
@@ -253,17 +253,17 @@ class TestPreparation:
 
 
 class TestInterruptedPlanning:
-    """Un worker qui meurt en pleine découpe ne doit pas laisser le job bloqué pour toujours."""
+    """A worker that dies in the middle of a split must not leave the job stuck forever."""
 
     @staticmethod
     def _claim_planning_and_die(declared: psycopg.Connection) -> None:
-        """Ce qu'un worker laisse derrière lui s'il meurt juste après avoir réclamé la découpe."""
+        """What a worker leaves behind if it dies right after claiming the split."""
         declared.execute(runner.CLAIM_PLANNING, (queue.LEASE_TTL,))
 
     async def test_the_job_stays_in_planning_while_it_is_split(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Il était passé « en cours » avant même d'avoir un chunk — un état qu'aucune reprise ne voyait."""
+        """It used to move to "running" before it even had a chunk — a state no recovery saw."""
         job = _submit(declared)
 
         self._claim_planning_and_die(declared)
@@ -292,7 +292,7 @@ class TestInterruptedPlanning:
     async def test_a_second_planner_does_not_double_the_chunks(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Le premier planificateur, trop lent, finit après celui qui a repris son bail."""
+        """The first planner, too slow, finishes after the one that took over its lease."""
         job = _submit(declared)
         await runner.plan_one(adb, registry)
         late_chunks = [Chunk(payload={"first_task": 0, "task_count": 200}, task_count=200)]
@@ -305,7 +305,7 @@ class TestInterruptedPlanning:
 
 
 class TestCancelledDuringPlanning:
-    """Revue de l'étape 1 : une annulation pendant la découpe ressuscitait le job en `pending`."""
+    """Step 1 review: a cancellation during the split resurrected the job as `pending`."""
 
     @staticmethod
     def _cancel_as_the_application_does(declared: psycopg.Connection, job: str) -> None:
@@ -333,17 +333,17 @@ class TestCancelledDuringPlanning:
         states = declared.execute(
             f"SELECT payload->>'state' FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state'", (job,)
         ).fetchall()
-        assert ("pending",) not in states, "aucun événement ne doit annoncer le job de nouveau en attente"
+        assert ("pending",) not in states, "no event must announce the job as pending again"
 
     async def test_a_planning_failure_after_a_cancel_does_not_turn_it_into_an_error(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Un job qu'on a arrêté n'est pas un job qui a échoué."""
+        """A job that was stopped is not a job that failed."""
         job = _submit(declared)
         declared.execute(runner.CLAIM_PLANNING, (queue.LEASE_TTL,))
         self._cancel_as_the_application_does(declared, job)
 
-        await runner._fail_job(adb, job, {"reason": "la planification a échoué"})
+        await runner._fail_job(adb, job, {"reason": "planning failed"})
 
         assert _state(declared, job)[0] == "cancelled"
 
@@ -352,7 +352,7 @@ class TestExecution:
     async def test_runs_a_job_to_completion(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """La première moitié de la DoD du lot : un job factice de 200 tâches va au bout."""
+        """The first half of the lot's DoD: a fake job of 200 tasks runs to the end."""
         job = _submit(declared)
         await runner.plan_one(adb, registry)
 
@@ -379,10 +379,10 @@ class TestExecution:
     async def test_the_job_announces_once_that_it_is_running(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Sans cet événement, l'interface affiche « pending » sous une barre qui avance.
+        """Without this event, the interface shows "pending" under a bar that moves forward.
 
-        Vu dans le navigateur au lot 11 : le job passait bien en cours en base, sans que rien ne
-        le dise au flux.
+        Seen in the browser at lot 11: the job did move to running in the database, without
+        anything telling the stream.
         """
         job = _submit(declared)
         await runner.plan_one(adb, registry)
@@ -399,8 +399,8 @@ class TestExecution:
     async def test_progress_events_carry_absolute_counters(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Les identifiants de séquence sont attribués avant le commit : un lecteur peut en
-        sauter un, et doit pouvoir s'en remettre au suivant. Des incréments l'interdiraient."""
+        """Sequence identifiers are assigned before the commit: a reader can skip one, and must
+        be able to rely on the next. Increments would forbid it."""
         _submit(declared)
         await runner.plan_one(adb, registry)
         await runner.run_batch(adb, registry, "worker-test", 2)
@@ -425,7 +425,7 @@ class TestExecution:
     async def test_the_other_chunks_still_run(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Un job ne s'arrête pas au premier item corrompu : il finit et rapporte."""
+        """A job does not stop at the first corrupted item: it finishes and reports."""
         _submit(declared, params={**FAST, "fail_at_chunk": 3})
         await runner.plan_one(adb, registry)
 
@@ -443,10 +443,10 @@ class TestCancellation:
     async def test_stops_between_batches(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """La deuxième partie de la DoD : une annulation en cours de route s'arrête proprement.
+        """The second part of the DoD: a cancellation along the way stops cleanly.
 
-        Le worker voit l'annulation avant le chunk suivant : il le sort de la file plutôt que
-        de l'exécuter, puis conclut le job.
+        The worker sees the cancellation before the next chunk: it takes it out of the queue
+        rather than running it, then settles the job.
         """
         job = _submit(declared)
         await runner.plan_one(adb, registry)
@@ -458,13 +458,13 @@ class TestCancellation:
 
         state, done, total = _state(declared, job)
         assert state == "cancelled"
-        assert done == 60, "le travail déjà fait reste compté"
+        assert done == 60, "the work already done stays counted"
         assert total == 200
 
     async def test_a_cancelled_chunk_never_comes_back(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Le rendre « en attente » le ferait reréclamer sans fin, et le job ne conclurait jamais."""
+        """Handing it back as "pending" would have it reclaimed endlessly, and the job would never settle."""
         job = _submit(declared)
         await runner.plan_one(adb, registry)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
@@ -473,7 +473,7 @@ class TestCancellation:
         while await runner.run_batch(adb, registry, "worker-test", 4) and tours < 20:
             tours += 1
 
-        assert tours < 20, "la boucle ne se termine pas"
+        assert tours < 20, "the loop does not terminate"
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'pending'").fetchone()
         assert row is not None and row[0] == 0
 
@@ -497,19 +497,19 @@ class TestRecovery:
     async def test_an_interrupted_job_resumes_where_it_stopped(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """La troisième partie de la DoD, simulée : un worker meurt, un autre reprend.
+        """The third part of the DoD, simulated: a worker dies, another takes over.
 
-        Ce qu'un `kill -9` laisse derrière lui, ce sont des chunks en cours avec un bail. Le
-        worker qui redémarre rend les siens ; ceux d'un worker qui ne revient pas expirent.
+        What a `kill -9` leaves behind is running chunks with a lease. The worker that restarts
+        hands its own back; those of a worker that does not come back expire.
         """
         job = _submit(declared)
         await runner.plan_one(adb, registry)
-        await runner.run_batch(adb, registry, "worker-mort", 2)
-        await queue.claim(adb, "worker-mort", 3)
+        await runner.run_batch(adb, registry, "worker-dead", 2)
+        await queue.claim(adb, "worker-dead", 3)
 
-        recovery = await queue.release_own(adb, "worker-mort")
+        recovery = await queue.release_own(adb, "worker-dead")
         assert recovery.requeued == 3
-        while await runner.run_batch(adb, registry, "worker-vivant", 8):
+        while await runner.run_batch(adb, registry, "worker-alive", 8):
             pass
 
         assert _state(declared, job) == ("done", 200, 200)
@@ -517,14 +517,14 @@ class TestRecovery:
     async def test_no_task_is_counted_twice_after_a_resume(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Reprendre ne doit pas gonfler la progression au-delà du total."""
+        """Resuming must not inflate the progress beyond the total."""
         job = _submit(declared)
         await runner.plan_one(adb, registry)
-        await runner.run_batch(adb, registry, "worker-mort", 4)
-        await queue.claim(adb, "worker-mort", 2)
-        await queue.release_own(adb, "worker-mort")
+        await runner.run_batch(adb, registry, "worker-dead", 4)
+        await queue.claim(adb, "worker-dead", 2)
+        await queue.release_own(adb, "worker-dead")
 
-        while await runner.run_batch(adb, registry, "worker-vivant", 8):
+        while await runner.run_batch(adb, registry, "worker-alive", 8):
             pass
 
         state, done, total = _state(declared, job)
@@ -532,7 +532,7 @@ class TestRecovery:
 
 
 class TestAbandonedChunk:
-    """Revue de l'étape 1 : un chunk écarté par la reprise ne concluait pas son job."""
+    """Step 1 review: a chunk set aside by the recovery did not settle its job."""
 
     async def test_a_job_whose_last_chunk_is_set_aside_ends_in_error(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
@@ -540,7 +540,7 @@ class TestAbandonedChunk:
         job = _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.0})
         await runner.plan_one(adb, registry)
         for _ in range(queue.MAX_ATTEMPTS):
-            await queue.claim(adb, "worker-qui-meurt", 1)
+            await queue.claim(adb, "worker-dying", 1)
             declared.execute(
                 f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() - interval '1 minute' "
                 "WHERE state = 'running'"
@@ -553,15 +553,15 @@ class TestAbandonedChunk:
 
 
 class TestNotification:
-    """La sonnette qui réveille l'interface."""
+    """The doorbell that wakes the interface."""
 
     async def test_an_event_rings_only_once_committed(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
     ) -> None:
-        """PostgreSQL ne délivre un NOTIFY qu'au commit.
+        """PostgreSQL only delivers a NOTIFY at commit.
 
-        C'est ce qui garantit qu'un lecteur réveillé trouve toujours la ligne en base — sans
-        cette propriété il faudrait un accusé de réception applicatif.
+        This is what guarantees that a woken reader always finds the row in the database —
+        without this property an application-level acknowledgement would be needed.
         """
         job = _submit(declared)
 
@@ -570,7 +570,7 @@ class TestNotification:
 
             async with await psycopg.AsyncConnection.connect(postgres_url) as writer:
                 await queue.record_event(writer, job, "state", {"state": "planning"})
-                assert list(listener.notifies(timeout=0.3)) == [], "rien ne doit sonner avant le commit"
+                assert list(listener.notifies(timeout=0.3)) == [], "nothing must ring before the commit"
                 await writer.commit()
 
             received = list(listener.notifies(timeout=3, stop_after=1))
@@ -584,8 +584,8 @@ class TestNotification:
     async def test_the_payload_carries_identifiers_only(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
     ) -> None:
-        """La charge d'un NOTIFY est plafonnée à 8 ko : y mettre le contenu serait un piège
-        qui se déclencherait le jour d'un message d'erreur un peu long."""
+        """A NOTIFY payload is capped at 8 kB: putting the content in it would be a trap that
+        would spring the day an error message gets a little long."""
         job = _submit(declared)
 
         with psycopg.connect(postgres_url, autocommit=True) as listener:
@@ -598,13 +598,13 @@ class TestNotification:
 
 
 class TestConcurrency:
-    """Plusieurs chunks en vol, sans jamais en tenir plus que permis."""
+    """Several chunks in flight, without ever holding more than allowed."""
 
     @staticmethod
     async def _run_until_settled(
         pool, registry: Registry, declared: psycopg.Connection, job: str, concurrency: int, threads=None
     ):
-        """Faire tourner la boucle réelle jusqu'à ce que le job conclue, en relevant l'occupation."""
+        """Run the real loop until the job settles, recording the occupancy."""
         worker = asyncio.create_task(
             runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05, threads=threads)
         )
@@ -627,10 +627,10 @@ class TestConcurrency:
     async def test_runs_several_chunks_at_once(
         self, declared: psycopg.Connection, postgres_url: str, registry: Registry
     ) -> None:
-        """Le plafond est atteint, et jamais dépassé.
+        """The ceiling is reached, and never exceeded.
 
-        Chaque chunk dort un dixième de seconde : assez pour que la sonde voie les chunks se
-        chevaucher, si la boucle les chevauche vraiment.
+        Each chunk sleeps a tenth of a second: enough for the probe to see the chunks overlap,
+        if the loop really overlaps them.
         """
         job = _submit(declared, params={"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.005})
 
@@ -638,7 +638,7 @@ class TestConcurrency:
             peak = await self._run_until_settled(pool, registry, declared, job, concurrency=4)
 
         assert _state(declared, job) == ("done", 200, 200)
-        assert 2 <= peak <= 4, f"occupation maximale observée : {peak}"
+        assert 2 <= peak <= 4, f"peak occupancy observed: {peak}"
 
     async def test_a_single_slot_runs_one_chunk_at_a_time(
         self, declared: psycopg.Connection, postgres_url: str, registry: Registry
@@ -654,7 +654,7 @@ class TestConcurrency:
     async def test_no_task_is_counted_twice_under_concurrency(
         self, declared: psycopg.Connection, postgres_url: str, registry: Registry
     ) -> None:
-        """Les progressions de chunks concurrents s'additionnent sans se marcher dessus."""
+        """The progress of concurrent chunks adds up without stepping on each other."""
         job = _submit(declared, params={"task_count": 500, "chunk_size": 10, "seconds_per_task": 0.0})
 
         async with AsyncConnectionPool(postgres_url, min_size=1, max_size=9, kwargs={"autocommit": True}) as pool:
@@ -666,8 +666,8 @@ class TestConcurrency:
         ).fetchall()
         assert len(events) == 50
         assert max(event[0]["done_tasks"] for event in events) == 500
-        # Les états, lus dans l'ordre des identifiants, sont dans l'ordre logique même quand huit
-        # chunks finissent ensemble : `running` s'écrit sous le verrou du job, avant tout `done`.
+        # The states, read in identifier order, are in logical order even when eight chunks
+        # finish together: `running` is written under the job's lock, before any `done`.
         states = declared.execute(
             f"SELECT payload->>'state' FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id",
             (job,),
@@ -681,7 +681,7 @@ async def _drain(adb: psycopg.AsyncConnection, registry: Registry) -> None:
 
 
 class TestTransientFailures:
-    """Une panne passagère n'est pas un échec du job."""
+    """A transient failure is not a failure of the job."""
 
     async def test_the_chunk_is_retried_later_instead_of_failing_the_job(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
@@ -691,7 +691,7 @@ class TestTransientFailures:
 
         await _drain(adb, registry)
 
-        assert _state(declared, job)[0] == "running", "le job attend son chunk rejoué, il n'a pas échoué"
+        assert _state(declared, job)[0] == "running", "the job waits for its replayed chunk, it has not failed"
         row = declared.execute(
             f"SELECT state, attempts, error->>'reason' FROM {SCHEMA_NAME}.job_chunks WHERE seq = 3"
         ).fetchone()
@@ -704,7 +704,7 @@ class TestTransientFailures:
         await runner.plan_one(adb, registry)
         await _drain(adb, registry)
 
-        # La panne est passée : le même job, sans la panne, et le délai écoulé.
+        # The failure has passed: the same job, without the failure, and the delay elapsed.
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET params = params - 'transient_at_chunk' WHERE id = %s", (job,))
         declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET available_at = now()")
         await _drain(adb, registry)
@@ -727,7 +727,7 @@ class TestTransientFailures:
 
 
 class TestOutcome:
-    """Un job dit ce qu'il a produit, pas seulement ce qu'il a tenté."""
+    """A job says what it produced, not only what it attempted."""
 
     async def test_the_final_event_carries_the_outcome(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
@@ -749,7 +749,7 @@ class TestOutcome:
     async def test_quarantined_items_can_be_read_back(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Une quarantaine qu'on ne peut pas relire ne sert à rien."""
+        """A quarantine that cannot be read back is useless."""
         job = _submit(declared, params={**FAST, "quarantine_per_chunk": 1})
         await runner.plan_one(adb, registry)
 
@@ -764,7 +764,7 @@ class TestOutcome:
     async def test_an_outcome_that_does_not_add_up_fails_the_chunk(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Un bilan faux fausserait tout ce qu'on affiche du job : c'est un défaut du type."""
+        """A wrong outcome would distort everything displayed about the job: it is a fault of the kind."""
 
         class Miscounting(FakeKind):
             def outcome(self, result, payload, task_count):  # noqa: ANN001, ANN202, D102
@@ -779,14 +779,14 @@ class TestOutcome:
 
         assert _state(declared, job)[0] == "error"
         row = declared.execute(f"SELECT error->>'reason' FROM {SCHEMA_NAME}.job_chunks LIMIT 1").fetchone()
-        assert row is not None and "bilan" in row[0]
+        assert row is not None and "outcome" in row[0]
 
 
 class TestChunkTimeLimit:
     async def test_a_chunk_over_its_time_limit_is_sent_back(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
-        """Le worker est vivant, la sonde de docker ne voit rien : seul ce plafond rend le chunk."""
+        """The worker is alive, docker's probe sees nothing: only this ceiling hands the chunk back."""
         job = _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.05})
         await runner.plan_one(adb, registry)
         chunk = (await queue.claim(adb, "worker-test", 1))[0]
@@ -806,12 +806,13 @@ class TestLeaseKeptWhileRunning:
         registry: Registry,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Sans rafraîchissement, un chunk plus long que son bail serait repris en plein vol."""
+        """Without refreshing, a chunk longer than its lease would be taken over in mid-flight."""
         monkeypatch.setattr(queue, "LEASE_REFRESH_INTERVAL", timedelta(milliseconds=50))
         _submit(declared, params={"task_count": 20, "chunk_size": 20, "seconds_per_task": 0.02})
         await runner.plan_one(adb, registry)
         chunk = (await queue.claim(adb, "worker-test", 1))[0]
-        # Un bail presque échu, qui expirerait bien avant la fin du chunk s'il n'était pas prolongé.
+        # A lease about to expire, which would run out well before the end of the chunk if it
+        # were not extended.
         declared.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET lease_until = now() + interval '200 milliseconds'")
 
         running = asyncio.create_task(runner.run_chunk(adb, registry, chunk))
@@ -821,13 +822,13 @@ class TestLeaseKeptWhileRunning:
         ).fetchone()
         await running
 
-        assert lease is not None and float(lease[0]) > 60, "le bail a été prolongé pendant l'exécution"
+        assert lease is not None and float(lease[0]) > 60, "the lease was extended during execution"
         row = declared.execute(f"SELECT state FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row == ("done",)
 
 
 class TestLeaseRefreshOutage:
-    """Seconde revue : un rafraîchissement de bail raté classait un chunk réussi comme fatal."""
+    """Second review: a failed lease refresh classed a successful chunk as fatal."""
 
     async def test_a_chunk_whose_work_succeeded_is_done_despite_a_failed_refresh(
         self,
@@ -853,7 +854,7 @@ class TestLeaseRefreshOutage:
 
         await runner.run_chunk(adb, registry, chunk)
 
-        assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
+        assert outages["left"] == 0, "the simulated outages did take place"
         assert _state(declared, job) == ("done", 20, 20)
 
 
@@ -861,7 +862,7 @@ class TestChunkFacingAnOutage:
     async def test_an_unreachable_database_is_a_warning_not_a_traceback(
         self, registry: Registry, caplog: pytest.LogCaptureFixture
     ) -> None:
-        """Vu sur la pile : chaque chunk en vol pendant une panne écrivait une trace complète."""
+        """Seen on the stack: every chunk in flight during an outage wrote a full traceback."""
 
         class _DeadPool:
             def connection(self):  # noqa: ANN202
@@ -877,7 +878,7 @@ class TestChunkFacingAnOutage:
 
 
 class TestPlanningRefusedByTheSchema:
-    """Revue indépendante, D1 : un chunk sans tâche tuait le worker et laissait le job sous bail."""
+    """Independent review, D1: a chunk with no task killed the worker and left the job under lease."""
 
     async def test_a_kind_planning_an_empty_chunk_fails_its_job_not_the_worker(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection
@@ -913,7 +914,7 @@ class TestPlanningRefusedByTheSchema:
         async def buggy_plan_one(*args: object, **kwargs: object) -> str | None:
             if failures["left"] > 0:
                 failures["left"] -= 1
-                raise RuntimeError("un bug que personne n'avait prévu")
+                raise RuntimeError("a bug nobody had foreseen")
             return await real_plan_one(*args, **kwargs)  # type: ignore[arg-type]
 
         monkeypatch.setattr(runner, "plan_one", buggy_plan_one)
@@ -932,17 +933,17 @@ class TestPlanningRefusedByTheSchema:
         registry: Registry,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Revue d'architecture, point 7 : survivre à un défaut, oui ; boucler dessus sans fin, non.
+        """Architecture review, point 7: surviving a fault, yes; looping on it endlessly, no.
 
-        Passé la limite, la boucle s'arrête d'elle-même et le dit par une exception, pour que
-        le process sorte en erreur et que la politique de redémarrage en relance un neuf.
+        Past the limit, the loop stops by itself and says so through an exception, so that the
+        process exits in error and the restart policy launches a fresh one.
         """
         _submit(declared, params={"task_count": 10, "chunk_size": 10, "seconds_per_task": 0.0})
         turns = {"count": 0}
 
         async def always_buggy_plan_one(*args: object, **kwargs: object) -> str | None:
             turns["count"] += 1
-            raise RuntimeError("un bug qui ne passe pas")
+            raise RuntimeError("a bug that does not pass")
 
         monkeypatch.setattr(runner, "plan_one", always_buggy_plan_one)
         monkeypatch.setattr(runner, "UNEXPECTED_ERROR_PAUSE_S", 0.001)
@@ -958,10 +959,10 @@ class TestPlanningRefusedByTheSchema:
 
 
 class TestSaturation:
-    """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy ».
+    """Step 1 review: stuck threads immobilised the worker, still "healthy".
 
-    Seconde revue : renouveler le pool sur place plutôt que sortir du process — le redémarrage
-    automatique est borné, et un worker qui comptait dessus finissait arrêté pour de bon.
+    Second review: renew the pool in place rather than exit the process — the automatic restart
+    is bounded, and a worker that relied on it ended up stopped for good.
     """
 
     async def test_a_saturated_pool_is_renewed_and_the_worker_goes_on(
@@ -980,12 +981,12 @@ class TestSaturation:
         finally:
             release.set()
 
-        assert _state(declared, job) == ("done", 20, 20), "le worker a continué à travailler après le renouvellement"
+        assert _state(declared, job) == ("done", 20, 20), "the worker kept working after the renewal"
         assert not threads.saturated
 
 
 class TestDatabaseOutage:
-    """Vu sur la pile réelle : un `docker compose restart postgres` tuait le worker pour de bon."""
+    """Seen on the real stack: a `docker compose restart postgres` killed the worker for good."""
 
     async def test_the_loop_waits_for_the_database_instead_of_dying(
         self,
@@ -1010,17 +1011,17 @@ class TestDatabaseOutage:
         async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
             await TestConcurrency._run_until_settled(pool, registry, declared, job, concurrency=2)
 
-        assert outages["left"] == 0, "les coupures simulées ont bien eu lieu"
+        assert outages["left"] == 0, "the simulated outages did take place"
         assert _state(declared, job) == ("done", 40, 40)
 
 
 class TestGracefulShutdown:
-    """Revue de l'étape 1 : `docker compose stop` coupait les chunks en cours sans les rendre."""
+    """Step 1 review: `docker compose stop` cut the running chunks without handing them back."""
 
     async def test_an_idle_worker_stops_at_once(
         self, declared: psycopg.Connection, postgres_url: str, registry: Registry
     ) -> None:
-        """Pas d'attente de la pause en cours : docker ne doit pas attendre pour rien."""
+        """No waiting for the current pause: docker must not wait for nothing."""
         stop = asyncio.Event()
         async with AsyncConnectionPool(postgres_url, min_size=1, max_size=2, kwargs={"autocommit": True}) as pool:
             worker = asyncio.create_task(runner.work(pool, registry, "worker-test", 1, idle_poll_s=60, stop=stop))
@@ -1048,8 +1049,8 @@ class TestGracefulShutdown:
         states = dict(
             declared.execute(f"SELECT state, count(*) FROM {SCHEMA_NAME}.job_chunks GROUP BY state").fetchall()
         )
-        assert "running" not in states, "les chunks en vol ont fini avant l'arrêt"
-        assert states.get("pending", 0) > 0, "rien de nouveau n'a été réclamé après la demande d'arrêt"
+        assert "running" not in states, "the in-flight chunks finished before the stop"
+        assert states.get("pending", 0) > 0, "nothing new was claimed after the stop request"
 
     async def test_chunks_that_outlast_the_grace_are_left_to_be_handed_back(
         self,

@@ -110,10 +110,10 @@ Wait a few seconds, then:
 
 ```sh
 docker compose start pixano-worker
-docker compose logs --since 1m pixano-worker | grep -E "repris|démarré"
+docker compose logs --since 1m pixano-worker | grep -E "recovered|started"
 ```
 
-**What to see:** the log says `4 chunk(s) repris d'une exécution précédente`, the bar moves
+**What to see:** the log says `4 chunk(s) recovered from a previous run`, the bar moves
 again from where it stopped, and the job ends `done`.
 
 **What to point out:**
@@ -187,13 +187,13 @@ minutes to restart before a chunk is given up.
 
 ## If something does not match
 
-| Symptom                                                      | Cause and fix                                                                                                                          |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| "No worker is running" in the Jobs panel                     | `pixano-worker` is not up, or started before PostgreSQL. `docker compose logs pixano-worker`                                           |
-| The worker exits at start with "schéma de base incompatible" | the database holds an older queue schema. There is no migration on purpose: drop the queue schema, then restart the worker — see below |
-| A job fails at once with "Table 'embeddings' was not found"  | the worker cached a dataset that was recreated underneath it. `docker compose restart pixano-worker`                                   |
-| Every job ends `error`, the chunks mention the inference     | `pixano-inference` is not healthy yet — its first start downloads the model. `docker compose ps`, and wait for `healthy`               |
-| The bar is much slower than two minutes for 400 images       | Docker has fewer CPUs than expected. The demo still works; allow for it in the cancel and kill steps                                   |
+| Symptom                                                       | Cause and fix                                                                                                                          |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| "No worker is running" in the Jobs panel                      | `pixano-worker` is not up, or started before PostgreSQL. `docker compose logs pixano-worker`                                           |
+| The worker exits at start with "incompatible database schema" | the database holds an older queue schema. There is no migration on purpose: drop the queue schema, then restart the worker — see below |
+| A job fails at once with "Table 'embeddings' was not found"   | the worker cached a dataset that was recreated underneath it. `docker compose restart pixano-worker`                                   |
+| Every job ends `error`, the chunks mention the inference      | `pixano-inference` is not healthy yet — its first start downloads the model. `docker compose ps`, and wait for `healthy`               |
+| The bar is much slower than two minutes for 400 images        | Docker has fewer CPUs than expected. The demo still works; allow for it in the cancel and kill steps                                   |
 
 Dropping the queue schema, which recreates it empty at the worker's next start. Prefer it to
 `docker compose down -v`, which would also delete the inference's downloaded model weights:

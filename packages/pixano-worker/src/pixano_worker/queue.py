@@ -4,18 +4,18 @@
 # License: CECILL-C
 # =====================================
 
-"""Réclamation et restitution de chunks.
+"""Claiming and returning chunks.
 
-Les primitives qu'appelle le runner. Elles sont ici, séparées de la boucle, parce qu'elles
-portent les seules propriétés qui comptent — aucun doublon, aucune perte, et une reprise qui
-ne dépend d'aucun process vivant — et qu'on veut les tester sans runner.
+The primitives the runner calls. They live here, apart from the loop, because they carry the
+only properties that matter — no duplicate, no loss, and a recovery that depends on no live
+process — and because we want to test them without a runner.
 
-Elles sont asynchrones parce que le runner l'est : il fait tourner plusieurs chunks à la fois,
-et chacun attend surtout du réseau.
+They are asynchronous because the runner is: it runs several chunks at once, and each one
+mostly waits on the network.
 
-Rien ici ne joint la table des jobs. La réclamation doit rester une requête sur un seul index
-partiel : c'est pourquoi l'annulation d'un job bascule ses chunks en attente plutôt que de
-laisser la file interroger l'état du job à chaque tour.
+Nothing here joins the jobs table. Claiming must remain a query over a single partial index:
+that is why cancelling a job flips its pending chunks, rather than having the queue ask for
+the job's state on every round.
 """
 
 import os
@@ -31,22 +31,22 @@ from .config import MAX_HEARTBEAT_AGE_S
 from .schema import NOTIFY_CHANNEL, SCHEMA_NAME
 
 
-# Le bail doit dépasser la fenêtre au bout de laquelle docker déclare le worker mort, sinon
-# un chunk serait volé avant même qu'on ait constaté que son porteur ne répond plus.
+# The lease must outlast the window after which docker declares the worker dead, otherwise a
+# chunk would be stolen before we even noticed that its holder no longer answers.
 LEASE_TTL = timedelta(seconds=max(120, MAX_HEARTBEAT_AGE_S * 4))
 
-# Un chunk qui tourne prolonge son bail bien avant qu'il expire : trois occasions par bail,
-# pour qu'une requête lente ou une connexion qui hoquette ne suffise pas à le perdre.
+# A running chunk extends its lease well before it expires: three opportunities per lease, so
+# that one slow query or one hiccupping connection is not enough to lose it.
 LEASE_REFRESH_INTERVAL = LEASE_TTL / 3
 
-# Au-delà, un chunk est mis de côté plutôt que de faire boucler la file indéfiniment — qu'il
-# fasse tomber son worker à chaque tentative ou qu'il bute sur une panne qui ne passe pas.
-# Cinq, parce qu'avec le délai ci-dessous cela laisse près de quatre minutes à une inférence
-# pour revenir : le temps d'un redémarrage avec rechargement du modèle.
+# Beyond this, a chunk is set aside rather than making the queue loop forever — whether it
+# brings its worker down on every attempt or keeps hitting a failure that does not pass.
+# Five, because with the delay below that leaves nearly four minutes for an inference to come
+# back: the time of a restart with the model reloaded.
 MAX_ATTEMPTS = 5
 
-# Délai avant de rejouer un chunk après une panne passagère, doublé à chaque tentative. Le
-# plafond évite qu'un chunk disparaisse une heure pour une panne déjà réparée.
+# Delay before replaying a chunk after a transient failure, doubled on each attempt. The cap
+# keeps a chunk from vanishing for an hour over a failure already repaired.
 RETRY_BASE_DELAY = timedelta(seconds=15)
 RETRY_MAX_DELAY = timedelta(minutes=5)
 
@@ -68,8 +68,8 @@ WHERE c.id = picked.id
 RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts
 """
 
-# `attempts` sert de jeton de garde : un worker dont le bail a expiré pendant qu'il
-# travaillait ne doit pas écraser le résultat de celui qui a repris son chunk.
+# `attempts` serves as a fencing token: a worker whose lease expired while it was working must
+# not overwrite the result of the one that took its chunk over.
 FINISH = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'done', lease_until = NULL, error = NULL, produced = %s, skipped = %s, updated_at = now()
@@ -77,8 +77,8 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 RETURNING job_id, task_count
 """
 
-# Un item rejoué avec son chunk remplace sa ligne : la quarantaine reflète la dernière
-# tentative, pas l'historique de toutes.
+# An item replayed with its chunk replaces its row: the quarantine reflects the last attempt,
+# not the history of all of them.
 QUARANTINE = f"""
 INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason, detail)
 VALUES (%s, %s, %s, %s, %s)
@@ -86,9 +86,9 @@ ON CONFLICT (job_id, item_id) DO UPDATE
 SET chunk_id = EXCLUDED.chunk_id, reason = EXCLUDED.reason, detail = EXCLUDED.detail, created_at = now()
 """
 
-# Une panne passagère rend le chunk à la file après un délai — ou l'écarte, s'il a épuisé ses
-# tentatives. Même jeton de garde que FINISH. Les tentatives se comptent depuis le plancher :
-# un job relancé repart avec un compte neuf sans que `attempts` recule.
+# A transient failure returns the chunk to the queue after a delay — or sets it aside, if it
+# has used up its attempts. Same fencing token as FINISH. Attempts are counted from the floor:
+# a retried job starts over with a fresh count without `attempts` going backwards.
 RETRY = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = CASE WHEN attempts - attempts_floor < %(max_attempts)s THEN 'pending' ELSE 'error' END,
@@ -101,8 +101,8 @@ WHERE id = %(id)s AND state = 'running' AND attempts = %(attempts)s
 RETURNING state
 """
 
-# Le bail d'un chunk qui tourne encore. Même jeton de garde : un worker qui a perdu son chunk
-# ne peut pas prolonger le bail de son successeur.
+# The lease of a chunk still running. Same fencing token: a worker that lost its chunk cannot
+# extend its successor's lease.
 REFRESH_LEASE = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET lease_until = now() + %s, updated_at = now()
@@ -116,9 +116,9 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 RETURNING job_id
 """
 
-# Un chunk dont le job est annulé ne revient pas en file : il en sort. Le rendre « en
-# attente » le ferait reréclamer au tour suivant, relâcher, reréclamer — sans fin, et le job
-# ne se conclurait jamais faute de voir sa file se vider.
+# A chunk whose job is cancelled does not go back to the queue: it leaves it. Making it
+# "pending" would have it claimed again on the next round, released, claimed again — endlessly,
+# and the job would never conclude for want of seeing its queue drain.
 CANCEL_CHUNK = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'cancelled', lease_until = NULL, claimed_by = NULL, updated_at = now()
@@ -131,10 +131,10 @@ SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
 WHERE id = %s AND state = 'running' AND attempts = %s
 """
 
-# Ce que le worker fait de ses propres chunks après un arrêt brutal : les rendre tout de
-# suite, au lieu d'attendre l'expiration de leur bail. Avec le même plafond que la reprise des
-# baux : un chunk qui fait tomber son worker à chaque tentative ferait sinon boucler un worker
-# redémarré automatiquement, puisque ce chemin ne regardait jamais les tentatives.
+# What the worker does with its own chunks after a hard stop: return them right away, instead
+# of waiting for their lease to expire. With the same cap as the lease recovery: a chunk that
+# brings its worker down on every attempt would otherwise make an automatically restarted
+# worker loop, since this path never looked at the attempts.
 RELEASE_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
@@ -165,12 +165,12 @@ WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor >=
 RETURNING job_id
 """
 
-# Un job passe en cours à la réclamation de son premier chunk (START_JOBS), pas à la fin : un
-# premier chunk de cinq minutes affichait « pending » cinq minutes sous une barre qui allait
-# bouger. Cette marque est posée par une seconde requête, après le lancement des tâches, pour
-# que la réclamation elle-même ne joigne jamais `jobs` et qu'une coupure juste après laisse
-# les chunks à leurs threads plutôt qu'à leur bail. Les jobs sont verrouillés dans l'ordre de
-# leurs identifiants, comme partout où plusieurs lignes de `jobs` sont prises à la fois.
+# A job becomes running when its first chunk is claimed (START_JOBS), not when it finishes: a
+# five-minute first chunk showed "pending" for five minutes under a bar that was about to move.
+# This mark is set by a second query, after the tasks are launched, so that the claim itself
+# never joins `jobs` and so that a crash right after leaves the chunks to their threads rather
+# than to their lease. Jobs are locked in the order of their identifiers, as everywhere several
+# `jobs` rows are taken at once.
 START_JOBS = f"""
 WITH picked AS (
     SELECT id FROM {SCHEMA_NAME}.jobs
@@ -185,9 +185,9 @@ WHERE j.id = picked.id
 RETURNING j.id
 """
 
-# Le filet de START_JOBS : si la marque a manqué — une coupure entre la réclamation et elle —
-# le premier chunk terminé la pose. L'ancien état est lu sous le verrou de la ligne, pour que
-# l'appelant sache si c'est lui qui a fait la transition, et l'annonce une seule fois.
+# The safety net of START_JOBS: if the mark was missed — a crash between the claim and it — the
+# first finished chunk sets it. The previous state is read under the row lock, so that the
+# caller knows whether it is the one that made the transition, and announces it only once.
 ADVANCE_JOB = f"""
 WITH previous AS (
     SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %(job)s FOR UPDATE
@@ -201,10 +201,10 @@ WHERE j.id = %(job)s
 RETURNING previous.state = 'pending', j.done_tasks, j.total_tasks
 """
 
-# L'insertion et la sonnette dans la même instruction, donc la même transaction : PostgreSQL
-# ne délivre un NOTIFY qu'au commit, ce qui donne gratuitement la garantie « pas d'événement
-# annoncé avant d'être lisible ». La charge ne porte que des identifiants — elle est plafonnée
-# à 8 ko, et un lecteur doit de toute façon relire la ligne pour rattraper ce qu'il a manqué.
+# The insert and the doorbell in the same statement, hence the same transaction: PostgreSQL
+# only delivers a NOTIFY at commit, which gives the "no event announced before it is readable"
+# guarantee for free. The payload carries only identifiers — it is capped at 8 KB, and a reader
+# must re-read the row anyway to catch up on what it missed.
 RECORD_EVENT = f"""
 WITH inserted AS (
     INSERT INTO {SCHEMA_NAME}.job_events (job_id, type, payload)
@@ -221,7 +221,7 @@ IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs 
 
 @dataclass(frozen=True)
 class Chunk:
-    """Un lot de tâches réclamé, avec le jeton qui autorise à écrire son résultat."""
+    """A claimed batch of tasks, with the token that authorises writing its result."""
 
     id: int
     job_id: str
@@ -231,28 +231,28 @@ class Chunk:
     attempts: int
 
 
-# Une identité stable, donnée par le déploiement. Sans elle, l'identité est hôte:pid — stable
-# dans un conteneur, dont le nom d'hôte est fixe et le worker le process 1, mais pas pour un
-# worker lancé à la main, dont le pid change à chaque relance : ses chunks ne seraient repris
-# qu'à l'expiration de leur bail, deux minutes, au lieu de tout de suite.
+# A stable identity, given by the deployment. Without it, the identity is host:pid — stable in
+# a container, whose hostname is fixed and where the worker is process 1, but not for a worker
+# launched by hand, whose pid changes on every relaunch: its chunks would only be taken back
+# when their lease expires, two minutes, instead of right away.
 WORKER_ID_VARIABLE = "PIXANO_WORKER_ID"
 
 
 def worker_identity() -> str:
-    """Nommer ce worker, pour le diagnostic et la restitution après un arrêt brutal.
+    """Name this worker, for diagnostics and for returning chunks after a hard stop.
 
-    Deux workers vivants ne doivent jamais porter le même nom : le second reprendrait les
-    chunks du premier comme s'ils étaient orphelins.
+    Two live workers must never carry the same name: the second would take over the first's
+    chunks as if they were orphans.
     """
     given = os.environ.get(WORKER_ID_VARIABLE, "").strip()
     return given or f"{socket.gethostname()}:{os.getpid()}"
 
 
 async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) -> list[Chunk]:
-    """Réclamer jusqu'à `batch_size` chunks en attente.
+    """Claim up to `batch_size` pending chunks.
 
-    Deux workers qui réclament en même temps obtiennent des ensembles disjoints : le verrou
-    de ligne et `SKIP LOCKED` s'en chargent, sans qu'aucun des deux n'attende l'autre.
+    Two workers claiming at the same time get disjoint sets: the row lock and `SKIP LOCKED`
+    take care of it, without either one waiting for the other.
     """
     cursor = await conn.execute(CLAIM, (worker_id, LEASE_TTL, batch_size))
     rows = await cursor.fetchall()
@@ -263,14 +263,14 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
 
 
 async def start_jobs(conn: psycopg.AsyncConnection, job_ids: Iterable[str]) -> list[str]:
-    """Passer en cours les jobs encore en attente parmi ceux-là, et l'annoncer.
+    """Mark as running the jobs still pending among these, and announce it.
 
-    La transition et son événement d'état partagent une transaction, sous le verrou de chaque
-    ligne : l'identifiant du `running` précède ainsi ceux des progressions et du `done`, quel
-    que soit le nombre de chunks qui finissent en même temps.
+    The transition and its state event share a transaction, under each row's lock: the
+    identifier of the `running` thus precedes those of the progress events and of the `done`,
+    however many chunks finish at the same time.
 
     Returns:
-        Les jobs que cet appel a fait passer en cours.
+        The jobs this call has made running.
     """
     ids = sorted(set(job_ids))
     if not ids:
@@ -285,13 +285,13 @@ async def start_jobs(conn: psycopg.AsyncConnection, job_ids: Iterable[str]) -> l
 
 @dataclass(frozen=True)
 class Recovery:
-    """Ce qu'une reprise de chunks orphelins a fait.
+    """What a recovery of orphaned chunks did.
 
     Attributes:
-        requeued: Chunks remis en file.
-        abandoned_jobs: Jobs dont au moins un chunk vient d'être écarté après ses tentatives.
-            Ce chunk était peut-être le dernier de son job : l'appelant doit conclure ces jobs,
-            sans quoi un job dont plus rien ne tourne resterait « en cours » pour toujours.
+        requeued: Chunks put back in the queue.
+        abandoned_jobs: Jobs of which at least one chunk has just been set aside after its
+            attempts. That chunk may have been the last of its job: the caller must conclude
+            these jobs, otherwise a job with nothing left running would stay "running" forever.
     """
 
     requeued: int
@@ -300,22 +300,22 @@ class Recovery:
 
 @dataclass(frozen=True)
 class Finished:
-    """Ce qu'a produit la fin d'un chunk, au-delà du chunk lui-même.
+    """What finishing a chunk produced, beyond the chunk itself.
 
     Attributes:
-        started_job: Ce chunk est le premier terminé de son job, qui vient de passer en cours.
-            C'est le moment d'annoncer la transition : sans événement, une interface
-            continuerait d'afficher « en attente » sous une barre qui avance.
+        started_job: This chunk is the first finished of its job, which has just become
+            running. This is the moment to announce the transition: without an event, an
+            interface would keep showing "pending" under a bar that moves.
     """
 
     started_job: bool
 
 
 class QuarantinedItem(Protocol):
-    """Ce que la file lit d'un item en quarantaine.
+    """What the queue reads from a quarantined item.
 
-    Un protocole plutôt que le modèle du contrat des types de jobs : la file est la couche du
-    bas, elle ne doit rien importer de ce qui s'appuie sur elle.
+    A protocol rather than the model from the job kinds' contract: the queue is the bottom
+    layer, it must import nothing from what builds on it.
     """
 
     @property
@@ -329,15 +329,15 @@ class QuarantinedItem(Protocol):
 
 
 async def record_event(conn: psycopg.AsyncConnection, job_id: str, event_type: str, payload: dict[str, Any]) -> None:
-    """Consigner un événement de progression.
+    """Record a progress event.
 
-    Les compteurs y sont **absolus**, jamais des incréments : les identifiants de séquence
-    sont attribués avant le commit, donc deux transactions concurrentes peuvent rendre leurs
-    événements visibles dans le désordre. Un lecteur qui en saute un doit pouvoir s'en
-    remettre au suivant.
+    Its counters are **absolute**, never increments: sequence identifiers are assigned before
+    the commit, so two concurrent transactions can make their events visible out of order. A
+    reader that skips one must be able to rely on the next.
 
-    Un événement **d'état**, lui, n'a pas de suivant qui le répare : il doit s'écrire dans la
-    transaction qui change l'état, pour que l'ordre des identifiants soit l'ordre des états.
+    A **state** event, on the other hand, has no next one to repair it: it must be written in
+    the transaction that changes the state, so that the order of identifiers is the order of
+    states.
     """
     await conn.execute(RECORD_EVENT, (job_id, event_type, Jsonb(payload), NOTIFY_CHANNEL))
 
@@ -349,25 +349,25 @@ async def finish(
     skipped: int = 0,
     quarantined: Sequence[QuarantinedItem] = (),
 ) -> Finished | None:
-    """Marquer un chunk terminé, consigner son bilan, et avancer la progression de son job.
+    """Mark a chunk finished, record its outcome, and advance its job's progress.
 
-    Le bilan, la quarantaine, la progression et ses événements s'écrivent dans une seule
-    transaction : un chunk ne peut pas être compté fait sans que ses items écartés soient
-    consignés ni sans que l'interface l'apprenne. L'événement `running` du premier chunk terminé
-    est écrit ici aussi, sous le verrou de la ligne du job : c'est ce qui garantit que son
-    identifiant précède celui du `done` que le dernier chunk écrira — revue indépendante, D2/D6.
+    The outcome, the quarantine, the progress and its events are written in a single
+    transaction: a chunk cannot be counted done without its set-aside items being recorded
+    nor without the interface learning of it. The `running` event of the first finished chunk
+    is written here too, under the job row's lock: this is what guarantees that its identifier
+    precedes that of the `done` the last chunk will write — independent review, D2/D6.
 
     Args:
-        conn: La connexion du chunk.
-        chunk: Le chunk réclamé.
-        produced: Tâches produites. Par défaut, toutes celles qui ne sont ni écartées ni en
-            quarantaine.
-        skipped: Tâches sans objet.
-        quarantined: Items en échec.
+        conn: The chunk's connection.
+        chunk: The claimed chunk.
+        produced: Tasks produced. By default, all those that are neither skipped nor
+            quarantined.
+        skipped: Tasks not applicable.
+        quarantined: Failed items.
 
     Returns:
-        None si le chunk avait été repris par un autre worker entre-temps ; l'appelant doit
-        alors jeter son résultat plutôt que d'écraser celui de son successeur.
+        None if the chunk had been taken over by another worker in the meantime; the caller
+        must then discard its result rather than overwrite its successor's.
     """
     if produced is None:
         produced = chunk.task_count - skipped - len(quarantined)
@@ -392,11 +392,11 @@ async def finish(
 async def retry_later(
     conn: psycopg.AsyncConnection, chunk: Chunk, error: dict[str, Any], max_attempts: int = MAX_ATTEMPTS
 ) -> str | None:
-    """Rendre à la file, après un délai, un chunk qui a buté sur une panne passagère.
+    """Return to the queue, after a delay, a chunk that hit a transient failure.
 
     Returns:
-        `pending` s'il sera rejoué, `error` s'il a épuisé ses tentatives, None si le chunk
-        ne lui appartenait plus.
+        `pending` if it will be replayed, `error` if it has used up its attempts, None if the
+        chunk no longer belonged to it.
     """
     row = await (
         await conn.execute(
@@ -415,36 +415,36 @@ async def retry_later(
 
 
 async def refresh_lease(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
-    """Prolonger le bail d'un chunk en cours.
+    """Extend the lease of a running chunk.
 
     Returns:
-        False si le chunk ne lui appartient plus : son bail a expiré et un autre l'a repris.
+        False if the chunk no longer belongs to it: its lease expired and another took it over.
     """
     return (await conn.execute(REFRESH_LEASE, (LEASE_TTL, chunk.id, chunk.attempts))).rowcount > 0
 
 
 async def fail(conn: psycopg.AsyncConnection, chunk: Chunk, error: dict[str, Any]) -> bool:
-    """Marquer un chunk en échec. Même garde que `finish`."""
+    """Mark a chunk failed. Same guard as `finish`."""
     cursor = await conn.execute(FAIL, (Jsonb(error), chunk.id, chunk.attempts))
     return await cursor.fetchone() is not None
 
 
 async def release(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
-    """Remettre un chunk en file sans l'exécuter."""
+    """Put a chunk back in the queue without executing it."""
     return (await conn.execute(RELEASE, (chunk.id, chunk.attempts))).rowcount > 0
 
 
 async def cancel_chunk(conn: psycopg.AsyncConnection, chunk: Chunk) -> bool:
-    """Sortir de la file un chunk dont le job a été annulé."""
+    """Take out of the queue a chunk whose job was cancelled."""
     return (await conn.execute(CANCEL_CHUNK, (chunk.id, chunk.attempts))).rowcount > 0
 
 
 async def release_own(conn: psycopg.AsyncConnection, worker_id: str, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
-    """Rendre les chunks laissés par une exécution précédente de ce même worker.
+    """Return the chunks left behind by a previous run of this same worker.
 
-    Le bail finirait par les libérer de toute façon ; les rendre au démarrage transforme une
-    reprise de deux minutes en reprise immédiate. Ceux qui ont épuisé leurs tentatives sont
-    écartés, comme par la reprise des baux.
+    The lease would eventually free them anyway; returning them at startup turns a two-minute
+    recovery into an immediate one. Those that have used up their attempts are set aside, as
+    by the lease recovery.
     """
     async with conn.transaction():
         requeued = len(await (await conn.execute(RELEASE_OWN, (worker_id, max_attempts))).fetchall())
@@ -453,7 +453,7 @@ async def release_own(conn: psycopg.AsyncConnection, worker_id: str, max_attempt
 
 
 async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX_ATTEMPTS) -> Recovery:
-    """Remettre en file les chunks dont le bail a expiré, écarter ceux qui s'acharnent."""
+    """Put back in the queue the chunks whose lease expired, set aside those that keep failing."""
     async with conn.transaction():
         requeued = len(await (await conn.execute(RECLAIM_EXPIRED, (max_attempts,))).fetchall())
         abandoned = await (await conn.execute(ABANDON_EXHAUSTED, (max_attempts,))).fetchall()
@@ -461,6 +461,6 @@ async def reclaim_expired(conn: psycopg.AsyncConnection, max_attempts: int = MAX
 
 
 async def is_cancelled(conn: psycopg.AsyncConnection, job_id: str) -> bool:
-    """Une annulation a-t-elle été demandée pour ce job ?"""
+    """Has a cancellation been requested for this job?"""
     row = await (await conn.execute(IS_CANCELLED, (job_id,))).fetchone()
     return row is not None and bool(row[0])
