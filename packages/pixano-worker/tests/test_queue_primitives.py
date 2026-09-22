@@ -348,6 +348,56 @@ class TestRetryLater:
         assert await queue.retry_later(adb, chunk, {"reason": "panne passagère"}) is None
 
 
+class TestRetriedJob:
+    """Un job relancé par l'API rouvre ses chunks avec un compte de tentatives neuf.
+
+    `attempts` ne recule jamais — c'est le jeton de garde — donc le compte repart d'un plancher.
+    """
+
+    @staticmethod
+    def _reopen_like_the_api(db: psycopg.Connection, chunk_id: int) -> None:
+        db.execute(
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'pending', attempts_floor = attempts, claimed_by = NULL, "
+            "error = NULL, available_at = now() WHERE id = %s",
+            (chunk_id,),
+        )
+
+    async def test_a_reopened_chunk_has_its_attempts_again(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET attempts = %s WHERE id = %s", (queue.MAX_ATTEMPTS, chunk.id))
+        exhausted = queue.Chunk(**{**chunk.__dict__, "attempts": queue.MAX_ATTEMPTS})
+        assert await queue.retry_later(adb, exhausted, {"reason": "x"}) == "error"
+
+        self._reopen_like_the_api(db, chunk.id)
+        again = (await queue.claim(adb, "worker-a", 1))[0]
+
+        # Première tentative du nouveau compte : rendu à la file, pas écarté, et sans délai
+        # hérité de l'ancien compte.
+        assert again.attempts == queue.MAX_ATTEMPTS + 1
+        assert await queue.retry_later(adb, again, {"reason": "x"}) == "pending"
+        delay = db.execute(
+            f"SELECT available_at - now() FROM {SCHEMA_NAME}.job_chunks WHERE id = %s", (chunk.id,)
+        ).fetchone()
+        assert delay is not None and delay[0] <= queue.RETRY_BASE_DELAY
+
+    async def test_the_fencing_token_still_holds_across_a_retry(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Un worker de l'exécution précédente, revenu tard, ne peut pas écrire sur la nouvelle."""
+        _enqueue(db, 1)
+        stale = (await queue.claim(adb, "worker-a", 1))[0]
+        db.execute(
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'error', lease_until = NULL WHERE id = %s", (stale.id,)
+        )
+        self._reopen_like_the_api(db, stale.id)
+        await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.finish(adb, stale) is None
+
+
 class TestLeaseRefresh:
     async def test_extends_the_lease_of_a_running_chunk(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection

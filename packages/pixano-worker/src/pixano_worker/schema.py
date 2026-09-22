@@ -29,7 +29,7 @@ import psycopg
 logger = logging.getLogger("pixano-worker")
 
 # Incrémenter à chaque modification de sql/schema.sql.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA_NAME = "pixano_jobs"
 

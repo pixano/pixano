@@ -87,13 +87,14 @@ SET chunk_id = EXCLUDED.chunk_id, reason = EXCLUDED.reason, detail = EXCLUDED.de
 """
 
 # Une panne passagère rend le chunk à la file après un délai — ou l'écarte, s'il a épuisé ses
-# tentatives. Même jeton de garde que FINISH.
+# tentatives. Même jeton de garde que FINISH. Les tentatives se comptent depuis le plancher :
+# un job relancé repart avec un compte neuf sans que `attempts` recule.
 RETRY = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
-SET state = CASE WHEN attempts < %(max_attempts)s THEN 'pending' ELSE 'error' END,
+SET state = CASE WHEN attempts - attempts_floor < %(max_attempts)s THEN 'pending' ELSE 'error' END,
     lease_until = NULL,
-    claimed_by = CASE WHEN attempts < %(max_attempts)s THEN NULL ELSE claimed_by END,
-    available_at = now() + least(%(base)s * power(2, attempts - 1), %(cap)s),
+    claimed_by = CASE WHEN attempts - attempts_floor < %(max_attempts)s THEN NULL ELSE claimed_by END,
+    available_at = now() + least(%(base)s * power(2, attempts - attempts_floor - 1), %(cap)s),
     error = %(error)s,
     updated_at = now()
 WHERE id = %(id)s AND state = 'running' AND attempts = %(attempts)s
@@ -137,30 +138,30 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 RELEASE_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND claimed_by = %s AND attempts < %s
+WHERE state = 'running' AND claimed_by = %s AND attempts - attempts_floor < %s
 RETURNING id
 """
 
 ABANDON_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
-WHERE state = 'running' AND claimed_by = %s AND attempts >= %s
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts - attempts_floor)
+WHERE state = 'running' AND claimed_by = %s AND attempts - attempts_floor >= %s
 RETURNING job_id
 """
 
 RECLAIM_EXPIRED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND lease_until < now() AND attempts < %s
+WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor < %s
 RETURNING id
 """
 
 ABANDON_EXHAUSTED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
-WHERE state = 'running' AND lease_until < now() AND attempts >= %s
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts - attempts_floor)
+WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor >= %s
 RETURNING job_id
 """
 
