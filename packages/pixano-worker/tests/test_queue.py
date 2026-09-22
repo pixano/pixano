@@ -52,7 +52,8 @@ class TestClaim:
     """La propriété centrale de la file : ni doublon, ni perte."""
 
     def test_two_workers_share_a_queue_without_overlap(self, db: psycopg.Connection, postgres_url: str) -> None:
-        _job_with_chunks(db, 200)
+        # Mille, comme la définition de fini du lot 2 le demandait.
+        _job_with_chunks(db, 1000)
         claimed: dict[str, list[int]] = {"a": [], "b": []}
         failures: list[str] = []
 
@@ -81,7 +82,7 @@ class TestClaim:
 
         assert failures == []
         assert set(claimed["a"]) & set(claimed["b"]) == set()
-        assert len(set(claimed["a"]) | set(claimed["b"])) == 200
+        assert len(set(claimed["a"]) | set(claimed["b"])) == 1000
         left = db.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state <> 'done'").fetchone()
         assert left is not None and left[0] == 0
 
