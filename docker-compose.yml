@@ -78,11 +78,16 @@ services:
       # La racine du dépôt, parce que le worker dépend de la source de pixano par chemin.
       context: .
       dockerfile: packages/pixano-worker/Dockerfile
-    # Redémarré s'il plante, mais pas indéfiniment. Un worker qui refuse un schéma incompatible
-    # sort en erreur exprès et doit rester arrêté, avec son message : trois essais le laissent
-    # arrêté assez vite pour qu'on lise la cause, au lieu de boucler sans fin dans les journaux.
-    # Les pannes passagères de la base, elles, sont absorbées par le worker sans redémarrer.
-    restart: on-failure:3
+    # Toujours redémarré, sauf arrêt demandé (`stop`, `down`). Un worker qui sort en erreur — un
+    # schéma incompatible, un défaut qui persiste — revient donc en boucle, et son message avec
+    # lui à chaque tour : c'est voulu, la décision du lot 1 était « refuser de démarrer avec un
+    # message clair », pas « rester arrêté pour de bon ». `on-failure:N` ne remet jamais son
+    # compteur à zéro (vérifié) : le N-ième incident d'une longue vie laissait le worker à
+    # terre. Les pannes passagères de la base, elles, sont absorbées sans redémarrer.
+    # Vérifié : un `docker compose kill` compte comme un arrêt demandé et n'est pas redémarré —
+    # la démo, qui tue le worker puis le relance à la main, y compte ; un process qui sort de
+    # lui-même, quel que soit son code, est relancé.
+    restart: unless-stopped
     # Au-dessus des 30 s que le worker laisse à ses chunks en vol pour finir (SHUTDOWN_GRACE_S) :
     # sans cette marge, docker le tuerait avant qu'il ait rendu ceux qui n'ont pas fini.
     stop_grace_period: 45s
