@@ -240,7 +240,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 ## 12. Writes into LanceDB
 
-**Identifiers are derived from the work**, so a replayed chunk replaces its rows instead of adding to them. `replace` also removes leftovers — rows a previous run wrote under the following ranks — but probes only 32 ranks ahead. A detection that shrinks by more would leave ghost boxes. Decided in review: exact replacement by key, of scope (kind, record), to land with the first detection kind. It also closes a gap with lot 6, which asked for a delete scoped by (job, item): the job is the wrong scope, since a second job must replace the first one's rows.
+**Identifiers are derived from the work** — the kind, the model, the key and the rank — so a replayed chunk replaces its rows instead of adding to them, and another model's rows for the same key are left alone. An identifier is a prefix shared by everything a key produced, then the rank: a replay finds every row of a previous run by prefix and deletes exactly those beyond what it wrote. A first version probed 32 ranks ahead, and a detection that shrank by more left ghost rows; the replacement is now exact, scoped by (kind, model, key), which also closes the gap with lot 6 — it asked for a delete scoped by (job, item), and the job is the wrong scope, since a rerun must replace the previous run's rows.
 
 **Writes to one dataset are serialised** inside a worker; processing still overlaps. Across workers, nothing serialises them: step 4.
 

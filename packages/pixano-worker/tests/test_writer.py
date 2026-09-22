@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+import re
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -32,6 +33,15 @@ class _FakeRow:
         self.payload = payload
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The two reads the writer makes: by identifiers, or by the prefix filter of a cleanup."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
+    assert prefix is not None, f"unexpected filter in a test double: {where!r}"
+    return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+
+
 class _FakeDataset:
     """An in-memory dataset, which behaves like LanceDB on the only two operations the writer
     uses: upsert by identifier and deletion by identifiers."""
@@ -51,9 +61,8 @@ class _FakeDataset:
         for row_id in ids:
             table.pop(row_id, None)
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        table = self.tables.get(table_name, {})
-        return [table[row_id] for row_id in ids if row_id in table]
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        return _matching(self.tables.get(table_name, {}), ids, where)
 
     def open_table(self, table_name: str) -> Any:
         self.compactions.append(table_name)
@@ -185,6 +194,28 @@ class TestReplay:
 
         assert len(dataset.tables["toy"]) == 2
 
+    def test_a_result_that_shrinks_by_more_than_a_window_leaves_nothing_behind(self, dataset: _FakeDataset) -> None:
+        """Independent review, C6: the cleanup probed 32 ranks; a hundred boxes going to twenty kept 48."""
+        _writer(dataset).replace("toy", "item-1", [_FakeRow(str(n)) for n in range(100)])
+
+        _writer(dataset).replace("toy", "item-1", [_FakeRow(str(n)) for n in range(20)])
+
+        assert len(dataset.tables["toy"]) == 20
+
+    def test_another_model_adds_and_the_same_model_replaces(self, dataset: _FakeDataset) -> None:
+        """Step 2 design: the replacement is scoped by (kind, model, key)."""
+        yolo = JobWriter(lambda: dataset, "detection", "job-1", model=ModelIdentity("yolo"))
+        detr = JobWriter(lambda: dataset, "detection", "job-2", model=ModelIdentity("detr"))
+        yolo.replace("toy", "item-1", [_FakeRow(str(n)) for n in range(5)])
+        detr.replace("toy", "item-1", [_FakeRow(str(n)) for n in range(3)])
+        assert len(dataset.tables["toy"]) == 8, "two models, two sets of rows"
+
+        JobWriter(lambda: dataset, "detection", "job-3", model=ModelIdentity("yolo")).replace(
+            "toy", "item-1", [_FakeRow("0"), _FakeRow("1")]
+        )
+
+        assert len(dataset.tables["toy"]) == 5, "yolo replaced its five by two, detr's three are untouched"
+
     def test_an_empty_result_clears_the_key(self, dataset: _FakeDataset) -> None:
         _writer(dataset).replace("toy", "item-1", [_FakeRow("a"), _FakeRow("b")])
 
@@ -289,6 +320,25 @@ class TestAgainstRealLance:
         self._run(toy, "job-1", 60)
 
         assert self._fingerprint(toy) == first
+
+    def test_a_shrinking_output_is_cleaned_exactly_by_the_real_store(self, toy) -> None:
+        """The prefix filter must be one LanceDB understands: `id LIKE 'prefix-%'`."""
+        from pixano.schemas.annotations.classification import Classification
+
+        writer = JobWriter(lambda: toy, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        def boxes(count: int) -> list[Classification]:
+            return [
+                Classification(id="", record_id="task-0", labels=["x"], confidences=[1.0], **writer.provenance())
+                for _ in range(count)
+            ]
+
+        writer.replace("classifications", "task-0", boxes(100))
+        assert len(toy.get_data("classifications", limit=None)) == 100
+
+        writer.replace("classifications", "task-0", boxes(20))
+
+        assert len(toy.get_data("classifications", limit=None)) == 20
 
     def test_resubmitting_does_not_duplicate(self, toy) -> None:
         self._run(toy, "job-1", 60)

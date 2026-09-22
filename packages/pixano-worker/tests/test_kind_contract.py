@@ -17,6 +17,7 @@ from the contract.
 
 import hashlib
 import json
+import re
 from types import SimpleNamespace
 from typing import Any
 
@@ -56,6 +57,15 @@ QUIET_EXAMPLES: dict[str, dict[str, Any]] = {
 REGISTRY = default_registry(demo_kinds=True)
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The two reads the writer makes: by identifiers, or by the prefix filter of a cleanup."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
+    assert prefix is not None, f"unexpected filter in a test double: {where!r}"
+    return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+
+
 class _Target:
     """A write target that behaves like LanceDB on the three operations used."""
 
@@ -73,8 +83,8 @@ class _Target:
         for row_id in ids:
             self.rows.pop(row_id, None)
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        return [self.rows[i] for i in ids if i in self.rows]
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        return _matching(self.rows, ids, where)
 
     def open_table(self, table_name: str) -> Any:
         self.compactions.append(table_name)
