@@ -14,10 +14,11 @@ License: CECILL-C
   import { PointCloudCamera } from "./usePointCloudCamera.svelte.js";
   // RING_DEFS is the orbit-indicator's ring geometry (camera UI), not annotation logic.
   import { RING_DEFS } from "$lib/annotations/kinds/3d/bbox3d/boxEditorConstants.js";
-  import { parsePointCloud } from "$lib/annotations/pointCloudParser";
   import { RENDERER_FACTORIES_3D, TOOLS_3D } from "$lib/annotations/scene/registry3d.js";
   import type { Scene3DContext, SceneContextBase } from "$lib/annotations/scene/sceneContext.js";
   import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
+  import type { PointCloudColorController } from "$lib/pointcloud/pointCloudColorController.svelte.js";
+  import { parsePointCloud } from "$lib/pointcloud/pointCloudParser.js";
 
   interface Props {
     pointCloudUrl?: string;
@@ -29,6 +30,12 @@ License: CECILL-C
     onLoadError?: (message: string) => void;
     /** Per-tool host props keyed by tool id; forwarded opaquely to each overlay. */
     toolProps?: Record<string, Record<string, unknown>>;
+    /**
+     * Host-owned colouring. The scene hands it the parsed cloud and renders the
+     * buffer it publishes; which mode produced those colours is none of the
+     * scene's business.
+     */
+    colors: PointCloudColorController;
   }
 
   let {
@@ -38,12 +45,14 @@ License: CECILL-C
     cameraMode = "orbit",
     onLoadError,
     toolProps = {},
+    colors,
   }: Props = $props();
 
   // ─── Rendering state ──────────────────────────────────────────────────────
   let positions = $state<Float32Array>(new Float32Array(0));
-  let colors = $state<Float32Array>(new Float32Array(0));
   let loading = $state(true);
+  /** The live colour attribute, so a recolour can mark it dirty in place. */
+  let colorAttribute: THREE.BufferAttribute | null = null;
   let floorY = $state(0);
   let controlsRef = $state<ThreeOrbitControls | null>(null);
   // Each tool publishes its handle by id; the scene reads the active one (camera
@@ -51,6 +60,10 @@ License: CECILL-C
   // tool can't clobber the first — previously a single shared handle (DEBT-6).
   let toolHandles = $state<Record<string, ToolHandle3D | undefined>>({});
   const activeHandle = $derived(toolHandles[activeToolId]);
+
+  /** Components per vertex in the geometry's buffers: XYZ and RGB. */
+  const POSITION_COMPONENTS = 3;
+  const COLOR_COMPONENTS = 3;
 
   const AMBIENT_LIGHT_INTENSITY = 0.6;
   const POINT_RENDER_SIZE = 0.05;
@@ -60,7 +73,7 @@ License: CECILL-C
   const GRID_COLOR_LINES = "#222222";
   const FETCH_TIMEOUT_MS = 30_000;
 
-  const { camera } = useThrelte();
+  const { camera, invalidate } = useThrelte();
 
   // ─── Composables ──────────────────────────────────────────────────────────
 
@@ -110,12 +123,15 @@ License: CECILL-C
       try {
         const response = await fetch(pointCloudUrl, { signal: controller.signal });
         const buffer = await response.arrayBuffer();
-        const { positions: pos, colors: col, bounds } = parsePointCloud(buffer);
+        const parsed = parsePointCloud(buffer);
 
-        floorY = bounds.minY;
-        cam.focusOnBounds(bounds);
-        positions = pos;
-        colors = col;
+        floorY = parsed.bounds.minY;
+        cam.focusOnBounds(parsed.bounds);
+        positions = parsed.positions;
+        // Hands over the cloud *and* triggers the first colouring pass. Awaited
+        // so `loading` only clears once there are colours to draw — otherwise
+        // the first frame would upload an all-black buffer.
+        await colors.setCloud(parsed);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") {
           onLoadError?.("Point cloud load timed out");
@@ -132,6 +148,18 @@ License: CECILL-C
       clearTimeout(timeoutId);
       controller.abort();
     };
+  });
+
+  // A recolour writes into the same buffer, so nothing about the attribute
+  // changes — only its contents. Reading `revision` (not `colors.colors`, whose
+  // identity is stable) is what makes this run, and `needsUpdate` is what gets
+  // the new bytes to the GPU. Threlte's on-demand loop then redraws because this
+  // effect invalidated.
+  $effect(() => {
+    const revision = colors.revision;
+    if (!colorAttribute || revision === 0) return;
+    colorAttribute.needsUpdate = true;
+    invalidate();
   });
 </script>
 
@@ -158,8 +186,9 @@ License: CECILL-C
   <T.Points>
     <T.BufferGeometry
       oncreate={(ref) => {
-        ref.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-        ref.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        ref.setAttribute("position", new THREE.BufferAttribute(positions, POSITION_COMPONENTS));
+        colorAttribute = new THREE.BufferAttribute(colors.colors, COLOR_COMPONENTS);
+        ref.setAttribute("color", colorAttribute);
       }}
     />
     <T.PointsMaterial size={POINT_RENDER_SIZE} vertexColors sizeAttenuation />

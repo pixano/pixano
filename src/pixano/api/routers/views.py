@@ -320,6 +320,8 @@ def _list_sframe_responses(
 
 
 def _to_point_cloud_response(dataset_id: str, row: Any) -> PointCloudResponse:
+    raw_extrinsic = getattr(row, "extrinsic_matrix", None)
+    raw_ego = getattr(row, "ego_to_world", None)
     return PointCloudResponse(
         id=row.id,
         record_id=row.record_id,
@@ -327,6 +329,8 @@ def _to_point_cloud_response(dataset_id: str, row: Any) -> PointCloudResponse:
         created_at=str(getattr(row, "created_at", "") or ""),
         updated_at=str(getattr(row, "updated_at", "") or ""),
         src=_image_src(dataset_id, "point-clouds", row),
+        extrinsic_matrix=list(raw_extrinsic) if raw_extrinsic is not None else None,
+        ego_to_world=list(raw_ego) if raw_ego is not None else None,
     )
 
 

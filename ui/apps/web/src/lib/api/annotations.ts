@@ -33,13 +33,6 @@ export interface BBoxRow {
   confidence?: number;
 }
 
-interface PaginatedBBoxes {
-  items: BBoxRow[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 /**
  * Minimal shape of a BBox3D row as returned by `GET /datasets/:id/bbox3ds`.
  * Mirrors the backend `BBox3D` LanceModel: 6 coords + 9-element row-major
@@ -67,13 +60,6 @@ export interface BBox3DRow {
  */
 export type LocalBBox3D = BBox3DRow & { entity?: Record<string, unknown> };
 
-interface PaginatedBBox3Ds {
-  items: BBox3DRow[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 /**
  * Minimal shape of an Entity row. The backend Entity schema only guarantees
  * `id`, `record_id` and `parent_id`; dataset-specific subclasses add custom
@@ -87,15 +73,16 @@ export interface EntityRow {
   [key: string]: unknown;
 }
 
-interface PaginatedEntities {
-  items: EntityRow[];
+/** Envelope every paginated list endpoint returns. */
+interface PaginatedResponse<TRow> {
+  items: TRow[];
   total: number;
   limit: number;
   offset: number;
 }
 
 /**
- * List entities for a record. Mirrors `listBBoxes` — see
+ * List entities for a record. Mirrors `listAnnotations` — see
  * `src/pixano/api/resources.py` for the list filters accepted by the backend.
  */
 export async function listEntities(
@@ -105,7 +92,7 @@ export async function listEntities(
   const qs = new URLSearchParams();
   if (params.recordId) qs.set("record_id", params.recordId);
   qs.set("limit", String(params.limit ?? 1000));
-  const res = await requestJson<PaginatedEntities>(
+  const res = await requestJson<PaginatedResponse<EntityRow>>(
     `${resourceUrl(datasetId, "entities")}?${qs.toString()}`,
     { headers: JSON_HEADERS, method: "GET" },
     "listEntities",
@@ -113,46 +100,39 @@ export async function listEntities(
   return res.items ?? [];
 }
 
-/**
- * List bboxes from the backend. The server accepts `record_id`, `view_name`
- * (which actually filters on the `view_id` column for annotations — see
- * `service.list` in src/pixano/api/service.py), `entity_id`, `source_type`
- * and a free-form `where` clause.
- */
-export async function listBBoxes(
-  datasetId: string,
-  params: { recordId?: string; viewId?: string; limit?: number } = {},
-): Promise<BBoxRow[]> {
-  const qs = new URLSearchParams();
-  if (params.recordId) qs.set("record_id", params.recordId);
-  // Annotation endpoints use the `view_name` query param name to filter the
-  // `view_id` column — legacy naming.
-  if (params.viewId) qs.set("view_name", params.viewId);
-  qs.set("limit", String(params.limit ?? 1000));
-  const res = await requestJson<PaginatedBBoxes>(
-    `${resourceUrl(datasetId, "bboxes")}?${qs.toString()}`,
-    { headers: JSON_HEADERS, method: "GET" },
-    "listBBoxes",
-  );
-  return res.items ?? [];
+/** Filters every annotation list endpoint accepts. */
+export interface ListAnnotationsParams {
+  recordId?: string;
+  viewId?: string;
+  limit?: number;
 }
 
 /**
- * List 3D bboxes for a (record, view) pair. Same query-param contract as
- * `listBBoxes`: `view_name` filters the `view_id` column server-side.
+ * List a record's rows for one annotation resource. Kind-agnostic on purpose:
+ * every annotation table is served by the same generic CRUD router
+ * (`create_resource_router` in src/pixano/api/routers/resources.py), so one
+ * function covers bboxes, bbox3ds, masks, keypoints, multi-paths and the rest.
+ * A new annotation kind therefore adds no method here — it passes its own
+ * `resource` (the name its payload builder already owns).
+ *
+ * The server accepts `record_id`, `view_name`, `entity_id`, `source_type` and a
+ * free-form `where` clause. Note `view_name` actually filters the `view_id`
+ * column for annotations (legacy naming) — see `service.list` in
+ * src/pixano/api/service.py.
  */
-export async function listBBox3Ds(
+export async function listAnnotations<TRow>(
   datasetId: string,
-  params: { recordId?: string; viewId?: string; limit?: number } = {},
-): Promise<BBox3DRow[]> {
+  resource: string,
+  params: ListAnnotationsParams = {},
+): Promise<TRow[]> {
   const qs = new URLSearchParams();
   if (params.recordId) qs.set("record_id", params.recordId);
   if (params.viewId) qs.set("view_name", params.viewId);
   qs.set("limit", String(params.limit ?? 1000));
-  const res = await requestJson<PaginatedBBox3Ds>(
-    `${resourceUrl(datasetId, "bbox3ds")}?${qs.toString()}`,
+  const res = await requestJson<PaginatedResponse<TRow>>(
+    `${resourceUrl(datasetId, resource)}?${qs.toString()}`,
     { headers: JSON_HEADERS, method: "GET" },
-    "listBBox3Ds",
+    `listAnnotations(${resource})`,
   );
   return res.items ?? [];
 }

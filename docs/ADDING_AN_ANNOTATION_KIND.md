@@ -46,8 +46,15 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   **Invariant (D9):** `buildUpdate`'s body must be a superset of `buildCreate`'s geometry
   fields with identical values otherwise, so `commitGeometryEdit` can patch a pending
   create with it. → register in `PAYLOAD_BUILDERS` (`payloadBuilders.ts`).
-- `<kind>SeedLoader.ts` — implement `AnnotationSeedLoader` (REST rows → `LocalAnnotation[]`,
-  once per record). → register in `SEED_LOADERS` (`seedLoaders.ts`).
+- `<kind>SeedLoader.ts` — REST rows → `LocalAnnotation[]`, once per record.
+  For a view-scoped kind, do **not** hand-roll the fetch/filter/wrap loop: call
+  `createViewScopedSeedLoader({ kind, resource, toGeometry })`
+  (`viewScopedSeedLoader.ts`) and supply only `toGeometry(row, view)`, returning
+  `null` to drop a malformed row. The fetch, the failure policy and the
+  `LocalAnnotation` envelope are shared so they cannot drift per kind.
+  A record-scoped kind (`bbox3d`) implements `AnnotationSeedLoader` directly,
+  since it deliberately keeps rows whose view is not displayed.
+  → register in `SEED_LOADERS` (`seedLoaders.ts`).
 
 ## Step 3 — the DISPLAY + INPUT halves
 
@@ -112,6 +119,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] tests added; `check` / `vitest` / `build` green; no widget/scene edits
 
 ## Adding a whole new *medium* (e.g. text), not just a kind
+
+> Note: the existing `TextWidget.svelte` is a display-only Tiptap host — it has no
+> seam, renderer or tool, so it is not an example of this. Text *annotation* is
+> still unbuilt.
 
 That is a bigger job: build the widget with `buildSeam(manager, …)`, define a
 `Scene<Medium>Context extends SceneContextBase` with the medium's engine handle, and add

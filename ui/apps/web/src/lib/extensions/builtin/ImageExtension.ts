@@ -6,12 +6,8 @@ License: CECILL-C
 
 import { WidgetExtension } from "../WidgetExtension.js";
 import { DEFAULT_TOOL_2D } from "$lib/annotations/scene/tool.js";
-import type {
-  CameraCalibration,
-  ImageWidgetOptions,
-  ImageWidgetStorage,
-} from "$lib/annotations/types.js";
-import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
+import type { ImageWidgetOptions, ImageWidgetStorage } from "$lib/annotations/types.js";
+import { toCameraCalibration } from "$lib/api/adapters.js";
 import ImageWidget from "$lib/components/widgets/image/ImageWidget.svelte";
 
 /**
@@ -19,25 +15,6 @@ import ImageWidget from "$lib/components/widgets/image/ImageWidget.svelte";
  * backend and now surfaces calibration data via `options.calibration`.
  */
 const CLAIMED_BASES = new Set(["Image", "CalibratedImage"]);
-
-function _extractCalibration(image: CalibratedImageResponse | null): CameraCalibration | null {
-  if (
-    !image?.extrinsic_matrix ||
-    !image.ego_to_world ||
-    !image.f ||
-    !image.c ||
-    !image.distortion
-  ) {
-    return null;
-  }
-  return {
-    f: image.f,
-    c: image.c,
-    distortion: image.distortion,
-    extrinsicMatrix: image.extrinsic_matrix,
-    egoToWorld: image.ego_to_world,
-  };
-}
 
 export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWidgetStorage>({
   name: "image",
@@ -72,7 +49,7 @@ export const ImageExtension = WidgetExtension.create<ImageWidgetOptions, ImageWi
         viewName,
         imageWidth: image?.width ?? 0,
         imageHeight: image?.height ?? 0,
-        calibration: _extractCalibration(image),
+        calibration: toCameraCalibration(image),
       },
       data: { imageUrl: image?.src },
       // The per-kind SEED_LOADERS fetch this record's annotations once and

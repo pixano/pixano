@@ -7,7 +7,11 @@ License: CECILL-C
 import { describe, expect, it, vi } from "vitest";
 
 import { AnnotationCollection } from "../annotationCollection.svelte.js";
-import type { LocalBBox, LocalBBox3DAnnotation } from "../annotationCollection.svelte.js";
+import type {
+  AnnotationKind,
+  LocalBBox,
+  LocalBBox3DAnnotation,
+} from "../annotationCollection.svelte.js";
 import {
   buildDeleteMutations,
   commitDraftWithEntity,
@@ -38,10 +42,17 @@ const BBOX3D: LocalBBox3DAnnotation = {
 };
 
 describe("payloadBuilderFor", () => {
-  it("resolves a builder per registered kind and throws for unknown kinds", () => {
+  it("resolves a builder for every registered kind", () => {
     expect(payloadBuilderFor("bbox").resource).toBe("bboxes");
     expect(payloadBuilderFor("bbox3d").resource).toBe("bbox3ds");
-    expect(() => payloadBuilderFor("mask")).toThrow(/mask/);
+    expect(payloadBuilderFor("mask").resource).toBe("masks");
+  });
+
+  it("throws for a kind with no registered builder", () => {
+    // Adding a literal to `AnnotationKind` without registering its builder is
+    // the mistake this guards: fail loudly at the first commit, not silently.
+    const unregistered = "polyline" as AnnotationKind;
+    expect(() => payloadBuilderFor(unregistered)).toThrow(/polyline/);
   });
 });
 
@@ -166,7 +177,11 @@ describe("reassignEntity (change a persisted annotation's entity)", () => {
   function makeCtx(collection: AnnotationCollection, findEntity = vi.fn()): ReassignEntityContext {
     return {
       collection,
-      mutations: { queue: vi.fn(), upsertUpdate: vi.fn() },
+      mutations: {
+        queue: vi.fn(),
+        upsertUpdate: vi.fn(),
+        dropPendingEntityCreate: vi.fn(),
+      },
       buildContext: CTX,
       widgetId: "w1",
       findEntity,

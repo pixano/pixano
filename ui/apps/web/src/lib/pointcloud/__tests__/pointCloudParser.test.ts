@@ -6,16 +6,22 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { parsePointCloud } from "../pointCloudParser";
+import {
+  CHANNEL_INTENSITY,
+  CHANNEL_RING,
+  parsePointCloud,
+  POINT_STRIDE,
+} from "../pointCloudParser.js";
 
-// Build a raw binary buffer from an array of Lance [x, y, z] points.
-// The format is 5 floats per point: [x, y, z, intensity(=0), unused(=0)].
-function buildBuffer(points: [number, number, number][]): ArrayBuffer {
-  const data = new Float32Array(points.length * 5);
+/** One point's worth of the stored layout: `[x, y, z, intensity, ring]`. */
+type RawPoint = [number, number, number, number?, number?];
+
+function buildBuffer(points: RawPoint[]): ArrayBuffer {
+  const data = new Float32Array(points.length * POINT_STRIDE);
   for (let i = 0; i < points.length; i++) {
-    data[i * 5] = points[i][0];
-    data[i * 5 + 1] = points[i][1];
-    data[i * 5 + 2] = points[i][2];
+    for (let component = 0; component < POINT_STRIDE; component++) {
+      data[i * POINT_STRIDE + component] = points[i][component] ?? 0;
+    }
   }
   return data.buffer;
 }
@@ -23,15 +29,21 @@ function buildBuffer(points: [number, number, number][]): ArrayBuffer {
 // ─── Empty buffer ─────────────────────────────────────────────────────────────
 
 describe("parsePointCloud — empty buffer", () => {
-  it("returns empty position and color arrays", () => {
-    const { positions, colors } = parsePointCloud(new ArrayBuffer(0));
+  it("reports no points and an empty position array", () => {
+    const { pointCount, positions } = parsePointCloud(new ArrayBuffer(0));
+    expect(pointCount).toBe(0);
     expect(positions.length).toBe(0);
-    expect(colors.length).toBe(0);
   });
 
   it("returns zero bounds", () => {
     const { bounds } = parsePointCloud(new ArrayBuffer(0));
     expect(bounds).toEqual({ minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: 0, maxZ: 0 });
+  });
+
+  it("still answers channel requests, with an empty array", () => {
+    // A colour mode reads its channel before checking the count; it must not
+    // have to guard against undefined.
+    expect(parsePointCloud(new ArrayBuffer(0)).channel(CHANNEL_INTENSITY).length).toBe(0);
   });
 });
 
@@ -51,58 +63,53 @@ describe("parsePointCloud — Lance→Three.js coordinate transform", () => {
     expect(positions[1]).toBeCloseTo(-3);
     expect(positions[2]).toBeCloseTo(2);
   });
+
+  it("counts whole points only, ignoring a truncated trailing record", () => {
+    const partial = new Float32Array(POINT_STRIDE + 2);
+    expect(parsePointCloud(partial.buffer).pointCount).toBe(1);
+  });
 });
 
-// ─── Elevation colors ─────────────────────────────────────────────────────────
+// ─── Raw channels ─────────────────────────────────────────────────────────────
 
-describe("parsePointCloud — elevation colors", () => {
-  it("assigns R=0 to the lowest Lance Z point", () => {
-    // Point A at Lance Z=0 (minimum elevation): t=0, R=0
-    const { colors } = parsePointCloud(
+describe("parsePointCloud — raw channels", () => {
+  it("de-interleaves the intensity channel", () => {
+    const { channel } = parsePointCloud(
       buildBuffer([
-        [0, 0, 0],
-        [0, 0, 10],
+        [0, 0, 0, 12],
+        [1, 1, 1, 34],
       ]),
     );
-    expect(colors[0]).toBeCloseTo(0); // R of point A
+    expect([...channel(CHANNEL_INTENSITY)]).toEqual([12, 34]);
   });
 
-  it("assigns R=1 to the highest Lance Z point", () => {
-    // Point B at Lance Z=10 (maximum elevation): t=1, R=1
-    const { colors } = parsePointCloud(
+  it("de-interleaves the ring channel", () => {
+    // The channel no colour mode reads yet: the point of a generic accessor is
+    // that reaching for it later needs no parser change.
+    const { channel } = parsePointCloud(
       buildBuffer([
-        [0, 0, 0],
-        [0, 0, 10],
+        [0, 0, 0, 0, 7],
+        [0, 0, 0, 0, 9],
       ]),
     );
-    expect(colors[3]).toBeCloseTo(1); // R of point B
+    expect([...channel(CHANNEL_RING)]).toEqual([7, 9]);
   });
 
-  it("assigns stable colors when all points share the same elevation", () => {
-    // Single elevation: lanceZRange falls back to 1, t=0 for all points
-    const { colors } = parsePointCloud(
-      buildBuffer([
-        [0, 0, 5],
-        [1, 0, 5],
-      ]),
-    );
-    expect(colors[0]).toBeCloseTo(0); // R: t=0
-    expect(colors[1]).toBeCloseTo(0.4); // G: GREEN_MIN + 0 * GREEN_RANGE = 0.4
-    expect(colors[2]).toBeCloseTo(1.0); // B: 1 - 0 * BLUE_DECAY = 1
+  it("returns the same array instance on a second request", () => {
+    // Memoised: two modes reading intensity must not each pay the de-interleave.
+    const { channel } = parsePointCloud(buildBuffer([[0, 0, 0, 5]]));
+    expect(channel(CHANNEL_INTENSITY)).toBe(channel(CHANNEL_INTENSITY));
   });
 
-  it("colors are interpolated for a mid-elevation point", () => {
-    // Three points: Z=0, Z=5, Z=10 → t=0, 0.5, 1
-    const { colors } = parsePointCloud(
-      buildBuffer([
-        [0, 0, 0],
-        [0, 0, 5],
-        [0, 0, 10],
-      ]),
-    );
-    expect(colors[3]).toBeCloseTo(0.5); // R of mid point
-    expect(colors[4]).toBeCloseTo(0.4 + 0.5 * 0.4); // G
-    expect(colors[5]).toBeCloseTo(1 - 0.5 * 0.5); // B
+  it("yields zeros for a channel beyond the stride", () => {
+    const { channel } = parsePointCloud(buildBuffer([[1, 2, 3, 4, 5]]));
+    expect([...channel(POINT_STRIDE)]).toEqual([0]);
+  });
+
+  it("does not colour the cloud", () => {
+    // Colouring is a plugin (`coloring/`); a parser that baked one scheme in is
+    // what made "colour the cloud differently" a parser change.
+    expect("colors" in parsePointCloud(buildBuffer([[0, 0, 0]]))).toBe(false);
   });
 });
 

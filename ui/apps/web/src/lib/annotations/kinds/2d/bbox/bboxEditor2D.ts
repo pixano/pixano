@@ -9,11 +9,8 @@ import Konva from "konva";
 import { BBOX_ID_ATTR, BBOX_NODE_NAME } from "./bbox2dNodes.js";
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
 import type { AnnotationEditor2D } from "$lib/annotations/scene/renderer.js";
-import {
-  BBOX_COLOR_PERSISTED,
-  getPixelFrame,
-  pixelToNormalized,
-} from "$lib/annotations/scene/scene2dGeometry.js";
+import { getPixelFrame, pixelToNormalized } from "$lib/annotations/scene/scene2dGeometry.js";
+import { BBOX_COLOR_PERSISTED } from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 
 const MIN_BBOX_PIXELS = 1;

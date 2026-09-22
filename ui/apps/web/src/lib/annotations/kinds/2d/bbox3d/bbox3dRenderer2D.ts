@@ -13,12 +13,12 @@ import type {
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
 import {
-  DRAFT_DASH,
   getPixelFrame,
   normalizedPointToPixel,
   type PixelFrame,
   type PixelPoint,
 } from "$lib/annotations/scene/scene2dGeometry.js";
+import { DRAFT_DASH } from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type {
   LiveAnnotationDraft,
   Scene2DReadContext,

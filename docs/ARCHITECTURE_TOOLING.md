@@ -6,18 +6,21 @@
 > *not* the app's generic frontend architecture (routing, panels, theming, data
 > layer) — for that see `FRONTEND_ARCHITECTURE.md`.
 >
-> **Status.** Implemented on `refactor/annotation-tools`. The original design
-> (Phases 0–6, agreed 2026-06-11) plus the **2026-06-29 plugin-symmetry refactor**
-> (Stages 1–5) that brought the 3D pipeline to full parity with 2D, unified the
-> commit path, and extracted the shared widget shell. The seams are internal-only
-> (D1); they may still change as new kinds harden them.
+> **Status.** Implemented and in use. The original design (Phases 0–6, agreed
+> 2026-06-11) plus the **2026-06-29 plugin-symmetry refactor** (Stages 1–5) that
+> brought the 3D pipeline to full parity with 2D, unified the commit path, and
+> extracted the shared widget shell. Since then the seams have been exercised by
+> four further 2D kinds (mask, keypoints, multi-path, classification) added as
+> plugins with no widget, scene or queue edits — the validation D5 asked for. The
+> seams are internal-only (D1); they may still change as new kinds harden them.
 
 ## Context
 
 The workspace app renders dataset records in widgets (2D image canvas via Konva,
 3D point cloud via Threlte/Three.js) and lets users create and edit annotations.
-Two kinds exist today — 2D bounding boxes and 3D bounding boxes. The product
-direction is many more (mask RLE, polylines, …), so the cost of adding a kind
+Six kinds exist today: `bbox`, `mask`, `keypoints`, `multi_path` and
+`classification` on 2D, and `bbox3d` on 3D (also rendered into image views as a
+projection). The product direction is more still, so the cost of adding a kind
 must be **one new folder + one registry line per axis**, never edits scattered
 across existing widgets or scenes.
 
@@ -46,7 +49,9 @@ Original design (2026-06-11):
 - **D4 — Renderers are separate from tools (ISP).** Displaying persisted
   annotations must work with no tool active; input is a different responsibility.
 - **D5 — Validation by construction.** Seams are proven by implementing a
-  genuinely new kind end-to-end (mask RLE) before generalizing further.
+  genuinely new kind end-to-end before generalizing further. _Discharged:_ mask
+  RLE landed as the first validation kind, followed by keypoints, multi-path and
+  classification — all as folder + registry lines.
 
 2026-06-29 refactor:
 
@@ -109,14 +114,18 @@ scene/
   sceneContext.ts   SceneContextBase, MutationSink, LiveAnnotationDraft,
                     LiveDraftSource / LiveDraftChannel, Scene2DReadContext,
                     Scene2DContext, Scene3DContext
+  toolDefinition.ts ToolDefinition — the metadata 2D and 3D tools share (D3)
   renderer.ts       AnnotationRenderer2D + AnnotationEditor2D (+Factory),
                     AnnotationRenderer3DFactory
-  tool.ts           ToolDefinition, DEFAULT_TOOL_2D/3D, Tool2D/ToolHandler2D,
+  tool.ts           DEFAULT_TOOL_2D/3D, Tool2D/ToolHandler2D,
                     Tool3D/ToolHandle3D/AnnotationTool3DProps/ToolHudProps
   registry2d.ts     TOOLS_2D, RENDERER_FACTORIES_2D
   registry3d.ts     TOOLS_3D, RENDERER_FACTORIES_3D
   selectTool2D.ts   kind-agnostic select/delete tool
-  scene2dGeometry.ts Konva pixel↔normalized math
+  flatCoordsEditor2D.ts  shared vertex editor reused by keypoints and multi-path
+  entityLabels2D.ts      shared entity-label rendering
+  scene2dGeometry.ts     Konva pixel↔normalized math
+  scene2dStyleConstants.ts  shared 2D draw styling
 ```
 
 **`SceneContextBase`** is the seam every medium shares:
@@ -241,9 +250,15 @@ which both `Scene2DContext` and the widgets' seam satisfy.
 
 ### Adding a new medium (e.g. text)
 
-`TextWidget` calls `buildSeam(manager, …)`, defines `SceneTextContext extends
-SceneContextBase` with its own engine handle (the editor/DOM node), and implements
-text renderer/tool interfaces mirroring the 2D/3D ones. Everything below the seam —
+> A `TextWidget.svelte` already exists (registered via `TextExtension`), but it is a
+> **display-only Tiptap host**: it calls no `buildSeam`, defines no scene context and
+> carries no renderer or tool. It is not an instance of what follows — text
+> *annotation* is still unbuilt.
+
+An annotating text widget would call `buildSeam(manager, …)`, define
+`SceneTextContext extends SceneContextBase` with its own engine handle (the
+editor/DOM node), and implement text renderer/tool interfaces mirroring the 2D/3D
+ones. Everything below the seam —
 `AnnotationCollection`, `MutationQueue`, seed loaders, payload builders, the
 `commit*` helpers, `buildSeam`, `<AnnotationToolbar>` — is reused unchanged. Per
 D10, those text interfaces are written against a real feature, not pre-declared.
@@ -301,8 +316,8 @@ gesture happening in another medium.
 `localAnnotationId`). 1: `LocalAnnotation` + `AnnotationCollection`. 2: 2D tool
 registry. 3: 3D `useBoxEditor` split. 4: payload-builder registry + renderer
 interface. 6: record-scoped shared collection on `WorkspaceSession` +
-`ViewScopedAnnotations`. **Phase 5 (implement mask RLE end-to-end) is still the
-planned validation kind.**
+`ViewScopedAnnotations`. 5: mask RLE end-to-end — **shipped**, and with it the D5
+validation the seams were waiting on.
 
 **2026-06-29 plugin-symmetry refactor (Stages 1–5).** Brought 3D to full parity
 with 2D and removed the last duplications. Each stage shipped with `pnpm run
@@ -348,7 +363,7 @@ check` at baseline error count and `vitest` green:
 - **DEBT-3 — renderer sync tests (partial → mostly resolved for 2D, 2026-07-30).**
   The 2D *editor* has coverage (`bboxEditor2D.test.ts` fires drag/transform → asserts
   the commit). `bbox3dRenderer2D` now has node-level tests too
-  (`bbox3dRenderer2D.test.ts`, 21 cases): projection math against hand-computed
+  (`bbox3dRenderer2D.test.ts`): projection math against hand-computed
   pixels, per-box independence of the shared scratch buffers, create/destroy
   lifecycle, entity-visibility filtering, degraded inputs (no calibration / no loaded
   image), rotation, and the whole `syncDraft` fast path including its gesture
@@ -356,9 +371,12 @@ check` at baseline error count and `vitest` green:
   check, the rotation matrix, the scratch indexing or the draft-visibility guard each
   turns it red. **The blocker is gone:** the "Konva mock harness" that debt was
   waiting on now exists (a `vi.mock("konva")` fake `Line` plus a parameterisable
-  `Scene2DReadContext`), so covering `bboxRenderer2D.sync()` is a copy-and-adapt job.
-  _Remaining: `bboxRenderer2D.sync()`, and the 3D Threlte scene (still needs a Threlte
-  harness — a genuinely separate problem). Target: alongside the next 2D kind (mask RLE)._
+  `Scene2DReadContext`), so covering `bboxRenderer2D.sync()` was a copy-and-adapt job
+  — **done**: `bboxRenderer2D.test.ts` exists, and every 2D kind added since ships its
+  own renderer test (`maskRenderer2D`, `keypointsRenderer2D`, `multiPathRenderer2D`,
+  `classificationEditor2D`).
+  _Remaining: the 3D Threlte scene only — it still needs a Threlte harness, a
+  genuinely separate problem. Target: with the next point-cloud UX pass._
 
 - **DEBT-7 — 3D boxes can't be selected from an image view (2026-07-30).** The
   projected wireframes are display-only: they carry no click handler, and

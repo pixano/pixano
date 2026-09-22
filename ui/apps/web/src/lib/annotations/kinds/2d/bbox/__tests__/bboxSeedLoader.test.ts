@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import { BBOX_RESOURCE } from "../bboxPayloadBuilder.js";
 import { bboxSeedLoader } from "../bboxSeedLoader.js";
 import type { SeedLoadContext, ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
@@ -28,8 +29,10 @@ function makeContext(bboxes: BBoxRow[], entities: EntityRow[] = []): SeedLoadCon
     entitiesById: new Map(entities.map((e) => [e.id, e])),
     views,
     gateway: {
-      listBBoxes: () => Promise.resolve(bboxes),
-      listBBox3Ds: () => Promise.resolve([]),
+      // Resource-aware so the test also pins down *which* table the loader
+      // reads: anything but "bboxes" comes back empty.
+      listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> =>
+        Promise.resolve((resource === BBOX_RESOURCE ? bboxes : []) as TRow[]),
     },
   };
 }
@@ -115,7 +118,7 @@ describe("bboxSeedLoader — view resolution", () => {
 
   it("returns empty when the listing fails", async () => {
     const ctx = makeContext([]);
-    ctx.gateway = { ...ctx.gateway, listBBoxes: () => Promise.reject(new Error("boom")) };
+    ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
     expect(await bboxSeedLoader.load(ctx)).toEqual([]);
   });
 });

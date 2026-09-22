@@ -6,14 +6,18 @@ License: CECILL-C
 
 import { MousePointer2 } from "lucide-svelte";
 
-import { deleteLocalAnnotation } from "../payloadBuilders.js";
+import { beginEntityReassign, deleteLocalAnnotation } from "../payloadBuilders.js";
 import type { Scene2DContext } from "./sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "./tool.js";
+
+/** Reassign the selected annotation's entity. Mirrors the toolbar button. */
+const REASSIGN_ENTITY_KEY = "e";
 
 /**
  * Default 2D tool: click an annotation to select it (the renderer's nodes
  * handle their own click-to-select), click empty canvas to deselect,
- * Delete/Backspace removes the selection, Escape deselects.
+ * Delete/Backspace removes the selection, `E` moves it to another entity,
+ * Escape deselects.
  */
 class SelectHandler2D implements ToolHandler2D {
   constructor(private readonly ctx: Scene2DContext) {}
@@ -29,6 +33,14 @@ class SelectHandler2D implements ToolHandler2D {
     if (event.key === "Escape") {
       this.ctx.collection.select(null);
       this.ctx.requestRedraw();
+      return true;
+    }
+    // Same action as the toolbar's button, reachable without leaving the canvas
+    // — Delete already sets that precedent for acting on the selection.
+    if (event.key.toLowerCase() === REASSIGN_ENTITY_KEY) {
+      const annotation = this.ctx.collection.selected;
+      if (!annotation) return false;
+      beginEntityReassign(annotation, this.ctx, { label: "annotation entity" });
       return true;
     }
     if (event.key === "Delete" || event.key === "Backspace") {

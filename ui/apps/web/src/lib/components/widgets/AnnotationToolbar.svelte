@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Save } from "lucide-svelte";
+  import { RotateCcw, Save } from "lucide-svelte";
   import type { Snippet } from "svelte";
 
   import type { ToolDefinition } from "$lib/annotations/scene/tool.js";
@@ -23,7 +23,16 @@ License: CECILL-C
     saving: boolean;
     saveError?: string | null;
     onSave: () => void;
+    /** Throw away every unsaved edit; absent for hosts that do not offer it. */
+    onDiscard?: () => void;
     ariaLabel: string;
+    /**
+     * Widget-specific controls pinned to the toolbar's right edge, past the
+     * spacer. The distance is the point: a control here is not a tool — it does
+     * not change what a click on the canvas does — and putting the whole width
+     * of the bar between it and the tool group says so without needing a label.
+     */
+    trailingControls?: Snippet;
     /** Widget-specific controls rendered right after the tool buttons. */
     controls?: Snippet;
   }
@@ -38,7 +47,9 @@ License: CECILL-C
     saving,
     saveError = null,
     onSave,
+    onDiscard,
     ariaLabel,
+    trailingControls,
     controls,
   }: Props = $props();
 </script>
@@ -71,6 +82,11 @@ License: CECILL-C
 
   <div class="flex-1"></div>
 
+  {#if trailingControls}
+    {@render trailingControls()}
+    <span class="mx-1 h-4 w-px bg-border"></span>
+  {/if}
+
   {#if pendingCount > 0}
     <span class="text-[10px] text-muted-foreground">{pendingCount} unsaved</span>
   {/if}
@@ -78,6 +94,17 @@ License: CECILL-C
     <span class="max-w-[200px] truncate text-[10px] text-destructive" title={saveError}>
       Save failed
     </span>
+  {/if}
+  {#if onDiscard}
+    <button
+      type="button"
+      onclick={onDiscard}
+      disabled={pendingCount === 0 || saving}
+      title="Discard unsaved changes and restore this record's saved annotations"
+      class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
+    >
+      <RotateCcw class="h-3.5 w-3.5" />
+    </button>
   {/if}
   <button
     type="button"

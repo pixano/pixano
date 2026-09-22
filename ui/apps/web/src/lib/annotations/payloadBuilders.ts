@@ -12,9 +12,13 @@ import type {
 import { buildEntityCreateMutation, generateShortId } from "./buildPayloads.js";
 import type { BuildContext, EntityCreateChoice } from "./buildPayloads.js";
 import { bboxPayloadBuilder } from "./kinds/2d/bbox/bboxPayloadBuilder.js";
+import { classificationPayloadBuilder } from "./kinds/2d/classification/classificationPayloadBuilder.js";
+import { keypointsPayloadBuilder } from "./kinds/2d/keypoints/keypointsPayloadBuilder.js";
+import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
+import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { MutationSink } from "./scene/sceneContext.js";
-import type { PendingEntityChoice, ResourceMutation } from "./types.js";
+import type { PendingAnnotation, PendingEntityChoice, ResourceMutation } from "./types.js";
 
 /**
  * Per-kind knowledge of how a `LocalAnnotation` becomes backend payloads.
@@ -38,6 +42,25 @@ export interface PayloadBuilder<G = unknown> {
   ): ResourceMutation[];
   /** Update body for an existing annotation whose geometry changed. */
   buildUpdate(ctx: BuildContext, annotation: LocalAnnotation<G>): Record<string, unknown>;
+  /**
+   * The geometry this annotation must take when it moves onto `entity`, or
+   * `null` to refuse the move. Only for a kind whose payload derives from its
+   * entity; every other kind carries geometry independent of it and leaves
+   * this out.
+   *
+   * Exists for one real case: a classification's labels *are* the entity's
+   * label, so moving it to another entity without rewriting them would leave a
+   * chip asserting a class the annotation no longer belongs to.
+   *
+   * It lives on the builder, not on the call that opens the entity form: a
+   * reassignment is reachable from the widget toolbar, a keyboard shortcut and
+   * a kind's own gesture, and a rule only one of those entry points knew about
+   * saved the stale class from the two others.
+   */
+  geometryForEntity?(
+    annotation: LocalAnnotation<G>,
+    entity: Record<string, unknown> | undefined,
+  ): G | null;
 }
 
 const PAYLOAD_BUILDERS: ReadonlyMap<AnnotationKind, PayloadBuilder> = new Map<
@@ -46,6 +69,10 @@ const PAYLOAD_BUILDERS: ReadonlyMap<AnnotationKind, PayloadBuilder> = new Map<
 >([
   [bboxPayloadBuilder.kind, bboxPayloadBuilder as PayloadBuilder],
   [bbox3dPayloadBuilder.kind, bbox3dPayloadBuilder as PayloadBuilder],
+  [maskPayloadBuilder.kind, maskPayloadBuilder as PayloadBuilder],
+  [keypointsPayloadBuilder.kind, keypointsPayloadBuilder as PayloadBuilder],
+  [multiPathPayloadBuilder.kind, multiPathPayloadBuilder as PayloadBuilder],
+  [classificationPayloadBuilder.kind, classificationPayloadBuilder as PayloadBuilder],
 ]);
 
 export function payloadBuilderFor(kind: AnnotationKind): PayloadBuilder {
@@ -217,7 +244,7 @@ export function commitDraftWithEntity(
  */
 export interface ReassignEntityContext {
   readonly collection: AnnotationStore;
-  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate">;
+  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate" | "dropPendingEntityCreate">;
   readonly buildContext: BuildContext;
   readonly widgetId: string;
   findEntity(entityId: string): Record<string, unknown> | undefined;
@@ -239,6 +266,14 @@ export function reassignEntity(
 ): void {
   if (!annotation.persisted) return;
   const builder = payloadBuilderFor(annotation.kind);
+
+  // Whatever this choice turns out to be, it supersedes the previous one: any
+  // entity still queued for this annotation is now unreachable, since
+  // `upsertUpdate` leaves only the latest choice referenced. Dropped before the
+  // branch, not inside it — landing on an *existing* entity abandons a
+  // previously typed one just as surely as typing another name does, and
+  // guarding only the second case still wrote the orphan to the dataset.
+  ctx.mutations.dropPendingEntityCreate(annotation.id);
 
   if (choice.mode === "existing") {
     ctx.collection.setEntity(annotation.id, choice.entityId, ctx.findEntity(choice.entityId));
@@ -269,4 +304,71 @@ export function reassignEntity(
     localAnnotationId: annotation.id,
   });
   ctx.requestRedraw?.();
+}
+
+/** What `beginEntityReassign` needs on top of the reassignment itself. */
+export interface EntityReassignContext extends ReassignEntityContext {
+  beginPendingAnnotation(pending: PendingAnnotation): void;
+}
+
+export interface BeginEntityReassignOptions {
+  /** Header shown above the entity form, e.g. "box entity". */
+  label: string;
+}
+
+/**
+ * Bring the annotation's payload in line with the chosen entity, for a kind
+ * that declares `geometryForEntity`. Returns whether the move should go ahead.
+ *
+ * **Applies the change by writing to the collection.** The write is the
+ * mechanism: `reassignEntity` re-reads the live annotation to build its update
+ * body, precisely so that body carries the entity id just assigned.
+ */
+function alignPayloadWithEntity(
+  annotation: LocalAnnotation,
+  choice: PendingEntityChoice,
+  ctx: EntityReassignContext,
+): boolean {
+  const builder = payloadBuilderFor(annotation.kind);
+  if (!builder.geometryForEntity) return true;
+
+  const entity = choice.mode === "new" ? choice.entityFields : ctx.findEntity(choice.entityId);
+  const geometry = builder.geometryForEntity(annotation, entity);
+  if (geometry === null) return false;
+
+  ctx.collection.setGeometry(annotation.id, geometry);
+  return true;
+}
+
+/**
+ * Ask for an entity, then move the annotation onto it — the whole "this shape
+ * belongs to something else" flow, in one kind-agnostic place.
+ *
+ * Every kind reaches it the same way: the widget toolbar for 2D shapes, the box
+ * HUD in 3D, a double-click on a classification chip. They differ only in how
+ * the user gets here, never in what happens next, which is why the guard, the
+ * form call and the commit live together rather than being re-typed per kind.
+ *
+ * Drafts are refused on purpose. An annotation that has never reached the
+ * backend has no entity to move away from — its entity is still being chosen by
+ * the create flow (`commitDraftWithEntity`), and letting a second picker run
+ * alongside it would queue two entities for one shape.
+ */
+export function beginEntityReassign(
+  annotation: LocalAnnotation,
+  ctx: EntityReassignContext,
+  opts: BeginEntityReassignOptions,
+): void {
+  if (!annotation.persisted) return;
+
+  ctx.beginPendingAnnotation({
+    label: opts.label,
+    onConfirm: (choice) => {
+      if (!alignPayloadWithEntity(annotation, choice, ctx)) return;
+      reassignEntity(annotation, choice, ctx);
+    },
+    // Nothing to undo: unlike creation there is no draft waiting on this
+    // answer, so cancelling leaves the annotation exactly as it was.
+    onCancel: () => ctx.requestRedraw?.(),
+  });
 }

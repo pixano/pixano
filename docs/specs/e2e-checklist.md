@@ -1,10 +1,16 @@
 # 0.8.0 Import/Export — Manual End-to-End Validation Checklist
 
-Companion to [data-import-export.md](./data-import-export.md). The redesign lands as a PR
-stack on `arch/data-import`; nothing merges to `main` until every checkpoint below has been
-validated by hand. Automated gates (full pytest suite locally and in CI on every PR) run
-first — this checklist covers what automation cannot: a human confirming the real app
-behaves correctly on real data.
+Companion to [data-import-export.md](./data-import-export.md).
+
+> **Status: integrated, not released.** The `arch/data-import` work is in `releases/0.8`, and
+> its import/export engine is on `releases/v1.0-alpha`. It is not in `main`, and 0.8.0 has not
+> been published: Checkpoint E below is still the gate for that merge. The earlier checkpoints
+> double as the reusable manual-validation procedure for the import/export path — re-run the
+> relevant ones when touching `datasets/io/`.
+
+Automated gates (full pytest suite locally and in CI on every PR) run first — this
+checklist covers what automation cannot: a human confirming the real app behaves
+correctly on real data.
 
 **Always test on a COPY of a library, never the original.** Opening a dataset with 0.8.0
 code performs a one-time additive migration (stamps `spec_version: 2` in `info.json` and,

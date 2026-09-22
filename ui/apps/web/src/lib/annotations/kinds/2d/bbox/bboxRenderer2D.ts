@@ -9,20 +9,22 @@ import Konva from "konva";
 import { BBOX_ID_ATTR, BBOX_NODE_NAME } from "./bbox2dNodes.js";
 import { createBBoxEditor2D } from "./bboxEditor2D.js";
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
+import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
 import type {
   AnnotationRenderer2D,
   AnnotationRenderer2DFactory,
 } from "$lib/annotations/scene/renderer.js";
 import {
-  BBOX_COLOR_DRAFT,
-  BBOX_COLOR_PERSISTED,
-  DRAFT_DASH,
   getPixelFrame,
   normalizedToPixel,
   type PixelFrame,
 } from "$lib/annotations/scene/scene2dGeometry.js";
+import {
+  BBOX_COLOR_DRAFT,
+  BBOX_COLOR_PERSISTED,
+  DRAFT_DASH,
+} from "$lib/annotations/scene/scene2dStyleConstants.js";
 import type { Scene2DReadContext } from "$lib/annotations/scene/sceneContext.js";
-import { pickEntityLabel } from "$lib/annotations/types.js";
 
 /**
  * Displays the "bbox" kind on the Konva scene: one rect (+ optional entity
@@ -34,11 +36,14 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
   readonly kind = "bbox";
 
   private readonly rectByBBoxId = new Map<string, Konva.Rect>();
-  private readonly labelByBBoxId = new Map<string, Konva.Label>();
+  private readonly labels: EntityLabels2D;
 
-  constructor(private readonly ctx: Scene2DReadContext) {}
+  constructor(private readonly ctx: Scene2DReadContext) {
+    this.labels = new EntityLabels2D(ctx.annotationLayer);
+  }
 
   sync(): void {
+    const labelEntries: EntityLabelEntry[] = [];
     const frame = getPixelFrame(this.ctx.getKonvaImage());
     const activeIds = new Set<string>();
 
@@ -64,15 +69,7 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         rect.dash(bbox.persisted ? [] : [...DRAFT_DASH]);
       }
 
-      let label = this.labelByBBoxId.get(bbox.id);
-      if (!label) {
-        label = this._makeLabel(bbox.persisted, bbox.entity) ?? undefined;
-        if (label) {
-          this.ctx.annotationLayer.add(label);
-          this.labelByBBoxId.set(bbox.id, label);
-        }
-      }
-      if (label) this._positionLabel(label, rect);
+      labelEntries.push({ id: bbox.id, annotation: bbox, anchor: rect.position() });
     }
 
     for (const [id, rect] of this.rectByBBoxId) {
@@ -81,12 +78,7 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         this.rectByBBoxId.delete(id);
       }
     }
-    for (const [id, label] of this.labelByBBoxId) {
-      if (!activeIds.has(id)) {
-        label.destroy();
-        this.labelByBBoxId.delete(id);
-      }
-    }
+    this.labels.sync(labelEntries);
 
     this.ctx.annotationLayer.batchDraw();
   }
@@ -101,18 +93,7 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
   destroy(): void {
     for (const rect of this.rectByBBoxId.values()) rect.destroy();
     this.rectByBBoxId.clear();
-    for (const label of this.labelByBBoxId.values()) label.destroy();
-    this.labelByBBoxId.clear();
-  }
-
-  private _positionLabel(label: Konva.Label, rect: Konva.Rect): void {
-    const { x, y } = rect.position();
-    label.position({ x, y: y - label.height() - 1 });
-  }
-
-  private _followLabel(bboxId: string, rect: Konva.Rect): void {
-    const lbl = this.labelByBBoxId.get(bboxId);
-    if (lbl) this._positionLabel(lbl, rect);
+    this.labels.destroy();
   }
 
   private _makeRect(bbox: LocalBBox, frame: PixelFrame | null): Konva.Rect | null {
@@ -137,29 +118,8 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
       this.ctx.collection.select(bbox.id);
     });
     // Keep the label glued to the box while the editor drags/transforms it.
-    rect.on("dragmove transform", () => this._followLabel(bbox.id, rect));
+    rect.on("dragmove transform", () => this.labels.moveTo(bbox.id, rect.position()));
     return rect;
-  }
-
-  private _makeLabel(
-    persisted: boolean,
-    entity: Record<string, unknown> | undefined,
-  ): Konva.Label | null {
-    const text = pickEntityLabel(entity);
-    if (!text) return null;
-    const stroke = persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT;
-    const label = new Konva.Label({ listening: false });
-    label.add(new Konva.Tag({ fill: stroke, cornerRadius: 3 }));
-    label.add(
-      new Konva.Text({
-        text,
-        fontSize: 12,
-        fontFamily: "system-ui, sans-serif",
-        fill: "#0f172a",
-        padding: 3,
-      }),
-    );
-    return label;
   }
 }
 
