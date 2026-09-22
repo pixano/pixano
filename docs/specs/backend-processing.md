@@ -185,7 +185,7 @@ A record the calculation does not apply to is counted, not stored. Otherwise a l
 
 **The outcome is aggregated on read** from the chunks and the quarantine, and shown by the API and the panel once a job ends. It is not kept as counters on the job: a counter can drift from what it summarises. `done_tasks` is the one denormalised counter, kept to avoid summing chunks on every progress event; it shares a transaction with the chunk it counts, and a concurrency test compares it against the sum. Validated in review.
 
-**A failed job says why.** The API exposes the job's error, or its first failed chunk's, without the stack trace; the panel shows the reason. The worker's reasons are in English for that purpose, although the worker's own comments and logs are in French.
+**A failed job says why.** The API exposes the job's error, or its first failed chunk's, without the stack trace; the panel shows the reason. The worker's reasons are in English for that purpose; since step 2's first lot, so is the whole worker.
 
 ## 9. The worker process
 
