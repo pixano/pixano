@@ -143,7 +143,7 @@ def main() -> int:
     log.info("worker %s : %d type(s) déclaré(s) — %s", worker_id, declared, ", ".join(registry.names()))
 
     media = MediaResolver(config.media_root, config.inference_media_root)
-    asyncio.run(
+    code = asyncio.run(
         serve(
             config.database_url,
             registry,
@@ -157,8 +157,8 @@ def main() -> int:
     )
     # Sans attendre les threads : après un arrêt, certains peuvent rester bloqués sur un appel
     # qui ne revient pas, et une sortie normale les attendrait indéfiniment.
-    _exit_now(0)
-    return 0
+    _exit_now(code)
+    return code
 
 
 def _exit_now(code: int) -> None:
@@ -180,8 +180,13 @@ async def serve(
     media: MediaResolver,
     concurrency: int,
     chunk_timeout_s: float,
-) -> None:
-    """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné."""
+) -> int:
+    """Battre, puis planifier, exécuter, et récupérer ce que d'autres ont abandonné.
+
+    Returns:
+        Le code de sortie : 0 après un arrêt demandé, 1 quand la boucle s'est arrêtée d'elle-même
+        sur un défaut persistant — pour que la politique de redémarrage relance un process neuf.
+    """
     heartbeat = asyncio.create_task(_beat_forever(alive))
     threads = WorkerThreads.for_concurrency(concurrency)
 
@@ -222,22 +227,28 @@ async def serve(
             )
 
         log.info("worker démarré, en attente de jobs")
+        code = 0
         try:
-            await runner.work(
-                pool,
-                registry,
-                worker_id,
-                concurrency,
-                library,
-                media,
-                IDLE_POLL_INTERVAL_S,
-                chunk_timeout_s,
-                threads,
-                stop,
-            )
-            # Arrêt demandé. Ce qui tourne encore est rendu tout de suite : attendre l'expiration
-            # du bail coûterait deux minutes, et le prochain worker n'aura peut-être pas la même
-            # identité pour les reprendre au démarrage.
+            try:
+                await runner.work(
+                    pool,
+                    registry,
+                    worker_id,
+                    concurrency,
+                    library,
+                    media,
+                    IDLE_POLL_INTERVAL_S,
+                    chunk_timeout_s,
+                    threads,
+                    stop,
+                )
+            except runner.PersistentFailure as error:
+                log.error("%s — arrêt en erreur, un worker neuf reprendra", error)
+                code = 1
+            # Arrêt demandé, ou arrêt sur défaut persistant : même remise en ordre. Ce qui tourne
+            # encore est rendu tout de suite : attendre l'expiration du bail coûterait deux
+            # minutes, et le prochain worker n'aura peut-être pas la même identité pour les
+            # reprendre au démarrage.
             try:
                 async with pool.connection() as conn:
                     handed_back = await queue.release_own(conn, worker_id)
@@ -251,6 +262,7 @@ async def serve(
         finally:
             heartbeat.cancel()
             threads.shutdown()
+    return code
 
 
 async def _beat_forever(alive: Callable[[], None]) -> None:
