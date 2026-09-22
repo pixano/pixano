@@ -21,9 +21,11 @@ import json
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Callable
 
 import psycopg
+
+from pixano.datasets import Dataset
 
 from .queries import NOTIFY_CHANNEL, SCHEMA_NAME
 
@@ -50,6 +52,13 @@ SELECT_ONE = f"""
 SELECT id, job_id, type, payload, created_at
 FROM {SCHEMA_NAME}.job_events WHERE id = %s
 """
+
+# The dataset a job worked on, read when the job reaches a terminal state: what the worker
+# wrote — an embeddings table this process has never seen — must reach the API's own caches.
+SELECT_DATASET_OF_JOB = f"SELECT dataset FROM {SCHEMA_NAME}.jobs WHERE id = %s"
+
+# The states after which a job writes nothing more.
+TERMINAL_STATES = frozenset({"done", "error", "cancelled"})
 
 
 @dataclass(frozen=True)
@@ -99,9 +108,20 @@ class _Subscriber:
 class EventBroker:
     """Holds the single listening connection and feeds every open stream."""
 
-    def __init__(self, database_url: str | None) -> None:
-        """Create a broker. A missing URL makes it inert rather than broken."""
+    def __init__(
+        self, database_url: str | None, on_job_ended: Callable[[str], None] = Dataset.invalidate_caches
+    ) -> None:
+        """Create a broker. A missing URL makes it inert rather than broken.
+
+        Args:
+            database_url: Where the queue lives.
+            on_job_ended: Called with the dataset identifier of every job that reaches a
+                terminal state. The default drops this process's cached view of the dataset:
+                the worker writes tables — an embeddings table above all — that a `Dataset`
+                opened before the job would never see, since it reads its sidecar once.
+        """
         self._database_url = database_url
+        self._on_job_ended = on_job_ended
         self._subscribers: set[_Subscriber] = set()
         self._task: asyncio.Task | None = None
         self._listening = asyncio.Event()
@@ -169,16 +189,29 @@ class EventBroker:
             return
 
         wanted = [sub for sub in self._subscribers if sub.job_id in (None, announced.get("job_id"))]
-        if not wanted:
+        # A state event is read whether or not anyone is listening: the end of a job is what
+        # this process needs to hear for itself, not only what it relays.
+        if not wanted and announced.get("type") != "state":
             return
 
         row = await (await conn.execute(SELECT_ONE, (event_id,))).fetchone()
         if row is None:
             return
         event = JobEvent(id=row[0], job_id=str(row[1]), type=row[2], payload=row[3])
+        if event.type == "state" and event.payload.get("state") in TERMINAL_STATES:
+            await self._job_ended(conn, event.job_id)
         for subscriber in wanted:
             if subscriber.wants(event):
                 subscriber.offer(event)
+
+    async def _job_ended(self, conn: psycopg.AsyncConnection, job_id: str) -> None:
+        row = await (await conn.execute(SELECT_DATASET_OF_JOB, (job_id,))).fetchone()
+        if row is None:
+            return
+        try:
+            self._on_job_ended(str(row[0]))
+        except Exception:
+            logger.exception("job %s: the end-of-job hook failed", job_id)
 
     @asynccontextmanager
     async def subscribe(
