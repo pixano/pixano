@@ -12,6 +12,7 @@ import json
 import logging
 import threading
 from datetime import timedelta
+from pathlib import Path
 
 import psycopg
 import psycopg_pool
@@ -153,6 +154,50 @@ class TestPlanning:
         assert await runner.plan_one(adb, registry) is None
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == 0
+
+
+class TestPlanningSeesTheDatasetAsItIs:
+    """Revue d'architecture, point 5 : la planification rouvre le dataset hors du cache du worker.
+
+    Un dataset recréé sous le worker — réimporté, sa table d'embeddings supprimée — était vu tel
+    qu'à son ouverture précédente jusqu'au redémarrage du worker ; rencontré en préparant les
+    scénarios du lot 11.
+    """
+
+    class _ReadsAtPlanning(FakeKind):
+        """Le kind factice, mais dont le plan regarde le dataset et se souvient de ce qu'il a vu."""
+
+        name = "reads-at-planning"
+        seen: list[object] = []
+
+        def plan(self, reader, params):
+            self.seen.append(reader.dataset)
+            return super().plan(reader, params)
+
+    async def test_the_plan_reads_a_dataset_reopened_outside_the_cache(
+        self,
+        db: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        kind = self._ReadsAtPlanning()
+        registry = Registry()
+        registry.register(kind)
+        registry.declare(db, "worker-test")
+        job = _submit(db, kind=kind.name)
+
+        versions = iter(["as first opened", "as it is now"])
+        monkeypatch.setattr(runner.Dataset, "find", lambda _id, _library: next(versions))
+        # Ce que le worker en tenait avant : ouvert par un job précédent, resté en cache.
+        stale = runner._open_dataset(tmp_path, "ds")
+        assert stale == "as first opened"
+
+        await runner.plan_one(adb, registry, library=tmp_path)
+
+        assert _state(db, job)[0] == "pending"
+        assert kind.seen == ["as it is now"]
+        assert runner._open_dataset(tmp_path, "ds") == "as it is now", "le cache tient désormais la version relue"
 
 
 class TestInterruptedPlanning:
