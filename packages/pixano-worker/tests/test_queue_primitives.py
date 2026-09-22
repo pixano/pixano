@@ -50,6 +50,37 @@ class TestClaim:
 
         assert [chunk.seq for chunk in claimed] == [0, 1, 2]
 
+    async def test_a_claimed_job_is_running_before_any_of_its_chunks_finishes(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue d'architecture, point 17 : un premier chunk long laissait le job « pending »."""
+        job = _enqueue(db, 4)
+        claimed = await queue.claim(adb, "worker-a", 2)
+
+        started = await queue.start_jobs(adb, (chunk.job_id for chunk in claimed))
+
+        assert started == [job]
+        row = db.execute(f"SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
+        assert row == ("running",)
+        events = db.execute(
+            f"SELECT type, payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s ORDER BY id", (job,)
+        ).fetchall()
+        assert events == [("state", {"state": "running"})]
+
+    async def test_starting_a_job_twice_announces_it_once(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Deux workers réclament des chunks du même job : un seul fait la transition."""
+        job = _enqueue(db, 4)
+        first = await queue.claim(adb, "worker-a", 1)
+        second = await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.start_jobs(adb, [first[0].job_id]) == [job]
+        assert await queue.start_jobs(adb, [second[0].job_id]) == []
+
+        count = db.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_events WHERE job_id = %s", (job,)).fetchone()
+        assert count == (1,)
+
     async def test_an_empty_queue_returns_nothing(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
         assert await queue.claim(adb, "worker-a", 8) == []
 
@@ -95,7 +126,11 @@ class TestFinish:
     async def test_announces_the_job_running_then_its_progress_in_the_same_transaction(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`."""
+        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`.
+
+        C'est le filet du cas où la marque posée à la réclamation a manqué : ici elle n'est
+        pas posée du tout, et c'est le premier chunk terminé qui doit l'annoncer.
+        """
         job = _enqueue(db, 2, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)
 
