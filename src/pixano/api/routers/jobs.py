@@ -359,3 +359,21 @@ def cancel_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]
         except jobs.QueueUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
     return JobResponse.of(record)
+
+
+@router.post("/{job_id}/retry", operation_id="retry_job")
+def retry_job(job_id: str, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
+    """Run a job that ended in error or cancellation again, from where it stopped.
+
+    Completed chunks keep their results; the others go back to the queue.
+    """
+    with _connect(settings) as conn:
+        try:
+            record = jobs.retry(conn, job_id)
+        except jobs.JobNotFoundError as error:
+            raise HTTPException(status_code=404, detail=f"unknown job: {job_id}") from error
+        except jobs.JobNotRetryableError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        except jobs.QueueUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+    return JobResponse.of(record)

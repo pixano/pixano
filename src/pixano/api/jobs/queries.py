@@ -111,3 +111,25 @@ WHERE id = %s AND state IN ('planning', 'pending', 'running')
   )
 RETURNING state
 """
+
+# A retry reopens the chunks that did not complete. `attempts` is the fencing token and must
+# stay monotonic, so the count restarts from a floor instead of being reset. `available_at`
+# is brought back to now: the growing delay of the previous run has no reason to survive it.
+RETRY_CHUNKS = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET state = 'pending', attempts_floor = attempts, claimed_by = NULL, error = NULL,
+    available_at = now(), updated_at = now()
+WHERE job_id = %s AND state IN ('error', 'cancelled')
+"""
+
+# Only a job that has ended badly can be retried, and it goes back to where its work is:
+# `pending` when it has chunks, `planning` when it never got any — a plan that failed, or a
+# cancellation before the worker reached it. Planning again is the only way to get chunks.
+RETRY_JOB = f"""
+UPDATE {SCHEMA_NAME}.jobs AS j
+SET state = CASE WHEN EXISTS (SELECT 1 FROM {SCHEMA_NAME}.job_chunks c WHERE c.job_id = j.id)
+                 THEN 'pending' ELSE 'planning' END,
+    error = NULL, cancel_requested_at = NULL, updated_at = now()
+WHERE j.id = %s AND j.state IN ('error', 'cancelled')
+RETURNING j.state
+"""

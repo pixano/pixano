@@ -39,6 +39,10 @@ class JobNotFoundError(LookupError):
     """No job carries this identifier."""
 
 
+class JobNotRetryableError(ValueError):
+    """The job has not ended in error or cancellation, so there is nothing to retry."""
+
+
 class UnknownKindError(ValueError):
     """No worker has declared it can run this job kind."""
 
@@ -225,4 +229,27 @@ def cancel(conn: psycopg.Connection, job_id: str) -> JobRecord:
             # Settled on the spot, or still in its previous state: a cancellation does not change it.
             payload = {"state": settled[0] if settled else job.state, "cancel_requested": True}
             conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
+    return get(conn, job_id)
+
+
+def retry(conn: psycopg.Connection, job_id: str) -> JobRecord:
+    """Run a job that ended in error or cancellation again, from where it stopped.
+
+    Chunks that completed keep their results; those in error or cancelled go back to the
+    queue with a fresh count of attempts. A job that never got chunks — its plan failed, or it
+    was cancelled before a worker reached it — goes back to planning. The retry is announced
+    on the event stream in the same transaction, like a cancellation.
+
+    Raises:
+        JobNotFoundError: No job carries this identifier.
+        JobNotRetryableError: The job is not in error or cancelled.
+    """
+    with conn.transaction():
+        job = get(conn, job_id)
+        conn.execute(queries.RETRY_CHUNKS, (job.id,))
+        reopened = conn.execute(queries.RETRY_JOB, (job.id,)).fetchone()
+        if reopened is None:
+            raise JobNotRetryableError(f"job {job.id} is {job.state}, only a job in error or cancelled can be retried")
+        payload = {"state": reopened[0], "cancel_requested": False}
+        conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
     return get(conn, job_id)
