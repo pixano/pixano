@@ -13,6 +13,8 @@ transitoire d'un échec définitif, et écrire un résultat que rejouer ne dupli
 """
 
 import io
+import logging
+import time
 from functools import cache
 from typing import Any, Iterable
 
@@ -27,6 +29,8 @@ from ..reader import JobReader
 from ..writer import JobWriter, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 
+
+log = logging.getLogger("pixano-worker")
 
 # La table des vues image, et celle des enregistrements. Ce sont les noms canoniques de Pixano.
 IMAGE_TABLE = "images"
@@ -144,6 +148,10 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 image n'y soit pour rien.
         """
         record_ids: list[str] = payload["record_ids"]
+        # Chronométré par phase — lecture du dataset, appel d'inférence, puis l'écriture dans
+        # `write` — parce que la mesure du lot 10 ne datait que des jobs entiers, et ne savait
+        # pas dire où passait le temps quand un lot plus gros se révélait plus lent.
+        started = time.perf_counter()
         images = self._images_of(reader, record_ids) if record_ids else {}
 
         candidates: list[tuple[str, str]] = []
@@ -167,10 +175,14 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             if not resolved.carried_bytes:
                 by_path[record_id] = image
 
+        read_s = time.perf_counter() - started
+
         client = SyncPixanoInferenceClient(
             self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
         )
+        started = time.perf_counter()
         embedded, refused = self._embed_isolating(client, candidates, params)
+        inference_s = time.perf_counter() - started
         if refused and not embedded:
             # Tout le lot est refusé, image par image. Une inférence en panne refuse tout ; un
             # lot entièrement corrompu aussi. Ce n'est pas la taille du lot qui départage — le
@@ -188,6 +200,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             "skipped": skipped,
             "quarantined": quarantined,
             "carried_bytes": carried,
+            "phases_s": {"read": read_s, "inference": inference_s},
         }
 
     def outcome(self, result: dict[str, Any], payload: dict[str, Any], task_count: int) -> Outcome:
@@ -207,9 +220,20 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         vecteurs au lieu d'en empiler une seconde série.
         """
         vectors = result["vectors"]
-        if not vectors:
-            return
-        writer.write_record_embeddings(record_ids=result["record_ids"], vectors=vectors, model=params.model)
+        started = time.perf_counter()
+        if vectors:
+            writer.write_record_embeddings(record_ids=result["record_ids"], vectors=vectors, model=params.model)
+        phases = result.get("phases_s", {})
+        # Une ligne par chunk, avec le job : c'est ce que scripts/measure_throughput.py additionne.
+        log.info(
+            "job %s : phases lecture %.3f s, inférence %.3f s, écriture %.3f s (%d vecteur(s), %d image(s) en octets)",
+            writer.job_id,
+            phases.get("read", 0.0),
+            phases.get("inference", 0.0),
+            time.perf_counter() - started,
+            len(vectors),
+            result.get("carried_bytes", 0),
+        )
 
     def _blame_the_server_or_the_images(
         self,

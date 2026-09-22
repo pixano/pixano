@@ -29,9 +29,11 @@ Usage :
 
 import argparse
 import json
+import re
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 
 def _call(url: str, payload: dict | None = None) -> dict:
@@ -41,14 +43,37 @@ def _call(url: str, payload: dict | None = None) -> dict:
         return json.loads(response.read())
 
 
-def run_job(api: str, dataset_id: str, chunk_size: int, poll_s: float = 0.2) -> tuple[float, int]:
+#: Ce que le type d'embeddings journalise pour chaque chunk écrit, avec l'identifiant du job.
+PHASES = re.compile(
+    r"job (?P<job>[0-9a-f-]{36}) : phases lecture (?P<read>[\d.]+) s, inférence (?P<inference>[\d.]+) s, "
+    r"écriture (?P<write>[\d.]+) s"
+)
+
+
+def phases_of(worker_log: Path, job_id: str) -> dict[str, float]:
+    """Additionner, sur le journal du worker, le temps passé par phase pour un job.
+
+    Les phases sont sommées sur les chunks : avec plusieurs chunks en vol, leur somme dépasse
+    la durée du job. Ce sont des temps de travail, pas des temps d'attente — c'est ce qui dit où
+    va le temps quand un lot plus gros se révèle plus lent.
+    """
+    totals = {"read": 0.0, "inference": 0.0, "write": 0.0}
+    for line in worker_log.read_text(errors="replace").splitlines():
+        found = PHASES.search(line)
+        if found and found["job"] == job_id:
+            for phase in totals:
+                totals[phase] += float(found[phase])
+    return totals
+
+
+def run_job(api: str, dataset_id: str, chunk_size: int, poll_s: float = 0.2) -> tuple[float, int, str]:
     """Lancer un job d'embeddings et attendre sa fin.
 
     L'attente est courte devant la durée d'un job, pour que le pas de scrutation ne se
     confonde pas avec ce qu'on mesure.
 
     Returns:
-        La durée en secondes, et le nombre de tâches planifiées.
+        La durée en secondes, le nombre de tâches planifiées, et l'identifiant du job.
     """
     job = _call(
         f"{api}/jobs",
@@ -65,7 +90,7 @@ def run_job(api: str, dataset_id: str, chunk_size: int, poll_s: float = 0.2) -> 
         if state["state"] in ("done", "error", "cancelled"):
             if state["state"] != "done":
                 raise RuntimeError(f"job {state['state']} : {state}")
-            return time.monotonic() - started, state["total_tasks"]
+            return time.monotonic() - started, state["total_tasks"], job["id"]
 
 
 def datasets(api: str) -> dict[str, str]:
@@ -85,6 +110,12 @@ def main() -> None:
         "tout ce qui traîne dans la bibliothèque lance un calcul long sur des datasets dont "
         "le débit ne veut rien dire.",
     )
+    parser.add_argument(
+        "--worker-log",
+        type=Path,
+        help="Journal du worker (par exemple la sortie de `docker compose logs -f pixano-worker`, ou celle "
+        "d'un worker lancé à la main), pour ventiler la durée par phase : lecture, inférence, écriture.",
+    )
     args = parser.parse_args()
 
     available = datasets(args.api)
@@ -94,13 +125,20 @@ def main() -> None:
         raise SystemExit(f"dataset inconnu : {', '.join(unknown)}. Connus : {', '.join(available)}")
     sizes = [int(s) for s in args.sizes.split(",")]
 
-    print("| dataset | lot | tâches planifiées | durée | tâches/s |", flush=True)
-    print("| --- | ---: | ---: | ---: | ---: |", flush=True)
+    phases = " lecture | inférence | écriture |" if args.worker_log else ""
+    print(f"| dataset | lot | tâches planifiées | durée | tâches/s |{phases}", flush=True)
+    print("| --- | ---: | ---: | ---: | ---: |" + (" ---: | ---: | ---: |" if args.worker_log else ""), flush=True)
     for name in wanted:
         for size in sizes:
-            elapsed, tasks = run_job(args.api, available[name], size)
+            elapsed, tasks, job_id = run_job(args.api, available[name], size)
             rate = tasks / elapsed if elapsed else 0.0
-            print(f"| {name} | {size} | {tasks} | {elapsed:.1f} s | {rate:.1f} |", flush=True)
+            row = f"| {name} | {size} | {tasks} | {elapsed:.1f} s | {rate:.1f} |"
+            if args.worker_log:
+                # Le worker écrit son journal après coup ; lui laisser le temps de le vider.
+                time.sleep(1.0)
+                totals = phases_of(args.worker_log, job_id)
+                row += f" {totals['read']:.1f} s | {totals['inference']:.1f} s | {totals['write']:.1f} s |"
+            print(row, flush=True)
 
 
 if __name__ == "__main__":
