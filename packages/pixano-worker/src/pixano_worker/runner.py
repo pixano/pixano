@@ -325,7 +325,7 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
         return _reopen_dataset(library, dataset_id) if fresh else _open_dataset(library, dataset_id)
 
-    return JobReader(open_dataset, media or MediaResolver("/medias", "/medias"))
+    return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
 def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
