@@ -12,6 +12,7 @@ répond — mesuré, pas supposé : un 500 `internal_error` pour une image corro
 un chemin absent, et pour le lot entier dès qu'une seule image y est mauvaise.
 """
 
+import base64
 from types import SimpleNamespace
 from typing import Any
 
@@ -22,8 +23,18 @@ from pixano_inference_client import PixanoInferenceError
 from pixano_worker.kinds import EmbeddingsKind, TransientError
 from pixano_worker.media import ResolvedMedia
 
+from pixano.inference.media import bytes_to_data_uri
+
 
 DIM = 4
+
+
+def _decoded(data_uri: str) -> str:
+    """Ce que désignent des octets envoyés ; l'image témoin, un vrai PNG, reste elle-même."""
+    if not data_uri.startswith("data:"):
+        return data_uri
+    raw = base64.b64decode(data_uri.split(",", 1)[1])
+    return raw.decode() if raw.startswith(b"/medias/") else "witness"
 
 
 class _Inference:
@@ -31,6 +42,8 @@ class _Inference:
 
     def __init__(self) -> None:
         self.bad: set[str] = set()
+        # Refuser tout chemin, accepter les octets : un serveur qui ne lit pas son montage de médias.
+        self.refuses_paths = False
         self.status_for_everything: int | None = None
         self.unreachable = False
         self.transport_error: Exception | None = None
@@ -56,7 +69,12 @@ class _Inference:
             raise self.transport_error
         if self.status_for_everything is not None:
             raise PixanoInferenceError(self.status_for_everything, "erreur", "refusé")
-        if self.bad & set(images):
+        # Une image abîmée l'est aussi en octets : ce que le lecteur simulé donne pour octets
+        # d'une image, c'est son chemin, pour que le simulateur la reconnaisse sous les deux formes.
+        identities = {_decoded(image) for image in images}
+        if self.bad & identities:
+            raise PixanoInferenceError(500, "internal_error", "Inference error.")
+        if self.refuses_paths and any(not image.startswith("data:") for image in images):
             raise PixanoInferenceError(500, "internal_error", "Inference error.")
         vectors = np.ones((len(images), DIM), dtype=np.float32)
         return SimpleNamespace(data=SimpleNamespace(embeddings=SimpleNamespace(to_numpy=lambda: vectors)))
@@ -65,10 +83,21 @@ class _Inference:
 class _Reader:
     """Un dataset où certains enregistrements n'ont pas d'image, et d'autres une image perdue."""
 
-    def __init__(self, without_image: set[str] = frozenset(), lost: set[str] = frozenset()) -> None:  # type: ignore[assignment]
+    def __init__(
+        self,
+        without_image: set[str] = frozenset(),  # type: ignore[assignment]
+        lost: set[str] = frozenset(),  # type: ignore[assignment]
+        carried_bytes: bool = False,
+    ) -> None:
         self.without_image = without_image
         self.lost = lost
-        self.dataset = SimpleNamespace(get_data=self._get_data)
+        self.carried_bytes = carried_bytes
+        self.dataset = SimpleNamespace(get_data=self._get_data, get_view_binary=self._get_view_binary)
+
+    @staticmethod
+    def _get_view_binary(table_name: str, row_id: str) -> tuple[bytes, str]:
+        record_id = row_id.removeprefix("img-")
+        return f"/medias/{record_id}.jpg".encode(), "image/jpeg"
 
     def _get_data(self, table_name: str, record_ids: list[str]) -> list[Any]:
         return [
@@ -80,6 +109,8 @@ class _Reader:
     def resolve_media(self, table_name: str, view: Any) -> ResolvedMedia | None:
         if view.record_id in self.lost:
             return None
+        if self.carried_bytes:
+            return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), carried_bytes=True, reason="octets")
         return ResolvedMedia(view.uri, carried_bytes=False, reason="chemin")
 
 
@@ -195,7 +226,7 @@ class TestTransientFailures:
         with pytest.raises(TransientError, match="revenir plus tard"):
             _run(_Reader())
 
-    def test_a_single_refused_image_is_quarantined_not_presumed_an_outage(self, inference: _Inference) -> None:
+    def test_a_single_refused_image_is_quarantined_when_the_witness_passes(self, inference: _Inference) -> None:
         """Review de l'étape 1 : un lot d'une image corrompue faisait échouer tout le job.
 
         Le dernier chunk d'un dataset n'a souvent qu'une image, et sur un dataset lidar la plupart
@@ -215,18 +246,58 @@ class TestTransientFailures:
 
         assert (outcome.produced, outcome.skipped, len(outcome.quarantined)) == (0, 7, 1)
 
-    def test_two_images_both_refused_are_presumed_an_outage(self, inference: _Inference) -> None:
-        inference.bad = {"/medias/r0.jpg", "/medias/r1.jpg"}
 
-        with pytest.raises(TransientError, match="refuse les 2"):
-            _run(_Reader(), records=["r0", "r1"])
+class TestWitness:
+    """Revue d'architecture, point 3 : sur un lot entièrement refusé, c'est le serveur qui départage.
 
-    def test_an_inference_refusing_every_image_is_presumed_down(self, inference: _Inference) -> None:
-        """Toutes les images refusées une à une : une panne est bien plus probable qu'un lot entièrement corrompu."""
+    Une image témoin générée, envoyée en octets : refusée, le serveur ne va pas bien ; acceptée,
+    les images sont en cause — sauf si le serveur ne lit pas les chemins qu'on lui donne.
+    """
+
+    @staticmethod
+    def _witness_calls(inference: _Inference) -> list[list[str]]:
+        return [call for call in inference.calls if len(call) == 1 and _decoded(call[0]) == "witness"]
+
+    def test_a_whole_batch_of_bad_images_is_quarantined_when_the_witness_passes(self, inference: _Inference) -> None:
+        """Ce que le seuil d'avant prenait pour une panne : huit images abîmées, un serveur qui va bien."""
         inference.bad = {f"/medias/{r}.jpg" for r in RECORDS}
 
-        with pytest.raises(TransientError, match="refuse les 8"):
+        _, outcome = _run(_Reader())
+
+        assert (outcome.produced, len(outcome.quarantined)) == (0, 8)
+        assert len(self._witness_calls(inference)) == 1
+
+    def test_a_server_refusing_the_witness_is_presumed_down(self, inference: _Inference) -> None:
+        inference.status_for_everything = 500
+
+        with pytest.raises(TransientError, match="image témoin"):
             _run(_Reader())
+
+    def test_the_witness_is_not_sent_when_something_embedded(self, inference: _Inference) -> None:
+        inference.bad = {"/medias/r0.jpg"}
+
+        _run(_Reader())
+
+        assert self._witness_calls(inference) == []
+
+    def test_a_server_that_cannot_read_its_media_mount_is_told_apart_from_bad_images(
+        self, inference: _Inference
+    ) -> None:
+        """Le témoin passe, les chemins sont tous refusés, la même image passe en octets : c'est le montage."""
+        inference.refuses_paths = True
+
+        with pytest.raises(TransientError, match="ne lit pas le stockage des médias"):
+            _run(_Reader())
+
+    def test_images_sent_as_bytes_are_not_resent(self, inference: _Inference) -> None:
+        """Rien à renvoyer : elles ont déjà voyagé en octets, le refus est le leur."""
+        inference.bad = {f"/medias/{r}.jpg" for r in RECORDS}
+
+        _, outcome = _run(_Reader(carried_bytes=True))
+
+        assert len(outcome.quarantined) == 8
+        single = [call for call in inference.calls if len(call) == 1 and _decoded(call[0]) != "witness"]
+        assert len(single) == 8, "les huit isolements, et aucun renvoi"
 
 
 class TestFatalFailures:
