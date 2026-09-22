@@ -167,11 +167,19 @@ def _reader() -> JobReader:
     return JobReader(lambda: _Source(), MediaResolver("/medias", "/medias"))
 
 
-def _execute(kind: JobKind, target: _Target, job_id: str) -> None:
+def _writer(kind: JobKind, target: _Target, job_id: str) -> JobWriter:
+    return JobWriter(lambda: target, kind.name, job_id, kind.source_type)
+
+
+def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1) -> None:
+    """Un job entier, comme le moteur le déroule : préparer, découper, puis chaque chunk."""
     params = _params(kind)
+    for _ in range(prepare_times):
+        kind.prepare(_writer(kind, target, job_id), params)
     for chunk in kind.plan(_reader(), params):
-        writer = JobWriter(lambda: target, kind.name, job_id, kind.source_type)
-        kind.write(writer, kind.process(_reader(), chunk.payload, params), chunk.payload, params)
+        kind.write(
+            _writer(kind, target, job_id), kind.process(_reader(), chunk.payload, params), chunk.payload, params
+        )
 
 
 #: Largeur des vecteurs que l'inference simulée renvoie.
@@ -226,6 +234,27 @@ class TestDeclaration:
 
     def test_its_parameter_example_is_valid(self, kind: JobKind) -> None:
         assert isinstance(_params(kind), JobParams)
+
+
+class TestPreparation:
+    """Le crochet `prepare` : rien par défaut, et jamais deux états différents pour deux appels."""
+
+    def test_preparing_with_default_parameters_destroys_nothing(self, kind: JobKind) -> None:
+        target = _Target()
+        _execute(kind, target, "job-1")
+        before = target.fingerprint()
+
+        kind.prepare(_writer(kind, target, "job-2"), _params(kind))
+
+        assert target.fingerprint() == before
+
+    def test_preparing_twice_is_the_same_as_once(self, kind: JobKind) -> None:
+        """Un planificateur mort après `prepare` laisse le suivant tout refaire."""
+        once, twice = _Target(), _Target()
+        _execute(kind, once, "job-1")
+        _execute(kind, twice, "job-1", prepare_times=2)
+
+        assert twice.fingerprint() == once.fingerprint()
 
 
 class TestPlanning:

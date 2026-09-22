@@ -11,7 +11,7 @@ registered kind, and adding a kind without an entry in `CONTRACT_EXAMPLES` fails
 
 ---
 
-## 1. The three contracts
+## 1. The contracts
 
 ### `Params` — a pydantic model, inheriting `JobParams`
 
@@ -37,6 +37,20 @@ turn without advancing anything. And **planning twice describes the same work**:
 replanned after an outage must not describe something different from what was partly executed.
 
 A chunk's payload is opaque to the engine, and must be a JSON object.
+
+### `prepare(writer, params)` — optional
+
+Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
+never for a job retried with its chunks. The default does nothing, and most kinds keep it: it
+exists for a state the chunks cannot each restore on their own, such as emptying a table
+before refilling it. Three rules, the first two checked by the suite:
+
+- **Idempotent.** A planner that dies after `prepare` lets its lease expire and the next one
+  does both again, so twice must leave the dataset as once does.
+- **Nothing is destroyed unless an explicit parameter asks for it.** A job with default
+  parameters never loses what the dataset holds.
+- **No `finalize` in return** until a kind needs one: what should happen at the end of a job
+  is designed then, not by symmetry.
 
 ### `process(payload, params)` then `write(writer, result, payload, params)`
 
