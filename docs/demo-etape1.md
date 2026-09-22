@@ -99,7 +99,8 @@ docker compose kill -s SIGKILL pixano-worker
 ```
 
 **What to see:** the bar stops. The worker is gone without any chance to clean up — this is a
-power cut, not a shutdown.
+power cut, not a shutdown. Docker does not bring it back on its own: a `kill` counts as a stop
+you asked for, whereas a worker that crashes by itself is restarted.
 
 Wait a few seconds, then:
 
