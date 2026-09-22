@@ -408,6 +408,11 @@ async def _loop(
                 )
                 in_flight.add(task)
                 task.add_done_callback(in_flight.discard)
+            # Une fois les tâches lancées seulement : leurs jobs passent en cours, et l'interface
+            # l'apprend, sans que le travail dépende de cette seconde requête.
+            if claimed:
+                async with pool.connection() as conn:
+                    await queue.start_jobs(conn, (chunk.job_id for chunk in claimed))
 
             if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
                 last_reclaim = loop.time()
@@ -520,6 +525,7 @@ async def run_batch(
         Le nombre de chunks traités — zéro quand la file est vide.
     """
     chunks = await queue.claim(conn, worker_id, batch_size)
+    await queue.start_jobs(conn, (chunk.job_id for chunk in chunks))
     for chunk in chunks:
         await run_chunk(conn, registry, chunk, library, media)
     return len(chunks)
