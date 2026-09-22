@@ -131,6 +131,29 @@ class JobKind(ABC, Generic[ParamsT]):
     #: dire, pour qu'on ne prenne pas sa sortie pour une prédiction.
     source_type: str = "model"
 
+    def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
+        """Mettre le dataset en état avant que le job ne soit découpé.
+
+        Appelé une fois par job, sous le bail de planification, avant `plan` — jamais par le
+        rejeu d'un chunk ni par la relance d'un job qui a déjà ses chunks. Ne rien faire est le
+        défaut, et c'est ce que font la plupart des types : un type ne redéfinit ceci que pour
+        une remise en état que ses chunks ne peuvent pas faire chacun pour soi — vider une table
+        avant de la remplir, par exemple.
+
+        Trois règles, vérifiées par la suite de contrat pour les deux premières :
+
+        - **Idempotent.** Appelé deux fois, le dataset est dans le même état qu'après une fois :
+          un planificateur mort après `prepare` laisse son bail expirer, et le suivant repart.
+        - **Ne détruit rien sans qu'un paramètre explicite le demande.** Un job lancé avec les
+          paramètres par défaut ne doit jamais perdre ce que le dataset contient.
+        - **Pas de `finalize` en face**, tant qu'aucun type n'en a besoin : ce qui doit se faire
+          en fin de job se conçoit alors, pas par symétrie.
+
+        Args:
+            writer: Par où écrire, déjà lié au dataset et au job.
+            params: Les paramètres validés.
+        """
+
     @abstractmethod
     def plan(self, reader: "JobReader", params: ParamsT) -> Iterable[Chunk]:
         """Découper le travail du job en chunks.

@@ -203,8 +203,14 @@ async def plan_one(
     try:
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media, fresh=True)
+        writer = _writer_for(library, dataset_id, kind_name, job_id, kind.source_type)
         async with _kept_alive(refresh, f"planification du job {job_id}"):
-            chunks = await (threads or default_threads()).run(lambda: list(kind.plan(reader, params)))
+            pool = threads or default_threads()
+            # La remise en état précède le découpage, sous le même bail : un planificateur qui
+            # meurt entre les deux laisse un `prepare` fait et aucun chunk, et le suivant refait
+            # les deux — c'est pour cela que `prepare` doit être idempotent.
+            await pool.run(lambda: kind.prepare(writer, params))
+            chunks = await pool.run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)

@@ -200,6 +200,58 @@ class TestPlanningSeesTheDatasetAsItIs:
         assert runner._open_dataset(tmp_path, "ds") == "as it is now", "le cache tient désormais la version relue"
 
 
+class TestPreparation:
+    """Revue d'architecture, point 4 : `prepare` court une fois par job, à la planification."""
+
+    class _Prepares(FakeKind):
+        name = "prepares"
+        prepared: list[str] = []
+
+        def prepare(self, writer, params):
+            self.prepared.append(writer.job_id)
+
+    @pytest.fixture
+    def kind_registry(self, db: psycopg.Connection) -> tuple[Registry, "TestPreparation._Prepares"]:
+        kind = self._Prepares()
+        kind.prepared = []
+        registry = Registry()
+        registry.register(kind)
+        registry.declare(db, "worker-test")
+        return registry, kind
+
+    async def test_prepare_runs_before_the_plan_and_never_with_a_chunk(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        registry, kind = kind_registry
+        job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+
+        await runner.plan_one(adb, registry)
+        assert kind.prepared == [job]
+
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        assert _state(db, job)[0] == "done"
+        assert kind.prepared == [job], "aucun chunk ne prépare"
+
+    async def test_a_retried_job_with_chunks_is_not_prepared_again(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        """La relance remet les chunks en file sans repasser par la planification."""
+        registry, kind = kind_registry
+        job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+        await runner.plan_one(adb, registry)
+        # Ce que fait POST /jobs/{id}/retry sur un job qui a déjà ses chunks.
+        db.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'pending' WHERE id = %s", (job,))
+
+        await runner.plan_one(adb, registry)
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        assert _state(db, job)[0] == "done"
+        assert kind.prepared == [job]
+
+
 class TestInterruptedPlanning:
     """Un worker qui meurt en pleine découpe ne doit pas laisser le job bloqué pour toujours."""
 
