@@ -202,7 +202,7 @@ async def plan_one(
 
     try:
         params = kind.validate_params(raw_params)
-        reader = _reader_for(library, dataset_id, media)
+        reader = _reader_for(library, dataset_id, media, fresh=True)
         async with _kept_alive(refresh, f"planification du job {job_id}"):
             chunks = await (threads or default_threads()).run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
@@ -300,13 +300,24 @@ def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
     return _open_dataset(library, dataset_id)
 
 
-def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None) -> JobReader:
-    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert."""
+def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None, fresh: bool = False) -> JobReader:
+    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert.
+
+    Args:
+        library: La bibliothèque de datasets ; None si aucune n'est configurée.
+        dataset_id: Le dataset du job.
+        media: Le résolveur de médias.
+        fresh: Rouvrir le dataset en ignorant le cache. La planification le demande : elle est
+            le premier regard d'un job sur son dataset, et un dataset recréé sous le worker —
+            réimporté, sa table d'embeddings supprimée — était sinon vu tel qu'il était à
+            l'ouverture précédente, jusqu'au redémarrage du worker. Les chunks, eux, lisent
+            ce que la planification a rouvert.
+    """
 
     def open_dataset() -> Dataset:
         if library is None:
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
-        return _open_dataset(library, dataset_id)
+        return _reopen_dataset(library, dataset_id) if fresh else _open_dataset(library, dataset_id)
 
     return JobReader(open_dataset, media or MediaResolver("/medias", "/medias"))
 
