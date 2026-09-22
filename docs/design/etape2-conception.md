@@ -157,7 +157,7 @@ devient un problème mesuré ; rien dans A ne l'empêche d'arriver ensuite.
 
 ## 3. `replace` exact par clé
 
-> **Décision :** un autre modèle **s'ajoute** : la clé de remplacement est (kind, modèle, enregistrement, vue), et relancer le même modèle remplace ses propres lignes. Remplacer à la demande : un paramètre `replace_previous` qui, via `prepare`, efface d'abord les lignes `pending` du kind, tous modèles. Un nettoyage des doublons pourra être un workflow plus tard. Mécanisme : A (delete par filtre), B si Lance le permet.
+> **Décision :** un autre modèle **s'ajoute** : la clé de remplacement est (kind, modèle, enregistrement, vue), et relancer le même modèle remplace ses propres lignes — **provisoire**, à revoir à la revue de l'étape 2. Remplacer à la demande : un paramètre `replace_previous` qui, via `prepare`, efface d'abord les lignes `pending` du kind, tous modèles. Un nettoyage des doublons pourra être un workflow plus tard. Mécanisme : A (delete par filtre), B si Lance le permet.
 
 ### Aujourd'hui
 
