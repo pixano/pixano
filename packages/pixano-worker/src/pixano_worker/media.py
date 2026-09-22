@@ -71,6 +71,17 @@ class MediaResolver:
         self.media_root = media_root.rstrip("/")
         self.inference_media_root = inference_media_root.rstrip("/")
 
+    @classmethod
+    def unconfigured(cls) -> "MediaResolver":
+        """Un résolveur qui refuse de désigner quoi que ce soit, en le disant.
+
+        Pour les chemins d'exécution sans déploiement derrière — les tests du moteur, dont les
+        types n'ouvrent aucun média. L'ancien repli, deux racines `/medias` en dur, était le
+        chemin des conteneurs du compose glissé dans le code : un worker lancé à la main sans
+        racine configurée aurait envoyé à l'inférence des chemins qu'elle ne pouvait pas lire.
+        """
+        return _UnconfiguredMedia()
+
     def resolve(self, source: MediaSource, table_name: str, view: Any) -> ResolvedMedia | None:
         """Désigner un média pour l'inference.
 
@@ -129,3 +140,13 @@ class MediaResolver:
             return None
         reason = "octets embarqués" if not uri else "chemin hors racine, octets envoyés"
         return ResolvedMedia(bytes_to_data_uri(found[0]), carried_bytes=True, reason=reason)
+
+
+class _UnconfiguredMedia(MediaResolver):
+    def __init__(self) -> None:
+        super().__init__(media_root="", inference_media_root="")
+
+    def resolve(self, source: MediaSource, table_name: str, view: Any) -> ResolvedMedia | None:
+        raise RuntimeError(
+            "aucune racine de médias configurée : PIXANO_MEDIA_ROOT et PIXANO_INFERENCE_MEDIA_ROOT sont vides"
+        )
