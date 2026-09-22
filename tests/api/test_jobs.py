@@ -364,3 +364,72 @@ class TestMalformedIdentifier:
     def test_cannot_be_cancelled_either(self, declared: psycopg.Connection) -> None:
         with pytest.raises(jobs.JobNotFoundError):
             jobs.cancel(declared, "not-a-uuid")
+
+
+class TestRetry:
+    """Architecture review, point 1: a failed job was a dead end; the retry reopens it where it stopped."""
+
+    @staticmethod
+    def _failed_with_chunks(queue: psycopg.Connection) -> str:
+        """A job that ended in error: one chunk done, one in error, one cancelled."""
+        job = jobs.submit(queue, kind="fake", dataset_id="ds", params={"task_count": 15})
+        queue.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET state = 'error', error = '{{\"reason\": \"x\"}}' WHERE id = %s", (job.id,)
+        )
+        queue.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks "
+            "(job_id, seq, task_count, state, attempts, produced, skipped, error) "
+            "VALUES (%s, 0, 5, 'done', 1, 5, 0, NULL), "
+            "(%s, 1, 5, 'error', 5, NULL, NULL, '{\"reason\": \"abandoned after its attempts\"}'), "
+            "(%s, 2, 5, 'cancelled', 0, NULL, NULL, NULL)",
+            (job.id, job.id, job.id),
+        )
+        return job.id
+
+    def test_reopens_the_chunks_that_did_not_complete(self, declared: psycopg.Connection) -> None:
+        job_id = self._failed_with_chunks(declared)
+
+        retried = jobs.retry(declared, job_id)
+
+        assert (retried.state, retried.error, retried.cancel_requested) == ("pending", None, False)
+        rows = declared.execute(
+            f"SELECT seq, state, attempts, attempts_floor, error FROM {SCHEMA_NAME}.job_chunks "
+            "WHERE job_id = %s ORDER BY seq",
+            (job_id,),
+        ).fetchall()
+        assert rows == [
+            (0, "done", 1, 0, None),
+            (1, "pending", 5, 5, None),
+            (2, "pending", 0, 0, None),
+        ]
+
+    def test_a_job_without_chunks_goes_back_to_planning(self, declared: psycopg.Connection) -> None:
+        """A plan that failed, or a cancellation before the worker got there: planning again is the only way."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        jobs.cancel(declared, job.id)
+
+        retried = jobs.retry(declared, job.id)
+
+        assert (retried.state, retried.cancel_requested) == ("planning", False)
+
+    def test_refuses_a_job_that_has_not_ended_badly(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+
+        with pytest.raises(jobs.JobNotRetryableError):
+            jobs.retry(declared, job.id)
+
+        assert jobs.get(declared, job.id).state == "planning"
+
+    def test_announces_the_retry_in_its_transaction(self, declared: psycopg.Connection) -> None:
+        job_id = self._failed_with_chunks(declared)
+
+        jobs.retry(declared, job_id)
+
+        rows = declared.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s AND type = 'state' ORDER BY id", (job_id,)
+        ).fetchall()
+        assert rows[-1][0] == {"state": "pending", "cancel_requested": False}
+
+    def test_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
+        with pytest.raises(jobs.JobNotFoundError):
+            jobs.retry(declared, "not-a-uuid")

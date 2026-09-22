@@ -163,7 +163,9 @@ its own verification that nothing relies on the import's side effect.
 
 **Why a delay.** Handing a chunk straight back would claim it again within the second, against an inference that is still restarting, and burn every attempt before it returns. `available_at` makes a chunk invisible to the claim until then.
 
-**Why five attempts.** With that delay, they leave close to four minutes for an inference to come back — a restart with a model reload. Measured on the local stack: a 45-second outage plus the restart used four of the five. A longer outage sets the affected chunks aside and fails the job; a deployment whose inference restarts more slowly should raise the number. Validated in review, together with the retry endpoint of §19: five attempts are acceptable because a failed job will no longer be a dead end.
+**Why five attempts.** With that delay, they leave close to four minutes for an inference to come back — a restart with a model reload. Measured on the local stack: a 45-second outage plus the restart used four of the five. A longer outage sets the affected chunks aside and fails the job; a deployment whose inference restarts more slowly should raise the number. Validated in review together with the retry: five attempts are acceptable because a failed job is not a dead end.
+
+**A job that ended badly can be run again.** `POST /jobs/{id}/retry` reopens the chunks in error or cancelled, clears the job's error and its cancellation request, and puts it back to `pending` — or to `planning` when it never got chunks, since planning again is the only way to get some. Refused with 409 for a job in any other state; the state event is written in the same transaction. Completed chunks keep their results, and the reopened ones get their attempts back without `attempts` ever going down, since it is the fencing token: `attempts_floor` records where the count restarts (schema version 5). A button in the panel is deferred.
 
 **Both recovery paths cap attempts and settle the job.** Expired leases and a restarted worker taking its own chunks back count against the same five; a chunk set aside settles its job. A job whose last chunk was abandoned used to stay running forever, and a chunk that crashed its worker looped for good once restarts were automatic.
 
@@ -173,7 +175,7 @@ The inference answers `500 internal_error` for a corrupt image, a missing path a
 
 A failure **without** a response — status 0 from the client, which is how it wraps a connection error — makes the whole chunk transient, even halfway through that search. The first version did not know about status 0 and quarantined seven healthy images during an inference restart; the scenario of §15 caught it.
 
-**When nothing in a chunk embeds, the inference is presumed down**, and the chunk is transient rather than a quarantine of every image. That presumption needs at least two images: a single refused image — the last chunk of a job, or `chunk_size: 1` — says nothing about the server, and used to fail its whole job. The threshold is an interim; §19 replaces it with a witness request.
+**When every image of a chunk is refused, the inference itself is asked whether it is at fault.** A small generated image is sent as bytes. Refused, the server is unwell and the chunk is transient. Accepted, the images are to blame — unless they were sent by path: the server may be unable to read the media storage it was told to mount, and refuse every path through no fault of the images, so one of them is sent again as bytes; if it passes, the chunk is retried with that reason instead of hundreds of sound images going to quarantine. A first version presumed an outage from two refused images up, which made the decision hang on the size of the batch, and the last chunk of a dataset often holds one image.
 
 ### 8.3 Skipped is not quarantined
 
@@ -198,7 +200,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 - The worker **never claims more chunks than it has free slots**: a claimed chunk's lease is already running.
 - **The lease is refreshed** three times per lease while a chunk runs. A refresh that meets a database outage is logged and retried at the next interval, never filed as the chunk's failure.
-- **A chunk over its time limit is sent back.** Its thread cannot be stopped; if it ever completes, the fencing token refuses its result and its idempotent write doubled nothing. The limit is a deployment setting today, and a slow inference answering 500 on a corrupt image can push a legitimate bisection past it. Decided in review: the limit should follow the work — a kind declares a weight per chunk at planning. Measure first; designed with the chunk work of §20.
+- **A chunk over its time limit is sent back.** Its thread cannot be stopped; if it ever completes, the fencing token refuses its result and its idempotent write doubled nothing. The limit is a deployment setting today, and a slow inference answering 500 on a corrupt image can push a legitimate bisection past it. Decided in review: the limit should follow the work — a kind declares a weight per chunk at planning. Measure first; designed with the chunk work of §19.
 - **The heartbeat is its own task.** It used to beat once per loop turn, so any chunk longer than the probe's window made docker declare a working worker dead.
 - **A full worker still reclaims expired leases**, on the reclaim interval, instead of waiting for one of its own chunks to finish.
 
@@ -206,11 +208,11 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **The worker survives its database.** A PostgreSQL restart used to kill it for good — checked on the running stack. The loop waits with a short capped backoff, as startup does; the pool checks a connection before lending it, and gives up a borrow after five seconds so that a stop during an outage is not held for the default thirty. A database error raised anywhere around a chunk propagates and leaves the chunk to its lease.
 
-**An unexpected exception in a loop turn is logged and survived**, with a one-second pause, counted, and traced once every sixty repeats: killing the worker made nothing more visible than its trace. Decided in review (§19): sixty consecutive failures end the process with an error, and the restart policy brings back a fresh one.
+**An unexpected exception in a loop turn is logged and survived**, with a one-second pause, counted, and traced once every sixty repeats: killing the worker made nothing more visible than its trace. Sixty consecutive failures — a minute — end the process: the chunks in flight get their grace and are handed back as on any stop, and the exit code is 1 so that the restart policy brings up a fresh one. A defect that does not pass in a minute will not pass in an hour.
 
 **SIGTERM stops the worker gracefully.** It stops claiming, gives chunks in flight 30 s, hands back what still runs, and exits; the compose allows 45 s. As the container's process 1 without a handler, it used to ignore SIGTERM until docker killed it.
 
-**The restart policy** is `on-failure:3` today. It was chosen so that a worker refusing an incompatible schema stays down with its message. Corrected in review: the decision of §5 was to refuse to start with a clear message, not to stay down for good. The policy becomes `unless-stopped` (§19), and a crash loop on a stale schema is accepted — the message is in every iteration of the log.
+**The restart policy is `unless-stopped`.** It was `on-failure:3`, chosen so that a worker refusing an incompatible schema stays down with its message; that misread the decision of §5, which was to refuse to start with a clear message, not to stay down for good — and Docker never resets the count after a healthy run, so the third incident of a long life left the worker down. A crash loop on a stale schema is accepted: the message is in every turn of the log. Checked on Docker: a `compose kill` counts as a stop asked for and is not restarted, which the demo relies on; an exit of the process itself, whatever its code, is.
 
 ## 10. Planning
 
@@ -234,7 +236,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **Job identifiers stay `uuid`**, unlike the shortuuid text of the rest of Pixano: the database guarantees uniqueness unprompted. Validated in review.
 
-**A job reads `running` only once its first chunk has finished.** A first chunk of five minutes shows `pending` for five minutes while a worker works. Decided in review (§19): `running` is recorded right after the claim.
+**A job reads `running` as soon as its first chunk is claimed.** The claim itself never joins `jobs`; a second query, run once the claimed chunks' tasks are launched, moves their jobs from `pending` to `running` under each row's lock, in identifier order, and writes the state event in the same transaction. The transition on the first finished chunk remains as the net for an outage between the two. A first version only turned `running` at the first finished chunk, so a first chunk of five minutes showed `pending` for five minutes.
 
 ## 12. Writes into LanceDB
 
@@ -242,13 +244,13 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **Writes to one dataset are serialised** inside a worker; processing still overlaps. Across workers, nothing serialises them: step 4.
 
-**An embeddings table holds one model.** A job with another model or dimension is refused — at planning, and again at write time. Replacing a table's vectors on request (`replace_existing_embeddings`) is accepted for step 2, under conditions: the drop happens once, under the planning lease; a partly refilled table says so; the form asks for confirmation through a generic schema marker. It needs the `prepare` hook of §19.
+**An embeddings table holds one model.** A job with another model or dimension is refused — at planning, and again at write time. Replacing a table's vectors on request (`replace_existing_embeddings`) is accepted for step 2, under conditions: the drop happens once, under the planning lease; a partly refilled table says so; the form asks for confirmation through a generic schema marker. It relies on the `prepare` hook of the kind contract: run once per job under the planning lease, before the plan, never for a replayed chunk or a job retried with its chunks; a no-op by default, idempotent, and never destructive without an explicit parameter — the contract suite checks the first two.
 
 **The writer rereads a dataset before creating its embeddings table**, since creating overwrites: with two workers, the second's cached dataset would have erased the first's vectors. Two simultaneous creations remain for the writer role of step 4.
 
-**Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock; whether that is acceptable on a large annotation table is to be measured (§19), and the policy — every N writes, at the end of a job, or owned by a writer role — is settled before step 2's kinds write into tables users annotate (§20).
+**Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured (`scripts/measure_compaction.py`) on a classification table filled by chunk-sized writes: 0.12 s median at 10 000 rows, 0.30 s at 30 000 with a 0.9 s maximum, growing with the table. Acceptable for step 1; the policy — every N writes, at the end of a job, or owned by a writer role — is settled before step 2's kinds write into tables users annotate (§19).
 
-**Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name` and the job identifier in `source_metadata`. Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Self-contained provenance — model, version, parameters in the row — is step 2 (§20). Embeddings rows carry none: the model lives in the dataset's sidecar. Lot 9 asked for full provenance; accepted as a gap, designed with the rest.
+**Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name` and the job identifier in `source_metadata`. Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Self-contained provenance — model, version, parameters in the row — is step 2 (§19). Embeddings rows carry none: the model lives in the dataset's sidecar. Lot 9 asked for full provenance; accepted as a gap, designed with the rest.
 
 ## 13. Media
 
@@ -256,7 +258,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
 
-**One image per record.** The embeddings kind embeds the first image view LanceDB returns for a record; on nuScenes, a record has several cameras and one is embedded. Written in the kind; not fixed, because the right fix depends on the grain of embeddings — per record or per view — which is a product decision (§20).
+**One image per record.** The embeddings kind embeds the first image view LanceDB returns for a record; on nuScenes, a record has several cameras and one is embedded. Written in the kind; not fixed, because the right fix depends on the grain of embeddings — per record or per view — which is a product decision (§19).
 
 ## 14. Chunk size, measured
 
@@ -292,10 +294,14 @@ spread at 64 is wide, the ordering never varies.
 **Bigger batches are slower, not faster.** This is the opposite of what batching is supposed to
 buy, it is monotonic across four sizes, and it holds for both storage modes. **The mechanism is
 not established** — the measurement times whole jobs, so it cannot say whether the cost sits in
-the inference call, in preprocessing, or in the worker. Separating them needs per-phase timing,
-which is decided (§19), followed by a new measurement of the extremes. Until then the number is a fact about this
-stack, not a law: on a GPU, where a batch amortises a kernel launch, the ordering will probably
-reverse. That is what the parameter is for.
+the inference call, in preprocessing, or in the worker. Per-phase timing, added
+after the review, settles where: on Demo shapes (400 images, concurrency 4) chunk 8 takes 100 s of
+wall time for 365 s of inference calls, chunk 64 takes 165 s for 514 s of calls, and reading and
+writing stay under 5 s in both. The cost of a bigger batch sits inside the inference call — the CPU
+server, not the worker. The number remains a fact about this stack, not a law: on a GPU, where a
+batch amortises a kernel launch, the ordering will probably reverse. That is what the parameter is
+for. The kind logs one line per chunk with its three phases, and the measurement script sums them
+per job from the worker's log.
 
 **Carrying the bytes costs nothing measurable here — and that does not validate the
 invariant.** The two modes are within noise of each other. It would be convenient to read this
@@ -339,7 +345,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 
 **The compose supposes no colocation.** Every link between components is an address in `.env`; the same files run against a remote database or a shared inference.
 
-**Docker must not be the only way to run this.** Decided in review: a user who starts PostgreSQL, Pixano, the worker and an inference by hand must get the same behaviour. Today several things assume the compose — the media root the demo script writes (`/medias`), the worker's fallback media roots, the schema-refusal message that prints `docker compose` commands, a worker identity derived from the container's hostname, a lease derived from the docker probe. The "manual mode" item of §19 removes those assumptions and verifies the whole path off Docker.
+**Docker must not be the only way to run this.** Decided in review: a user who starts PostgreSQL, Pixano, the worker and an inference by hand must get the same behaviour. `docs/running-by-hand.md` runs the four components as plain processes with the same variables. What used to assume the compose is gone: the demo script takes the worker's media root as an option, the runner has no fallback media root, the schema-refusal message gives the `psql` command first, and `PIXANO_WORKER_ID` names a worker whose pid changes on every restart — the identity is what lets a restarted worker take its own chunks back at once. Verified with the worker and the application started by hand against the compose's PostgreSQL and inference. What still assumes Docker is the lease derived from the file probe (§20).
 
 **The demo's inference is upstream pixano-inference, unmodified.** Its tree ships an open_clip embedding plugin that its own Dockerfile cannot install, so the compose builds their image first and adds one layer of ours (`dockerfiles/Dockerfile.inference-clip`) that installs the plugin; the models served on CPU are listed in `docker/inference/models.cpu.py`, in this repository, since which models a deployment serves is that deployment's own choice. A one-line switch in their Dockerfile would make the extra layer unnecessary; it is to be proposed upstream, and nothing has been pushed there so far.
 
@@ -355,39 +361,23 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 | Event retention                             | step 6                       | Same reason                                                                                                                                                                                                                              |
 | Containers running as an unprivileged user  | before any shared deployment | Acceptable while everything is local; it stops being acceptable when the worker writes to shared storage                                                                                                                                 |
 | `review_status` on produced annotations     | step 2                       | The schemas do not have the field; it is the first schema work of the pre-annotation kinds                                                                                                                                               |
-| A Retry button in the panel                 | after the endpoint of §19    | The endpoint is generic; the button is interface work                                                                                                                                                                                    |
+| A Retry button in the panel                 | when the panel needs it      | The endpoint is generic; the button is interface work                                                                                                                                                                                    |
 | A connection pool in the API                | when measured                | One connection per request is negligible with one user                                                                                                                                                                                   |
 
-**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test ran on 200 chunks rather than 1 000 — re-verified at 1 000 by the reviewer, and raised in §19. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance, `review_status` is not delivered, and deletes are not scoped by (job, item) (§12).
+**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test now runs on 1 000 chunks, as lot 2 asked. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance, `review_status` is not delivered, and deletes are not scoped by (job, item) (§12).
 
 ## 18. Known defects
 
-- **The worker caches open datasets.** A dataset changed from outside — its embeddings table deleted, say — is seen in its old state until the worker restarts. The writer rereads before creating an embeddings table, which covers the one case that lost data; rereading at planning is decided (§19).
-- **The API caches open datasets too**, and nothing tells it a worker's job has ended: vectors written by a job may stay invisible to a search until the API restarts. Deduced in review, to verify, then fix (§19).
-- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py` writes `view_id` and builds an index; the worker does neither. Which path survives is a question of §20.
+- **The worker caches open datasets between jobs.** Planning reopens a job's dataset outside the cache, so a dataset recreated underneath the worker is seen as it is by the next job; a chunk of a running job reads the copy its planning opened.
+- **The API learns of a worker's writes at the end of the job only.** Its event broker drops the cached dataset when a job reaches a terminal state, whether or not a stream is open — reproduced on the stack before the fix: job done, table on disk, search reported absent until a restart. During a job, what the worker wrote is not yet visible to a search.
+- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py` writes `view_id` and builds an index; the worker does neither. Which path survives is a question of §19.
 - **The inference answers 500 for a client error.** A corrupt image or a missing path should be a 4xx. The worker works around it by isolating the culprit (§8.2); the fix belongs in pixano-inference. Issue texts are to be drafted; nothing is published without the architect.
 - **Listing jobs costs three correlated subqueries per row.** Measured by the independent review at 256 000 chunks: 168–281 ms for fifty jobs, under the 500 ms p99 the project targets but with little margin at the cap of two hundred. Materialising the counters at chunk completion, or a covering index on `(job_id, state)`, are the two levers.
 - **Compaction runs under the dataset's write lock** (§12).
 - **The stream of one job replays its whole history on first connection.** 6 250 events for a job of 50 000 images. Acceptable today; a bound or a `since` parameter is the obvious fix, and it is a choice about what a fresh client sees.
 - **The pool checks each connection before lending it** (`SELECT 1` per borrow). Negligible today; to measure at step 4 if the claim rate ever matters.
 
-## 19. Decided in review, not yet built
-
-One more change set on step 1, after the merge. Each line is a decision, not a proposal.
-
-1. **`POST /jobs/{id}/retry`**, generic. Chunks in `error` or `cancelled` go back to `pending`, the job's error and cancellation request are cleared, and the job goes to `pending` — or to `planning` when it has no chunks. Refused with 409 unless the job is `error` or `cancelled`. The state event is written in the same transaction. It must not run `prepare` again. `attempts` stays monotonic, since it is the fencing token: a floor column records where the count restarts. Schema version 5.
-2. **`running` right after the claim**, in the transaction of its event, under the job row's lock — jobs locked in identifier order, after the claimed tasks are launched, as a second query so that the claim itself still never joins `jobs`.
-3. **A clean exit after sixty consecutive loop failures**, and `restart: unless-stopped`. What Docker does after a manual `kill` under that policy is to be checked, and the demo adapted.
-4. **A `prepare(writer, params)` hook in the kind contract.** A no-op by default; it receives the job's writer; it is idempotent, and the contract suite calls it twice; it destroys only on an explicit parameter; there is no `finalize` until a kind needs one.
-5. **The dataset is reread outside the cache at planning.**
-6. **A witness request replaces the presumed-outage threshold.** When a chunk embeds nothing, a small generated image is sent: refused, the inference is down and the chunk is transient; accepted, the images are the problem. If they were sent by path, one is sent again as bytes: accepted, the inference cannot read the media mount, which is a deployment failure and not three hundred bad images.
-7. **Per-phase timing in the embeddings kind**, then a new measurement of chunk sizes 8 and 64.
-8. **The API's dataset cache is invalidated when a job ends** — after verifying the defect.
-9. **Compaction measured** at two sizes of an annotation table, and the retention commented in the code.
-10. **Manual mode** (§16): a media-root option in the demo script, `PIXANO_WORKER_ID`, a schema-refusal message that does not assume Docker, no `/medias` fallback in the runner, the CPU model configuration in this repository, a "run it by hand" page, and an end-to-end verification off Docker.
-11. **The sharing test at 1 000 chunks**, as lot 2 asked.
-
-## 20. Design before step 2
+## 19. Design before step 2
 
 Questions the review raised and step 1 does not settle. None is a defect; each shapes the first kinds of step 2.
 
@@ -399,7 +389,7 @@ Questions the review raised and step 1 does not settle. None is a defect; each s
 - **The compaction policy** (§12).
 - **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
 
-## 21. What step 4 opens
+## 20. What step 4 opens
 
 - **Does a remote worker reach PostgreSQL directly, or go through the API?** The opening question of the step: everything below depends on it.
 - **A cap on calls per model** is impossible with today's claim: `job_chunks` carries neither kind nor model, by choice. It needs both denormalised on the chunk and the partial index revisited.
@@ -409,6 +399,6 @@ Questions the review raised and step 1 does not settle. None is a defect; each s
 - **The per-chunk lease** refreshes one row per chunk in flight; worth revisiting if workers number in the dozens (§6).
 - **The cost of bytes over a network** (§13).
 
-## 22. Open questions
+## 21. Open questions
 
 - **Fairness across jobs.** The claim orders by chunk identifier, so an older job drains before a newer one and a large job can starve a small one. Batching by job would give locality at the cost of arbitrary job order.

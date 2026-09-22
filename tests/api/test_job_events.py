@@ -187,6 +187,58 @@ def _emit(url: str, job_id: str, event_type: str, payload: dict) -> None:
         )
 
 
+class TestEndOfJob:
+    """Architecture review: the API never learnt that a worker had written into a dataset.
+
+    A `Dataset` reads its embeddings sidecar once, when opened; the API caches the instance.
+    The first embeddings job of a dataset created that sidecar in a worker, and this process
+    kept advertising "no embeddings" until it restarted.
+    """
+
+    @staticmethod
+    def _hear(url: str, job: str, events: list[tuple[str, dict]]) -> list[str]:
+        ended: list[str] = []
+
+        async def scenario() -> None:
+            broker = EventBroker(url, on_job_ended=ended.append)
+            broker.start()
+            try:
+                await asyncio.sleep(1.0)  # let the listener settle
+                for event_type, payload in events:
+                    _emit(url, job, event_type, payload)
+                await asyncio.sleep(1.0)
+            finally:
+                await broker.stop()
+
+        asyncio.run(scenario())
+        return ended
+
+    def test_a_finished_job_names_its_dataset_even_with_nobody_listening(self, url: str) -> None:
+        job, _ = _job_with_events(url, 0)
+
+        ended = self._hear(url, job, [("state", {"state": "done"})])
+
+        assert ended == ["ds"]
+
+    def test_only_a_terminal_state_counts(self, url: str) -> None:
+        job, _ = _job_with_events(url, 0)
+
+        ended = self._hear(
+            url,
+            job,
+            [("state", {"state": "running"}), ("progress", {"done_tasks": 10, "total_tasks": 100})],
+        )
+
+        assert ended == []
+
+    @pytest.mark.parametrize("state", ["error", "cancelled"])
+    def test_a_job_that_ended_badly_counts_too(self, url: str, state: str) -> None:
+        """Chunks that completed wrote before the job failed; the API must see them as well."""
+        job, _ = _job_with_events(url, 0)
+
+        assert self._hear(url, job, [("state", {"state": state})]) == ["ds"]
+
+
 class TestSlowSubscriber:
     """Step 1 review: a subscriber whose queue overflowed was marked dropped and kept open."""
 

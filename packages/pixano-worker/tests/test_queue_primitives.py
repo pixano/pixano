@@ -7,6 +7,7 @@
 """Tests des primitives de réclamation du worker."""
 
 import asyncio
+import os
 from dataclasses import dataclass
 
 import psycopg
@@ -32,6 +33,32 @@ def _enqueue(db: psycopg.Connection, chunks: int, tasks_per_chunk: int = 10) -> 
     return job
 
 
+class TestWorkerIdentity:
+    """Un worker lancé à la main change de pid à chaque relance : son identité doit pouvoir être donnée."""
+
+    def test_defaults_to_host_and_pid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(queue.WORKER_ID_VARIABLE, raising=False)
+
+        assert queue.worker_identity().endswith(f":{os.getpid()}")
+
+    def test_takes_the_identity_the_deployment_gives(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(queue.WORKER_ID_VARIABLE, " worker-gpu-1 ")
+
+        assert queue.worker_identity() == "worker-gpu-1"
+
+    async def test_a_given_identity_takes_its_chunks_back_after_a_restart(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """C'est ce que l'identité achète : la reprise immédiate, sans attendre le bail."""
+        monkeypatch.setenv(queue.WORKER_ID_VARIABLE, "worker-by-hand")
+        _enqueue(db, 2)
+        await queue.claim(adb, queue.worker_identity(), 2)
+
+        recovered = await queue.release_own(adb, queue.worker_identity())
+
+        assert recovered.requeued == 2
+
+
 class TestClaim:
     async def test_claims_up_to_the_batch_size(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
         _enqueue(db, 10)
@@ -49,6 +76,37 @@ class TestClaim:
         claimed = await queue.claim(adb, "worker-a", 3)
 
         assert [chunk.seq for chunk in claimed] == [0, 1, 2]
+
+    async def test_a_claimed_job_is_running_before_any_of_its_chunks_finishes(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Revue d'architecture, point 17 : un premier chunk long laissait le job « pending »."""
+        job = _enqueue(db, 4)
+        claimed = await queue.claim(adb, "worker-a", 2)
+
+        started = await queue.start_jobs(adb, (chunk.job_id for chunk in claimed))
+
+        assert started == [job]
+        row = db.execute(f"SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
+        assert row == ("running",)
+        events = db.execute(
+            f"SELECT type, payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s ORDER BY id", (job,)
+        ).fetchall()
+        assert events == [("state", {"state": "running"})]
+
+    async def test_starting_a_job_twice_announces_it_once(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Deux workers réclament des chunks du même job : un seul fait la transition."""
+        job = _enqueue(db, 4)
+        first = await queue.claim(adb, "worker-a", 1)
+        second = await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.start_jobs(adb, [first[0].job_id]) == [job]
+        assert await queue.start_jobs(adb, [second[0].job_id]) == []
+
+        count = db.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_events WHERE job_id = %s", (job,)).fetchone()
+        assert count == (1,)
 
     async def test_an_empty_queue_returns_nothing(self, db: psycopg.Connection, adb: psycopg.AsyncConnection) -> None:
         assert await queue.claim(adb, "worker-a", 8) == []
@@ -95,7 +153,11 @@ class TestFinish:
     async def test_announces_the_job_running_then_its_progress_in_the_same_transaction(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`."""
+        """Revue indépendante, D2/D6 : émis après coup, `running` pouvait suivre `done`.
+
+        C'est le filet du cas où la marque posée à la réclamation a manqué : ici elle n'est
+        pas posée du tout, et c'est le premier chunk terminé qui doit l'annoncer.
+        """
         job = _enqueue(db, 2, tasks_per_chunk=10)
         chunks = await queue.claim(adb, "worker-a", 2)
 
@@ -311,6 +373,56 @@ class TestRetryLater:
         await queue.claim(adb, "worker-b", 1)
 
         assert await queue.retry_later(adb, chunk, {"reason": "panne passagère"}) is None
+
+
+class TestRetriedJob:
+    """Un job relancé par l'API rouvre ses chunks avec un compte de tentatives neuf.
+
+    `attempts` ne recule jamais — c'est le jeton de garde — donc le compte repart d'un plancher.
+    """
+
+    @staticmethod
+    def _reopen_like_the_api(db: psycopg.Connection, chunk_id: int) -> None:
+        db.execute(
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'pending', attempts_floor = attempts, claimed_by = NULL, "
+            "error = NULL, available_at = now() WHERE id = %s",
+            (chunk_id,),
+        )
+
+    async def test_a_reopened_chunk_has_its_attempts_again(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        _enqueue(db, 1)
+        chunk = (await queue.claim(adb, "worker-a", 1))[0]
+        db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET attempts = %s WHERE id = %s", (queue.MAX_ATTEMPTS, chunk.id))
+        exhausted = queue.Chunk(**{**chunk.__dict__, "attempts": queue.MAX_ATTEMPTS})
+        assert await queue.retry_later(adb, exhausted, {"reason": "x"}) == "error"
+
+        self._reopen_like_the_api(db, chunk.id)
+        again = (await queue.claim(adb, "worker-a", 1))[0]
+
+        # Première tentative du nouveau compte : rendu à la file, pas écarté, et sans délai
+        # hérité de l'ancien compte.
+        assert again.attempts == queue.MAX_ATTEMPTS + 1
+        assert await queue.retry_later(adb, again, {"reason": "x"}) == "pending"
+        delay = db.execute(
+            f"SELECT available_at - now() FROM {SCHEMA_NAME}.job_chunks WHERE id = %s", (chunk.id,)
+        ).fetchone()
+        assert delay is not None and delay[0] <= queue.RETRY_BASE_DELAY
+
+    async def test_the_fencing_token_still_holds_across_a_retry(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        """Un worker de l'exécution précédente, revenu tard, ne peut pas écrire sur la nouvelle."""
+        _enqueue(db, 1)
+        stale = (await queue.claim(adb, "worker-a", 1))[0]
+        db.execute(
+            f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'error', lease_until = NULL WHERE id = %s", (stale.id,)
+        )
+        self._reopen_like_the_api(db, stale.id)
+        await queue.claim(adb, "worker-b", 1)
+
+        assert await queue.finish(adb, stale) is None
 
 
 class TestLeaseRefresh:

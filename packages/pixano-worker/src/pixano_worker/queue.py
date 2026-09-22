@@ -22,7 +22,7 @@ import os
 import socket
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Protocol, Sequence
+from typing import Any, Iterable, Protocol, Sequence
 
 import psycopg
 from psycopg.types.json import Jsonb
@@ -87,13 +87,14 @@ SET chunk_id = EXCLUDED.chunk_id, reason = EXCLUDED.reason, detail = EXCLUDED.de
 """
 
 # Une panne passagère rend le chunk à la file après un délai — ou l'écarte, s'il a épuisé ses
-# tentatives. Même jeton de garde que FINISH.
+# tentatives. Même jeton de garde que FINISH. Les tentatives se comptent depuis le plancher :
+# un job relancé repart avec un compte neuf sans que `attempts` recule.
 RETRY = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
-SET state = CASE WHEN attempts < %(max_attempts)s THEN 'pending' ELSE 'error' END,
+SET state = CASE WHEN attempts - attempts_floor < %(max_attempts)s THEN 'pending' ELSE 'error' END,
     lease_until = NULL,
-    claimed_by = CASE WHEN attempts < %(max_attempts)s THEN NULL ELSE claimed_by END,
-    available_at = now() + least(%(base)s * power(2, attempts - 1), %(cap)s),
+    claimed_by = CASE WHEN attempts - attempts_floor < %(max_attempts)s THEN NULL ELSE claimed_by END,
+    available_at = now() + least(%(base)s * power(2, attempts - attempts_floor - 1), %(cap)s),
     error = %(error)s,
     updated_at = now()
 WHERE id = %(id)s AND state = 'running' AND attempts = %(attempts)s
@@ -137,36 +138,56 @@ WHERE id = %s AND state = 'running' AND attempts = %s
 RELEASE_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND claimed_by = %s AND attempts < %s
+WHERE state = 'running' AND claimed_by = %s AND attempts - attempts_floor < %s
 RETURNING id
 """
 
 ABANDON_OWN = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
-WHERE state = 'running' AND claimed_by = %s AND attempts >= %s
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts - attempts_floor)
+WHERE state = 'running' AND claimed_by = %s AND attempts - attempts_floor >= %s
 RETURNING job_id
 """
 
 RECLAIM_EXPIRED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'pending', lease_until = NULL, claimed_by = NULL, updated_at = now()
-WHERE state = 'running' AND lease_until < now() AND attempts < %s
+WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor < %s
 RETURNING id
 """
 
 ABANDON_EXHAUSTED = f"""
 UPDATE {SCHEMA_NAME}.job_chunks
 SET state = 'error', lease_until = NULL, updated_at = now(),
-    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts)
-WHERE state = 'running' AND lease_until < now() AND attempts >= %s
+    error = jsonb_build_object('reason', 'abandoned after its attempts', 'attempts', attempts - attempts_floor)
+WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor >= %s
 RETURNING job_id
 """
 
-# Le premier chunk terminé fait passer le job en cours. L'ancien état est lu sous le verrou de
-# la ligne, pour que l'appelant sache si c'est lui qui a fait la transition — et l'annonce une
-# seule fois, même quand plusieurs chunks du job finissent ensemble.
+# Un job passe en cours à la réclamation de son premier chunk (START_JOBS), pas à la fin : un
+# premier chunk de cinq minutes affichait « pending » cinq minutes sous une barre qui allait
+# bouger. Cette marque est posée par une seconde requête, après le lancement des tâches, pour
+# que la réclamation elle-même ne joigne jamais `jobs` et qu'une coupure juste après laisse
+# les chunks à leurs threads plutôt qu'à leur bail. Les jobs sont verrouillés dans l'ordre de
+# leurs identifiants, comme partout où plusieurs lignes de `jobs` sont prises à la fois.
+START_JOBS = f"""
+WITH picked AS (
+    SELECT id FROM {SCHEMA_NAME}.jobs
+    WHERE id = ANY(%s) AND state = 'pending'
+    ORDER BY id
+    FOR UPDATE
+)
+UPDATE {SCHEMA_NAME}.jobs AS j
+SET state = 'running', updated_at = now()
+FROM picked
+WHERE j.id = picked.id
+RETURNING j.id
+"""
+
+# Le filet de START_JOBS : si la marque a manqué — une coupure entre la réclamation et elle —
+# le premier chunk terminé la pose. L'ancien état est lu sous le verrou de la ligne, pour que
+# l'appelant sache si c'est lui qui a fait la transition, et l'annonce une seule fois.
 ADVANCE_JOB = f"""
 WITH previous AS (
     SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %(job)s FOR UPDATE
@@ -210,9 +231,21 @@ class Chunk:
     attempts: int
 
 
+# Une identité stable, donnée par le déploiement. Sans elle, l'identité est hôte:pid — stable
+# dans un conteneur, dont le nom d'hôte est fixe et le worker le process 1, mais pas pour un
+# worker lancé à la main, dont le pid change à chaque relance : ses chunks ne seraient repris
+# qu'à l'expiration de leur bail, deux minutes, au lieu de tout de suite.
+WORKER_ID_VARIABLE = "PIXANO_WORKER_ID"
+
+
 def worker_identity() -> str:
-    """Nommer ce worker, pour le diagnostic et la restitution après un arrêt brutal."""
-    return f"{socket.gethostname()}:{os.getpid()}"
+    """Nommer ce worker, pour le diagnostic et la restitution après un arrêt brutal.
+
+    Deux workers vivants ne doivent jamais porter le même nom : le second reprendrait les
+    chunks du premier comme s'ils étaient orphelins.
+    """
+    given = os.environ.get(WORKER_ID_VARIABLE, "").strip()
+    return given or f"{socket.gethostname()}:{os.getpid()}"
 
 
 async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) -> list[Chunk]:
@@ -227,6 +260,27 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
         Chunk(id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5])
         for row in rows
     ]
+
+
+async def start_jobs(conn: psycopg.AsyncConnection, job_ids: Iterable[str]) -> list[str]:
+    """Passer en cours les jobs encore en attente parmi ceux-là, et l'annoncer.
+
+    La transition et son événement d'état partagent une transaction, sous le verrou de chaque
+    ligne : l'identifiant du `running` précède ainsi ceux des progressions et du `done`, quel
+    que soit le nombre de chunks qui finissent en même temps.
+
+    Returns:
+        Les jobs que cet appel a fait passer en cours.
+    """
+    ids = sorted(set(job_ids))
+    if not ids:
+        return []
+    async with conn.transaction():
+        rows = await (await conn.execute(START_JOBS, (ids,))).fetchall()
+        started = [str(row[0]) for row in rows]
+        for job_id in started:
+            await record_event(conn, job_id, "state", {"state": "running"})
+    return started
 
 
 @dataclass(frozen=True)

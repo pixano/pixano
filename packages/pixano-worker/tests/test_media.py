@@ -134,3 +134,12 @@ class TestResolve:
         assert chemin is not None and octets is not None
         assert [chemin.carried_bytes, octets.carried_bytes] == [False, True]
         assert chemin.reason and octets.reason
+
+
+class TestUnconfigured:
+    def test_refuses_to_resolve_and_says_which_variables_are_missing(self) -> None:
+        """Le repli d'avant envoyait des chemins `/medias` que seule la pile compose sait lire."""
+        resolver = MediaResolver.unconfigured()
+
+        with pytest.raises(RuntimeError, match="PIXANO_MEDIA_ROOT"):
+            resolver.resolve(_Source(), "images", _View(uri="/anywhere/a.jpg"))

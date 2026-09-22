@@ -12,6 +12,7 @@ import json
 import logging
 import threading
 from datetime import timedelta
+from pathlib import Path
 
 import psycopg
 import psycopg_pool
@@ -153,6 +154,102 @@ class TestPlanning:
         assert await runner.plan_one(adb, registry) is None
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks").fetchone()
         assert row is not None and row[0] == 0
+
+
+class TestPlanningSeesTheDatasetAsItIs:
+    """Revue d'architecture, point 5 : la planification rouvre le dataset hors du cache du worker.
+
+    Un dataset recréé sous le worker — réimporté, sa table d'embeddings supprimée — était vu tel
+    qu'à son ouverture précédente jusqu'au redémarrage du worker ; rencontré en préparant les
+    scénarios du lot 11.
+    """
+
+    class _ReadsAtPlanning(FakeKind):
+        """Le kind factice, mais dont le plan regarde le dataset et se souvient de ce qu'il a vu."""
+
+        name = "reads-at-planning"
+        seen: list[object] = []
+
+        def plan(self, reader, params):
+            self.seen.append(reader.dataset)
+            return super().plan(reader, params)
+
+    async def test_the_plan_reads_a_dataset_reopened_outside_the_cache(
+        self,
+        db: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        kind = self._ReadsAtPlanning()
+        registry = Registry()
+        registry.register(kind)
+        registry.declare(db, "worker-test")
+        job = _submit(db, kind=kind.name)
+
+        versions = iter(["as first opened", "as it is now"])
+        monkeypatch.setattr(runner.Dataset, "find", lambda _id, _library: next(versions))
+        # Ce que le worker en tenait avant : ouvert par un job précédent, resté en cache.
+        stale = runner._open_dataset(tmp_path, "ds")
+        assert stale == "as first opened"
+
+        await runner.plan_one(adb, registry, library=tmp_path)
+
+        assert _state(db, job)[0] == "pending"
+        assert kind.seen == ["as it is now"]
+        assert runner._open_dataset(tmp_path, "ds") == "as it is now", "le cache tient désormais la version relue"
+
+
+class TestPreparation:
+    """Revue d'architecture, point 4 : `prepare` court une fois par job, à la planification."""
+
+    class _Prepares(FakeKind):
+        name = "prepares"
+        prepared: list[str] = []
+
+        def prepare(self, writer, params):
+            self.prepared.append(writer.job_id)
+
+    @pytest.fixture
+    def kind_registry(self, db: psycopg.Connection) -> tuple[Registry, "TestPreparation._Prepares"]:
+        kind = self._Prepares()
+        kind.prepared = []
+        registry = Registry()
+        registry.register(kind)
+        registry.declare(db, "worker-test")
+        return registry, kind
+
+    async def test_prepare_runs_before_the_plan_and_never_with_a_chunk(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        registry, kind = kind_registry
+        job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+
+        await runner.plan_one(adb, registry)
+        assert kind.prepared == [job]
+
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        assert _state(db, job)[0] == "done"
+        assert kind.prepared == [job], "aucun chunk ne prépare"
+
+    async def test_a_retried_job_with_chunks_is_not_prepared_again(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        """La relance remet les chunks en file sans repasser par la planification."""
+        registry, kind = kind_registry
+        job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+        await runner.plan_one(adb, registry)
+        # Ce que fait POST /jobs/{id}/retry sur un job qui a déjà ses chunks.
+        db.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'pending' WHERE id = %s", (job,))
+
+        await runner.plan_one(adb, registry)
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        assert _state(db, job)[0] == "done"
+        assert kind.prepared == [job]
 
 
 class TestInterruptedPlanning:
@@ -827,6 +924,37 @@ class TestPlanningRefusedByTheSchema:
 
         assert failures["left"] == 0
         assert _state(declared, job) == ("done", 40, 40)
+
+    async def test_a_failure_that_never_passes_stops_the_worker_in_error(
+        self,
+        declared: psycopg.Connection,
+        postgres_url: str,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Revue d'architecture, point 7 : survivre à un défaut, oui ; boucler dessus sans fin, non.
+
+        Passé la limite, la boucle s'arrête d'elle-même et le dit par une exception, pour que
+        le process sorte en erreur et que la politique de redémarrage en relance un neuf.
+        """
+        _submit(declared, params={"task_count": 10, "chunk_size": 10, "seconds_per_task": 0.0})
+        turns = {"count": 0}
+
+        async def always_buggy_plan_one(*args: object, **kwargs: object) -> str | None:
+            turns["count"] += 1
+            raise RuntimeError("un bug qui ne passe pas")
+
+        monkeypatch.setattr(runner, "plan_one", always_buggy_plan_one)
+        monkeypatch.setattr(runner, "UNEXPECTED_ERROR_PAUSE_S", 0.001)
+        monkeypatch.setattr(runner, "UNEXPECTED_ERROR_LIMIT", 5)
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
+            with pytest.raises(runner.PersistentFailure):
+                await asyncio.wait_for(
+                    runner.work(pool, registry, "worker-test", concurrency=2, idle_poll_s=0.01), timeout=5
+                )
+
+        assert turns["count"] == 5
 
 
 class TestSaturation:

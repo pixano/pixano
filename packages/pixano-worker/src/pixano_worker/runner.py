@@ -71,6 +71,12 @@ UNEXPECTED_ERROR_PAUSE_S = 1.0
 # une fois toutes les N occurrences : le journal dit qu'il persiste, sans une trace par seconde.
 UNEXPECTED_ERROR_LOG_EVERY = 60
 
+# Autant d'échecs de suite — une minute, avec la pause ci-dessus — et le worker s'arrête
+# proprement en erreur : un défaut qui ne passe pas en une minute ne passera pas en une heure,
+# et un process neuf, relancé par la politique de redémarrage, a plus de chances qu'un tour de
+# plus. Les chunks en vol ont leur grâce, puis sont rendus, comme à tout arrêt.
+UNEXPECTED_ERROR_LIMIT = 60
+
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
 RECLAIM_INTERVAL_S = 30.0
@@ -196,9 +202,15 @@ async def plan_one(
 
     try:
         params = kind.validate_params(raw_params)
-        reader = _reader_for(library, dataset_id, media)
+        reader = _reader_for(library, dataset_id, media, fresh=True)
+        writer = _writer_for(library, dataset_id, kind_name, job_id, kind.source_type)
         async with _kept_alive(refresh, f"planification du job {job_id}"):
-            chunks = await (threads or default_threads()).run(lambda: list(kind.plan(reader, params)))
+            pool = threads or default_threads()
+            # La remise en état précède le découpage, sous le même bail : un planificateur qui
+            # meurt entre les deux laisse un `prepare` fait et aucun chunk, et le suivant refait
+            # les deux — c'est pour cela que `prepare` doit être idempotent.
+            await pool.run(lambda: kind.prepare(writer, params))
+            chunks = await pool.run(lambda: list(kind.plan(reader, params)))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s : planification impossible", job_id)
@@ -294,15 +306,26 @@ def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
     return _open_dataset(library, dataset_id)
 
 
-def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None) -> JobReader:
-    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert."""
+def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None, fresh: bool = False) -> JobReader:
+    """Lier un lecteur au dataset d'un job, ouvert seulement si le type s'en sert.
+
+    Args:
+        library: La bibliothèque de datasets ; None si aucune n'est configurée.
+        dataset_id: Le dataset du job.
+        media: Le résolveur de médias.
+        fresh: Rouvrir le dataset en ignorant le cache. La planification le demande : elle est
+            le premier regard d'un job sur son dataset, et un dataset recréé sous le worker —
+            réimporté, sa table d'embeddings supprimée — était sinon vu tel qu'il était à
+            l'ouverture précédente, jusqu'au redémarrage du worker. Les chunks, eux, lisent
+            ce que la planification a rouvert.
+    """
 
     def open_dataset() -> Dataset:
         if library is None:
             raise RuntimeError("aucune bibliothèque de datasets configurée : PIXANO_LIBRARY_DIR est vide")
-        return _open_dataset(library, dataset_id)
+        return _reopen_dataset(library, dataset_id) if fresh else _open_dataset(library, dataset_id)
 
-    return JobReader(open_dataset, media or MediaResolver("/medias", "/medias"))
+    return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
 def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
@@ -349,6 +372,10 @@ async def work(
 
     Un pool saturé — trop de threads bloqués sur des chunks rendus pour cause de durée dépassée —
     est renouvelé sur place, et la boucle continue.
+
+    Raises:
+        PersistentFailure: La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite. Les chunks
+            en vol ont eu leur grâce ; l'appelant rend ceux qui restent, comme à tout arrêt.
     """
     owns_threads = threads is None
     threads = threads or WorkerThreads.for_concurrency(concurrency)
@@ -360,6 +387,10 @@ async def work(
     finally:
         if owns_threads:
             threads.shutdown()
+
+
+class PersistentFailure(RuntimeError):
+    """La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite et s'est arrêtée."""
 
 
 async def _loop(
@@ -379,6 +410,7 @@ async def _loop(
     last_reclaim = loop.time()
     outages = 0
     failures = 0
+    broken = False
 
     while not stop.is_set():
         if threads.saturated:
@@ -408,6 +440,11 @@ async def _loop(
                 )
                 in_flight.add(task)
                 task.add_done_callback(in_flight.discard)
+            # Une fois les tâches lancées seulement : leurs jobs passent en cours, et l'interface
+            # l'apprend, sans que le travail dépende de cette seconde requête.
+            if claimed:
+                async with pool.connection() as conn:
+                    await queue.start_jobs(conn, (chunk.job_id for chunk in claimed))
 
             if loop.time() - last_reclaim >= RECLAIM_INTERVAL_S:
                 last_reclaim = loop.time()
@@ -432,6 +469,11 @@ async def _loop(
             # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
             # rendre plus visible que cette trace.
             failures += 1
+            if failures >= UNEXPECTED_ERROR_LIMIT:
+                log.exception("tour de boucle en échec %d fois de suite : le worker s'arrête", failures)
+                stop.set()
+                broken = True
+                break
             if failures == 1 or failures % UNEXPECTED_ERROR_LOG_EVERY == 0:
                 log.exception("tour de boucle en échec (%d fois de suite), le worker continue", failures)
             await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
@@ -459,6 +501,8 @@ async def _loop(
         if unfinished:
             await asyncio.wait(unfinished)
             log.info("%d chunk(s) n'ont pas fini à temps", len(unfinished))
+    if broken:
+        raise PersistentFailure(f"{UNEXPECTED_ERROR_LIMIT} tours de boucle en échec de suite")
 
 
 async def _pause(
@@ -520,6 +564,7 @@ async def run_batch(
         Le nombre de chunks traités — zéro quand la file est vide.
     """
     chunks = await queue.claim(conn, worker_id, batch_size)
+    await queue.start_jobs(conn, (chunk.job_id for chunk in chunks))
     for chunk in chunks:
         await run_chunk(conn, registry, chunk, library, media)
     return len(chunks)

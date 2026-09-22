@@ -46,7 +46,18 @@ _LEFTOVER_PROBE = 32
 # Une table fragmentée ralentit toutes les lectures de l'explorateur. On compacte donc à
 # intervalle régulier, en nombre d'écritures, et on efface les versions assez anciennes pour
 # qu'aucun lecteur ne les tienne encore.
+#
+# La compaction tourne sous le verrou d'écriture du dataset, dans le chunk qui la déclenche.
+# Mesuré (scripts/measure_compaction.py) sur une table de classifications remplie par lots de
+# huit : 0,12 s en médiane à 10 000 lignes, 0,30 s à 30 000, avec un maximum de 0,9 s — et
+# cela croît avec la table. Acceptable pour l'étape 1 ; la politique — tous les N chunks, en
+# fin de job, ou confiée à un rôle d'écrivain — se décide avant que les types de l'étape 2
+# écrivent dans des tables que les utilisateurs annotent en même temps.
 COMPACT_EVERY_WRITES = 64
+# Une heure : plus qu'aucune lecture d'un client Pixano ne tient une version — une page de
+# l'explorateur, un export — pour qu'aucun lecteur ne voie disparaître la version qu'il lit.
+# Plus court risquerait de faire échouer une lecture en cours ; plus long ne coûte que du
+# disque, le temps que les anciennes versions s'effacent.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
 # Le compte d'écritures par table, par dataset. Le runner sérialise les écritures d'un dataset,
