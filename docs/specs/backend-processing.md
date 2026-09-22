@@ -377,17 +377,18 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 - **The stream of one job replays its whole history on first connection.** 6 250 events for a job of 50 000 images. Acceptable today; a bound or a `since` parameter is the obvious fix, and it is a choice about what a fresh client sees.
 - **The pool checks each connection before lending it** (`SELECT 1` per borrow). Negligible today; to measure at step 4 if the claim rate ever matters.
 
-## 19. Design before step 2
+## 19. Decided for step 2
 
-Questions the review raised and step 1 does not settle. None is a defect; each shapes the first kinds of step 2.
+Settled on 2026-09-22 with the architect, from `docs/design/etape2-conception.md`; the lots are in `docs/design/todo-etape2.md`. The first version of step 2 is pre-annotation only — embeddings, detection, segmentation, a review queue, and jobs reachable from the legacy interface until the new one ships.
 
-- **Chunks.** They have no dependency and no internal progress, and their time limit is a deployment setting. Video tracking by segments needs an order between segments, per-video atomicity, progress in frames, and a limit that follows the work (§9). The one piece of engine design step 2 must do first.
-- **Embeddings.** The grain — one vector per record or per view — is a product decision before it is a worker decision: search is record-grained today. The advice on record: store per view, return records by their best view; video needs sampling. With it: the sidecar, one table per model, the fate of the application's in-process path (§18), `replace_existing_embeddings` (§12), and the rule for choosing a view, not to be built if the grain makes it moot.
-- **Self-contained provenance** (§12).
-- **Exact `replace` by key** (§12).
-- **`review_status`.**
-- **The compaction policy** (§12).
-- **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
+- **Embeddings are per medium, not per record.** One vector per image view composing a record, `view_id` filled; a search finds a medium and returns its record. Returning media is left open. The application's in-process path stays for now.
+- **Another model adds; the same model replaces its own rows.** The replacement key is (kind, model, record, view); `replace` becomes exact by that key. Replacing on request is a job parameter, `replace_previous`, honoured by `prepare`. Cleaning duplicates across models may be a workflow later.
+- **A rerun only replaces rows still `pending`.** Rows a human reviewed are frozen for that kind.
+- **`review_status`** takes `pending`, `accepted`, `corrected`, `rejected`, on the annotation schemas; empty for a human annotation, `pending` set by the writer for a model's. Correcting keeps `source_type = model` and the model's trace, so corrections can be counted. Rejecting does not delete.
+- **Provenance** lives in `source_metadata`, set by the writer: `job_id`, `kind`, `model`, `model_version`, `params`. Dedicated columns when a filter by model becomes a need.
+- **Compaction** stays as it is until a compaction outlasts a chunk; then it moves out of the write lock. Measure at 500 k rows once a kind produces that volume.
+- **Chunks are unchanged.** Video tracking is on hold; when it comes, a chunk is a video, with an internal progress and a weight per chunk deciding its time limit.
+- Deferred to a second version of the step: NER, statistics and partial writes, vector indexing, clustering, video.
 
 ## 20. What step 4 opens
 
