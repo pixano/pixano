@@ -56,8 +56,10 @@ DEFECTS_SEED = 1789
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-# Le chemin sous lequel le worker et l'inférence voient le volume médias dans le compose.
-CONTAINER_MEDIA_ROOT = "/medias"
+# Le chemin sous lequel le worker voit le dossier des médias — dans le compose, le volume monté
+# en /medias. Les images du dataset par chemin sont référencées sous cette racine : c'est
+# PIXANO_MEDIA_ROOT du worker, quel que soit l'endroit d'où on le lance.
+COMPOSE_MEDIA_ROOT = "/medias"
 
 
 def draw_images(target: Path, count: int, seed: int) -> list[Path]:
@@ -139,8 +141,14 @@ def prepare_shapes(data_dir: Path) -> str:
     return dataset_id(data_dir, SHAPES_NAME)
 
 
-def prepare_defects(data_dir: Path, media_dir: Path) -> str:
-    """Générer, importer par chemin puis abîmer le dataset de la quarantaine ; rendre son identifiant."""
+def prepare_defects(data_dir: Path, media_dir: Path, media_root: str) -> str:
+    """Générer, importer par chemin puis abîmer le dataset de la quarantaine ; rendre son identifiant.
+
+    Args:
+        data_dir: La bibliothèque de datasets.
+        media_dir: Où écrire les images, tel que cette machine le voit.
+        media_root: Le même dossier, tel que le worker le verra : le préfixe des chemins importés.
+    """
     remove_previous(data_dir, DEFECTS_NAME)
     folder = media_dir / DEFECTS_FOLDER
     shutil.rmtree(folder, ignore_errors=True)
@@ -156,7 +164,7 @@ def prepare_defects(data_dir: Path, media_dir: Path) -> str:
             "format: pixano_jsonl\n"
             "media:\n"
             "  mode: uri\n"
-            f"  uri_prefix: {CONTAINER_MEDIA_ROOT}/{DEFECTS_FOLDER}\n"
+            f"  uri_prefix: {media_root}/{DEFECTS_FOLDER}\n"
         )
         pixano_import(data_dir, folder, ["--spec", str(spec), "--media", "uri"])
 
@@ -176,6 +184,12 @@ def main() -> None:
     parser.add_argument(
         "--media-dir", type=Path, default=REPO_ROOT / "data" / "media", help="PIXANO_MEDIA_DIR du compose."
     )
+    parser.add_argument(
+        "--media-root",
+        default=COMPOSE_MEDIA_ROOT,
+        help="Le dossier des médias tel que le worker le voit, c'est-à-dire son PIXANO_MEDIA_ROOT. "
+        "Par défaut le montage du compose ; pour un worker lancé à la main, donner --media-dir lui-même.",
+    )
     args = parser.parse_args()
 
     data_dir, media_dir = args.data_dir.resolve(), args.media_dir.resolve()
@@ -185,10 +199,9 @@ def main() -> None:
     print(f"« {SHAPES_NAME} » : {SHAPES_COUNT} images embarquées…", flush=True)
     shapes = prepare_shapes(data_dir)
     print(f"« {DEFECTS_NAME} » : {DEFECTS_COUNT} images par chemin, dont 3 abîmées…", flush=True)
-    defects = prepare_defects(data_dir, media_dir)
+    defects = prepare_defects(data_dir, media_dir, args.media_root)
 
     print(f"prêt — « {SHAPES_NAME} » ({shapes}) et « {DEFECTS_NAME} » ({defects}).")
-    print("Redémarrez le worker s'il tourne déjà : il garde en cache les datasets qu'il a ouverts.")
 
 
 if __name__ == "__main__":

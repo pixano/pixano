@@ -74,6 +74,9 @@ docker compose up
 docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 ```
 
+The compose is a convenience, not a requirement: [docs/running-by-hand.md](./docs/running-by-hand.md)
+runs the same four components as plain processes.
+
 A scripted walkthrough of the stack — a job submitted from the interface, cancelled, its worker
 killed and resumed, and failures that do not end the job — lives in
 [docs/demo-etape1.md](./docs/demo-etape1.md), with a script that prepares its datasets.
