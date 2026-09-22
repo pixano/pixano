@@ -33,6 +33,13 @@ from typing import Any, Callable, Protocol, Sequence
 
 logger = logging.getLogger("pixano-worker")
 
+# The provenance vocabulary of the Pixano schemas that means "a model produced this", and the
+# review status such a row arrives with. The strings are the schemas' (`AnnotationSourceKind`,
+# `ReviewStatus`); named here so that the writer does not import the application's schemas
+# for two words.
+MODEL_SOURCE = "model"
+PENDING_REVIEW = "pending"
+
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
 # key produced shares one prefix and can be found — and cleaned — exactly.
@@ -220,6 +227,11 @@ def _rank_of(row_id: str) -> int:
     return int(row_id.rsplit("-", 1)[1])
 
 
+def _is_reviewed(row: Any) -> bool:
+    """Whether a human has looked at this row: then a rerun must leave it alone."""
+    return getattr(row, "review_status", "") not in ("", PENDING_REVIEW)
+
+
 class JobWriter:
     """Writes a job's outputs into a dataset, in a replayable way.
 
@@ -299,11 +311,16 @@ class JobWriter:
                 metadata["model_version"] = self.model.version
         if self.params is not None:
             metadata["params"] = self.params
-        return {
+        provenance = {
             "source_type": self.source_type,
             "source_name": self.kind,
             "source_metadata": json.dumps(metadata, sort_keys=True),
         }
+        if self.source_type == MODEL_SOURCE:
+            # A model's output arrives to be reviewed; a human's has nothing to review, and a
+            # demonstration kind's is neither.
+            provenance["review_status"] = PENDING_REVIEW
+        return provenance
 
     def ids_for(self, key: str, count: int) -> list[str]:
         """The identifiers a key will occupy for `count` outputs."""
@@ -316,13 +333,18 @@ class JobWriter:
     def replace(self, table_name: str, key: str, rows: Sequence[Any]) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
-        Two operations, and both are necessary: the rows are upserted on their derived
-        identifier, then **the surplus rows of a previous run are deleted**. Without that second
-        step, a replay that produced fewer outputs than before — a model that detects two
-        objects where it used to see five — would leave three orphan rows that nothing would
-        ever clean up. The replacement is exact: it is scoped by (kind, model, key), which is
-        what the identifiers' prefix encodes, so another model's rows for the same key are
-        left alone, and no output shrinks past what is cleaned.
+        Three steps. What a previous run wrote for this (kind, model, key) is read by the
+        prefix its identifiers share. **Rows a human reviewed are frozen**: accepted, corrected
+        or rejected, they keep their rank and are not touched — a rerun replaces what is still
+        pending, never what someone looked at (step 2 design). The new rows take the free
+        ranks, in order, and are upserted; then **the pending rows of the previous run that no
+        new row replaced are deleted**. Without that last step, a replay that produced fewer
+        outputs than before — a model that detects two objects where it used to see five —
+        would leave three orphan rows that nothing would ever clean up.
+
+        The replacement is exact: scoped by (kind, model, key), which is what the prefix
+        encodes, so another model's rows for the same key are left alone, and no output
+        shrinks past what is cleaned.
 
         Args:
             table_name: The target table.
@@ -332,15 +354,28 @@ class JobWriter:
         Returns:
             The identifiers written.
         """
-        written = self.ids_for(key, len(rows))
-        for row, row_id in zip(rows, written):
-            row.id = row_id
+        prefix = derive_prefix(self.kind, key, self._model_name)
+        previous = self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
+        frozen = {_rank_of(row.id) for row in previous if _is_reviewed(row)}
+
+        written: list[str] = []
+        rank = 0
+        for row in rows:
+            while rank in frozen:
+                rank += 1
+            row.id = f"{prefix}-{rank}"
+            written.append(row.id)
+            rank += 1
 
         if rows:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
 
-        self._drop_leftovers(table_name, key, kept=len(rows))
+        replaced = set(written)
+        stale = [row.id for row in previous if row.id not in replaced and _rank_of(row.id) not in frozen]
+        if stale:
+            self.dataset.delete_data(table_name, stale)
+            logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
         return written
 
     def _count_write(self, table_name: str) -> None:
@@ -366,21 +401,6 @@ class JobWriter:
             self.dataset.open_table(table_name).optimize(cleanup_older_than=KEEP_OLD_VERSIONS_FOR)
         except Exception as error:
             logger.warning("job %s: cannot compact %s (%s)", self.job_id, table_name, error)
-
-    def _drop_leftovers(self, table_name: str, key: str, kept: int) -> None:
-        """Erase what a previous run had written beyond `kept`.
-
-        Everything this key produced shares one identifier prefix, so one filtered read finds
-        all of it; what lies at a rank beyond `kept` is a leftover. A first version probed a
-        bounded window of ranks instead, and an output that shrank by more than the window —
-        a crowd scene going from a hundred boxes to twenty — kept ghost rows.
-        """
-        prefix = derive_prefix(self.kind, key, self._model_name)
-        found = self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
-        stale = [row.id for row in found if _rank_of(row.id) >= kept]
-        if stale:
-            self.dataset.delete_data(table_name, stale)
-            logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
 
     # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"

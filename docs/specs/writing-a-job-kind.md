@@ -50,6 +50,12 @@ allowed, but a provenance that cannot be completed must not fail the chunk. The 
 recorded are all of them but the engine's: `chunk_size` by default, plus whatever the kind
 lists in `params_not_in_provenance` (a request timeout, a retry count).
 
+A kind whose `source_type` is `model` also gets `review_status = "pending"` in its
+provenance: its rows arrive to be reviewed. A human's annotation, or a demonstration kind's,
+carries no status. And `replace` honours the review: rows a human accepted, corrected or
+rejected keep their rank and are never touched by a rerun, which replaces the pending rows
+only.
+
 ### `prepare(writer, params)` — optional
 
 Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
