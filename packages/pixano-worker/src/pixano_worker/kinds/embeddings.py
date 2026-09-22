@@ -12,11 +12,16 @@ transiter d'octets quand c'est évitable, appeler l'inférence par lots, disting
 transitoire d'un échec définitif, et écrire un résultat que rejouer ne duplique pas.
 """
 
+import io
+from functools import cache
 from typing import Any, Iterable
 
 import httpx
+from PIL import Image
 from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
+
+from pixano.inference.media import bytes_to_data_uri
 
 from ..reader import JobReader
 from ..writer import JobWriter, check_embedding_space
@@ -36,18 +41,29 @@ TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 # de droit, pas de route, pas de modèle. Découper le lot n'y changerait rien.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 
-# À partir de combien d'images toutes refusées on présume une panne du serveur plutôt qu'un lot
-# entièrement corrompu. Deux images corrompues côte à côte restent rares ; une seule image
-# refusée, en revanche, est le cas ordinaire d'un fichier abîmé — et le dernier chunk d'un
-# dataset, comme la plupart des chunks d'un dataset où peu d'enregistrements portent une image,
-# n'en contient souvent qu'une. Provisoire : une requête témoin au serveur remplacera ce seuil,
-# pour que la décision ne dépende plus de la taille du lot.
-PRESUMED_OUTAGE_MIN_IMAGES = 2
+# Côté de l'image témoin : la plus petite que le serveur accepte sans discuter. Elle ne sert
+# qu'à savoir si le serveur embarque encore quelque chose, pas à produire un vecteur.
+WITNESS_IMAGE_SIDE = 16
 
 # Le statut que le client donne à une erreur quand le serveur n'a rien répondu du tout —
 # connexion refusée, délai dépassé. Il l'enveloppe dans une PixanoInferenceError plutôt que de
 # laisser passer l'erreur httpx.
 NO_RESPONSE = 0
+
+
+@cache
+def witness_image() -> str:
+    """Une image générée, en octets, que le serveur doit savoir embarquer.
+
+    Quand un lot entier est refusé image par image, elle départage la panne de l'inférence du lot
+    réellement corrompu : le seuil « deux images refusées valent une panne » qu'elle remplace
+    faisait dépendre la décision de la taille du lot, et le dernier chunk d'un dataset n'a
+    souvent qu'une image.
+    """
+    image = Image.new("RGB", (WITNESS_IMAGE_SIDE, WITNESS_IMAGE_SIDE), (128, 128, 128))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return bytes_to_data_uri(buffer.getvalue())
 
 
 class EmbeddingsParams(JobParams):
@@ -131,6 +147,9 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         images = self._images_of(reader, record_ids) if record_ids else {}
 
         candidates: list[tuple[str, str]] = []
+        # Les images envoyées par chemin, pour pouvoir en renvoyer une en octets si le serveur
+        # les refuse toutes alors qu'il embarque encore l'image témoin.
+        by_path: dict[str, Any] = {}
         quarantined: list[dict[str, Any]] = []
         skipped = 0
         carried = 0
@@ -145,18 +164,19 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 continue
             candidates.append((record_id, resolved.value))
             carried += int(resolved.carried_bytes)
+            if not resolved.carried_bytes:
+                by_path[record_id] = image
 
         client = SyncPixanoInferenceClient(
             self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
         )
         embedded, refused = self._embed_isolating(client, candidates, params)
-        if len(candidates) >= PRESUMED_OUTAGE_MIN_IMAGES and not embedded:
-            # Tout le lot est refusé, image par image. Une inférence qui refuse toutes les images
-            # est bien plus probablement en panne que ce lot n'est entièrement corrompu : on
-            # rejoue plus tard, et si c'est vraiment le lot, il finira écarté par la file. Une
-            # image seule, elle, part en quarantaine : sans ce seuil, elle faisait rejouer son
-            # chunk jusqu'à l'échec, et finir en erreur un job qui n'avait qu'un fichier abîmé.
-            raise TransientError(f"l'inférence refuse les {len(candidates)} image(s) du lot : {refused[0][1]}")
+        if refused and not embedded:
+            # Tout le lot est refusé, image par image. Une inférence en panne refuse tout ; un
+            # lot entièrement corrompu aussi. Ce n'est pas la taille du lot qui départage — le
+            # dernier chunk d'un dataset n'a souvent qu'une image — mais le serveur lui-même,
+            # sur une image qu'on sait bonne.
+            self._blame_the_server_or_the_images(client, reader, refused, by_path, params)
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
             for record_id, detail in refused
@@ -190,6 +210,47 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         if not vectors:
             return
         writer.write_record_embeddings(record_ids=result["record_ids"], vectors=vectors, model=params.model)
+
+    def _blame_the_server_or_the_images(
+        self,
+        client: SyncPixanoInferenceClient,
+        reader: JobReader,
+        refused: list[tuple[str, dict[str, Any]]],
+        by_path: dict[str, Any],
+        params: EmbeddingsParams,
+    ) -> None:
+        """Décider, sur un lot entièrement refusé, si c'est le serveur ou les images.
+
+        Une image témoin, générée ici, est envoyée en octets : refusée, le serveur ne va pas
+        bien et le chunk est rejoué plus tard. Acceptée, les images sont en cause — sauf si
+        elles avaient été désignées par chemin : le serveur peut ne pas lire le stockage qu'on
+        lui a dit de monter, et refuser alors tout chemin sans qu'aucune image n'y soit pour
+        rien. L'une d'elles est donc renvoyée en octets ; si elle passe, c'est le montage, et le
+        chunk est rejoué avec la raison, plutôt que trois cents images saines en quarantaine.
+
+        Raises:
+            TransientError: Le serveur refuse l'image témoin, ou ne lit pas ses médias par chemin.
+        """
+        try:
+            self._embed(client, [witness_image()], params)
+        except (httpx.TransportError, PixanoInferenceError) as error:
+            raise TransientError(f"l'inférence refuse même l'image témoin : {error}") from error
+
+        first_by_path = next((record_id for record_id, _ in refused if record_id in by_path), None)
+        if first_by_path is None:
+            return
+        found = reader.dataset.get_view_binary(IMAGE_TABLE, by_path[first_by_path].id)
+        if found is None or not found[0]:
+            return
+        try:
+            self._embed(client, [bytes_to_data_uri(found[0])], params)
+        except (httpx.TransportError, PixanoInferenceError):
+            # Refusée en octets aussi : l'image est bien en cause.
+            return
+        raise TransientError(
+            f"l'inférence refuse les images par chemin mais accepte la même en octets ({first_by_path}) : "
+            "elle ne lit pas le stockage des médias — vérifier PIXANO_INFERENCE_MEDIA_ROOT et son montage"
+        )
 
     @staticmethod
     def _images_of(reader: JobReader, record_ids: list[str]) -> dict[str, Any]:
