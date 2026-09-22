@@ -19,9 +19,9 @@ runs a small CLIP model on CPU, at about three images per second.
 About 20 minutes the first time, mostly image builds and a model download.
 
 ```sh
-# The inference server is a sibling repository. The fork carries the switch that bundles the
-# CLIP embedding model into the image.
-git clone https://github.com/vmulet-benzo/pixano-inference.git ../pixano-inference
+# The inference server is a sibling repository, used as is: the compose builds its image and
+# adds the CLIP embedding plugin on top (see docker-compose.inference.yml).
+git clone https://github.com/pixano/pixano-inference.git ../pixano-inference
 
 cp .env.example .env
 

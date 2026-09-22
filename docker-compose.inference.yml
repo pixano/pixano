@@ -12,29 +12,44 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 #
-# La variante construite par défaut est la variante CPU (torch CPU), avec le plugin CLIP et
-# le détecteur numpy d'exemple : elle sert de vrais embeddings sans GPU, assez vite pour une
-# démonstration. Pour une vraie capacité, passer les build args en GPU (voir plus bas) et
-# monter docker/models.py à la place de docker/models.cpu.py.
+# La variante construite est la variante CPU (torch CPU) avec le plugin d'embeddings CLIP :
+# elle sert de vrais embeddings sans GPU, assez vite pour une démonstration. Pour une vraie
+# capacité, passer les build args en GPU (voir plus bas) et monter sa propre liste de modèles
+# à la place de docker/inference/models.cpu.py.
+#
+# L'image se construit en deux temps, depuis un clone NON MODIFIÉ de pixano-inference
+# (PIXANO_INFERENCE_REPO) : d'abord l'image que produit son propre Dockerfile, puis une
+# couche définie ici, dockerfiles/Dockerfile.inference-clip, qui y installe le plugin CLIP.
+# Le plugin est dans leur dépôt, mais leur Dockerfile n'a pas d'interrupteur pour
+# l'installer ; à leur proposer, et cette couche disparaîtra avec.
 #
 # La variante « sans framework » (TORCH_INDEX_URL vide) ne démarre pas : Ray Serve importe
 # jinja2 dans son module haproxy sans le déclarer dans ray[serve], et c'est torch qui
 # l'apporte incidemment. À signaler au dépôt pixano-inference.
 
 services:
-  pixano-inference:
+  # Ne tourne jamais : ce service n'existe que pour que sa construction serve de base à
+  # celle de pixano-inference. Zéro instance, plutôt qu'un profil : un service écarté par
+  # un profil n'existe plus pour les autres, et ne peut donc pas leur servir de contexte.
+  pixano-inference-base:
+    scale: 0
     build:
       context: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
       dockerfile: Dockerfile
       args:
-        # Variante CPU : torch CPU, pas de SAM2, plugin numpy d'exemple.
-        # Variante GPU : retirer ces quatre lignes (les défauts du Dockerfile sont GPU+SAM).
+        # Variante CPU : torch CPU, pas de SAM2.
+        # Variante GPU : retirer ces trois lignes (les défauts du Dockerfile sont GPU+SAM).
         TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
         PIXANO_EXTRAS: ""
         INSTALL_SAM: "false"
-        # Le plugin d'embeddings : c'est lui qui rend le job d'embeddings démontrable sans GPU.
-        INSTALL_CLIP: "true"
-        INSTALL_EXAMPLE: "true"
+
+  pixano-inference:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.inference-clip
+      additional_contexts:
+        inference-base: "service:pixano-inference-base"
+        inference-src: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
     ports:
       - "127.0.0.1:${PIXANO_INFERENCE_PORT:-7463}:7463"
     environment:
@@ -48,7 +63,7 @@ services:
       HF_TOKEN: ${HF_TOKEN:-}
     volumes:
       - pixano-inference-weights:/data
-      - ${PIXANO_INFERENCE_REPO:-../pixano-inference}/docker/models.cpu.py:/config/models.py:ro
+      - ./docker/inference/models.cpu.py:/config/models.py:ro
       - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}:ro
     command:
       ["--host", "0.0.0.0", "--port", "7463", "--config", "/config/models.py"]
