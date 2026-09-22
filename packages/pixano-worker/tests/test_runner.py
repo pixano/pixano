@@ -828,6 +828,37 @@ class TestPlanningRefusedByTheSchema:
         assert failures["left"] == 0
         assert _state(declared, job) == ("done", 40, 40)
 
+    async def test_a_failure_that_never_passes_stops_the_worker_in_error(
+        self,
+        declared: psycopg.Connection,
+        postgres_url: str,
+        registry: Registry,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Revue d'architecture, point 7 : survivre à un défaut, oui ; boucler dessus sans fin, non.
+
+        Passé la limite, la boucle s'arrête d'elle-même et le dit par une exception, pour que
+        le process sorte en erreur et que la politique de redémarrage en relance un neuf.
+        """
+        _submit(declared, params={"task_count": 10, "chunk_size": 10, "seconds_per_task": 0.0})
+        turns = {"count": 0}
+
+        async def always_buggy_plan_one(*args: object, **kwargs: object) -> str | None:
+            turns["count"] += 1
+            raise RuntimeError("un bug qui ne passe pas")
+
+        monkeypatch.setattr(runner, "plan_one", always_buggy_plan_one)
+        monkeypatch.setattr(runner, "UNEXPECTED_ERROR_PAUSE_S", 0.001)
+        monkeypatch.setattr(runner, "UNEXPECTED_ERROR_LIMIT", 5)
+
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=3, kwargs={"autocommit": True}) as pool:
+            with pytest.raises(runner.PersistentFailure):
+                await asyncio.wait_for(
+                    runner.work(pool, registry, "worker-test", concurrency=2, idle_poll_s=0.01), timeout=5
+                )
+
+        assert turns["count"] == 5
+
 
 class TestSaturation:
     """Revue de l'étape 1 : des threads bloqués immobilisaient le worker, toujours « healthy ».

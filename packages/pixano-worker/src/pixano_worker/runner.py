@@ -71,6 +71,12 @@ UNEXPECTED_ERROR_PAUSE_S = 1.0
 # une fois toutes les N occurrences : le journal dit qu'il persiste, sans une trace par seconde.
 UNEXPECTED_ERROR_LOG_EVERY = 60
 
+# Autant d'échecs de suite — une minute, avec la pause ci-dessus — et le worker s'arrête
+# proprement en erreur : un défaut qui ne passe pas en une minute ne passera pas en une heure,
+# et un process neuf, relancé par la politique de redémarrage, a plus de chances qu'un tour de
+# plus. Les chunks en vol ont leur grâce, puis sont rendus, comme à tout arrêt.
+UNEXPECTED_ERROR_LIMIT = 60
+
 # Au-delà de ce délai, la file est réexaminée même sans rien de nouveau à y faire : c'est ce
 # qui rend les baux expirés d'un worker mort à un worker occupé, pas seulement à un oisif.
 RECLAIM_INTERVAL_S = 30.0
@@ -349,6 +355,10 @@ async def work(
 
     Un pool saturé — trop de threads bloqués sur des chunks rendus pour cause de durée dépassée —
     est renouvelé sur place, et la boucle continue.
+
+    Raises:
+        PersistentFailure: La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite. Les chunks
+            en vol ont eu leur grâce ; l'appelant rend ceux qui restent, comme à tout arrêt.
     """
     owns_threads = threads is None
     threads = threads or WorkerThreads.for_concurrency(concurrency)
@@ -360,6 +370,10 @@ async def work(
     finally:
         if owns_threads:
             threads.shutdown()
+
+
+class PersistentFailure(RuntimeError):
+    """La boucle a échoué `UNEXPECTED_ERROR_LIMIT` fois de suite et s'est arrêtée."""
 
 
 async def _loop(
@@ -379,6 +393,7 @@ async def _loop(
     last_reclaim = loop.time()
     outages = 0
     failures = 0
+    broken = False
 
     while not stop.is_set():
         if threads.saturated:
@@ -437,6 +452,11 @@ async def _loop(
             # laisser remonter arrêtait le worker pour de bon, chunks en vol compris, sans rien
             # rendre plus visible que cette trace.
             failures += 1
+            if failures >= UNEXPECTED_ERROR_LIMIT:
+                log.exception("tour de boucle en échec %d fois de suite : le worker s'arrête", failures)
+                stop.set()
+                broken = True
+                break
             if failures == 1 or failures % UNEXPECTED_ERROR_LOG_EVERY == 0:
                 log.exception("tour de boucle en échec (%d fois de suite), le worker continue", failures)
             await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
@@ -464,6 +484,8 @@ async def _loop(
         if unfinished:
             await asyncio.wait(unfinished)
             log.info("%d chunk(s) n'ont pas fini à temps", len(unfinished))
+    if broken:
+        raise PersistentFailure(f"{UNEXPECTED_ERROR_LIMIT} tours de boucle en échec de suite")
 
 
 async def _pause(
