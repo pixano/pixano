@@ -11,6 +11,7 @@ from .enqueue import (
     DEFAULT_LISTED_JOBS,
     InvalidParamsError,
     JobNotFoundError,
+    JobNotRetryableError,
     JobRecord,
     QuarantinedItem,
     QueueUnavailableError,
@@ -22,6 +23,7 @@ from .enqueue import (
     get,
     list_jobs,
     quarantine,
+    retry,
     submit,
 )
 from .queries import SCHEMA_NAME
@@ -32,6 +34,7 @@ __all__ = [
     "SCHEMA_NAME",
     "InvalidParamsError",
     "JobNotFoundError",
+    "JobNotRetryableError",
     "JobRecord",
     "QuarantinedItem",
     "QueueUnavailableError",
@@ -43,6 +46,7 @@ __all__ = [
     "get",
     "list_jobs",
     "quarantine",
+    "retry",
     "queries",
     "submit",
 ]
