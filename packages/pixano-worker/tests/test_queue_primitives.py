@@ -7,6 +7,7 @@
 """Tests des primitives de réclamation du worker."""
 
 import asyncio
+import os
 from dataclasses import dataclass
 
 import psycopg
@@ -30,6 +31,32 @@ def _enqueue(db: psycopg.Connection, chunks: int, tasks_per_chunk: int = 10) -> 
         (job, tasks_per_chunk, chunks - 1),
     )
     return job
+
+
+class TestWorkerIdentity:
+    """Un worker lancé à la main change de pid à chaque relance : son identité doit pouvoir être donnée."""
+
+    def test_defaults_to_host_and_pid(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv(queue.WORKER_ID_VARIABLE, raising=False)
+
+        assert queue.worker_identity().endswith(f":{os.getpid()}")
+
+    def test_takes_the_identity_the_deployment_gives(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(queue.WORKER_ID_VARIABLE, " worker-gpu-1 ")
+
+        assert queue.worker_identity() == "worker-gpu-1"
+
+    async def test_a_given_identity_takes_its_chunks_back_after_a_restart(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """C'est ce que l'identité achète : la reprise immédiate, sans attendre le bail."""
+        monkeypatch.setenv(queue.WORKER_ID_VARIABLE, "worker-by-hand")
+        _enqueue(db, 2)
+        await queue.claim(adb, queue.worker_identity(), 2)
+
+        recovered = await queue.release_own(adb, queue.worker_identity())
+
+        assert recovered.requeued == 2
 
 
 class TestClaim:
