@@ -231,9 +231,21 @@ class Chunk:
     attempts: int
 
 
+# Une identité stable, donnée par le déploiement. Sans elle, l'identité est hôte:pid — stable
+# dans un conteneur, dont le nom d'hôte est fixe et le worker le process 1, mais pas pour un
+# worker lancé à la main, dont le pid change à chaque relance : ses chunks ne seraient repris
+# qu'à l'expiration de leur bail, deux minutes, au lieu de tout de suite.
+WORKER_ID_VARIABLE = "PIXANO_WORKER_ID"
+
+
 def worker_identity() -> str:
-    """Nommer ce worker, pour le diagnostic et la restitution après un arrêt brutal."""
-    return f"{socket.gethostname()}:{os.getpid()}"
+    """Nommer ce worker, pour le diagnostic et la restitution après un arrêt brutal.
+
+    Deux workers vivants ne doivent jamais porter le même nom : le second reprendrait les
+    chunks du premier comme s'ils étaient orphelins.
+    """
+    given = os.environ.get(WORKER_ID_VARIABLE, "").strip()
+    return given or f"{socket.gethostname()}:{os.getpid()}"
 
 
 async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) -> list[Chunk]:
