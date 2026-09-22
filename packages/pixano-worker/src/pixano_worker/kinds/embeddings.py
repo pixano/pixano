@@ -27,7 +27,7 @@ from pydantic import Field
 from pixano.inference.media import bytes_to_data_uri
 
 from ..reader import JobReader
-from ..writer import JobWriter, check_embedding_space
+from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 
 
@@ -108,6 +108,33 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """Bind this kind to the inference server the worker knows."""
         self.inference_url = inference_url.rstrip("/")
         self.api_key = api_key
+        self._checkpoints: dict[str, str | None] = {}
+
+    #: How the engine runs the job, not what it computes: absent from the provenance.
+    params_not_in_provenance = JobKind.params_not_in_provenance | {"request_timeout_s", "max_retries"}
+
+    def model_identity(self, params: EmbeddingsParams) -> ModelIdentity:
+        """The model's name, and the checkpoint the server loaded under it.
+
+        The server declares no version as such; the checkpoint path is what identifies which
+        weights answered, and it is what a reviewer needs to tell two deployments of the same
+        name apart. Asked once per model per process: a server redeployed with other weights
+        under the same name during a job would keep the old answer — accepted, the job's rows
+        were not produced by two checkpoints on purpose.
+        """
+        if params.model not in self._checkpoints:
+            self._checkpoints[params.model] = self._checkpoint_of(params.model, params)
+        return ModelIdentity(params.model, self._checkpoints[params.model])
+
+    def _checkpoint_of(self, model: str, params: EmbeddingsParams) -> str | None:
+        client = SyncPixanoInferenceClient(self.inference_url, api_key=self.api_key or None, max_retries=0)
+        try:
+            for info in client.list_models():
+                if info.name == model:
+                    return info.model_path or None
+        except Exception as error:  # noqa: BLE001 — a provenance that cannot be completed must not fail the chunk
+            log.warning("model '%s': cannot ask the inference for its checkpoint (%s)", model, error)
+        return None
 
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
         """Split the dataset's records into batches.

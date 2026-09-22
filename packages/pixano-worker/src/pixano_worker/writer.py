@@ -26,6 +26,7 @@ import json
 import logging
 import threading
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, Iterable, Protocol, Sequence
 
@@ -63,6 +64,20 @@ KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 # lock here only protects the counter itself.
 _writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
 _writes_guard = threading.Lock()
+
+
+@dataclass(frozen=True)
+class ModelIdentity:
+    """The model a job ran, as the inference declares it.
+
+    Attributes:
+        name: The model's name on the inference server — what the job's parameters name.
+        version: What the server gives as the model's identity beyond its name — the checkpoint
+            it loaded, typically. None when the server exposes nothing of the kind.
+    """
+
+    name: str
+    version: str | None = None
 
 
 class DatasetReadSource(Protocol):
@@ -208,6 +223,9 @@ class JobWriter:
         source_type: str = "model",
         reopen_dataset: Callable[[], DatasetWriteTarget] | None = None,
         dataset_id: str | None = None,
+        *,
+        params: dict[str, Any] | None = None,
+        model: ModelIdentity | None = None,
     ) -> None:
         """Bind a writer to a job and to its dataset.
 
@@ -225,6 +243,9 @@ class JobWriter:
                 authoritative.
             dataset_id: The dataset's identifier, key of the write count that decides
                 compactions. Without it, the writer counts for itself alone.
+            params: The job's validated parameters, as the provenance records them — those that
+                say what was computed, not how the engine ran it.
+            model: The model the job ran, when the kind runs one.
         """
         self._open_dataset = open_dataset
         self._dataset_id = dataset_id
@@ -233,6 +254,8 @@ class JobWriter:
         self.kind = kind
         self.job_id = job_id
         self.source_type = source_type
+        self.params = params
+        self.model = model
 
     @property
     def dataset(self) -> DatasetWriteTarget:
@@ -249,11 +272,23 @@ class JobWriter:
         a dataset without knowing where it came from. The `source_type` vocabulary is that of
         the schemas — `model`, `human`, `ground_truth`, `other` — and it is the job kind that
         declares which one describes it.
+
+        `source_metadata` is self-contained: the job identifier is an opaque run label, since
+        jobs are cleaned by truncation, and the kind, the model, its version and the
+        parameters are what a reviewer needs to know how a row was produced without any
+        table to look it up in.
         """
+        metadata: dict[str, Any] = {"job_id": self.job_id, "kind": self.kind}
+        if self.model is not None:
+            metadata["model"] = self.model.name
+            if self.model.version is not None:
+                metadata["model_version"] = self.model.version
+        if self.params is not None:
+            metadata["params"] = self.params
         return {
             "source_type": self.source_type,
             "source_name": self.kind,
-            "source_metadata": json.dumps({"job_id": self.job_id}),
+            "source_metadata": json.dumps(metadata, sort_keys=True),
         }
 
     def ids_for(self, key: str, count: int) -> list[str]:

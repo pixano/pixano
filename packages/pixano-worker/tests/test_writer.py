@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 from pixano_worker.reader import JobReader
-from pixano_worker.writer import JobWriter, derive_id
+from pixano_worker.writer import JobWriter, ModelIdentity, derive_id
 
 
 class _Vector:
@@ -212,6 +212,35 @@ class TestProvenance:
         assert provenance["source_type"] == "other"
         assert provenance["source_name"] == "fake"
         assert json.loads(provenance["source_metadata"])["job_id"] == "job-42"
+
+    def test_is_self_contained(self, dataset: _FakeDataset) -> None:
+        """Step 2 design: jobs are cleaned by truncation, so the row must say by itself how it was made."""
+        writer = JobWriter(
+            lambda: dataset,
+            "detection",
+            "job-42",
+            "model",
+            params={"model": "yolo", "threshold": 0.4},
+            model=ModelIdentity("yolo", "yolov8n.pt"),
+        )
+
+        metadata = json.loads(writer.provenance()["source_metadata"])
+
+        assert metadata == {
+            "job_id": "job-42",
+            "kind": "detection",
+            "model": "yolo",
+            "model_version": "yolov8n.pt",
+            "params": {"model": "yolo", "threshold": 0.4},
+        }
+
+    def test_says_nothing_about_a_model_it_does_not_know(self, dataset: _FakeDataset) -> None:
+        """A kind without a model, or a server that gives no version: the keys are absent, not null."""
+        without_version = JobWriter(lambda: dataset, "k", "j", model=ModelIdentity("clip")).provenance()
+        without_model = JobWriter(lambda: dataset, "k", "j").provenance()
+
+        assert json.loads(without_version["source_metadata"]) == {"job_id": "j", "kind": "k", "model": "clip"}
+        assert "model" not in json.loads(without_model["source_metadata"])
 
 
 class TestAgainstRealLance:

@@ -55,6 +55,11 @@ class _Inference:
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
         return self
 
+    def list_models(self) -> list[Any]:
+        if self.unreachable:
+            raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
+        return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
         self.calls.append(images)
@@ -337,3 +342,26 @@ class TestModelOfTheExistingTable:
 
         with pytest.raises(ValueError, match="dinov2"):
             list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+
+
+class TestModelIdentity:
+    """What the provenance of every vector says about the model that produced it."""
+
+    def test_names_the_model_and_the_checkpoint_the_server_loaded(self, inference: _Inference) -> None:
+        identity = KIND.model_identity(PARAMS)
+
+        assert (identity.name, identity.version) == ("clip", "MobileCLIP2-S2")
+
+    def test_a_server_that_cannot_be_asked_still_gives_the_name(self, inference: _Inference) -> None:
+        """A provenance that cannot be completed must not fail the chunk."""
+        inference.unreachable = True
+        kind = EmbeddingsKind("http://inference", "")
+
+        identity = kind.model_identity(PARAMS)
+
+        assert (identity.name, identity.version) == ("clip", None)
+
+    def test_engine_parameters_stay_out_of_the_provenance(self) -> None:
+        recorded = KIND.provenance_params(KIND.validate_params({"model": "clip", "chunk_size": 3}))
+
+        assert recorded == {"model": "clip", "normalize": True}

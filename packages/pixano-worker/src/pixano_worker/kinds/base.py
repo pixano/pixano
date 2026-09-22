@@ -44,7 +44,7 @@ from typing import Any, Generic, Iterable, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..reader import JobReader
-from ..writer import JobWriter
+from ..writer import JobWriter, ModelIdentity
 
 
 class JobParams(BaseModel):
@@ -126,10 +126,29 @@ class JobKind(ABC, Generic[ParamsT]):
     name: str
     params_model: type[ParamsT]
 
+    #: Parameters that say how the engine runs the job rather than what it computes — the
+    #: chunk size every kind has, a request timeout. They are left out of the provenance
+    #: written with each row. A kind extends the set with its own.
+    params_not_in_provenance: frozenset[str] = frozenset({"chunk_size"})
+
     #: What this kind produces, in the provenance vocabulary of the Pixano schemas. Most kinds
     #: run a model; a kind that does not run one must say so, so that its output is not taken
     #: for a prediction.
     source_type: str = "model"
+
+    def model_identity(self, params: ParamsT) -> ModelIdentity | None:
+        """The model this job runs, for the provenance of every row it writes.
+
+        None by default — a kind that runs no model. A kind that does returns at least the
+        model's name; the version is whatever the inference exposes beyond the name. Called
+        once per chunk, in the job's thread, so asking the server is allowed; but a provenance
+        that cannot be completed must not fail the chunk — return the name alone.
+        """
+        return None
+
+    def provenance_params(self, params: ParamsT) -> dict[str, Any]:
+        """The parameters the provenance records: all of them but the engine's."""
+        return {key: value for key, value in params.model_dump().items() if key not in self.params_not_in_provenance}
 
     def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
         """Put the dataset in shape before the job is split.

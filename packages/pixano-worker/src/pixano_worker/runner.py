@@ -38,7 +38,7 @@ from psycopg_pool import AsyncConnectionPool
 from pixano.datasets import Dataset
 
 from . import queue
-from .kinds import Chunk, Outcome, Registry, TransientError
+from .kinds import Chunk, JobKind, JobParams, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import SCHEMA_NAME
@@ -202,9 +202,9 @@ async def plan_one(
     try:
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media, fresh=True)
-        writer = _writer_for(library, dataset_id, kind_name, job_id, kind.source_type)
         async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
+            writer = await pool.run(lambda: _writer_for(library, dataset_id, kind, job_id, params))
             # Preparation precedes the split, under the same lease: a planner that dies between
             # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
             # is why `prepare` must be idempotent.
@@ -327,11 +327,15 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
     return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
-def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
-    """Bind a writer to a job's dataset.
+def _writer_for(
+    library: Path | None, dataset_id: str, kind: JobKind, job_id: str, params: JobParams | None = None
+) -> JobWriter:
+    """Bind a writer to a job's dataset, carrying the job's provenance.
 
     Opening is deferred to first use: a kind that writes nothing must not fail for lack of a
-    dataset, and the absence of a library only shows if someone writes.
+    dataset, and the absence of a library only shows if someone writes. With `params`, the
+    writer records them and asks the kind which model it runs — a call that may reach the
+    inference server, so this runs in the job's thread, never on the loop.
     """
 
     def open_dataset() -> Dataset:
@@ -344,7 +348,16 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
             raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _reopen_dataset(library, dataset_id)
 
-    return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset, dataset_id)
+    return JobWriter(
+        open_dataset,
+        kind.name,
+        job_id,
+        kind.source_type,
+        reopen_dataset,
+        dataset_id,
+        params=kind.provenance_params(params) if params is not None else None,
+        model=kind.model_identity(params) if params is not None else None,
+    )
 
 
 async def work(
@@ -631,13 +644,9 @@ async def _execute(
                 f"the outcome of kind '{kind_name}' covers {outcome.total} task(s), "
                 f"the chunk counts {chunk.task_count}"
             )
+        writer = _writer_for(library, dataset_id, kind, chunk.job_id, params)
         with _write_lock(dataset_id):
-            kind.write(
-                _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
-                result,
-                chunk.payload,
-                params,
-            )
+            kind.write(writer, result, chunk.payload, params)
         return outcome
 
     try:

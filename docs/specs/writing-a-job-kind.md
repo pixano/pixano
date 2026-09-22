@@ -38,6 +38,18 @@ replanned after an outage must not describe something different from what was pa
 
 A chunk's payload is opaque to the engine, and must be a JSON object.
 
+### `model_identity(params)` and `provenance_params(params)` — provenance
+
+Every row a kind writes through `writer.provenance()` says by itself how it was produced:
+`source_name` is the kind, `source_metadata` carries the job identifier (an opaque run
+label), the kind, the model and its version when the kind runs one, and the parameters.
+The writer fills it; the kind only answers two questions. `model_identity(params)` returns
+the model's name and whatever the inference exposes beyond it — the checkpoint it loaded —
+or `None` for a kind that runs no model; it runs in the job's thread, so asking the server is
+allowed, but a provenance that cannot be completed must not fail the chunk. The parameters
+recorded are all of them but the engine's: `chunk_size` by default, plus whatever the kind
+lists in `params_not_in_provenance` (a request timeout, a retry count).
+
 ### `prepare(writer, params)` — optional
 
 Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
