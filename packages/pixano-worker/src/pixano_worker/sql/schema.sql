@@ -90,6 +90,10 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     -- jeton de garde — une écriture porte l'`attempts` qu'elle a réclamé, donc un worker
     -- dont le bail a expiré ne peut pas écraser le résultat de son successeur.
     attempts    integer     NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+    -- Un job relancé (POST /jobs/{id}/retry) rouvre ses chunks en échec sans toucher à
+    -- `attempts`, qui doit rester monotone pour servir de jeton de garde : le plancher
+    -- marque d'où repart le compte, et les plafonds comparent `attempts - attempts_floor`.
+    attempts_floor integer  NOT NULL DEFAULT 0 CHECK (attempts_floor >= 0 AND attempts_floor <= attempts),
     claimed_by  text,
     lease_until timestamptz,
     -- Une panne passagère rend le chunk à la file, mais pas tout de suite : rejoué dans la
