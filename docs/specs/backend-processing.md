@@ -179,7 +179,7 @@ A failure **without** a response — status 0 from the client, which is how it w
 
 ### 8.3 Skipped is not quarantined
 
-A record the calculation does not apply to is counted, not stored. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
+A task the calculation does not apply to is counted, not stored — since step 2's lot 1 the embeddings kind plans existing media only and skips nothing, but a kind that plans by record still may. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
 
 ### 8.4 What a job says when it ends
 
@@ -258,7 +258,9 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
 
-**One image per record.** The embeddings kind embeds the first image view LanceDB returns for a record; on nuScenes, a record has several cameras and one is embedded. Written in the kind; not fixed, because the right fix depends on the grain of embeddings — per record or per view — which is a product decision (§19).
+**One embedding per medium, media types chosen by the user.** A record may hold several media — a nuScenes record has six camera images and a point cloud. A job's parameters name the media types it covers (`image`, `video`, `point_cloud`, `text`, from `pixano.schemas.media_type_of`, where a video frame belongs to its video); a kind declares the types it can send to the inference, and a job choosing another is refused whole at planning, the types named — the user serves what they need or narrows the selection. A task is a medium: a chunk's cost is its number of inference calls, so batches of media stay alike where batches of records held six images or none, and a chunk never mixes tables. The payload is `{table, view_ids}`; a chunk queued by an earlier version, by record, fails saying so. A quarantined item is a medium, its record in the detail.
+
+**Search is by medium, results by record.** A record's distance is its closest medium's; the search widens until it has k distinct records, and stops when it finds fewer vectors than it asked for. "Similar to" a record searches with every medium it has. The health counts distinct embedded media against the dataset's still images: `partial` means some image has no vector. Verified on nuScenes: 2 424 vectors, six per record for the 404 that have cameras, `ready`; "similar to" returns 20 distinct records for k = 20 in a quarter of a second.
 
 ## 14. Chunk size, measured
 
@@ -370,7 +372,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 
 - **The worker caches open datasets between jobs.** Planning reopens a job's dataset outside the cache, so a dataset recreated underneath the worker is seen as it is by the next job; a chunk of a running job reads the copy its planning opened.
 - **The API learns of a worker's writes at the end of the job only.** Its event broker drops the cached dataset when a job reaches a terminal state, whether or not a stream is open — reproduced on the stack before the fix: job done, table on disk, search reported absent until a restart. During a job, what the worker wrote is not yet visible to a search.
-- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py` writes `view_id` and builds an index; the worker does neither. Which path survives is a question of §19.
+- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py`, kept for now, writes one vector per record — its first image — and builds an index; the worker writes one per medium and builds none. On a multi-camera dataset its "Update" never completes the table, which the health rightly reports as partial. Rows it wrote, like rows written per record before step 2's lot 1, are not replaced by a worker rerun: rerun with `replace_existing_embeddings`.
 - **The inference answers 500 for a client error.** A corrupt image or a missing path should be a 4xx. The worker works around it by isolating the culprit (§8.2); the fix belongs in pixano-inference. Issue texts are to be drafted; nothing is published without the architect.
 - **Listing jobs costs three correlated subqueries per row.** Measured by the independent review at 256 000 chunks: 168–281 ms for fifty jobs, under the 500 ms p99 the project targets but with little margin at the cap of two hundred. Materialising the counters at chunk completion, or a covering index on `(job_id, state)`, are the two levers.
 - **Compaction runs under the dataset's write lock** (§12).
@@ -382,7 +384,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 Settled on 2026-09-22 with the architect, from `docs/design/etape2-conception.md`; the lots are in `docs/design/todo-etape2.md`. The first version of step 2 is pre-annotation only — embeddings, detection, segmentation, a review queue, and jobs reachable from the legacy interface until the new one ships.
 
 - **Embeddings are per medium, not per record.** One vector per image view composing a record, `view_id` filled; a search finds a medium and returns its record. Returning media is left open. The application's in-process path stays for now.
-- **Another model adds; the same model replaces its own rows.** The replacement key is (kind, model, record, view); `replace` becomes exact by that key. The second half is provisional — a rerun of the same model replacing rather than adding — and is to be revisited at the step 2 review. Replacing on request is a job parameter, `replace_previous`, honoured by `prepare`. Cleaning duplicates across models may be a workflow later.
+- **For annotations, another model adds; the same model replaces its own rows.** The replacement key is (kind, model, record, view); `replace` becomes exact by that key. The second half is provisional — a rerun of the same model replacing rather than adding — and is to be revisited at the step 2 review. Replacing on request will be a detection parameter, `replace_previous`, honoured by `prepare`. Cleaning duplicates across models may be a workflow later. An embeddings table, by contrast, holds one model (§12): another model goes through `replace_existing_embeddings`, which empties the table first.
 - **A rerun only replaces rows still `pending`.** Rows a human reviewed are frozen for that kind.
 - **`review_status`** takes `pending`, `accepted`, `corrected`, `rejected`, on every entity annotation schema (dataset spec version 3; an older dataset gains the column, empty, when opened); empty for a human annotation, `pending` set by the writer for a model's. Correcting keeps `source_type = model` and the model's trace, so corrections can be counted. Rejecting does not delete.
 - **Provenance** lives in `source_metadata`, set by the writer: `job_id`, `kind`, `model`, `model_version`, `params`. Dedicated columns when a filter by model becomes a need.
