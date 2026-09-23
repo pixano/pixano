@@ -15,11 +15,13 @@ left alone by a rerun, and a detection that mostly covers such a box, for the sa
 written: the person has already said what is there.
 """
 
+import io
 import logging
 import time
 from typing import Any, Iterable
 
 import httpx
+from PIL import Image, UnidentifiedImageError
 from pixano_inference_client import DetectionRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
 
@@ -154,9 +156,14 @@ class DetectionKind(JobKind[DetectionParams]):
     def process(self, reader: JobReader, payload: dict[str, Any], params: DetectionParams) -> dict[str, Any]:
         """Detect on each medium of a batch, and return its boxes, with the fate of each medium.
 
-        A medium that cannot be found, whose size is unknown — its boxes could not be placed —
-        or that the inference refuses goes to **quarantine**, its record in the detail. Otherwise
-        it is **produced**, even with no box: a medium where the model sees nothing is an answer.
+        A medium that cannot be found, whose size cannot be known — its boxes could not be
+        placed — or that the inference refuses goes to **quarantine**, its record in the detail.
+        Otherwise it is **produced**, even with no box: a medium where the model sees nothing is
+        an answer.
+
+        The size comes from the view, and from the image itself when the view has none: a
+        dataset imported by URI records no size, and quarantining all of it would make it
+        impossible to pre-annotate.
 
         Raises:
             TransientError: The inference does not answer, or refuses every medium through no
@@ -168,7 +175,7 @@ class DetectionKind(JobKind[DetectionParams]):
         views = {row.id: row for row in reader.rows(table, view_ids)} if view_ids else {}
 
         quarantined: list[dict[str, Any]] = []
-        candidates: list[tuple[Any, str]] = []
+        candidates: list[tuple[Any, str, tuple[int, int]]] = []
         # The media sent by path, so that one can be resent as bytes if the server refuses them
         # all while it still accepts the witness image.
         by_path: dict[str, Any] = {}
@@ -177,18 +184,19 @@ class DetectionKind(JobKind[DetectionParams]):
             if view is None:
                 quarantined.append({"item_id": view_id, "reason": "media not found"})
                 continue
-            if not (getattr(view, "width", 0) > 0 and getattr(view, "height", 0) > 0):
-                quarantined.append(
-                    {"item_id": view_id, "reason": "image size unknown", "detail": {"record_id": view.record_id}}
-                )
-                continue
             resolved = reader.resolve_media(table, view)
             if resolved is None:
                 quarantined.append(
                     {"item_id": view_id, "reason": "media not found", "detail": {"record_id": view.record_id}}
                 )
                 continue
-            candidates.append((view, resolved.value))
+            size = _recorded_size(view) or _measured_size(reader, table, view)
+            if size is None:
+                quarantined.append(
+                    {"item_id": view_id, "reason": "image size unknown", "detail": {"record_id": view.record_id}}
+                )
+                continue
+            candidates.append((view, resolved.value, size))
             if not resolved.carried_bytes:
                 by_path[view_id] = view
         read_s = time.perf_counter() - started
@@ -197,7 +205,7 @@ class DetectionKind(JobKind[DetectionParams]):
         started = time.perf_counter()
         media: list[dict[str, Any]] = []
         refused: list[tuple[Any, dict[str, Any]]] = []
-        for view, reference in candidates:
+        for view, reference, size in candidates:
             try:
                 output = self._detect(client, reference, params)
             except (httpx.TransportError, PixanoInferenceError) as error:
@@ -210,7 +218,7 @@ class DetectionKind(JobKind[DetectionParams]):
                     raise
                 refused.append((view, refusal_detail(error)))  # type: ignore[arg-type]
                 continue
-            media.append(_medium(view, output))
+            media.append(_medium(view, size, output))
         inference_s = time.perf_counter() - started
 
         if refused and not media:
@@ -317,13 +325,31 @@ class DetectionKind(JobKind[DetectionParams]):
         return client.detection(request, timeout=params.request_timeout_s).data
 
 
-def _medium(view: Any, output: Any) -> dict[str, Any]:
+def _recorded_size(view: Any) -> tuple[int, int] | None:
+    """The image's size as the dataset records it, if it does."""
+    width, height = getattr(view, "width", 0), getattr(view, "height", 0)
+    return (width, height) if width > 0 and height > 0 else None
+
+
+def _measured_size(reader: JobReader, table: str, view: Any) -> tuple[int, int] | None:
+    """The image's size read from its header, when the dataset does not record it."""
+    found = reader.dataset.get_view_binary(table, view.id)
+    if found is None or not found[0]:
+        return None
+    try:
+        with Image.open(io.BytesIO(found[0])) as image:
+            return image.size
+    except (UnidentifiedImageError, OSError):
+        return None
+
+
+def _medium(view: Any, size: tuple[int, int], output: Any) -> dict[str, Any]:
     """A medium's detections, placed as the dataset stores them: normalised, top-left and size.
 
     The server answers in pixels, corners; a box that the image's bounds reduce to nothing is
     not one.
     """
-    width, height = view.width, view.height
+    width, height = size
     boxes, scores, classes = [], [], []
     for (x1, y1, x2, y2), score, name in zip(output.boxes, output.scores, output.classes, strict=True):
         left, top = min(max(x1, 0), width), min(max(y1, 0), height)

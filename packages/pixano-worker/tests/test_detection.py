@@ -7,11 +7,13 @@
 """The detection kind: where its boxes land, what it does with each failure, and what it leaves
 to the boxes a person drew or reviewed."""
 
+import io
 import json
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from PIL import Image as PILImage
 from pixano_inference_client import PixanoInferenceError
 from pixano_worker.kinds import MODEL_TASK_MARKER, DetectionKind, TransientError
 from pixano_worker.kinds.detection import iou
@@ -59,15 +61,30 @@ class _Inference:
         )
 
 
-class _Reader:
-    """Images of 200 × 100 pixels, designated by path; some missing, some of unknown size."""
+def _png(width: int, height: int) -> bytes:
+    buffer = io.BytesIO()
+    PILImage.new("RGB", (width, height)).save(buffer, format="PNG")
+    return buffer.getvalue()
 
-    def __init__(self, missing: set[str] = frozenset(), unsized: set[str] = frozenset()) -> None:  # type: ignore[assignment]
-        self.missing, self.unsized = missing, unsized
+
+class _Reader:
+    """Images of 200 × 100 pixels, designated by path; some missing, some whose size the dataset
+    does not record, some of those unreadable."""
+
+    def __init__(
+        self,
+        missing: set[str] = frozenset(),  # type: ignore[assignment]
+        unsized: set[str] = frozenset(),  # type: ignore[assignment]
+        unreadable: set[str] = frozenset(),  # type: ignore[assignment]
+    ) -> None:
+        self.missing, self.unsized, self.unreadable = missing, unsized, unreadable
         self.dataset = SimpleNamespace(
-            get_view_binary=lambda table, row_id: (b"bytes", "image/jpeg"),
+            get_view_binary=self._get_view_binary,
             info=SimpleNamespace(tables={"bboxes": object, "entities": object, "images": object}),
         )
+
+    def _get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str]:
+        return (b"not an image" if row_id in self.unreadable else _png(WIDTH, HEIGHT)), "image/png"
 
     def rows(self, table_name: str, ids: list[str]) -> list[Any]:
         return [
@@ -165,9 +182,18 @@ class TestFailures:
 
         assert outcome.produced == 1
 
-    def test_a_medium_of_unknown_size_is_quarantined_without_a_call(self, inference: _Inference) -> None:
+    def test_a_size_the_dataset_does_not_record_is_read_from_the_image(self, inference: _Inference) -> None:
+        """A dataset imported by URI records no size; its boxes are placed all the same."""
+        inference.answers["/medias/a.jpg"] = [([20, 10, 120, 60], 0.9, "car")]
+
+        result, outcome = _process(_Reader(unsized={"a"}), ["a"])
+
+        assert outcome.quarantined == []
+        assert result["media"][0]["boxes"] == [[0.1, 0.1, 0.5, 0.5]]
+
+    def test_a_medium_whose_size_cannot_be_known_is_quarantined_without_a_call(self, inference: _Inference) -> None:
         """Its boxes could not be placed: they are stored relative to its size."""
-        _, outcome = _process(_Reader(unsized={"a"}), ["a", "b"])
+        _, outcome = _process(_Reader(unsized={"a"}, unreadable={"a"}), ["a", "b"])
 
         assert [(item.item_id, item.reason) for item in outcome.quarantined] == [("a", "image size unknown")]
         assert len(inference.calls) == 1
