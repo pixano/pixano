@@ -6,7 +6,15 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { fieldKind, initialValue, initialValues, missingRequired, toParams } from "../schemaForm";
+import {
+  confirmationsFor,
+  fieldKind,
+  initialValue,
+  initialValues,
+  missingRequired,
+  toggleChoice,
+  toParams,
+} from "../schemaForm";
 import type { JsonSchema } from "$lib/api/jobs";
 
 // The shape pydantic actually publishes for a job kind, trimmed to what matters here.
@@ -149,5 +157,56 @@ describe("lists of scalars", () => {
 
   it("starts empty even when the default is an empty list", () => {
     expect(initialValue({ type: "array", items: { type: "string" }, default: [] })).toBe("");
+  });
+});
+
+describe("multiple choices", () => {
+  // Step 2, lot 1: the media types a job covers.
+  const media: JsonSchema = {
+    type: "array",
+    items: { type: "string", enum: ["image", "video", "point_cloud", "text"] },
+    default: ["image"],
+  };
+
+  it("renders a list drawn from a fixed set as choices", () => {
+    expect(fieldKind(media)).toBe("choices");
+  });
+
+  it("starts on the declared default", () => {
+    expect(initialValue(media)).toEqual(["image"]);
+  });
+
+  it("ticks and unticks in the declared order", () => {
+    const ticked = toggleChoice(media, ["point_cloud"], "image");
+    expect(ticked).toEqual(["image", "point_cloud"]);
+    expect(toggleChoice(media, ticked, "image")).toEqual(["point_cloud"]);
+  });
+
+  it("sends an empty selection rather than letting the default run", () => {
+    const schema: JsonSchema = { properties: { media } };
+    expect(toParams(schema, { media: [] })).toEqual({ media: [] });
+  });
+});
+
+describe("confirmationsFor", () => {
+  const schema: JsonSchema = {
+    properties: {
+      model: { type: "string" },
+      replace_existing_embeddings: {
+        type: "boolean",
+        default: false,
+        "x-pixano-confirm": "This deletes every vector already computed.",
+      },
+    },
+  };
+
+  it("asks nothing while the destructive parameter is off", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: false })).toEqual([]);
+  });
+
+  it("gives the parameter's text once it is set", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: true })).toEqual([
+      "This deletes every vector already computed.",
+    ]);
   });
 });

@@ -64,6 +64,8 @@ export type JsonSchema = {
   maximum?: number;
   anyOf?: JsonSchema[];
   items?: JsonSchema;
+  /** Set on a parameter that destroys something when set: the form asks before running. */
+  "x-pixano-confirm"?: string;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */

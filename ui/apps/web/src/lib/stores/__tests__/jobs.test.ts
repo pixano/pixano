@@ -126,6 +126,21 @@ describe("failureOf", () => {
     expect(failureOf(job({ state: "done" }))).toBeNull();
   });
 
+  it("adds the detail, which says why", () => {
+    // Step 2, lot 1: a job refused at planning named the media types it could not process,
+    // and the panel showed "planning failed" alone.
+    const failed = job({
+      state: "error",
+      error: {
+        reason: "planning failed",
+        detail: "the 'embeddings' job cannot process point_cloud",
+      },
+    });
+    expect(failureOf(failed)).toBe(
+      "planning failed: the 'embeddings' job cannot process point_cloud",
+    );
+  });
+
   it("gives the reason of a failed job", () => {
     // Independent review, D4: a failed job read "error" and nothing else.
     expect(failureOf(job({ state: "error", error: { reason: "planning failed" } }))).toBe(

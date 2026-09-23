@@ -6,7 +6,13 @@ License: CECILL-C
 
 <script lang="ts">
   import SchemaField from "./SchemaField.svelte";
-  import { initialValues, missingRequired, requiredNames, toParams } from "./schemaForm";
+  import {
+    confirmationsFor,
+    initialValues,
+    missingRequired,
+    requiredNames,
+    toParams,
+  } from "./schemaForm";
   import type { JobKind, JobTarget } from "$lib/api/jobs";
 
   type Props = {
@@ -20,6 +26,9 @@ License: CECILL-C
   let selectedName = $state("");
   let values = $state<Record<string, unknown>>({});
   let submitting = $state(false);
+  // Set by a first click when a parameter asks for confirmation; any edit clears it, so what
+  // is confirmed is what runs.
+  let confirming = $state(false);
 
   const selected = $derived(kinds.find((kind) => kind.name === selectedName) ?? kinds[0]);
 
@@ -34,6 +43,7 @@ License: CECILL-C
   const required = $derived(selected ? requiredNames(selected.params_schema) : new Set<string>());
   const missing = $derived(selected ? missingRequired(selected.params_schema, values) : []);
   const fields = $derived(Object.entries(selected?.params_schema.properties ?? {}));
+  const confirmations = $derived(selected ? confirmationsFor(selected.params_schema, values) : []);
 
   // Switching kind must not carry the previous kind's values over: the parameters are not
   // the same, and a stale one would be refused by the schema it does not belong to.
@@ -45,6 +55,11 @@ License: CECILL-C
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     if (!selected || !dataset || submitting) return;
+    if (confirmations.length > 0 && !confirming) {
+      confirming = true;
+      return;
+    }
+    confirming = false;
     submitting = true;
     const accepted = await onSubmit(selected.name, toParams(selected.params_schema, values));
     submitting = false;
@@ -87,7 +102,10 @@ License: CECILL-C
       {schema}
       required={required.has(name)}
       value={values[name]}
-      onChange={(value: unknown) => (values = { ...values, [name]: value })}
+      onChange={(value: unknown) => {
+        values = { ...values, [name]: value };
+        confirming = false;
+      }}
     />
   {/each}
 
@@ -95,11 +113,21 @@ License: CECILL-C
     <p class="text-xs text-muted-foreground">Fill in: {missing.join(", ")}</p>
   {/if}
 
+  {#if confirming}
+    <div
+      class="flex flex-col gap-1 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs"
+    >
+      {#each confirmations as text (text)}
+        <p>{text}</p>
+      {/each}
+      <p class="font-medium">Click again to confirm.</p>
+    </div>
+  {/if}
   <button
     type="submit"
     class="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
     disabled={!selected || !dataset || missing.length > 0 || submitting}
   >
-    {submitting ? "Starting…" : "Run"}
+    {submitting ? "Starting…" : confirming ? "Confirm and run" : "Run"}
   </button>
 </form>

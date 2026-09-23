@@ -211,7 +211,11 @@ export function stateLabelOf(job: Job): string {
 export function failureOf(job: Job): string | null {
   if (job.state !== "error") return null;
   const reason = job.error?.reason;
-  return typeof reason === "string" && reason ? reason : "failed for an unknown reason";
+  const detail = job.error?.detail;
+  if (typeof reason !== "string" || !reason) return "failed for an unknown reason";
+  // The reason says which step failed, the detail says why — a job refused at planning reads
+  // "planning failed" and nothing more without it.
+  return typeof detail === "string" && detail ? `${reason}: ${detail}` : reason;
 }
 
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */

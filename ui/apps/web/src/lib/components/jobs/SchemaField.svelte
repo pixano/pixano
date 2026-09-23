@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { asText, fieldKind, type FieldKind } from "./schemaForm";
+  import { asText, fieldKind, toggleChoice, type FieldKind } from "./schemaForm";
   import type { JsonSchema } from "$lib/api/jobs";
 
   type Props = {
@@ -62,6 +62,20 @@ License: CECILL-C
       value={asText(value)}
       onchange={(event) => onChange(event.currentTarget.value)}
     />
+  {:else if kind === "choices"}
+    <span class="flex flex-wrap gap-3">
+      {#each schema.items?.enum ?? [] as choice (asText(choice))}
+        <span class="flex items-center gap-1">
+          <input
+            type="checkbox"
+            class="h-4 w-4"
+            checked={Array.isArray(value) && value.includes(choice)}
+            onchange={() => onChange(toggleChoice(schema, value, choice))}
+          />
+          {asText(choice)}
+        </span>
+      {/each}
+    </span>
   {:else if kind === "array"}
     <input
       type="text"
