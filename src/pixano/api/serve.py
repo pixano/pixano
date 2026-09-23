@@ -8,11 +8,12 @@ import asyncio
 import warnings
 from functools import lru_cache
 from importlib.resources import files
+from pathlib import Path
 
 import fastapi
 import uvicorn
 from fastapi import HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -147,6 +148,20 @@ class App:
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
             return templates.TemplateResponse(request, "index.html")
+
+        def root_static_file(filename: str, media_type: str) -> FileResponse:
+            path = Path(TEMPLATE_PATH) / filename
+            if not path.is_file():
+                raise HTTPException(status_code=404, detail="Not Found")
+            return FileResponse(path, media_type=media_type)
+
+        @self.app.api_route("/favicon.ico", methods=["GET", "HEAD"], include_in_schema=False)
+        def favicon():
+            return root_static_file("favicon.ico", "image/x-icon")
+
+        @self.app.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+        def robots():
+            return root_static_file("robots.txt", "text/plain")
 
         def _is_non_spa_path(path: str) -> bool:
             return any(path == prefix or path.startswith(f"{prefix}/") for prefix in NON_SPA_PREFIXES)

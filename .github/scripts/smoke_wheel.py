@@ -17,8 +17,10 @@ import tempfile
 import time
 from importlib import import_module
 from importlib.metadata import version
+from importlib.resources import files
 from pathlib import Path
 from urllib.error import URLError
+from urllib.parse import quote
 from urllib.request import urlopen
 
 
@@ -79,6 +81,31 @@ def smoke_test(expected_version: str) -> None:
                         raise RuntimeError("The bundled asset did not return JavaScript.")
                     if not response.read():
                         raise RuntimeError("The bundled JavaScript asset is empty.")
+
+                ui_root = Path(str(files("pixano").joinpath("api/dist")))
+                ui_assets = sorted(path for path in ui_root.rglob("*") if path.is_file())
+                content_types = {
+                    ".css": {"text/css"},
+                    ".ico": {"image/x-icon", "image/vnd.microsoft.icon"},
+                    ".js": {"text/javascript", "application/javascript"},
+                    ".json": {"application/json"},
+                    ".png": {"image/png"},
+                    ".txt": {"text/plain"},
+                }
+                for path in ui_assets:
+                    relative = path.relative_to(ui_root).as_posix()
+                    if relative == "index.html":
+                        # The home page above is rendered through Jinja.
+                        continue
+                    asset_url = f"{base}/{quote(relative)}"
+                    with urlopen(asset_url, timeout=10) as response:
+                        if response.url != asset_url:
+                            raise RuntimeError(f"Bundled UI asset redirects instead of serving its file: {relative}")
+                        expected_types = content_types.get(path.suffix)
+                        if expected_types and response.headers.get_content_type() not in expected_types:
+                            raise RuntimeError(f"Incorrect content type for bundled UI asset: {relative}")
+                        if response.read() != path.read_bytes():
+                            raise RuntimeError(f"Served UI asset differs from the installed wheel: {relative}")
             except BaseException:
                 log.seek(0)
                 print(log.read(), file=sys.stderr)
@@ -90,7 +117,10 @@ def smoke_test(expected_version: str) -> None:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=5)
-    print(f"Pixano {installed}: installed CLI, initialization, health, home page, and bundled UI passed.")
+    print(
+        f"Pixano {installed}: installed CLI, initialization, health, home page, "
+        f"and all {len(ui_assets) - 1} bundled UI assets passed."
+    )
 
 
 if __name__ == "__main__":

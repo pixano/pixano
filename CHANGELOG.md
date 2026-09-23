@@ -117,6 +117,8 @@ library.
 
 ### Fixed
 
+- The installed app serves its packaged favicon and robots file directly instead
+  of redirecting those requests to the UI. Release smoke checks verify every bundled asset.
 - Dependency validation uses stable releases, removes unused runtime packages,
   and updates affected packages to patched versions. FastAPI's minimum matches
   the template API used by the application.
