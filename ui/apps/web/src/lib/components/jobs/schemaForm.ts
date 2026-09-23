@@ -15,7 +15,11 @@ export type FieldKind =
   | "enum"
   | "array"
   | "choices"
+  | "model"
   | "unsupported";
+
+/** The models the inference serves, by task — what a model field offers. */
+export type ServedModels = Record<string, string[]>;
 
 const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
 
@@ -27,6 +31,7 @@ const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
  */
 export function fieldKind(schema: JsonSchema): FieldKind {
   if (schema.enum && schema.enum.length > 0) return "enum";
+  if (modelTaskOf(schema)) return "model";
 
   const type = schema.type ?? nonNullType(schema.anyOf);
   if (type && RENDERABLE.has(type)) return type as FieldKind;
@@ -48,6 +53,41 @@ function scalarType(schema: JsonSchema): string | undefined {
 function nonNullType(branches: JsonSchema[] | undefined): string | undefined {
   const usable = (branches ?? []).filter((branch) => branch.type && branch.type !== "null");
   return usable.length === 1 ? usable[0].type : undefined;
+}
+
+/** The inference task a model parameter belongs to, if it is one. */
+export function modelTaskOf(schema: JsonSchema): string | undefined {
+  return schema["x-pixano-model-task"] || undefined;
+}
+
+/** The inference tasks whose models a set of kinds asks for, each once. */
+export function modelTasks(schemas: JsonSchema[]): string[] {
+  const tasks = schemas.flatMap((schema) =>
+    Object.values(schema.properties ?? {}).map(modelTaskOf),
+  );
+  return [...new Set(tasks.filter((task): task is string => task !== undefined))];
+}
+
+/**
+ * Propose a served model in every model field still empty.
+ *
+ * The models arrive after the form is drawn, and a field the user already filled keeps what
+ * they chose. The first model the inference lists is proposed: nothing in the job names one.
+ */
+export function proposeModels(
+  schema: JsonSchema,
+  values: Record<string, unknown>,
+  served: ServedModels,
+): Record<string, unknown> {
+  const proposed = { ...values };
+  for (const [name, field] of Object.entries(schema.properties ?? {})) {
+    const task = modelTaskOf(field);
+    const first = task ? served[task]?.[0] : undefined;
+    if (first !== undefined && (proposed[name] === "" || proposed[name] === undefined)) {
+      proposed[name] = first;
+    }
+  }
+  return proposed;
 }
 
 /** The value a field starts at: its declared default, or an empty value of its kind. */

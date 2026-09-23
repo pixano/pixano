@@ -35,7 +35,12 @@ License: CECILL-C
 
 <div class="flex h-full flex-col overflow-hidden">
   {#if jobsStore.runnable}
-    <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
+    <SubmitJobForm
+      kinds={jobsStore.kinds}
+      {dataset}
+      servedModels={jobsStore.servedModels}
+      onSubmit={run}
+    />
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
       No worker is running, so nothing can be launched. Start pixano-worker and reopen this panel.

@@ -12,6 +12,8 @@ import {
   initialValue,
   initialValues,
   missingRequired,
+  modelTasks,
+  proposeModels,
   toggleChoice,
   toParams,
 } from "../schemaForm";
@@ -215,5 +217,52 @@ describe("confirmationsFor", () => {
     expect(confirmationsFor(schema, { replace_existing_embeddings: true })).toEqual([
       "This deletes every vector already computed.",
     ]);
+  });
+});
+
+describe("a model field", () => {
+  // What the detection kind publishes: a required model, named by task and not by name.
+  const detection: JsonSchema = {
+    properties: {
+      model: { type: "string", minLength: 1, "x-pixano-model-task": "detection" } as JsonSchema,
+      box_threshold: { type: "number", default: 0.5 },
+    },
+    required: ["model"],
+  };
+  const embeddings: JsonSchema = {
+    properties: { model: { type: "string", "x-pixano-model-task": "embedding" } },
+  };
+
+  it("renders as the models served for its task", () => {
+    expect(fieldKind(detection.properties!.model)).toBe("model");
+  });
+
+  it("names each task the kinds need once", () => {
+    expect(modelTasks([detection, embeddings, detection, FAKE_SCHEMA])).toEqual([
+      "detection",
+      "embedding",
+    ]);
+  });
+
+  it("proposes the first model the inference serves for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), {
+      detection: ["yolo26s", "yolov8n"],
+      embedding: ["clip"],
+    });
+
+    expect(values).toEqual({ model: "yolo26s", box_threshold: 0.5 });
+  });
+
+  it("keeps a model the user already chose", () => {
+    const values = proposeModels(detection, { model: "yolov8n" }, { detection: ["yolo26s"] });
+
+    expect(values.model).toBe("yolov8n");
+  });
+
+  it("stays empty, and required, when the inference serves nothing for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), { embedding: ["clip"] });
+
+    expect(values.model).toBe("");
+    expect(missingRequired(detection, values)).toEqual(["model"]);
   });
 });
