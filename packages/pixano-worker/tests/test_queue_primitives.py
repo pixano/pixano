@@ -498,3 +498,25 @@ class TestOutcome:
 
         items = db.execute(f"SELECT item_id, reason FROM {SCHEMA_NAME}.job_items WHERE job_id = %s", (job,)).fetchall()
         assert items == [("a", "second time")]
+
+    async def test_two_chunks_finishing_together_with_quarantined_items_do_not_deadlock(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, postgres_url: str
+    ) -> None:
+        """Step 2, lot 2, on the stack: every chunk of a job abandoned for a deadlock.
+
+        Recording a quarantined item takes a KEY SHARE lock on its job's row, through the
+        foreign key. Two chunks of one job finishing at once both held it, then both asked to
+        lock the row for update, each waiting for the other. Here the second chunk stands still
+        right after recording its item, as its transaction does before advancing the job: the
+        first must still be able to finish, rather than wait on it.
+        """
+        job = _enqueue(db, 2)
+        first, second = await queue.claim(adb, "worker-a", 2)
+        with psycopg.connect(postgres_url) as other:
+            other.execute(queue.QUARANTINE, (job, second.id, "img-2", "refused", None))
+            await adb.execute("SET lock_timeout = '2s'")
+
+            finished = await queue.finish(adb, first, quarantined=[self.Item("img-1", "refused")])
+
+            other.rollback()
+        assert finished is not None

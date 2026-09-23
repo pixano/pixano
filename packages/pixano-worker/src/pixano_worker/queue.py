@@ -176,7 +176,7 @@ WITH picked AS (
     SELECT id FROM {SCHEMA_NAME}.jobs
     WHERE id = ANY(%s) AND state = 'pending'
     ORDER BY id
-    FOR UPDATE
+    FOR NO KEY UPDATE
 )
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = 'running', updated_at = now()
@@ -188,9 +188,15 @@ RETURNING j.id
 # The safety net of START_JOBS: if the mark was missed — a crash between the claim and it — the
 # first finished chunk sets it. The previous state is read under the row lock, so that the
 # caller knows whether it is the one that made the transition, and announces it only once.
+#
+# NO KEY UPDATE, not UPDATE: the counters are not the key, and the stronger lock conflicts with
+# the KEY SHARE that recording a quarantined item takes on the job's row through its foreign
+# key. Two chunks of one job finishing at once each held that, then each waited for the other
+# to lock the row — a deadlock that, on the stack, abandoned every chunk of a job whose images
+# were all set aside (step 2, lot 2).
 ADVANCE_JOB = f"""
 WITH previous AS (
-    SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %(job)s FOR UPDATE
+    SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %(job)s FOR NO KEY UPDATE
 )
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET done_tasks = j.done_tasks + %(tasks)s,
