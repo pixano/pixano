@@ -84,6 +84,9 @@ class _FakeDataset:
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)
 
+    def ensure_entity_text_field(self, name: str) -> None:
+        self.entity_fields: set[str] = {*getattr(self, "entity_fields", set()), name}
+
     def checksum(self, table_name: str) -> str:
         """A fingerprint of the content, insensitive to the write order."""
         table = self.tables.get(table_name, {})
@@ -494,6 +497,124 @@ class TestAgainstRealLance:
         reviewer is knowing whether an annotation comes from a model, not which cog wrote it.
         """
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
+
+
+class TestDetectedObjects:
+    """Step 2, lot 2: a detected box comes with the object it names, in the entities table."""
+
+    @pytest.fixture
+    def scene(self, tmp_path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas import BBox, Entity, Image, Record
+
+        dataset = Dataset.create(
+            tmp_path / "scene",
+            DatasetInfo(id="scene", name="Scene", record=Record, entity=Entity, bbox=BBox, views={"image": Image}),
+        )
+        dataset.add_records({"records": [Record(id="r1")]})
+        return dataset
+
+    @staticmethod
+    def _detect(scene, classes: list[str], job_id: str = "job-1") -> list[str]:
+        from pixano.schemas import BBox
+
+        writer = JobWriter(lambda: scene, "detection", job_id, "model", model=ModelIdentity("yolo"))
+        field = writer.ensure_label_field()
+        boxes = [
+            BBox(
+                id="",
+                record_id="r1",
+                view_id="v1",
+                coords=[0.1, 0.1, 0.2, 0.2],
+                format="xywh",
+                is_normalized=True,
+                **writer.provenance(),
+            )
+            for _ in classes
+        ]
+        entities = [writer.entity_schema()(id="", record_id="r1", **{field: name}) for name in classes]
+        return writer.replace("bboxes", "v1", boxes, entities)
+
+    @staticmethod
+    def _objects(scene) -> dict[str, tuple[str, str]]:
+        """Each box's class, through the entity it points to, and its review status."""
+        entities = {entity.id: entity.category for entity in scene.get_data("entities", limit=None)}
+        return {box.id: (entities[box.entity_id], box.review_status) for box in scene.get_data("bboxes", limit=None)}
+
+    @staticmethod
+    def _review(scene, box_id: str, status: str) -> None:
+        box = scene.get_data("bboxes", ids=[box_id])[0]
+        box.review_status = status
+        scene.update_data("bboxes", [box])
+
+    def test_a_dataset_whose_entities_hold_no_class_gains_one(self, scene) -> None:
+        """nuScenes, Demo shapes: entities are bare identifiers until a detection names them."""
+        from pixano.schemas import label_field_of
+
+        assert label_field_of(scene.info.entity) is None
+
+        self._detect(scene, ["cat"])
+
+        assert label_field_of(scene.info.entity) == "category"
+
+    def test_each_box_points_to_an_entity_that_names_its_class(self, scene) -> None:
+        written = self._detect(scene, ["cat", "dog"])
+
+        assert self._objects(scene) == {written[0]: ("cat", "pending"), written[1]: ("dog", "pending")}
+
+    def test_a_rerun_leaves_no_orphan_entity(self, scene) -> None:
+        self._detect(scene, ["cat", "dog", "cow"])
+
+        self._detect(scene, ["horse"])
+
+        assert len(scene.get_data("entities", limit=None)) == 1
+        assert list(self._objects(scene).values()) == [("horse", "pending")]
+
+    def test_the_entity_of_a_reviewed_box_stays_with_it(self, scene) -> None:
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[1], "accepted")
+
+        self._detect(scene, [])
+
+        assert self._objects(scene) == {first[1]: ("dog", "accepted")}
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[1]]
+
+    def test_rerunning_is_idempotent(self, scene) -> None:
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[0], "corrected")
+        self._detect(scene, ["x", "y"])
+        once = self._objects(scene)
+
+        self._detect(scene, ["x", "y"], job_id="job-2")
+
+        assert self._objects(scene) == once
+        assert len(scene.get_data("entities", limit=None)) == len(once)
+
+    def test_dropping_the_pending_rows_keeps_what_a_person_reviewed(self, scene) -> None:
+        """`replace_previous`: what was never looked at goes, whatever model wrote it."""
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[0], "rejected")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True)
+
+        assert dropped == 1
+        assert self._objects(scene) == {first[0]: ("cat", "rejected")}
+        assert len(scene.get_data("entities", limit=None)) == 1
+
+    def test_dropping_leaves_another_kind_alone(self, scene) -> None:
+        self._detect(scene, ["cat"])
+        writer = JobWriter(lambda: scene, "segmentation", "job-2", "model", model=ModelIdentity("sam"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 0
+        assert len(self._objects(scene)) == 1
+
+    def test_one_entity_per_box_is_required(self, scene) -> None:
+        writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        with pytest.raises(ValueError, match="1 entities for 0 rows"):
+            writer.replace("bboxes", "v1", [], [SimpleNamespace(id="")])
 
 
 class TestMediaEmbeddings:

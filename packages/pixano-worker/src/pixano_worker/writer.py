@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, Protocol, Sequence
 
+from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
+
 
 logger = logging.getLogger("pixano-worker")
 
@@ -39,6 +41,9 @@ logger = logging.getLogger("pixano-worker")
 # for two words.
 MODEL_SOURCE = "model"
 PENDING_REVIEW = "pending"
+
+# The canonical table of a dataset's entities.
+ENTITY_TABLE = "entities"
 
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
@@ -153,6 +158,10 @@ class DatasetWriteTarget(Protocol):
 
     def drop_record_embeddings(self) -> None:
         """Delete the embeddings table and the model it declares."""
+        ...
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
@@ -343,7 +352,9 @@ class JobWriter:
     def _model_name(self) -> str | None:
         return self.model.name if self.model is not None else None
 
-    def replace(self, table_name: str, key: str, rows: Sequence[Any]) -> list[str]:
+    def replace(
+        self, table_name: str, key: str, rows: Sequence[Any], entities: Sequence[Any] | None = None
+    ) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
         Three steps. What a previous run wrote for this (kind, model, key) is read by the
@@ -359,14 +370,26 @@ class JobWriter:
         encodes, so another model's rows for the same key are left alone, and no output
         shrinks past what is cleaned.
 
+        An annotation can come with its entity — a detected box and the object it names. The
+        entity shares its annotation's identifier, in the entities table, and follows it: written
+        before it, since the annotation references it; kept when the annotation is frozen;
+        deleted with it when it is stale.
+
         Args:
             table_name: The target table.
             key: What these outputs are about, typically an item identifier.
             rows: The rows to write. Their `id` field is overwritten.
+            entities: One entity per row, when the rows are annotations of new objects. Their
+                `id` is overwritten, and each row's `entity_id` set to it.
 
         Returns:
             The identifiers written.
+
+        Raises:
+            ValueError: There is not one entity per row.
         """
+        if entities is not None and len(entities) != len(rows):
+            raise ValueError(f"{len(entities)} entities for {len(rows)} rows")
         prefix = derive_prefix(self.kind, key, self._model_name)
         previous = [
             row
@@ -384,6 +407,12 @@ class JobWriter:
             written.append(row.id)
             rank += 1
 
+        if entities:
+            for entity, row in zip(entities, rows, strict=True):
+                entity.id = row.id
+                row.entity_id = entity.id
+            self.dataset.update_data(ENTITY_TABLE, list(entities))
+            self._count_write(ENTITY_TABLE)
         if rows:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
@@ -392,8 +421,68 @@ class JobWriter:
         stale = [row.id for row in previous if row.id not in replaced and _rank_of(row.id) not in frozen]
         if stale:
             self.dataset.delete_data(table_name, stale)
+            if entities is not None:
+                self._delete_existing(ENTITY_TABLE, stale)
             logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
         return written
+
+    def drop_pending(self, table_name: str, with_entities: bool = False) -> int:
+        """Delete every row this kind wrote that nobody has reviewed yet, whatever its model.
+
+        For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
+        means the pending ones — a row a person accepted, corrected or rejected stays.
+
+        Args:
+            table_name: The kind's annotation table.
+            with_entities: Delete the entities those rows name too.
+
+        Returns:
+            How many rows were deleted.
+        """
+        pending = [
+            row.id
+            for row in self.dataset.get_data(
+                table_name, where=f"source_name = '{self.kind}' AND review_status = '{PENDING_REVIEW}'"
+            )
+        ]
+        if pending:
+            self.dataset.delete_data(table_name, pending)
+            if with_entities:
+                self._delete_existing(ENTITY_TABLE, pending)
+            logger.info(
+                "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
+            )
+        return len(pending)
+
+    def ensure_label_field(self) -> str:
+        """The entity field this job writes a class into, added to the dataset if there is none.
+
+        Chosen with the rule the annotation interface uses to read a class. A dataset whose
+        entities hold no text field gets one, `category`, empty for the entities already there.
+
+        Returns:
+            The field name.
+        """
+        entity = self.dataset.info.entity
+        field = label_field_of(entity) if entity is not None else None
+        if field is None:
+            self.dataset.ensure_entity_text_field(DEFAULT_LABEL_FIELD)
+            field = DEFAULT_LABEL_FIELD
+            logger.info("job %s: the dataset's entities gained a '%s' field", self.job_id, field)
+        return field
+
+    def entity_schema(self) -> Any:
+        """The dataset's entity schema, to build the entities a job writes."""
+        return self.dataset.info.entity
+
+    def read(self, table_name: str, where: str) -> list[Any]:
+        """Rows of a table matching a filter — what a kind checks its outputs against."""
+        return self.dataset.get_data(table_name, where=where)
+
+    def _delete_existing(self, table_name: str, ids: list[str]) -> None:
+        existing = [row.id for row in self.dataset.get_data(table_name, ids=ids)]
+        if existing:
+            self.dataset.delete_data(table_name, existing)
 
     def _count_write(self, table_name: str) -> None:
         """Count a write, and compact the table once enough have accumulated."""
