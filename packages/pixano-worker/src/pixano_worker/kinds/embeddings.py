@@ -46,6 +46,10 @@ TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
 # route, no model. Splitting the batch would change nothing.
 REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 
+# How long a chunk may wait to learn which checkpoint the model runs. The answer only completes
+# the provenance: a slow server must not hold the chunk for the client's default minute.
+CHECKPOINT_QUERY_TIMEOUT_S = 5.0
+
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
 # find out whether the server can still embed anything, not to produce a vector.
 WITNESS_IMAGE_SIDE = 16
@@ -108,7 +112,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """Bind this kind to the inference server the worker knows."""
         self.inference_url = inference_url.rstrip("/")
         self.api_key = api_key
-        self._checkpoints: dict[str, str | None] = {}
+        self._checkpoints: dict[str, str] = {}
 
     #: How the engine runs the job, not what it computes: absent from the provenance.
     params_not_in_provenance = JobKind.params_not_in_provenance | {"request_timeout_s", "max_retries"}
@@ -117,21 +121,32 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """The model's name, and the checkpoint the server loaded under it.
 
         The server declares no version as such; the checkpoint path is what identifies which
-        weights answered, and it is what a reviewer needs to tell two deployments of the same
-        name apart. Asked once per model per process: a server redeployed with other weights
-        under the same name during a job would keep the old answer — accepted, the job's rows
-        were not produced by two checkpoints on purpose.
+        weights answered. Embedding rows carry no provenance today — the model lives in the
+        dataset's sidecar as long as one table holds one model — so this is the reference
+        implementation the pre-annotation kinds copy, not something the vectors record.
+
+        Asked once per model per process, and only a successful answer is remembered: a
+        server that could not be asked is asked again on the next chunk rather than leaving
+        every later row without a version.
         """
         if params.model not in self._checkpoints:
-            self._checkpoints[params.model] = self._checkpoint_of(params.model, params)
+            checkpoint = self._checkpoint_of(params.model)
+            if checkpoint is None:
+                return ModelIdentity(params.model)
+            self._checkpoints[params.model] = checkpoint
         return ModelIdentity(params.model, self._checkpoints[params.model])
 
-    def _checkpoint_of(self, model: str, params: EmbeddingsParams) -> str | None:
-        client = SyncPixanoInferenceClient(self.inference_url, api_key=self.api_key or None, max_retries=0)
+    def _checkpoint_of(self, model: str) -> str | None:
         try:
-            for info in client.list_models():
-                if info.name == model:
-                    return info.model_path or None
+            with SyncPixanoInferenceClient(
+                self.inference_url,
+                api_key=self.api_key or None,
+                max_retries=0,
+                timeout=CHECKPOINT_QUERY_TIMEOUT_S,
+            ) as client:
+                for info in client.list_models():
+                    if info.name == model:
+                        return info.model_path or None
         except Exception as error:  # noqa: BLE001 — a provenance that cannot be completed must not fail the chunk
             log.warning("model '%s': cannot ask the inference for its checkpoint (%s)", model, error)
         return None

@@ -55,6 +55,12 @@ class _Inference:
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
         return self
 
+    def __enter__(self) -> "_Inference":
+        return self
+
+    def __exit__(self, *_exc: Any) -> None:
+        return None
+
     def list_models(self) -> list[Any]:
         if self.unreachable:
             raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
@@ -360,6 +366,15 @@ class TestModelIdentity:
         identity = kind.model_identity(PARAMS)
 
         assert (identity.name, identity.version) == ("clip", None)
+
+    def test_a_failed_query_is_asked_again_rather_than_remembered(self, inference: _Inference) -> None:
+        """One unreachable moment must not leave every later row of the process without a version."""
+        kind = EmbeddingsKind("http://inference", "")
+        inference.unreachable = True
+        kind.model_identity(PARAMS)
+        inference.unreachable = False
+
+        assert kind.model_identity(PARAMS).version == "MobileCLIP2-S2"
 
     def test_engine_parameters_stay_out_of_the_provenance(self) -> None:
         recorded = KIND.provenance_params(KIND.validate_params({"model": "clip", "chunk_size": 3}))
