@@ -58,7 +58,15 @@ from .embeddings import (
     is_embedding,
     is_view_embedding,
 )
-from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
+from .entities import (
+    DEFAULT_LABEL_FIELD,
+    LABEL_FIELD_PRIORITY,
+    Entity,
+    EntityDynamicState,
+    is_entity,
+    is_entity_dynamic_state,
+    label_field_of,
+)
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
 from .table_names import (
@@ -184,6 +192,9 @@ __all__ = [
     "is_entity_dynamic_state",
     "is_embedding",
     "is_entity",
+    "DEFAULT_LABEL_FIELD",
+    "LABEL_FIELD_PRIORITY",
+    "label_field_of",
     "is_image",
     "is_record",
     "is_record_component",
