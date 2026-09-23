@@ -30,3 +30,22 @@ valider le circuit complet sur un seul kind.
 le writer), indexation vectorielle, clustering, suivi vidéo, nettoyage du chemin en processus
 de l'API, colonnes dédiées de provenance (quand un filtre par modèle sera un besoin),
 politique de compaction (mesurer à 500 k lignes d'abord).
+
+## Relevé par la revue du lot 0 (2026-09-23)
+
+Consigné ici pour ne pas le perdre ; chaque point se traite dans le lot indiqué.
+
+- **Lot 2 — figer n'est pas apparier.** Une ligne relue est figée, mais une relance qui
+  détecte le même objet l'écrit à nouveau en `pending`, à côté. Au kind de détection de
+  décider s'il apparie (IoU avec les lignes relues) avant d'écrire.
+- **Lot 2 ou 3 — une édition humaine d'une ligne `pending` doit la passer en `corrected`.**
+  Aujourd'hui l'API met à jour la géométrie et laisse le statut : une relance écraserait la
+  correction. À régler avant qu'un utilisateur puisse éditer une pré-annotation.
+- **Plus tard — l'aller-retour export/import JSONL perd `review_status` et `source_metadata`**
+  mais garde les identifiants : une ligne acceptée réimportée redevient remplaçable.
+- **Étape 4 — course entre l'API et le worker** : une relecture faite entre la lecture et
+  l'écriture de `replace` peut être écrasée. Le verrou d'écriture ne couvre que le worker ;
+  à reprendre avec le rôle d'écrivain.
+- **Datasets de l'étape 1** : leurs vecteurs portent l'ancien format d'identifiant, qu'une
+  relance ne remplace pas (elle ajoute). Rien n'a été livré avec ; régénérer les datasets de
+  démo suffit (`prepare_demo.py`).
