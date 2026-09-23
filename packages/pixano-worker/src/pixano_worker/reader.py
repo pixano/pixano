@@ -14,8 +14,10 @@ The dataset is opened on first use: a kind whose work fits in its parameters has
 read, and must not require a dataset to exist.
 """
 
+import io
 import logging
-from typing import Any, Callable, Iterator, Sequence
+import os
+from typing import Any, BinaryIO, Callable, Iterator, Sequence
 
 from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
 
@@ -84,3 +86,17 @@ class JobReader:
     def resolve_media(self, table_name: str, view: Any) -> ResolvedMedia | None:
         """Designate a media for the inference — a path if possible, the bytes otherwise."""
         return self.media.resolve(self.dataset, table_name, view)
+
+    def open_media(self, table_name: str, view: Any) -> BinaryIO | None:
+        """The media itself, for what a kind must read rather than send: its file, else its bytes.
+
+        Returns:
+            An open binary stream the caller closes, or None if this worker can reach neither.
+        """
+        path = self.media.local_path(view)
+        if path is not None and os.path.isfile(path):
+            return open(path, "rb")
+        found = self.dataset.get_view_binary(table_name, view.id)
+        if found is None or not found[0]:
+            return None
+        return io.BytesIO(found[0])

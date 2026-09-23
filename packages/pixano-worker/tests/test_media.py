@@ -6,6 +6,7 @@
 
 """Tests of the media resolver."""
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -143,3 +144,23 @@ class TestUnconfigured:
 
         with pytest.raises(RuntimeError, match="PIXANO_MEDIA_ROOT"):
             resolver.resolve(_Source(), "images", _View(uri="/anywhere/a.jpg"))
+
+
+class TestLocalPath:
+    """The file a view names, for what the worker reads itself — an image's size."""
+
+    RESOLVER = MediaResolver("/medias", "/srv/inference/medias")
+
+    def test_an_absolute_path_under_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="/medias/voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    def test_a_relative_reference_is_taken_from_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    @pytest.mark.parametrize("uri", ["/medias/../etc/passwd", "../etc/passwd", "/etc/passwd"])
+    def test_nothing_outside_the_root(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    @pytest.mark.parametrize("uri", ["https://host/a.jpg", "s3://bucket/a.jpg", ""])
+    def test_nothing_the_worker_does_not_hold(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None

@@ -110,6 +110,18 @@ class MediaResolver:
 
         return self._inline(source, table_name, view, uri)
 
+    def local_path(self, view: Any) -> str | None:
+        """The file a view names, as this worker sees it, if it is under the media root.
+
+        For what the worker must read itself rather than send — an image's size when the
+        dataset does not record it. A relative reference is taken from the media root.
+        """
+        uri = (getattr(view, "uri", "") or "").strip()
+        if not uri or uri.startswith(REMOTE_SCHEMES) or not self.media_root:
+            return None
+        clean = PurePosixPath(posixpath.normpath(posixpath.join(self.media_root, uri)))
+        return str(clean) if clean.is_relative_to(PurePosixPath(self.media_root)) else None
+
     def translate(self, path: str) -> str | None:
         """Go from a path as seen by the worker to a path as seen by the inference.
 

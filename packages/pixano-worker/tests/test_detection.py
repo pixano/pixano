@@ -86,6 +86,9 @@ class _Reader:
     def _get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str]:
         return (b"not an image" if row_id in self.unreadable else _png(WIDTH, HEIGHT)), "image/png"
 
+    def open_media(self, table_name: str, view: Any) -> Any:
+        return io.BytesIO(self._get_view_binary(table_name, view.id)[0])
+
     def rows(self, table_name: str, ids: list[str]) -> list[Any]:
         return [
             SimpleNamespace(
@@ -187,6 +190,39 @@ class TestFailures:
         inference.answers["/medias/a.jpg"] = [([20, 10, 120, 60], 0.9, "car")]
 
         result, outcome = _process(_Reader(unsized={"a"}), ["a"])
+
+        assert outcome.quarantined == []
+        assert result["media"][0]["boxes"] == [[0.1, 0.1, 0.5, 0.5]]
+
+    def test_the_size_of_an_image_imported_by_uri_is_read_from_its_file(
+        self, inference: _Inference, tmp_path: Any
+    ) -> None:
+        """Independent review of lot 2, B1: such a view carries no bytes, and the first version
+        of this fallback read only bytes — every image of voc_2007_uri went to quarantine."""
+        from pixano_worker.media import MediaResolver
+        from pixano_worker.reader import JobReader
+
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas import BBox, Entity, Image, Record
+
+        media = tmp_path / "media"
+        media.mkdir()
+        (media / "a.png").write_bytes(_png(WIDTH, HEIGHT))
+        dataset = Dataset.create(
+            tmp_path / "ds",
+            DatasetInfo(id="ds", name="ds", record=Record, entity=Entity, bbox=BBox, views={"image": Image}),
+        )
+        dataset.add_records({"records": [Record(id="r1")]})
+        dataset.add_data(
+            "images",
+            [Image(id="a", record_id="r1", logical_name="image", uri=str(media / "a.png"), width=0, height=0)],
+            raise_or_warn="none",
+        )
+        reader = JobReader(lambda: dataset, MediaResolver(str(media), "/inference-media"))
+        inference.answers["/inference-media/a.png"] = [([20, 10, 120, 60], 0.9, "car")]
+
+        result, outcome = _process(reader, ["a"])  # type: ignore[arg-type]
 
         assert outcome.quarantined == []
         assert result["media"][0]["boxes"] == [[0.1, 0.1, 0.5, 0.5]]

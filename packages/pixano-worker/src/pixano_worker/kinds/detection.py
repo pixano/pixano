@@ -15,7 +15,6 @@ left alone by a rerun, and a detection that mostly covers such a box, for the sa
 written: the person has already said what is there.
 """
 
-import io
 import logging
 import time
 from typing import Any, Iterable
@@ -332,12 +331,16 @@ def _recorded_size(view: Any) -> tuple[int, int] | None:
 
 
 def _measured_size(reader: JobReader, table: str, view: Any) -> tuple[int, int] | None:
-    """The image's size read from its header, when the dataset does not record it."""
-    found = reader.dataset.get_view_binary(table, view.id)
-    if found is None or not found[0]:
+    """The image's size read from its header, when the dataset does not record it.
+
+    From its file for a view imported by reference — such a view carries no bytes — and from
+    its bytes for an embedded one.
+    """
+    media = reader.open_media(table, view)
+    if media is None:
         return None
     try:
-        with Image.open(io.BytesIO(found[0])) as image:
+        with media, Image.open(media) as image:
             return image.size
     except (UnidentifiedImageError, OSError):
         return None
