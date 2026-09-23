@@ -65,6 +65,11 @@ ParamsT = TypeVar("ParamsT", bound=JobParams)
 #: before the job starts, with this text. For a parameter that destroys something when set.
 CONFIRM_MARKER = "x-pixano-confirm"
 
+#: A key a model parameter's JSON schema carries to name the inference task it belongs to
+#: (`detection`, `embedding`): the submission form offers the models the server actually serves
+#: for that task, and no model name is written into a kind.
+MODEL_TASK_MARKER = "x-pixano-model-task"
+
 
 class Chunk(BaseModel):
     """A batch of tasks as a planner produces it.

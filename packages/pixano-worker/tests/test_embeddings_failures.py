@@ -451,9 +451,20 @@ class TestReplaceExistingEmbeddings:
 
         assert media["default"] == ["image"]
         assert (
-            KIND.validate_params({}).media == ["image"]
-            and KIND.validate_params({}).media is not KIND.validate_params({}).media
+            KIND.validate_params({"model": "clip"}).media == ["image"]
+            and KIND.validate_params({"model": "clip"}).media is not KIND.validate_params({"model": "clip"}).media
         )
+
+    def test_names_no_model_and_asks_the_form_for_a_served_one(self) -> None:
+        """Step 2, lot 2: a model name in a kind is a guess about a deployment. The form offers
+        the models the inference serves for embeddings instead."""
+        from pixano_worker.kinds import MODEL_TASK_MARKER
+
+        schema = KIND.params_model.model_json_schema()
+
+        assert "model" in schema["required"]
+        assert "default" not in schema["properties"]["model"]
+        assert schema["properties"]["model"][MODEL_TASK_MARKER] == "embedding"
 
     def test_the_form_is_asked_to_confirm_it(self) -> None:
         from pixano_worker.kinds import CONFIRM_MARKER

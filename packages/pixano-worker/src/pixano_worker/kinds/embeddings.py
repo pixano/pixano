@@ -25,6 +25,7 @@ from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import (
     CONFIRM_MARKER,
+    MODEL_TASK_MARKER,
     Chunk,
     JobKind,
     JobParams,
@@ -75,7 +76,9 @@ class EmbeddingsParams(JobParams):
             on CPU takes time and giving up too early would turn slowness into failure.
     """
 
-    model: str = Field(default="clip", min_length=1)
+    # No default: the model is whichever the inference serves for embeddings, which the form
+    # offers; a name written here would be a guess about a deployment.
+    model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: EMBEDDING_CAPABILITY})
     # A plain default rather than a factory: pydantic publishes it in the JSON schema, and the
     # submission form starts from it — with a factory the form started with nothing ticked.
     # Pydantic copies a mutable default, so no instance shares the list.
