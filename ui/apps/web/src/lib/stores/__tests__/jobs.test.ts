@@ -12,6 +12,7 @@ import {
   isTerminal,
   outcomeOf,
   progressOf,
+  recordOf,
   stateLabelOf,
 } from "../jobs.svelte";
 import type { Job } from "$lib/api/jobs";
@@ -150,5 +151,23 @@ describe("failureOf", () => {
 
   it("says so when a failed job carries no reason", () => {
     expect(failureOf(job({ state: "error", error: null }))).toBe("failed for an unknown reason");
+  });
+});
+
+describe("recordOf", () => {
+  // Step 2, lot 1: a quarantined item is a medium; its record is what a user opens.
+  const item = (detail: Record<string, unknown> | null) => ({
+    item_id: "cam-front-42",
+    reason: "refused by the inference server",
+    detail,
+    created_at: "",
+  });
+
+  it("names the record the job gave", () => {
+    expect(recordOf(item({ record_id: "rec-42", status: 500 }))).toBe("rec-42");
+  });
+
+  it("is silent when the job gave none", () => {
+    expect(recordOf(item(null))).toBeNull();
   });
 });

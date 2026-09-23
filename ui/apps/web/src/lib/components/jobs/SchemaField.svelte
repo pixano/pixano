@@ -22,50 +22,19 @@ License: CECILL-C
   const label = $derived(schema.title ?? name);
 </script>
 
-<label class="flex flex-col gap-1 text-sm">
-  <span class="font-medium">
-    {label}
-    {#if required}<span class="text-destructive" title="Required">*</span>{/if}
-  </span>
-
-  {#if kind === "boolean"}
-    <input
-      type="checkbox"
-      class="h-4 w-4 self-start"
-      checked={Boolean(value)}
-      onchange={(event) => onChange(event.currentTarget.checked)}
-    />
-  {:else if kind === "enum"}
-    <select
-      class="rounded border border-input bg-background px-2 py-1"
-      value={asText(value)}
-      onchange={(event) => onChange(event.currentTarget.value)}
-    >
-      {#each schema.enum ?? [] as option (asText(option))}
-        <option value={asText(option)}>{asText(option)}</option>
-      {/each}
-    </select>
-  {:else if kind === "number" || kind === "integer"}
-    <input
-      type="number"
-      class="rounded border border-input bg-background px-2 py-1"
-      step={kind === "integer" ? 1 : "any"}
-      min={schema.minimum}
-      max={schema.maximum}
-      value={asText(value)}
-      onchange={(event) => onChange(event.currentTarget.value)}
-    />
-  {:else if kind === "string"}
-    <input
-      type="text"
-      class="rounded border border-input bg-background px-2 py-1"
-      value={asText(value)}
-      onchange={(event) => onChange(event.currentTarget.value)}
-    />
-  {:else if kind === "choices"}
+{#if kind === "choices"}
+  <!--
+    A fieldset, not the label the other fields use: a label activates the first control it
+    holds, so clicking "video" ticked "image", and the other boxes had no name of their own.
+  -->
+  <fieldset class="flex flex-col gap-1 text-sm">
+    <legend class="font-medium">
+      {label}
+      {#if required}<span class="text-destructive" title="Required">*</span>{/if}
+    </legend>
     <span class="flex flex-wrap gap-3">
       {#each schema.items?.enum ?? [] as choice (asText(choice))}
-        <span class="flex items-center gap-1">
+        <label class="flex items-center gap-1">
           <input
             type="checkbox"
             class="h-4 w-4"
@@ -73,30 +42,76 @@ License: CECILL-C
             onchange={() => onChange(toggleChoice(schema, value, choice))}
           />
           {asText(choice)}
-        </span>
+        </label>
       {/each}
     </span>
-  {:else if kind === "array"}
-    <input
-      type="text"
-      class="rounded border border-input bg-background px-2 py-1"
-      placeholder="One value per comma"
-      value={asText(value)}
-      onchange={(event) => onChange(event.currentTarget.value)}
-    />
-  {:else}
-    <!--
+    {#if schema.description}
+      <span class="text-xs text-muted-foreground">{schema.description}</span>
+    {/if}
+  </fieldset>
+{:else}
+  <label class="flex flex-col gap-1 text-sm">
+    <span class="font-medium">
+      {label}
+      {#if required}<span class="text-destructive" title="Required">*</span>{/if}
+    </span>
+
+    {#if kind === "boolean"}
+      <input
+        type="checkbox"
+        class="h-4 w-4 self-start"
+        checked={Boolean(value)}
+        onchange={(event) => onChange(event.currentTarget.checked)}
+      />
+    {:else if kind === "enum"}
+      <select
+        class="rounded border border-input bg-background px-2 py-1"
+        value={asText(value)}
+        onchange={(event) => onChange(event.currentTarget.value)}
+      >
+        {#each schema.enum ?? [] as option (asText(option))}
+          <option value={asText(option)}>{asText(option)}</option>
+        {/each}
+      </select>
+    {:else if kind === "number" || kind === "integer"}
+      <input
+        type="number"
+        class="rounded border border-input bg-background px-2 py-1"
+        step={kind === "integer" ? 1 : "any"}
+        min={schema.minimum}
+        max={schema.maximum}
+        value={asText(value)}
+        onchange={(event) => onChange(event.currentTarget.value)}
+      />
+    {:else if kind === "string"}
+      <input
+        type="text"
+        class="rounded border border-input bg-background px-2 py-1"
+        value={asText(value)}
+        onchange={(event) => onChange(event.currentTarget.value)}
+      />
+    {:else if kind === "array"}
+      <input
+        type="text"
+        class="rounded border border-input bg-background px-2 py-1"
+        placeholder="One value per comma"
+        value={asText(value)}
+        onchange={(event) => onChange(event.currentTarget.value)}
+      />
+    {:else}
+      <!--
       Shown rather than hidden on purpose: silently dropping a parameter the form cannot
       render would submit a job the user did not describe, and a required one would be
       refused with no visible cause.
     -->
-    <span class="rounded border border-dashed border-muted-foreground/50 px-2 py-1 text-xs">
-      This parameter has a shape this form cannot render yet. Leave it to its default, or submit the
-      job through the API.
-    </span>
-  {/if}
+      <span class="rounded border border-dashed border-muted-foreground/50 px-2 py-1 text-xs">
+        This parameter has a shape this form cannot render yet. Leave it to its default, or submit
+        the job through the API.
+      </span>
+    {/if}
 
-  {#if schema.description}
-    <span class="text-xs text-muted-foreground">{schema.description}</span>
-  {/if}
-</label>
+    {#if schema.description}
+      <span class="text-xs text-muted-foreground">{schema.description}</span>
+    {/if}
+  </label>
+{/if}

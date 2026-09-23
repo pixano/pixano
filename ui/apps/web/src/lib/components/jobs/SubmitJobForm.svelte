@@ -50,6 +50,7 @@ License: CECILL-C
   $effect(() => {
     const schema = selected?.params_schema;
     values = schema ? initialValues(schema) : {};
+    confirming = false;
   });
 
   async function handleSubmit(event: SubmitEvent) {
@@ -116,6 +117,7 @@ License: CECILL-C
   {#if confirming}
     <div
       class="flex flex-col gap-1 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs"
+      aria-live="polite"
     >
       {#each confirmations as text (text)}
         <p>{text}</p>

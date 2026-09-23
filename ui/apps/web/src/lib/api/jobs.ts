@@ -64,6 +64,7 @@ export type JsonSchema = {
   maximum?: number;
   anyOf?: JsonSchema[];
   items?: JsonSchema;
+  minItems?: number;
   /** Set on a parameter that destroys something when set: the form asks before running. */
   "x-pixano-confirm"?: string;
 };

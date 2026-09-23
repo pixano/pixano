@@ -143,7 +143,14 @@ export function requiredNames(schema: JsonSchema): Set<string> {
 /** The required fields left empty, so the form can refuse before the server does. */
 export function missingRequired(schema: JsonSchema, values: Record<string, unknown>): string[] {
   const params = toParams(schema, values);
-  return [...requiredNames(schema)].filter((name) => !(name in params));
+  const missing = [...requiredNames(schema)].filter((name) => !(name in params));
+  // A multiple choice the schema wants non-empty is as missing as a required field left blank:
+  // sent empty, the backend refuses the whole job.
+  const tooFew = Object.entries(schema.properties ?? {})
+    .filter(([, field]) => fieldKind(field) === "choices" && (field.minItems ?? 0) > 0)
+    .filter(([name]) => !Array.isArray(params[name]) || (params[name] as unknown[]).length === 0)
+    .map(([name]) => name);
+  return [...missing, ...tooFew.filter((name) => !missing.includes(name))];
 }
 
 /**

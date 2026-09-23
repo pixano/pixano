@@ -218,6 +218,17 @@ export function failureOf(job: Job): string | null {
   return typeof detail === "string" && detail ? `${reason}: ${detail}` : reason;
 }
 
+/**
+ * The record a quarantined item belongs to, when the job said so.
+ *
+ * An item is a medium now — one camera of a record — and its identifier alone does not tell a
+ * user which record to open.
+ */
+export function recordOf(item: QuarantinedItem): string | null {
+  const recordId = item.detail?.record_id;
+  return typeof recordId === "string" && recordId ? recordId : null;
+}
+
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */
 export function canCancel(job: Job): boolean {
   return !isTerminal(job.state) && !job.cancel_requested;

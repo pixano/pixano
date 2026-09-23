@@ -182,6 +182,13 @@ describe("multiple choices", () => {
     expect(toggleChoice(media, ticked, "image")).toEqual(["point_cloud"]);
   });
 
+  it("names an empty selection the schema wants non-empty as missing", () => {
+    // Review of step 2, lot 1: sent empty, the job was refused with a bare 422.
+    const schema: JsonSchema = { properties: { media: { ...media, minItems: 1 } } };
+    expect(missingRequired(schema, { media: [] })).toEqual(["media"]);
+    expect(missingRequired(schema, { media: ["image"] })).toEqual([]);
+  });
+
   it("sends an empty selection rather than letting the default run", () => {
     const schema: JsonSchema = { properties: { media } };
     expect(toParams(schema, { media: [] })).toEqual({ media: [] });
