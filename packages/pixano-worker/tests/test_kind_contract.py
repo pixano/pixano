@@ -216,6 +216,12 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *_exc: Any) -> None:
+            return None
+
         def list_models(self) -> list[Any]:
             return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
 
@@ -408,3 +414,31 @@ class TestRegistry:
 
         with pytest.raises(ValueError, match="already registered"):
             registry.register(FakeKind())
+
+
+class TestProvenanceParameters:
+    """What the provenance records of a job's parameters."""
+
+    def test_a_selection_is_not_copied_into_every_row(self) -> None:
+        """Review of step 2, lot 0: ten thousand ids made 260 kB of metadata on each labelled row."""
+        from pixano_worker.kinds import LabelKind
+
+        kind = LabelKind()
+        params = kind.validate_params({"record_ids": [f"r{n}" for n in range(10_000)], "label": "cat"})
+
+        assert "record_ids" not in kind.provenance_params(params)
+
+    def test_a_parameter_json_cannot_hold_is_recorded_as_json(self) -> None:
+        """A path, an enum or a date must not fail the chunk at write time."""
+        from datetime import date
+        from pathlib import Path
+
+        from pixano_worker.kinds import FakeKind, JobParams
+
+        class _Params(JobParams):
+            where: Path
+            since: date
+
+        recorded = FakeKind.provenance_params(FakeKind(), _Params(where=Path("/a"), since=date(2026, 1, 2)))
+
+        assert json.dumps(recorded) == '{"where": "/a", "since": "2026-01-02"}'

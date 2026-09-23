@@ -126,9 +126,10 @@ class JobKind(ABC, Generic[ParamsT]):
     name: str
     params_model: type[ParamsT]
 
-    #: Parameters that say how the engine runs the job rather than what it computes — the
-    #: chunk size every kind has, a request timeout. They are left out of the provenance
-    #: written with each row. A kind extends the set with its own.
+    #: Parameters left out of the provenance written with each row: those that say how the
+    #: engine runs the job rather than what it computes — the chunk size every kind has, a
+    #: request timeout — and a selection of items, which would copy thousands of identifiers
+    #: into every row it produced. A kind extends the set with its own.
     params_not_in_provenance: frozenset[str] = frozenset({"chunk_size"})
 
     #: What this kind produces, in the provenance vocabulary of the Pixano schemas. Most kinds
@@ -147,8 +148,13 @@ class JobKind(ABC, Generic[ParamsT]):
         return None
 
     def provenance_params(self, params: ParamsT) -> dict[str, Any]:
-        """The parameters the provenance records: all of them but the engine's."""
-        return {key: value for key, value in params.model_dump().items() if key not in self.params_not_in_provenance}
+        """The parameters the provenance records: all of them but the engine's.
+
+        Dumped in JSON mode: a parameter typed as a path, an enum or a date must not make the
+        provenance fail to serialise at write time, which would fail the chunk.
+        """
+        dumped = params.model_dump(mode="json")
+        return {key: value for key, value in dumped.items() if key not in self.params_not_in_provenance}
 
     def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
         """Put the dataset in shape before the job is split.
