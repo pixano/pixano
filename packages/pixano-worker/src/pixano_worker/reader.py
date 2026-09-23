@@ -15,12 +15,15 @@ read, and must not require a dataset to exist.
 """
 
 import logging
-from typing import Any, Callable, Iterator, Literal, Sequence, get_args
+from typing import Any, Callable, Iterator, Sequence
 
-from pixano.schemas import is_image, is_point_cloud, is_sequence_frame, is_text, is_video
+from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
 
 from .media import MediaResolver, ResolvedMedia
 from .writer import DatasetReadSource
+
+
+__all__ = ["MEDIA_TYPES", "JobReader", "MediaType", "media_type_of"]
 
 
 logger = logging.getLogger("pixano-worker")
@@ -28,28 +31,6 @@ logger = logging.getLogger("pixano-worker")
 # How many rows we fetch per request when enumerating a table. Enough to amortise the round
 # trip, few enough that a dataset of several million items does not fit in memory at once.
 PAGE_SIZE = 2_000
-
-#: The kinds of media a dataset's records are made of, as a user chooses them for a job.
-#: A record may hold several — nuScenes has six camera images and a point cloud each.
-MediaType = Literal["image", "video", "point_cloud", "text"]
-MEDIA_TYPES: tuple[str, ...] = get_args(MediaType)
-
-
-def media_type_of(schema: type) -> str | None:
-    """The media type a view schema holds, or None for a table that holds no media.
-
-    A frame of a video is an image to Pixano's schemas (`SequenceFrame` derives from `Image`),
-    but it belongs to its video: choosing images on a video dataset must not embed every frame.
-    """
-    if is_sequence_frame(schema) or is_video(schema):
-        return "video"
-    if is_image(schema):
-        return "image"
-    if is_point_cloud(schema):
-        return "point_cloud"
-    if is_text(schema):
-        return "text"
-    return None
 
 
 class JobReader:

@@ -185,10 +185,13 @@ class JobKind(ABC, Generic[ParamsT]):
         return {key: value for key, value in dumped.items() if key not in self.params_not_in_provenance}
 
     def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
-        """Put the dataset in shape before the job is split.
+        """Put the dataset in shape before the job's chunks run.
 
-        Called once per job, under the planning lease, before `plan` — never by the replay of
-        a chunk nor by the relaunch of a job that already has its chunks. Doing nothing is the
+        Called once per job, under the planning lease, **after** `plan` has produced work and
+        before the chunks are recorded — never when the plan was refused or empty, never by the
+        replay of a chunk nor by the relaunch of a job that already has its chunks. After, so
+        that everything that can refuse the job refuses it before anything is destroyed; so
+        `plan` must not rely on what `prepare` will do. Doing nothing is the
         default, and it is what most kinds do: a kind only overrides this for a reset that its
         chunks cannot each do on their own — emptying a table before filling it, for example.
 

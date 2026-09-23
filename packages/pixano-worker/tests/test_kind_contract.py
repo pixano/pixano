@@ -202,11 +202,12 @@ def _writer(kind: JobKind, target: _Target, job_id: str) -> JobWriter:
 
 
 def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1) -> None:
-    """A whole job, as the engine runs it: prepare, split, then every chunk."""
+    """A whole job, as the engine runs it: split, prepare, then every chunk."""
     params = _params(kind)
+    chunks = list(kind.plan(_reader(), params))
     for _ in range(prepare_times):
         kind.prepare(_writer(kind, target, job_id), params)
-    for chunk in kind.plan(_reader(), params):
+    for chunk in chunks:
         kind.write(
             _writer(kind, target, job_id), kind.process(_reader(), chunk.payload, params), chunk.payload, params
         )

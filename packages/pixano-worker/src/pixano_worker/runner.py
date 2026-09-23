@@ -204,12 +204,16 @@ async def plan_one(
         reader = _reader_for(library, dataset_id, media, fresh=True)
         async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
-            writer = await pool.run(lambda: _writer_for(library, dataset_id, kind, job_id, params))
-            # Preparation precedes the split, under the same lease: a planner that dies between
-            # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
-            # is why `prepare` must be idempotent.
-            await pool.run(lambda: kind.prepare(writer, params))
             chunks = await pool.run(lambda: list(kind.plan(reader, params)))
+            # The split first, then the preparation, under the same lease: everything that can
+            # refuse the job — a media type, a model, a dataset with nothing to do — refuses it
+            # before `prepare` has destroyed anything. The other order dropped a dataset's
+            # vectors and then failed the job for a media type it could not process. A planner
+            # that dies after `prepare` leaves no chunk, and the next one redoes both — that is
+            # why `prepare` must be idempotent.
+            if chunks:
+                writer = await pool.run(lambda: _writer_for(library, dataset_id, kind, job_id, params))
+                await pool.run(lambda: kind.prepare(writer, params))
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s: planning failed", job_id)

@@ -100,7 +100,10 @@ class EmbeddingsParams(JobParams):
     """
 
     model: str = Field(default="clip", min_length=1)
-    media: list[MediaType] = Field(default_factory=lambda: ["image"], min_length=1)
+    # A plain default rather than a factory: pydantic publishes it in the JSON schema, and the
+    # submission form starts from it — with a factory the form started with nothing ticked.
+    # Pydantic copies a mutable default, so no instance shares the list.
+    media: list[MediaType] = Field(default=["image"], min_length=1)
     replace_existing_embeddings: bool = Field(
         default=False,
         json_schema_extra={
@@ -202,7 +205,10 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """
         self.refuse_unsupported_media(params.media)
         self._require_served(params.model)
-        check_embedding_space(reader.dataset.record_embedding_space(), params.model)
+        # Replacing the vectors is precisely how another model gets in: `prepare`, run once this
+        # plan has succeeded, empties the table.
+        if not params.replace_existing_embeddings:
+            check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         for media_type in dict.fromkeys(params.media):
             for table in reader.media_tables(media_type):
                 batch: list[str] = []
@@ -246,6 +252,13 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             TransientError: The inference does not answer, or refuses the whole batch through no
                 fault of any image.
         """
+        if "view_ids" not in payload:
+            # Planned by a worker from before embeddings were per medium: its payload names
+            # records. Said plainly rather than failing on a missing key.
+            raise ValueError(
+                "this chunk was planned by an earlier version of the embeddings job, by record; "
+                "cancel the job and submit it again"
+            )
         table: str = payload["table"]
         view_ids: list[str] = payload["view_ids"]
         # Timed per phase — reading the dataset, inference call, then the write in `write` —

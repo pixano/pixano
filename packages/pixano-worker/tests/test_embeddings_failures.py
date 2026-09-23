@@ -204,6 +204,13 @@ class TestMissingMedia:
         assert inference.calls == []
 
 
+class TestEarlierPayloads:
+    def test_a_chunk_planned_by_record_says_so(self, inference: _Inference) -> None:
+        """Review of step 2, lot 1: a chunk queued before the upgrade failed with the reason "'table'"."""
+        with pytest.raises(ValueError, match="planned by an earlier version"):
+            KIND.process(_Reader(), {"record_ids": RECORDS}, PARAMS)  # type: ignore[arg-type]
+
+
 class TestTransientFailures:
     def test_an_unreachable_inference_is_transient(self, inference: _Inference) -> None:
         inference.unreachable = True
@@ -432,6 +439,21 @@ class TestReplaceExistingEmbeddings:
         KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
 
         assert writer.drops == 1
+
+    def test_replacing_lets_another_model_through_planning(self, inference: _Inference) -> None:
+        """The check on the table's model is what replacing is for: `prepare` empties it after the plan."""
+        assert _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}), replace_existing_embeddings=True)
+
+    def test_the_form_starts_with_images_ticked(self) -> None:
+        """Review of step 2, lot 1: with a default factory, pydantic published no default,
+        the form started with nothing ticked, and Run was refused with a bare 422."""
+        media = KIND.params_model.model_json_schema()["properties"]["media"]
+
+        assert media["default"] == ["image"]
+        assert (
+            KIND.validate_params({}).media == ["image"]
+            and KIND.validate_params({}).media is not KIND.validate_params({}).media
+        )
 
     def test_the_form_is_asked_to_confirm_it(self) -> None:
         from pixano_worker.kinds import CONFIRM_MARKER
