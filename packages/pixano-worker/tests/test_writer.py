@@ -533,7 +533,7 @@ class TestDetectedObjects:
             )
             for _ in classes
         ]
-        entities = [writer.entity_schema()(id="", record_id="r1", **{field: name}) for name in classes]
+        entities = [writer.table_schema("entities")(id="", record_id="r1", **{field: name}) for name in classes]
         return writer.replace("bboxes", "v1", boxes, entities)
 
     @staticmethod

@@ -249,7 +249,7 @@ def _rank_of(row_id: str) -> int | None:
     return int(rank) if rank.isdigit() else None
 
 
-def _is_reviewed(row: Any) -> bool:
+def is_reviewed(row: Any) -> bool:
     """Whether a human has looked at this row: then a rerun must leave it alone."""
     return getattr(row, "review_status", "") not in ("", PENDING_REVIEW)
 
@@ -396,7 +396,7 @@ class JobWriter:
             for row in self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
             if _rank_of(row.id) is not None
         ]
-        frozen = {_rank_of(row.id) for row in previous if _is_reviewed(row)}
+        frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
 
         written: list[str] = []
         rank = 0
@@ -471,9 +471,9 @@ class JobWriter:
             logger.info("job %s: the dataset's entities gained a '%s' field", self.job_id, field)
         return field
 
-    def entity_schema(self) -> Any:
-        """The dataset's entity schema, to build the entities a job writes."""
-        return self.dataset.info.entity
+    def table_schema(self, table_name: str) -> Any:
+        """The schema of one of the dataset's tables, to build the rows a job writes into it."""
+        return self.dataset.info.tables[table_name]
 
     def read(self, table_name: str, where: str) -> list[Any]:
         """Rows of a table matching a filter — what a kind checks its outputs against."""
