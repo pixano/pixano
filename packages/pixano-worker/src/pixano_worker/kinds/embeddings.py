@@ -23,7 +23,16 @@ from pydantic import Field
 
 from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
-from .base import CONFIRM_MARKER, Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .base import (
+    CONFIRM_MARKER,
+    Chunk,
+    JobKind,
+    JobParams,
+    Outcome,
+    QuarantinedItem,
+    TransientError,
+    media_chunks,
+)
 from .inference import (
     NO_RESPONSE,
     REQUEST_STATUSES,
@@ -148,16 +157,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         # plan has succeeded, empties the table.
         if not params.replace_existing_embeddings:
             check_embedding_space(reader.dataset.record_embedding_space(), params.model)
-        for media_type in dict.fromkeys(params.media):
-            for table in reader.media_tables(media_type):
-                batch: list[str] = []
-                for view_id in reader.ids(table):
-                    batch.append(view_id)
-                    if len(batch) == params.chunk_size:
-                        yield Chunk(payload={"table": table, "view_ids": batch}, task_count=len(batch))
-                        batch = []
-                if batch:
-                    yield Chunk(payload={"table": table, "view_ids": batch}, task_count=len(batch))
+        yield from media_chunks(reader, params.media, params.chunk_size)
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: EmbeddingsParams) -> dict[str, Any]:
         """Embed a batch of media and return their vectors, with the fate of each medium.
