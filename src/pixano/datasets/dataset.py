@@ -48,6 +48,7 @@ from pixano.schemas import (
     is_sequence_frame,
     is_video,
     is_view_embedding,
+    media_type_of,
     validate_canonical_table_map,
 )
 from pixano.utils.python import to_sql_list, unique_list
@@ -1741,9 +1742,10 @@ class Dataset:
         records hold no image at all, such as nuScenes' lidar sweeps.
 
         Returns:
-            ``{"status", "model_id", "dim", "rows", "records", "media", "detail"}`` where status
-            is one of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
-            ``corrupt``, ``partial`` (fewer vectors than media) or ``ready``.
+            ``{"status", "model_id", "dim", "rows", "records", "media", "embedded_media",
+            "detail"}`` where status is one of ``absent`` (no sidecar), ``missing_table``,
+            ``empty``, ``dim_mismatch``, ``corrupt``, ``partial`` (fewer media embedded than
+            media) or ``ready``.
         """
         space = self._record_embedding_space
         base: dict[str, Any] = {
@@ -1753,6 +1755,7 @@ class Dataset:
             "rows": 0,
             "records": self.num_rows,
             "media": self._still_image_count(),
+            "embedded_media": 0,
             "detail": None,
         }
         if space is None:
@@ -1783,11 +1786,20 @@ class Dataset:
                 "status": "dim_mismatch",
                 "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
             }
-        if rows < base["media"]:
+        # Counted in distinct media rather than rows: a table can hold rows that name no medium
+        # (written per record before embeddings were per medium) or two rows for one medium
+        # (the application's in-process path next to the worker's), and neither makes a medium
+        # embedded.
+        try:
+            view_ids = table.search().select(["view_id"]).limit(rows).to_arrow().column("view_id").to_pylist()
+        except Exception as exc:  # noqa: BLE001
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be read: {exc}"}
+        base["embedded_media"] = len({view_id for view_id in view_ids if view_id})
+        if base["embedded_media"] < base["media"]:
             return {
                 **base,
                 "status": "partial",
-                "detail": f"{rows} of {base['media']} media embedded.",
+                "detail": f"{base['embedded_media']} of {base['media']} media embedded.",
             }
         return {**base, "status": "ready"}
 
@@ -1799,7 +1811,7 @@ class Dataset:
         """
         total = 0
         for table_name, schema in self.info.tables.items():
-            if is_image(schema) and not is_sequence_frame(schema):
+            if media_type_of(schema) == "image":
                 try:
                     total += self.open_table(table_name).count_rows()
                 except Exception:  # noqa: BLE001 - a health check must degrade, not raise
@@ -1966,7 +1978,9 @@ class Dataset:
             if results.is_empty():
                 return []
             ranked = results.group_by("record_id").agg(pl.min("_distance"))
-            if ranked.height >= k or limit >= stored:
+            # Fewer vectors than asked for means there are no more to find — a prefilter that
+            # keeps fewer than k records would otherwise widen up to the whole table.
+            if ranked.height >= k or limit >= stored or results.height < limit:
                 return list(zip(ranked["record_id"].to_list(), ranked["_distance"].to_list(), strict=True))
             limit *= self._SEARCH_WIDENING_FACTOR
 

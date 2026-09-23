@@ -32,6 +32,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.io.jobs import JobStore
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.types import EmbeddingInput
+from pixano.utils.python import to_sql_list
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Explorer"])
@@ -135,7 +136,7 @@ def get_filter_schema(
             models=models,
             status=str(health["status"]),
             detail=health["detail"],
-            embedded_rows=int(health["rows"]),
+            embedded_rows=int(health["embedded_media"]),
             total_records=int(health["records"]),
             total_media=int(health["media"]),
         ),
@@ -189,7 +190,9 @@ def get_record_neighbors(
 
 def _stored_record_vectors(dataset: Dataset, record_id: str) -> list[list[float]]:
     """Every vector of a record — one per medium: a record is similar through its closest medium."""
-    rows = dataset.get_data(dataset._RECORD_EMBEDDING_TABLE, where=f"record_id = '{record_id}'", limit=None)  # noqa: SLF001
+    rows = dataset.get_data(  # noqa: SLF001
+        dataset._RECORD_EMBEDDING_TABLE, where=f"record_id IN {to_sql_list(record_id)}", limit=None
+    )
     return [list(row.vector) for row in rows]
 
 

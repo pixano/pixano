@@ -34,7 +34,9 @@ def dataset_with_embeddings() -> Dataset:
     dataset.add_records({"records": [Record(id=f"r{i}") for i in range(20)]})
     dataset.add_data("images", [_image(f"img-r{i}", f"r{i}") for i in range(20)], raise_or_warn="none")
     dataset.create_record_embedding_table(dim=8, model_id="test-clip", metric="cosine")
-    dataset.add_record_embeddings([{"record_id": f"r{i}", "vector": _bit_vector(i)} for i in range(20)])
+    dataset.add_record_embeddings(
+        [{"record_id": f"r{i}", "view_id": f"img-r{i}", "vector": _bit_vector(i)} for i in range(20)]
+    )
     dataset.build_record_embedding_index()
     return dataset
 
@@ -161,7 +163,7 @@ class TestDropRecordEmbeddings:
         dataset_with_embeddings.drop_record_embeddings()
         dataset_with_embeddings.create_record_embedding_table(dim=4, model_id="new-model")
         dataset_with_embeddings.add_record_embeddings(
-            [{"record_id": f"r{i}", "vector": _bit_vector(i, dim=4)} for i in range(20)]
+            [{"record_id": f"r{i}", "view_id": f"img-r{i}", "vector": _bit_vector(i, dim=4)} for i in range(20)]
         )
         health = dataset_with_embeddings.record_embedding_health()
         assert health["status"] == "ready"
@@ -202,6 +204,37 @@ class TestMultiMediaRecords:
         records, distances = six_cameras.search_records(own_vectors, k=1)
 
         assert (records[0].id, distances[0]) == ("r3", pytest.approx(0.0, abs=1e-6))
+
+    def test_rows_that_name_no_medium_do_not_make_it_ready(self, six_cameras: Dataset):
+        """Review of step 2, lot 1: rows written per record, before, inflated the count to "ready"."""
+        six_cameras.drop_record_embeddings()
+        six_cameras.create_record_embedding_table(dim=8, model_id="test-clip", metric="cosine")
+        six_cameras.add_record_embeddings(
+            [{"record_id": f"r{i}", "vector": _bit_vector(i + 1)} for i in range(10)]
+            + [{"record_id": "r0", "view_id": f"r0-cam{c}", "vector": _bit_vector(c + 1)} for c in range(6)] * 10
+        )
+
+        health = six_cameras.record_embedding_health()
+
+        assert (health["status"], health["embedded_media"], health["media"]) == ("partial", 6, 60)
+
+    def test_a_prefilter_smaller_than_k_does_not_widen_to_the_whole_table(self, six_cameras: Dataset):
+        """Review of step 2, lot 1: with fewer than k records to find, the search widened up to the table."""
+        searches: list[int] = []
+        table = six_cameras.open_table(six_cameras._RECORD_EMBEDDING_TABLE)
+        real_search = table.search
+
+        def counting_search(*args, **kwargs):
+            searches.append(1)
+            return real_search(*args, **kwargs)
+
+        table.search = counting_search  # type: ignore[method-assign]
+        six_cameras._table_handles[six_cameras._RECORD_EMBEDDING_TABLE] = table
+
+        records, _ = six_cameras.search_records(_bit_vector(1), k=50, record_id_filter=["r1", "r2"])
+
+        assert {record.id for record in records} == {"r1", "r2"}
+        assert len(searches) == 1
 
     def test_health_counts_media_not_records(self, six_cameras: Dataset):
         health = six_cameras.record_embedding_health()
