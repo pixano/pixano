@@ -15,7 +15,9 @@ read, and must not require a dataset to exist.
 """
 
 import logging
-from typing import Any, Callable, Iterator, Sequence
+from typing import Any, Callable, Iterator, Literal, Sequence, get_args
+
+from pixano.schemas import is_image, is_point_cloud, is_sequence_frame, is_text, is_video
 
 from .media import MediaResolver, ResolvedMedia
 from .writer import DatasetReadSource
@@ -26,6 +28,28 @@ logger = logging.getLogger("pixano-worker")
 # How many rows we fetch per request when enumerating a table. Enough to amortise the round
 # trip, few enough that a dataset of several million items does not fit in memory at once.
 PAGE_SIZE = 2_000
+
+#: The kinds of media a dataset's records are made of, as a user chooses them for a job.
+#: A record may hold several — nuScenes has six camera images and a point cloud each.
+MediaType = Literal["image", "video", "point_cloud", "text"]
+MEDIA_TYPES: tuple[str, ...] = get_args(MediaType)
+
+
+def media_type_of(schema: type) -> str | None:
+    """The media type a view schema holds, or None for a table that holds no media.
+
+    A frame of a video is an image to Pixano's schemas (`SequenceFrame` derives from `Image`),
+    but it belongs to its video: choosing images on a video dataset must not embed every frame.
+    """
+    if is_sequence_frame(schema) or is_video(schema):
+        return "video"
+    if is_image(schema):
+        return "image"
+    if is_point_cloud(schema):
+        return "point_cloud"
+    if is_text(schema):
+        return "text"
+    return None
 
 
 class JobReader:
@@ -63,6 +87,14 @@ class JobReader:
             rows = self.dataset.get_data(table_name, limit=PAGE_SIZE, skip=offset, where=where)
             for row in rows:
                 yield row.id
+
+    def media_tables(self, media_type: str) -> list[str]:
+        """The dataset's tables that hold media of this type, in a stable order.
+
+        Pixano stores every view of a type in one canonical table — nuScenes' six cameras are
+        all rows of `images`, told apart by their logical name — so this is usually one table.
+        """
+        return sorted(name for name, schema in self.dataset.info.tables.items() if media_type_of(schema) == media_type)
 
     def rows(self, table_name: str, ids: Sequence[str]) -> list[Any]:
         """Read specific rows, by identifier."""

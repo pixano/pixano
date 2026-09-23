@@ -6,7 +6,7 @@
 
 """The job kinds this worker knows how to run."""
 
-from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .base import CONFIRM_MARKER, Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
@@ -35,6 +35,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
 
 
 __all__ = [
+    "CONFIRM_MARKER",
     "Chunk",
     "FakeKind",
     "EmbeddingsKind",

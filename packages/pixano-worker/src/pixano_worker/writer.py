@@ -91,6 +91,9 @@ class DatasetReadSource(Protocol):
     accesses one day remains a change to a single file.
     """
 
+    #: What the dataset holds: its tables and their schemas.
+    info: Any
+
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         """Count the rows of a table, without materialising it."""
         ...
@@ -146,6 +149,10 @@ class DatasetWriteTarget(Protocol):
 
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         """Create the embeddings table for a given vector width."""
+        ...
+
+    def drop_record_embeddings(self) -> None:
+        """Delete the embeddings table and the model it declares."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
@@ -415,8 +422,23 @@ class JobWriter:
     # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"
 
-    def write_record_embeddings(self, record_ids: Sequence[str], vectors: Sequence[Any], model: str) -> None:
-        """Write one vector per record, replacing the previous one.
+    def drop_embeddings(self) -> None:
+        """Delete the dataset's embeddings table, so that another model can fill it.
+
+        Only for a kind's `prepare`, and only on an explicit parameter: this destroys every
+        vector of the dataset. Harmless when there is no table.
+        """
+        self.dataset.drop_record_embeddings()
+        logger.info("job %s: embeddings table dropped before recomputing", self.job_id)
+
+    def write_media_embeddings(
+        self, record_ids: Sequence[str], view_ids: Sequence[str], vectors: Sequence[Any], model: str
+    ) -> None:
+        """Write one vector per medium, replacing the previous one.
+
+        An embedding belongs to a medium — one camera of a nuScenes record, not the record: a
+        record with six images has six vectors, each carrying its `view_id`, and a search that
+        finds a medium returns its record. The medium is the replacement key.
 
         The table is not an ordinary one: its width depends on the model, so it can only be
         created once a first vector is known. Creating on the first pass avoids requiring the
@@ -428,11 +450,11 @@ class JobWriter:
         model.
 
         Raises:
-            ValueError: The vectors do not match the records, or the existing table was
+            ValueError: The vectors do not match the media, or the existing table was
                 computed with another model or another dimension.
         """
-        if len(record_ids) != len(vectors):
-            raise ValueError(f"{len(record_ids)} records for {len(vectors)} vectors")
+        if not len(record_ids) == len(view_ids) == len(vectors):
+            raise ValueError(f"{len(record_ids)} records, {len(view_ids)} media for {len(vectors)} vectors")
         if not vectors:
             return
 
@@ -451,8 +473,8 @@ class JobWriter:
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
-            schema(id=derive_id(self.kind, record_id, 0), record_id=record_id, vector=list(vector))
-            for record_id, vector in zip(record_ids, vectors)
+            schema(id=derive_id(self.kind, view_id, 0), record_id=record_id, view_id=view_id, vector=list(vector))
+            for record_id, view_id, vector in zip(record_ids, view_ids, vectors)
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
         self._count_write(self.EMBEDDING_TABLE)

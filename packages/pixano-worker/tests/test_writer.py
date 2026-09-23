@@ -21,8 +21,8 @@ from pixano_worker.writer import JobWriter, ModelIdentity, derive_id
 class _Vector:
     """An embedding row, for the stand-in."""
 
-    def __init__(self, id: str, record_id: str, vector: Any) -> None:
-        self.id, self.record_id, self.vector = id, record_id, vector
+    def __init__(self, id: str, record_id: str, vector: Any, view_id: str = "") -> None:
+        self.id, self.record_id, self.view_id, self.vector = id, record_id, view_id, vector
 
 
 class _FakeRow:
@@ -74,7 +74,12 @@ class _FakeDataset:
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
-        self.space = {"model_id": model_id, "dim": dim}
+        self.space: dict[str, Any] | None = {"model_id": model_id, "dim": dim}
+
+    def drop_record_embeddings(self) -> None:
+        self.tables.pop("embeddings", None)
+        self.info.tables.pop("embeddings", None)
+        self.space = None
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)
@@ -93,6 +98,8 @@ def dataset() -> _FakeDataset:
 
 class _EmptySource:
     """An empty dataset: the fake kind reads nothing from it, but the contract wants a reader."""
+
+    info = SimpleNamespace(tables={})
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
@@ -489,41 +496,57 @@ class TestAgainstRealLance:
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
 
 
-class TestRecordEmbeddings:
+class TestMediaEmbeddings:
     """An embeddings table accepts only one model."""
 
     def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
 
-        writer.write_record_embeddings(["r1", "r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
+        writer.write_media_embeddings(["r1", "r2"], ["v-r1", "v-r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
 
         assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2}
         assert len(dataset.tables["embeddings"]) == 2
 
     def test_the_same_model_replaces_its_vectors(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
-        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
-        writer.write_record_embeddings(["r1"], [[0.5, 0.6]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.5, 0.6]], model="clip")
 
         assert len(dataset.tables["embeddings"]) == 1
+
+    def test_a_record_with_several_media_gets_a_vector_each(self, dataset: _FakeDataset) -> None:
+        """Step 2, lot 1: an embedding belongs to a medium — nuScenes has six cameras per record."""
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+
+        writer.write_media_embeddings(["r1", "r1"], ["cam-front", "cam-back"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
+        writer.write_media_embeddings(["r1"], ["cam-front"], [[0.9, 0.9]], model="clip")
+
+        rows = {row.view_id: (row.record_id, row.vector) for row in dataset.tables["embeddings"].values()}
+        assert rows == {"cam-front": ("r1", [0.9, 0.9]), "cam-back": ("r1", [0.3, 0.4])}
+
+    def test_media_and_vectors_must_match(self, dataset: _FakeDataset) -> None:
+        with pytest.raises(ValueError, match="2 media for 1 vectors"):
+            JobWriter(lambda: dataset, "embeddings", "j").write_media_embeddings(
+                ["r1", "r1"], ["a", "b"], [[0.1]], model="clip"
+            )
 
     def test_another_model_is_refused_rather_than_mixed_in(self, dataset: _FakeDataset) -> None:
         """Same dimension, other model: nothing would break on write, the search would be wrong."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
-        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
         with pytest.raises(ValueError, match="dinov2"):
-            writer.write_record_embeddings(["r2"], [[0.3, 0.4]], model="dinov2")
+            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4]], model="dinov2")
 
-        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "r1", 0)]
+        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "v-r1", 0)]
 
     def test_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
-        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
         with pytest.raises(ValueError, match="dimension 3"):
-            writer.write_record_embeddings(["r2"], [[0.3, 0.4, 0.5]], model="clip")
+            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="clip")
 
 
 class TestCompaction:
@@ -589,7 +612,7 @@ class TestEmbeddingTableCreatedElsewhere:
         dataset.create_record_embedding_table = lambda dim, model_id: created_on_stale.append(model_id)  # type: ignore[assignment]
         writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: fresh)
 
-        writer.write_record_embeddings(["r1"], [[0.1, 0.2]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
         assert created_on_stale == [], "the existing table would have been overwritten"
         assert len(fresh.tables["embeddings"]) == 1

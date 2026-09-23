@@ -61,6 +61,10 @@ class JobParams(BaseModel):
 
 ParamsT = TypeVar("ParamsT", bound=JobParams)
 
+#: A key a parameter's JSON schema may carry to make the submission form ask for confirmation
+#: before the job starts, with this text. For a parameter that destroys something when set.
+CONFIRM_MARKER = "x-pixano-confirm"
+
 
 class Chunk(BaseModel):
     """A batch of tasks as a planner produces it.
@@ -132,10 +136,34 @@ class JobKind(ABC, Generic[ParamsT]):
     #: into every row it produced. A kind extends the set with its own.
     params_not_in_provenance: frozenset[str] = frozenset({"chunk_size"})
 
+    #: The media types this kind knows how to send to the inference. A job that chooses
+    #: another is refused whole at planning — see `refuse_unsupported_media`. Empty for a kind
+    #: that reads no media.
+    supported_media: frozenset[str] = frozenset()
+
     #: What this kind produces, in the provenance vocabulary of the Pixano schemas. Most kinds
     #: run a model; a kind that does not run one must say so, so that its output is not taken
     #: for a prediction.
     source_type: str = "model"
+
+    def refuse_unsupported_media(self, chosen: Iterable[str]) -> None:
+        """Refuse the whole job when the user chose a media type this kind cannot process.
+
+        Whole, not partly: a job that silently ran on the images and skipped the point clouds
+        would look finished while doing less than asked. The user either serves what the
+        missing type needs, or narrows the selection — a decision the job must not take for
+        them (step 2 design).
+
+        Raises:
+            ValueError: A chosen media type is not supported, named in the message.
+        """
+        unsupported = sorted(set(chosen) - self.supported_media)
+        if unsupported:
+            raise ValueError(
+                f"the '{self.name}' job cannot process {', '.join(unsupported)}: it handles "
+                f"{', '.join(sorted(self.supported_media)) or 'no media'}. Run it on those media only, "
+                "or serve a model that processes the others."
+            )
 
     def model_identity(self, params: ParamsT) -> ModelIdentity | None:
         """The model this job runs, for the provenance of every row it writes.

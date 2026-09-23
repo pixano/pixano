@@ -29,6 +29,8 @@ from pixano_worker.media import MediaResolver
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
 
+from pixano.schemas import Image, Record
+
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
 SOURCE_TYPES = {"model", "human", "ground_truth", "other"}
@@ -96,7 +98,12 @@ class _Target:
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
-        self._space = {"model_id": model_id, "dim": dim}
+        self._space: dict[str, Any] | None = {"model_id": model_id, "dim": dim}
+
+    def drop_record_embeddings(self) -> None:
+        self._embeddings_ready = False
+        self.info.tables.pop("embeddings", None)
+        self._space = None
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "_space", None)
@@ -130,8 +137,8 @@ class _Vector:
     nobody reviews it, and the model that produced it is described once for the whole table.
     """
 
-    def __init__(self, id: str, record_id: str, vector: Any) -> None:
-        self.id, self.record_id, self.vector = id, record_id, vector
+    def __init__(self, id: str, record_id: str, vector: Any, view_id: str = "") -> None:
+        self.id, self.record_id, self.view_id, self.vector = id, record_id, view_id, vector
 
 
 class _Row:
@@ -147,6 +154,9 @@ class _Source:
     By path and not by bytes, so that the contract does not have to simulate images: what the
     resolver does with them is exercised elsewhere.
     """
+
+    # The real schemas: the reader finds a dataset's media by looking at them.
+    info = SimpleNamespace(tables={"records": Record, "images": Image})
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
@@ -164,7 +174,10 @@ class _Source:
         record_ids: list[str] | None = None,
     ) -> list[Any]:
         if table_name == "images":
-            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in record_ids or []]
+            if ids is None:
+                end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+                ids = [f"img-{n}" for n in range(skip, end)]
+            return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 
@@ -223,7 +236,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def list_models(self) -> list[Any]:
-            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
