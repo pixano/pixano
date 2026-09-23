@@ -327,14 +327,12 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
     return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
-def _writer_for(
-    library: Path | None, dataset_id: str, kind: JobKind, job_id: str, params: JobParams | None = None
-) -> JobWriter:
+def _writer_for(library: Path | None, dataset_id: str, kind: JobKind, job_id: str, params: JobParams) -> JobWriter:
     """Bind a writer to a job's dataset, carrying the job's provenance.
 
     Opening is deferred to first use: a kind that writes nothing must not fail for lack of a
-    dataset, and the absence of a library only shows if someone writes. With `params`, the
-    writer records them and asks the kind which model it runs — a call that may reach the
+    dataset, and the absence of a library only shows if someone writes. The writer records the
+    job's parameters and asks the kind which model it runs — a call that may reach the
     inference server, so this runs in the job's thread, never on the loop.
     """
 
@@ -355,8 +353,8 @@ def _writer_for(
         kind.source_type,
         reopen_dataset,
         dataset_id,
-        params=kind.provenance_params(params) if params is not None else None,
-        model=kind.model_identity(params) if params is not None else None,
+        params=kind.provenance_params(params),
+        model=kind.model_identity(params),
     )
 
 

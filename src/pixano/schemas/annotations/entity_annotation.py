@@ -37,8 +37,10 @@ class ReviewStatus(Enum):
     A human annotation carries no status (the empty string): there is nothing to review. A
     model's output arrives ``pending``; a reviewer accepts it as is, corrects it — the row keeps
     ``source_type = model`` and the model's trace, so corrections can be counted — or rejects
-    it, in which case the row stays, marked, so that a rerun of the model does not recreate it
-    as new. A rerun replaces ``pending`` rows only: reviewed rows are frozen for that kind.
+    it, in which case the row stays, marked. A rerun replaces ``pending`` rows only: reviewed
+    rows are frozen for that kind. Freezing is not matching: a rerun that detects the same
+    object again writes it as a new ``pending`` row next to the reviewed one; telling the two
+    apart is the detection kind's concern.
 
     Attributes:
         PENDING: Produced by a model, not yet reviewed.
