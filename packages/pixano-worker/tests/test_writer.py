@@ -270,6 +270,17 @@ class TestProvenance:
         assert JobWriter(lambda: dataset, "detection", "j", "model").provenance()["review_status"] == "pending"
         assert "review_status" not in JobWriter(lambda: dataset, "label", "j", "other").provenance()
 
+    def test_a_row_without_a_rank_under_the_prefix_is_left_alone(self, dataset: _FakeDataset) -> None:
+        """Written by hand under a derived prefix: skipped, never a failure of every attempt."""
+        writer = JobWriter(lambda: dataset, "fake", "j")
+        stray_id = writer.ids_for("item-1", 1)[0].rsplit("-", 1)[0] + "-by-hand"
+        dataset.tables.setdefault("toy", {})[stray_id] = _FakeRow("stray")
+        dataset.tables["toy"][stray_id].id = stray_id
+
+        writer.replace("toy", "item-1", [_FakeRow("a")])
+
+        assert stray_id in dataset.tables["toy"]
+
     def test_says_nothing_about_a_model_it_does_not_know(self, dataset: _FakeDataset) -> None:
         """A kind without a model, or a server that gives no version: the keys are absent, not null."""
         without_version = JobWriter(lambda: dataset, "k", "j", model=ModelIdentity("clip")).provenance()
@@ -369,6 +380,61 @@ class TestAgainstRealLance:
 
         rows = {row.labels[0]: row.review_status for row in toy.get_data("classifications", limit=None)}
         assert rows == {"dog": "accepted", "horse": "pending"}
+
+    @staticmethod
+    def _review(toy, row_id: str, status: str) -> None:
+        row = toy.get_data("classifications", ids=[row_id])[0]
+        row.review_status = status
+        toy.update_data("classifications", [row])
+
+    def _detections(self, toy):
+        from pixano.schemas.annotations.classification import Classification
+
+        writer = JobWriter(lambda: toy, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        def run(labels: list[str]) -> list[str]:
+            rows = [
+                Classification(id="", record_id="task-0", labels=[label], confidences=[1.0], **writer.provenance())
+                for label in labels
+            ]
+            return writer.replace("classifications", "task-0", rows)
+
+        return run
+
+    def _statuses(self, toy) -> dict[str, tuple[str, str]]:
+        return {row.id: (row.labels[0], row.review_status) for row in toy.get_data("classifications", limit=None)}
+
+    @pytest.mark.parametrize("status", ["accepted", "corrected", "rejected"])
+    def test_every_reviewed_status_is_frozen(self, toy, status: str) -> None:
+        run = self._detections(toy)
+        first = run(["cat", "dog"])
+        self._review(toy, first[0], status)
+
+        run([])
+
+        assert self._statuses(toy) == {first[0]: ("cat", status)}
+
+    def test_new_rows_skip_the_ranks_reviewed_rows_hold(self, toy) -> None:
+        """A frozen rank 0 and more new rows than frozen ones: the new rows go around it."""
+        run = self._detections(toy)
+        first = run(["cat"])
+        self._review(toy, first[0], "accepted")
+
+        written = run(["a", "b", "c"])
+
+        assert first[0] not in written
+        assert sorted(label for label, _ in self._statuses(toy).values()) == ["a", "b", "c", "cat"]
+
+    def test_rerunning_with_frozen_rows_is_idempotent(self, toy) -> None:
+        run = self._detections(toy)
+        first = run(["cat", "dog", "cow"])
+        self._review(toy, first[1], "corrected")
+        run(["x", "y"])
+        once = self._statuses(toy)
+
+        run(["x", "y"])
+
+        assert self._statuses(toy) == once
 
     def test_resubmitting_does_not_duplicate(self, toy) -> None:
         self._run(toy, "job-1", 60)

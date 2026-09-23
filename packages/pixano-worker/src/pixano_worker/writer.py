@@ -222,9 +222,15 @@ def derive_id(kind: str, key: str, index: int = 0, model: str | None = None) -> 
     return f"{derive_prefix(kind, key, model)}-{index}"
 
 
-def _rank_of(row_id: str) -> int:
-    """The rank a derived identifier carries after its prefix."""
-    return int(row_id.rsplit("-", 1)[1])
+def _rank_of(row_id: str) -> int | None:
+    """The rank a derived identifier carries after its prefix; None for an id that has none.
+
+    The prefix is hexadecimal and fixed-length, so only a row written by hand under a derived
+    identifier could lack a rank. It is left alone rather than failing every attempt of the
+    chunk.
+    """
+    rank = row_id.rsplit("-", 1)[-1]
+    return int(rank) if rank.isdigit() else None
 
 
 def _is_reviewed(row: Any) -> bool:
@@ -355,7 +361,11 @@ class JobWriter:
             The identifiers written.
         """
         prefix = derive_prefix(self.kind, key, self._model_name)
-        previous = self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
+        previous = [
+            row
+            for row in self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
+            if _rank_of(row.id) is not None
+        ]
         frozen = {_rank_of(row.id) for row in previous if _is_reviewed(row)}
 
         written: list[str] = []
