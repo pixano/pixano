@@ -274,4 +274,4 @@ export type Shape = SaveShape | IdleState | EditShape | CreateShape;
 
 // ─── Feature Values ────────────────────────────────────────────────────────────
 
-export type FeatureValues = string | number | boolean;
+export type FeatureValues = string | number | boolean | Array<string | number | boolean>;

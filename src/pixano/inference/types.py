@@ -6,8 +6,9 @@
 
 """Pixano's inference types.
 
-This module defines Pixano's own types for inference operations,
-independent of any specific inference backend.
+This module defines Pixano's own types for inference operations, independent of any specific
+inference backend. Task names use Pixano's vocabulary (``image_mask_generation`` etc.); the
+`CAPABILITY_TO_TASK` map bridges the pixano-inference server's capability strings.
 """
 
 from dataclasses import dataclass, field
@@ -22,66 +23,38 @@ class ServerInfo:
     """Information about the inference server.
 
     Attributes:
-        app_name: Application name.
-        app_version: Application version string.
-        app_description: Application description.
-        num_cpus: Number of CPUs available (None if unknown).
-        num_gpus: Number of GPUs available.
-        num_nodes: Number of nodes in the cluster.
-        gpus_used: GPU usage (float value).
-        gpu_to_model: Mapping of GPU index to model name.
+        version: Server application version string.
         models: List of loaded model names.
-        models_to_capability: Mapping of model names to their capabilities.
+        models_to_task: Mapping of model name to its Pixano task value.
     """
 
-    app_name: str
-    app_version: str
-    app_description: str
-    num_cpus: int | None
-    num_gpus: int
-    num_nodes: int
-    gpus_used: float
-    gpu_to_model: dict[str, str]
+    version: str
     models: list[str]
-    models_to_capability: dict[str, str]
+    models_to_task: dict[str, str]
 
 
 class InferenceTask(str, Enum):
-    """Tasks supported by Pixano inference providers."""
+    """Tasks supported by Pixano inference providers (Pixano vocabulary)."""
 
-    SEGMENTATION = "segmentation"
-    TRACKING = "tracking"
+    MASK_GENERATION = "image_mask_generation"
+    VIDEO_MASK_GENERATION = "video_mask_generation"
     DETECTION = "detection"
     VLM = "vlm"
+    NER = "ner"
+    EMBEDDING = "embedding"
 
 
-@dataclass
-class ModelConfig:
-    """Configuration for instantiating a model.
-
-    Attributes:
-        name: Name of the model.
-        task: Task of the model.
-        path: Path to the model dump.
-        config: Configuration of the model.
-        processor_config: Configuration of the processor.
-    """
-
-    name: str
-    task: str
-    path: Path | str | None = None
-    config: dict[str, Any] = field(default_factory=dict)
-    processor_config: dict[str, Any] = field(default_factory=dict)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        return {
-            "name": self.name,
-            "task": self.task,
-            "path": str(self.path) if self.path else None,
-            "config": self.config,
-            "processor_config": self.processor_config,
-        }
+# The pixano-inference server reports a model's ability as a "capability" string; Pixano exposes
+# it as a task. These two maps bridge the vocabularies at the provider boundary.
+CAPABILITY_TO_TASK: dict[str, InferenceTask] = {
+    "segmentation": InferenceTask.MASK_GENERATION,
+    "tracking": InferenceTask.VIDEO_MASK_GENERATION,
+    "detection": InferenceTask.DETECTION,
+    "vlm": InferenceTask.VLM,
+    "ner": InferenceTask.NER,
+    "embedding": InferenceTask.EMBEDDING,
+}
+TASK_TO_CAPABILITY: dict[InferenceTask, str] = {task: cap for cap, task in CAPABILITY_TO_TASK.items()}
 
 
 @dataclass
@@ -90,35 +63,20 @@ class ModelInfo:
 
     Attributes:
         name: Name of the model.
-        capability: Capability the model can perform.
+        task: Pixano task the model performs (an `InferenceTask` value).
         model_path: Path to the model weights (optional).
         model_class: Class name of the model (optional).
+        status: Deployment status on the server (optional).
     """
 
     name: str
-    capability: str
+    task: str
     model_path: str | None = None
     model_class: str | None = None
+    status: str | None = None
 
 
-@dataclass
-class ProviderCapabilities:
-    """What a provider can do.
-
-    Attributes:
-        tasks: List of supported inference tasks.
-        supports_batching: Whether the provider supports batch processing.
-        supports_streaming: Whether the provider supports streaming responses.
-        max_image_size: Maximum supported image size (optional).
-    """
-
-    tasks: list[InferenceTask]
-    supports_batching: bool = False
-    supports_streaming: bool = False
-    max_image_size: int | None = None
-
-
-# --- Segmentation Types ---
+# --- Shared array / mask payloads (frontend wire shape — DO NOT change fields) ---
 
 
 @dataclass
@@ -171,9 +129,12 @@ class NDArrayData:
         return {"values": self.values, "shape": self.shape}
 
 
+# --- Image mask generation (SAM-style) ---
+
+
 @dataclass
-class SegmentationInput:
-    """Input for image segmentation.
+class ImageMaskGenerationInput:
+    """Input for image mask generation.
 
     Attributes:
         image: Image as base64 string or URL.
@@ -207,8 +168,8 @@ class SegmentationInput:
 
 
 @dataclass
-class SegmentationOutput:
-    """Output for image segmentation.
+class ImageMaskGenerationOutput:
+    """Output for image mask generation.
 
     Attributes:
         masks: Generated masks [num_prompts, num_masks].
@@ -226,8 +187,8 @@ class SegmentationOutput:
 
 
 @dataclass
-class SegmentationResult:
-    """Complete result of image segmentation.
+class ImageMaskGenerationResult:
+    """Complete result of image mask generation.
 
     Attributes:
         data: The output data.
@@ -238,7 +199,7 @@ class SegmentationResult:
         status: Status of the inference ("SUCCESS", "FAILURE").
     """
 
-    data: SegmentationOutput
+    data: ImageMaskGenerationOutput
     timestamp: datetime
     processing_time: float
     metadata: dict[str, Any]
@@ -246,12 +207,12 @@ class SegmentationResult:
     status: str = "SUCCESS"
 
 
-# --- Tracking Types ---
+# --- Video mask generation (SAM2 video tracking) ---
 
 
 @dataclass
-class TrackingInput:
-    """Input for video tracking.
+class VideoMaskGenerationInput:
+    """Input for video mask generation.
 
     Attributes:
         video: List of frame images as base64 or URLs.
@@ -261,6 +222,9 @@ class TrackingInput:
         points: Points for mask generation.
         labels: Labels for points.
         boxes: Bounding boxes.
+        propagate: Whether to propagate masks beyond the prompted frames.
+        interval: Optional propagation interval (window-relative).
+        keyframes: Optional structured prompt payloads.
     """
 
     video: list[str | bytes] | str | bytes
@@ -276,8 +240,8 @@ class TrackingInput:
 
 
 @dataclass
-class TrackingOutput:
-    """Output for video tracking.
+class VideoMaskGenerationOutput:
+    """Output for video mask generation.
 
     Attributes:
         objects_ids: IDs of tracked objects.
@@ -291,8 +255,8 @@ class TrackingOutput:
 
 
 @dataclass
-class TrackingResult:
-    """Complete result of video tracking.
+class VideoMaskGenerationResult:
+    """Complete result of video mask generation.
 
     Attributes:
         data: The output data.
@@ -303,7 +267,7 @@ class TrackingResult:
         id: Unique identifier for the inference request.
     """
 
-    data: TrackingOutput
+    data: VideoMaskGenerationOutput
     status: str
     timestamp: datetime
     processing_time: float
@@ -312,19 +276,19 @@ class TrackingResult:
 
 
 @dataclass
-class TrackingJobStatus:
-    """Status of an asynchronous tracking job."""
+class VideoMaskGenerationJobStatus:
+    """Status of an asynchronous video mask generation job."""
 
     job_id: str
     status: str
     detail: str | None = None
-    data: TrackingOutput | None = None
+    data: VideoMaskGenerationOutput | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime | None = None
     processing_time: float = 0.0
 
 
-# --- Detection Types ---
+# --- Detection ---
 
 
 @dataclass
@@ -382,7 +346,63 @@ class DetectionResult:
     status: str = "SUCCESS"
 
 
-# --- VLM Types ---
+# --- Embedding (CLIP-style, image XOR text into a shared space) ---
+
+
+@dataclass
+class EmbeddingInput:
+    """Input for embedding computation.
+
+    Exactly one of ``image`` or ``text`` must be provided (single value or a batch list).
+
+    Attributes:
+        model: Model name to use.
+        image: Image(s) to embed (path, URL, or base64).
+        text: Text(s) to embed.
+        normalize: Whether to L2-normalize the output vectors.
+    """
+
+    model: str
+    image: list[str] | str | None = None
+    text: list[str] | str | None = None
+    normalize: bool = True
+
+
+@dataclass
+class EmbeddingOutput:
+    """Output for embedding computation.
+
+    Attributes:
+        embedding: Embedding vectors as an ``[num_inputs, dim]`` array.
+        dim: Dimensionality of each embedding vector.
+    """
+
+    embedding: NDArrayData
+    dim: int
+
+
+@dataclass
+class EmbeddingResult:
+    """Complete result of embedding computation.
+
+    Attributes:
+        data: The output data.
+        timestamp: When the inference completed.
+        processing_time: Time taken in seconds.
+        metadata: Additional metadata from the model.
+        id: Unique identifier for the inference request.
+        status: Status of the inference ("SUCCESS", "FAILURE").
+    """
+
+    data: EmbeddingOutput
+    timestamp: datetime
+    processing_time: float
+    metadata: dict[str, Any]
+    id: str = ""
+    status: str = "SUCCESS"
+
+
+# --- VLM ---
 
 
 @dataclass

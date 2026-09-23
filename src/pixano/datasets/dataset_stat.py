@@ -10,6 +10,20 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
+class SplitStatusCount(BaseModel):
+    """Count of records grouped by split and annotation status.
+
+    Attributes:
+        split: The dataset split name (e.g. 'train', 'val', 'test').
+        status: The annotation status (e.g. 'new', 'inProgress', 'validated').
+        count: Number of records matching this split-status pair.
+    """
+
+    split: str
+    status: str
+    count: int
+
+
 class DatasetStatistic(BaseModel):
     """A statistic of a dataset.
 

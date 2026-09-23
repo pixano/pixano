@@ -14,12 +14,13 @@ License: CECILL-C
     PaintBrush,
     PaintBucket,
     PencilSimple,
+    Polygon,
     Square,
   } from "phosphor-svelte";
 
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
+  import DisplaySettings from "./Toolbar/DisplaySettings.svelte";
   import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
-  import { polygonIcon } from "$lib/assets";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     currentSegmentationModels,
@@ -196,10 +197,7 @@ License: CECILL-C
   });
 </script>
 
-<div
-  class="flex items-center gap-1.5 z-10 bg-card/90 backdrop-blur-md p-0.5 px-1.5 rounded-xl border border-border/40 shadow-sm"
-  aria-busy={smartInferencePending}
->
+<div class="flex items-center gap-1.5 z-10" aria-busy={smartInferencePending}>
   <!-- Navigation -->
   <IconButton
     tooltipContent={panTool.name}
@@ -239,7 +237,7 @@ License: CECILL-C
       disabled={smartInferencePending}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
-      <img src={polygonIcon} alt="polygon icon" class="h-4.5 w-4.5" />
+      <Polygon class="h-4.5 w-4.5" />
     </IconButton>
 
     {#if showPolygonTools}
@@ -401,8 +399,12 @@ License: CECILL-C
       </div>
     {/if}
   </div>
-
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  <!-- Display settings (canvas tools, not record data) -->
+  {#if currentWorkspaceType !== WorkspaceType.PCL_3D}
+    <DisplaySettings />
+  {/if}
 
   <!-- Help -->
   <KeyboardShortcuts isVideo={currentWorkspaceType === WorkspaceType.VIDEO} />

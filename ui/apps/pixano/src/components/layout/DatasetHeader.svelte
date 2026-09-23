@@ -9,187 +9,128 @@ License: CECILL-C
   import { fade } from "svelte/transition";
 
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
-  import { goto } from "$app/navigation";
-  import { page } from "$app/state";
+  import { navigating, page } from "$app/state";
+  import * as api from "$lib/api";
+  import type { NeighborsResponse } from "$lib/api/restTypes";
+  import { currentDatasetStore, currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
+  import { navigateToRoute } from "$lib/utils/navigation";
   import {
-    currentDatasetStore,
-    currentItemSaveCoordinator,
-    datasetItemIds,
-  } from "$lib/stores/appStores.svelte";
-  import { PrimaryButton, UnsavedChangesDialog } from "$lib/ui";
-  import {
-    EXPLORER_ROUTE_ID,
-    findNeighborItemId,
     getExplorerRoute,
-    getPageFromItemId,
+    getPageFromPosition,
+    getRouteSearchParams,
     getWorkspaceRoute,
+    pickExplorerQuery,
     WORKSPACE_ROUTE_ID,
   } from "$lib/utils/routes";
 
-  interface Props {
-    pageId: string | null;
-  }
-
-  let { pageId }: Props = $props();
-
-  let pendingNavigationRoute = $state<string | null>(null);
-  let isDestroyed = false;
-
   let currentItemId = $derived(page.params.itemId);
   const isWorkspaceRoute = $derived(page.route.id === WORKSPACE_ROUTE_ID);
-  const saveState = $derived(currentItemSaveCoordinator.value);
+  // The active filter/sort/search, read from the workspace route's hash query.
+  const explorerQuery = () => {
+    const params = getRouteSearchParams(page.url);
+    return {
+      filters: params.getAll("filter").filter((value) => value !== ""),
+      q: params.get("q") ?? undefined,
+      sort: params.get("sort") ?? undefined,
+      order: params.get("order") ?? undefined,
+      where: params.get("where") ?? undefined,
+    };
+  };
 
+  // Neighbors within the current result set, fetched server-side so item-to-item
+  // navigation honors the explorer's filter and sort (not the full dataset).
+  const neighborsContext = $derived(
+    JSON.stringify([currentDatasetStore.value?.id, currentItemId, explorerQuery()]),
+  );
+  let neighborResult = $state<{ context: string; data: NeighborsResponse } | null>(null);
+  const neighbors = $derived(
+    neighborResult?.context === neighborsContext ? neighborResult.data : null,
+  );
   $effect(() => {
+    const context = neighborsContext;
+    const datasetId = currentDatasetStore.value?.id;
+    const itemId = currentItemId;
+    neighborResult = null;
+    if (!isWorkspaceRoute || !datasetId || !itemId) {
+      return;
+    }
+    const query = explorerQuery();
+    let cancelled = false;
+    void api
+      .getNeighbors(datasetId, itemId, query)
+      .then((result) => {
+        if (!cancelled) neighborResult = { context, data: result };
+      })
+      .catch(() => {
+        if (!cancelled) neighborResult = null;
+      });
     return () => {
-      isDestroyed = true;
+      cancelled = true;
     };
   });
 
-  $effect(() => {
-    if (page.route.id === WORKSPACE_ROUTE_ID) return;
-    currentItemSaveCoordinator.resetForItemChange();
+  const getRecordPosition = () => ({
+    position: neighbors?.position ?? null,
+    total: neighbors?.total ?? null,
   });
-
-  const getWorkspaceRecordDisplayCount = () => {
-    const index = datasetItemIds.value.indexOf(currentItemId);
-    if (index === -1) return "0 of 0";
-    return `${index + 1} of ${datasetItemIds.value.length}`;
-  };
 
   // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    if (!currentDatasetStore.value) return;
+    if (navigating.to !== null) return;
+    if (!currentDatasetStore.value || !neighbors) return;
 
-    // Find the neighbor item id
-    const neighborId = findNeighborItemId(datasetItemIds.value, direction, currentItemId);
+    const neighborId = direction === "previous" ? neighbors.prev : neighbors.next;
+    if (!neighborId) return; // at the start/end of the filtered result set
 
-    // If a neighbor item has been found
-    if (neighborId) {
-      const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId);
+    const query = pickExplorerQuery(getRouteSearchParams(page.url)).toString();
+    const route = getWorkspaceRoute(currentDatasetStore.value.id, neighborId, query);
 
-      // Ask for confirmation if modifications have been made to the item
-      if (saveState.isDirty) {
-        pendingNavigationRoute = route;
-        return;
-      }
-
-      // Go to next/previous item
-      await goto(route);
-    }
+    await navigateToRoute(route);
   };
 
   const handleSave = () => {
     void currentItemSaveCoordinator.requestSave();
   };
 
-  const handleSaveAndContinue = async () => {
-    const route = pendingNavigationRoute;
-    if (!route) return;
-
-    const result = await currentItemSaveCoordinator.requestSave();
-    if (!result.ok) return;
-
-    pendingNavigationRoute = null;
-    await goto(route);
-  };
-
-  const handleDiscardAndContinue = async () => {
-    const route = pendingNavigationRoute;
-    if (!route) return;
-
-    pendingNavigationRoute = null;
-    currentItemSaveCoordinator.beginDiscardBypass();
-
-    try {
-      await goto(route);
-    } finally {
-      if (!isDestroyed) {
-        currentItemSaveCoordinator.endDiscardBypass();
-      }
-    }
-  };
-
-  // Return to the previous page
+  // Return to the explorer, landing on the page that contains this item within
+  // the active filter/sort (derived from its position in the result set).
   const handleReturnToPreviousPage = async () => {
     if (!currentDatasetStore.value) return;
     if (currentItemId) {
-      const targetPage = getPageFromItemId(datasetItemIds.value, currentItemId);
-      await navigateTo(getExplorerRoute(currentDatasetStore.value.id, `page=${targetPage}`));
-    } else await navigateTo("/");
+      const params = pickExplorerQuery(getRouteSearchParams(page.url));
+      // Respect a custom page size so the computed page matches the explorer's pagination.
+      const size = parseInt(params.get("size") ?? "") || undefined;
+      params.set("page", String(getPageFromPosition(neighbors?.position ?? 1, size)));
+      await navigateToRoute(getExplorerRoute(currentDatasetStore.value.id, params.toString()));
+    } else await navigateToRoute("/");
   };
-
-  const navigateTo = async (route: string) => {
-    if (saveState.isDirty) {
-      pendingNavigationRoute = route;
-      return;
-    }
-    await goto(route);
-  };
-
-  // Prevent losing unsaved changes on browser-level unloads.
-  // Internal app navigation is handled by the dialog flow above.
-  // The parameter is unused but required by the Svelte action signature.
-  // eslint-disable-next-line
-  function preventUnsavedUnload(_: HTMLElement) {
-    function checkNavigation(e: BeforeUnloadEvent) {
-      if (
-        currentItemSaveCoordinator.value.isDirty &&
-        currentItemSaveCoordinator.value.guardMode === "armed"
-      ) {
-        e.preventDefault();
-      }
-    }
-    window.addEventListener("beforeunload", checkNavigation);
-    return {
-      destroy() {
-        window.removeEventListener("beforeunload", checkNavigation);
-      },
-    };
-  }
 </script>
 
-<div class="h-full w-full flex items-center" use:preventUnsavedUnload>
+<div class="h-full w-full flex items-center">
   {#if isWorkspaceRoute}
     <WorkspaceRecordHeader
       {currentItemId}
       {handleSave}
       {goToNeighborItem}
       {handleReturnToPreviousPage}
-      {getWorkspaceRecordDisplayCount}
+      {getRecordPosition}
     />
   {:else}
-    <div in:fade={{ duration: 200 }} class="flex-1 flex items-center justify-between h-full">
-      <div class="flex items-center gap-6">
-        {#if currentDatasetStore.value}
-          <div
-            class="flex items-center px-4 py-1.5 bg-primary/[0.03] border border-primary/10 rounded-xl max-w-[300px]"
-          >
-            <span class="text-sm font-bold text-foreground truncate">
-              {currentDatasetStore.value.name}
-            </span>
-          </div>
-        {/if}
-
-        <PrimaryButton
-          isSelected={pageId === EXPLORER_ROUTE_ID}
-          onclick={() => navigateTo(getExplorerRoute(currentDatasetStore.value.id))}
-          class="h-9 px-4 text-xs font-bold uppercase tracking-wider"
-        >
-          Dataset
-        </PrimaryButton>
-      </div>
-
-      <!-- Placeholder for Right zone in browser view to maintain symmetry -->
-      <div class="w-10"></div>
-    </div>
+    <!-- Breadcrumb: Library / dataset name -->
+    <nav in:fade={{ duration: 200 }} class="flex-1 flex items-center gap-2 h-full min-w-0">
+      <button
+        type="button"
+        onclick={() => navigateToRoute("/")}
+        class="text-sm font-medium text-muted-foreground hover:text-primary transition-colors rounded-md px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Library
+      </button>
+      <span class="shrink-0 text-sm text-muted-foreground/40">/</span>
+      {#if currentDatasetStore.value}
+        <span class="max-w-[360px] truncate text-sm font-bold text-foreground">
+          {currentDatasetStore.value.name}
+        </span>
+      {/if}
+    </nav>
   {/if}
 </div>
-{#if pendingNavigationRoute !== null}
-  <UnsavedChangesDialog
-    isSaving={saveState.status === "saving"}
-    errorMessage={saveState.status === "failed" ? saveState.errorMessage : null}
-    onSave={handleSaveAndContinue}
-    onDiscard={handleDiscardAndContinue}
-    onCancel={() => (pendingNavigationRoute = null)}
-  />
-{/if}

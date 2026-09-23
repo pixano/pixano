@@ -25,28 +25,32 @@ dependencies = [
   "boto3 >= 1.26.0, < 2.0.0",
   "duckdb >= 1.0.0, < 2.0.0",
   "httpx >= 0.25.0, < 1.0.0",
-  "fastapi >= 0.103.0, < 1.0.0",
-  "importlib-resources >= 5.12.0, < 6.0.0",
-  "ipywidgets >= 8.0.0, < 9.0.0",
+  "huggingface_hub >= 0.20, < 1.0",
+  "fastapi >= 0.108.0, < 1.0.0",
+  "filelock >= 3.13, < 4.0",
+  "ipython >= 8.0.0, < 10.0.0",
   "jinja2 >= 3.1.2, < 4.0.0",
   "lance-namespace >= 0.5.0, < 0.6.0",
   "lancedb >= 0.29.0, < 0.30.0",
   "numpy >= 1.26.0, < 3.0.0",
-  "orjson >= 3.9.0, < 4.0.0",
   "opencv-python >= 4.7.0, < 5.0.0",
   "pandas >= 1.5.0, < 3.0.0",
-  "Pillow >= 9.4.0, < 13.0.0",
+  "Pillow >= 12.3.0, < 13.0.0",
   "polars > 1.7.0, < 2.0.0",
   "pycocotools >= 2.0.0, < 3.0.0",
   "pydantic >= 2.9.0, < 3.0.0",
-  "pydantic-settings >= 2.0.0, < 3.0.0",
+  "pydantic-settings >= 2.14.2, < 3.0.0",
   "s3path >= 0.5.0, < 1.0.0",
-  "setuptools >= 65.6.0, < 76.0.0",
   "shortuuid >= 1.0.0, < 2.0.0",
   "tqdm >= 4.64.0, < 5.0.0",
   "typer >= 0.9.0, < 1.0.0",
   "uvicorn >= 0.20.0, < 1.0.0",
+  "pyyaml>=6.0,<7.0",
+  "pixano-inference-client == 0.1.0",
 ]
+
+[project.optional-dependencies]
+coco = ["ijson >= 3.2, < 4.0"]
 
 [dependency-groups]
 docs = [
@@ -62,7 +66,7 @@ test = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/pixano/pixano#readme"
+Documentation = "https://pixano.github.io/pixano/"
 Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 
@@ -71,7 +75,6 @@ pixano = "pixano.cli:main"
 
 [tool.uv]
 default-groups = ["test"]
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]
@@ -79,6 +82,29 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 artifacts = ["src/pixano/api/dist"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/ui",
+  "/tests",
+  "/.gitignore",
+  "/CHANGELOG.md",
+  "/LICENSE",
+  "/README.md",
+  "/VERSION",
+  "/hatch_build.py",
+  "/pyproject.toml",
+  "/uv.lock",
+]
+exclude = [
+  "**/.svelte-kit",
+  "**/node_modules",
+  "**/__pycache__",
+  "**/.venv",
+  "**/.env",
+  "**/.env.*",
+]
 
 [tool.hatch.build.hooks.custom]
 
@@ -88,6 +114,8 @@ path = "src/pixano/__version__.py"
 [tool.pytest.ini_options]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
+    "slow: Long-running scale/soak tests, excluded from the default CI run",
+    "hub: Tests downloading from the Hugging Face hub, excluded from the default CI run",
 ]
 
 [tool.ruff]

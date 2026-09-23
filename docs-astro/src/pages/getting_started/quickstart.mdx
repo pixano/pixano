@@ -4,166 +4,171 @@ title: "Quickstart"
 section: getting_started
 ---
 import Callout from '../../components/Callout.astro'
+import Figure from '../../components/Figure.astro'
 import PrevNext from '../../components/PrevNext.astro'
 
 # Quickstart
 
-By the end of this page, you will have imported your own images into Pixano and set up a dataset ready for annotation with bounding boxes and masks. Along the way, you will learn how Pixano organizes data — and why it works that way.
-
-<Callout type="info" title="What you'll learn">
-
-- What a **DatasetInfo** is and why you need one
-- The role of **records**, **views**, **entities**, and **annotations** in a dataset
-- How to **import** images and **launch** the Pixano app
-
-</Callout>
+Import a local image directory, configure its annotation schema, and inspect the dataset in
+the Explorer.
 
 ## Prerequisites
 
-- Python 3.10–3.13 with Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/))
-- A few images (JPEG or PNG) on your computer — 3 to 5 is enough
+- Pixano running (see [Installation](/pixano/getting_started/installing_pixano/)).
+- A flat directory containing only JPEG or PNG files (no subdirectories).
 
-## Step 1 — Initialize Pixano
+<Callout type="note">
 
-First, bootstrap Pixano by creating a **library** — the place where all your datasets will be stored:
+The example folder, `my_images_dataset`, contains three images. Record counts depend on the
+selected files.
 
-```bash
-pixano init ./my_library
-```
-
-This sets up your dataset library and runs all internal setup. From now on, `./my_library` is where Pixano manages your datasets and everything it needs to operate.
-
-## Step 2 — Define your dataset schema
-
-Before importing anything, you need to tell Pixano **what your dataset looks like**. You do this by creating a `DatasetInfo` — a Python object that declares which tables Pixano should create in the database.
-
-Create a file called `my_info.py` anywhere on your machine (e.g. in your current working directory):
-
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record
-
-
-class MyObject(Entity):
-    """A custom entity for the objects we want to annotate."""
-    category: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="My First Dataset",
-    workspace=WorkspaceType.IMAGE,
-    record=Record,
-    entity=MyObject,
-    bbox=BBox,
-    mask=CompressedRLE,
-    views={"image": Image},
-)
-```
-
-Let's break this down — each piece maps to a concept in Pixano's data model:
-
-- **`Record`** — Represents one sample in your dataset. Each image you import becomes one record. Records carry metadata like which split they belong to (`train`, `val`) and their annotation status (`new`, `inProgress`, `validated`).
-
-- **`views={"image": Image}`** — Defines the media attached to each record. Here, each record has a single view named `"image"`. For multi-view setups (e.g. stereo cameras), you would add more entries to this dictionary.
-
-- **`entity=MyObject`** — Entities are the **objects you want to label** in your images — a car, a person, a tree. We subclass `Entity` to add a `category` field so we can tag what kind of object each one is. You can add any fields you need (e.g. `is_occluded: bool = False`).
-
-- **`bbox=BBox`** — Tells Pixano to create a bounding box annotation table. This is where the rectangular coordinates for each labeled object will be stored.
-
-- **`mask=CompressedRLE`** — Tells Pixano to also create a mask annotation table, using compressed run-length encoding. This enables pixel-level segmentation annotations alongside bounding boxes.
-
-- **`workspace=WorkspaceType.IMAGE`** — Selects the UI layout. `IMAGE` gives you a single-image viewer with annotation tools. Other options include `VIDEO`, `IMAGE_VQA`, and `IMAGE_TEXT_ENTITY_LINKING`.
-
-<Callout type="tip" title="Why define the schema upfront?">
-Pixano uses your schema to create the right database tables before any data is imported. This means annotations are structured and queryable from day one — not just flat files. It also means Pixano knows which annotation tools to show you in the UI.
 </Callout>
 
-## Step 3 — Prepare your source folder
+## Import with the wizard
 
-Pixano imports data from a **source folder** organized by **splits**. Each split is a subfolder containing your images.
+1. Open Pixano in a browser. In the empty Library, click **Import dataset** to open the import
+   wizard.
 
-Create a folder and put a few images in it:
+<Figure src="getting_started/quickstart/01-library-empty.webp"
+  alt="The empty Library: 'Your library is empty' with the Import dataset button."
+  caption="Empty Library." />
+
+2. In **Setup**, use the **Source** pane on the left to select **Raw media**.
+3. In **Annotation setup** on the right, select **Image annotation**. **Bounding boxes** and
+   **Masks** are enabled by default; **Polygons & lines** is optional. Add **Object attributes**
+   such as `category` (String) if required by the annotation schema.
+4. In **Source**, click **Choose a folder** and select `my_images_dataset`. After upload,
+   **Detected layout** reports 3 records, each with one `image` view.
+5. Leave **Dataset name** empty to use the folder name. Keep **Overwrite existing dataset**
+   unchecked for a new dataset, then click **Review import**.
+
+<Figure src="getting_started/quickstart/02-wizard-source-detected-layout.webp"
+  alt="Setup with Source on the left and Annotation setup on the right: my_images_dataset is uploaded, 3 records are detected, and bounding boxes and masks are selected."
+  caption="Setup: source configuration and annotation schema." />
+
+6. In **Review**, check the record count, **Media views**, **Annotation setup**, and **Sample
+   records**. Analysis does not create the dataset. Use **Edit setup** to make changes, or click
+   **Start import**.
+
+<Figure src="getting_started/quickstart/03-wizard-review-plan.webp"
+  alt="Review import showing 3 records, the image view, bounding box and mask tools, and sample records."
+  caption="Review the import plan before starting the job." />
+
+7. The wizard closes and the import runs in the background. The job tray shows progress and a
+   **Cancel** control. On completion, the Library updates automatically with the new dataset.
+
+<Figure src="getting_started/quickstart/04-library-dataset-card.webp"
+  alt="The Library with the new my_images_dataset card and an Imported status in the background job tray."
+  caption="The Library updates automatically when the background import completes." />
+
+<Callout type="note">
+
+The same **Setup → Review** flow supports video, Visual Q&A, and image–text annotation tasks,
+plus existing Pixano, MS COCO, and LeRobot datasets. Select the data format in **Source** and
+configure applicable tools and attributes in **Annotation setup**. In a raw media directory,
+`train/`, `val/`, and `test/` subdirectories become splits.
+
+</Callout>
+
+## Inspect the dataset
+
+Click the dataset card. The **Explorer** lists the records in a gallery, one per image. Click a
+record to open it in the annotation **Workspace**.
+
+<Figure src="getting_started/quickstart/05-explorer-records.webp"
+  alt="The Explorer showing the three records of my_images_dataset in the gallery."
+  caption="Explorer, gallery view." />
+
+Each image is stored as a **record** with a single **view**. Annotated objects are **entities**;
+each bounding box, mask, or polygon attached to an entity is an **annotation**. Review summarizes
+the views, annotation tools, and custom attributes. See
+[Key Concepts](/pixano/getting_started/key_concepts/) for the data model.
+
+{/* HIDDEN until the CLI import flow is re-verified. To restore: remove the two comment markers,
+    end the intro sentence with ", and reproducing the workflow using the CLI.", and mention the
+    command line again on the Quickstart card in getting_started/index.astro.
+
+## Import with the CLI
+
+The wizard uploads files through the browser. Use `pixano data import` when the data already
+resides on the server machine, or to script imports. The CLI requires the pip installation; with
+Docker, use the wizard.
+
+With the server running, open a second terminal in the directory containing `my_data`, activate
+the virtual environment, and run:
 
 ```bash
-mkdir -p my_images/train
-# Copy 3-5 JPEG or PNG images into my_images/train/
+pixano data import ./my_data ./my_images_dataset --name my_images_dataset_cli
 ```
 
-Your folder should look like this:
+The dataset name defaults to the folder name. `--name` is needed here only because the wizard
+already created `my_images_dataset`: Pixano never overwrites an existing dataset implicitly. If
+`my_images_dataset` is located elsewhere, pass its full path.
 
+Pixano analyzes the source and prints the import plan before writing anything:
+
+```text
+Format: pixano_jsonl (importer 1.0.0)
+- Split 'default': 3 record(s)
+Total: 3 record(s)
+Schema (workspace: image):
+- View 'image': Image
+- Annotations: bbox, keypoint
+Proceed with the import? [Y/n]:
 ```
-my_images/
-  train/
-    photo1.jpg
-    photo2.jpg
-    photo3.jpg
+
+Press Enter to confirm. On completion:
+
+```text
+Dataset 'my_images_dataset_cli' imported successfully (3 record(s), storage: embedded, job Z4sYXS4cHu5P5sZ3BYLdSP).
 ```
 
-The subfolder name (`train`) becomes the **split** assigned to each record. You can add more splits later (e.g. `val/`, `test/`) by re-importing with `--mode add`.
+Reload the Library: the new dataset is listed. No server restart is required.
 
-Without a `metadata.jsonl` file, Pixano auto-discovers all supported images in each split folder and creates one record per image.
+### Define the schema with dataset.yaml
 
-## Step 4 — Import the dataset
+Without a configuration file, the CLI creates the `bbox` and `keypoint` annotation tables; the
+wizard's image preset creates `bbox` and `mask`. To control the schema, add a
+`dataset.yaml` at the root of the source directory.
 
-Now bring everything together:
+Create `my_images_dataset/dataset.yaml`:
+
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: my_images_dataset_detection
+  workspace: image
+schema:
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox, mask]
+```
+
+- `dataset`: the name and the workspace (set by the cards in the wizard).
+- `schema`: adds a `category` string attribute to every entity and restricts the annotation
+  tables to `bbox` and `mask`.
+
+Pixano detects the file automatically. No option is needed; the name comes from the file:
 
 ```bash
-pixano data import ./my_library ./my_images --info my_info.py:dataset_info
+pixano data import ./my_data ./my_images_dataset
 ```
 
-Here is what this command does:
+The plan now reflects the file:
 
-1. Reads your `DatasetInfo` from `my_info.py`
-2. Scans `my_images/` for split folders and images
-3. Creates a new dataset in `./my_library` with the tables you defined
-4. Stores each image as a record with its associated view
-
-The `--info` flag uses the format `path/to/file.py:attribute_name` to locate your `DatasetInfo` object. The path can be absolute or relative to your current working directory — it doesn't need to be inside the library or the source folder.
-
-Common import options:
-
-| Option | Description |
-|--------|-------------|
-| `--info` | Dataset info as `path/to/file.py:attribute`. Required. |
-| `--mode` | `create` (default), `overwrite`, or `add`. |
-| `--dry-run` | Validate without creating the dataset. |
-
-## Step 5 — Launch and explore
-
-Start the Pixano server:
-
-```bash
-pixano server run ./my_library
+```text
+Schema (workspace: image):
+- View 'image': Image
+- Entity attrs: category: str
+- Annotations: bbox, mask
 ```
 
-Open **http://127.0.0.1:7492** in your browser.
+See [Key Concepts](/pixano/getting_started/key_concepts/) for workspaces, entities, and
+annotation tables.
 
-You will see the Pixano home page with a card for your dataset. Click it to enter the dataset explorer, where you can browse your images, see their split and status, and open any image in the annotation workspace.
-
-Server options:
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--host` | Bind address (e.g. `0.0.0.0` for network access) | `127.0.0.1` |
-| `--port` | Port number | `7492` |
-
-## What just happened?
-
-Let's connect the dots between what you did and how Pixano sees your data:
-
-- The **DatasetInfo** you wrote became a set of **database tables** — one for records, one for image views, one for entities, one for bounding boxes, and one for masks.
-- Each image you placed in `my_images/train/` became a **record** in the `train` split, with an associated **image view**.
-- The **entity** and **annotation** tables are empty for now — they will be populated as you (or a model) annotate objects in the UI.
-- Because you declared `BBox` and `CompressedRLE` in your schema, the annotation workspace knows to offer both bounding box and mask tools when you start labeling.
-
-You will learn more about this data model in [Key Concepts](/pixano/getting_started/key_concepts/).
-
-## Next steps
-
-- [Key Concepts](/pixano/getting_started/key_concepts/) — understand the data model in depth
-- [Object Detection](/pixano/cookbook/object_detection/) — full walkthrough with pre-annotation and semantic search
-- [Video Object Tracking](/pixano/cookbook/video_tracking/) — work with video datasets and SAM
+*/}
 
 <PrevNext
   prev={{ title: "Installation", href: "/getting_started/installing_pixano/" }}

@@ -34,6 +34,8 @@ repos:
     hooks:
       - id: mypy
         exclude: ^(docs|tests|ui)/
+        additional_dependencies:
+          - types-PyYAML
   - repo: local
     hooks:
       - id: check_license_header

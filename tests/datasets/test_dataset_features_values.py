@@ -27,7 +27,15 @@ class TestDatasetFeaturesValues:
             },
             annotations={"annotation1": []},
         )
-        assert set(type(fv).model_fields.keys()) == {"item", "views", "entities", "annotations"}
+        assert set(type(fv).model_fields.keys()) == {
+            "item",
+            "records",
+            "views",
+            "entities",
+            "entity_dynamic_states",
+            "annotations",
+            "embeddings",
+        }
 
     def test_to_json(self):
         fv = DatasetFeaturesValues(
@@ -58,6 +66,7 @@ class TestDatasetFeaturesValues:
             }
         ]
     },
+    "records": {},
     "views": {},
     "entities": {
         "entity1": [
@@ -79,9 +88,11 @@ class TestDatasetFeaturesValues:
             }
         ]
     },
+    "entity_dynamic_states": {},
     "annotations": {
         "annotation1": []
-    }
+    },
+    "embeddings": {}
 }"""
         )
 

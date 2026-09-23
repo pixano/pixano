@@ -15,20 +15,22 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY src/ ./src/
 COPY ui/ ./ui/
-COPY pyproject.toml uv.lock hatch_build.py README.md ./
+COPY pyproject.toml uv.lock hatch_build.py README.md LICENSE ./
 
 RUN uv build --wheel
 
-# Stage 2: Runtime (install the wheel and system dependencies)
+# Stage 2: Runtime (validate the wheel's published dependency declarations)
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 && \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/dist/pixano-*.whl /tmp/
-RUN uv pip install --system /tmp/pixano-*.whl && rm /tmp/pixano-*.whl
+RUN uv pip install --system --index-url https://pypi.org/simple /tmp/pixano-*.whl \
+    && uv pip check --system \
+    && rm /tmp/pixano-*.whl
 
 ARG DATA_DIR=/library
 ENV DATA_DIR=${DATA_DIR}

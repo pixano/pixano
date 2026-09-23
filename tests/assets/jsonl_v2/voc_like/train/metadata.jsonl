@@ -1,0 +1,2 @@
+{"$pixano":"jsonl/2","defaults":{"bbox":{"format":"xywh","is_normalized":true},"source":{"type":"ground_truth","name":"voc2007"}}}
+{"id":"voc_000042","attrs":{"license":"voc2007"},"views":{"image":"JPEGImages/000042.jpg"},"entities":[{"attrs":{"category":"dog","is_difficult":false},"annotations":[{"kind":"bbox","coords":[0.132,0.28,0.41,0.55]},{"kind":"keypoints","template_id":"animal_pose","coords":[0.5,0.5,0.7,0.5,0.6,0.6,0.6,0.8],"states":["visible","visible","hidden","visible"]},{"kind":"mask","polygons":[[0.13,0.28,0.54,0.28,0.54,0.83,0.13,0.83]]}]}]}

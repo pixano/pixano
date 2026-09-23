@@ -22,11 +22,32 @@ jobs:
     name: PyPI
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Verify release tag and package versions
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import runpy
+          from pathlib import Path
+
+          version = Path("VERSION").read_text().strip()
+          expected_tag = f"v{version}"
+          if os.environ["RELEASE_TAG"] != expected_tag:
+              raise SystemExit(f"Release tag must be {expected_tag}.")
+          backend = runpy.run_path("src/pixano/__version__.py")["__version__"]
+          frontend = json.loads(Path("ui/apps/pixano/package.json").read_text())["version"]
+          if backend != version or frontend != version:
+              raise SystemExit("VERSION, backend, and frontend versions must match.")
+          PY
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -49,12 +70,22 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Verify clean wheel installation and startup
+        run: |
+          python -m venv "$RUNNER_TEMP/pixano-wheel-smoke"
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" -m pip --isolated install --index-url https://pypi.org/simple dist/pixano-*.whl
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" .github/scripts/smoke_wheel.py --expected-version "$(cat VERSION)"
+
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish_docs:
     name: Documentation
+    needs: publish_pypi
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
@@ -63,15 +94,19 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      # Version comes from "packageManager" in docs-astro/package.json.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          ref: main
+          package_json_file: docs-astro/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: docs-astro/package-lock.json
+          cache: pnpm
+          cache-dependency-path: docs-astro/pnpm-lock.yaml
 
       - name: Setup Python 3.12
         uses: actions/setup-python@v6
@@ -85,18 +120,18 @@ jobs:
         run: uv sync --group docs
 
       - name: Install Node dependencies
-        run: npm ci
+        run: pnpm i --frozen-lockfile
         working-directory: docs-astro
 
       - name: Generate API reference
         run: uv run python docs-astro/scripts/generate_api_docs.py
 
       - name: Build Astro site
-        run: npx astro build
+        run: pnpm exec astro build
         working-directory: docs-astro
 
       - name: Run Pagefind
-        run: npx pagefind --site dist
+        run: pnpm exec pagefind --site dist
         working-directory: docs-astro
 
       - name: Upload artifact
@@ -110,12 +145,27 @@ jobs:
 
   publish_docker:
     name: Docker
+    needs: publish_pypi
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Set VERSION environment variable
         run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Wait for the released version on PyPI
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: |
+          for attempt in $(seq 1 30); do
+            if python -m pip --isolated download --index-url https://pypi.org/simple --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/pixano-pypi-check" "pixano==$VERSION"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "Pixano $VERSION is not available on PyPI after 30 attempts."
+              exit 1
+            fi
+            sleep 10
+          done
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx

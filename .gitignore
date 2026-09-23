@@ -56,3 +56,4 @@ venv
 # Dataset files
 *.lance
 tests/assets/library/*
+my_data/

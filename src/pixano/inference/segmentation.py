@@ -15,9 +15,9 @@ from pixano.schemas.entities.entity import Entity
 from .provider import InferenceProvider
 from .types import (
     CompressedRLEData,
+    ImageMaskGenerationInput,
     NDArrayData,
-    SegmentationInput,
-    TrackingInput,
+    VideoMaskGenerationInput,
 )
 
 
@@ -110,7 +110,7 @@ async def segmentation(
     # More, it is VERY costly (around 13 sec) as it means to shape them and transfer them via HTTP.
     return_image_embedding = False
 
-    input_data = SegmentationInput(
+    input_data = ImageMaskGenerationInput(
         image=image_request,
         model=source_name,
         image_embedding=image_embedding_request,
@@ -124,7 +124,7 @@ async def segmentation(
         return_image_embedding=return_image_embedding,
     )
 
-    result = await provider.segmentation(input_data, **provider_kwargs)
+    result = await provider.image_mask_generation(input_data, **provider_kwargs)
 
     # Get first mask from first prompt
     mask_data: CompressedRLEData = result.data.masks[0][0]
@@ -206,7 +206,7 @@ async def tracking(
             bbox = bbox.denormalize(height=video[0].height, width=video[0].width)
         boxes_request = [[int(c) for c in bbox.xyxy_coords]]
 
-    input_data = TrackingInput(
+    input_data = VideoMaskGenerationInput(
         video=video_request,
         model=source_name,
         objects_ids=list(range(len(video))),
@@ -216,7 +216,7 @@ async def tracking(
         boxes=boxes_request,
     )
 
-    result = await provider.tracking(input_data, **provider_kwargs)
+    result = await provider.video_mask_generation(input_data, **provider_kwargs)
 
     masks: list[CompressedRLE] = []
     objects_ids: list[int] = []

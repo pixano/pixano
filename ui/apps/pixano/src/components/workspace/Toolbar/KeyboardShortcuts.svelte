@@ -134,13 +134,14 @@ License: CECILL-C
 <Popover.Root>
   <Popover.Trigger
     type="button"
-    class="h-7 w-7 inline-flex items-center justify-center rounded-md text-foreground hover:bg-accent/60 transition-all duration-200"
-    title="Keyboard Shortcuts"
+    class="h-7 w-7 inline-flex items-center justify-center rounded-lg text-foreground hover:bg-accent/60 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    aria-label="Keyboard shortcuts"
+    title="Keyboard shortcuts"
   >
     <Keyboard class="h-4.5 w-4.5" />
   </Popover.Trigger>
   <Popover.Content
-    class="w-[44rem] p-5 bg-popover backdrop-blur-xl border border-border rounded-lg shadow-xl"
+    class="z-50 w-[44rem] p-5 rounded-2xl border border-border/50 bg-popover/95 shadow-elevation-2 backdrop-blur-md"
   >
     <div class="text-sm font-medium text-foreground mb-4">Keyboard Shortcuts</div>
     <div class="grid grid-cols-3 gap-10">

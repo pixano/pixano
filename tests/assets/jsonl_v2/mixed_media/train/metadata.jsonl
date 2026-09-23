@@ -1,0 +1,1 @@
+{"id":"mix_1","views":{"image":"photo.jpg","clip":{"uri":"https://example.com/clips/mix_1.mp4","fps":25}},"entities":[{"attrs":{"category":"car"},"annotations":[{"kind":"classification","view":"image","labels":["street"],"confidences":[0.98]}]}]}

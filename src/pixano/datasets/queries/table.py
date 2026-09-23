@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import re
 from typing import Any, TypeVar
 
 import duckdb
@@ -73,6 +74,7 @@ class TableQueryBuilder:
         self._offset: int | None = None
         self._order_by: list[str] = []
         self._descending: list[bool] = []
+        self._force_full_scan: bool = False
         self._function_called: dict[str, bool] = {
             "select": False,
             "where": False,
@@ -132,6 +134,26 @@ class TableQueryBuilder:
         if not isinstance(where, str):
             raise ValueError("where must be a string.")
         self._where = where
+        return self
+
+    def force_full_scan(self, force: bool = True) -> Self:
+        """Force the safe full-scan-then-slice path regardless of index coverage.
+
+        The index-coverage check (`_filter_is_index_covered`) inspects which
+        columns a filter references, not which operators it uses. Some operators
+        (`!=`, `NOT IN`, `LIKE`, `array_contains`) are not served correctly by a
+        scalar index, so a filter using them on an indexed column would wrongly
+        take the native fast path and, under the lancedb 0.29 limit-before-filter
+        caveat, silently under-return. Callers that build such a filter set this
+        so the whole table is scanned and sliced afterwards.
+
+        Args:
+            force: Whether to force the full-scan path.
+
+        Returns:
+            The TableQueryBuilder instance.
+        """
+        self._force_full_scan = force
         return self
 
     def limit(self, limit: int | None) -> Self:
@@ -194,6 +216,33 @@ class TableQueryBuilder:
         self._descending = descending
         return self
 
+    def _filter_is_index_covered(self) -> bool:
+        """True when every column the where clause references has a scalar index.
+
+        Conservative: identifier tokens are matched against the table schema;
+        any schema column appearing in the filter must be indexed. Unknown or
+        unparsable filters return False (callers fall back to the full scan).
+        When `force_full_scan` is set, always report False so the safe
+        full-scan-then-slice path is taken (see `force_full_scan`).
+        """
+        if self._force_full_scan:
+            return False
+        if self._where is None:
+            return True
+        try:
+            schema_names = set(self.table.schema.names)
+            referenced = {
+                token for token in re.findall(r"[A-Za-z_][A-Za-z0-9_.]*", self._where) if token in schema_names
+            }
+            if not referenced:
+                return False
+            indexed: set[str] = set()
+            for index in self.table.list_indices():
+                indexed.update(getattr(index, "columns", None) or [])
+            return referenced <= indexed
+        except Exception:  # pragma: no cover - lancedb introspection failure
+            return False
+
     def _execute(self) -> pa.Table:
         """Builds the LanceQueryBuilder.
 
@@ -228,17 +277,30 @@ class TableQueryBuilder:
 
         # Determine if we need the DuckDB path
         needs_duckdb = len(self._order_by) > 0 or (self._offset is not None and self._offset > 0)
+        if needs_duckdb and len(self._order_by) == 0 and self._filter_is_index_covered():
+            # Indexed filters page natively (limit/offset apply post-filter).
+            needs_duckdb = False
 
         if not needs_duckdb:
-            # LanceDB native path — pushes predicates to storage layer, avoids full table materialization
-            if self._limit is None:
-                limit = self.table.count_rows(self._where) if self._where else self.table.count_rows()
+            # LanceDB native path. CAUTION: in lancedb 0.29 plain scans apply
+            # `limit` BEFORE any non-index-covered part of the `where` filter —
+            # a filtered query whose matches are not at the head of the table
+            # silently under-returns. When every predicate column carries a
+            # scalar index the limit/offset apply post-filter (fast path);
+            # otherwise scan the whole table and slice afterwards.
+            if self._where is not None and not self._filter_is_index_covered():
+                scan_limit = self.table.count_rows()
             else:
-                limit = self._limit
-            query = self.table.search(None).select(columns).limit(limit)
+                scan_limit = self._limit if self._limit is not None else self.table.count_rows()
+            query = self.table.search(None).select(columns).limit(scan_limit)
             if self._where is not None:
                 query = query.where(self._where)
-            return query.to_arrow()
+            if self._offset:
+                query = query.offset(self._offset)
+            result = query.to_arrow()
+            if self._where is not None and self._limit is not None:
+                result = result.slice(0, self._limit)
+            return result
         elif not has_count_join:
             # Optimized path: avoid full table.to_arrow() by fetching bounded set from LanceDB
             # then sorting/slicing with DuckDB over only that subset
@@ -246,17 +308,23 @@ class TableQueryBuilder:
             limit = self._limit
 
             if len(self._order_by) == 0:
-                # No ORDER BY, just OFFSET — use LanceDB native with overfetch + slice
-                fetch_limit = offset + limit if limit is not None else self.table.count_rows()
+                # No ORDER BY, just OFFSET — overfetch + slice. Same scan-limit
+                # caveat as the native path: with a non-index-covered filter,
+                # scan everything (index-covered filters took the native path).
+                if self._where is not None:
+                    fetch_limit = self.table.count_rows()
+                else:
+                    fetch_limit = offset + limit if limit is not None else self.table.count_rows()
                 query = self.table.search(None).select(columns).limit(fetch_limit)
                 if self._where is not None:
                     query = query.where(self._where)
                 arrow_table = query.to_arrow()
-                return arrow_table.slice(offset, limit) if offset > 0 else arrow_table
+                return arrow_table.slice(offset, limit if limit is not None else max(arrow_table.num_rows - offset, 0))
             else:
                 # ORDER BY on a regular column — need to fetch all matching rows, sort, then slice
-                # But we only fetch the columns we need via LanceDB native (no full to_arrow())
-                total = self.table.count_rows(self._where) if self._where is not None else self.table.count_rows()
+                # But we only fetch the columns we need via LanceDB native (no full to_arrow()).
+                # Scan the FULL table when filtered (limit applies pre-filter, see above).
+                total = self.table.count_rows()
                 query = self.table.search(None).select(columns).limit(total)
                 if self._where is not None:
                     query = query.where(self._where)

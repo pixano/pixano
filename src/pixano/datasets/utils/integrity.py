@@ -6,7 +6,9 @@
 
 import warnings
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal
+
+import pyarrow as pa
 
 from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.schemas import SchemaGroup, canonical_table_name_for_slot
@@ -149,6 +151,81 @@ def check_table_integrity(
     return errors
 
 
+def validate_arrow_batch(
+    table_name: str,
+    batch: pa.RecordBatch | pa.Table,
+    known_ids: dict[str, set[str]],
+    dataset: "Dataset",
+    raise_or_warn: Literal["raise", "warn", "none"] = "raise",
+    pending_ids: dict[str, set[str]] | None = None,
+    fk_lookup: Callable[[str, set[str]], dict[str, bool]] | None = None,
+) -> None:
+    """Vectorized `validate_batch` for Arrow payloads (spec §8, deviation D6).
+
+    Same semantics as the row path — defined ids, in-batch + cross-flush
+    uniqueness, FK resolution with the ""-sentinel skip — using
+    `pyarrow.compute` set operations instead of per-row Python.
+    """
+    import pyarrow.compute as pc
+
+    errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
+    column_names = set(batch.schema.names)
+
+    ids = batch.column("id") if "id" in column_names else None
+    if ids is not None:
+        empty_mask = pc.equal(ids, "")
+        for _ in range(pc.sum(pc.cast(empty_mask, pa.int64())).as_py() or 0):
+            errors.append((IntegrityCheck.DEFINED_ID, table_name, "id", "", ""))
+
+        non_empty = pc.drop_null(pc.if_else(empty_mask, pa.nulls(len(ids), pa.string()), ids))
+        counts = non_empty.value_counts() if len(non_empty) else []
+        for entry in counts:
+            if entry["counts"].as_py() > 1:
+                value = entry["values"].as_py()
+                errors.append((IntegrityCheck.UNIQUE_ID, table_name, "id", value, value))
+        known_own = known_ids.get(table_name, set())
+        if known_own and len(non_empty):
+            seen_mask = pc.is_in(non_empty, value_set=pa.array(list(known_own), pa.string()))
+            for value in pc.drop_null(pc.if_else(seen_mask, non_empty, pa.nulls(len(non_empty), pa.string()))):
+                errors.append((IntegrityCheck.UNIQUE_ID, table_name, "id", value.as_py(), value.as_py()))
+
+    schema_cls = dataset.info.tables.get(table_name)
+    fk_fields = [
+        name
+        for name in (schema_cls.model_fields if schema_cls is not None else {})
+        if name != "id" and (name == "record_id" or name.endswith("_id")) and name in column_names
+    ]
+    for field_name in fk_fields:
+        target_tables = _resolve_fk_target_tables(dataset, table_name, field_name)
+        if not target_tables:
+            continue
+        column = batch.column(field_name)
+        values_mask = pc.invert(pc.equal(column, ""))  # ""-sentinel parity with the row path
+        candidates = pc.drop_null(pc.if_else(values_mask, column, pa.nulls(len(column), pa.string())))
+        if not len(candidates):
+            continue
+        unique_values = {value.as_py() for value in candidates.unique()}
+        resolved: set[str] = set()
+        for target in target_tables:
+            resolved |= unique_values & known_ids.get(target, set())
+            resolved |= unique_values & (pending_ids or {}).get(target, set())
+        unresolved = unique_values - resolved
+        if unresolved:
+            lookup = fk_lookup if fk_lookup is not None else dataset.find_ids_in_table
+            for target in target_tables:
+                try:
+                    result = lookup(target, set(unresolved))
+                except Exception:
+                    continue
+                unresolved -= {value for value, found in result.items() if found}
+                if not unresolved:
+                    break
+        for value in sorted(unresolved):
+            errors.append((IntegrityCheck.FK_ID, table_name, field_name, value, value))
+
+    handle_integrity_errors(errors, raise_or_warn=raise_or_warn)
+
+
 def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, str, str, str, Any]]:
     """Check integrity for all dataset tables."""
     check_errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
@@ -188,6 +265,7 @@ def validate_batch(
     dataset: "Dataset",
     raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     pending_ids: dict[str, set[str]] | None = None,
+    fk_lookup: Callable[[str, set[str]], dict[str, bool]] | None = None,
 ) -> None:
     """Validate a batch of schemas before insertion using in-memory ID tracking.
 
@@ -203,6 +281,9 @@ def validate_batch(
         pending_ids: Mapping of table_name -> set of IDs that are buffered for insertion
             in this flush cycle. Used only for FK checks so sibling tables that haven't
             been flushed yet can be resolved.
+        fk_lookup: Optional replacement for the bulk DB lookup, called as
+            ``fk_lookup(target_table, values) -> {value: found}``. An import engine
+            can answer from its id ledger to skip DB scans on fresh builds.
     """
     errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
 
@@ -239,11 +320,12 @@ def validate_batch(
                 for t in target_tables:
                     fk_values_by_target.setdefault(t, set()).add(field_value)
 
-    # Bulk DB queries: one per target table
+    # Bulk lookups: one per target table (DB by default, or the caller's ledger)
+    lookup = fk_lookup if fk_lookup is not None else dataset.find_ids_in_table
     db_found: dict[str, set[str]] = {}
     for target_table, values in fk_values_by_target.items():
         try:
-            result = dataset.find_ids_in_table(target_table, values)
+            result = lookup(target_table, values)
             db_found[target_table] = {v for v, found in result.items() if found}
         except Exception:
             db_found[target_table] = set()

@@ -6,7 +6,37 @@
 
 import pytest
 
-from pixano.utils.python import get_super_type_from_dict, natural_key, unique_list
+from pixano.utils.python import get_super_type_from_dict, natural_key, quote_sql_string, to_sql_list, unique_list
+
+
+class TestToSqlList:
+    def test_single_string(self):
+        assert to_sql_list("abc") == "('abc')"
+
+    def test_multiple(self):
+        assert to_sql_list(["a", "b"]) == "('a', 'b')"
+
+    def test_single_element_list_has_no_trailing_comma(self):
+        assert to_sql_list(["a"]) == "('a')"
+
+    def test_deduplicates_preserving_order(self):
+        assert to_sql_list(["b", "a", "b"]) == "('b', 'a')"
+
+    def test_empty_yields_null_list_not_error(self):
+        assert to_sql_list([]) == "(NULL)"
+
+    def test_single_quotes_are_escaped(self):
+        assert to_sql_list("o'brien") == "('o''brien')"
+        assert to_sql_list(["a'b", "c"]) == "('a''b', 'c')"
+
+    def test_non_string_raises(self):
+        with pytest.raises(ValueError, match="must be strings"):
+            to_sql_list([1, 2])
+
+
+def test_quote_sql_string():
+    assert quote_sql_string("plain") == "'plain'"
+    assert quote_sql_string("O'Brien") == "'O''Brien'"
 
 
 def test_natural_key():

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createSaveQueue } from "$lib/stores/saveQueue";
 import { BaseSchema, BBox, Entity, Tracklet, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
 import { boxLinearInterpolation } from "$lib/utils/interpolation";
@@ -36,11 +37,15 @@ const mockSaveDataStore = {
     this.value = updater(this.value);
   },
 };
+const mockSaveQueue = createSaveQueue((mutations) => {
+  mockSaveDataStore.value = mutations;
+});
 
 vi.mock("$lib/stores/workspaceStores.svelte", () => ({
   entities: mockEntitiesStore,
   views: mockViewsStore,
   saveData: mockSaveDataStore,
+  workspaceSaveQueue: mockSaveQueue,
 }));
 
 vi.mock("$lib/stores/workspaceBaseStores.svelte", () => ({
@@ -158,6 +163,7 @@ describe("videoTrackMutations", () => {
   beforeEach(() => {
     mockEntitiesStore.value = [];
     mockSaveDataStore.value = [];
+    mockSaveQueue.reset();
   });
 
   it("keeps tracklet ownership when materializing an interpolated bbox into a keyframe", async () => {

@@ -8,7 +8,9 @@
 
 This module defines the abstract interface that all inference providers must implement.
 Pixano uses this interface to communicate with different backends (pixano-inference,
-OpenAI, Gemini, local models, etc.) in a uniform way.
+OpenAI, Gemini, local models, etc.) in a uniform way. Only discovery methods are abstract;
+each task method defaults to raising `TaskNotSupportedError`, so a provider implements only
+what its backend supports.
 """
 
 from abc import ABC, abstractmethod
@@ -17,16 +19,16 @@ from .exceptions import TaskNotSupportedError
 from .types import (
     DetectionInput,
     DetectionResult,
+    EmbeddingInput,
+    EmbeddingResult,
+    ImageMaskGenerationInput,
+    ImageMaskGenerationResult,
     InferenceTask,
-    ModelConfig,
     ModelInfo,
-    ProviderCapabilities,
-    SegmentationInput,
-    SegmentationResult,
     ServerInfo,
-    TrackingInput,
-    TrackingJobStatus,
-    TrackingResult,
+    VideoMaskGenerationInput,
+    VideoMaskGenerationJobStatus,
+    VideoMaskGenerationResult,
     VLMInput,
     VLMResult,
 )
@@ -35,22 +37,13 @@ from .types import (
 class InferenceProvider(ABC):
     """Abstract interface for inference backends.
 
-    This is the base class that all inference providers must implement.
-    It defines a common interface for interacting with different inference
-    backends, allowing Pixano to be agnostic to the specific backend used.
-
     Example:
         ```python
         from pixano.inference import get_provider
 
-        # Get a provider instance
         provider = get_provider("pixano-inference", url="http://localhost:8000")
-
-        # List available models
         models = await provider.list_models()
-
-        # Generate masks
-        result = await provider.segmentation(input_data)
+        result = await provider.image_mask_generation(input_data)
         ```
     """
 
@@ -61,156 +54,89 @@ class InferenceProvider(ABC):
         ...
 
     @abstractmethod
-    async def get_capabilities(self) -> ProviderCapabilities:
-        """Return what this provider can do.
-
-        Returns:
-            ProviderCapabilities describing supported tasks and features.
-        """
-        ...
-
-    @abstractmethod
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
-        """List available models, optionally filtered by task.
-
-        Args:
-            task: Optional task to filter models by.
-
-        Returns:
-            List of available models.
-        """
+        """List available models, optionally filtered by task."""
         ...
-
-    async def instantiate_model(self, provider: str, config: ModelConfig, timeout: int = 60) -> None:
-        """Instantiate (load) a model.
-
-        Args:
-            provider: The model provider name (e.g., "sam2", "transformers").
-            config: Configuration for the model.
-            timeout: Timeout in seconds for model loading.
-
-        Raises:
-            TaskNotSupportedError: Model deployment is managed by the server administrator.
-        """
-        raise TaskNotSupportedError("Model deployment is managed by the server administrator")
-
-    async def delete_model(self, model_name: str) -> None:
-        """Delete (unload) a model.
-
-        Args:
-            model_name: Name of the model to delete.
-
-        Raises:
-            TaskNotSupportedError: Model deployment is managed by the server administrator.
-        """
-        raise TaskNotSupportedError("Model deployment is managed by the server administrator")
 
     @abstractmethod
     async def get_server_info(self) -> ServerInfo:
-        """Get server information.
-
-        Returns:
-            ServerInfo with version, GPU info, models, readiness.
-        """
+        """Get server information (version, models, models_to_task)."""
         ...
 
-    # --- Segmentation ---
+    async def close(self) -> None:
+        """Release any resources held by the provider (e.g. HTTP connections)."""
+        return None
 
-    @abstractmethod
-    async def segmentation(
+    # --- Image mask generation ---
+
+    async def image_mask_generation(
         self,
-        input_data: SegmentationInput,
+        input_data: ImageMaskGenerationInput,
         timeout: float = 60.0,
-    ) -> SegmentationResult:
-        """Generate masks for an image.
+    ) -> ImageMaskGenerationResult:
+        """Generate masks for an image."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support image mask generation")
 
-        Args:
-            input_data: Input data for segmentation.
-            timeout: Maximum time to wait for result.
+    # --- Video mask generation ---
 
-        Returns:
-            Segmentation result.
-        """
-        ...
-
-    @abstractmethod
-    async def tracking(
+    async def video_mask_generation(
         self,
-        input_data: TrackingInput,
+        input_data: VideoMaskGenerationInput,
         timeout: float = 120.0,
-    ) -> TrackingResult:
-        """Generate masks for video frames.
+    ) -> VideoMaskGenerationResult:
+        """Generate masks for video frames (synchronous)."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support video mask generation")
 
-        Args:
-            input_data: Input data for tracking.
-            timeout: Maximum time to wait for result.
-
-        Returns:
-            Tracking result.
-        """
-        ...
-
-    @abstractmethod
-    async def submit_tracking_job(
+    async def submit_video_mask_generation_job(
         self,
-        input_data: TrackingInput,
+        input_data: VideoMaskGenerationInput,
         timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Submit an asynchronous tracking job."""
-        ...
+    ) -> VideoMaskGenerationJobStatus:
+        """Submit an asynchronous video mask generation job."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support video mask generation")
 
-    @abstractmethod
-    async def get_tracking_job(
+    async def get_video_mask_generation_job(
         self,
         job_id: str,
         timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Fetch the current status of an asynchronous tracking job."""
-        ...
+    ) -> VideoMaskGenerationJobStatus:
+        """Fetch the current status of an asynchronous video mask generation job."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support video mask generation")
 
-    @abstractmethod
-    async def cancel_tracking_job(
+    async def cancel_video_mask_generation_job(
         self,
         job_id: str,
         timeout: float = 30.0,
-    ) -> TrackingJobStatus:
-        """Cancel an asynchronous tracking job."""
-        ...
+    ) -> VideoMaskGenerationJobStatus:
+        """Cancel an asynchronous video mask generation job."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support video mask generation")
 
     # --- Detection ---
 
-    @abstractmethod
     async def detection(
         self,
         input_data: DetectionInput,
         timeout: float = 60.0,
     ) -> DetectionResult:
-        """Detect objects in an image using zero-shot detection.
-
-        Args:
-            input_data: Input data for detection.
-            timeout: Maximum time to wait for result.
-
-        Returns:
-            Detection result.
-        """
-        ...
+        """Detect objects in an image using zero-shot detection."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support detection")
 
     # --- VLM ---
 
-    @abstractmethod
     async def vlm(
         self,
         input_data: VLMInput,
         timeout: float = 60.0,
     ) -> VLMResult:
-        """Generate text conditioned on images.
+        """Generate text conditioned on images."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support vlm")
 
-        Args:
-            input_data: Input data for VLM inference.
-            timeout: Maximum time to wait for result.
+    # --- Embedding ---
 
-        Returns:
-            VLM result.
-        """
-        ...
+    async def embedding(
+        self,
+        input_data: EmbeddingInput,
+        timeout: float = 60.0,
+    ) -> EmbeddingResult:
+        """Embed an image or text into a shared vector space (CLIP-style)."""
+        raise TaskNotSupportedError(f"Provider '{self.name}' does not support embedding")

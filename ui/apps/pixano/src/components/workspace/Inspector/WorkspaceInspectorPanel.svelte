@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { BoundingBox, PencilSimple } from "phosphor-svelte";
+  import { ClipboardText, Cube } from "phosphor-svelte";
 
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import EntitiesInspector from "./EntitiesInspector.svelte";
@@ -20,7 +20,7 @@ License: CECILL-C
 
   let { isLoading }: Props = $props();
 
-  let currentTab: "scene" | "objects" = $state("objects");
+  let currentTab: "record" | "objects" = $state("objects");
   const loadingObjectRows = Array.from({ length: 7 }, (_, index) => index);
   const loadingTitleWidths = [48, 62, 53, 58, 44];
   const loadingSubtitleWidths = [28, 34, 26, 31];
@@ -39,15 +39,15 @@ License: CECILL-C
             value="objects"
             class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"
           >
-            <BoundingBox class="h-4 w-4" />
+            <Cube class="h-4 w-4" />
             Entities
           </Tabs.Trigger>
           <Tabs.Trigger
-            value="scene"
+            value="record"
             class="inline-flex items-center justify-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-muted-foreground transition-all duration-200 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/60"
           >
-            <PencilSimple class="h-4 w-4" />
-            Scene
+            <ClipboardText class="h-4 w-4" />
+            Record
           </Tabs.Trigger>
         </Tabs.List>
       </div>
@@ -95,8 +95,8 @@ License: CECILL-C
           <EntitiesInspector />
         {/if}
       </Tabs.Content>
-      <Tabs.Content value="scene" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
-        {#if currentTab === "scene"}
+      <Tabs.Content value="record" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+        {#if currentTab === "record"}
           {#if isLoading}
             <div class="p-4 flex flex-col gap-4 animate-in fade-in duration-300">
               <Skeleton class="h-8 w-full" />

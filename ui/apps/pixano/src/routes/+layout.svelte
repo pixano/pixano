@@ -5,19 +5,20 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { DropdownMenu, Tooltip } from "bits-ui";
-  import { CaretDown, FolderOpen } from "phosphor-svelte";
+  import { Tooltip } from "bits-ui";
   import { fade } from "svelte/transition";
 
   import pixanoFavicon from "../assets/favicon.ico";
+  import InferenceStatusChip from "../components/inference/InferenceStatusChip.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import ImportDatasetModal from "../components/library/ImportDatasetModal.svelte";
+  import UnsavedChangesGuard from "../components/layout/UnsavedChangesGuard.svelte";
+  import ImportJobsTray from "../components/library/import-wizard/ImportJobsTray.svelte";
   import type { LayoutProps } from "./$types";
-  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { pixanoLogo } from "$lib/assets";
   import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
   import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
+  import { navigateToRoute } from "$lib/utils/navigation";
 
   import "./styles.css";
 
@@ -62,10 +63,8 @@ License: CECILL-C
     return () => window.removeEventListener("error", handleEffectDepthExceeded);
   });
 
-  let showImportModal = $state(false);
-
   async function navigateToHome() {
-    await goto("/");
+    await navigateToRoute("/");
   }
 </script>
 
@@ -93,45 +92,13 @@ License: CECILL-C
       <div class="flex-1 h-full">
         {#if page.route.id !== HOME_ROUTE_ID}
           <div in:fade={{ duration: 300 }} out:fade={{ duration: 200 }} class="h-full w-full">
-            <DatasetHeader pageId={page.route.id} />
+            <DatasetHeader />
           </div>
         {/if}
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
-        <!-- File menu -->
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger
-            class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border/60
-              bg-background/60 text-sm font-semibold text-foreground hover:bg-accent
-              hover:border-border transition-all duration-150 focus-visible:outline-none
-              focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            File
-            <CaretDown weight="bold" class="h-3 w-3 text-muted-foreground" />
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              class="z-[300] min-w-[200px] rounded-xl border border-border bg-background/95
-                backdrop-blur-sm shadow-lg py-1.5 text-sm"
-              sideOffset={6}
-              align="end"
-            >
-              <DropdownMenu.Item
-                class="flex items-center gap-2.5 px-3 py-2 cursor-pointer rounded-lg mx-1
-                  text-foreground hover:bg-accent focus-visible:bg-accent
-                  focus-visible:outline-none transition-colors"
-                onSelect={() => {
-                  showImportModal = true;
-                }}
-              >
-                <FolderOpen weight="regular" class="h-4 w-4 text-muted-foreground" />
-                Import dataset…
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
-
+        <InferenceStatusChip />
         <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
       </div>
     </header>
@@ -143,11 +110,6 @@ License: CECILL-C
     </main>
   </div>
 
-  {#if showImportModal}
-    <ImportDatasetModal
-      onClose={() => {
-        showImportModal = false;
-      }}
-    />
-  {/if}
+  <ImportJobsTray />
+  <UnsavedChangesGuard />
 </Tooltip.Provider>

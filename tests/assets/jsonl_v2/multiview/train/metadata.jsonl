@@ -1,0 +1,2 @@
+{"$pixano":"jsonl/2","defaults":{"bbox":{"format":"xywh","is_normalized":true}}}
+{"views":{"rgb":"rgb/000001.jpg","thermal":"thermal/000001.jpg"},"entities":[{"attrs":{"category":"person"},"annotations":[{"kind":"bbox","view":"thermal","coords":[0.41,0.30,0.05,0.12]},{"kind":"multi_path","view":"rgb","coords":[0.10,0.90,0.45,0.62,0.80,0.88],"num_points":[3],"is_closed":false}]}]}

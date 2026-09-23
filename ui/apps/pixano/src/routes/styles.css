@@ -1,17 +1,39 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
   --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
   --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
   --color-primary-light: hsl(var(--primary-light));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
   --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
   --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-surface-1: hsl(var(--surface-1));
+  --color-surface-2: hsl(var(--surface-2));
+  --color-surface-3: hsl(var(--surface-3));
   --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-canvas-bg: hsl(var(--canvas-bg));
 
   --radius-2xl: calc(var(--radius-xl) + 4px);
   --radius-xl: var(--radius-xl);
@@ -22,6 +44,16 @@
 
   --blur-glass: 16px;
   --blur-glass-heavy: 24px;
+
+  /* Elevation shadows (cards, popovers, raised panels) */
+  --shadow-elevation-1: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px -1px rgb(0 0 0 / 0.06);
+  --shadow-elevation-2: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+  --shadow-elevation-3: 0 12px 32px -8px rgb(0 0 0 / 0.14), 0 4px 12px -4px rgb(0 0 0 / 0.08);
+
+  /* Glass shadows (match the .glass-subtle / .glass / .glass-heavy utilities below) */
+  --shadow-glass-sm: 0 0 0 1px rgb(255 255 255 / 0.05), 0 2px 8px rgb(0 0 0 / 0.08);
+  --shadow-glass: 0 0 0 1px rgb(255 255 255 / 0.05), 0 4px 24px rgb(0 0 0 / 0.12);
+  --shadow-glass-lg: 0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 40px rgb(0 0 0 / 0.16);
 }
 
 @layer base {

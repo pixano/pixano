@@ -59,7 +59,8 @@ License: CECILL-C
           },
         ],
       },
-      editable: true,
+      // Reference text is read-only; annotation happens via selection + Tag.
+      editable: false,
       onSelectionUpdate: ({ editor: ed }) => {
         const { from, to, empty } = ed.state.selection;
         if (empty) return;

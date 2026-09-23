@@ -27,77 +27,76 @@ An entity-linking dataset has an image and a text document per item. Organize yo
 
 ```
 mel_source/
+  dataset.yaml
   train/
-    image_001.jpg
-    image_002.jpg
+    images/
+      image_001.jpg
+      image_002.jpg
     metadata.jsonl
 ```
+
+Media paths in `metadata.jsonl` are relative to the split folder, so `images/image_001.jpg`
+below resolves to `mel_source/train/images/image_001.jpg`.
 
 Each line in `metadata.jsonl` describes one item with both an image view and a text view, plus entities that link regions across both:
 
 ```json
 {
-  "status": "validated",
   "views": {
-    "image": "image_001.jpg",
-    "text": "The Eiffel Tower is a wrought-iron lattice tower in Paris."
+    "image": "images/image_001.jpg",
+    "text": { "content": "The Eiffel Tower is a wrought-iron lattice tower in Paris." }
   },
+  "attrs": { "status": "validated" },
   "entities": [
     {
-      "name": "Eiffel Tower",
-      "annotations": {
-        "image": { "bbox": [0.3, 0.1, 0.4, 0.8] },
-        "text": { "text_span": [4, 16] }
-      }
+      "attrs": { "name": "Eiffel Tower" },
+      "annotations": [
+        { "kind": "bbox", "view": "image", "coords": [0.3, 0.1, 0.4, 0.8], "format": "xywh", "is_normalized": true },
+        { "kind": "text_span", "view": "text", "mention": "Eiffel Tower", "spans_start": [4], "spans_end": [16] }
+      ]
     }
   ]
 }
 ```
 
-- `views.text` is a string (the full text content).
-- `text_span` is a `[start, end]` character offset pair.
-- Each entity can have annotations on both the image and text views.
+- A text view takes `{"content": …}` for inline text **or** `{"uri": "doc.txt"}` for a file — exactly one, always explicit.
+- A `text_span` carries the `mention` string plus parallel `spans_start`/`spans_end` character offsets (a mention can span several ranges).
+- With two views declared, every annotation names its view: the bbox lives on `image`, the span on `text`.
 
-### Review the dataset info
+### Review the schema
 
-The dataset info at `examples/mel/info.py`:
+The schema lives in `dataset.yaml` at the source root:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record, Text, TextSpan
-
-
-class MELEntity(Entity):
-    name: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="MEL Sample",
-    description="Sample import for image-text entity linking datasets.",
-    workspace=WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
-    record=Record,
-    entity=MELEntity,
-    bbox=BBox,
-    mask=CompressedRLE,
-    text_span=TextSpan,
-    views={"image": Image, "text": Text},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: mel_sample
+  workspace: image_text_entity_linking
+schema:
+  views:
+    image: { kind: image }
+    text: { kind: text }
+  entity:
+    attrs:
+      name: str
+  annotations: [bbox, mask, text_span]
 ```
 
 Key elements:
 
-- `WorkspaceType.IMAGE_TEXT_ENTITY_LINKING` enables the image + text panel UI.
-- `views` has two entries: `"image"` (type `Image`) and `"text"` (type `Text`).
-- `TextSpan` is the annotation type that marks character ranges in the text.
-- Entities can be linked to both `BBox` (on the image) and `TextSpan` (on the text).
+- `workspace: image_text_entity_linking` enables the image + text panel UI.
+- `views` has two entries: `"image"` (an image) and `"text"` (a text document).
+- `text_span` is the annotation kind that marks character ranges in the text.
+- Entities can be linked to both a `bbox` (on the image) and a `text_span` (on the text).
 
 ### Run the import
 
 ```bash
-pixano data import ./my_data ./mel_source \
-    --info examples/mel/info.py:dataset_info
+pixano data import ./my_data ./mel_source
 ```
+
+Pixano validates every line first and prints a plan; use `--dry-run` to only validate.
 
 ### Launch the server
 
@@ -107,30 +106,31 @@ pixano server run ./my_data
 
 ## Explore in the UI
 
-### Item page — entity linking mode
+### Workspace — entity linking mode
 
-When you open an item from an entity-linking dataset, you see:
+When you open a record from an entity-linking dataset, you see:
 
 - **Image** in the center — with bounding boxes and masks drawn on it.
-- **Text panel** on the left — displaying the full text with color-coded spans. Each text span is highlighted with the same color as its linked entity's bounding box.
+- **Text panel** on the side — displaying the full text with color-coded spans. Each text span is highlighted with the same color as its linked entity's bounding box.
 
 #### Text panel interactions
 
-- **Click a text span** to select the corresponding entity. The entity's bounding box highlights on the image, and its object card opens in the right panel.
-- **Select text and click "Tag Selected Text"** to create a new text span annotation. The creation panel opens so you can assign it to an existing entity or create a new one.
+- **Click a text span** to select the corresponding entity. The entity's bounding box highlights on the image, and its card opens in the right panel.
+- **Select text and click "Tag selection"** to create a new text span annotation. The creation form opens so you can assign it to an existing entity or create a new one.
 
-#### Object panel
+#### Entities tab
 
-The Object panel on the right shows all entities. Expand an entity card to see:
+The **Entities** tab on the right lists every entity in the record. Expand an entity card to see:
 
-- **Features** — entity attributes (name, etc.).
-- **Objects** — sub-objects (bounding boxes, masks, text spans).
-- **Text spans** — a table showing each text span's features alongside the highlighted text.
+- **Attributes** — the entity's fields (name, category, and anything else your schema declares).
+- **Annotations** — every annotation attached to it (bounding boxes, masks, text spans), with each text span showing its highlighted text.
+
+The neighbouring **Record** tab holds record-level information: status, record attributes, and per-view metadata.
 
 <Callout type="tip" title="Linking workflow">
-1. Select text in the text panel and click "Tag Selected Text".
-2. In the creation prompt, choose an existing entity (or create a new one).
-3. Draw a bounding box on the image for the same entity.
+1. Select text in the text panel and click **Tag selection**.
+2. In the creation form, pick an existing entity under **Parent entity**, or keep **Create new entity**.
+3. Draw a bounding box on the image and link it to the same entity.
 4. Both annotations are now linked through the shared entity.
 </Callout>
 
@@ -142,11 +142,11 @@ Use the **bounding box tool** on the image to draw regions around the entity. Wh
 
 ### Text spans
 
-Select text in the text panel and click **"Tag Selected Text"**. Choose the same entity that has the bounding box annotation.
+Select text in the text panel and click **Tag selection**. Choose the same entity that has the bounding box annotation.
 
 ### Masks
 
-If your dataset includes `CompressedRLE` masks, you can also use the polygon tool or SAM to create segmentation masks linked to entities.
+If your schema lists `mask`, you can also use the polygon tool or smart segmentation to create segmentation masks linked to entities.
 
 ## Next steps
 

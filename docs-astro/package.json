@@ -13,6 +13,7 @@
     "@iconify-json/mdi": "^1.2.0",
     "@iconify-json/octicon": "^1.2.0",
     "@tailwindcss/vite": "^4.0.0",
+    "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
   },
@@ -20,6 +21,7 @@
     "node": ">=22.12.0"
   },
   "name": "pixano-docs",
+  "packageManager": "pnpm@11.5.1",
   "private": true,
   "scripts": {
     "astro": "astro",
@@ -27,7 +29,7 @@
     "dev": "astro dev",
     "generate-api": "cd .. && uv run python docs-astro/scripts/generate_api_docs.py",
     "postbuild": "pagefind --site dist",
-    "prebuild": "npm run generate-api",
+    "prebuild": "pnpm run generate-api",
     "preview": "astro preview"
   },
   "type": "module",

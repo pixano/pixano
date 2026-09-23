@@ -18,7 +18,7 @@ export interface ResourceMutation {
   op: "create" | "update" | "delete";
   target: MutationTarget;
   body?: Record<string, unknown>;
-  schema: Schema;
+  table: string;
 }
 
 const RESOURCE_BY_BASE_SCHEMA: Partial<Record<BaseSchema, string>> = {
@@ -180,6 +180,6 @@ export function toResourceMutation(
       id: schema.id,
     },
     body: changeType === "delete" ? undefined : serializeSchema(schema),
-    schema,
+    table: schema.table_info.name,
   };
 }

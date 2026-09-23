@@ -34,4 +34,4 @@ class OllamaProvider(OpenAICompatibleProvider):
             return []
         response = await self.get("/api/tags")
         data = response.json()
-        return [ModelInfo(name=model["name"], capability="vlm") for model in data.get("models", [])]
+        return [ModelInfo(name=model["name"], task=InferenceTask.VLM.value) for model in data.get("models", [])]

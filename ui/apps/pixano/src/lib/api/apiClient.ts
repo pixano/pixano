@@ -26,12 +26,22 @@ function logApiError(label: string, error: unknown): void {
 }
 
 export function buildQueryString(
-  params: Record<string, string | number | boolean | null | undefined>,
+  params: Record<string, string | number | boolean | string[] | null | undefined>,
 ): string {
   const searchParams = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === null || value === "") {
+      continue;
+    }
+    // Arrays become repeated params (e.g. filter=a&filter=b) — the shape the
+    // records endpoint's `filter` query param expects.
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item !== undefined && item !== null && item !== "") {
+          searchParams.append(key, String(item));
+        }
+      }
       continue;
     }
     searchParams.set(key, String(value));
@@ -139,10 +149,11 @@ export async function apiMutate(
       if (acceptedErrorStatuses.includes(response.status)) {
         return;
       }
-      const details = [response.status, response.statusText, await response.text()];
+      const body = await response.text();
+      const details = [response.status, response.statusText, body];
       logApiError(label, details);
       if (throwOnError) {
-        throw new Error(`${label} failed: ${details.join(" ")}`);
+        throw new ApiError(`${label} failed: ${details.join(" ")}`, response.status, body);
       }
     }
   } catch (e) {

@@ -1,0 +1,1 @@
+{"views":{"image":"000001.jpg"},"conversations":[{"messages":[{"type":"QUESTION","content":"What is the greatest number? <view:image>","question_type":"SINGLE_CHOICE","choices":["0","15","3.14","58"]},{"type":"ANSWER","content":"58"}]}]}

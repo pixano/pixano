@@ -9,77 +9,48 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from pixano.inference.provider import InferenceProvider
-from pixano.inference.types import ServerInfo
+from pixano.inference.types import InferenceTask, ServerInfo
+
+
+def _make_mock_provider() -> InferenceProvider:
+    provider = MagicMock(spec=InferenceProvider)
+    provider.name = "mock-provider"
+    provider.url = "http://localhost:8081"
+
+    # Setup async task methods (new vocabulary)
+    provider.image_mask_generation = AsyncMock()
+    provider.video_mask_generation = AsyncMock()
+    provider.submit_video_mask_generation_job = AsyncMock()
+    provider.get_video_mask_generation_job = AsyncMock()
+    provider.cancel_video_mask_generation_job = AsyncMock()
+    provider.detection = AsyncMock()
+    provider.vlm = AsyncMock()
+    provider.embedding = AsyncMock()
+    provider.close = AsyncMock()
+    provider.list_models = AsyncMock(return_value=[])
+    provider.get_server_info = AsyncMock(
+        return_value=ServerInfo(
+            version="0.6.0",
+            models=["sam2", "grounding-dino"],
+            models_to_task={
+                "sam2": InferenceTask.MASK_GENERATION.value,
+                "grounding-dino": InferenceTask.DETECTION.value,
+            },
+        )
+    )
+    return provider
 
 
 @pytest.fixture(scope="session")
 def simple_inference_provider() -> InferenceProvider:
     """Create a mock inference provider for testing."""
-    provider = MagicMock(spec=InferenceProvider)
-    provider.name = "mock-provider"
-    provider.url = "http://localhost:8081"
-
-    # Setup async methods
-    provider.segmentation = AsyncMock()
-    provider.tracking = AsyncMock()
-    provider.submit_tracking_job = AsyncMock()
-    provider.get_tracking_job = AsyncMock()
-    provider.cancel_tracking_job = AsyncMock()
-    provider.detection = AsyncMock()
-    provider.vlm = AsyncMock()
-    provider.list_models = AsyncMock(return_value=[])
-    provider.get_capabilities = AsyncMock()
-    provider.get_server_info = AsyncMock(
-        return_value=ServerInfo(
-            app_name="pixano-inference",
-            app_version="0.6.0",
-            app_description="Pixano Inference Server",
-            num_cpus=8,
-            num_gpus=1,
-            num_nodes=1,
-            gpus_used=0.0,
-            gpu_to_model={"0": "sam2"},
-            models=["sam2", "grounding-dino"],
-            models_to_capability={"sam2": "segmentation", "grounding-dino": "detection"},
-        )
-    )
-
-    return provider
+    return _make_mock_provider()
 
 
 @pytest.fixture()
 def simple_inference_provider_fn_scope() -> InferenceProvider:
     """Create a mock inference provider for testing (function scope)."""
-    provider = MagicMock(spec=InferenceProvider)
-    provider.name = "mock-provider"
-    provider.url = "http://localhost:8081"
-
-    # Setup async methods
-    provider.segmentation = AsyncMock()
-    provider.tracking = AsyncMock()
-    provider.submit_tracking_job = AsyncMock()
-    provider.get_tracking_job = AsyncMock()
-    provider.cancel_tracking_job = AsyncMock()
-    provider.detection = AsyncMock()
-    provider.vlm = AsyncMock()
-    provider.list_models = AsyncMock(return_value=[])
-    provider.get_capabilities = AsyncMock()
-    provider.get_server_info = AsyncMock(
-        return_value=ServerInfo(
-            app_name="pixano-inference",
-            app_version="0.6.0",
-            app_description="Pixano Inference Server",
-            num_cpus=8,
-            num_gpus=1,
-            num_nodes=1,
-            gpus_used=0.0,
-            gpu_to_model={"0": "sam2"},
-            models=["sam2", "grounding-dino"],
-            models_to_capability={"sam2": "segmentation", "grounding-dino": "detection"},
-        )
-    )
-
-    return provider
+    return _make_mock_provider()
 
 
 # Keep backwards compatibility alias

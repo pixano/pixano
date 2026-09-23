@@ -5,6 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { TextT } from "phosphor-svelte";
+
   import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
   import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
   import TiptapAnnotator from "./TiptapAnnotator.svelte";
@@ -49,6 +51,10 @@ License: CECILL-C
   const onSelectionChange = (attrs: TextSpanTypeWithViewName) => {
     textSpanAttributes = attrs;
   };
+
+  const hasSelection = $derived(
+    textSpanAttributes !== null && String(textSpanAttributes.mention ?? "").length > 0,
+  );
 
   const handleSpanClick = (id: string) => {
     const span = textSpans.find((ts) => ts.id === id);
@@ -99,14 +105,25 @@ License: CECILL-C
   };
 </script>
 
-<div class="bg-card p-2 flex flex-col gap-2 h-full">
-  <button
-    class="bg-primary text-primary-foreground p-2 rounded-md w-fit"
-    onclick={onTagText}
-    id="tagButton"
-  >
-    Tag Selected Text
-  </button>
+<div class="bg-card p-3 flex flex-col gap-2.5 h-full">
+  <div class="flex items-center gap-3">
+    <button
+      type="button"
+      id="tagButton"
+      onclick={onTagText}
+      disabled={!hasSelection}
+      title={hasSelection
+        ? "Create a text span from the selection"
+        : "Select text in the document first"}
+      class="inline-flex h-10 w-fit items-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-95 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <TextT size={15} />
+      Tag selection
+    </button>
+    {#if !hasSelection}
+      <p class="text-xs text-muted-foreground">Select text in the document to tag it.</p>
+    {/if}
+  </div>
   <div class="overflow-y-auto">
     {#each textViews as textView (textView.id)}
       <TiptapAnnotator

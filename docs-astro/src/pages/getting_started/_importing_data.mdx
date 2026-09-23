@@ -1,0 +1,551 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Importing and Exporting Data"
+section: getting_started
+---
+
+import Callout from "../../components/Callout.astro";
+import PrevNext from "../../components/PrevNext.astro";
+
+# Importing and Exporting Data
+
+Pixano 0.8 imports and exports datasets as plain files — no Python required. There are two ways in: the app's import wizard and the `pixano data import` command. Both run the same engine — analyze first, show the plan, then write — and read the same formats. This page lists every choice the wizard offers, then documents the command line, the file formats, export, and jobs.
+
+<Callout type="info" title="What you'll learn">
+
+- **From the app**: what each step of the import wizard asks, and which choices exist only on the command line
+- **From the command line**: `pixano data import` and its options, the folder layout, the `metadata.jsonl` line format (JSONL v2), the `dataset.yaml` schema spec, and media storage
+- **Exporting**: how to export a dataset, including record base fields with `--include-record-field`
+- **Jobs**: resuming, cancelling and rolling back an import — from either side
+
+</Callout>
+
+## Import from the app
+
+The Library's **Import** button (on an empty Library, **Import dataset**) opens a large
+**Setup** screen, followed by **Review**. Starting an import hands it over to the background
+jobs tray. On a wide screen, **Source** is on the left and **Annotation** is on the right,
+each with its own scroll area. On a smaller screen the panels stack. You can choose the data
+and its annotation settings together.
+
+### Source: format and files
+
+Choose the format from the icon cards in Source:
+
+- **Raw media** — folders of images, videos, or text files to annotate from scratch.
+- **Pixano dataset** — a JSONL v2 export or a source with a `dataset.yaml`, including its schema
+  and annotations. See [Import from the command line](#import-from-the-command-line).
+- **MS COCO** — COCO instances JSON and images; categories become object attributes.
+- **LeRobot** — robotics episodes (v2.1 / v3), from a local folder or the Hugging Face Hub.
+- **Auto-detect** — let Pixano identify the source format during analysis.
+
+Raw-media layouts can be wrapped in optional `train/`, `val/` and `test/` folders; `training`,
+`valid`, `validation` and `testing` are recognised too. Supported media extensions are images `.jpg`
+`.jpeg` `.png` `.bmp` `.gif` `.tiff` `.webp`, videos `.mp4` `.avi` `.mov` `.mkv` `.webm` `.flv`
+`.vob`, and text `.txt` `.md`. Other files are skipped and counted.
+
+Choose a folder on your computer to upload it. Raw media is checked against the selected
+layout first, and only matching media files are uploaded. The detected layout shows the
+records, views, splits, and skipped files. LeRobot also accepts a Hugging Face dataset id such
+as `org/name`, with optional episode selection and a cap on frames per episode. **Episodes to
+import** accepts `0:4` (episodes 0 through 4) or `1,3,7` (only episodes 1, 3, and 7). Leave it
+blank to import all episodes.
+
+Source settings also include:
+
+- An optional dataset name, which defaults to the folder name.
+- **Overwrite existing dataset** checkbox. Unchecked, duplicate dataset names are rejected.
+  To append records, use `--mode add` or `{"mode": "add"}` in Advanced JSON.
+- For raw video files, frame extraction with an optional frame cap and sampling FPS, or clip
+  references for metadata-only imports. Folders of pre-extracted frames import directly,
+  with an optional frame cap and FPS for timestamps.
+
+### Annotation: task, tools, and attributes
+
+For Raw media, task icon cards appear at the top of Annotation, above the tools and attributes:
+
+- **Image annotation** — a folder of images (one view), or one subfolder per view (`left/`,
+  `right/`, …) where files with the same name pair up.
+- **Video annotation** — video files, one folder of frame images per video, or one subfolder
+  per view.
+- **Visual Q&A** — a folder of images; questions and answers are added in Pixano.
+- **Image–text linking** — an `image/` folder and a `text/` folder whose file names pair up.
+
+LeRobot shows a fixed **Video annotation** task summary. In Source, the raw-media task summary's
+**Change** link takes you to the task cards in Annotation without clearing the current setup.
+
+For Raw media and LeRobot, the Annotation panel lets you choose the tools you will use and
+define attributes for the objects you annotate. Tools use labels such as **Bounding boxes**,
+**Masks**, and **Polygons & lines**. Keypoints, relations, and
+classification are not offered by this setup form.
+
+A compact **Included** summary lists the required task features: **Object tracks** for video
+and LeRobot, **Questions & answers** for Visual Q&A, and **Text spans** for image–text linking.
+These are included automatically; only optional tools need a choice.
+
+Object attributes appear in a compact table with a name and type on each row. They can hold
+String, Integer, Float, or Boolean values. Expand a row's **Options** for
+**Multiple values**, **Required when annotating**, and **Default value**. For example, you can add
+a required `category` and a true/false `occluded` attribute. **Record attributes (optional)** for
+raw media and **Episode attributes
+(optional)** for LeRobot are collapsed initially. These metadata attributes cannot be required
+because their values are filled in after import.
+
+LeRobot camera views, episode metadata, and state/action vectors are discovered from the source
+and retained alongside your custom attributes. The record names `episode_index`, `tasks`, and
+`length` are reserved for episode metadata. Pixano and COCO imports retain the schemas and
+annotations supplied by their source; the tool choices for new annotations do not remove
+annotation types from imported schemas.
+
+**Advanced JSON** is collapsed by default. It accepts optional overrides using the same keys
+as `dataset.yaml`, including `dataset`, `schema`, `ids`, `options`, and `media`. Media storage
+can be configured there.
+
+**Review import** becomes available once a source is selected and the setup is valid. It checks the
+data and opens Review without starting the import.
+
+### Review and import jobs
+
+**Review** shows the record count, media size, detected format, splits, and the
+schema (views, record, entity, annotations), warnings and errors with their locations, and a
+few sample records. **Start import** stays disabled while the plan has errors.
+
+**Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
+options, and annotation settings preserved. Adjust the setup and analyze again to review the
+updated plan; you do not need to upload the same folder again.
+
+**Start import** closes the wizard as soon as the server accepts the job. The import runs
+in the background, and the tray at the bottom right shows its progress, completion, or error.
+You can keep using the app and cancel an active import from the tray. When the import finishes,
+the Library refreshes with the new dataset card. If the start request fails, the wizard stays
+on **Review** with the error so you can retry.
+
+The uploaded copy of your folder is deleted once the import can no longer be resumed.
+Imports started from the app are the same jobs the command line lists under [Jobs](#jobs).
+
+### App or command line?
+
+| You need | Use |
+|----------|-----|
+| Add records to an existing dataset | `--mode add` on the command line, or `{"mode": "add"}` in the Advanced spec |
+| A `dataset.yaml` file kept outside the source (`--spec`) | command line; the app takes the same keys inline in the Advanced spec |
+| Custom Python importers (`--importer`, `--info-py`) | command line only — the app refuses them |
+| Data that sits on your own computer, no terminal | app |
+
+## Import from the command line
+
+`pixano data import` takes your data directory and a **source**: a folder on the machine where
+the command runs, or a Hugging Face dataset id. A folder holding only media needs nothing else
+(see the note below). A full Pixano source is a folder with one subfolder per split. Each split
+holds a `metadata.jsonl` file (one JSON object per line, one line per sample) and the media it
+references.
+
+### The folder layout
+
+```
+my_dataset/
+├── dataset.yaml            # the dataset + schema spec
+├── train/
+│   ├── metadata.jsonl
+│   └── images/…
+└── val/
+    ├── metadata.jsonl
+    └── images/…
+```
+
+Import it with:
+
+```sh
+pixano data import /path/to/data_dir ./my_dataset
+```
+
+The command **analyzes first**: it validates every line, counts records, checks that media files exist, and prints a plan with precise error locations (`file:line`). Nothing is written until the plan is clean and confirmed. Use `--dry-run` to only validate, `--yes` to skip the confirmation.
+
+<Callout type="note" title="No metadata at all?">
+
+A folder holding only media — images, videos or text files, optionally wrapped in `train/`,
+`val/` or `test/` folders — imports without a `metadata.jsonl` or a `dataset.yaml`: one record
+per file, an empty entity table, and the workspace's default annotation types (for an image
+folder, `bbox` and `keypoint`). This is the path the
+[Quickstart](/pixano/getting_started/quickstart/) takes, and what the app's **Raw media** choice
+builds on; add a `dataset.yaml` when you need custom attributes or other annotation types.
+
+</Callout>
+
+### Command options
+
+| Option | Description |
+|--------|-------------|
+| `--spec` | Path to a `dataset.yaml` outside the source folder (default: `dataset.yaml` at the source root). |
+| `--name`, `--workspace` | Override the yaml — or replace it entirely for a media-only folder. |
+| `--format` | Force a format (`pixano_jsonl`, `coco`, `lerobot`); the default, `auto`, detects it. |
+| `--mode` | `create` (default — fails if the dataset exists), `overwrite`, or `add`. |
+| `--media` | `embed` (default, self-contained) or `uri` (store datalake URIs verbatim). |
+| `--dry-run` | Validate and print the plan without creating the dataset. |
+| `--yes`, `-y` | Skip the confirmation prompt — use this in scripts and CI. |
+
+### The line format (JSONL v2)
+
+Every line is one sample: its views (media), its entities (annotated objects), and optionally conversations (VQA). The format is **strict**: unknown keys are errors with did-you-mean suggestions, and nothing is guessed from value shapes. What you write is what you get.
+
+A minimal detection sample:
+
+```json
+{
+  "views": { "image": "images/000042.jpg" },
+  "entities": [
+    {
+      "attrs": { "category": "dog" },
+      "annotations": [
+        {
+          "kind": "bbox",
+          "coords": [0.132, 0.28, 0.41, 0.55],
+          "format": "xywh",
+          "is_normalized": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### The header line (optional)
+
+The first line may declare the format version and file-scoped defaults, so per-annotation boilerplate disappears:
+
+```json
+{
+  "$pixano": "jsonl/2",
+  "defaults": {
+    "bbox": { "format": "xywh", "is_normalized": true },
+    "source": { "type": "model", "name": "yolo-x" }
+  }
+}
+```
+
+With bbox defaults declared, annotations can omit `format`/`is_normalized`. Without them, both are **required** on every bbox — Pixano never infers normalization from value ranges.
+
+#### Views
+
+Views are declared in `dataset.yaml` (name + kind) and referenced by name on each line. The payload shape depends on the declared kind:
+
+| Kind              | Payload                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| `image`           | `"path.jpg"` shorthand, or `{"uri": …, "width": …, "height": …}`                                     |
+| `video`           | `{"uri": …, "fps": …, "from_timestamp": …, "to_timestamp": …}` — a **time window** into a media file |
+| `sequence_frames` | `{"frames": [{"uri": …, "frame_index": …}, …]}` or `{"frame_pattern": "frames/x/*.jpg", "fps": 24}`  |
+| `text`            | `{"content": "inline text"}` or `{"uri": "doc.txt"}` — exactly one                                   |
+| `point_cloud`     | `{"uri": "scan.ply"}`                                                                                |
+
+#### Annotation kinds
+
+Annotations live in a flat list under each entity, discriminated by `"kind"`. Payload keys are exactly the Pixano schema field names, so the format is self-documenting:
+
+| Kind             | Payload keys                                                                   |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `bbox`           | `coords` (4), `format` (`xywh`/`xyxy`), `is_normalized`, `confidence`          |
+| `mask`           | `rle: {size, counts}` **or** `polygons` (hand-authorable; converted at import) |
+| `keypoints`      | `template_id`, `coords` (2 per point), `states`                                |
+| `multi_path`     | `coords`, `num_points`, `is_closed`                                            |
+| `text_span`      | `mention`, `spans_start`, `spans_end`                                          |
+| `classification` | `labels`, `confidences`                                                        |
+
+On multi-view datasets every annotation carries `"view": "<name>"`; single-view datasets can omit it. Per-frame annotations on video/sequence views add `"frame_index"`. The kinds `bbox3d`, `keypoints3d`, and `relation` are reserved for a future release — using them today produces a clear "reserved kind" error, not a typo message.
+
+#### Tracking: tracklets and per-frame state
+
+For video, entities can carry explicit tracklets and per-frame states:
+
+```json
+{
+  "views": { "camera": { "uri": "videos/bear.mp4", "fps": 30 } },
+  "entities": [
+    {
+      "attrs": { "category": "bear" },
+      "tracklets": [
+        { "view": "camera", "start_timestep": 0, "end_timestep": 120 }
+      ],
+      "states": [{ "frame_index": 12, "attrs": { "occluded": true } }],
+      "annotations": [
+        { "kind": "bbox", "frame_index": 12, "coords": [0.1, 0.1, 0.2, 0.3] }
+      ]
+    }
+  ]
+}
+```
+
+If you omit `tracklets` but provide per-frame annotations, Pixano derives one tracklet per view from the min/max `frame_index` — the only derivation in the format, and it is deterministic.
+
+#### Conversations (VQA)
+
+```json
+{
+  "views": { "image": "000001.jpg" },
+  "conversations": [
+    {
+      "messages": [
+        {
+          "type": "QUESTION",
+          "question_type": "SINGLE_CHOICE",
+          "content": "Where are the kids riding?",
+          "choices": ["carnival ride", "bus"]
+        },
+        { "type": "ANSWER", "content": "carnival ride" }
+      ]
+    }
+  ]
+}
+```
+
+`question_type` is required on questions — `OPEN`, `SINGLE_CHOICE`, `MULTI_CHOICE`, or `YES_NO`.
+
+#### Sidecar annotation files
+
+Dense per-frame annotations can live in separate files, stem-matched to frames:
+
+```json
+{
+  "views": { "camera": { "frame_pattern": "frames/bear/*.jpg", "fps": 24 } },
+  "annotation_files": [
+    {
+      "kind": "mask",
+      "view": "camera",
+      "pattern": "masks/bear/*.png",
+      "encoding": "index_png",
+      "entity_map": { "1": "bear", "2": "cub" }
+    }
+  ]
+}
+```
+
+`index_png` files are indexed PNGs where each pixel value is one object (0 = background). `entity_map` names them; `"auto"` derives `object_1`, `object_2`, …
+
+### The schema spec: dataset.yaml
+
+The YAML file names the dataset, picks a workspace, and declares views and custom attributes:
+
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: voc_2007
+  workspace: image
+schema:
+  record:
+    attrs:
+      license: str
+  entity:
+    attrs:
+      category: str
+      is_difficult: { type: bool, default: false }
+  annotations: [bbox, mask, keypoint]
+```
+
+Workspaces (`image`, `video`, `image_vqa`, `image_text_entity_linking`) provide sensible defaults; `views:` overrides them for multi-view or custom setups:
+
+```yaml
+schema:
+  views:
+    rgb: { kind: image }
+    thermal: { kind: image }
+```
+
+Everything in the yaml can also be given as CLI flags (`--name`, `--workspace`, `--media`, …) — flags win over the file.
+
+### Media storage: embed or URI
+
+Pixano stores media one of two ways (spec §6):
+
+- **Embed (default)** — media bytes are stored inside the dataset's LanceDB tables, which are built for exactly this. The dataset folder is fully self-contained: copy it, move it, serve it — no dangling paths, no media server to configure.
+- **URI (`media: {mode: uri}`)** — for data that already lives in a datalake (S3, HTTP), Pixano stores your URIs verbatim and your infrastructure serves them. Bare local paths are an **error** in this mode: a browser cannot fetch a server-side path, so the analyze step tells you to embed instead.
+
+Mixed datasets are legal: local images embed while, say, LeRobot episode videos stay as `https://` URIs. The dataset records itself as `mixed`.
+
+## Other import formats
+
+Besides JSONL v2, Pixano ships importers for two common formats. They are detected
+automatically, so the `import` command is the same. LeRobot and Hugging Face Hub
+support are included in the default installation; COCO needs an extra dependency.
+
+| Format | Install | Notes |
+|--------|---------|-------|
+| **COCO** | `pip install "pixano[coco]"` | Object-detection style JSON. Streamed in two passes, so very large annotation files work. |
+| **LeRobot** (v2.1 and v3) | Included with `pixano` | Robotics episodes become annotatable frame sequences; `action` and `observation.state` land in a `timeseries` table. |
+
+LeRobot datasets can be pulled straight from the Hugging Face Hub, downloading only the
+episodes you ask for:
+
+```sh
+pixano data import /path/to/data_dir org/dataset-name --episodes '0:4'
+```
+
+Use `--episodes '0:4'` or `--episodes '1,3'` to select a subset, and `--max-frames` to cap the
+number of frames per episode.
+
+Run `pixano data formats` to list every format available in your installation.
+
+## Exporting Data
+
+### General
+
+Pixano exports a dataset back to the JSONL v2 format — the same format it imports. The command:
+
+```sh
+pixano data export /path/to/data_dir <dataset_name> <dest>
+```
+
+produces a self-contained source folder (JSONL files + `dataset.yaml`) ready for re-import or sharing.
+
+Two options control the output:
+
+| Option | Description |
+|--------|-------------|
+| `--format` | `pixano_jsonl` (default) or `coco`. |
+| `--media` | `files` (default — write embedded media out as files) or `uris` (write the stored URIs verbatim). |
+
+```sh
+# Export to COCO instead of JSONL v2
+pixano data export /path/to/data_dir my_dataset ./out --format coco
+```
+
+The exported JSONL contains supported views, entities, and annotations in the format described
+in [The line format (JSONL v2)](#the-line-format-jsonl-v2) above.
+
+<Callout type="warning" title="LeRobot export limitation in 0.8">
+
+Pixano JSONL export omits LeRobot time-series data and can produce incomplete annotation
+schemas that fail on re-import. Do not use it as a LeRobot backup format. Complete
+LeRobot export/re-import support is deferred to 0.9.
+
+</Callout>
+
+A minimal exported line looks like:
+
+```json
+{
+  "id": "rec_001",
+  "split": "train",
+  "views": { "image": "images/000042.jpg" },
+  "entities": [
+    {
+      "id": "ent_001",
+      "attrs": { "category": "dog" },
+      "annotations": [
+        {
+          "id": "ann_001",
+          "kind": "bbox",
+          "view": "image",
+          "coords": [0.132, 0.28, 0.41, 0.55],
+          "format": "xywh",
+          "is_normalized": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+By default, Record base fields (`status`, `created_at`, `updated_at`, `comment`) are always present in the dataset but **omitted** from the exported JSONL. The `--include-record-field` flag (repeatable) brings them back into the `"attrs"` dict:
+
+```sh
+pixano data export /path/to/data_dir my_dataset ./exported \
+  --include-record-field status \
+  --include-record-field created_at
+```
+
+The exported line then carries these values:
+
+```json
+{"id": "rec_001", "split": "train", "attrs": {"status": "validated", "created_at": "2024-01-15T10:30:00"}, "views": {...}, "entities": [...]}
+```
+
+The exported `dataset.yaml` records the option (under `options`, so the file remains a valid import spec):
+
+```yaml
+options:
+  include_record_fields:
+    - status
+    - created_at
+```
+
+<Callout type="note" title="Available fields">
+
+The selectable fields are: `status`, `created_at`, `updated_at`, `comment`. These fields always exist in the dataset — the flag controls whether they appear in the exported JSONL.
+
+</Callout>
+
+When re-importing an exported dataset that contains record base fields in `"attrs"`, the importer maps them back to the corresponding Record fields automatically — no special flag is needed:
+
+```sh
+pixano data import /path/to/data_dir ./exported
+```
+
+Record **base** fields (`status`, `created_at`, `updated_at`, `comment`) are recognized by name and need no declaration. **Supplementary** custom attributes, however, must be declared in `dataset.yaml` under `schema.record.attrs`. The following example declares a supplementary string field named `label` as a record attribute, imported from the JSONL dataset files:
+
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: my_dataset
+  workspace: image
+schema:
+  record:
+    attrs:
+      label: str
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox]
+```
+
+The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as Record base fields by name and sets them directly. Timestamp fields accept ISO-8601 strings (e.g. `"2024-01-15T10:30:00"`); a value that cannot be parsed as the field's type fails the import with a clear validation error. On `create`/`overwrite` imports the provided `created_at`/`updated_at` values are **preserved as-is**; in `--mode add`, upsert semantics apply — a re-imported existing record keeps its stored `created_at` and gets a fresh `updated_at`.
+
+### Deterministic ids and round-trips
+
+Explicit `id`s are preserved where supported; other ids are derived from the source
+(namespace, split, file, line). Re-importing the same source produces the same ids,
+making `pixano data import --mode add` re-runs idempotent:
+
+```sh
+pixano data export /path/to/data_dir voc_2007 ./exported
+pixano data import /path/to/data_dir ./exported
+```
+
+Exports include `dataset.yaml` for re-import. The LeRobot export limitation above applies.
+
+## Jobs
+
+Imports and exports run as **durable jobs** recorded in a store shared by the CLI, the REST API
+and the app — so a job started from the import wizard is visible from the command line, and the
+other way round.
+
+```sh
+pixano data jobs /path/to/data_dir list             # every job and its state
+pixano data jobs /path/to/data_dir show <job_id>    # details and progress
+pixano data jobs /path/to/data_dir cancel <job_id>  # ask a running job to stop
+pixano data jobs /path/to/data_dir resume <job_id>  # continue from the last checkpoint
+pixano data jobs /path/to/data_dir rollback <job_id>
+```
+
+Two properties make this safe to interrupt:
+
+- **Resume** picks up from the last committed checkpoint rather than starting over.
+- **Rollback** restores the versions from before a completed `--mode add` import, provided
+  the dataset has not changed since. It refuses to run after later edits or a resumed import.
+  Writes to the same dataset are rejected with a retryable conflict while an add import or
+  rollback is in progress.
+
+Cancellation is cooperative: a running job stops at its next checkpoint. Create and overwrite
+imports discard their staged dataset; an add import keeps writes that already committed.
+Imports started with a custom Python importer or schema file are restart-only.
+
+<Callout type="warning" title="Custom Python builders">
+
+`DatasetBuilder` subclasses are deprecated and will be removed in 0.9. The replacement is the `DatasetImporter` contract in `pixano.datasets.io` — the same interface Pixano's own formats use, with a ready-made test harness in `pixano.datasets.io.testing`.
+
+</Callout>
+
+<PrevNext
+  prev={{ title: "Semantic Search", href: "/getting_started/semantic_search/" }}
+  next={{ title: "Custom Importers", href: "/getting_started/custom_importers/" }}
+/>

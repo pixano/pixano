@@ -14,18 +14,35 @@ import Card from "../../components/Card.astro";
 
   <CardGrid>
     <Card title="Installation" href="/getting_started/installing_pixano/" icon="download">
-      Install Pixano with pip in a virtual environment.
+      Install Pixano with pip or Docker and open the empty Library.
     </Card>
     <Card title="Quickstart" href="/getting_started/quickstart/" icon="rocket">
-      Import a dataset with pre-annotations and launch the app in minutes.
+      Import a directory of images with the import wizard and inspect the dataset in the Explorer.
     </Card>
     <Card title="Key Concepts" href="/getting_started/key_concepts/" icon="lightbulb">
-      Understand the data model: items, views, entities, annotations, and more.
+      Understand the data model: records, views, entities, annotations, and more.
     </Card>
+    {/* Hidden until they are reworked for 0.8 — see the note in src/config/navigation.ts.
+    <Card title="Using the App" href="/getting_started/using_the_app/" icon="monitor">
+      Tour the Library, the Explorer, and the annotation Workspace.
+    </Card>
+    <Card title="Inference" href="/getting_started/inference/" icon="robot">
+      Connect a model server to unlock smart segmentation, VLM answers, and search.
+    </Card>
+    <Card title="Semantic Search" href="/getting_started/semantic_search/" icon="search">
+      Find records by meaning, and ask for more like any record.
+    </Card>
+    <Card title="Importing & Exporting Data" href="/getting_started/importing_data/" icon="download">
+      The import wizard, the <code>pixano data</code> CLI, the JSONL v2 format, and round-trip export.
+    </Card>
+    <Card title="Custom Importers" href="/getting_started/custom_importers/" icon="code">
+      Write a <code>DatasetImporter</code> for a format Pixano does not ship.
+    </Card>
+    */}
   </CardGrid>
 
   <p>
     Once you are comfortable with the basics, head over to the
-    <a href={`${import.meta.env.BASE_URL}cookbook/`}>Cookbook</a> for end-to-end walkthroughs with real datasets.
+    <a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/cookbook/`}>Cookbook</a> for end-to-end walkthroughs with real datasets.
   </p>
 </DocsLayout>

@@ -67,17 +67,6 @@ describe("currentItemSaveCoordinator", () => {
     await expect(saveRequest).resolves.toEqual({ ok: true });
   });
 
-  it("arms and clears the explicit discard bypass", () => {
-    const coordinator = createCurrentItemSaveCoordinatorController();
-    coordinator.syncDirty(true);
-
-    coordinator.beginDiscardBypass();
-    expect(coordinator.value.guardMode).toBe("bypassed");
-
-    coordinator.endDiscardBypass();
-    expect(coordinator.value.guardMode).toBe("armed");
-  });
-
   it("resets pending requests when the current item changes", async () => {
     const coordinator = createCurrentItemSaveCoordinatorController();
     coordinator.syncDirty(true);
@@ -90,8 +79,43 @@ describe("currentItemSaveCoordinator", () => {
       isDirty: false,
       status: "idle",
       errorMessage: null,
-      guardMode: "armed",
       activeRequestId: null,
     });
+  });
+  it("keeps deduplicating while the queue's last request is still completing", async () => {
+    const coordinator = createCurrentItemSaveCoordinatorController();
+    coordinator.syncDirty(true);
+    const saving = coordinator.requestSave();
+    coordinator.syncDirty(false);
+    expect(coordinator.requestSave()).toBe(saving);
+    coordinator.setSaveSucceeded(1);
+    await expect(saving).resolves.toEqual({ ok: true });
+  });
+
+  it("ignores completions from a previous record, with and without a new request", async () => {
+    const coordinator = createCurrentItemSaveCoordinatorController();
+    coordinator.syncDirty(true);
+    const oldRequest = coordinator.requestSave();
+    coordinator.resetForItemChange();
+    await expect(oldRequest).resolves.toEqual({ ok: false });
+    coordinator.syncDirty(true);
+    coordinator.setSaveSucceeded(1);
+    coordinator.setSaveFailed("Old failure", 1);
+    expect(coordinator.value).toMatchObject({ isDirty: true, status: "idle", errorMessage: null });
+    const newRequest = coordinator.requestSave();
+    coordinator.setSaveSucceeded(1);
+    coordinator.setSaveFailed("Old failure", 1);
+    expect(coordinator.value).toMatchObject({ status: "saving", activeRequestId: 2 });
+    coordinator.setSaveSucceeded(2);
+    await expect(newRequest).resolves.toEqual({ ok: true });
+  });
+
+  it("does not authorize leaving while a newer edit is dirty", async () => {
+    const coordinator = createCurrentItemSaveCoordinatorController();
+    coordinator.syncDirty(true);
+    const request = coordinator.requestSave();
+    coordinator.setSaveSucceeded(1, true);
+    await expect(request).resolves.toEqual({ ok: false });
+    expect(coordinator.value.isDirty).toBe(true);
   });
 });

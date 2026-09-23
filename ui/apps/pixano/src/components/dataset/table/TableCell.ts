@@ -28,6 +28,7 @@ export const TableCell: Record<string, (value: CellValue) => ReturnType<typeof r
   float: createCellRenderer(NumberCell),
   bool: createCellRenderer(BooleanCell),
   str: createCellRenderer(TextCell),
+  list: createCellRenderer(TextCell),
   datetime: createCellRenderer(DateTimeCell),
   video: createCellRenderer(VideoCell),
   histogram: createCellRenderer(HistogramCell),

@@ -8,26 +8,18 @@ import {
   createCurrentItemSaveCoordinatorController,
   createInitialCurrentItemSaveState,
   type CurrentItemSaveCoordinatorController,
-  type CurrentItemSaveGuardMode,
   type CurrentItemSaveResult,
   type CurrentItemSaveState,
   type CurrentItemSaveStatus,
 } from "./currentItemSaveCoordinator";
 import { reactiveStore } from "./reactiveStore.svelte";
 
-export type {
-  CurrentItemSaveGuardMode,
-  CurrentItemSaveResult,
-  CurrentItemSaveState,
-  CurrentItemSaveStatus,
-};
+export type { CurrentItemSaveResult, CurrentItemSaveState, CurrentItemSaveStatus };
 
 export interface CurrentItemSaveCoordinator {
   readonly value: CurrentItemSaveState;
   syncDirty: (isDirty: boolean) => void;
   requestSave: () => Promise<CurrentItemSaveResult>;
-  beginDiscardBypass: () => void;
-  endDiscardBypass: () => void;
   setSaveFailed: CurrentItemSaveCoordinatorController["setSaveFailed"];
   setSaveSucceeded: CurrentItemSaveCoordinatorController["setSaveSucceeded"];
   resetForItemChange: () => void;
@@ -47,8 +39,6 @@ export function createCurrentItemSaveCoordinator(): CurrentItemSaveCoordinator {
     },
     syncDirty: controller.syncDirty,
     requestSave: controller.requestSave,
-    beginDiscardBypass: controller.beginDiscardBypass,
-    endDiscardBypass: controller.endDiscardBypass,
     setSaveFailed: controller.setSaveFailed,
     setSaveSucceeded: controller.setSaveSucceeded,
     resetForItemChange: controller.resetForItemChange,

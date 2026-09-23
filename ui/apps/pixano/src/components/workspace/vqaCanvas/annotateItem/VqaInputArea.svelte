@@ -496,15 +496,17 @@ License: CECILL-C
           <Gear weight="regular" size={14} />
         </IconButton>
 
-        <!-- Debug prompt viewer -->
-        <IconButton
-          tooltipContent="View last VLM prompt"
-          disabled={!lastVlmPromptStore.value}
-          onclick={() => (showDebugModal = true)}
-          class="h-7 w-7"
-        >
-          <Terminal weight="regular" size={14} />
-        </IconButton>
+        <!-- Debug prompt viewer (dev builds only — not an annotator affordance) -->
+        {#if import.meta.env.DEV}
+          <IconButton
+            tooltipContent="View last VLM prompt"
+            disabled={!lastVlmPromptStore.value}
+            onclick={() => (showDebugModal = true)}
+            class="h-7 w-7"
+          >
+            <Terminal weight="regular" size={14} />
+          </IconButton>
+        {/if}
       </div>
 
       <div class="flex items-center gap-1.5">

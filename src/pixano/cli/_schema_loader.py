@@ -53,3 +53,33 @@ def load_info(specifier: str) -> DatasetInfo:
         return value().model_copy(deep=True)
 
     raise typer.BadParameter(f"'{attribute_name}' is not a DatasetInfo instance")
+
+
+def load_importer(specifier: str):
+    """Load a ``DatasetImporter`` from a ``path/to/file.py:ClassName`` specifier.
+
+    CLI/Python-only escape hatch (spec §4): the REST API never executes
+    user-provided Python.
+    """
+    from pixano.datasets.io import DatasetImporter
+
+    if ":" not in specifier:
+        raise typer.BadParameter(f"Importer must be in 'path/to/file.py:ClassName' format, got '{specifier}'")
+
+    file_path_str, class_name = specifier.rsplit(":", 1)
+    file_path = Path(file_path_str).resolve()
+    if not file_path.is_file():
+        raise typer.BadParameter(f"Importer file not found: {file_path}")
+
+    spec = importlib.util.spec_from_file_location("_user_importer", file_path)
+    if spec is None or spec.loader is None:
+        raise typer.BadParameter(f"Cannot load module from: {file_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    importer_cls = getattr(module, class_name, None)
+    if importer_cls is None:
+        raise typer.BadParameter(f"Class '{class_name}' not found in {file_path}")
+    if not (isinstance(importer_cls, type) and issubclass(importer_cls, DatasetImporter)):
+        raise typer.BadParameter(f"'{class_name}' is not a DatasetImporter subclass")
+    return importer_cls()

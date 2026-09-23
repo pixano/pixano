@@ -7,6 +7,7 @@
 """Generic CRUD service for the API."""
 
 import logging
+from functools import wraps
 from typing import Any
 
 from fastapi import HTTPException
@@ -26,6 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 MAX_QUERY_LIMIT = 1000
+
+
+def _service_write(method):
+    """Hold one lock for a resource operation's reads and writes."""
+
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self.dataset.write_lock():
+            return method(self, *args, **kwargs)
+
+    return locked
 
 
 class BaseService:
@@ -49,28 +61,22 @@ class BaseService:
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
             if self.resource.schema_group == SchemaGroup.ANNOTATION:
-                logger.warning(
-                    "Table '%s' does not exist in dataset '%s'. "
-                    "Auto-creating with base schema '%s'. "
-                    "To use a custom schema, recreate the dataset with "
-                    "DatasetInfo(%s=YourCustomSchema).",
-                    resolved_table,
-                    self.dataset.info.id,
-                    self.resource.schema_cls.__name__,
-                    self.resource.name,
-                )
-                self.dataset.create_table(
-                    resolved_table,
-                    self.resource.schema_cls,
-                    exist_ok=True,
-                )
-                # Ensure the DatasetInfo slot is set so the table
-                # survives serialisation to info.json across restarts.
-                slot_name = self.resource.name  # e.g. "multi_path"
-                if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
-                    setattr(self.dataset.info, slot_name, self.resource.schema_cls)
-                    self.dataset.info.to_json(self.dataset._info_file)
-                return resolved_table
+                with self.dataset.write_lock():
+                    if resolved_table in self.dataset.info.tables:
+                        return self.resolve_table()
+                    logger.warning(
+                        "Table '%s' does not exist in dataset '%s'. Auto-creating with base schema '%s'.",
+                        resolved_table,
+                        self.dataset.info.id,
+                        self.resource.schema_cls.__name__,
+                    )
+                    self.dataset.create_table(resolved_table, self.resource.schema_cls, exist_ok=True)
+                    # Persist the slot as well as the physical table.
+                    slot_name = self.resource.name
+                    if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
+                        setattr(self.dataset.info, slot_name, self.resource.schema_cls)
+                        self.dataset.info.to_json(self.dataset._info_file)
+                    return resolved_table
             raise HTTPException(status_code=404, detail=f"No table found for resource '{self.resource.path}'.")
         if not issubclass(schema_type, self.resource.schema_cls):
             raise HTTPException(
@@ -169,8 +175,31 @@ class BaseService:
         where: str | None = None,
         limit: int = 100,
         offset: int = 0,
+        sortcol: str | None = None,
+        order: str | None = None,
+        force_full_scan: bool = False,
+        raw_where: bool = False,
     ) -> PaginatedResponse:
-        """List resources with filtering and pagination."""
+        """List resources with filtering, sorting and pagination.
+
+        Args:
+            record_id: Equality filter on ``record_id`` (auxiliary resources).
+            entity_id: Equality filter on ``entity_id`` (auxiliary resources).
+            view_name: Equality filter on the view's logical name / view id.
+            source_type: Equality filter on ``source_type``.
+            tracklet_id: Equality filter on ``tracklet_id``.
+            frame_index: Equality filter on ``frame_index``.
+            where: A ready-to-use SQL where clause (e.g. compiled by the explorer
+                filter compiler, or a deprecated raw clause).
+            limit: Page size (clamped to ``MAX_QUERY_LIMIT``).
+            offset: Rows to skip.
+            sortcol: Column to order by (``get_data`` adds an ``id`` tie-break).
+            order: Sort order, ``asc`` or ``desc``.
+            force_full_scan: Force the safe full-scan path for a non-index-servable
+                ``where`` (see `TableQueryBuilder.force_full_scan`).
+            raw_where: True when ``where`` includes a user-supplied raw clause, so a
+                query-engine error is reported as 400 (bad input) rather than 500.
+        """
         resolved_table = self.resolve_table()
         limit = min(limit, MAX_QUERY_LIMIT)
 
@@ -200,9 +229,20 @@ class BaseService:
                 where=combined_where,
                 limit=limit,
                 skip=offset,
+                sortcol=sortcol,
+                order=order,
+                force_full_scan=force_full_scan,
             )
         except DatasetPaginationError as err:
             raise HTTPException(status_code=400, detail=f"Invalid query parameters. {err}")
+        except RuntimeError as err:
+            # A malformed user-supplied `where` reaches LanceDB as a query-engine
+            # error (a bare RuntimeError). Report it as bad input, not a server
+            # fault — but only when a raw clause was actually supplied; the
+            # compiled filter path is allowlisted and can't be malformed.
+            if raw_where:
+                raise HTTPException(status_code=400, detail=f"Invalid filter. {err}")
+            raise HTTPException(status_code=500, detail=f"Internal server error. {err}")
         except DatasetAccessError as err:
             raise HTTPException(status_code=500, detail=f"Internal server error. {err}")
 
@@ -217,6 +257,7 @@ class BaseService:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
         return self._response(row)
 
+    @_service_write
     def create(self, data: dict[str, Any]) -> BaseModel:
         """Create a new resource row."""
         resolved_table = self.resolve_table()
@@ -231,6 +272,19 @@ class BaseService:
         except Exception as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        # A client-generated id makes a POST safe to retry after a lost response.
+        # Compare validated defaults and values, excluding only server timestamps.
+        if data.get("id"):
+            existing = self.dataset.get_data(resolved_table, ids=row.id)
+            if existing is not None:
+                ignored = {"created_at", "updated_at"}
+                if existing.model_dump(exclude=ignored) == row.model_dump(exclude=ignored):
+                    return self._response(existing)
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "id_conflict", "message": "A different resource already exists with this id."},
+                )
+
         try:
             created_rows = self.dataset.add_data(resolved_table, [row])
         except DatasetIntegrityError as err:
@@ -240,6 +294,7 @@ class BaseService:
 
         return self._response(created_rows[0])
 
+    @_service_write
     def update(self, id: str, data: dict[str, Any]) -> BaseModel:
         """Update an existing resource row."""
         resolved_table = self.resolve_table()
@@ -263,6 +318,7 @@ class BaseService:
 
         return self._response(updated_rows[0])
 
+    @_service_write
     def delete(self, id: str) -> None:
         """Delete a resource by ID."""
         resolved_table = self.resolve_table()

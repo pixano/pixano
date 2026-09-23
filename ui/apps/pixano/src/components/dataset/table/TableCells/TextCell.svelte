@@ -13,6 +13,6 @@ License: CECILL-C
   let { value }: Props = $props();
 </script>
 
-<div class="min-w-24 px-2">
+<div class="min-w-24 max-w-[280px] px-2 truncate mx-auto" title={value}>
   {value}
 </div>

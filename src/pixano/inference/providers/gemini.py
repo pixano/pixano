@@ -19,20 +19,11 @@ from typing import Any, Literal
 
 import httpx
 
-from ..exceptions import TaskNotSupportedError
 from ..registry import register_provider
 from ..types import (
-    DetectionInput,
-    DetectionResult,
     InferenceTask,
     ModelInfo,
-    ProviderCapabilities,
-    SegmentationInput,
-    SegmentationResult,
     ServerInfo,
-    TrackingInput,
-    TrackingJobStatus,
-    TrackingResult,
     UsageInfo,
     VLMInput,
     VLMOutput,
@@ -67,16 +58,8 @@ class GeminiProvider(HTTPProvider):
         path = f"{path}{separator}key={self._api_key}"
         return await super()._request(method, path, timeout=timeout, **kwargs)
 
-    async def get_capabilities(self) -> ProviderCapabilities:
-        """Return provider capabilities."""
-        return ProviderCapabilities(
-            tasks=[InferenceTask.VLM],
-            supports_batching=False,
-            supports_streaming=False,
-        )
-
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
-        """List available models."""
+        """List available models (VLM only)."""
         if task is not None and task != InferenceTask.VLM:
             return []
         response = await self.get("/v1beta/models")
@@ -86,23 +69,16 @@ class GeminiProvider(HTTPProvider):
             methods = model.get("supportedGenerationMethods", [])
             if "generateContent" in methods:
                 model_name = model["name"].removeprefix("models/")
-                models.append(ModelInfo(name=model_name, capability="vlm"))
+                models.append(ModelInfo(name=model_name, task=InferenceTask.VLM.value))
         return models
 
     async def get_server_info(self) -> ServerInfo:
         """Get server information."""
         models = await self.list_models()
         return ServerInfo(
-            app_name="gemini",
-            app_version="unknown",
-            app_description="Google Gemini provider",
-            num_cpus=None,
-            num_gpus=0,
-            num_nodes=1,
-            gpus_used=0.0,
-            gpu_to_model={},
+            version="unknown",
             models=[m.name for m in models],
-            models_to_capability={m.name: m.capability for m in models},
+            models_to_task={m.name: m.task for m in models},
         )
 
     async def vlm(self, input_data: VLMInput, timeout: float = 60.0) -> VLMResult:
@@ -171,29 +147,3 @@ class GeminiProvider(HTTPProvider):
 
         # Assume base64-encoded data
         return {"inlineData": {"mimeType": "image/jpeg", "data": image_str}}
-
-    # --- Unsupported tasks ---
-
-    async def segmentation(self, input_data: SegmentationInput, timeout: float = 60.0) -> SegmentationResult:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support segmentation")
-
-    async def tracking(self, input_data: TrackingInput, timeout: float = 120.0) -> TrackingResult:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support tracking")
-
-    async def submit_tracking_job(self, input_data: TrackingInput, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support tracking")
-
-    async def get_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support tracking")
-
-    async def cancel_tracking_job(self, job_id: str, timeout: float = 30.0) -> TrackingJobStatus:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support tracking")
-
-    async def detection(self, input_data: DetectionInput, timeout: float = 60.0) -> DetectionResult:
-        """Not supported."""
-        raise TaskNotSupportedError("Provider 'gemini' does not support detection")

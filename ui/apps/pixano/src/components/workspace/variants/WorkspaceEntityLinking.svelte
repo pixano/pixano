@@ -32,7 +32,15 @@ License: CECILL-C
   import type { SelectionTool } from "$lib/tools";
   import type { ImageFilters, Shape } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
-  import { effectProbe, Image, isImage, TextSpan, type LoadedImagesPerView } from "$lib/ui";
+  import {
+    CanvasStateOverlay,
+    effectProbe,
+    Image,
+    isImage,
+    ResizeHandle,
+    TextSpan,
+    type LoadedImagesPerView,
+  } from "$lib/ui";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   // Import stores and API functions
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -56,6 +64,7 @@ License: CECILL-C
   // Images per view type
   let imagesPerView: LoadedImagesPerView = $state({});
   let loaded: boolean = $state(false); // Loading status of images per view
+  let loadError = $state(false);
   let prevSelectedItemId: string = $state("");
   let imageLoadRequestId = 0;
   const hasImages = $derived(Object.keys(imagesPerView).length > 0);
@@ -115,6 +124,7 @@ License: CECILL-C
       prev16BitRange = [...next16BitRange];
       void updateImages(itemChanged).catch(() => {
         console.error("Error loading the images.");
+        loadError = true;
       });
     }
   });
@@ -170,14 +180,12 @@ License: CECILL-C
       onTextSpanClick={handleTextSpanClick}
     />
   </div>
-  <button
-    type="button"
-    aria-label="Resize text and image panels"
-    class="w-1 bg-primary-light cursor-col-resize h-full"
+  <ResizeHandle
+    ariaLabel="Resize text and image panels"
     onmousedown={() => {
       expanding = true;
     }}
-  ></button>
+  />
   <div class="overflow-hidden grow relative">
     {#if loaded && hasImages}
       <Canvas2D
@@ -202,7 +210,13 @@ License: CECILL-C
       <div class="w-full h-full bg-canvas"></div>
     {/if}
 
-    {#if !loaded}
+    {#if loadError}
+      <CanvasStateOverlay
+        variant="error"
+        title="The image could not be loaded"
+        message="The media file may be missing or unreachable."
+      />
+    {:else if !loaded}
       <div class="absolute inset-0 z-10 bg-canvas/95 flex items-center justify-center">
         <CircleNotch weight="regular" class="h-10 w-10 animate-spin stroke-white" />
       </div>

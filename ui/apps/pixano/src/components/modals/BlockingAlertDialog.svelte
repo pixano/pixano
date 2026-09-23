@@ -39,6 +39,8 @@ License: CECILL-C
     statusMessage?: string;
     statusTone?: BlockingAlertTone;
     isBusy?: boolean;
+    /** Let the parent own dismissal, for asynchronous actions that can fail. */
+    closeOnAction?: boolean;
     onConfirm?: () => void;
     onCancel?: () => void;
     onAlternative?: () => void;
@@ -57,6 +59,7 @@ License: CECILL-C
     statusMessage = "",
     statusTone = "neutral",
     isBusy = false,
+    closeOnAction = true,
     onConfirm,
     onCancel,
     onAlternative,
@@ -87,11 +90,26 @@ License: CECILL-C
 
   function beginClose(action: BlockingAlertAction) {
     if (!open || isActionDisabled(action)) return;
+    if (!closeOnAction) {
+      invokePendingAction(action);
+      if (action === "cancel") {
+        queueMicrotask(() => {
+          if (previouslyFocusedElement?.isConnected) {
+            previouslyFocusedElement.focus({ preventScroll: true });
+          }
+        });
+      }
+      return;
+    }
     pendingAction = action;
     open = false;
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && !closeOnAction) {
+      beginClose(escapeAction);
+      return;
+    }
     if (!nextOpen && allActionsDisabled) {
       open = true;
       return;
@@ -156,7 +174,7 @@ License: CECILL-C
   <AlertDialog.Portal>
     <AlertDialog.Overlay class={BLOCKING_ALERT_OVERLAY_CLASS} />
 
-    <div class={BLOCKING_ALERT_VIEWPORT_CLASS}>
+    <div class={BLOCKING_ALERT_VIEWPORT_CLASS} class:pointer-events-none={!open}>
       <div class="flex min-h-full items-center justify-center">
         <AlertDialog.Content
           class={BLOCKING_ALERT_CONTENT_CLASS}

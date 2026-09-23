@@ -22,16 +22,17 @@ Run the full stack with `pixano server run`, or use the Python backend directly 
 
 ## How data is organized
 
-A Pixano dataset is a collection of **tables** stored in a [LanceDB](https://lancedb.github.io/lancedb/) database. Each table belongs to one of six **schema groups**:
+A Pixano dataset is a collection of **tables** stored in a [LanceDB](https://lancedb.github.io/lancedb/) database. Each table belongs to one of seven **schema groups**:
 
 | Group | Purpose | Schema classes |
 |-------|---------|----------------|
 | **Record** | One row per dataset sample. Holds metadata, split, and workflow status. | `Record` |
 | **View** | Media files attached to a record. | `Image`, `Video`, `SequenceFrame`, `Text` |
 | **Entity** | An object observable in one or more views (e.g. a car, a person). | `Entity` |
-| **Annotation** | Labels attached to entities (bounding boxes, masks, keypoints, etc.). | `BBox`, `CompressedRLE`, `KeyPoints`, `TextSpan`, `Message`, `Tracklet` |
+| **Annotation** | Labels attached to entities (bounding boxes, masks, keypoints, etc.). | `BBox`, `CompressedRLE`, `KeyPoints`, `MultiPath`, `Classification`, `TextSpan`, `Message`, `Tracklet` |
 | **EntityDynamicState** | Per-frame state of an entity in video (e.g. visibility, pose). | `EntityDynamicState` |
-| **Embedding** | Vectors for semantic search. | `ViewEmbedding` |
+| **Timeseries** | Numeric signals sampled alongside a record (e.g. robot state). | `Timeseries` |
+| **Embedding** | Vectors for semantic search. | `RecordEmbedding` (record-level, used by the app), `ViewEmbedding` (legacy, per-view) |
 
 All schema classes live in `pixano.schemas` and are Pydantic models backed by LanceDB. You can subclass them to add custom fields.
 
@@ -46,46 +47,39 @@ Consider an image dataset for detecting vehicles:
 5. You can later add model predictions (YOLO, GroundingDINO, etc.) as additional annotations — provenance fields on the annotation let you distinguish human labels from model outputs.
 6. You compute embeddings (e.g. OpenCLIP) so the dataset becomes searchable — those go in the **embedding** table.
 
-## DatasetInfo
+## The dataset schema
 
-Every dataset is defined by a `DatasetInfo` that declares its name, workspace type, and schema:
+Every dataset is defined by a schema that declares its name, workspace type, views, and custom attributes. When importing, it lives in a `dataset.yaml` file:
 
-```python
-from pixano.datasets import DatasetInfo
-from pixano.datasets.workspaces import WorkspaceType
-from pixano.schemas import BBox, Entity, Image, Record
-
-
-class Vehicle(Entity):
-    category: str = ""
-
-
-dataset_info = DatasetInfo(
-    name="Vehicle Detection",
-    workspace=WorkspaceType.IMAGE,
-    record=Record,
-    entity=Vehicle,
-    bbox=BBox,
-    views={"image": Image},
-)
+```yaml
+pixano: 2
+format: pixano_jsonl
+dataset:
+  name: vehicle_detection
+  workspace: image
+schema:
+  entity:
+    attrs:
+      category: str
+  annotations: [bbox]
 ```
 
-The `workspace` selects the UI layout. The schema types you pass (`record`, `entity`, `bbox`, `views`, etc.) determine which tables are created in the database.
+The `workspace` selects the UI layout and provides default views. The `annotations` list determines which annotation tables are created in the database.
 
 ### Custom fields
 
-Each schema group maps to a base class you can subclass to add domain-specific fields:
+Records, entities, and per-frame states accept domain-specific attributes with a type and an optional default:
 
-```python
-from pixano.schemas import Entity
-
-class DetectedObject(Entity):
-    category: str = ""
-    is_difficult: bool = False
-    confidence: float = 0.0
+```yaml
+schema:
+  entity:
+    attrs:
+      category: str
+      is_difficult: { type: bool, default: false }
+      confidence: { type: float, default: 0.0 }
 ```
 
-Fields must have default values (Pixano uses Pydantic under the hood).
+(Programmatic users can build the same schema in Python via `DatasetInfo` and Pydantic subclasses — the yaml compiles to exactly that.)
 
 ## Record fields
 
@@ -100,7 +94,7 @@ The base `Record` class provides these fields out of the box:
 | `created_at` | `datetime` | now | Creation timestamp |
 | `updated_at` | `datetime` | now | Last modification timestamp |
 
-The `status` field is central to annotation campaigns: filter the dataset explorer by status to see which items still need work, and use the dashboard to track overall progress. You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for ground truth).
+The `status` field is central to annotation campaigns: filter the dataset explorer by status to see which records still need work, and the Split and Status facets show how many fall into each bucket. You can set `status` in `metadata.jsonl` during import (e.g. `"status": "validated"` for ground truth).
 
 ## Annotation provenance
 
@@ -137,7 +131,8 @@ library/<dataset>/
   info.json               # Name, description, workspace type, schema
   features_values.json    # Value constraints for fields
   stats.json              # Dataset statistics
-  preview.png             # Thumbnail for the UI
+  embeddings.json         # Semantic-search sidecar (model, dimension, metric)
+  previews/               # Generated thumbnails for the UI
   db/                     # LanceDB tables (one per schema)
 ```
 
@@ -154,13 +149,14 @@ ds = Dataset(Path("./my_data/library/my_dataset"))
 records = ds.get_records(limit=20, skip=0)
 
 # Read a specific table
-images = ds.get_data("image", limit=5)
+images = ds.get_data("images", limit=5)
 
 # Add annotations
 ds.add_data("bboxes", [bbox1, bbox2])
 
-# Semantic search (requires precomputed embeddings)
-records, distances, record_ids = ds.semantic_search("car on road", "image_embedding", limit=50)
+# Semantic search over record embeddings. The query vector comes from the
+# inference server; the app does this for you from the explorer's search bar.
+records, distances = ds.search_records(query_vector, k=50)
 ```
 
 ## Next steps
@@ -175,5 +171,5 @@ Pick a use case to see these concepts in action:
 
 <PrevNext
   prev={{ title: "Quickstart", href: "/getting_started/quickstart/" }}
-  next={{ title: "Object Detection", href: "/cookbook/object_detection/" }}
+  next={{ title: "Cookbook", href: "/cookbook/" }}
 />

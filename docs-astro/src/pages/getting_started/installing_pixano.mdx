@@ -3,84 +3,114 @@ layout: ../../layouts/DocsLayout.astro
 title: "Installation"
 section: getting_started
 ---
-import Callout from '../../components/Callout.astro'
 import PrevNext from '../../components/PrevNext.astro'
 
 # Installation
 
-## Prerequisites
-
-- **Python 3.10 to 3.13** — check with `python --version`
-- **pip** (included with Python)
-- A modern browser (Chrome, Firefox, Safari, Edge)
-
-<Callout type="note" title="Operating system support">
-Pixano is tested on Linux and macOS. It should work on Windows but is not officially tested.
-</Callout>
+To install Pixano you need a working Python installation. It currently requires
+**Python 3.10 to 3.13**. We encourage installing Pixano in a virtual environment, or using the
+Docker distribution, which needs no Python at all. Pixano is supported on Linux and macOS, and
+on Windows with limited support.
 
 ## Install with pip
 
-We recommend installing Pixano in a virtual environment to keep dependencies isolated:
+Open a terminal and check your Python version first:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 --version
+```
+
+If it is not between 3.10 and 3.13 (Python 3.14 is not supported yet), install a supported
+version from [python.org](https://www.python.org/downloads/) and use its own command below, for
+example `python3.13` instead of `python3`. Do not skip this check: with an unsupported Python,
+pip installs a very old Pixano without any warning.
+
+From the folder where you want to keep your Pixano files, create a virtual environment and
+activate it:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows, use `python` instead of `python3`, and activate with `.venv\Scripts\activate`.
+
+Install with:
+
+```bash
 pip install pixano
 ```
 
-Verify the installation:
+Hugging Face Hub and LeRobot imports are included in this installation. When running
+from a source checkout, `uv sync` installs their dependencies as well.
+
+Video and LeRobot frame imports also need **FFmpeg**, including both `ffmpeg` and
+`ffprobe`, on your system's `PATH`. Install it with your system package manager:
 
 ```bash
-pip show pixano
+# Ubuntu / Debian
+sudo apt-get install ffmpeg
+
+# macOS with Homebrew
+brew install ffmpeg
 ```
 
-You should see output including `Name: pixano` and `Version: 0.7.x`.
+On Windows, install FFmpeg and add its `bin` directory to `PATH`. Verify the installation
+with `ffmpeg -version` and `ffprobe -version`. The Pixano Docker image already includes
+these tools. Image-only imports do not need them.
 
-You can also check that the CLI is available:
+Then check it is correctly installed with:
 
 ```bash
 pixano --help
 ```
 
-## Docker
+```text
+ Usage: pixano [OPTIONS] COMMAND [ARGS]...
 
-Pixano is available on [Docker Hub](https://hub.docker.com/r/pixano/pixano) for official releases. Pull the
-`stable` tag to get the latest released version:
+ Pixano CLI
+```
+
+The list of commands that follows includes `init` and `server`, the two you need next.
+
+At this point you can start the Pixano server, by first initializing its data directory — the
+folder where Pixano keeps your datasets:
+
+```bash
+pixano init ./my_data
+```
+
+and then running the server itself:
+
+```bash
+pixano server run ./my_data
+```
+
+Open **http://127.0.0.1:7492** in your browser: this is the Library, Pixano's home page, empty
+for now. Continue to the [Quickstart](/pixano/getting_started/quickstart/) to import your first
+dataset.
+
+The server runs until you press `Ctrl-C` in the terminal. To start it again later, open a
+terminal in the same folder, activate the virtual environment and run
+`pixano server run ./my_data` — `pixano init` is only needed once.
+
+## Run with Docker
+
+With [Docker](https://docs.docker.com/get-started/get-docker/) installed and running, pull the
+image and start a container:
 
 ```bash
 docker pull pixano/pixano:stable
 ```
 
-If you need to pin a specific release, use the corresponding version tag instead of `stable`.
-
-Run the container with a mounted library directory:
-
 ```bash
-docker run -d \
-    --name pixano \
-    -p 7492:7492 \
-    -v ./my_library:/library \
-    pixano/pixano:stable
+docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-Open `http://localhost:7492` in your browser.
+`my_data` is the folder where Pixano keeps your datasets; it is created in the current folder on
+first start. Open **http://localhost:7492** in your browser: the Library.
 
-In this example, `./my_library` is the directory on your machine where Pixano stores its library. Inside the
-container, Pixano always uses `/library`. Reusing the same mounted directory lets you keep your data across
-container restarts or upgrades.
-
-## Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `pip install pixano` fails with build errors | Make sure you have Python 3.10+ and an up-to-date pip: `pip install --upgrade pip` |
-| `pixano` command not found after install | Activate your virtual environment: `source .venv/bin/activate` |
-| Port 7492 already in use | Use `--port 8000` or stop the other process |
-| Docker container exits immediately | Check logs with `docker logs pixano`, then verify that the mounted host directory exists and is writable |
-
-## Next steps
-
-You're ready to go. Head to the [Quickstart](/pixano/getting_started/quickstart/) to import your first dataset and launch the app.
+Stop the container with `docker stop pixano` and start it again with `docker start pixano`.
 
 <PrevNext
   prev={{ title: "Overview", href: "/getting_started/" }}
