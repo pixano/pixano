@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 
+import pytest
+
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.locking import dataset_mutation_lock, mutation_token
 from pixano.schemas import BBox, Image, Record, Video
@@ -248,3 +250,39 @@ class TestSpecVersion3Migration:
         )
 
         assert {box.id: box.review_status for box in dataset.get_data("bboxes")} == {"box1": "", "box2": "pending"}
+
+    def test_upserts_survive_an_index_rebuilt_after_migration(self, tmp_path: Path):
+        """Review of step 2, lot 0: the migrated column sits at the end of the Lance schema.
+
+        The pydantic schema declares ``review_status`` after ``view_id``; once the ``id`` index
+        covers fragments written in pydantic order, ``merge_insert`` failed with "fragment id
+        does not exist". Seen on a dataset imported at version 2 (imports build the index),
+        opened, edited, then compacted — which the worker's writer does every 64 writes.
+        """
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+        dataset = Dataset(dataset_path)
+        dataset.create_scalar_indexes()
+
+        def edit(box_id: str, size: float) -> None:
+            box = dataset.get_data("bboxes", ids=[box_id])[0]
+            box.coords = [0, 0, size, size]
+            dataset.update_data("bboxes", [box], raise_or_warn="none")
+
+        edit("box1", 0.5)
+        dataset.update_data(
+            "bboxes",
+            [
+                BBox(
+                    id="box2", record_id="rec1", view_id="img1", coords=[0, 0, 1, 1], format="xyxy", is_normalized=True
+                )
+            ],
+            raise_or_warn="none",
+        )
+        dataset.open_table("bboxes").optimize()
+        edit("box1", 0.6)
+        edit("box2", 0.7)
+
+        sizes = {box.id: box.coords[2] for box in dataset.get_data("bboxes")}
+        assert sizes == pytest.approx({"box1": 0.6, "box2": 0.7})

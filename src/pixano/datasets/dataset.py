@@ -1356,16 +1356,40 @@ class Dataset:
             if table_name in row_payloads:
                 rows = row_payloads[table_name]
                 self._stamp_upsert_timestamps(table, rows)
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(rows)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, rows)
+                )
                 counts[table_name] = len(rows)
             else:
                 arrow_table = self._with_timestamp_columns(table, arrow_payloads[table_name])
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(arrow_table)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, arrow_table)
+                )
                 counts[table_name] = arrow_table.num_rows
 
         if SchemaGroup.RECORD.value in counts:
             self._num_rows_cache = None
         return counts
+
+    @staticmethod
+    def _in_table_order(table: LanceTable, data: list[LanceModel] | pa.Table) -> list[LanceModel] | pa.Table:
+        """Give an upsert its columns in the order the table stores them.
+
+        A column added by a storage migration lands at the end of the Lance schema, while the
+        pydantic schema may declare it in the middle — ``review_status`` sits after
+        ``view_id``. Lance's ``merge_insert`` does not match columns by name once the ``id``
+        index covers fragments written in the other order: the upsert then fails, or corrupts
+        the match ("fragment id does not exist", "ambiguous merge insert"). Rows whose schema
+        already matches the table are passed through untouched.
+        """
+        names = table.schema.names
+        if isinstance(data, pa.Table):
+            if data.schema.names == names or set(data.schema.names) != set(names):
+                return data
+            return data.select(names)
+        if not data or list(type(data[0]).model_fields) == names:
+            return data
+        return pa.Table.from_pylist([row.model_dump() for row in data], schema=table.schema)
 
     def _stamp_upsert_timestamps(self, table: LanceTable, rows: list[LanceModel]) -> None:
         """Stamp ``updated_at`` and preserve stored ``created_at`` for existing rows."""
@@ -1621,7 +1645,9 @@ class Dataset:
                 d.updated_at = datetime.now()
             if d.id not in ids_found and hasattr(d, "created_at"):
                 d.created_at = d.updated_at if hasattr(d, "updated_at") else datetime.now()
-        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+            self._in_table_order(table, data)
+        )
 
         if not return_separately:
             return data
