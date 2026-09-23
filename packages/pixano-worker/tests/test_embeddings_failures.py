@@ -131,7 +131,7 @@ class _Reader:
 @pytest.fixture
 def inference(monkeypatch: pytest.MonkeyPatch) -> _Inference:
     fake = _Inference()
-    monkeypatch.setattr("pixano_worker.kinds.embeddings.SyncPixanoInferenceClient", fake.client)
+    monkeypatch.setattr("pixano_worker.kinds.inference.SyncPixanoInferenceClient", fake.client)
     return fake
 
 

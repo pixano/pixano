@@ -13,64 +13,31 @@ a transient failure from a definitive one, and writing a result that replaying d
 duplicate.
 """
 
-import io
 import logging
 import time
-from functools import cache
 from typing import Any, Iterable
 
 import httpx
-from PIL import Image
 from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
-
-from pixano.inference.media import bytes_to_data_uri
 
 from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import CONFIRM_MARKER, Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .inference import (
+    NO_RESPONSE,
+    REQUEST_STATUSES,
+    TRANSIENT_STATUSES,
+    InferenceServer,
+    blame_the_server_or_the_media,
+    refusal_detail,
+)
 
 
 log = logging.getLogger("pixano-worker")
 
 # The capability pixano-inference declares for a model this kind can call.
 EMBEDDING_CAPABILITY = "embedding"
-
-# The answers that say "come back later": timeout, too many requests, service unavailable. The
-# client already replays 502, 503 and 504 on its own; what reaches this point has survived its
-# retries and belongs to the queue.
-TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
-
-# The answers that say "this request will never pass", whatever its content: no permission, no
-# route, no model. Splitting the batch would change nothing.
-REQUEST_STATUSES = frozenset({401, 403, 404, 405})
-
-# How long a chunk may wait to learn which checkpoint the model runs. The answer only completes
-# the provenance: a slow server must not hold the chunk for the client's default minute.
-CHECKPOINT_QUERY_TIMEOUT_S = 5.0
-
-# Side of the witness image: the smallest the server accepts without arguing. It only serves to
-# find out whether the server can still embed anything, not to produce a vector.
-WITNESS_IMAGE_SIDE = 16
-
-# The status the client gives an error when the server answered nothing at all — connection
-# refused, timeout. It wraps it in a PixanoInferenceError rather than letting the httpx error
-# through.
-NO_RESPONSE = 0
-
-
-@cache
-def witness_image() -> str:
-    """A generated image, as bytes, that the server must be able to embed.
-
-    When a whole batch is refused image by image, it tells an inference outage from a batch that
-    is really corrupt: the "two refused images count as an outage" threshold it replaces made the
-    decision depend on the batch size, and the last chunk of a dataset often has only one image.
-    """
-    image = Image.new("RGB", (WITNESS_IMAGE_SIDE, WITNESS_IMAGE_SIDE), (128, 128, 128))
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return bytes_to_data_uri(buffer.getvalue())
 
 
 class EmbeddingsParams(JobParams):
@@ -129,9 +96,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
     def __init__(self, inference_url: str = "", api_key: str = "") -> None:
         """Bind this kind to the inference server the worker knows."""
-        self.inference_url = inference_url.rstrip("/")
-        self.api_key = api_key
-        self._checkpoints: dict[str, str] = {}
+        self.server = InferenceServer(inference_url, api_key)
 
     #: How the engine runs the job, not what it computes: absent from the provenance.
     params_not_in_provenance = JobKind.params_not_in_provenance | {
@@ -144,36 +109,10 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def model_identity(self, params: EmbeddingsParams) -> ModelIdentity:
         """The model's name, and the checkpoint the server loaded under it.
 
-        The server declares no version as such; the checkpoint path is what identifies which
-        weights answered. Embedding rows carry no provenance today — the model lives in the
-        dataset's sidecar as long as one table holds one model — so this is the reference
-        implementation the pre-annotation kinds copy, not something the vectors record.
-
-        Asked once per model per process, and only a successful answer is remembered: a
-        server that could not be asked is asked again on the next chunk rather than leaving
-        every later row without a version.
+        Embedding rows carry no provenance today — the model lives in the dataset's sidecar as
+        long as one table holds one model — so this completes the job's own provenance only.
         """
-        if params.model not in self._checkpoints:
-            checkpoint = self._checkpoint_of(params.model)
-            if checkpoint is None:
-                return ModelIdentity(params.model)
-            self._checkpoints[params.model] = checkpoint
-        return ModelIdentity(params.model, self._checkpoints[params.model])
-
-    def _checkpoint_of(self, model: str) -> str | None:
-        try:
-            with SyncPixanoInferenceClient(
-                self.inference_url,
-                api_key=self.api_key or None,
-                max_retries=0,
-                timeout=CHECKPOINT_QUERY_TIMEOUT_S,
-            ) as client:
-                for info in client.list_models():
-                    if info.name == model:
-                        return info.model_path or None
-        except Exception as error:  # noqa: BLE001 — a provenance that cannot be completed must not fail the chunk
-            log.warning("model '%s': cannot ask the inference for its checkpoint (%s)", model, error)
-        return None
+        return self.server.model_identity(params.model)
 
     def prepare(self, writer: JobWriter, params: EmbeddingsParams) -> None:
         """Empty the embeddings table first, when the job was asked to replace it.
@@ -204,7 +143,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 model, or the dataset already carries embeddings from another model.
         """
         self.refuse_unsupported_media(params.media)
-        self._require_served(params.model)
+        self.server.require_served(params.model, EMBEDDING_CAPABILITY)
         # Replacing the vectors is precisely how another model gets in: `prepare`, run once this
         # plan has succeeded, empties the table.
         if not params.replace_existing_embeddings:
@@ -219,27 +158,6 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                         batch = []
                 if batch:
                     yield Chunk(payload={"table": table, "view_ids": batch}, task_count=len(batch))
-
-    def _require_served(self, model: str) -> None:
-        """Refuse a job whose model the inference does not serve as an embedding model.
-
-        A server that cannot be reached is not a refusal: it may be restarting, and the chunks
-        will wait for it like after any outage.
-        """
-        try:
-            with SyncPixanoInferenceClient(
-                self.inference_url, api_key=self.api_key or None, max_retries=0, timeout=CHECKPOINT_QUERY_TIMEOUT_S
-            ) as client:
-                served = client.list_models()
-        except Exception as error:  # noqa: BLE001 — an unreachable server is the chunks' concern
-            log.warning("model '%s': cannot ask the inference whether it is served (%s)", model, error)
-            return
-        embedding = sorted(info.name for info in served if info.capability == EMBEDDING_CAPABILITY)
-        if model not in embedding:
-            raise ValueError(
-                f"the inference serves no embedding model named '{model}' — it serves "
-                f"{', '.join(embedding) or 'none'}. Deploy the model on pixano-inference, or choose one of those."
-            )
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: EmbeddingsParams) -> dict[str, Any]:
         """Embed a batch of media and return their vectors, with the fate of each medium.
@@ -293,9 +211,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
         read_s = time.perf_counter() - started
 
-        client = SyncPixanoInferenceClient(
-            self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
-        )
+        client = self.server.client(max_retries=params.max_retries)
         started = time.perf_counter()
         embedded, refused = self._embed_isolating(client, candidates, params)
         inference_s = time.perf_counter() - started
@@ -304,7 +220,13 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             # so does an entirely corrupt batch. What tells them apart is not the batch size —
             # the last chunk of a dataset often has only one image — but the server itself, on an
             # image known to be good.
-            self._blame_the_server_or_the_images(client, reader, table, refused, by_path, params)
+            blame_the_server_or_the_media(
+                lambda reference: self._embed(client, [reference], params),
+                reader,
+                table,
+                [view_id for view_id, _ in refused],
+                by_path,
+            )
         quarantined.extend(
             {
                 "item_id": view_id,
@@ -358,49 +280,6 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             result.get("carried_bytes", 0),
         )
 
-    def _blame_the_server_or_the_images(
-        self,
-        client: SyncPixanoInferenceClient,
-        reader: JobReader,
-        table: str,
-        refused: list[tuple[str, dict[str, Any]]],
-        by_path: dict[str, Any],
-        params: EmbeddingsParams,
-    ) -> None:
-        """Decide, on an entirely refused batch, whether the server or the images are to blame.
-
-        A witness image, generated here, is sent as bytes: refused, the server is not well and
-        the chunk is replayed later. Accepted, the images are at fault — unless they had been
-        designated by path: the server may not read the storage it was told to mount, and then
-        refuses every path through no fault of any image. So one of them is resent as bytes; if
-        it passes, the mount is the cause, and the chunk is replayed with the reason, rather than
-        three hundred healthy images going to quarantine.
-
-        Raises:
-            TransientError: The server refuses the witness image, or does not read its media by
-                path.
-        """
-        try:
-            self._embed(client, [witness_image()], params)
-        except (httpx.TransportError, PixanoInferenceError) as error:
-            raise TransientError(f"the inference refuses even the witness image: {error}") from error
-
-        first_by_path = next((view_id for view_id, _ in refused if view_id in by_path), None)
-        if first_by_path is None:
-            return
-        found = reader.dataset.get_view_binary(table, by_path[first_by_path].id)
-        if found is None or not found[0]:
-            return
-        try:
-            self._embed(client, [bytes_to_data_uri(found[0])], params)
-        except (httpx.TransportError, PixanoInferenceError):
-            # Refused as bytes too: the image really is at fault.
-            return
-        raise TransientError(
-            f"the inference refuses images by path but accepts the same one as bytes ({first_by_path}): "
-            "it does not read the media storage — check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
-        )
-
     def _embed_isolating(
         self, client: SyncPixanoInferenceClient, candidates: list[tuple[str, str]], params: EmbeddingsParams
     ) -> tuple[list[tuple[str, list[float]]], list[tuple[str, dict[str, Any]]]]:
@@ -439,8 +318,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             if error.status_code in REQUEST_STATUSES:
                 raise
             if len(candidates) == 1:
-                detail = {"status": error.status_code, "code": error.code, "message": str(error.message)[:500]}
-                return [], [(candidates[0][0], detail)]
+                return [], [(candidates[0][0], refusal_detail(error))]
             middle = len(candidates) // 2
             left_ok, left_ko = self._embed_isolating(client, candidates[:middle], params)
             right_ok, right_ko = self._embed_isolating(client, candidates[middle:], params)

@@ -244,7 +244,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             vectors = np.full((count, FAKE_DIM), 0.1, dtype=np.float32)
             return SimpleNamespace(data=SimpleNamespace(embeddings=SimpleNamespace(to_numpy=lambda: vectors)))
 
-    monkeypatch.setattr("pixano_worker.kinds.embeddings.SyncPixanoInferenceClient", _Client)
+    monkeypatch.setattr("pixano_worker.kinds.inference.SyncPixanoInferenceClient", _Client)
 
 
 @pytest.fixture(params=REGISTRY.names())
