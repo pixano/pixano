@@ -96,8 +96,8 @@ library.
   server's `/v1` API. A single `/inference` surface replaces `/app/inference/*`,
   and the task vocabulary is now `image_mask_generation`,
   `video_mask_generation`, `detection`, `vlm`, `ner`, and `embedding` (was
-  `Segmentation*` and `Tracking*`). `pixano-inference-client` is installed from
-  git until it is published to PyPI.
+  `Segmentation*` and `Tracking*`). `pixano-inference-client` is pinned to the
+  published PyPI release `0.1.0`.
 - One visual system across library, explorer, and workspace: semantic color
   tokens, glass surfaces, and a single control dialect.
 
@@ -117,6 +117,11 @@ library.
 
 ### Fixed
 
+- Dependency validation uses stable releases, removes unused runtime packages,
+  and updates affected packages to patched versions. FastAPI's minimum matches
+  the template API used by the application.
+- Docker installs the wheel's dependencies from PyPI without development or
+  test packages, validates their compatibility, and bundles the license text.
 - Source distributions include only package sources, tests, and build files,
   excluding local datasets and other untracked files outside those directories.
 - COCO export converts `xyxy` and `xywh` bounding boxes to pixel-space `xywh`

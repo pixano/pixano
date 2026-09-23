@@ -15,44 +15,25 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 WORKDIR /app
 COPY src/ ./src/
 COPY ui/ ./ui/
-COPY pyproject.toml uv.lock hatch_build.py README.md ./
+COPY pyproject.toml uv.lock hatch_build.py README.md LICENSE ./
 
 RUN uv build --wheel
 
-# Stage 2: Runtime (install pixano and its dependencies via uv sync,
-# honoring [tool.uv.sources] so the git-only pixano-inference-client is
-# resolved from the lockfile instead of PyPI)
+# Stage 2: Runtime (validate the wheel's published dependency declarations)
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-ENV UV_PROJECT_ENVIRONMENT=/opt/pixano
 
-RUN apt-get update && apt-get install -y git ffmpeg libsm6 libxext6 && \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-# Copy enough of the project for uv to resolve the dependency graph.
-# pixano-inference-client is intentionally kept to its editable install
-# placeholder; it is NOT on PyPI, so it must be resolved via the git source
-# in [tool.uv.sources] / uv.lock.
-COPY pyproject.toml uv.lock ./
-
-# --no-dev: production install only; --active installs into the venv at
-# UV_PROJECT_ENVIRONMENT and honors the git source from the lockfile.
-# --no-install-project: only install the dependency tree (including the
-# git-only pixano-inference-client); the pixano wheel is installed below.
-RUN uv sync --active --no-dev --no-install-project
-
-# Install the pre-built wheel (which bundles the built frontend assets from
-# Stage 1) into the same venv, without re-resolving dependencies
-# (--no-deps) since they were already installed by uv sync above.
-COPY --from=builder /app/dist/pixano-*.whl /app/dist/
-RUN uv pip install --python /opt/pixano/bin/python --no-deps /app/dist/pixano-*.whl \
-    && rm -rf /app/dist
+COPY --from=builder /app/dist/pixano-*.whl /tmp/
+RUN uv pip install --system --index-url https://pypi.org/simple /tmp/pixano-*.whl \
+    && uv pip check --system \
+    && rm /tmp/pixano-*.whl
 
 ARG DATA_DIR=/library
 ENV DATA_DIR=${DATA_DIR}
-ENV PATH=/opt/pixano/bin:$PATH
 
 EXPOSE 7492
 

@@ -13,6 +13,8 @@ on:
       - "releases/**"
     paths:
       - "dockerfiles/**"
+      - ".dockerignore"
+      - "LICENSE"
       - "src/pixano/**"
       - "ui/**"
       - ".github/workflows/docker.yml"
@@ -25,6 +27,8 @@ on:
       - "releases/**"
     paths:
       - "dockerfiles/**"
+      - ".dockerignore"
+      - "LICENSE"
       - ".github/workflows/docker.yml"
       - "src/pixano/**"
       - "ui/**"
