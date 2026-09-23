@@ -137,6 +137,7 @@ def get_filter_schema(
             detail=health["detail"],
             embedded_rows=int(health["rows"]),
             total_records=int(health["records"]),
+            total_media=int(health["media"]),
         ),
     )
 
@@ -186,11 +187,10 @@ def get_record_neighbors(
     return NeighborsResponse(**neighbors)
 
 
-def _stored_record_vector(dataset: Dataset, record_id: str) -> list[float] | None:
-    rows = dataset.get_data(dataset._RECORD_EMBEDDING_TABLE, where=f"record_id = '{record_id}'", limit=1)  # noqa: SLF001
-    if not rows:
-        return None
-    return list(rows[0].vector)
+def _stored_record_vectors(dataset: Dataset, record_id: str) -> list[list[float]]:
+    """Every vector of a record — one per medium: a record is similar through its closest medium."""
+    rows = dataset.get_data(dataset._RECORD_EMBEDDING_TABLE, where=f"record_id = '{record_id}'", limit=None)  # noqa: SLF001
+    return [list(row.vector) for row in rows]
 
 
 def _prefilter_record_ids(dataset: Dataset, filters: list[str] | None, where: str | None) -> list[str] | None:
@@ -242,13 +242,13 @@ async def search_records(
     mode: str
     if body.similar_to:
         try:
-            query_vector = _stored_record_vector(dataset, body.similar_to)
+            query_vectors = _stored_record_vectors(dataset, body.similar_to)
         except Exception as exc:  # noqa: BLE001 - corrupt storage → actionable 503
             raise HTTPException(
                 status_code=503,
                 detail=f"Record embeddings could not be read ({exc}). Recompute the embeddings.",
             ) from exc
-        if query_vector is None:
+        if not query_vectors:
             raise HTTPException(status_code=404, detail=f"Record '{body.similar_to}' has no embedding.")
         mode = "similar"
     elif body.text:
@@ -257,16 +257,17 @@ async def search_records(
             result = await provider.embedding(EmbeddingInput(model=model, text=body.text))
         except Exception as exc:  # noqa: BLE001 - provider/HTTP failure → 502
             raise HTTPException(status_code=502, detail=f"Embedding failed: {exc}") from exc
-        query_vector = list(result.data.embedding.values)
+        query_vectors = [list(result.data.embedding.values)]
         mode = "text"
     else:
         raise HTTPException(status_code=400, detail="Provide either 'text' or 'similar_to'.")
 
-    if len(query_vector) != int(space.get("dim", len(query_vector))):
+    query_dim = len(query_vectors[0])
+    if query_dim != int(space.get("dim", query_dim)):
         raise HTTPException(
             status_code=409,
             detail=(
-                f"The query embedding has dim {len(query_vector)} but the stored embeddings have "
+                f"The query embedding has dim {query_dim} but the stored embeddings have "
                 f"dim {space.get('dim')} (model '{space.get('model_id')}'). Recompute the embeddings "
                 "with the current model."
             ),
@@ -274,7 +275,7 @@ async def search_records(
 
     record_id_filter = _prefilter_record_ids(dataset, body.filter, body.where)
     try:
-        records, distances = dataset.search_records(query_vector, k=body.k, record_id_filter=record_id_filter)
+        records, distances = dataset.search_records(query_vectors, k=body.k, record_id_filter=record_id_filter)
     except HTTPException:
         raise
     except (FileNotFoundError, OSError) as err:

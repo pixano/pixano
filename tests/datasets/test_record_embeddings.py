@@ -23,11 +23,16 @@ def _bit_vector(i: int, dim: int = 8) -> list[float]:
     return [float((i >> b) & 1) for b in range(dim)]
 
 
+def _image(image_id: str, record_id: str, name: str = "image") -> Image:
+    return Image(id=image_id, record_id=record_id, logical_name=name, uri=f"{image_id}.jpg", width=8, height=8)
+
+
 @pytest.fixture()
 def dataset_with_embeddings() -> Dataset:
     tmp = Path(tempfile.mkdtemp()) / "ds"
     dataset = Dataset.create(tmp, DatasetInfo(name="emb", description="d", record=Record, views={"image": Image}))
     dataset.add_records({"records": [Record(id=f"r{i}") for i in range(20)]})
+    dataset.add_data("images", [_image(f"img-r{i}", f"r{i}") for i in range(20)], raise_or_warn="none")
     dataset.create_record_embedding_table(dim=8, model_id="test-clip", metric="cosine")
     dataset.add_record_embeddings([{"record_id": f"r{i}", "vector": _bit_vector(i)} for i in range(20)])
     dataset.build_record_embedding_index()
@@ -94,12 +99,18 @@ class TestRecordEmbeddingHealth:
         dataset = Dataset.create(tmp, DatasetInfo(name="none", description="d", record=Record, views={"image": Image}))
         assert dataset.record_embedding_health()["status"] == "absent"
 
-    def test_partial_when_some_records_missing(self, dataset_with_embeddings: Dataset):
+    def test_partial_when_some_media_have_no_vector(self, dataset_with_embeddings: Dataset):
         dataset_with_embeddings.add_records({"records": [Record(id="extra")]})
+        dataset_with_embeddings.add_data("images", [_image("img-extra", "extra")], raise_or_warn="none")
         health = dataset_with_embeddings.record_embedding_health()
         assert health["status"] == "partial"
-        assert health["rows"] == 20
-        assert health["records"] == 21
+        assert (health["rows"], health["media"], health["records"]) == (20, 21, 21)
+
+    def test_a_record_without_media_does_not_make_it_partial(self, dataset_with_embeddings: Dataset):
+        """nuScenes' lidar sweeps hold no image: counting records kept the table "partial" for ever."""
+        dataset_with_embeddings.add_records({"records": [Record(id="lidar-only")]})
+
+        assert dataset_with_embeddings.record_embedding_health()["status"] == "ready"
 
     def test_missing_table_detected(self, dataset_with_embeddings: Dataset):
         # Sidecar remains but the physical table is gone (crashed job / external delete).
@@ -156,3 +167,43 @@ class TestDropRecordEmbeddings:
         assert health["status"] == "ready"
         assert health["model_id"] == "new-model"
         assert health["dim"] == 4
+
+
+class TestMultiMediaRecords:
+    """Step 2, lot 1: an embedding belongs to a medium, and a record may hold several."""
+
+    @pytest.fixture()
+    def six_cameras(self) -> Dataset:
+        tmp = Path(tempfile.mkdtemp()) / "cams"
+        dataset = Dataset.create(tmp, DatasetInfo(name="cams", description="d", record=Record, views={"image": Image}))
+        dataset.add_records({"records": [Record(id=f"r{i}") for i in range(10)]})
+        cameras = [_image(f"r{i}-cam{c}", f"r{i}", f"cam{c}") for i in range(10) for c in range(6)]
+        dataset.add_data("images", cameras, raise_or_warn="none")
+        dataset.create_record_embedding_table(dim=8, model_id="test-clip", metric="cosine")
+        dataset.add_record_embeddings(
+            [
+                {"record_id": f"r{i}", "view_id": f"r{i}-cam{c}", "vector": _bit_vector(i * 6 + c + 1)}
+                for i in range(10)
+                for c in range(6)
+            ]
+        )
+        return dataset
+
+    def test_k_records_are_found_although_each_has_six_vectors(self, six_cameras: Dataset):
+        """Asking for k vectors and grouping by record returned about k / 6 records."""
+        records, distances = six_cameras.search_records(_bit_vector(1), k=6)
+
+        assert len({record.id for record in records}) == 6
+        assert distances == sorted(distances)
+
+    def test_similar_to_a_record_uses_its_closest_medium(self, six_cameras: Dataset):
+        own_vectors = [_bit_vector(3 * 6 + c + 1) for c in range(6)]
+
+        records, distances = six_cameras.search_records(own_vectors, k=1)
+
+        assert (records[0].id, distances[0]) == ("r3", pytest.approx(0.0, abs=1e-6))
+
+    def test_health_counts_media_not_records(self, six_cameras: Dataset):
+        health = six_cameras.record_embedding_health()
+
+        assert (health["status"], health["rows"], health["media"], health["records"]) == ("ready", 60, 60, 10)

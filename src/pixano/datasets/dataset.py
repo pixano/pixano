@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
 
 import lancedb
+import numpy as np
 import PIL.Image
 import polars as pl
 import pyarrow as pa
@@ -97,6 +98,11 @@ def _validate_raise_or_warn(raise_or_warn: str) -> None:
     """Validate the raise_or_warn argument."""
     if raise_or_warn not in ("raise", "warn", "none"):
         raise ValueError(f"raise_or_warn must be 'raise', 'warn' or 'none', got '{raise_or_warn}'")
+
+
+def _is_nested(query: Sequence[float] | Sequence[Sequence[float]]) -> bool:
+    """Whether a search query is a list of vectors rather than one vector."""
+    return len(query) > 0 and isinstance(query[0], (list, tuple, np.ndarray))
 
 
 class Dataset:
@@ -1729,10 +1735,15 @@ class Dataset:
         touched at query time, so a crashed job or external deletion can leave the feature
         advertised but broken. This inspects metadata only (no vector scan).
 
+        An embedding belongs to a medium, so completeness is counted in media: ``partial``
+        means some still image has no vector. Counting records instead said "complete" for a
+        record with one camera embedded out of six, and "partial" forever on a dataset whose
+        records hold no image at all, such as nuScenes' lidar sweeps.
+
         Returns:
-            ``{"status", "model_id", "dim", "rows", "records", "detail"}`` where status is one
-            of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
-            ``corrupt``, ``partial`` (fewer vectors than records) or ``ready``.
+            ``{"status", "model_id", "dim", "rows", "records", "media", "detail"}`` where status
+            is one of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
+            ``corrupt``, ``partial`` (fewer vectors than media) or ``ready``.
         """
         space = self._record_embedding_space
         base: dict[str, Any] = {
@@ -1741,6 +1752,7 @@ class Dataset:
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
+            "media": self._still_image_count(),
             "detail": None,
         }
         if space is None:
@@ -1771,13 +1783,28 @@ class Dataset:
                 "status": "dim_mismatch",
                 "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
             }
-        if rows < base["records"]:
+        if rows < base["media"]:
             return {
                 **base,
                 "status": "partial",
-                "detail": f"{rows} of {base['records']} records embedded.",
+                "detail": f"{rows} of {base['media']} media embedded.",
             }
         return {**base, "status": "ready"}
+
+    def _still_image_count(self) -> int:
+        """How many still images the dataset holds — the media an embedding job covers today.
+
+        Video frames are images to the schemas but belong to their video, which no embedding
+        job covers yet.
+        """
+        total = 0
+        for table_name, schema in self.info.tables.items():
+            if is_image(schema) and not is_sequence_frame(schema):
+                try:
+                    total += self.open_table(table_name).count_rows()
+                except Exception:  # noqa: BLE001 - a health check must degrade, not raise
+                    continue
+        return total
 
     @dataset_write
     def drop_record_embeddings(self) -> None:
@@ -1870,16 +1897,26 @@ class Dataset:
             # Typically "not enough rows to train IVF"; brute-force search remains exact.
             logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
 
+    # How much further a vector search looks when the vectors it found belong to too few
+    # records: an embedding belongs to a medium, and a record may hold several — nuScenes has
+    # six cameras — so k vectors can cover far fewer than k records.
+    _SEARCH_WIDENING_FACTOR = 4
+
     def search_records(
         self,
-        query_vector: Sequence[float],
+        query_vector: Sequence[float] | Sequence[Sequence[float]],
         k: int,
         record_id_filter: list[str] | None = None,
     ) -> tuple[list[LanceModel], list[float]]:
-        """Rank records by similarity of their embedding to ``query_vector``.
+        """Rank records by similarity of their media's embeddings to a query.
+
+        An embedding belongs to a medium, not to a record: a record's distance is that of its
+        closest medium. The query is one vector — a text, an image — or several: the media of
+        a record searched "similar to", each searched and the best match kept per record.
 
         Args:
-            query_vector: The query embedding (same space/dim as the stored vectors).
+            query_vector: The query embedding, or a list of them (same space/dim as the stored
+                vectors).
             k: Maximum number of records to return.
             record_id_filter: Optional record-id allowlist applied as a vector-search prefilter.
 
@@ -1893,24 +1930,45 @@ class Dataset:
         if record_id_filter is not None and len(record_id_filter) == 0:
             return [], []
 
+        vectors = cast(list[Sequence[float]], list(query_vector) if _is_nested(query_vector) else [query_vector])
         table = self.open_table(self._RECORD_EMBEDDING_TABLE)
         metric = self._record_embedding_space.get("metric", "cosine")
-        query = table.search(list(query_vector)).metric(metric).select(["record_id"])
-        if record_id_filter is not None:
-            query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
-        # One vector per record, but group defensively so duplicates collapse to their best match.
-        results: pl.DataFrame = query.limit(max(k, 1)).to_polars()
-        if results.is_empty():
+        stored = table.count_rows()
+        best: dict[str, float] = {}
+        for vector in vectors:
+            for record_id, distance in self._closest_records(table, vector, metric, k, stored, record_id_filter):
+                best[record_id] = min(distance, best.get(record_id, distance))
+        if not best:
             return [], []
-        ranked = results.group_by("record_id").agg(pl.min("_distance")).sort("_distance")
-        record_ids = ranked["record_id"].to_list()[:k]
+        ranked = sorted(best.items(), key=lambda item: item[1])[:k]
+        record_ids = [record_id for record_id, _ in ranked]
 
         records = self.get_data(SchemaGroup.RECORD.value, ids=record_ids)
         records = sorted(records, key=lambda record: record_ids.index(record.id))
-        distances = [
-            ranked.row(by_predicate=(pl.col("record_id") == record.id), named=True)["_distance"] for record in records
-        ]
-        return records, distances
+        return records, [best[record.id] for record in records]
+
+    def _closest_records(
+        self,
+        table: LanceTable,
+        vector: Sequence[float],
+        metric: str,
+        k: int,
+        stored: int,
+        record_id_filter: list[str] | None,
+    ) -> list[tuple[str, float]]:
+        """The closest record of each medium near ``vector``, widening until ``k`` records are found."""
+        limit = k
+        while True:
+            query = table.search(list(vector)).metric(metric).select(["record_id"])
+            if record_id_filter is not None:
+                query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
+            results: pl.DataFrame = query.limit(limit).to_polars()
+            if results.is_empty():
+                return []
+            ranked = results.group_by("record_id").agg(pl.min("_distance"))
+            if ranked.height >= k or limit >= stored:
+                return list(zip(ranked["record_id"].to_list(), ranked["_distance"].to_list(), strict=True))
+            limit *= self._SEARCH_WIDENING_FACTOR
 
     def semantic_search(
         self, query: str, table_name: str, limit: int, skip: int = 0
