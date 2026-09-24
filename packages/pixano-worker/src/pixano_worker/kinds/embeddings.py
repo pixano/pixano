@@ -21,6 +21,8 @@ import httpx
 from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
 
+from pixano.inference.types import TASK_TO_CAPABILITY, InferenceTask
+
 from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import (
@@ -46,8 +48,11 @@ from .inference import (
 
 log = logging.getLogger("pixano-worker")
 
-# The capability pixano-inference declares for a model this kind can call.
-EMBEDDING_CAPABILITY = "embedding"
+# The task of the model this kind calls, in Pixano's vocabulary — the one the form sends to the
+# application to list the served models — and the same task in pixano-inference's, which the
+# worker asks the server about. The two differ for some tasks (segmentation), hence one source.
+EMBEDDING_TASK = InferenceTask.EMBEDDING
+EMBEDDING_CAPABILITY = TASK_TO_CAPABILITY[EMBEDDING_TASK]
 
 
 class EmbeddingsParams(JobParams):
@@ -78,7 +83,7 @@ class EmbeddingsParams(JobParams):
 
     # No default: the model is whichever the inference serves for embeddings, which the form
     # offers; a name written here would be a guess about a deployment.
-    model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: EMBEDDING_CAPABILITY})
+    model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: EMBEDDING_TASK.value})
     # A plain default rather than a factory: pydantic publishes it in the JSON schema, and the
     # submission form starts from it — with a factory the form started with nothing ticked.
     # Pydantic copies a mutable default, so no instance shares the list.

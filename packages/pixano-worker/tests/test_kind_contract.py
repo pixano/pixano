@@ -309,6 +309,18 @@ class TestDeclaration:
     def test_its_parameter_example_is_valid(self, kind: JobKind) -> None:
         assert isinstance(_params(kind), JobParams)
 
+    def test_a_model_parameter_names_a_task_the_application_knows(self, kind: JobKind) -> None:
+        """Independent review of lot 2: the form sends the marker to the application, which
+        refuses a pixano-inference capability name where it differs — `segmentation` for
+        `image_mask_generation` — and the field fell back to typing without a word."""
+        from pixano_worker.kinds import MODEL_TASK_MARKER
+
+        from pixano.inference.types import InferenceTask
+
+        for name, field in kind.params_schema()["properties"].items():
+            if MODEL_TASK_MARKER in field:
+                assert field[MODEL_TASK_MARKER] in {task.value for task in InferenceTask}, name
+
 
 class TestProvenance:
     """Every row a kind writes must say, by itself, how it was produced."""

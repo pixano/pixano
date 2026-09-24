@@ -24,6 +24,7 @@ from PIL import Image, UnidentifiedImageError
 from pixano_inference_client import DetectionRequest, PixanoInferenceError, SyncPixanoInferenceClient
 from pydantic import Field
 
+from pixano.inference.types import TASK_TO_CAPABILITY, InferenceTask
 from pixano.utils.python import to_sql_list
 
 from ..reader import JobReader, MediaType
@@ -44,8 +45,11 @@ from .inference import InferenceServer, blame_the_server_or_the_media, classify,
 
 log = logging.getLogger("pixano-worker")
 
-# The capability pixano-inference declares for a model this kind can call.
-DETECTION_CAPABILITY = "detection"
+# The task of the model this kind calls, in Pixano's vocabulary — the one the form sends to the
+# application to list the served models — and the same task in pixano-inference's, which the
+# worker asks the server about. The two differ for some tasks (segmentation), hence one source.
+DETECTION_TASK = InferenceTask.DETECTION
+DETECTION_CAPABILITY = TASK_TO_CAPABILITY[DETECTION_TASK]
 
 # The canonical table of a dataset's bounding boxes.
 BBOX_TABLE = "bboxes"
@@ -82,7 +86,7 @@ class DetectionParams(JobParams):
 
     # No default: the model is whichever the inference serves for detection, which the form
     # offers; a name written here would be a guess about a deployment.
-    model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: DETECTION_CAPABILITY})
+    model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: DETECTION_TASK.value})
     # A plain default rather than a factory, so that pydantic publishes it and the form starts
     # from it. Pydantic copies a mutable default, so no instance shares the list.
     media: list[MediaType] = Field(default=["image"], min_length=1)
