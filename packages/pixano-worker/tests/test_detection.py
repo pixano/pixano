@@ -163,6 +163,17 @@ class TestPlacement:
 
         assert result["media"][0]["boxes"] == []
 
+    def test_only_the_classes_asked_for_are_kept_even_from_a_closed_vocabulary_model(
+        self, inference: _Inference
+    ) -> None:
+        """Independent review of lot 2: YOLO ignores `classes`, and a user asking for cars got
+        the 80 COCO classes."""
+        inference.answers["/medias/a.jpg"] = [([20, 10, 120, 60], 0.9, "Car"), ([0, 0, 50, 50], 0.8, "dog")]
+
+        result, _ = _process(_Reader(), ["a"], KIND.validate_params({"model": "yolo", "classes": ["car"]}))
+
+        assert result["media"][0]["classes"] == ["Car"]
+
     def test_the_classes_asked_for_are_sent_and_none_means_the_models_own(self, inference: _Inference) -> None:
         _process(_Reader(), ["a"])
         _process(_Reader(), ["a"], KIND.validate_params({"model": "yolo", "classes": ["zebra"]}))

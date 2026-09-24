@@ -67,8 +67,9 @@ class DetectionParams(JobParams):
         model: The model name as the inference declares it.
         media: The media types to run the model on. Only images can be sent today; another type
             refuses the whole job.
-        classes: The classes to look for, for a model with an open vocabulary. Empty, the model
-            finds the classes it was trained on.
+        classes: The classes to look for. An open-vocabulary model is asked for them; any model
+            keeps only those — a closed-vocabulary one ignores the request and answers with
+            every class it knows. Empty, the model finds the classes it was trained on.
         box_threshold: The score below which the model keeps no box.
         overlap_threshold: A detection whose overlap (intersection over union) with a box a
             person drew or reviewed reaches this value, for the same class, is not written. At 1,
@@ -221,7 +222,7 @@ class DetectionKind(JobKind[DetectionParams]):
                     raise
                 refused.append((view, refusal_detail(error)))  # type: ignore[arg-type]
                 continue
-            media.append(_medium(view, size, output))
+            media.append(_medium(view, size, output, params.classes))
         inference_s = time.perf_counter() - started
 
         if refused and not media:
@@ -350,15 +351,18 @@ def _measured_size(reader: JobReader, table: str, view: Any) -> tuple[int, int] 
         return None
 
 
-def _medium(view: Any, size: tuple[int, int], output: Any) -> dict[str, Any]:
+def _medium(view: Any, size: tuple[int, int], output: Any, wanted: list[str]) -> dict[str, Any]:
     """A medium's detections, placed as the dataset stores them: normalised, top-left and size.
 
     The server answers in pixels, corners; a box that the image's bounds reduce to nothing is
-    not one.
+    not one. Only the classes asked for are kept, when some are, case aside.
     """
     width, height = size
+    kept = {name.casefold() for name in wanted}
     boxes, scores, classes = [], [], []
     for (x1, y1, x2, y2), score, name in zip(output.boxes, output.scores, output.classes, strict=True):
+        if kept and str(name).casefold() not in kept:
+            continue
         left, top = min(max(x1, 0), width), min(max(y1, 0), height)
         right, bottom = min(max(x2, 0), width), min(max(y2, 0), height)
         if right <= left or bottom <= top:
