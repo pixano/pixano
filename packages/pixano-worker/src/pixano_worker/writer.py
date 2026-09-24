@@ -46,6 +46,9 @@ PENDING_REVIEW = "pending"
 # The canonical table of a dataset's entities.
 ENTITY_TABLE = "entities"
 
+#: Which previous rows a write is about, given each with its entity (None when it has none).
+Coverage = Callable[[Any, Any | None], bool]
+
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
 # key produced shares one prefix and can be found — and cleaned — exactly.
@@ -354,7 +357,12 @@ class JobWriter:
         return self.model.name if self.model is not None else None
 
     def replace(
-        self, table_name: str, key: str, rows: Sequence[Any], entities: Sequence[Any] | None = None
+        self,
+        table_name: str,
+        key: str,
+        rows: Sequence[Any],
+        entities: Sequence[Any] | None = None,
+        covers: Coverage | None = None,
     ) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
@@ -386,6 +394,10 @@ class JobWriter:
             rows: The rows to write. Their `id` field is overwritten.
             entities: One entity per row, when the rows are annotations of new objects. Their
                 `id` is overwritten, and each row's `entity_id` set to it.
+            covers: Which of the previous rows this write is about, given each with its entity
+                (None without `entities`). The others are left as they are and keep their rank,
+                like a reviewed row — a detection asked for dogs replaces the dogs it found
+                before, not the cars. Every row by default.
 
         Returns:
             The identifiers written.
@@ -411,6 +423,9 @@ class JobWriter:
             ]
             candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
             frozen |= {_rank_of(entity_id) for entity_id in self._entities_in_use(candidates, table_name)}
+        if covers is not None:
+            entity_of = {entity.id: entity for entity in previous_entities}
+            frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
 
         written: list[str] = []
         rank = 0
@@ -445,7 +460,7 @@ class JobWriter:
             self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
 
-    def drop_pending(self, table_name: str, with_entities: bool = False) -> int:
+    def drop_pending(self, table_name: str, with_entities: bool = False, covers: Coverage | None = None) -> int:
         """Delete every row this kind wrote that nobody has reviewed yet, whatever its model.
 
         For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
@@ -455,16 +470,27 @@ class JobWriter:
         Args:
             table_name: The kind's annotation table.
             with_entities: Delete the entities those rows name too.
+            covers: Which of those rows to delete, given each with its entity, as for `replace`.
+                Every row by default.
 
         Returns:
             How many rows were deleted.
         """
-        pending = [
-            row.id
-            for row in self.dataset.get_data(
-                table_name, where=f"source_name = '{self.kind}' AND review_status = '{PENDING_REVIEW}'"
+        rows = self.dataset.get_data(
+            table_name, where=f"source_name = '{self.kind}' AND review_status = '{PENDING_REVIEW}'"
+        )
+        if covers is not None:
+            named = {row.entity_id for row in rows if row.entity_id}
+            entity_of = (
+                {
+                    entity.id: entity
+                    for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id IN {to_sql_list(named)}")
+                }
+                if named and ENTITY_TABLE in self.dataset.info.tables
+                else {}
             )
-        ]
+            rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
+        pending = [row.id for row in rows]
         if pending and with_entities:
             in_use = self._entities_in_use(set(pending), table_name)
             pending = [row_id for row_id in pending if row_id not in in_use]

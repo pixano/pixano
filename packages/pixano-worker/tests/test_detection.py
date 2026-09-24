@@ -471,3 +471,38 @@ class TestAgainstRealLance:
 
         assert [row.id for row in scene.get_data("bboxes", limit=None)] == [first.id]
         assert len(scene.get_data("entities", limit=None)) == 1
+
+    def _classes(self, scene) -> list[str]:
+        return sorted(name for name, source in self._boxes(scene).values() if source == "model")
+
+    def test_a_job_for_other_classes_keeps_the_boxes_of_the_first(self, scene) -> None:
+        """Found testing lot 2: a job for "dog" wrote a dog, a job for "human" found nothing and
+        replaced the dog with nothing — the same model replaced all its pending rows."""
+        self._detect(scene, [([0.1, 0.1, 0.2, 0.2], "dog")], classes=["dog"])
+
+        self._detect(scene, [], classes=["human"])
+
+        assert self._classes(scene) == ["dog"]
+
+    def test_a_job_for_the_same_classes_still_replaces_them(self, scene) -> None:
+        self._detect(scene, [([0.1, 0.1, 0.2, 0.2], "dog"), ([0.5, 0.5, 0.2, 0.2], "dog")], classes=["dog"])
+        self._detect(scene, [([0.6, 0.1, 0.2, 0.2], "cat")], classes=["cat"])
+
+        self._detect(scene, [([0.1, 0.1, 0.2, 0.2], "Dog")], classes=["DOG"])
+
+        assert self._classes(scene) == ["Dog", "cat"]
+
+    def test_a_job_for_every_class_replaces_them_all(self, scene) -> None:
+        self._detect(scene, [([0.1, 0.1, 0.2, 0.2], "dog")], classes=["dog"])
+
+        self._detect(scene, [([0.6, 0.1, 0.2, 0.2], "cat")])
+
+        assert self._classes(scene) == ["cat"]
+
+    def test_replacing_the_previous_boxes_of_some_classes_keeps_the_others(self, scene) -> None:
+        self._detect(scene, [([0.1, 0.1, 0.2, 0.2], "dog"), ([0.6, 0.1, 0.2, 0.2], "cat")])
+
+        self._detect(scene, [], classes=["dog"], replace_previous=True)
+
+        assert self._classes(scene) == ["cat"]
+        assert len(scene.get_data("entities", limit=None)) == 1

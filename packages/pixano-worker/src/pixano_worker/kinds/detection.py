@@ -29,7 +29,7 @@ from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
 from pixano.utils.python import to_sql_list
 
 from ..reader import JobReader, MediaType
-from ..writer import ENTITY_TABLE, MODEL_SOURCE, JobWriter, ModelIdentity, is_reviewed
+from ..writer import ENTITY_TABLE, MODEL_SOURCE, Coverage, JobWriter, ModelIdentity, is_reviewed
 from .base import (
     CONFIRM_MARKER,
     MODEL_TASK_MARKER,
@@ -70,15 +70,17 @@ class DetectionParams(JobParams):
             refuses the whole job.
         classes: The classes to look for. An open-vocabulary model is asked for them; any model
             keeps only those — a closed-vocabulary one ignores the request and answers with
-            every class it knows. Empty, the model finds the classes it was trained on.
+            every class it knows. Empty, the model finds the classes it was trained on. A job
+            with classes replaces only the boxes of those classes: asking for dogs, then for
+            bicycles, keeps the dogs.
         box_threshold: The score below which the model keeps no box.
         overlap_threshold: A detection whose overlap (intersection over union) with a box a
             person drew or reviewed reaches this value, for the same class, is not written. At 1,
             only an exact duplicate is dropped.
         replace_previous: Delete, before detecting, every box this kind wrote that nobody has
-            reviewed yet, whatever its model. Without it, a rerun of the same model replaces its
-            own boxes and another model's stay. Done once, at planning; the form asks for
-            confirmation.
+            reviewed yet, whatever its model — of the classes asked for, when there are some.
+            Without it, a rerun of the same model replaces its own boxes and another model's
+            stay. Done once, at planning; the form asks for confirmation.
         chunk_size: Media per chunk — as many calls to the inference, one per medium.
         max_retries: Short retries of a call that failed transiently, done by the inference
             client before handing back. Beyond that, the chunk is handed back to the queue.
@@ -99,7 +101,8 @@ class DetectionParams(JobParams):
         default=False,
         json_schema_extra={
             CONFIRM_MARKER: "This deletes every box a detection job wrote on this dataset that nobody has reviewed "
-            "yet, whatever its model, before detecting again."
+            "yet, whatever its model — only those of the classes asked for, if you set some — before detecting "
+            "again."
         },
     )
     chunk_size: int = Field(default=8, ge=1, le=256)
@@ -139,9 +142,9 @@ class DetectionKind(JobKind[DetectionParams]):
         Both are idempotent: the field is added once, and a second clearing finds nothing left.
         Destructive only on the explicit parameter, as the contract requires.
         """
-        writer.ensure_label_field()
+        field = writer.ensure_label_field()
         if params.replace_previous:
-            writer.drop_pending(BBOX_TABLE, with_entities=True)
+            writer.drop_pending(BBOX_TABLE, with_entities=True, covers=_classes_covered(params.classes, field))
 
     def plan(self, reader: JobReader, params: DetectionParams) -> Iterable[Chunk]:
         """Split the chosen media into batches, after checking the job can run at all.
@@ -266,6 +269,9 @@ class DetectionKind(JobKind[DetectionParams]):
     ) -> None:
         """Write each medium's boxes and their objects, replacing what the same model wrote there.
 
+        With classes asked for, only the boxes of those classes are replaced: the others the
+        same model wrote there stay.
+
         A detection that overlaps, by `overlap_threshold` or more, a box a person drew or
         reviewed, for the same class, is dropped: that box already says what is there. A
         person's box without a class stands for any class.
@@ -297,7 +303,11 @@ class DetectionKind(JobKind[DetectionParams]):
                     )
                 )
                 entities.append(entity_schema(id="", record_id=medium["record_id"], **{field: name}))
-            written += len(writer.replace(BBOX_TABLE, medium["view_id"], boxes, entities))
+            written += len(
+                writer.replace(
+                    BBOX_TABLE, medium["view_id"], boxes, entities, covers=_classes_covered(params.classes, field)
+                )
+            )
         phases = result.get("phases_s", {})
         log.info(
             "job %s: phases read %.3f s, inference %.3f s, write %.3f s (%d box(es), %d left to a person's box)",
@@ -337,6 +347,16 @@ class DetectionKind(JobKind[DetectionParams]):
             box_threshold=params.box_threshold,
         )
         return client.detection(request, timeout=params.request_timeout_s).data
+
+
+def _classes_covered(classes: list[str], field: str) -> Coverage | None:
+    """The previous boxes a job asked for these classes is about: those of its classes, case
+    aside. None — every box — when it asked for none.
+    """
+    if not classes:
+        return None
+    wanted = {name.casefold() for name in classes}
+    return lambda _box, entity: str(getattr(entity, field, "") or "").casefold() in wanted
 
 
 def _recorded_size(view: Any) -> tuple[int, int] | None:
