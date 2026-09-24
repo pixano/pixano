@@ -8,6 +8,6 @@ import type { LayoutLoad } from "./$types";
 import * as api from "$lib/api";
 
 export const load: LayoutLoad = async () => {
-  const datasets = await api.listDatasets();
-  return { datasets };
+  const [datasets, uiOptions] = await Promise.all([api.listDatasets(), api.getUiOptions()]);
+  return { datasets, newUiEnabled: uiOptions.new_ui_enabled };
 };

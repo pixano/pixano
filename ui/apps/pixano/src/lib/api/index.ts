@@ -14,3 +14,4 @@ export * from "./inferenceApi";
 export * from "./ioApi";
 export * from "./viewsApi";
 export * from "./saveOrchestration";
+export * from "./uiOptions";

@@ -235,3 +235,8 @@ export interface IoJobResponse {
   created_at: number;
   updated_at: number;
 }
+
+/** GET /app/ui — which UIs the deployment exposes. */
+export interface UiOptionsResponse {
+  new_ui_enabled: boolean;
+}
