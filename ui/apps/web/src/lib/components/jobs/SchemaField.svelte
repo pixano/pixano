@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { asText, fieldKind, toggleChoice, type FieldKind } from "./schemaForm";
+  import { asText, fieldKind, modelOptions, toggleChoice, type FieldKind } from "./schemaForm";
   import type { JsonSchema } from "$lib/api/jobs";
 
   type Props = {
@@ -81,7 +81,7 @@ License: CECILL-C
         value={asText(value)}
         onchange={(event) => onChange(event.currentTarget.value)}
       >
-        {#each models as model (model)}
+        {#each modelOptions(models, value) as model (model)}
           <option value={model}>{model}</option>
         {/each}
       </select>

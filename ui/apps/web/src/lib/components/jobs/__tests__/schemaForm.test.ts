@@ -12,6 +12,7 @@ import {
   initialValue,
   initialValues,
   missingRequired,
+  modelOptions,
   modelTasks,
   proposeModels,
   toggleChoice,
@@ -257,6 +258,17 @@ describe("a model field", () => {
     const values = proposeModels(detection, { model: "yolov8n" }, { detection: ["yolo26s"] });
 
     expect(values.model).toBe("yolov8n");
+  });
+
+  it("lists a model typed before the served ones arrived, so the list shows what will run", () => {
+    // Independent review of lot 2: the list showed the first served model, the job ran the typed one.
+    expect(modelOptions(["yolo26s", "yolov8n"], "my-detector")).toEqual([
+      "my-detector",
+      "yolo26s",
+      "yolov8n",
+    ]);
+    expect(modelOptions(["yolo26s"], "yolo26s")).toEqual(["yolo26s"]);
+    expect(modelOptions(["yolo26s"], "")).toEqual(["yolo26s"]);
   });
 
   it("stays empty, and required, when the inference serves nothing for its task", () => {

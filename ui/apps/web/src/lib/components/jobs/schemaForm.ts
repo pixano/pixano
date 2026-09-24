@@ -90,6 +90,16 @@ export function proposeModels(
   return proposed;
 }
 
+/**
+ * The models a model field lists: those served, and the value it holds if it is not one of
+ * them — typed before the list arrived, say. Without it the list would show the first model
+ * while the job ran with the typed one.
+ */
+export function modelOptions(served: string[], value: unknown): string[] {
+  const current = typeof value === "string" ? value : "";
+  return current !== "" && !served.includes(current) ? [current, ...served] : served;
+}
+
 /** The value a field starts at: its declared default, or an empty value of its kind. */
 export function initialValue(schema: JsonSchema): unknown {
   // A list is edited as text, so its default — usually an empty list — becomes text too.
