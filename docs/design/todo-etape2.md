@@ -38,9 +38,13 @@ Consigné ici pour ne pas le perdre ; chaque point se traite dans le lot indiqu�
 - **Lot 2 — figer n'est pas apparier.** Une ligne relue est figée, mais une relance qui
   détecte le même objet l'écrit à nouveau en `pending`, à côté. Au kind de détection de
   décider s'il apparie (IoU avec les lignes relues) avant d'écrire.
+  → Traité au lot 2 : une détection qui recouvre (IoU ≥ `overlap_threshold`, 0,5 par défaut)
+  une boîte dessinée ou relue par une personne, de même classe, n'est pas écrite.
 - **Lot 2 ou 3 — une édition humaine d'une ligne `pending` doit la passer en `corrected`.**
   Aujourd'hui l'API met à jour la géométrie et laisse le statut : une relance écraserait la
   correction. À régler avant qu'un utilisateur puisse éditer une pré-annotation.
+  → Traité au lot 2 : l'API passe la ligne en `corrected` (ou au statut demandé) et garde
+  `source_type = model` et la provenance.
 - **Plus tard — l'aller-retour export/import JSONL perd `review_status` et `source_metadata`**
   mais garde les identifiants : une ligne acceptée réimportée redevient remplaçable.
 - **Étape 4 — course entre l'API et le worker** : une relecture faite entre la lecture et
