@@ -201,6 +201,22 @@ class Dataset:
                 )
         self._num_rows_cache: int | None = None
 
+    def is_stale(self) -> bool:
+        """Whether another process changed this dataset's metadata since it was read here.
+
+        A long-lived holder — the API's cache — asks before serving a request: a job that gives
+        the entities a new field rewrites `info.json`, and reading with the schema read before
+        would leave that field out. One `stat` per call; a replaced dataset counts as changed.
+        """
+        if isinstance(self.path, S3Path):
+            return False
+        try:
+            path_stat = self.path.stat()
+            info_mtime = self._info_file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return True
+        return (path_stat.st_dev, path_stat.st_ino) != self._directory_identity or info_mtime != self._info_mtime_ns
+
     @contextmanager
     def write_lock(self):
         """Protect a mutation and refresh cached handles before its integrity reads.

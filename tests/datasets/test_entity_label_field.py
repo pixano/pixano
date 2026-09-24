@@ -73,3 +73,27 @@ class TestEnsureEntityTextField:
 
         assert dataset.open_table("entities").schema.names.count("category") == 1
         assert Dataset(dataset.path).info.entity.__name__ == "VocEntity"
+
+
+class TestIsStale:
+    """What a long-lived holder — the API's cache — asks before serving a request."""
+
+    def test_a_dataset_just_read_is_not_stale(self) -> None:
+        assert not _dataset(Entity).is_stale()
+
+    def test_its_own_writes_do_not_make_it_stale(self) -> None:
+        """Otherwise the API would reopen a dataset after every edit it makes."""
+        dataset = _dataset(Entity)
+
+        dataset.ensure_entity_text_field("category")
+        dataset.add_data("entities", [dataset.info.entity(id="e2", record_id="r1")], raise_or_warn="none")
+
+        assert not dataset.is_stale()
+
+    def test_a_field_added_by_another_process_makes_it_stale(self) -> None:
+        held = _dataset(Entity)
+
+        Dataset(held.path).ensure_entity_text_field("category")
+
+        assert held.is_stale()
+        assert not Dataset(held.path).is_stale()
