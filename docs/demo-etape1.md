@@ -24,6 +24,8 @@ About 20 minutes the first time, mostly image builds and a model download.
 git clone https://github.com/pixano/pixano-inference.git ../pixano-inference
 
 cp .env.example .env
+# The demo runs in the new UI, which the app only serves once enabled.
+sed -i.bak 's/^ACTIVATE_UI_V1_0=.*/ACTIVATE_UI_V1_0=true/' .env && rm .env.bak
 
 # Build the four services.
 docker compose -f docker-compose.yml -f docker-compose.inference.yml build
@@ -52,7 +54,9 @@ docker compose exec -T postgres psql -U pixano -d pixano -c "TRUNCATE pixano_job
 docker compose restart pixano-worker
 ```
 
-Open <http://localhost:7492> and, in a second window, a terminal at the repository root.
+Open <http://localhost:7492> and, in a second window, a terminal at the repository root. The app
+opens on the legacy UI: click the **Switch to new UI** button (two arrows) in its header to reach
+the new one, where the demo takes place.
 
 ---
 

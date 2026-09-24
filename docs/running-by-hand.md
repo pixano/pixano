@@ -71,13 +71,16 @@ there is no migration on purpose (see `docs/specs/backend-processing.md`, §5).
 ```sh
 export PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano
 export PIXANO_MEDIA_ROOT=/srv/pixano/data/media
+# The Jobs panel lives in the new UI, which the app serves only when this is true.
+export ACTIVATE_UI_V1_0=true
 
 uv run pixano init /srv/pixano/data   # once
 uv run pixano server run /srv/pixano/data --port 7492 --pixano-inference-url http://127.0.0.1:7463
 ```
 
-Open <http://localhost:7492>. The Jobs panel shows the worker's kinds; a job submitted there
-is picked up by the worker started in step 3.
+Open <http://localhost:7492> and switch to the new UI with the button in the header. Its Jobs
+panel shows the worker's kinds; a job submitted there is picked up by the worker started in
+step 3.
 
 ## The demo, by hand
 

@@ -133,6 +133,10 @@ pnpm run dev:web      # the new workspace UI (ui/apps/web) — the usual target
 pnpm run dev:pixano   # the legacy app (ui/apps/pixano)
 ```
 
+The server (`pixano server run`) serves the legacy app. The new workspace UI is reachable through it
+only when the `ACTIVATE_UI_V1_0` environment variable is `true` (it defaults to `false`): the legacy
+header then shows a button that switches to the new UI. `pnpm run dev:web` does not depend on it.
+
 Run backend tests with `uv run pytest --cov=src/pixano tests/`. Run frontend tests with `pnpm -C ui test` (Turbo, both apps) or `pnpm -C ui/apps/web test` for the new UI alone — note `pnpm -C ui/apps/pixano test` covers only the legacy app. Type-check the new UI with `pnpm -C ui/apps/web run check`. For broader checks, use `uv tool run pre-commit run --all-files`, `pnpm -C ui lint`, and `pnpm -C ui format_check`.
 
 For release builds, just build the Python wheel:

@@ -49,6 +49,8 @@ services:
       # monté ici en est un cas ; un dataset peut aussi vivre en stockage objet, ou rester
       # sur la machine de son propriétaire (cf. lot 8, résolveur de médias).
       PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
+      # Sans elle, seule l'interface legacy est servie (voir .env.example).
+      ACTIVATE_UI_V1_0: ${ACTIVATE_UI_V1_0:-false}
     command:
       - sh
       - -c
