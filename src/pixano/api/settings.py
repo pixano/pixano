@@ -43,6 +43,9 @@ class Settings(BaseSettings):
             via the CORS_ORIGINS environment variable to production origins only, e.g.
             CORS_ORIGINS='["https://pixano.example.com"]'. Localhost development ports must never be
             added here.
+        activate_ui_v1_0: Whether the v1.0 workspace UI (ui/apps/web) can be reached. Off by default:
+            the app serves the legacy UI and hides the button that switches to the new one. Set it
+            with the ACTIVATE_UI_V1_0 environment variable.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -60,6 +63,7 @@ class Settings(BaseSettings):
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
     cors_origins: list[str] = []
+    activate_ui_v1_0: bool = False
 
     @field_validator("data_dir", mode="before")
     @classmethod
