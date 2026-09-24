@@ -39,7 +39,6 @@ on:
       - "ui/**"
       - "packages/**"
       - "docker-compose*.yml"
-      - ".dockerignore"
       - "pyproject.toml"
       - "hatch_build.py"
       - "uv.lock"
