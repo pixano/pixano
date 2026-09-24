@@ -25,6 +25,7 @@ from pixano_inference_client import DetectionRequest, PixanoInferenceError, Sync
 from pydantic import Field
 
 from pixano.inference.types import TASK_TO_CAPABILITY, InferenceTask
+from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
 from pixano.utils.python import to_sql_list
 
 from ..reader import JobReader, MediaType
@@ -147,13 +148,22 @@ class DetectionKind(JobKind[DetectionParams]):
 
         Raises:
             ValueError: A chosen media type cannot be processed, the dataset has no table to
-                hold boxes or objects, or the inference serves no such model.
+                hold boxes or objects nor a field to hold a class, or the inference serves no
+                such model.
         """
         self.refuse_unsupported_media(params.media)
         tables = reader.dataset.info.tables
         for table in (BBOX_TABLE, ENTITY_TABLE):
             if table not in tables:
                 raise ValueError(f"this dataset has no '{table}' table to write detections into")
+        entity = tables[ENTITY_TABLE]
+        if label_field_of(entity) is None and DEFAULT_LABEL_FIELD in getattr(entity, "model_fields", {}):
+            # The field a class would be added as exists with another type: every write would
+            # fail on it, chunk after chunk. Said once, here.
+            raise ValueError(
+                f"this dataset's entities have a '{DEFAULT_LABEL_FIELD}' field that is not text, and no text field "
+                "to hold the class of a detected object"
+            )
         self.server.require_served(params.model, DETECTION_CAPABILITY)
         yield from media_chunks(reader, params.media, params.chunk_size)
 

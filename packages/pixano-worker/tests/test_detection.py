@@ -20,6 +20,8 @@ from pixano_worker.kinds.detection import iou
 from pixano_worker.media import ResolvedMedia
 from pixano_worker.writer import JobWriter, ModelIdentity
 
+from pixano.schemas import Entity
+
 
 WIDTH, HEIGHT = 200, 100
 
@@ -80,7 +82,7 @@ class _Reader:
         self.missing, self.unsized, self.unreadable = missing, unsized, unreadable
         self.dataset = SimpleNamespace(
             get_view_binary=self._get_view_binary,
-            info=SimpleNamespace(tables={"bboxes": object, "entities": object, "images": object}),
+            info=SimpleNamespace(tables={"bboxes": object, "entities": Entity, "images": object}),
         )
 
     def _get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str]:
@@ -290,6 +292,21 @@ class TestPlanning:
         reader.dataset.info.tables = {"entities": object, "images": object}
 
         with pytest.raises(ValueError, match="'bboxes'"):
+            list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+
+    def test_entities_whose_category_is_not_text_are_refused_before_anything_runs(self, inference: _Inference) -> None:
+        """Independent review of lot 2: no text field, so `category` would be added — but it
+        exists as a number, and every write would have failed, chunk after chunk."""
+        from pydantic import create_model
+
+        reader = _Reader()
+        reader.dataset.info.tables = {
+            "bboxes": object,
+            "images": object,
+            "entities": create_model("E", __base__=Entity, category=(int, 0)),
+        }
+
+        with pytest.raises(ValueError, match="'category' field that is not text"):
             list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
 
     def test_a_model_the_server_does_not_serve_is_refused_with_those_it_does(self, inference: _Inference) -> None:
