@@ -12,15 +12,16 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 #
-# The variant built is the CPU variant (torch CPU) with the CLIP embeddings plugin: it
-# serves real embeddings without a GPU, fast enough for a demonstration. For real capacity,
+# The variant built is the CPU variant (torch CPU) with the CLIP embeddings and YOLO detection
+# plugins: it serves real embeddings and real boxes without a GPU, fast enough for a
+# demonstration. For real capacity,
 # switch the build args to GPU (see below) and mount your own model list in place of
 # docker/inference/models.cpu.py.
 #
 # The image is built in two stages, from an UNMODIFIED clone of pixano-inference
 # (PIXANO_INFERENCE_REPO): first the image its own Dockerfile produces, then a layer
-# defined here, dockerfiles/Dockerfile.inference-clip, which installs the CLIP plugin in it.
-# The plugin is in their repository, but their Dockerfile has no switch to install it;
+# defined here, dockerfiles/Dockerfile.inference-local, which installs the two plugins in it.
+# The plugins are in their repository, but their Dockerfile has no switch to install them;
 # to be proposed to them, and this layer will disappear with it.
 #
 # The "no framework" variant (empty TORCH_INDEX_URL) does not start: Ray Serve imports
@@ -46,7 +47,7 @@ services:
   pixano-inference:
     build:
       context: .
-      dockerfile: dockerfiles/Dockerfile.inference-clip
+      dockerfile: dockerfiles/Dockerfile.inference-local
       additional_contexts:
         inference-base: "service:pixano-inference-base"
         inference-src: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
@@ -61,6 +62,9 @@ services:
       # PIXANO_INFERENCE_MEDIA_ROOT on the worker side: pixels never go through Pixano.
       PIXANO_INFERENCE_MEDIA_ROOTS: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
       HF_TOKEN: ${HF_TOKEN:-}
+      # Ultralytics keeps its settings in the home directory by default; the volume keeps
+      # them, next to the weights, across restarts.
+      YOLO_CONFIG_DIR: /data/ultralytics
     volumes:
       - pixano-inference-weights:/data
       - ./docker/inference/models.cpu.py:/config/models.py:ro

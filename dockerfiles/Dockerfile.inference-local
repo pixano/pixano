@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1
+
+# The local-mode inference image: pixano-inference, plus two plugins from its own tree — the
+# open_clip embedding model and the Ultralytics YOLO detector.
+#
+# pixano-inference ships both in its tree (packages/pixano-inference-clip, examples/yolo) but
+# its Dockerfile has no switch to install them, so no image serving embeddings or detection
+# can be built from that tree alone. Rather than carry a patched copy of their Dockerfile, this
+# one adds a single layer on top of the image theirs produces.
+#
+# Ultralytics is AGPL-3.0: serving it over a network carries source-disclosure obligations
+# (AGPL section 13). It is here to make a demonstration run on a laptop; a deployment picks its
+# own detector, and nothing in Pixano names this one.
+#
+# Two named build contexts, both provided by docker-compose.inference.yml:
+#   inference-base   the image built by pixano-inference's own Dockerfile
+#   inference-src    a checkout of pixano-inference, for the plugin's sources
+
+FROM ghcr.io/astral-sh/uv:0.8 AS uv
+
+FROM inference-base
+
+ARG ULTRALYTICS_VERSION=8.4.160
+
+# The base image runs as an unprivileged user and owns its virtualenv as root.
+USER root
+RUN --mount=from=uv,source=/uv,target=/usr/local/bin/uv \
+    --mount=from=inference-src,source=packages/pixano-inference-clip,target=/src/packages/pixano-inference-clip \
+    --mount=from=inference-src,source=examples/yolo,target=/src/examples/yolo \
+    --mount=from=inference-src,source=LICENSE,target=/src/LICENSE \
+    --mount=type=cache,target=/root/.cache/uv \
+    # Copied at the same depth as in the checkout: the plugins' metadata points two
+    # directories up for their licence, and a build writes next to its sources, which the
+    # mounted checkout, being read-only, does not allow. The torch already in the image
+    # satisfies Ultralytics, so it is kept rather than replaced by a GPU build. The plugin
+    # leaves Ultralytics unpinned; the version pinned here is the one this image was verified
+    # with, so that a rebuild serves the same detector.
+    cp -r /src /tmp/inference-src \
+    && uv pip install --python /opt/venv/bin/python \
+        /tmp/inference-src/packages/pixano-inference-clip /tmp/inference-src/examples/yolo \
+        "ultralytics==${ULTRALYTICS_VERSION}" \
+    && rm -rf /tmp/inference-src
+USER pixano
