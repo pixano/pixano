@@ -610,6 +610,67 @@ class TestDetectedObjects:
         assert writer.drop_pending("bboxes", with_entities=True) == 0
         assert len(self._objects(scene)) == 1
 
+    @staticmethod
+    def _person_attaches_a_box(scene, entity_id: str) -> None:
+        """Another annotation of the same object, made by a person — on another view here."""
+        from pixano.schemas import BBox
+
+        scene.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id="person-box",
+                    record_id="r1",
+                    view_id="v2",
+                    entity_id=entity_id,
+                    coords=[0.5, 0.5, 0.1, 0.1],
+                    format="xywh",
+                    is_normalized=True,
+                    source_type="human",
+                )
+            ],
+        )
+
+    def _class_of(self, scene, entity_id: str) -> str:
+        found = scene.get_data("entities", ids=[entity_id])
+        return found[0].category if found else "<missing>"
+
+    def test_an_object_a_person_attached_work_to_keeps_its_class(self, scene) -> None:
+        """Independent review of lot 2, B2: the rank was reassigned to whatever the model found
+        there next, and the person's box silently became a car."""
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+
+    def test_an_object_a_person_attached_work_to_outlives_its_detection(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+
+        self._detect(scene, ["car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+
+    def test_dropping_the_pending_rows_spares_an_object_a_person_attached_work_to(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 1
+        assert self._class_of(scene, first[1]) == "dog"
+
+    def test_entities_left_by_a_crash_are_swept_by_the_next_attempt(self, scene) -> None:
+        """Independent review of lot 2, I1: the stale boxes were deleted, the worker died before
+        their entities, and the next attempt, looking in bboxes only, never found them."""
+        first = self._detect(scene, ["car", "dog", "cow"])
+        scene.delete_data("bboxes", first[1:])
+
+        self._detect(scene, ["car"])
+
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
+
     def test_one_entity_per_box_is_required(self, scene) -> None:
         writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
 

@@ -31,6 +31,7 @@ from datetime import timedelta
 from typing import Any, Callable, Protocol, Sequence
 
 from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
+from pixano.utils.python import to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
@@ -373,7 +374,11 @@ class JobWriter:
         An annotation can come with its entity — a detected box and the object it names. The
         entity shares its annotation's identifier, in the entities table, and follows it: written
         before it, since the annotation references it; kept when the annotation is frozen;
-        deleted with it when it is stale.
+        deleted with it when it is stale. A rank is also frozen when a person attached other
+        work to its entity — a mask, a keypoint, a child object: reassigning that object to
+        whatever the model finds at the same rank would contradict them silently. Stale
+        entities are looked up by the prefix too, in their own table, so that a crash between
+        the two writes leaves none behind for good.
 
         Args:
             table_name: The target table.
@@ -397,6 +402,15 @@ class JobWriter:
             if _rank_of(row.id) is not None
         ]
         frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
+        previous_entities: list[Any] = []
+        if entities is not None:
+            previous_entities = [
+                entity
+                for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id LIKE '{prefix}-%'")
+                if _rank_of(entity.id) is not None
+            ]
+            candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
+            frozen |= {_rank_of(entity_id) for entity_id in self._entities_in_use(candidates, table_name)}
 
         written: list[str] = []
         rank = 0
@@ -421,16 +435,22 @@ class JobWriter:
         stale = [row.id for row in previous if row.id not in replaced and _rank_of(row.id) not in frozen]
         if stale:
             self.dataset.delete_data(table_name, stale)
-            if entities is not None:
-                self._delete_existing(ENTITY_TABLE, stale)
             logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
+        stale_entities = [
+            entity.id
+            for entity in previous_entities
+            if entity.id not in replaced and _rank_of(entity.id) not in frozen
+        ]
+        if stale_entities:
+            self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
 
     def drop_pending(self, table_name: str, with_entities: bool = False) -> int:
         """Delete every row this kind wrote that nobody has reviewed yet, whatever its model.
 
         For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
-        means the pending ones — a row a person accepted, corrected or rejected stays.
+        means the pending ones — a row a person accepted, corrected or rejected stays, and so
+        does one whose entity a person attached other work to.
 
         Args:
             table_name: The kind's annotation table.
@@ -445,10 +465,16 @@ class JobWriter:
                 table_name, where=f"source_name = '{self.kind}' AND review_status = '{PENDING_REVIEW}'"
             )
         ]
+        if pending and with_entities:
+            in_use = self._entities_in_use(set(pending), table_name)
+            pending = [row_id for row_id in pending if row_id not in in_use]
         if pending:
-            self.dataset.delete_data(table_name, pending)
+            # The entities first: a crash between the two leaves boxes pointing at nothing, which
+            # the next attempt finds again as pending and finishes; the other order would leave
+            # entities nothing refers to, which no attempt would find.
             if with_entities:
                 self._delete_existing(ENTITY_TABLE, pending)
+            self.dataset.delete_data(table_name, pending)
             logger.info(
                 "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
             )
@@ -478,6 +504,27 @@ class JobWriter:
     def read(self, table_name: str, where: str) -> list[Any]:
         """Rows of a table matching a filter — what a kind checks its outputs against."""
         return self.dataset.get_data(table_name, where=where)
+
+    def _entities_in_use(self, entity_ids: set[str], own_table: str) -> set[str]:
+        """Those of these entities that something other than their own annotation refers to.
+
+        An annotation in any table that names one, apart from the row of `own_table` sharing its
+        identifier, or an entity whose parent it is.
+        """
+        if not entity_ids:
+            return set()
+        listed = to_sql_list(entity_ids)
+        used: set[str] = set()
+        for name, schema in self.dataset.info.tables.items():
+            if "entity_id" not in getattr(schema, "model_fields", {}):
+                continue
+            for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
+                if not (name == own_table and row.id == row.entity_id):
+                    used.add(row.entity_id)
+        if ENTITY_TABLE in self.dataset.info.tables:
+            children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
+            used |= {entity.parent_id for entity in children}
+        return used & entity_ids
 
     def _delete_existing(self, table_name: str, ids: list[str]) -> None:
         existing = [row.id for row in self.dataset.get_data(table_name, ids=ids)]
