@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - "releases/**"
+      - "dev/**"
     paths:
       - "dockerfiles/**"
       - ".dockerignore"
@@ -30,6 +31,7 @@ on:
       - "spec/**"
       - "feat/**"
       - "releases/**"
+      - "dev/**"
     paths:
       - "dockerfiles/**"
       - ".dockerignore"
