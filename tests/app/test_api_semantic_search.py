@@ -147,6 +147,26 @@ class TestRecordSearch:
         assert body["items"][0]["id"] == "r07"
         provider.embedding.assert_not_awaited()  # stored vector → no query encoding
 
+    def test_find_similar_searches_with_every_medium_of_the_record(self):
+        """Step 2, lot 1: a record with two cameras is similar through either.
+
+        r05 gets a second medium whose vector is r10's, orthogonal to its first: r10 must come
+        right after r05 itself. The route used to read one vector of the record, whichever the
+        table returned first.
+        """
+        dataset = _build_dataset(with_embeddings=True)
+        dataset.add_data(
+            "images",
+            [Image.from_bytes(record_id="r05", logical_name="image", raw_bytes=_png_bytes(99), id="img05-back")],
+            raise_or_warn="none",
+        )
+        dataset.add_record_embeddings([{"record_id": "r05", "view_id": "img05-back", "vector": _bit_vector(10)}])
+        client = _make_client(dataset, _make_provider())
+
+        body = client.post(f"{BASE}/records/search", json={"similar_to": "r05", "k": 2}).json()
+
+        assert [item["id"] for item in body["items"]] == ["r05", "r10"]
+
     def test_search_with_filter_prefilter(self):
         provider = _make_provider()
         client = _make_client(_build_dataset(with_embeddings=True), provider)

@@ -4,8 +4,9 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests du résolveur de médias."""
+"""Tests of the media resolver."""
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -19,7 +20,7 @@ class _View:
 
 
 class _Source:
-    """Un dataset qui sait rendre les octets d'une vue embarquée."""
+    """A dataset that can return the bytes of an embedded view."""
 
     def __init__(self, blobs: dict[str, bytes] | None = None) -> None:
         self.blobs = blobs or {}
@@ -36,7 +37,7 @@ JPEG = b"\xff\xd8\xff" + b"0" * 64
 
 @pytest.fixture
 def resolver() -> MediaResolver:
-    """Les deux racines diffèrent, comme dès que worker et inference sont sur deux machines."""
+    """The two roots differ, as they do as soon as worker and inference are on two machines."""
     return MediaResolver(media_root="/medias", inference_media_root="/data/media")
 
 
@@ -48,7 +49,7 @@ class TestTranslate:
         assert resolver.translate("/medias/a/b/c.png") == "/data/media/a/b/c.png"
 
     def test_refuses_a_path_outside_the_declared_root(self, resolver: MediaResolver) -> None:
-        """L'inference refuserait ce chemin ; autant le savoir ici et prendre l'autre route."""
+        """The inference would refuse this path; better to know it here and take the other route."""
         assert resolver.translate("/ailleurs/000001.jpg") is None
 
     @pytest.mark.parametrize(
@@ -56,7 +57,7 @@ class TestTranslate:
         ["/medias/../etc/passwd", "/medias/voc/../../etc/passwd", "/medias/./../ailleurs/a.jpg"],
     )
     def test_refuses_a_path_that_climbs_out_of_the_root(self, resolver: MediaResolver, escaping: str) -> None:
-        """Revue de l'étape 1 : la comparaison lexicale laissait passer `..`."""
+        """Step 1 review: the lexical comparison let `..` through."""
         assert resolver.translate(escaping) is None
 
     def test_a_path_that_climbs_back_into_the_root_is_normalised(self, resolver: MediaResolver) -> None:
@@ -73,7 +74,7 @@ class TestTranslate:
 
 class TestResolve:
     def test_a_remote_url_passes_through(self, resolver: MediaResolver) -> None:
-        """L'inference sait les lire elle-même : rien n'a à transiter par ici."""
+        """The inference can read them itself: nothing has to transit through here."""
         resolved = resolver.resolve(_Source(), "images", _View(uri="https://exemple/img.jpg"))
 
         assert resolved is not None
@@ -93,18 +94,18 @@ class TestResolve:
         assert resolved.carried_bytes is False
 
     def test_a_path_is_preferred_over_the_bytes(self, resolver: MediaResolver) -> None:
-        """La préférence qui fait tout l'intérêt : rien ne doit être lu si un chemin suffit."""
+        """The preference that is the whole point: nothing must be read if a path is enough."""
         source = _Source({"v1": JPEG})
 
         resolver.resolve(source, "images", _View(uri="/medias/voc/1.jpg"))
 
-        assert source.asked == [], "les octets ont été lus alors qu'un chemin existait"
+        assert source.asked == [], "the bytes were read although a path existed"
 
     def test_embedded_media_are_sent_as_bytes(self, resolver: MediaResolver) -> None:
-        """La route des datasets en mode embed — ceux qui existent aujourd'hui.
+        """The route of datasets in embed mode — the ones that exist today.
 
-        Sans elle, un dataset dont les images vivent dans LanceDB ne serait pas traitable du
-        tout, et le calcul d'embeddings qui fonctionne déjà cesserait de fonctionner.
+        Without it, a dataset whose images live in LanceDB could not be processed at all, and
+        the embeddings computation that already works would stop working.
         """
         resolved = resolver.resolve(_Source({"v1": JPEG}), "images", _View())
 
@@ -113,20 +114,20 @@ class TestResolve:
         assert resolved.carried_bytes is True
 
     def test_a_path_outside_the_root_falls_back_to_bytes(self, resolver: MediaResolver) -> None:
-        """L'inference refuserait ce chemin ; les octets sont la seule route restante."""
+        """The inference would refuse this path; the bytes are the only route left."""
         resolved = resolver.resolve(_Source({"v1": JPEG}), "images", _View(uri="/ailleurs/1.jpg"))
 
         assert resolved is not None
         assert resolved.carried_bytes is True
-        assert "hors racine" in resolved.reason
+        assert "outside the root" in resolved.reason
 
     def test_a_media_that_is_nowhere_resolves_to_nothing(self, resolver: MediaResolver) -> None:
-        """Ni chemin ni octets : le type de job doit pouvoir sauter cet item plutôt que
-        d'envoyer une référence vide à l'inference."""
+        """Neither path nor bytes: the job kind must be able to skip this item rather than
+        send an empty reference to the inference."""
         assert resolver.resolve(_Source(), "images", _View()) is None
 
     def test_it_says_which_route_it_took(self, resolver: MediaResolver) -> None:
-        """Le coût qu'on cherche à éviter doit être comptable, pas découvert sur un gros
+        """The cost we are trying to avoid must be countable, not discovered on a large
         dataset."""
         chemin = resolver.resolve(_Source(), "images", _View(uri="/medias/1.jpg"))
         octets = resolver.resolve(_Source({"v1": JPEG}), "images", _View())
@@ -138,8 +139,28 @@ class TestResolve:
 
 class TestUnconfigured:
     def test_refuses_to_resolve_and_says_which_variables_are_missing(self) -> None:
-        """Le repli d'avant envoyait des chemins `/medias` que seule la pile compose sait lire."""
+        """The former fallback sent `/medias` paths that only the compose stack can read."""
         resolver = MediaResolver.unconfigured()
 
         with pytest.raises(RuntimeError, match="PIXANO_MEDIA_ROOT"):
             resolver.resolve(_Source(), "images", _View(uri="/anywhere/a.jpg"))
+
+
+class TestLocalPath:
+    """The file a view names, for what the worker reads itself — an image's size."""
+
+    RESOLVER = MediaResolver("/medias", "/srv/inference/medias")
+
+    def test_an_absolute_path_under_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="/medias/voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    def test_a_relative_reference_is_taken_from_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    @pytest.mark.parametrize("uri", ["/medias/../etc/passwd", "../etc/passwd", "/etc/passwd"])
+    def test_nothing_outside_the_root(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    @pytest.mark.parametrize("uri", ["https://host/a.jpg", "s3://bucket/a.jpg", ""])
+    def test_nothing_the_worker_does_not_hold(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None

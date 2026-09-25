@@ -4,12 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-"""Comportements de file que le schéma doit rendre possibles.
+"""Queue behaviours the schema must make possible.
 
-Le lot 1 ne livre pas de runner, mais il livre les tables et les index sur lesquels le
-runner s'appuiera. Ces tests exercent les requêtes des lots suivants contre le schéma pour
-vérifier qu'il les porte réellement — un index qui n'est pas choisi par le planificateur, ou
-une contrainte qui bloque le chemin normal, se verrait ici et pas en review.
+Lot 1 ships no runner, but it ships the tables and indexes the runner will rely on. These
+tests exercise the queries of the following lots against the schema to check that it really
+carries them — an index the planner does not pick, or a constraint that blocks the normal
+path, would show up here and not in review.
 """
 
 import threading
@@ -35,7 +35,7 @@ RETURNING c.id
 
 def _job_with_chunks(db: psycopg.Connection, count: int) -> str:
     row = db.execute(
-        f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks) " "VALUES ('factice', 'ds', %s) RETURNING id",
+        f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, total_tasks) " "VALUES ('dummy', 'ds', %s) RETURNING id",
         (count * 10,),
     ).fetchone()
     assert row is not None
@@ -49,10 +49,10 @@ def _job_with_chunks(db: psycopg.Connection, count: int) -> str:
 
 
 class TestClaim:
-    """La propriété centrale de la file : ni doublon, ni perte."""
+    """The queue's central property: no duplicate, no loss."""
 
     def test_two_workers_share_a_queue_without_overlap(self, db: psycopg.Connection, postgres_url: str) -> None:
-        # Mille, comme la définition de fini du lot 2 le demandait.
+        # One thousand, as lot 2's definition of done asked for.
         _job_with_chunks(db, 1000)
         claimed: dict[str, list[int]] = {"a": [], "b": []}
         failures: list[str] = []
@@ -71,7 +71,7 @@ class TestClaim:
                             "lease_until = NULL, produced = task_count, skipped = 0 WHERE id = ANY(%s)",
                             (ids,),
                         )
-            except Exception as exc:  # pragma: no cover - remonté par l'assertion
+            except Exception as exc:  # pragma: no cover - surfaced by the assertion
                 failures.append(f"{name}: {exc!r}")
 
         threads = [threading.Thread(target=drain, args=(name,)) for name in claimed]
@@ -87,12 +87,12 @@ class TestClaim:
         assert left is not None and left[0] == 0
 
     def test_the_partial_index_carries_the_claim(self, db: psycopg.Connection) -> None:
-        """Sans cet index, la réclamation balaierait toute la table à chaque tour.
+        """Without this index, claiming would sweep the whole table on every round.
 
-        À l'échelle d'un job de 50 000 images — celle que vise le plan — la table conserve
-        tout le travail exécuté tandis que l'ensemble réclamable fond. Le test se fait à
-        cette taille délibérément : sur quelques centaines de lignes le planificateur
-        choisit un balayage complet, et le test ne prouverait rien.
+        At the scale of a 50,000-image job — the one the plan targets — the table keeps all
+        the executed work while the claimable set shrinks. The test is run at this size
+        deliberately: on a few hundred rows the planner picks a full scan, and the test would
+        prove nothing.
         """
         _job_with_chunks(db, 50_000)
         db.execute(
@@ -109,7 +109,7 @@ class TestClaim:
 
 
 class TestCancellation:
-    """Annuler doit vider la file sans que la réclamation ait à connaître les jobs."""
+    """Cancelling must drain the queue without the claim having to know about jobs."""
 
     def test_cancelling_empties_the_claimable_pool(self, db: psycopg.Connection) -> None:
         job = _job_with_chunks(db, 10)
@@ -125,7 +125,7 @@ class TestCancellation:
         assert claimed == []
 
     def test_a_running_chunk_is_left_to_its_worker(self, db: psycopg.Connection) -> None:
-        """On n'arrache pas un chunk en cours : son worker le rendra entre deux lots."""
+        """A running chunk is not torn away: its worker will return it between two batches."""
         _job_with_chunks(db, 10)
         db.execute(
             f"UPDATE {SCHEMA_NAME}.job_chunks SET state = 'running', "
@@ -139,7 +139,7 @@ class TestCancellation:
 
 
 class TestLease:
-    """Le bail remplace le PID : c'est lui qui décide qu'un chunk est reprenable."""
+    """The lease replaces the PID: it is what decides that a chunk can be taken over."""
 
     def test_an_expired_lease_returns_the_chunk_to_the_pool(self, db: psycopg.Connection) -> None:
         _job_with_chunks(db, 5)
@@ -155,10 +155,10 @@ class TestLease:
         assert reclaimed is not None and reclaimed[0] == 1
 
     def test_a_stale_worker_cannot_overwrite_its_successor(self, db: psycopg.Connection) -> None:
-        """Le compteur de tentatives sert de jeton de garde.
+        """The attempts counter serves as a fencing token.
 
-        Un worker dont le bail a expiré pendant qu'il travaillait doit constater que son
-        travail lui a été retiré, et non écraser le résultat de celui qui l'a repris.
+        A worker whose lease expired while it was working must find that its work has been
+        taken away from it, and not overwrite the result of the one that took it over.
         """
         _job_with_chunks(db, 1)
         row = db.execute(CLAIM, ("worker-a", 1)).fetchone()
@@ -189,7 +189,7 @@ class TestLease:
         assert owner == ("worker-b", "running")
 
     def test_finishing_a_chunk_must_release_its_lease(self, db: psycopg.Connection) -> None:
-        """La contrainte tient aussi sur UPDATE, qui est le chemin réel du runner."""
+        """The constraint also holds on UPDATE, which is the runner's real path."""
         _job_with_chunks(db, 1)
         row = db.execute(CLAIM, ("worker-a", 1)).fetchone()
         assert row is not None

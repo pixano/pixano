@@ -13,6 +13,7 @@ License: CECILL-C
     CircleNotch,
     FunnelSimple,
     Images,
+    ListChecks,
     MagnifyingGlass,
     Plus,
     Rows,
@@ -63,6 +64,8 @@ License: CECILL-C
     onCompute?: (force?: boolean) => void;
     onClearSimilar?: () => void;
     onViewChange?: (view: "grid" | "table") => void;
+    /** Open the jobs of this dataset: launch one, follow the ones running. */
+    onOpenJobs?: () => void;
   }
 
   let {
@@ -85,6 +88,7 @@ License: CECILL-C
     onCompute,
     onClearSimilar,
     onViewChange,
+    onOpenJobs,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -94,7 +98,7 @@ License: CECILL-C
     ["missing_table", "empty", "dim_mismatch", "corrupt"].includes(embeddingsStatus),
   );
   const embeddedRows = $derived(filterSchema.search?.embedded_rows ?? 0);
-  const totalRecords = $derived(filterSchema.search?.total_records ?? 0);
+  const totalMedia = $derived(filterSchema.search?.total_media ?? 0);
   const embeddingModelId = $derived(filterSchema.search?.models?.[0] ?? "");
   // The search bar is semantic-only; exact matching is the filters' job.
   const searchReady = $derived(embeddingsStatus === "ready" || embeddingsStatus === "partial");
@@ -290,7 +294,7 @@ License: CECILL-C
                   : "inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}
               >
                 {#if embeddingsStatus === "partial"}
-                  {embeddedRows.toLocaleString()}/{totalRecords.toLocaleString()}
+                  {embeddedRows.toLocaleString()}/{totalMedia.toLocaleString()}
                   <CaretDown size={10} />
                 {:else}
                   <ArrowsClockwise size={14} />
@@ -310,7 +314,7 @@ License: CECILL-C
                       </p>
                     {/if}
                     <p class="text-xs text-muted-foreground tabular-nums">
-                      {embeddedRows.toLocaleString()} of {totalRecords.toLocaleString()} records embedded
+                      {embeddedRows.toLocaleString()} of {totalMedia.toLocaleString()} media embedded
                     </p>
                     {#if embeddingsDetail}
                       <p class="text-xs text-warning">{embeddingsDetail}</p>
@@ -466,6 +470,17 @@ License: CECILL-C
             </button>
           {/if}
         </div>
+      {/if}
+
+      {#if onOpenJobs}
+        <button
+          type="button"
+          onclick={onOpenJobs}
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ListChecks size={15} />
+          Jobs
+        </button>
       {/if}
 
       <!-- Records count -->

@@ -179,13 +179,13 @@ A failure **without** a response — status 0 from the client, which is how it w
 
 ### 8.3 Skipped is not quarantined
 
-A record the calculation does not apply to is counted, not stored. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
+A task the calculation does not apply to is counted, not stored — since step 2's lot 1 the embeddings kind plans existing media only and skips nothing, but a kind that plans by record still may. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
 
 ### 8.4 What a job says when it ends
 
 **The outcome is aggregated on read** from the chunks and the quarantine, and shown by the API and the panel once a job ends. It is not kept as counters on the job: a counter can drift from what it summarises. `done_tasks` is the one denormalised counter, kept to avoid summing chunks on every progress event; it shares a transaction with the chunk it counts, and a concurrency test compares it against the sum. Validated in review.
 
-**A failed job says why.** The API exposes the job's error, or its first failed chunk's, without the stack trace; the panel shows the reason. The worker's reasons are in English for that purpose, although the worker's own comments and logs are in French.
+**A failed job says why.** The API exposes the job's error, or its first failed chunk's, without the stack trace; the panel shows the reason. The worker's reasons are in English for that purpose; since step 2's first lot, so is the whole worker.
 
 ## 9. The worker process
 
@@ -240,7 +240,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 ## 12. Writes into LanceDB
 
-**Identifiers are derived from the work**, so a replayed chunk replaces its rows instead of adding to them. `replace` also removes leftovers — rows a previous run wrote under the following ranks — but probes only 32 ranks ahead. A detection that shrinks by more would leave ghost boxes. Decided in review: exact replacement by key, of scope (kind, record), to land with the first detection kind. It also closes a gap with lot 6, which asked for a delete scoped by (job, item): the job is the wrong scope, since a second job must replace the first one's rows.
+**Identifiers are derived from the work** — the kind, the model, the key and the rank — so a replayed chunk replaces its rows instead of adding to them, and another model's rows for the same key are left alone. An identifier is a prefix shared by everything a key produced, then the rank: a replay finds every row of a previous run by prefix and deletes exactly those beyond what it wrote. A first version probed 32 ranks ahead, and a detection that shrank by more left ghost rows; the replacement is now exact, scoped by (kind, model, key), which also closes the gap with lot 6 — it asked for a delete scoped by (job, item), and the job is the wrong scope, since a rerun must replace the previous run's rows.
 
 **Writes to one dataset are serialised** inside a worker; processing still overlaps. Across workers, nothing serialises them: step 4.
 
@@ -258,7 +258,9 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
 
-**One image per record.** The embeddings kind embeds the first image view LanceDB returns for a record; on nuScenes, a record has several cameras and one is embedded. Written in the kind; not fixed, because the right fix depends on the grain of embeddings — per record or per view — which is a product decision (§19).
+**One embedding per medium, media types chosen by the user.** A record may hold several media — a nuScenes record has six camera images and a point cloud. A job's parameters name the media types it covers (`image`, `video`, `point_cloud`, `text`, from `pixano.schemas.media_type_of`, where a video frame belongs to its video); a kind declares the types it can send to the inference, and a job choosing another is refused whole at planning, the types named — the user serves what they need or narrows the selection. A task is a medium: a chunk's cost is its number of inference calls, so batches of media stay alike where batches of records held six images or none, and a chunk never mixes tables. The payload is `{table, view_ids}`; a chunk queued by an earlier version, by record, fails saying so. A quarantined item is a medium, its record in the detail.
+
+**Search is by medium, results by record.** A record's distance is its closest medium's; the search widens until it has k distinct records, and stops when it finds fewer vectors than it asked for. "Similar to" a record searches with every medium it has. The health counts distinct embedded media against the dataset's still images: `partial` means some image has no vector. Verified on nuScenes: 2 424 vectors, six per record for the 404 that have cameras, `ready`; "similar to" returns 20 distinct records for k = 20 in a quarter of a second.
 
 ## 14. Chunk size, measured
 
@@ -347,7 +349,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 
 **Docker must not be the only way to run this.** Decided in review: a user who starts PostgreSQL, Pixano, the worker and an inference by hand must get the same behaviour. `docs/running-by-hand.md` runs the four components as plain processes with the same variables. What used to assume the compose is gone: the demo script takes the worker's media root as an option, the runner has no fallback media root, the schema-refusal message gives the `psql` command first, and `PIXANO_WORKER_ID` names a worker whose pid changes on every restart — the identity is what lets a restarted worker take its own chunks back at once. Verified with the worker and the application started by hand against the compose's PostgreSQL and inference. What still assumes Docker is the lease derived from the file probe (§20).
 
-**The demo's inference is upstream pixano-inference, unmodified.** Its tree ships an open_clip embedding plugin that its own Dockerfile cannot install, so the compose builds their image first and adds one layer of ours (`dockerfiles/Dockerfile.inference-clip`) that installs the plugin; the models served on CPU are listed in `docker/inference/models.cpu.py`, in this repository, since which models a deployment serves is that deployment's own choice. A one-line switch in their Dockerfile would make the extra layer unnecessary; it is to be proposed upstream, and nothing has been pushed there so far.
+**The demo's inference is upstream pixano-inference, unmodified.** Its tree ships an open_clip embedding plugin and a YOLO detection plugin that its own Dockerfile cannot install, so the compose builds their image first and adds one layer of ours (`dockerfiles/Dockerfile.inference-local`) that installs both; the models served on CPU are listed in `docker/inference/models.cpu.py`, in this repository, since which models a deployment serves is that deployment's own choice. A one-line switch in their Dockerfile would make the extra layer unnecessary; it is to be proposed upstream, and nothing has been pushed there so far.
 
 **The demonstration kinds are opt-in** (`PIXANO_WORKER_DEMO_KINDS`), off in the compose unless `.env` turns them on, as `.env.example` does. `fake` and `label` write wherever they are told; they are not for a shared deployment.
 
@@ -369,25 +371,31 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 ## 18. Known defects
 
 - **The worker caches open datasets between jobs.** Planning reopens a job's dataset outside the cache, so a dataset recreated underneath the worker is seen as it is by the next job; a chunk of a running job reads the copy its planning opened.
-- **The API learns of a worker's writes at the end of the job only.** Its event broker drops the cached dataset when a job reaches a terminal state, whether or not a stream is open — reproduced on the stack before the fix: job done, table on disk, search reported absent until a restart. During a job, what the worker wrote is not yet visible to a search.
-- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py` writes `view_id` and builds an index; the worker does neither. Which path survives is a question of §19.
+- **The API learns of a worker's writes at the end of the job only.** Its event broker drops the cached dataset when a job reaches a terminal state, whether or not a stream is open — reproduced on the stack before the fix: job done, table on disk, search reported absent until a restart. During a job, what the worker wrote is not yet visible to a search. A change to `info.json` — a field a job added to the entities — is the exception: the API compares its mtime on each request (`Dataset.is_stale`) and reopens the dataset.
+- **The worker's embeddings differ from the application's.** The in-process path of `src/pixano/api/embeddings.py`, kept for now, writes one vector per record — its first image — and builds an index; the worker writes one per medium and builds none. On a multi-camera dataset its "Update" never completes the table, which the health rightly reports as partial. Rows it wrote, like rows written per record before step 2's lot 1, are not replaced by a worker rerun: rerun with `replace_existing_embeddings`.
 - **The inference answers 500 for a client error.** A corrupt image or a missing path should be a 4xx. The worker works around it by isolating the culprit (§8.2); the fix belongs in pixano-inference. Issue texts are to be drafted; nothing is published without the architect.
 - **Listing jobs costs three correlated subqueries per row.** Measured by the independent review at 256 000 chunks: 168–281 ms for fifty jobs, under the 500 ms p99 the project targets but with little margin at the cap of two hundred. Materialising the counters at chunk completion, or a covering index on `(job_id, state)`, are the two levers.
 - **Compaction runs under the dataset's write lock** (§12).
+- **Detection writes each image on its own** — the entities, then the boxes, each a LanceDB commit, plus the reads that find the previous run's rows. Measured on the stack (step 2, lot 2, 106 chunks of eight images, YOLO26n on CPU): 0.46 s of writing per chunk for 4.19 s of inference, about a tenth. Not worth a writer that batches keys while the model dominates; to revisit on a GPU, where the ratio flips, or at scale, where a job of 50 000 images makes 100 000 table versions between compactions.
 - **The stream of one job replays its whole history on first connection.** 6 250 events for a job of 50 000 images. Acceptable today; a bound or a `since` parameter is the obvious fix, and it is a choice about what a fresh client sees.
 - **The pool checks each connection before lending it** (`SELECT 1` per borrow). Negligible today; to measure at step 4 if the claim rate ever matters.
 
-## 19. Design before step 2
+## 19. Decided for step 2
 
-Questions the review raised and step 1 does not settle. None is a defect; each shapes the first kinds of step 2.
+Settled on 2026-09-22 with the architect, from `docs/design/etape2-conception.md`; the lots are in `docs/design/todo-etape2.md`. The first version of step 2 is pre-annotation only — embeddings, detection, segmentation, a review queue, and jobs reachable from the legacy interface until the new one ships.
 
-- **Chunks.** They have no dependency and no internal progress, and their time limit is a deployment setting. Video tracking by segments needs an order between segments, per-video atomicity, progress in frames, and a limit that follows the work (§9). The one piece of engine design step 2 must do first.
-- **Embeddings.** The grain — one vector per record or per view — is a product decision before it is a worker decision: search is record-grained today. The advice on record: store per view, return records by their best view; video needs sampling. With it: the sidecar, one table per model, the fate of the application's in-process path (§18), `replace_existing_embeddings` (§12), and the rule for choosing a view, not to be built if the grain makes it moot.
-- **Self-contained provenance** (§12).
-- **Exact `replace` by key** (§12).
-- **`review_status`.**
-- **The compaction policy** (§12).
-- **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
+- **Embeddings are per medium, not per record.** One vector per image view composing a record, `view_id` filled; a search finds a medium and returns its record. Returning media is left open. The application's in-process path stays for now.
+- **For annotations, another model adds; the same model replaces its own rows.** The replacement key is (kind, model, record, view); `replace` becomes exact by that key. The second half is provisional — a rerun of the same model replacing rather than adding — and is to be revisited at the step 2 review. Refined on 2026-09-24 after testing lot 2: a detection job asked for some `classes` replaces only the pending boxes of those classes — asked for dogs, then for humans, the dogs stay — and `replace_previous` with classes clears only theirs. Without classes, a job replaces everything the same model wrote there, as before. Replacing on request will be a detection parameter, `replace_previous`, honoured by `prepare`. Cleaning duplicates across models may be a workflow later. An embeddings table, by contrast, holds one model (§12): another model goes through `replace_existing_embeddings`, which empties the table first.
+- **A rerun only replaces rows still `pending`.** Rows a human reviewed are frozen for that kind.
+- **`review_status`** takes `pending`, `accepted`, `corrected`, `rejected`, on every entity annotation schema (dataset spec version 3; an older dataset gains the column, empty, when opened); empty for a human annotation, `pending` set by the writer for a model's. Correcting keeps `source_type = model` and the model's trace, so corrections can be counted. Rejecting does not delete.
+- **Provenance** lives in `source_metadata`, set by the writer: `job_id`, `kind`, `model`, `model_version`, `params`. Dedicated columns when a filter by model becomes a need.
+- **Compaction** stays as it is until a compaction outlasts a chunk; then it moves out of the write lock. Measure at 500 k rows once a kind produces that volume.
+- **Detection writes a box and the object it names** (lot 2). The box goes to `bboxes`, pending, normalised `xywh`, the score as confidence; the object goes to `entities`, sharing the box's identifier, which is how the writer keeps it with a frozen box and deletes it with a stale one. The class goes in the field the interface reads a class from (`category`, `label`, `name`, `class`, else the first text field); a dataset whose entities hold no text — nuScenes, Demo shapes — gains `category`, empty for the entities already there. `prepare` adds it, and `write` again, for a worker whose cached dataset predates it; planning refuses entities whose `category` exists with another type. A rank whose object a person attached other work to — another box, a mask, a child object — is frozen like a reviewed row, so a rerun never reassigns that object; stale objects are swept by the prefix in their own table, so a crash between the two deletions leaves none behind.
+- **A detection does not contradict a person.** One whose IoU with a box a person drew or reviewed reaches `overlap_threshold`, for the same class (case aside), is not written; a person's box without a class stands for any class, and a rejected box keeps the model from proposing it again. The threshold is a parameter, 0.5 by default, because the right value is not known.
+- **A person editing a pending model row corrects it.** The API's update sets `corrected` — or the status the request sets — and keeps `source_type = model` and the model's provenance, whatever source the client sent.
+- **No kind names a model.** A model parameter carries `x-pixano-model-task` in its schema and no default; the form offers the models the inference serves for that task, the first one proposed, and falls back to typing when the application sees none. The demonstration serves YOLO26n (Ultralytics, AGPL-3.0), a demonstration choice only. An open-vocabulary model is wanted eventually; the `classes` parameter is already sent, and the kind keeps only those classes whatever the model, since a closed-vocabulary one ignores the request. The marker's value is a Pixano `InferenceTask`, the application's vocabulary; the capability the worker asks the server about is derived from it.
+- **Chunks are unchanged.** Video tracking is on hold; when it comes, a chunk is a video, with an internal progress and a weight per chunk deciding its time limit.
+- Deferred to a second version of the step: NER, statistics and partial writes, vector indexing, clustering, video.
 
 ## 20. What step 4 opens
 

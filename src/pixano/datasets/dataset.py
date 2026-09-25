@@ -9,6 +9,8 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
+import tempfile
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
@@ -16,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Literal, Sequence, Union, cast, overload
 
 import lancedb
+import numpy as np
 import PIL.Image
 import polars as pl
 import pyarrow as pa
@@ -23,6 +26,7 @@ import shortuuid
 from lancedb.common import DATA
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
+from pydantic import create_model
 from s3path import S3Path
 
 from pixano.datasets.queries import TableQueryBuilder
@@ -37,21 +41,26 @@ from pixano.datasets.utils.integrity import (
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
     Conversation,
+    Entity,
     Message,
     Record,
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    canonical_table_name_for_slot,
+    is_entity_annotation,
     is_image,
     is_sequence_frame,
     is_video,
     is_view_embedding,
+    media_type_of,
     validate_canonical_table_map,
 )
 from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
+from .dataset_schema import _serialize_table_schema
 from .dataset_stat import DatasetStatistic, SplitStatusCount
 from .locking import dataset_mutation_lock, dataset_write
 
@@ -96,6 +105,11 @@ def _validate_raise_or_warn(raise_or_warn: str) -> None:
     """Validate the raise_or_warn argument."""
     if raise_or_warn not in ("raise", "warn", "none"):
         raise ValueError(f"raise_or_warn must be 'raise', 'warn' or 'none', got '{raise_or_warn}'")
+
+
+def _is_nested(query: Sequence[float] | Sequence[Sequence[float]]) -> bool:
+    """Whether a search query is a list of vectors rather than one vector."""
+    return len(query) > 0 and isinstance(query[0], (list, tuple, np.ndarray))
 
 
 class Dataset:
@@ -175,7 +189,7 @@ class Dataset:
                 with dataset_mutation_lock(self.path, timeout=5):
                     with self.write_lock():
                         if self.info.spec_version < self._CURRENT_SPEC_VERSION:
-                            self._migrate_storage_to_spec_version_2()
+                            self._migrate_storage()
             except Exception as exc:
                 # A read-only dataset stays readable at the old layout; writes will
                 # surface the missing columns explicitly.
@@ -186,6 +200,22 @@ class Dataset:
                     exc,
                 )
         self._num_rows_cache: int | None = None
+
+    def is_stale(self) -> bool:
+        """Whether another process changed this dataset's metadata since it was read here.
+
+        A long-lived holder — the API's cache — asks before serving a request: a job that gives
+        the entities a new field rewrites `info.json`, and reading with the schema read before
+        would leave that field out. One `stat` per call; a replaced dataset counts as changed.
+        """
+        if isinstance(self.path, S3Path):
+            return False
+        try:
+            path_stat = self.path.stat()
+            info_mtime = self._info_file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return True
+        return (path_stat.st_dev, path_stat.st_ino) != self._directory_identity or info_mtime != self._info_mtime_ns
 
     @contextmanager
     def write_lock(self):
@@ -230,23 +260,85 @@ class Dataset:
     # Storage-layout migrations
     # ------------------------------------------------------------------
 
-    _CURRENT_SPEC_VERSION: int = 2
+    _CURRENT_SPEC_VERSION: int = 3
 
     @dataset_write
-    def _migrate_storage_to_spec_version_2(self) -> None:
-        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+    def _migrate_storage(self) -> None:
+        """Bring an older on-disk layout up to the current spec version.
+
+        Each version adds columns that its schemas expect, backfilled with the value the
+        schema defaults to: version 2 the ``Video`` time window, version 3 the
+        ``review_status`` of entity annotations. Every step is idempotent, so a dataset opened
+        at version 1 goes through both.
 
         Local openers serialize the upgrade and refresh the metadata before
         calling this method. External ``add_columns`` races converge by
         re-reading the table schema. The ``info.json`` rewrite is atomic and
         idempotent (all writers produce identical content).
         """
-        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        if self.info.spec_version < 2:
+            self._backfill_columns(is_video, {"from_timestamp": "0.0", "to_timestamp": "-1.0"})
+        if self.info.spec_version < 3:
+            self._backfill_columns(is_entity_annotation, {"review_status": "''"})
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    @dataset_write
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there.
+
+        For a job that writes a class on the objects it detects, on a dataset whose entities
+        have nowhere to hold one — nuScenes as imported, a dataset of plain images. The schema
+        class gains the field, the table gains the column, and `info.json` is rewritten, so the
+        interface offers the field like any other. Idempotent: a field already there is left
+        as it is.
+
+        Args:
+            name: The field to add, typed as text.
+
+        Raises:
+            DatasetAccessError: The dataset declares no entities.
+        """
+        declared = self.info.entity
+        if declared is None:
+            raise DatasetAccessError(f"Dataset {self.id} declares no entities.")
+        schema: type[Entity] = declared
+        table_name = canonical_table_name_for_slot("entity")
+        if name not in schema.model_fields:
+            schema = create_model(schema.__name__, __base__=schema, **{name: (str, "")})  # type: ignore[call-overload]
+            self.info.entity = schema
+            self.info.tables[table_name] = schema
+            self._table_handles.pop(table_name, None)
+        self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
+
+        # Patch the raw JSON rather than re-serializing self.info, like the storage migration:
+        # a re-serialization would persist whatever views this build could not deserialize.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["entity"] = _serialize_table_schema(schema)
+        fd, tmp_name = tempfile.mkstemp(dir=self._info_file.parent, prefix=f"{self._info_file.name}.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+            tmp_file.write(json.dumps(info_json, indent=4))
+        Path(tmp_name).replace(self._info_file)
+
+    def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
+        """Add the columns missing from every table whose schema ``applies_to`` selects.
+
+        Args:
+            applies_to: Which table schemas get the columns.
+            columns: Column name to the SQL expression of its backfilled value.
+        """
         for table_name, schema_cls in self.info.tables.items():
-            if not is_video(schema_cls):
+            if not applies_to(schema_cls):
                 continue
             table = self.open_table(table_name)
-            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            missing = {column: expr for column, expr in columns.items() if column not in table.schema.names}
             if not missing:
                 continue
             try:
@@ -260,15 +352,6 @@ class Dataset:
                     raise
             finally:
                 self._table_handles.pop(table_name, None)
-
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
-        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory
@@ -1339,16 +1422,40 @@ class Dataset:
             if table_name in row_payloads:
                 rows = row_payloads[table_name]
                 self._stamp_upsert_timestamps(table, rows)
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(rows)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, rows)
+                )
                 counts[table_name] = len(rows)
             else:
                 arrow_table = self._with_timestamp_columns(table, arrow_payloads[table_name])
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(arrow_table)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, arrow_table)
+                )
                 counts[table_name] = arrow_table.num_rows
 
         if SchemaGroup.RECORD.value in counts:
             self._num_rows_cache = None
         return counts
+
+    @staticmethod
+    def _in_table_order(table: LanceTable, data: list[LanceModel] | pa.Table) -> list[LanceModel] | pa.Table:
+        """Give an upsert its columns in the order the table stores them.
+
+        A column added by a storage migration lands at the end of the Lance schema, while the
+        pydantic schema may declare it in the middle — ``review_status`` sits after
+        ``view_id``. Lance's ``merge_insert`` does not match columns by name once the ``id``
+        index covers fragments written in the other order: the upsert then fails, or corrupts
+        the match ("fragment id does not exist", "ambiguous merge insert"). Rows whose schema
+        already matches the table are passed through untouched.
+        """
+        names = table.schema.names
+        if isinstance(data, pa.Table):
+            if data.schema.names == names or set(data.schema.names) != set(names):
+                return data
+            return data.select(names)
+        if not data or list(type(data[0]).model_fields) == names:
+            return data
+        return pa.Table.from_pylist([row.model_dump() for row in data], schema=table.schema)
 
     def _stamp_upsert_timestamps(self, table: LanceTable, rows: list[LanceModel]) -> None:
         """Stamp ``updated_at`` and preserve stored ``created_at`` for existing rows."""
@@ -1604,7 +1711,9 @@ class Dataset:
                 d.updated_at = datetime.now()
             if d.id not in ids_found and hasattr(d, "created_at"):
                 d.created_at = d.updated_at if hasattr(d, "updated_at") else datetime.now()
-        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+            self._in_table_order(table, data)
+        )
 
         if not return_separately:
             return data
@@ -1686,10 +1795,16 @@ class Dataset:
         touched at query time, so a crashed job or external deletion can leave the feature
         advertised but broken. This inspects metadata only (no vector scan).
 
+        An embedding belongs to a medium, so completeness is counted in media: ``partial``
+        means some still image has no vector. Counting records instead said "complete" for a
+        record with one camera embedded out of six, and "partial" forever on a dataset whose
+        records hold no image at all, such as nuScenes' lidar sweeps.
+
         Returns:
-            ``{"status", "model_id", "dim", "rows", "records", "detail"}`` where status is one
-            of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
-            ``corrupt``, ``partial`` (fewer vectors than records) or ``ready``.
+            ``{"status", "model_id", "dim", "rows", "records", "media", "embedded_media",
+            "detail"}`` where status is one of ``absent`` (no sidecar), ``missing_table``,
+            ``empty``, ``dim_mismatch``, ``corrupt``, ``partial`` (fewer media embedded than
+            media) or ``ready``.
         """
         space = self._record_embedding_space
         base: dict[str, Any] = {
@@ -1698,6 +1813,8 @@ class Dataset:
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
+            "media": self._still_image_count(),
+            "embedded_media": 0,
             "detail": None,
         }
         if space is None:
@@ -1728,13 +1845,37 @@ class Dataset:
                 "status": "dim_mismatch",
                 "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
             }
-        if rows < base["records"]:
+        # Counted in distinct media rather than rows: a table can hold rows that name no medium
+        # (written per record before embeddings were per medium) or two rows for one medium
+        # (the application's in-process path next to the worker's), and neither makes a medium
+        # embedded.
+        try:
+            view_ids = table.search().select(["view_id"]).limit(rows).to_arrow().column("view_id").to_pylist()
+        except Exception as exc:  # noqa: BLE001
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be read: {exc}"}
+        base["embedded_media"] = len({view_id for view_id in view_ids if view_id})
+        if base["embedded_media"] < base["media"]:
             return {
                 **base,
                 "status": "partial",
-                "detail": f"{rows} of {base['records']} records embedded.",
+                "detail": f"{base['embedded_media']} of {base['media']} media embedded.",
             }
         return {**base, "status": "ready"}
+
+    def _still_image_count(self) -> int:
+        """How many still images the dataset holds — the media an embedding job covers today.
+
+        Video frames are images to the schemas but belong to their video, which no embedding
+        job covers yet.
+        """
+        total = 0
+        for table_name, schema in self.info.tables.items():
+            if media_type_of(schema) == "image":
+                try:
+                    total += self.open_table(table_name).count_rows()
+                except Exception:  # noqa: BLE001 - a health check must degrade, not raise
+                    continue
+        return total
 
     @dataset_write
     def drop_record_embeddings(self) -> None:
@@ -1827,16 +1968,26 @@ class Dataset:
             # Typically "not enough rows to train IVF"; brute-force search remains exact.
             logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
 
+    # How much further a vector search looks when the vectors it found belong to too few
+    # records: an embedding belongs to a medium, and a record may hold several — nuScenes has
+    # six cameras — so k vectors can cover far fewer than k records.
+    _SEARCH_WIDENING_FACTOR = 4
+
     def search_records(
         self,
-        query_vector: Sequence[float],
+        query_vector: Sequence[float] | Sequence[Sequence[float]],
         k: int,
         record_id_filter: list[str] | None = None,
     ) -> tuple[list[LanceModel], list[float]]:
-        """Rank records by similarity of their embedding to ``query_vector``.
+        """Rank records by similarity of their media's embeddings to a query.
+
+        An embedding belongs to a medium, not to a record: a record's distance is that of its
+        closest medium. The query is one vector — a text, an image — or several: the media of
+        a record searched "similar to", each searched and the best match kept per record.
 
         Args:
-            query_vector: The query embedding (same space/dim as the stored vectors).
+            query_vector: The query embedding, or a list of them (same space/dim as the stored
+                vectors).
             k: Maximum number of records to return.
             record_id_filter: Optional record-id allowlist applied as a vector-search prefilter.
 
@@ -1850,24 +2001,47 @@ class Dataset:
         if record_id_filter is not None and len(record_id_filter) == 0:
             return [], []
 
+        vectors = cast(list[Sequence[float]], list(query_vector) if _is_nested(query_vector) else [query_vector])
         table = self.open_table(self._RECORD_EMBEDDING_TABLE)
         metric = self._record_embedding_space.get("metric", "cosine")
-        query = table.search(list(query_vector)).metric(metric).select(["record_id"])
-        if record_id_filter is not None:
-            query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
-        # One vector per record, but group defensively so duplicates collapse to their best match.
-        results: pl.DataFrame = query.limit(max(k, 1)).to_polars()
-        if results.is_empty():
+        stored = table.count_rows()
+        best: dict[str, float] = {}
+        for vector in vectors:
+            for record_id, distance in self._closest_records(table, vector, metric, k, stored, record_id_filter):
+                best[record_id] = min(distance, best.get(record_id, distance))
+        if not best:
             return [], []
-        ranked = results.group_by("record_id").agg(pl.min("_distance")).sort("_distance")
-        record_ids = ranked["record_id"].to_list()[:k]
+        ranked = sorted(best.items(), key=lambda item: item[1])[:k]
+        record_ids = [record_id for record_id, _ in ranked]
 
         records = self.get_data(SchemaGroup.RECORD.value, ids=record_ids)
         records = sorted(records, key=lambda record: record_ids.index(record.id))
-        distances = [
-            ranked.row(by_predicate=(pl.col("record_id") == record.id), named=True)["_distance"] for record in records
-        ]
-        return records, distances
+        return records, [best[record.id] for record in records]
+
+    def _closest_records(
+        self,
+        table: LanceTable,
+        vector: Sequence[float],
+        metric: str,
+        k: int,
+        stored: int,
+        record_id_filter: list[str] | None,
+    ) -> list[tuple[str, float]]:
+        """The closest record of each medium near ``vector``, widening until ``k`` records are found."""
+        limit = k
+        while True:
+            query = table.search(list(vector)).metric(metric).select(["record_id"])
+            if record_id_filter is not None:
+                query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
+            results: pl.DataFrame = query.limit(limit).to_polars()
+            if results.is_empty():
+                return []
+            ranked = results.group_by("record_id").agg(pl.min("_distance"))
+            # Fewer vectors than asked for means there are no more to find — a prefilter that
+            # keeps fewer than k records would otherwise widen up to the whole table.
+            if ranked.height >= k or limit >= stored or results.height < limit:
+                return list(zip(ranked["record_id"].to_list(), ranked["_distance"].to_list(), strict=True))
+            limit *= self._SEARCH_WIDENING_FACTOR
 
     def semantic_search(
         self, query: str, table_name: str, limit: int, skip: int = 0

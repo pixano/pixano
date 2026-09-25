@@ -4,15 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-"""Sonde de vivacité du worker, appelée par docker.
+"""Liveness probe of the worker, called by docker.
 
-Le worker n'expose pas de port : on ne peut pas l'interroger. Une tâche dédiée touche un
-fichier à intervalle régulier, et la sonde vérifie que ce battement est récent.
+The worker exposes no port: it cannot be queried. A dedicated task touches a file at a
+regular interval, and the probe checks that this heartbeat is recent.
 
-Ce que le battement prouve est précis : la boucle d'événements n'est pas bloquée. Il ne dit
-rien d'un chunk pendu dans un appel qui ne revient pas — celui-là tourne dans un thread, et
-c'est la durée maximale d'un chunk qui le rend, puis la saturation du pool de threads qui
-arrête le worker s'ils s'accumulent.
+What the heartbeat proves is precise: the event loop is not blocked. It says nothing about a
+chunk hung in a call that never returns — that one runs in a thread, and it is the maximum
+duration of a chunk that hands it back, then the saturation of the thread pool that stops the
+worker if they pile up.
 """
 
 import os
@@ -23,15 +23,15 @@ from .config import MAX_HEARTBEAT_AGE_S, heartbeat_path
 
 
 def main() -> int:
-    """Renvoyer 0 si le dernier battement est récent, 1 sinon."""
+    """Return 0 if the last heartbeat is recent, 1 otherwise."""
     path = heartbeat_path()
     try:
         age = time.time() - os.path.getmtime(path)
     except OSError:
-        print(f"aucun battement à {path}", file=sys.stderr)
+        print(f"no heartbeat at {path}", file=sys.stderr)
         return 1
     if age > MAX_HEARTBEAT_AGE_S:
-        print(f"dernier battement il y a {age:.0f}s (> {MAX_HEARTBEAT_AGE_S:.0f}s)", file=sys.stderr)
+        print(f"last heartbeat {age:.0f}s ago (> {MAX_HEARTBEAT_AGE_S:.0f}s)", file=sys.stderr)
         return 1
     return 0
 

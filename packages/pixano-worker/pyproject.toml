@@ -40,6 +40,8 @@ default-groups = ["test"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Comme la suite de l'application : une coroutine de test s'exécute sans décorateur.
+# As in the application's suite: a test coroutine runs without a decorator.
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# A test stuck this long dumps every thread's stack, so that a hang says where it is.
+faulthandler_timeout = 120

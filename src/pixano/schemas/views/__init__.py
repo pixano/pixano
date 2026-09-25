@@ -7,6 +7,7 @@
 from .calibrated_image import CalibratedImage, is_calibrated_image
 from .calibrated_point_cloud import CalibratedPointCloud, is_calibrated_pointcloud
 from .image import Image, is_image
+from .media_type import MEDIA_TYPES, MediaType, media_type_of
 from .pdf import PDF, create_pdf, is_pdf
 from .point_cloud import PointCloud, is_point_cloud
 from .point_cloud_frame import PointCloudFrame, create_point_cloud_frame, is_point_cloud_frame
@@ -17,6 +18,9 @@ from .view import View, is_view
 
 
 __all__ = [
+    "MEDIA_TYPES",
+    "MediaType",
+    "media_type_of",
     "CalibratedImage",
     "CalibratedPointCloud",
     "Image",

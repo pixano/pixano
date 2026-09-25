@@ -104,7 +104,7 @@ class TestDatasetInfo:
         assert dumped["preview"] == "/preview"
         assert dumped["workspace"] == "image"
         assert dumped["storage_mode"] == "filesystem"
-        assert dumped["spec_version"] == 2
+        assert dumped["spec_version"] == 3
         assert isinstance(dumped["creation_date"], str) and dumped["creation_date"]
         assert dumped["bookmarks"] == []
         assert dumped["record"] == {"base": "Record", "fields": {}}
@@ -479,8 +479,8 @@ class TestDatasetInfo:
 
 
 class TestSpecVersion:
-    def test_defaults_to_2_for_new_infos(self):
-        assert DatasetInfo().spec_version == 2
+    def test_defaults_to_3_for_new_infos(self):
+        assert DatasetInfo().spec_version == 3
 
     def test_absent_in_json_means_version_1(self):
         temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)

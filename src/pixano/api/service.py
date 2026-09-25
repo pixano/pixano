@@ -319,6 +319,8 @@ class BaseService:
         prune_old_entity = prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION
         old_entity_id = getattr(existing, "entity_id", None) if prune_old_entity else None
 
+        if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            data = _as_human_edit_of(existing, data)
         merged = merge_update_payload(existing, data)
         schema = self.dataset.info.tables[resolved_table]
         try:
@@ -392,3 +394,29 @@ class BaseService:
 
 
 __all__ = ["BaseService"]
+
+
+# The provenance fields of an annotation, and the values that mean "a model produced this" and
+# "a person changed it". The strings are the schemas' (`AnnotationSourceKind`, `ReviewStatus`).
+_PROVENANCE_FIELDS = ("source_type", "source_name", "source_metadata")
+_MODEL_SOURCE = "model"
+_PENDING_REVIEW = "pending"
+_CORRECTED = "corrected"
+
+
+def _as_human_edit_of(existing: BaseModel, data: dict[str, Any]) -> dict[str, Any]:
+    """Read an update of a model's annotation as what it is: a person correcting it.
+
+    Two rules, both from the step 2 design. The row keeps the model's provenance — the
+    annotation interface sends its own ("Pixano", "other") with every edit, which would erase
+    which model produced the row and make corrections uncountable. And a row still pending
+    becomes corrected, unless the request sets the status itself (a review queue accepting or
+    rejecting): without it, the next run of the model would replace the correction, since a
+    rerun replaces pending rows only.
+    """
+    if getattr(existing, "source_type", "") != _MODEL_SOURCE:
+        return data
+    edit = {key: value for key, value in data.items() if key not in _PROVENANCE_FIELDS}
+    if getattr(existing, "review_status", "") == _PENDING_REVIEW and "review_status" not in data:
+        edit["review_status"] = _CORRECTED
+    return edit

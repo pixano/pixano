@@ -6,7 +6,18 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { fieldKind, initialValue, initialValues, missingRequired, toParams } from "../schemaForm";
+import {
+  confirmationsFor,
+  fieldKind,
+  initialValue,
+  initialValues,
+  missingRequired,
+  modelOptions,
+  modelTasks,
+  proposeModels,
+  toggleChoice,
+  toParams,
+} from "../schemaForm";
 import type { JsonSchema } from "$lib/api/jobs";
 
 // The shape pydantic actually publishes for a job kind, trimmed to what matters here.
@@ -149,5 +160,121 @@ describe("lists of scalars", () => {
 
   it("starts empty even when the default is an empty list", () => {
     expect(initialValue({ type: "array", items: { type: "string" }, default: [] })).toBe("");
+  });
+});
+
+describe("multiple choices", () => {
+  // Step 2, lot 1: the media types a job covers.
+  const media: JsonSchema = {
+    type: "array",
+    items: { type: "string", enum: ["image", "video", "point_cloud", "text"] },
+    default: ["image"],
+  };
+
+  it("renders a list drawn from a fixed set as choices", () => {
+    expect(fieldKind(media)).toBe("choices");
+  });
+
+  it("starts on the declared default", () => {
+    expect(initialValue(media)).toEqual(["image"]);
+  });
+
+  it("ticks and unticks in the declared order", () => {
+    const ticked = toggleChoice(media, ["point_cloud"], "image");
+    expect(ticked).toEqual(["image", "point_cloud"]);
+    expect(toggleChoice(media, ticked, "image")).toEqual(["point_cloud"]);
+  });
+
+  it("names an empty selection the schema wants non-empty as missing", () => {
+    // Review of step 2, lot 1: sent empty, the job was refused with a bare 422.
+    const schema: JsonSchema = { properties: { media: { ...media, minItems: 1 } } };
+    expect(missingRequired(schema, { media: [] })).toEqual(["media"]);
+    expect(missingRequired(schema, { media: ["image"] })).toEqual([]);
+  });
+
+  it("sends an empty selection rather than letting the default run", () => {
+    const schema: JsonSchema = { properties: { media } };
+    expect(toParams(schema, { media: [] })).toEqual({ media: [] });
+  });
+});
+
+describe("confirmationsFor", () => {
+  const schema: JsonSchema = {
+    properties: {
+      model: { type: "string" },
+      replace_existing_embeddings: {
+        type: "boolean",
+        default: false,
+        "x-pixano-confirm": "This deletes every vector already computed.",
+      },
+    },
+  };
+
+  it("asks nothing while the destructive parameter is off", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: false })).toEqual([]);
+  });
+
+  it("gives the parameter's text once it is set", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: true })).toEqual([
+      "This deletes every vector already computed.",
+    ]);
+  });
+});
+
+describe("a model field", () => {
+  // What the detection kind publishes: a required model, named by task and not by name.
+  const detection: JsonSchema = {
+    properties: {
+      model: { type: "string", minLength: 1, "x-pixano-model-task": "detection" } as JsonSchema,
+      box_threshold: { type: "number", default: 0.5 },
+    },
+    required: ["model"],
+  };
+  const embeddings: JsonSchema = {
+    properties: { model: { type: "string", "x-pixano-model-task": "embedding" } },
+  };
+
+  it("renders as the models served for its task", () => {
+    expect(fieldKind(detection.properties!.model)).toBe("model");
+  });
+
+  it("names each task the kinds need once", () => {
+    expect(modelTasks([detection, embeddings, detection, FAKE_SCHEMA])).toEqual([
+      "detection",
+      "embedding",
+    ]);
+  });
+
+  it("proposes the first model the inference serves for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), {
+      detection: ["yolo26s", "yolov8n"],
+      embedding: ["clip"],
+    });
+
+    expect(values).toEqual({ model: "yolo26s", box_threshold: 0.5 });
+  });
+
+  it("keeps a model the user already chose", () => {
+    const values = proposeModels(detection, { model: "yolov8n" }, { detection: ["yolo26s"] });
+
+    expect(values.model).toBe("yolov8n");
+  });
+
+  it("lists a model typed before the served ones arrived, so the list shows what will run", () => {
+    // Independent review of lot 2: the list showed the first served model, the job ran the typed one.
+    expect(modelOptions(["yolo26s", "yolov8n"], "my-detector")).toEqual([
+      "my-detector",
+      "yolo26s",
+      "yolov8n",
+    ]);
+    expect(modelOptions(["yolo26s"], "yolo26s")).toEqual(["yolo26s"]);
+    expect(modelOptions(["yolo26s"], "")).toEqual(["yolo26s"]);
+  });
+
+  it("stays empty, and required, when the inference serves nothing for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), { embedding: ["clip"] });
+
+    expect(values.model).toBe("");
+    expect(missingRequired(detection, values)).toEqual(["model"]);
   });
 });

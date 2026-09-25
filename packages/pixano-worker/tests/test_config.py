@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests de la configuration du worker."""
+"""Tests of the worker configuration."""
 
 import pytest
 from pixano_worker.config import (
@@ -28,7 +28,7 @@ REQUIRED_ENV = {
 
 @pytest.fixture
 def env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Poser un environnement complet et effacer les variables optionnelles."""
+    """Set a complete environment and clear the optional variables."""
     for name, value in REQUIRED_ENV.items():
         monkeypatch.setenv(name, value)
     for name in (
@@ -41,7 +41,7 @@ def env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestRedactDsn:
-    """La chaîne de connexion est loguée au démarrage : elle ne doit jamais porter le mot de passe."""
+    """The connection string is logged at startup: it must never carry the password."""
 
     def test_masks_the_password_of_a_url(self) -> None:
         assert redact_dsn("postgresql://pixano:s3cret@db:5432/pixano") == "postgresql://pixano:***@db:5432/pixano"
@@ -58,12 +58,12 @@ class TestRedactDsn:
         assert redact_dsn("postgresql://pixano@db:5432/pixano") == "postgresql://pixano@db:5432/pixano"
 
     def test_keeps_the_host_readable(self) -> None:
-        """Le but du log est de montrer où l'on se connecte : l'hôte doit survivre."""
+        """The point of the log is to show where we connect: the host must survive."""
         assert "db.interne:5432" in redact_dsn("postgresql://pixano:s3cret@db.interne:5432/pixano")
 
 
 class TestWorkerConfig:
-    """Une configuration incomplète doit échouer au démarrage, pas trois couches plus loin."""
+    """An incomplete configuration must fail at startup, not three layers further."""
 
     def test_reads_every_field_from_the_environment(self, env: None) -> None:
         config = WorkerConfig.from_env()
@@ -83,7 +83,7 @@ class TestWorkerConfig:
 
     @pytest.mark.parametrize("missing", sorted(REQUIRED_ENV))
     def test_rejects_a_blank_variable(self, env: None, monkeypatch: pytest.MonkeyPatch, missing: str) -> None:
-        """Une variable vide est le symptôme habituel d'un .env absent : même traitement."""
+        """A blank variable is the usual symptom of a missing .env: same treatment."""
         monkeypatch.setenv(missing, "   ")
 
         with pytest.raises(MissingConfigurationError, match=missing):
@@ -100,11 +100,11 @@ class TestWorkerConfig:
 
         assert WorkerConfig.from_env().concurrency == 12
 
-    @pytest.mark.parametrize("value", ["0", "-2", "quatre"])
+    @pytest.mark.parametrize("value", ["0", "-2", "four"])
     def test_rejects_a_concurrency_that_would_do_no_work(
         self, env: None, monkeypatch: pytest.MonkeyPatch, value: str
     ) -> None:
-        """Zéro chunk à la fois ferait un worker vivant qui ne travaille jamais, sans erreur."""
+        """Zero chunks at a time would make a live worker that never works, without an error."""
         monkeypatch.setenv("PIXANO_WORKER_CONCURRENCY", value)
 
         with pytest.raises(MissingConfigurationError, match="PIXANO_WORKER_CONCURRENCY"):
@@ -118,7 +118,7 @@ class TestWorkerConfig:
 
         assert WorkerConfig.from_env().chunk_timeout_s == 90.5
 
-    @pytest.mark.parametrize("value", ["0", "-1", "une heure"])
+    @pytest.mark.parametrize("value", ["0", "-1", "one hour"])
     def test_rejects_a_chunk_time_limit_that_would_send_everything_back(
         self, env: None, monkeypatch: pytest.MonkeyPatch, value: str
     ) -> None:
@@ -128,7 +128,7 @@ class TestWorkerConfig:
             WorkerConfig.from_env()
 
     def test_the_two_media_roots_stay_independent(self, env: None) -> None:
-        """Les deux côtés ne voient pas nécessairement le stockage au même endroit."""
+        """The two sides do not necessarily see the storage at the same place."""
         config = WorkerConfig.from_env()
 
         assert config.media_root != config.inference_media_root
@@ -142,19 +142,19 @@ class TestWorkerConfig:
     def test_describe_says_whether_the_inference_is_authenticated(
         self, env: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        assert "sans clé d'API" in WorkerConfig.from_env().describe()
+        assert "no API key" in WorkerConfig.from_env().describe()
 
-        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "jeton")
-        assert "authentifiée" in WorkerConfig.from_env().describe()
+        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "token")
+        assert "authenticated" in WorkerConfig.from_env().describe()
 
     def test_describe_never_leaks_the_inference_key(self, env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "jeton-secret")
+        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "secret-token")
 
-        assert "jeton-secret" not in WorkerConfig.from_env().describe()
+        assert "secret-token" not in WorkerConfig.from_env().describe()
 
 
 class TestHeartbeatPath:
-    """Le worker et sa sonde doivent viser le même fichier."""
+    """The worker and its probe must target the same file."""
 
     def test_defaults_to_the_container_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("PIXANO_WORKER_HEARTBEAT", raising=False)

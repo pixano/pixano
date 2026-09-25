@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
+  import JobsModal from "../jobs/JobsModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
   import GridSkeleton from "./GridSkeleton.svelte";
@@ -26,6 +27,8 @@ License: CECILL-C
 
   interface Props {
     selectedDataset: DatasetBrowser;
+    /** The dataset's display name: `selectedDataset.name` holds its id. */
+    datasetName: string;
     filterSchema: FilterSchemaResponse;
     splitCounts?: SplitStatusCount[];
     semanticActive?: boolean;
@@ -48,6 +51,7 @@ License: CECILL-C
 
   let {
     selectedDataset,
+    datasetName,
     filterSchema,
     splitCounts = [],
     semanticActive = false,
@@ -68,6 +72,7 @@ License: CECILL-C
 
   let computing = $state(false);
   let showConnectModal = $state(false);
+  let showJobsModal = $state(false);
   let computeJob = $state<IoJobResponse | null>(null);
   let computeError = $state("");
 
@@ -229,6 +234,7 @@ License: CECILL-C
         onCompute={handleCompute}
         onClearSimilar={handleClearSimilar}
         onViewChange={handleViewChange}
+        onOpenJobs={() => (showJobsModal = true)}
       />
     </div>
 
@@ -288,4 +294,11 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectToServerModal onClose={() => (showConnectModal = false)} onConnected={handleConnected} />
+{/if}
+
+{#if showJobsModal}
+  <JobsModal
+    dataset={{ id: selectedDataset.id, name: datasetName }}
+    onClose={() => (showJobsModal = false)}
+  />
 {/if}

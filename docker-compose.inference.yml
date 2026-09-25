@@ -4,41 +4,42 @@
 # License: CECILL-C
 # =====================================
 
-# Overlay : une inference construite et exécutée sur cette machine.
+# Overlay: an inference built and run on this machine.
 #
-# À n'utiliser qu'en mode local. En labo et en cloud, pixano-inference est un déploiement
-# à part avec sa propre capacité GPU : on retire cet overlay et on pointe simplement
-# PIXANO_INFERENCE_URL vers lui.
+# For local mode only. In the lab and in the cloud, pixano-inference is a separate
+# deployment with its own GPU capacity: drop this overlay and simply point
+# PIXANO_INFERENCE_URL at it.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 #
-# La variante construite est la variante CPU (torch CPU) avec le plugin d'embeddings CLIP :
-# elle sert de vrais embeddings sans GPU, assez vite pour une démonstration. Pour une vraie
-# capacité, passer les build args en GPU (voir plus bas) et monter sa propre liste de modèles
-# à la place de docker/inference/models.cpu.py.
+# The variant built is the CPU variant (torch CPU) with the CLIP embeddings and YOLO detection
+# plugins: it serves real embeddings and real boxes without a GPU, fast enough for a
+# demonstration. For real capacity,
+# switch the build args to GPU (see below) and mount your own model list in place of
+# docker/inference/models.cpu.py.
 #
-# L'image se construit en deux temps, depuis un clone NON MODIFIÉ de pixano-inference
-# (PIXANO_INFERENCE_REPO) : d'abord l'image que produit son propre Dockerfile, puis une
-# couche définie ici, dockerfiles/Dockerfile.inference-clip, qui y installe le plugin CLIP.
-# Le plugin est dans leur dépôt, mais leur Dockerfile n'a pas d'interrupteur pour
-# l'installer ; à leur proposer, et cette couche disparaîtra avec.
+# The image is built in two stages, from an UNMODIFIED clone of pixano-inference
+# (PIXANO_INFERENCE_REPO): first the image its own Dockerfile produces, then a layer
+# defined here, dockerfiles/Dockerfile.inference-local, which installs the two plugins in it.
+# The plugins are in their repository, but their Dockerfile has no switch to install them;
+# to be proposed to them, and this layer will disappear with it.
 #
-# La variante « sans framework » (TORCH_INDEX_URL vide) ne démarre pas : Ray Serve importe
-# jinja2 dans son module haproxy sans le déclarer dans ray[serve], et c'est torch qui
-# l'apporte incidemment. À signaler au dépôt pixano-inference.
+# The "no framework" variant (empty TORCH_INDEX_URL) does not start: Ray Serve imports
+# jinja2 in its haproxy module without declaring it in ray[serve], and it is torch that
+# brings it in incidentally. To be reported to the pixano-inference repository.
 
 services:
-  # Ne tourne jamais : ce service n'existe que pour que sa construction serve de base à
-  # celle de pixano-inference. Zéro instance, plutôt qu'un profil : un service écarté par
-  # un profil n'existe plus pour les autres, et ne peut donc pas leur servir de contexte.
+  # Never runs: this service only exists so that its build serves as the base for that of
+  # pixano-inference. Zero instances, rather than a profile: a service set aside by a
+  # profile no longer exists for the others, and so cannot serve as their context.
   pixano-inference-base:
     scale: 0
     build:
       context: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
       dockerfile: Dockerfile
       args:
-        # Variante CPU : torch CPU, pas de SAM2.
-        # Variante GPU : retirer ces trois lignes (les défauts du Dockerfile sont GPU+SAM).
+        # CPU variant: torch CPU, no SAM2.
+        # GPU variant: remove these three lines (the Dockerfile's defaults are GPU+SAM).
         TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
         PIXANO_EXTRAS: ""
         INSTALL_SAM: "false"
@@ -46,30 +47,33 @@ services:
   pixano-inference:
     build:
       context: .
-      dockerfile: dockerfiles/Dockerfile.inference-clip
+      dockerfile: dockerfiles/Dockerfile.inference-local
       additional_contexts:
         inference-base: "service:pixano-inference-base"
         inference-src: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
     ports:
       - "127.0.0.1:${PIXANO_INFERENCE_PORT:-7463}:7463"
     environment:
-      # Sans clé, toutes les routes sont ouvertes — acceptable sur une machine, jamais dès
-      # que l'inference est partagée. La variable traverse dès maintenant pour qu'il n'y ait
-      # rien à câbler le jour où elle devient obligatoire.
+      # Without a key, every route is open — acceptable on one machine, never as soon as
+      # the inference is shared. The variable passes through from now on so that there is
+      # nothing to wire up the day it becomes mandatory.
       PIXANO_INFERENCE_API_KEYS: ${PIXANO_INFERENCE_API_KEYS:-}
-      # Racine sous laquelle l'inference accepte des médias par chemin. C'est la contrepartie
-      # de PIXANO_INFERENCE_MEDIA_ROOT côté worker : les pixels ne transitent jamais par Pixano.
+      # Root under which the inference accepts media by path. It is the counterpart of
+      # PIXANO_INFERENCE_MEDIA_ROOT on the worker side: pixels never go through Pixano.
       PIXANO_INFERENCE_MEDIA_ROOTS: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
       HF_TOKEN: ${HF_TOKEN:-}
+      # Ultralytics keeps its settings in the home directory by default; the volume keeps
+      # them, next to the weights, across restarts.
+      YOLO_CONFIG_DIR: /data/ultralytics
     volumes:
       - pixano-inference-weights:/data
       - ./docker/inference/models.cpu.py:/config/models.py:ro
       - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}:ro
     command:
       ["--host", "0.0.0.0", "--port", "7463", "--config", "/config/models.py"]
-    # Ray laisse des process enfants derrière lui ; Python n'est pas un init.
+    # Ray leaves child processes behind it; Python is not an init.
     init: true
-    # L'object store de Ray vit dans /dev/shm, dont le défaut à 64 Mo est trop petit.
+    # Ray's object store lives in /dev/shm, whose 64 MB default is too small.
     shm_size: "8gb"
     stop_grace_period: 90s
     healthcheck:
@@ -78,7 +82,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 120s
-    # Variante GPU : décommenter et repasser les build args aux défauts du Dockerfile.
+    # GPU variant: uncomment and set the build args back to the Dockerfile's defaults.
     # deploy:
     #   resources:
     #     reservations:

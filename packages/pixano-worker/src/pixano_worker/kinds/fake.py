@@ -4,12 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-"""Un type de job qui ne fait rien, lentement.
+"""A job kind that does nothing, slowly.
 
-Il existe pour éprouver le moteur sans dépendre d'un modèle : la réclamation, le bail, la
-reprise, l'annulation et la progression se démontrent entièrement avec lui. C'est aussi la
-première implémentation des trois contrats, donc celle qui les met à l'épreuve avant que le
-lot des contrats gelés ne les fige.
+It exists to exercise the engine without depending on a model: claiming, lease, resumption,
+cancellation and progress can all be demonstrated with it. It is also the first implementation
+of the three contracts, hence the one that puts them to the test before the frozen-contracts
+lot pins them down.
 """
 
 import time
@@ -25,20 +25,20 @@ from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, Transient
 
 
 class FakeParams(JobParams):
-    """Paramètres du job factice.
+    """Parameters of the fake job.
 
     Attributes:
-        task_count: Nombre de tâches à simuler.
-        chunk_size: Tâches par chunk.
-        seconds_per_task: Temps passé par tâche, pour observer une progression réaliste.
-        fail_at_chunk: Rang d'un chunk qui doit échouer, pour éprouver la remontée d'erreur.
-        transient_at_chunk: Rang d'un chunk qui bute sur une panne passagère à chaque tentative,
-            pour éprouver le délai de reprise et l'abandon après épuisement.
-        skip_per_chunk: Tâches déclarées sans objet dans chaque chunk.
-        quarantine_per_chunk: Tâches déclarées en échec dans chaque chunk, pour éprouver la
-            quarantaine.
-        write_to: Table de jouet où écrire des lignes sans signification, pour éprouver
-            l'idempotence des écritures. Vide, le type n'écrit rien.
+        task_count: Number of tasks to simulate.
+        chunk_size: Tasks per chunk.
+        seconds_per_task: Time spent per task, to observe a realistic progression.
+        fail_at_chunk: Rank of a chunk that must fail, to exercise error reporting.
+        transient_at_chunk: Rank of a chunk that hits a transient outage on every attempt, to
+            exercise the retry delay and the give-up after exhaustion.
+        skip_per_chunk: Tasks declared as having nothing to do in each chunk.
+        quarantine_per_chunk: Tasks declared as failed in each chunk, to exercise the
+            quarantine.
+        write_to: Toy table to write meaningless rows into, to exercise the idempotence of
+            writes. Empty, the kind writes nothing.
     """
 
     task_count: int = Field(default=200, ge=1, le=1_000_000)
@@ -55,15 +55,15 @@ class FakeParams(JobParams):
 
 
 class FakeKind(JobKind[FakeParams]):
-    """Le type de job factice."""
+    """The fake job kind."""
 
     name = "fake"
     params_model = FakeParams
-    # Aucun modèle ne tourne ici : ce que ce type écrit n'est pas une prédiction.
+    # No model runs here: what this kind writes is not a prediction.
     source_type = "other"
 
     def plan(self, reader: JobReader, params: FakeParams) -> Iterable[Chunk]:
-        """Découper en chunks de taille fixe. Rien à lire : le compte est dans les paramètres."""
+        """Split into fixed-size chunks. Nothing to read: the count is in the parameters."""
         remaining = params.task_count
         first = 0
         while remaining > 0:
@@ -73,25 +73,25 @@ class FakeKind(JobKind[FakeParams]):
             remaining -= size
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
-        """Dormir le temps annoncé, puis rendre un résultat symbolique.
+        """Sleep for the announced time, then return a token result.
 
         Raises:
-            RuntimeError: Le rang de ce chunk est celui qu'on a demandé de faire échouer.
-            TransientError: Le rang de ce chunk est celui qu'on a demandé de faire buter sur une
-                panne passagère.
+            RuntimeError: This chunk's rank is the one that was asked to fail.
+            TransientError: This chunk's rank is the one that was asked to hit a transient
+                outage.
         """
         rank = payload.get("first_task", 0) // params.chunk_size
         if params.fail_at_chunk == rank:
-            raise RuntimeError(f"échec demandé au chunk {params.fail_at_chunk}")
+            raise RuntimeError(f"failure requested at chunk {params.fail_at_chunk}")
         if params.transient_at_chunk == rank:
-            raise TransientError(f"panne passagère demandée au chunk {rank}")
+            raise TransientError(f"transient outage requested at chunk {rank}")
         time.sleep(params.seconds_per_task * payload["task_count"])
         skipped = min(params.skip_per_chunk, payload["task_count"])
         quarantined = min(params.quarantine_per_chunk, payload["task_count"] - skipped)
         return {"processed": payload["task_count"], "skipped": skipped, "quarantined": quarantined}
 
     def outcome(self, result: dict[str, Any], payload: dict[str, Any], task_count: int) -> Outcome:
-        """Écarter puis mettre en quarantaine les premières tâches du chunk, comme `process` l'a décidé."""
+        """Skip then quarantine the first tasks of the chunk, as `process` decided."""
         skipped, quarantined = result["skipped"], result["quarantined"]
         first = payload["first_task"]
         return Outcome(
@@ -104,11 +104,11 @@ class FakeKind(JobKind[FakeParams]):
         )
 
     def write(self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: FakeParams) -> None:
-        """Écrire une classification sans signification dans une table de jouet.
+        """Write a meaningless classification into a toy table.
 
-        Le nom de la table dit ce qu'elle est. Ce type existe pour éprouver le moteur, et ce
-        qu'il produit n'a aucun sens : rien ne doit pouvoir passer pour une annotation réelle,
-        ni traîner dans un dataset sans qu'on sache d'où ça vient.
+        The table's name says what it is. This kind exists to exercise the engine, and what it
+        produces means nothing: nothing must be able to pass for a real annotation, nor linger
+        in a dataset without anyone knowing where it came from.
         """
         if not params.write_to:
             return
@@ -117,7 +117,7 @@ class FakeKind(JobKind[FakeParams]):
             Classification(
                 id="",
                 record_id=f"task-{first + offset}",
-                labels=["factice"],
+                labels=["fake"],
                 confidences=[1.0],
                 **writer.provenance(),
             )

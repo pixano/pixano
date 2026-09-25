@@ -12,6 +12,7 @@ import {
   isTerminal,
   outcomeOf,
   progressOf,
+  recordOf,
   stateLabelOf,
 } from "../jobs.svelte";
 import type { Job } from "$lib/api/jobs";
@@ -126,6 +127,21 @@ describe("failureOf", () => {
     expect(failureOf(job({ state: "done" }))).toBeNull();
   });
 
+  it("adds the detail, which says why", () => {
+    // Step 2, lot 1: a job refused at planning named the media types it could not process,
+    // and the panel showed "planning failed" alone.
+    const failed = job({
+      state: "error",
+      error: {
+        reason: "planning failed",
+        detail: "the 'embeddings' job cannot process point_cloud",
+      },
+    });
+    expect(failureOf(failed)).toBe(
+      "planning failed: the 'embeddings' job cannot process point_cloud",
+    );
+  });
+
   it("gives the reason of a failed job", () => {
     // Independent review, D4: a failed job read "error" and nothing else.
     expect(failureOf(job({ state: "error", error: { reason: "planning failed" } }))).toBe(
@@ -135,5 +151,23 @@ describe("failureOf", () => {
 
   it("says so when a failed job carries no reason", () => {
     expect(failureOf(job({ state: "error", error: null }))).toBe("failed for an unknown reason");
+  });
+});
+
+describe("recordOf", () => {
+  // Step 2, lot 1: a quarantined item is a medium; its record is what a user opens.
+  const item = (detail: Record<string, unknown> | null) => ({
+    item_id: "cam-front-42",
+    reason: "refused by the inference server",
+    detail,
+    created_at: "",
+  });
+
+  it("names the record the job gave", () => {
+    expect(recordOf(item({ record_id: "rec-42", status: 500 }))).toBe("rec-42");
+  });
+
+  it("is silent when the job gave none", () => {
+    expect(recordOf(item(null))).toBeNull();
   });
 });
