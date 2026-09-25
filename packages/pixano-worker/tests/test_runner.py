@@ -7,7 +7,6 @@
 """Tests of the execution loop: planning, execution, cancellation, recovery."""
 
 import asyncio
-import contextlib
 import json
 import logging
 import threading
@@ -25,6 +24,9 @@ from psycopg_pool import AsyncConnectionPool
 
 
 FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
+
+#: Beyond the grace the worker gives its in-flight chunks, how long a stop may take.
+STOP_MARGIN_S = 5.0
 
 
 @pytest.fixture
@@ -628,9 +630,18 @@ class TestConcurrency:
     async def _run_until_settled(
         pool, registry: Registry, declared: psycopg.Connection, job: str, concurrency: int, threads=None
     ):
-        """Run the real loop until the job settles, recording the occupancy."""
+        """Run the real loop until the job settles, recording the occupancy.
+
+        The worker is stopped as the real one is — its stop event, which SIGTERM sets — and not
+        by cancelling it. On Python 3.11, psycopg_pool waits for a free connection through
+        `asyncio.wait_for`, which can swallow a cancellation that arrives as the connection is
+        handed over (CPython bpo-42130, fixed in 3.12): the loop then never ended, and the suite
+        hung in CI until GitHub killed the job. The wait is bounded, so that a worker that does
+        not stop fails the test instead.
+        """
+        stop = asyncio.Event()
         worker = asyncio.create_task(
-            runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05, threads=threads)
+            runner.work(pool, registry, "worker-test", concurrency, idle_poll_s=0.05, threads=threads, stop=stop)
         )
         peak = 0
         try:
@@ -643,9 +654,10 @@ class TestConcurrency:
                     break
                 await asyncio.sleep(0.02)
         finally:
-            worker.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await worker
+            stop.set()
+            stopped, _ = await asyncio.wait({worker}, timeout=runner.SHUTDOWN_GRACE_S + STOP_MARGIN_S)
+            assert stopped, "the worker did not stop when asked"
+            await worker
         return peak
 
     async def test_runs_several_chunks_at_once(
