@@ -97,9 +97,14 @@ export async function registerInferenceServer(
   }
 }
 
-export async function listInferenceModels(): Promise<InferenceModel[]> {
+/**
+ * The models the connected providers serve, optionally narrowed to one task. Answers `[]` when
+ * nothing is connected or the call fails.
+ */
+export async function listInferenceModels(task?: string): Promise<InferenceModel[]> {
+  const query = task ? `?task=${encodeURIComponent(task)}` : "";
   try {
-    const response = await fetch("/inference/models/list", {
+    const response = await fetch(`/inference/models/list${query}`, {
       headers: { Accept: "application/json" },
       method: "GET",
     });

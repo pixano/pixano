@@ -10,6 +10,7 @@ import { ApiError } from "../apiClient";
 import {
   cancelTrackingJob,
   getTrackingJob,
+  listInferenceModels,
   segmentImage,
   submitTrackingJob,
   trackVideo,
@@ -218,5 +219,41 @@ describe("tracking job APIs", () => {
       job_id: "tracking-job-1",
       status: "canceled",
     });
+  });
+});
+
+describe("listInferenceModels", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function answer(models: unknown[]): Response {
+    return new Response(JSON.stringify(models), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  it("asks for every model when no task is given", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(answer([]));
+
+    await listInferenceModels();
+
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/inference/models/list");
+  });
+
+  it("asks only for the models of the task it is given", async () => {
+    const detector = { name: "yolo", task: "image_object_detection", provider_name: "p" };
+    vi.mocked(fetch).mockResolvedValueOnce(answer([detector]));
+
+    await expect(listInferenceModels("image_object_detection")).resolves.toEqual([detector]);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe(
+      "/inference/models/list?task=image_object_detection",
+    );
   });
 });
