@@ -28,7 +28,7 @@ import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Protocol, Sequence
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
 from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
 from pixano.utils.python import to_sql_list
@@ -48,6 +48,19 @@ ENTITY_TABLE = "entities"
 
 #: Which previous rows a write is about, given each with its entity (None when it has none).
 Coverage = Callable[[Any, Any | None], bool]
+
+# How many identifiers one filter or deletion names at most. Clearing a dataset's pending boxes
+# names every one of them — hundreds of thousands on a large dataset — and a filter that long
+# is slow to parse, when it is accepted at all.
+IDS_PER_QUERY = 1_000
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
+
 
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
@@ -484,9 +497,10 @@ class JobWriter:
             entity_of = (
                 {
                     entity.id: entity
-                    for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id IN {to_sql_list(named)}")
+                    for batch in _batched(named)
+                    for entity in self.dataset.get_data(ENTITY_TABLE, ids=batch)
                 }
-                if named and ENTITY_TABLE in self.dataset.info.tables
+                if ENTITY_TABLE in self.dataset.info.tables
                 else {}
             )
             rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
@@ -500,7 +514,8 @@ class JobWriter:
             # entities nothing refers to, which no attempt would find.
             if with_entities:
                 self._delete_existing(ENTITY_TABLE, pending)
-            self.dataset.delete_data(table_name, pending)
+            for batch in _batched(pending):
+                self.dataset.delete_data(table_name, batch)
             logger.info(
                 "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
             )
@@ -537,25 +552,25 @@ class JobWriter:
         An annotation in any table that names one, apart from the row of `own_table` sharing its
         identifier, or an entity whose parent it is.
         """
-        if not entity_ids:
-            return set()
-        listed = to_sql_list(entity_ids)
         used: set[str] = set()
-        for name, schema in self.dataset.info.tables.items():
-            if "entity_id" not in getattr(schema, "model_fields", {}):
-                continue
-            for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
-                if not (name == own_table and row.id == row.entity_id):
-                    used.add(row.entity_id)
-        if ENTITY_TABLE in self.dataset.info.tables:
-            children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
-            used |= {entity.parent_id for entity in children}
+        for batch in _batched(entity_ids):
+            listed = to_sql_list(batch)
+            for name, schema in self.dataset.info.tables.items():
+                if "entity_id" not in getattr(schema, "model_fields", {}):
+                    continue
+                for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
+                    if not (name == own_table and row.id == row.entity_id):
+                        used.add(row.entity_id)
+            if ENTITY_TABLE in self.dataset.info.tables:
+                children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
+                used |= {entity.parent_id for entity in children}
         return used & entity_ids
 
     def _delete_existing(self, table_name: str, ids: list[str]) -> None:
-        existing = [row.id for row in self.dataset.get_data(table_name, ids=ids)]
-        if existing:
-            self.dataset.delete_data(table_name, existing)
+        for batch in _batched(ids):
+            existing = [row.id for row in self.dataset.get_data(table_name, ids=batch)]
+            if existing:
+                self.dataset.delete_data(table_name, existing)
 
     def _count_write(self, table_name: str) -> None:
         """Count a write, and compact the table once enough have accumulated."""

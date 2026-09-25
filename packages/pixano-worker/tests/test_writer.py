@@ -671,6 +671,36 @@ class TestDetectedObjects:
 
         assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
 
+    def test_dropping_many_rows_names_them_in_bounded_batches(self, scene, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Code review of lot 2: clearing a dataset's pending boxes named all of them in one
+        filter — hundreds of thousands on a large dataset."""
+        import pixano_worker.writer as writer_module
+
+        monkeypatch.setattr(writer_module, "IDS_PER_QUERY", 2)
+        self._detect(scene, ["car", "dog", "cow", "cat", "bird"])
+        longest: list[int] = []
+        real_get, real_delete = scene.get_data, scene.delete_data
+
+        def get_data(table_name: str, ids: list[str] | None = None, **kwargs: Any) -> Any:
+            where = kwargs.get("where") or ""
+            longest.append(len(ids) if ids is not None else where.count("'") // 2 if " IN " in where else 0)
+            return real_get(table_name, ids=ids, **kwargs)
+
+        def delete_data(table_name: str, ids: list[str]) -> Any:
+            longest.append(len(ids))
+            return real_delete(table_name, ids)
+
+        monkeypatch.setattr(scene, "get_data", get_data)
+        monkeypatch.setattr(scene, "delete_data", delete_data)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True, covers=lambda _row, _entity: True)
+
+        assert dropped == 5
+        assert max(longest) <= 2
+        monkeypatch.undo()
+        assert scene.get_data("bboxes", limit=None) == [] and scene.get_data("entities", limit=None) == []
+
     def test_one_entity_per_box_is_required(self, scene) -> None:
         writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
 
