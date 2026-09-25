@@ -146,9 +146,7 @@ License: CECILL-C
     Pinned to the bottom of the scrolling form, so that Run, and what it waits for, stay in
     sight however many parameters a kind has.
   -->
-  <div
-    class="sticky bottom-0 -mx-3 -mb-3 flex flex-col gap-2 border-t border-border bg-card p-3"
-  >
+  <div class="sticky bottom-0 -mx-3 -mb-3 flex flex-col gap-2 border-t border-border bg-card p-3">
     {#if dataset && missing.length > 0}
       <p class="text-xs text-muted-foreground">Fill in: {missing.join(", ")}</p>
     {/if}
