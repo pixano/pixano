@@ -99,7 +99,7 @@ License: CECILL-C
   }
 </script>
 
-<form class="flex flex-col gap-3 border-b border-border p-3" onsubmit={handleSubmit}>
+<form class="flex flex-col gap-3 p-3" onsubmit={handleSubmit}>
   <!--
     Named before anything else: a job runs on the dataset last opened in the Explorer, and
     nothing else on this form says which one that is.
@@ -142,26 +142,34 @@ License: CECILL-C
     />
   {/each}
 
-  {#if dataset && missing.length > 0}
-    <p class="text-xs text-muted-foreground">Fill in: {missing.join(", ")}</p>
-  {/if}
-
-  {#if confirming}
-    <div
-      class="flex flex-col gap-1 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs"
-      aria-live="polite"
-    >
-      {#each confirmations as text (text)}
-        <p>{text}</p>
-      {/each}
-      <p class="font-medium">Click again to confirm.</p>
-    </div>
-  {/if}
-  <button
-    type="submit"
-    class="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
-    disabled={!selected || !dataset || missing.length > 0 || submitting}
+  <!--
+    Pinned to the bottom of the scrolling form, so that Run, and what it waits for, stay in
+    sight however many parameters a kind has.
+  -->
+  <div
+    class="sticky bottom-0 -mx-3 -mb-3 flex flex-col gap-2 border-t border-border bg-background p-3"
   >
-    {submitting ? "Starting…" : confirming ? "Confirm and run" : "Run"}
-  </button>
+    {#if dataset && missing.length > 0}
+      <p class="text-xs text-muted-foreground">Fill in: {missing.join(", ")}</p>
+    {/if}
+
+    {#if confirming}
+      <div
+        class="flex flex-col gap-1 rounded border border-destructive/50 bg-destructive/10 p-2 text-xs"
+        aria-live="polite"
+      >
+        {#each confirmations as text (text)}
+          <p>{text}</p>
+        {/each}
+        <p class="font-medium">Click again to confirm.</p>
+      </div>
+    {/if}
+    <button
+      type="submit"
+      class="rounded bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+      disabled={!selected || !dataset || missing.length > 0 || submitting}
+    >
+      {submitting ? "Starting…" : confirming ? "Confirm and run" : "Run"}
+    </button>
+  </div>
 </form>

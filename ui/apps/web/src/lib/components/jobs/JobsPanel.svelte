@@ -33,14 +33,20 @@ License: CECILL-C
   }
 </script>
 
-<div class="flex h-full flex-col overflow-hidden">
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
   {#if jobsStore.runnable}
-    <SubmitJobForm
-      kinds={jobsStore.kinds}
-      {dataset}
-      servedModels={jobsStore.servedModels}
-      onSubmit={run}
-    />
+    <!--
+      The form scrolls on its own, within a share of the panel: a kind with many parameters
+      used to push the Run button out of sight and leave the job list no room at all.
+    -->
+    <div class="max-h-[60%] shrink-0 overflow-y-auto border-b border-border">
+      <SubmitJobForm
+        kinds={jobsStore.kinds}
+        {dataset}
+        servedModels={jobsStore.servedModels}
+        onSubmit={run}
+      />
+    </div>
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
       No worker is running, so nothing can be launched. Start pixano-worker and reopen this panel.
@@ -53,7 +59,7 @@ License: CECILL-C
     </p>
   {/if}
 
-  <div class="flex-1 overflow-y-auto">
+  <div class="min-h-0 flex-1 overflow-y-auto">
     {#if jobsStore.loading}
       <p class="p-3 text-xs text-muted-foreground">Loading…</p>
     {:else if jobsStore.jobs.length === 0}
