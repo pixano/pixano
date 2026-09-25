@@ -51,15 +51,17 @@ class _Inference:
         # goes down, or flaps while restarting, in the middle of the search for a faulty image.
         self.unreachable_from_call: int | None = None
         self.calls: list[list[str]] = []
+        self.opened = self.closed = 0
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
+        self.opened += 1
         return self
 
     def __enter__(self) -> "_Inference":
         return self
 
     def __exit__(self, *_exc: Any) -> None:
-        return None
+        self.closed += 1
 
     def list_models(self) -> list[Any]:
         if self.unreachable:
@@ -171,6 +173,12 @@ class TestItemFailures:
 
         assert outcome.produced == 6
         assert sorted(item.item_id for item in outcome.quarantined) == ["r0", "r7"]
+
+    def test_the_client_is_closed_with_the_chunk(self, inference: _Inference) -> None:
+        """Code review of lot 2: a client holds a connection pool, and one was left per chunk."""
+        _run(_Reader())
+
+        assert inference.opened == inference.closed == 1
 
     def test_a_healthy_batch_costs_a_single_call(self, inference: _Inference) -> None:
         """The search for the culprit costs nothing on the day there is none."""

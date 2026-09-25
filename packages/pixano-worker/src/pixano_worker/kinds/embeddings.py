@@ -38,10 +38,13 @@ from .base import (
 )
 from .inference import (
     NO_RESPONSE,
+    REFUSED_BY_THE_SERVER,
     REQUEST_STATUSES,
     TRANSIENT_STATUSES,
     InferenceServer,
     blame_the_server_or_the_media,
+    chunk_media,
+    quarantined_item,
     refusal_detail,
 )
 
@@ -191,58 +194,33 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         # because the lot 10 measurement only dated whole jobs, and could not say where the time
         # went when a bigger batch turned out to be slower.
         started = time.perf_counter()
-        views = {row.id: row for row in reader.rows(table, view_ids)} if view_ids else {}
-
-        candidates: list[tuple[str, str]] = []
-        record_of: dict[str, str] = {}
-        # The images sent by path, so that one can be resent as bytes if the server refuses them
-        # all while it still embeds the witness image.
-        by_path: dict[str, Any] = {}
-        quarantined: list[dict[str, Any]] = []
-        carried = 0
-        for view_id in view_ids:
-            view = views.get(view_id)
-            if view is None:
-                quarantined.append({"item_id": view_id, "reason": "media not found"})
-                continue
-            record_of[view_id] = view.record_id
-            resolved = reader.resolve_media(table, view)
-            if resolved is None:
-                quarantined.append(
-                    {"item_id": view_id, "reason": "media not found", "detail": {"record_id": view.record_id}}
-                )
-                continue
-            candidates.append((view_id, resolved.value))
-            carried += int(resolved.carried_bytes)
-            if not resolved.carried_bytes:
-                by_path[view_id] = view
-
+        found = chunk_media(reader, table, view_ids)
+        candidates = [(view.id, reference) for view, reference in found.media]
+        record_of = {view.id: view.record_id for view, _ in found.media}
         read_s = time.perf_counter() - started
 
-        client = self.server.client(max_retries=params.max_retries)
-        started = time.perf_counter()
-        embedded, refused = self._embed_isolating(client, candidates, params)
-        inference_s = time.perf_counter() - started
-        if refused and not embedded:
-            # The whole batch is refused, image by image. A broken inference refuses everything;
-            # so does an entirely corrupt batch. What tells them apart is not the batch size —
-            # the last chunk of a dataset often has only one image — but the server itself, on an
-            # image known to be good.
-            blame_the_server_or_the_media(
-                lambda reference: self._embed(client, [reference], params),
-                reader,
-                table,
-                [view_id for view_id, _ in refused],
-                by_path,
-            )
-        quarantined.extend(
-            {
-                "item_id": view_id,
-                "reason": "refused by the inference server",
-                "detail": {**detail, "record_id": record_of[view_id]},
-            }
+        # Closed with the chunk: a client holds a connection pool, and a worker runs thousands
+        # of chunks.
+        with self.server.client(max_retries=params.max_retries) as client:
+            started = time.perf_counter()
+            embedded, refused = self._embed_isolating(client, candidates, params)
+            inference_s = time.perf_counter() - started
+            if refused and not embedded:
+                # The whole batch is refused, image by image. A broken inference refuses
+                # everything; so does an entirely corrupt batch. What tells them apart is not the
+                # batch size — the last chunk of a dataset often has only one image — but the
+                # server itself, on an image known to be good.
+                blame_the_server_or_the_media(
+                    lambda reference: self._embed(client, [reference], params),
+                    reader,
+                    table,
+                    [view_id for view_id, _ in refused],
+                    found.by_path,
+                )
+        quarantined = found.quarantined + [
+            quarantined_item(view_id, REFUSED_BY_THE_SERVER, record_of[view_id], **detail)
             for view_id, detail in refused
-        )
+        ]
 
         return {
             "record_ids": [record_of[view_id] for view_id, _ in embedded],
@@ -250,7 +228,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             "vectors": [vector for _, vector in embedded],
             "skipped": 0,
             "quarantined": quarantined,
-            "carried_bytes": carried,
+            "carried_bytes": found.carried_bytes,
             "phases_s": {"read": read_s, "inference": inference_s},
         }
 

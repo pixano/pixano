@@ -16,7 +16,6 @@ import pytest
 from PIL import Image as PILImage
 from pixano_inference_client import PixanoInferenceError
 from pixano_worker.kinds import MODEL_TASK_MARKER, DetectionKind, TransientError
-from pixano_worker.kinds.detection import iou
 from pixano_worker.media import ResolvedMedia
 from pixano_worker.writer import JobWriter, ModelIdentity
 
@@ -34,15 +33,17 @@ class _Inference:
         self.bad: set[str] = set()
         self.status_for_everything: int | None = None
         self.calls: list[Any] = []
+        self.opened = self.closed = 0
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
+        self.opened += 1
         return self
 
     def __enter__(self) -> "_Inference":
         return self
 
     def __exit__(self, *_exc: Any) -> None:
-        return None
+        self.closed += 1
 
     def list_models(self) -> list[Any]:
         return [SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection")]
@@ -240,6 +241,32 @@ class TestFailures:
         assert outcome.quarantined == []
         assert result["media"][0]["boxes"] == [[0.1, 0.1, 0.5, 0.5]]
 
+    def test_an_image_too_large_to_measure_costs_only_itself(
+        self, inference: _Inference, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Code review of lot 2: Pillow refuses to open an image with too many pixels, with an
+        error that is not an OSError — uncaught, it failed the whole chunk for one image."""
+        monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", WIDTH * HEIGHT // 4)
+
+        _, outcome = _process(_Reader(unsized={"a"}), ["a", "b"])
+
+        assert [(item.item_id, item.reason) for item in outcome.quarantined] == [("a", "image size unknown")]
+        assert outcome.produced == 1
+
+    def test_the_client_is_closed_with_the_chunk(self, inference: _Inference) -> None:
+        """Code review of lot 2: a client holds a connection pool, and one was left per chunk."""
+        _process(_Reader(), ["a", "b"])
+
+        assert inference.opened == inference.closed == 1
+
+    def test_the_client_is_closed_even_when_the_chunk_fails(self, inference: _Inference) -> None:
+        inference.status_for_everything = 503
+
+        with pytest.raises(TransientError):
+            _process(_Reader(), ["a"])
+
+        assert inference.closed == inference.opened
+
     def test_a_medium_whose_size_cannot_be_known_is_quarantined_without_a_call(self, inference: _Inference) -> None:
         """Its boxes could not be placed: they are stored relative to its size."""
         _, outcome = _process(_Reader(unsized={"a"}, unreadable={"a"}), ["a", "b"])
@@ -273,17 +300,6 @@ class TestFailures:
 
         with pytest.raises(TransientError, match="witness"):
             _process(_Reader(), ["a"])
-
-
-class TestIou:
-    def test_the_same_box(self) -> None:
-        assert iou((0, 0, 1, 1), (0, 0, 1, 1)) == 1
-
-    def test_disjoint_boxes(self) -> None:
-        assert iou((0, 0, 0.1, 0.1), (0.5, 0.5, 1, 1)) == 0
-
-    def test_half_a_box(self) -> None:
-        assert iou((0, 0, 1, 1), (0, 0, 0.5, 1)) == 0.5
 
 
 class TestPlanning:

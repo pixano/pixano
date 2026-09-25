@@ -14,6 +14,7 @@ The embeddings and detection kinds differ in the call they make, not in any of t
 
 import io
 import logging
+from dataclasses import dataclass, field
 from functools import cache
 from typing import Any, Callable, Literal
 
@@ -54,6 +55,55 @@ QUERY_TIMEOUT_S = 5.0
 WITNESS_IMAGE_SIDE = 16
 
 Failure = Literal["transient", "request", "medium"]
+
+# Why a medium goes to quarantine, as its record in the queue says it.
+MEDIA_NOT_FOUND = "media not found"
+REFUSED_BY_THE_SERVER = "refused by the inference server"
+
+
+def quarantined_item(item_id: str, reason: str, record_id: str | None = None, **detail: Any) -> dict[str, Any]:
+    """A medium set aside, as a kind's result carries it: its record in the detail, when known."""
+    if record_id is not None:
+        detail["record_id"] = record_id
+    return {"item_id": item_id, "reason": reason, **({"detail": detail} if detail else {})}
+
+
+@dataclass
+class ChunkMedia:
+    """The media of a chunk, found and designated for the inference, and those set aside.
+
+    Attributes:
+        media: Each medium found, with the reference the inference will read it by.
+        quarantined: The media that could not be found, with their record when known.
+        by_path: The media designated by path, by identifier: one can be resent as bytes if
+            the server refuses them all (see `blame_the_server_or_the_media`).
+        carried_bytes: How many were sent as bytes — the cost the paths avoid.
+    """
+
+    media: list[tuple[Any, str]] = field(default_factory=list)
+    quarantined: list[dict[str, Any]] = field(default_factory=list)
+    by_path: dict[str, Any] = field(default_factory=dict)
+    carried_bytes: int = 0
+
+
+def chunk_media(reader: JobReader, table: str, view_ids: list[str]) -> ChunkMedia:
+    """Find a chunk's media and designate each for the inference, what every kind does first."""
+    views = {row.id: row for row in reader.rows(table, view_ids)} if view_ids else {}
+    found = ChunkMedia()
+    for view_id in view_ids:
+        view = views.get(view_id)
+        if view is None:
+            found.quarantined.append(quarantined_item(view_id, MEDIA_NOT_FOUND))
+            continue
+        resolved = reader.resolve_media(table, view)
+        if resolved is None:
+            found.quarantined.append(quarantined_item(view_id, MEDIA_NOT_FOUND, view.record_id))
+            continue
+        found.media.append((view, resolved.value))
+        found.carried_bytes += int(resolved.carried_bytes)
+        if not resolved.carried_bytes:
+            found.by_path[view_id] = view
+    return found
 
 
 def classify(error: Exception) -> Failure:

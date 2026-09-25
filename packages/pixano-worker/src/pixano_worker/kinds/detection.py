@@ -41,7 +41,16 @@ from .base import (
     TransientError,
     media_chunks,
 )
-from .inference import InferenceServer, blame_the_server_or_the_media, classify, refusal_detail
+from .boxes import BOX_FORMAT, Box, covered, normalized_corners, placed
+from .inference import (
+    REFUSED_BY_THE_SERVER,
+    InferenceServer,
+    blame_the_server_or_the_media,
+    chunk_media,
+    classify,
+    quarantined_item,
+    refusal_detail,
+)
 
 
 log = logging.getLogger("pixano-worker")
@@ -55,10 +64,8 @@ DETECTION_CAPABILITY = TASK_TO_CAPABILITY[DETECTION_TASK]
 # The canonical table of a dataset's bounding boxes.
 BBOX_TABLE = "bboxes"
 
-# The layout the boxes are written in: the one the annotation interface draws from.
-BOX_FORMAT = "xywh"
-
-Box = tuple[float, float, float, float]
+# Why an image goes to quarantine before any call: its boxes could not be placed.
+IMAGE_SIZE_UNKNOWN = "image size unknown"
 
 
 class DetectionParams(JobParams):
@@ -187,72 +194,61 @@ class DetectionKind(JobKind[DetectionParams]):
                 fault of theirs.
         """
         table: str = payload["table"]
-        view_ids: list[str] = payload["view_ids"]
         started = time.perf_counter()
-        views = {row.id: row for row in reader.rows(table, view_ids)} if view_ids else {}
-
-        quarantined: list[dict[str, Any]] = []
+        found = chunk_media(reader, table, payload["view_ids"])
+        quarantined = found.quarantined
         candidates: list[tuple[Any, str, tuple[int, int]]] = []
-        # The media sent by path, so that one can be resent as bytes if the server refuses them
-        # all while it still accepts the witness image.
-        by_path: dict[str, Any] = {}
-        for view_id in view_ids:
-            view = views.get(view_id)
-            if view is None:
-                quarantined.append({"item_id": view_id, "reason": "media not found"})
-                continue
-            resolved = reader.resolve_media(table, view)
-            if resolved is None:
-                quarantined.append(
-                    {"item_id": view_id, "reason": "media not found", "detail": {"record_id": view.record_id}}
-                )
-                continue
+        for view, reference in found.media:
             size = _recorded_size(view) or _measured_size(reader, table, view)
             if size is None:
-                quarantined.append(
-                    {"item_id": view_id, "reason": "image size unknown", "detail": {"record_id": view.record_id}}
-                )
+                quarantined.append(quarantined_item(view.id, IMAGE_SIZE_UNKNOWN, view.record_id))
                 continue
-            candidates.append((view, resolved.value, size))
-            if not resolved.carried_bytes:
-                by_path[view_id] = view
+            candidates.append((view, reference, size))
         read_s = time.perf_counter() - started
 
-        client = self.server.client(max_retries=params.max_retries)
-        started = time.perf_counter()
         media: list[dict[str, Any]] = []
         refused: list[tuple[Any, dict[str, Any]]] = []
-        for view, reference, size in candidates:
-            try:
-                output = self._detect(client, reference, params)
-            except (httpx.TransportError, PixanoInferenceError) as error:
-                failure = classify(error)
-                if failure == "transient":
-                    raise TransientError(
-                        f"the inference does not answer or asks to come back later: {error}"
-                    ) from error
-                if failure == "request":
-                    raise
-                refused.append((view, refusal_detail(error)))  # type: ignore[arg-type]
-                continue
-            media.append(_medium(view, size, output, params.classes))
-        inference_s = time.perf_counter() - started
+        # Closed with the chunk: a client holds a connection pool, and a worker runs thousands
+        # of chunks.
+        with self.server.client(max_retries=params.max_retries) as client:
+            started = time.perf_counter()
+            for view, reference, size in candidates:
+                try:
+                    output = self._detect(client, reference, params)
+                except (httpx.TransportError, PixanoInferenceError) as error:
+                    failure = classify(error)
+                    if failure == "transient":
+                        raise TransientError(
+                            f"the inference does not answer or asks to come back later: {error}"
+                        ) from error
+                    if failure == "request":
+                        raise
+                    refused.append((view, refusal_detail(error)))  # type: ignore[arg-type]
+                    continue
+                boxes, scores, classes = placed(output.boxes, output.scores, output.classes, size, params.classes)
+                media.append(
+                    {
+                        "view_id": view.id,
+                        "record_id": view.record_id,
+                        "width": size[0],
+                        "height": size[1],
+                        "boxes": boxes,
+                        "scores": scores,
+                        "classes": classes,
+                    }
+                )
+            inference_s = time.perf_counter() - started
 
-        if refused and not media:
-            blame_the_server_or_the_media(
-                lambda reference: self._detect(client, reference, params),
-                reader,
-                table,
-                [view.id for view, _ in refused],
-                by_path,
-            )
+            if refused and not media:
+                blame_the_server_or_the_media(
+                    lambda reference: self._detect(client, reference, params),
+                    reader,
+                    table,
+                    [view.id for view, _ in refused],
+                    found.by_path,
+                )
         quarantined.extend(
-            {
-                "item_id": view.id,
-                "reason": "refused by the inference server",
-                "detail": {**detail, "record_id": view.record_id},
-            }
-            for view, detail in refused
+            quarantined_item(view.id, REFUSED_BY_THE_SERVER, view.record_id, **detail) for view, detail in refused
         )
         return {"media": media, "quarantined": quarantined, "phases_s": {"read": read_s, "inference": inference_s}}
 
@@ -282,12 +278,14 @@ class DetectionKind(JobKind[DetectionParams]):
         field = writer.ensure_label_field()
         bbox_schema = writer.table_schema(BBOX_TABLE)
         entity_schema = writer.table_schema(ENTITY_TABLE)
+        provenance = writer.provenance()
+        scope = _classes_covered(params.classes, field)
         written = dropped = 0
         for medium in result["media"]:
             protected = self._protected_boxes(writer, medium, field)
             boxes, entities = [], []
             for coords, score, name in zip(medium["boxes"], medium["scores"], medium["classes"], strict=True):
-                if _covered(coords, name, protected, params.overlap_threshold):
+                if covered(coords, name, protected, params.overlap_threshold):
                     dropped += 1
                     continue
                 boxes.append(
@@ -299,15 +297,11 @@ class DetectionKind(JobKind[DetectionParams]):
                         format=BOX_FORMAT,
                         is_normalized=True,
                         confidence=min(max(score, 0.0), 1.0),
-                        **writer.provenance(),
+                        **provenance,
                     )
                 )
                 entities.append(entity_schema(id="", record_id=medium["record_id"], **{field: name}))
-            written += len(
-                writer.replace(
-                    BBOX_TABLE, medium["view_id"], boxes, entities, covers=_classes_covered(params.classes, field)
-                )
-            )
+            written += len(writer.replace(BBOX_TABLE, medium["view_id"], boxes, entities, covers=scope))
         phases = result.get("phases_s", {})
         log.info(
             "job %s: phases read %.3f s, inference %.3f s, write %.3f s (%d box(es), %d left to a person's box)",
@@ -334,7 +328,8 @@ class DetectionKind(JobKind[DetectionParams]):
         entities = writer.read(ENTITY_TABLE, f"id IN {to_sql_list(entity_ids)}") if entity_ids else []
         classes = {entity.id: getattr(entity, field, "") for entity in entities}
         return [
-            (_normalized_xyxy(row, medium["width"], medium["height"]), classes.get(row.entity_id, "")) for row in rows
+            (normalized_corners(row, medium["width"], medium["height"]), classes.get(row.entity_id, ""))
+            for row in rows
         ]
 
     @staticmethod
@@ -377,71 +372,7 @@ def _measured_size(reader: JobReader, table: str, view: Any) -> tuple[int, int] 
     try:
         with media, Image.open(media) as image:
             return image.size
-    except (UnidentifiedImageError, OSError):
+    # Too many pixels for Pillow's guard is not an OSError: uncaught, it failed the whole chunk
+    # for one image, which the inference could not have read either.
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
         return None
-
-
-def _medium(view: Any, size: tuple[int, int], output: Any, wanted: list[str]) -> dict[str, Any]:
-    """A medium's detections, placed as the dataset stores them: normalised, top-left and size.
-
-    The server answers in pixels, corners; a box that the image's bounds reduce to nothing is
-    not one. Only the classes asked for are kept, when some are, case aside.
-    """
-    width, height = size
-    kept = {name.casefold() for name in wanted}
-    boxes, scores, classes = [], [], []
-    for (x1, y1, x2, y2), score, name in zip(output.boxes, output.scores, output.classes, strict=True):
-        if kept and str(name).casefold() not in kept:
-            continue
-        left, top = min(max(x1, 0), width), min(max(y1, 0), height)
-        right, bottom = min(max(x2, 0), width), min(max(y2, 0), height)
-        if right <= left or bottom <= top:
-            continue
-        boxes.append([left / width, top / height, (right - left) / width, (bottom - top) / height])
-        scores.append(float(score))
-        classes.append(str(name))
-    return {
-        "view_id": view.id,
-        "record_id": view.record_id,
-        "width": width,
-        "height": height,
-        "boxes": boxes,
-        "scores": scores,
-        "classes": classes,
-    }
-
-
-def _normalized_xyxy(row: Any, width: int, height: int) -> Box:
-    """A stored box as normalised corners, whatever layout it was stored in."""
-    x, y, a, b = row.coords
-    if row.format == BOX_FORMAT:
-        a, b = x + a, y + b
-    if not row.is_normalized:
-        x, a = x / width, a / width
-        y, b = y / height, b / height
-    return x, y, a, b
-
-
-def _covered(coords: list[float], name: str, protected: list[tuple[Box, str]], threshold: float) -> bool:
-    """Whether a person's box already says what this detection says."""
-    x, y, w, h = coords
-    box = (x, y, x + w, y + h)
-    return any(
-        (not other_class or other_class.casefold() == name.casefold()) and iou(box, other) >= threshold
-        for other, other_class in protected
-    )
-
-
-def iou(first: Box, second: Box) -> float:
-    """Intersection over union of two boxes given as corners."""
-    width = min(first[2], second[2]) - max(first[0], second[0])
-    height = min(first[3], second[3]) - max(first[1], second[1])
-    if width <= 0 or height <= 0:
-        return 0.0
-    intersection = width * height
-    union = (
-        (first[2] - first[0]) * (first[3] - first[1])
-        + (second[2] - second[0]) * (second[3] - second[1])
-        - intersection
-    )
-    return intersection / union if union > 0 else 0.0
