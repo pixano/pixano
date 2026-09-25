@@ -50,6 +50,7 @@ License: CECILL-C
 {#if data.browserData?.table_data}
   <DatasetExplorer
     selectedDataset={data.browserData}
+    datasetName={data.dataset.name}
     filterSchema={data.filterSchema}
     splitCounts={data.splitCounts ?? []}
     semanticActive={data.semantic?.active ?? false}

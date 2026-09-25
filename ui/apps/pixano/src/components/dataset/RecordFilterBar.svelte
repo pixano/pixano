@@ -13,6 +13,7 @@ License: CECILL-C
     CircleNotch,
     FunnelSimple,
     Images,
+    ListChecks,
     MagnifyingGlass,
     Plus,
     Rows,
@@ -63,6 +64,8 @@ License: CECILL-C
     onCompute?: (force?: boolean) => void;
     onClearSimilar?: () => void;
     onViewChange?: (view: "grid" | "table") => void;
+    /** Open the jobs of this dataset: launch one, follow the ones running. */
+    onOpenJobs?: () => void;
   }
 
   let {
@@ -85,6 +88,7 @@ License: CECILL-C
     onCompute,
     onClearSimilar,
     onViewChange,
+    onOpenJobs,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -466,6 +470,17 @@ License: CECILL-C
             </button>
           {/if}
         </div>
+      {/if}
+
+      {#if onOpenJobs}
+        <button
+          type="button"
+          onclick={onOpenJobs}
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ListChecks size={15} />
+          Jobs
+        </button>
       {/if}
 
       <!-- Records count -->
