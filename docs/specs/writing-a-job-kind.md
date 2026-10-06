@@ -38,10 +38,32 @@ replanned after an outage must not describe something different from what was pa
 
 A chunk's payload is opaque to the engine, and must be a JSON object.
 
+### `model_identity(params)` and `provenance_params(params)` — provenance
+
+Every row a kind writes through `writer.provenance()` says by itself how it was produced:
+`source_name` is the kind, `source_metadata` carries the job identifier (an opaque run
+label), the kind, the model and its version when the kind runs one, and the parameters.
+The writer fills it; the kind only answers two questions. `model_identity(params)` returns
+the model's name and whatever the inference exposes beyond it — the checkpoint it loaded —
+or `None` for a kind that runs no model; it runs in the job's thread, so asking the server is
+allowed, but a provenance that cannot be completed must not fail the chunk. The parameters
+recorded are all of them but the engine's: `chunk_size` by default, plus whatever the kind
+lists in `params_not_in_provenance` (a request timeout, a retry count).
+
+A kind whose `source_type` is `model` also gets `review_status = "pending"` in its
+provenance: its rows arrive to be reviewed. A human's annotation, or a demonstration kind's,
+carries no status. And `replace` honours the review: rows a human accepted, corrected or
+rejected keep their rank and are never touched by a rerun, which replaces the pending rows
+only.
+
 ### `prepare(writer, params)` — optional
 
-Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
-never for a job retried with its chunks. The default does nothing, and most kinds keep it: it
+Runs once per job, under the planning lease, **after** `plan` has produced work and before
+the chunks are recorded; never when the plan was refused or empty, never for a replayed chunk,
+and never for a job retried with its chunks. After, so that everything that can refuse the
+job refuses it before anything is destroyed — the other order dropped a dataset's vectors,
+then failed the job for a media type it could not process. So `plan` must not rely on what
+`prepare` will do. The default does nothing, and most kinds keep it: it
 exists for a state the chunks cannot each restore on their own, such as emptying a table
 before refilling it. Three rules, the first two checked by the suite:
 
@@ -75,10 +97,26 @@ embeddings kind learnt this on the real stack: during an inference restart, one 
 through and the next were refused, and "not every image failed" sent seven healthy images to
 quarantine.
 
+### Media types and confirmation
+
+A kind that reads media declares `supported_media`, the types it can send to the inference
+(`image`, `video`, `point_cloud`, `text`), and takes the user's choice as a `media`
+parameter. Its `plan` calls `refuse_unsupported_media(params.media)` first: a job choosing a
+type the kind cannot process is refused whole, the types named — never run on part of what
+was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
+identifier with its `record_id` in the detail: the panel shows the record.
+
+A parameter that destroys something when set carries `CONFIRM_MARKER`
+(`x-pixano-confirm`) in its `json_schema_extra`, with the text to show: the submission form
+turns Run into a confirmation. Give such a parameter a plain `default`, not a
+`default_factory` — pydantic does not publish a factory's value, and the form starts from
+the published one.
+
 ### `outcome(result, payload, task_count) -> Outcome`
 
 Optional. Says what each task of the chunk became: **produced**, **skipped** — the calculation
-does not apply, such as a record without an image for an image job, which is not a failure —
+does not apply, such as a record without an image for a kind that plans by record, which is
+not a failure —
 or **quarantined**, one `QuarantinedItem` per failed item. The default is "every task
 produced", which is right for a kind that neither skips nor loses anything.
 

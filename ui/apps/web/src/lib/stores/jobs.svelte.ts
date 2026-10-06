@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { listInferenceModels } from "$lib/api/inference";
 import {
   cancelJob,
   isTerminal,
@@ -17,6 +18,7 @@ import {
   type JobKind,
   type QuarantinedItem,
 } from "$lib/api/jobs";
+import { modelTasks, type ServedModels } from "$lib/components/jobs/schemaForm";
 
 /**
  * The jobs a user can see, kept current by one event stream.
@@ -29,6 +31,8 @@ import {
 class JobsStore {
   jobs = $state<Job[]>([]);
   kinds = $state<JobKind[]>([]);
+  /** The models the inference serves, by task, for the kinds that run one. */
+  servedModels = $state<ServedModels>({});
   loading = $state(false);
   /** What went wrong last, for the panel to show. Null when all is well. */
   error = $state<string | null>(null);
@@ -57,6 +61,23 @@ class JobsStore {
       this.loading = false;
     }
     this.#follow();
+    await this.#loadServedModels();
+  }
+
+  /**
+   * Ask the inference which models it serves for each task the kinds need.
+   *
+   * A task it cannot answer for is left out: its field is then typed, and the worker, which
+   * asks its own inference, refuses a wrong name with the models it does serve.
+   */
+  async #loadServedModels(): Promise<void> {
+    const tasks = modelTasks(this.kinds.map((kind) => kind.params_schema));
+    const answers = await Promise.all(tasks.map((task) => servedNames(task)));
+    const served: ServedModels = {};
+    tasks.forEach((task, index) => {
+      if (answers[index].length > 0) served[task] = answers[index];
+    });
+    this.servedModels = served;
   }
 
   /** Stop following. Safe to call twice. */
@@ -191,6 +212,15 @@ function describe(cause: unknown): string {
 }
 
 /** How far along a job is, between 0 and 1. Zero total means nothing to show yet. */
+/** The names of the models served for a task; none when the inference cannot say. */
+async function servedNames(task: string): Promise<string[]> {
+  try {
+    return (await listInferenceModels(task)).map((model) => model.name);
+  } catch {
+    return [];
+  }
+}
+
 export function progressOf(job: Job): number {
   if (job.total_tasks <= 0) return 0;
   return Math.min(1, job.done_tasks / job.total_tasks);
@@ -211,7 +241,22 @@ export function stateLabelOf(job: Job): string {
 export function failureOf(job: Job): string | null {
   if (job.state !== "error") return null;
   const reason = job.error?.reason;
-  return typeof reason === "string" && reason ? reason : "failed for an unknown reason";
+  const detail = job.error?.detail;
+  if (typeof reason !== "string" || !reason) return "failed for an unknown reason";
+  // The reason says which step failed, the detail says why — a job refused at planning reads
+  // "planning failed" and nothing more without it.
+  return typeof detail === "string" && detail ? `${reason}: ${detail}` : reason;
+}
+
+/**
+ * The record a quarantined item belongs to, when the job said so.
+ *
+ * An item is a medium now — one camera of a record — and its identifier alone does not tell a
+ * user which record to open.
+ */
+export function recordOf(item: QuarantinedItem): string | null {
+  const recordId = item.detail?.record_id;
+  return typeof recordId === "string" && recordId ? recordId : null;
 }
 
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */

@@ -152,6 +152,9 @@ jobs:
   worker:
     name: Worker
     runs-on: ubuntu-latest
+    # The suite takes about a minute. A test that hangs used to hold the job for GitHub's six-hour
+    # limit; pytest dumps the stacks of a test stuck for two minutes (faulthandler_timeout).
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -167,7 +170,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U pixano"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5

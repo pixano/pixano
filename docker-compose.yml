@@ -4,29 +4,29 @@
 # License: CECILL-C
 # =====================================
 
-# Pixano en mode local — le socle d'exécution des jobs (étape 1).
+# Pixano in local mode — the job execution foundation (step 1).
 #
-# Ce fichier décrit UNE liaison de l'architecture, pas l'architecture. Chaque lien entre
-# composants est une adresse + un secret, jamais une hypothèse de colocalisation : en
-# déploiement partagé (base et stockage communs, inference sur un serveur dimensionné) comme
-# en cloud, seules les valeurs de .env changent — aucun service décrit ici n'est réécrit.
+# This file describes ONE wiring of the architecture, not the architecture. Every link between
+# components is an address + a secret, never a colocation assumption: in a shared deployment
+# (common database and storage, inference on a properly sized server) as in the cloud, only the
+# values of .env change — no service described here is rewritten.
 #
 #   docker compose up
-#       l'inference est un serveur déjà en place, désigné par PIXANO_INFERENCE_URL.
+#       the inference is a server already in place, designated by PIXANO_INFERENCE_URL.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
-#       + une inference construite localement (variante CPU, sans GPU ni torch).
+#       + an inference built locally (CPU variant, without GPU or torch).
 
 services:
   postgres:
     image: postgres:16
-    # Lié à localhost : la base n'est jamais exposée hors de la machine par défaut.
+    # Bound to localhost: the database is never exposed outside the machine by default.
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?copiez .env.example en .env}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copiez .env.example en .env}
-      POSTGRES_DB: ${POSTGRES_DB:?copiez .env.example en .env}
+      POSTGRES_USER: ${POSTGRES_USER:?copy .env.example to .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      POSTGRES_DB: ${POSTGRES_DB:?copy .env.example to .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -42,12 +42,12 @@ services:
     ports:
       - "127.0.0.1:${PIXANO_PORT:-7492}:7492"
     environment:
-      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
-      # L'app dépose les jobs dans la même file que le worker consomme.
+      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?set PIXANO_INFERENCE_URL (see .env.example)}
+      # The app drops the jobs into the same queue the worker consumes.
       PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
-      # Racine sous laquelle Pixano voit les médias accessibles par chemin. Le stockage
-      # monté ici en est un cas ; un dataset peut aussi vivre en stockage objet, ou rester
-      # sur la machine de son propriétaire (cf. lot 8, résolveur de médias).
+      # Root under which Pixano sees the media reachable by path. The storage mounted here
+      # is one case; a dataset may also live in object storage, or stay on its owner's
+      # machine (see lot 8, media resolver).
       PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
       # Sans elle, seule l'interface legacy est servie (voir .env.example).
       ACTIVATE_UI_V1_0: ${ACTIVATE_UI_V1_0:-false}
@@ -57,8 +57,8 @@ services:
       - pixano init /data && pixano server run /data --host 0.0.0.0 --port 7492
         --pixano-inference-url "$$PIXANO_INFERENCE_URL"
     volumes:
-      # /data est la convention interne de l'image ; la racine médias, elle, doit suivre la
-      # variable, puisque c'est elle que le worker donne à l'inference.
+      # /data is the image's internal convention; the media root, on the other hand, must
+      # follow the variable, since it is what the worker hands to the inference.
       - ${PIXANO_DATA_DIR:-./data}:/data
       - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_MEDIA_ROOT:-/medias}
     depends_on:
@@ -77,31 +77,31 @@ services:
 
   pixano-worker:
     build:
-      # La racine du dépôt, parce que le worker dépend de la source de pixano par chemin.
+      # The repository root, because the worker depends on pixano's source by path.
       context: .
       dockerfile: packages/pixano-worker/Dockerfile
-    # Toujours redémarré, sauf arrêt demandé (`stop`, `down`). Un worker qui sort en erreur — un
-    # schéma incompatible, un défaut qui persiste — revient donc en boucle, et son message avec
-    # lui à chaque tour : c'est voulu, la décision du lot 1 était « refuser de démarrer avec un
-    # message clair », pas « rester arrêté pour de bon ». `on-failure:N` ne remet jamais son
-    # compteur à zéro (vérifié) : le N-ième incident d'une longue vie laissait le worker à
-    # terre. Les pannes passagères de la base, elles, sont absorbées sans redémarrer.
-    # Vérifié : un `docker compose kill` compte comme un arrêt demandé et n'est pas redémarré —
-    # la démo, qui tue le worker puis le relance à la main, y compte ; un process qui sort de
-    # lui-même, quel que soit son code, est relancé.
+    # Always restarted, unless a stop was requested (`stop`, `down`). A worker that exits in
+    # error — an incompatible schema, a defect that persists — therefore comes back in a loop,
+    # and its message with it at every turn: this is intended, the lot 1 decision was "refuse
+    # to start with a clear message", not "stay down for good". `on-failure:N` never resets its
+    # counter (verified): the N-th incident of a long life left the worker on the ground.
+    # Transient database outages, for their part, are absorbed without restarting.
+    # Verified: a `docker compose kill` counts as a requested stop and is not restarted — the
+    # demo, which kills the worker and then relaunches it by hand, relies on it; a process
+    # that exits on its own, whatever its code, is relaunched.
     restart: unless-stopped
-    # Au-dessus des 30 s que le worker laisse à ses chunks en vol pour finir (SHUTDOWN_GRACE_S) :
-    # sans cette marge, docker le tuerait avant qu'il ait rendu ceux qui n'ont pas fini.
+    # Above the 30 s the worker leaves its in-flight chunks to finish (SHUTDOWN_GRACE_S):
+    # without this margin, docker would kill it before it had returned the ones not finished.
     stop_grace_period: 45s
     environment:
       PIXANO_DATABASE_URL: ${PIXANO_DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
-      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?définissez PIXANO_INFERENCE_URL (voir .env.example)}
+      PIXANO_INFERENCE_URL: ${PIXANO_INFERENCE_URL:?set PIXANO_INFERENCE_URL (see .env.example)}
       PIXANO_INFERENCE_API_KEY: ${PIXANO_INFERENCE_API_KEY:-}
       PIXANO_LIBRARY_DIR: ${PIXANO_LIBRARY_DIR:-/data/library}
-      # Quand worker et inference voient le même stockage, le worker traduit ses chemins
-      # vers la vue de l'inference avant chaque appel — ici les deux racines coïncident,
-      # ailleurs non. Les autres cas (stockage objet, médias restés chez l'utilisateur) sont
-      # d'autres stratégies du résolveur, pas d'autres valeurs de ces deux variables.
+      # When the worker and the inference see the same storage, the worker translates its
+      # paths to the inference's view before each call — here the two roots coincide,
+      # elsewhere they do not. The other cases (object storage, media left with the user)
+      # are other strategies of the resolver, not other values of these two variables.
       PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
       PIXANO_INFERENCE_MEDIA_ROOT: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
       PIXANO_WORKER_CONCURRENCY: ${PIXANO_WORKER_CONCURRENCY:-4}
@@ -110,8 +110,8 @@ services:
       # shared deployment that starts from this file without it does not inherit them.
       PIXANO_WORKER_DEMO_KINDS: ${PIXANO_WORKER_DEMO_KINDS:-false}
     volumes:
-      # /data est la convention interne de l'image ; la racine médias, elle, doit suivre la
-      # variable, puisque c'est elle que le worker donne à l'inference.
+      # /data is the image's internal convention; the media root, on the other hand, must
+      # follow the variable, since it is what the worker hands to the inference.
       - ${PIXANO_DATA_DIR:-./data}:/data
       - ${PIXANO_MEDIA_DIR:-./data/media}:${PIXANO_MEDIA_ROOT:-/medias}
     depends_on:

@@ -4,24 +4,24 @@
 # License: CECILL-C
 # =====================================
 
-r"""Mesurer le débit du job d'embeddings, par taille de lot et par mode de stockage.
+r"""Measure the throughput of the embeddings job, by chunk size and by storage mode.
 
-La question à laquelle ce script répond n'est pas « combien d'images par seconde » — cela
-dépend du modèle et de la machine — mais deux comparaisons qui, elles, se transposent :
+The question this script answers is not "how many images per second" — that depends on the
+model and the machine — but two comparisons which, for their part, do carry over:
 
-1. **Ce que coûte le transport des octets.** Le plan pose que les médias ne doivent pas
-   transiter par Pixano. Sur deux datasets portant les mêmes images, l'un référencé par
-   chemin et l'autre embarqué, l'écart chiffre cet invariant au lieu de l'affirmer.
-2. **La taille de lot qui vaut le coup.** Un lot amortit un aller-retour réseau et un
-   passage de modèle ; trop gros, il rallonge ce qu'une reprise doit refaire.
+1. **What transporting the bytes costs.** The plan states that media must not go through
+   Pixano. On two datasets carrying the same images, one referenced by path and the other
+   embedded, the gap puts a number on this invariant instead of asserting it.
+2. **The chunk size that is worth it.** A chunk amortises a network round trip and a model
+   pass; too big, it lengthens what a resume has to redo.
 
-Une tâche est un enregistrement **planifié**, pas un vecteur produit : le type de job écarte
-les enregistrements sans image exploitable. Les deux nombres ne coïncident que sur un dataset
-où chaque enregistrement porte une image — mesuré sur nuScenes, 26 766 tâches ne donnent que
-404 vecteurs, le reste étant des relevés lidar sans caméra. D'où le choix des datasets à
-mesurer, explicite et obligatoire : un débit n'a de sens que sur un dataset entièrement imagé.
+A task is a **planned** record, not a produced vector: the job kind discards the records with
+no usable image. The two numbers only coincide on a dataset where every record carries an
+image — measured on nuScenes, 26,766 tasks give only 404 vectors, the rest being lidar
+readings without a camera. Hence the choice of the datasets to measure, explicit and
+mandatory: a throughput only makes sense on a fully imaged dataset.
 
-Usage :
+Usage:
     uv run --directory packages/pixano-worker python scripts/measure_throughput.py \\
         --api http://localhost:7492 --sizes 8,16,32,64 \\
         --datasets "VOC 2007 Sample,VOC 2007 (uri)"
@@ -43,19 +43,19 @@ def _call(url: str, payload: dict | None = None) -> dict:
         return json.loads(response.read())
 
 
-#: Ce que le type d'embeddings journalise pour chaque chunk écrit, avec l'identifiant du job.
+#: What the embeddings kind logs for each written chunk, with the job's identifier.
 PHASES = re.compile(
-    r"job (?P<job>[0-9a-f-]{36}) : phases lecture (?P<read>[\d.]+) s, inférence (?P<inference>[\d.]+) s, "
-    r"écriture (?P<write>[\d.]+) s"
+    r"job (?P<job>[0-9a-f-]{36}): phases read (?P<read>[\d.]+) s, inference (?P<inference>[\d.]+) s, "
+    r"write (?P<write>[\d.]+) s"
 )
 
 
 def phases_of(worker_log: Path, job_id: str) -> dict[str, float]:
-    """Additionner, sur le journal du worker, le temps passé par phase pour un job.
+    """Add up, over the worker's log, the time spent per phase for a job.
 
-    Les phases sont sommées sur les chunks : avec plusieurs chunks en vol, leur somme dépasse
-    la durée du job. Ce sont des temps de travail, pas des temps d'attente — c'est ce qui dit où
-    va le temps quand un lot plus gros se révèle plus lent.
+    The phases are summed over the chunks: with several chunks in flight, their sum exceeds
+    the job's duration. These are working times, not waiting times — this is what says where
+    the time goes when a bigger chunk turns out to be slower.
     """
     totals = {"read": 0.0, "inference": 0.0, "write": 0.0}
     for line in worker_log.read_text(errors="replace").splitlines():
@@ -67,13 +67,13 @@ def phases_of(worker_log: Path, job_id: str) -> dict[str, float]:
 
 
 def run_job(api: str, dataset_id: str, chunk_size: int, poll_s: float = 0.2) -> tuple[float, int, str]:
-    """Lancer un job d'embeddings et attendre sa fin.
+    """Launch an embeddings job and wait for it to finish.
 
-    L'attente est courte devant la durée d'un job, pour que le pas de scrutation ne se
-    confonde pas avec ce qu'on mesure.
+    The wait is short compared with a job's duration, so that the polling step does not get
+    mixed up with what is being measured.
 
     Returns:
-        La durée en secondes, le nombre de tâches planifiées, et l'identifiant du job.
+        The duration in seconds, the number of planned tasks, and the job's identifier.
     """
     job = _call(
         f"{api}/jobs",
@@ -89,32 +89,32 @@ def run_job(api: str, dataset_id: str, chunk_size: int, poll_s: float = 0.2) -> 
         state = _call(f"{api}/jobs/{job['id']}")
         if state["state"] in ("done", "error", "cancelled"):
             if state["state"] != "done":
-                raise RuntimeError(f"job {state['state']} : {state}")
+                raise RuntimeError(f"job {state['state']}: {state}")
             return time.monotonic() - started, state["total_tasks"], job["id"]
 
 
 def datasets(api: str) -> dict[str, str]:
-    """Les datasets disponibles, par nom."""
+    """The available datasets, by name."""
     return {d["name"]: d["id"] for d in _call(f"{api}/datasets")}
 
 
 def main() -> None:
-    """Mesurer et rendre un tableau prêt à coller dans la documentation."""
+    """Measure and return a table ready to paste into the documentation."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api", default="http://localhost:7492")
     parser.add_argument("--sizes", default="8,16,32,64")
     parser.add_argument(
         "--datasets",
         required=True,
-        help="Noms des datasets à mesurer, séparés par des virgules. Obligatoire : mesurer "
-        "tout ce qui traîne dans la bibliothèque lance un calcul long sur des datasets dont "
-        "le débit ne veut rien dire.",
+        help="Names of the datasets to measure, comma-separated. Mandatory: measuring "
+        "everything lying around in the library launches a long computation on datasets whose "
+        "throughput means nothing.",
     )
     parser.add_argument(
         "--worker-log",
         type=Path,
-        help="Journal du worker (par exemple la sortie de `docker compose logs -f pixano-worker`, ou celle "
-        "d'un worker lancé à la main), pour ventiler la durée par phase : lecture, inférence, écriture.",
+        help="The worker's log (for example the output of `docker compose logs -f pixano-worker`, or that "
+        "of a worker launched by hand), to break the duration down by phase: read, inference, write.",
     )
     args = parser.parse_args()
 
@@ -122,11 +122,11 @@ def main() -> None:
     wanted = [n.strip() for n in args.datasets.split(",") if n.strip()]
     unknown = [name for name in wanted if name not in available]
     if unknown:
-        raise SystemExit(f"dataset inconnu : {', '.join(unknown)}. Connus : {', '.join(available)}")
+        raise SystemExit(f"unknown dataset: {', '.join(unknown)}. Known: {', '.join(available)}")
     sizes = [int(s) for s in args.sizes.split(",")]
 
-    phases = " lecture | inférence | écriture |" if args.worker_log else ""
-    print(f"| dataset | lot | tâches planifiées | durée | tâches/s |{phases}", flush=True)
+    phases = " read | inference | write |" if args.worker_log else ""
+    print(f"| dataset | chunk | planned tasks | duration | tasks/s |{phases}", flush=True)
     print("| --- | ---: | ---: | ---: | ---: |" + (" ---: | ---: | ---: |" if args.worker_log else ""), flush=True)
     for name in wanted:
         for size in sizes:
@@ -134,7 +134,7 @@ def main() -> None:
             rate = tasks / elapsed if elapsed else 0.0
             row = f"| {name} | {size} | {tasks} | {elapsed:.1f} s | {rate:.1f} |"
             if args.worker_log:
-                # Le worker écrit son journal après coup ; lui laisser le temps de le vider.
+                # The worker writes its log after the fact; give it time to flush it.
                 time.sleep(1.0)
                 totals = phases_of(args.worker_log, job_id)
                 row += f" {totals['read']:.1f} s | {totals['inference']:.1f} s | {totals['write']:.1f} s |"

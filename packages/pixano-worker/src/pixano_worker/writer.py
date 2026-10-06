@@ -4,21 +4,21 @@
 # License: CECILL-C
 # =====================================
 
-"""Le point d'écriture unique des résultats de jobs.
+"""The single write point for job results.
 
-Toute écriture d'un type de job passe par ici, pour deux raisons.
+Every write of a job kind goes through here, for two reasons.
 
-**L'idempotence.** Les résultats vont dans LanceDB tandis que l'avancement va dans PostgreSQL
-— deux magasins, donc deux écritures qui ne peuvent pas partager une transaction. Un worker
-qui meurt entre les deux refera le chunk, et un chunk dont le bail a expiré peut être repris
-par un autre worker. Rejouer doit donc produire exactement le même contenu, jamais des
-doublons. Les identifiants sont pour cela dérivés **du travail**, pas de son exécution : deux
-exécutions du même traitement sur le même item écrivent sur les mêmes lignes.
+**Idempotence.** Results go to LanceDB while progress goes to PostgreSQL — two stores, hence
+two writes that cannot share a transaction. A worker that dies between the two will redo the
+chunk, and a chunk whose lease has expired can be picked up by another worker. Replaying must
+therefore produce exactly the same content, never duplicates. For that, identifiers are
+derived **from the work**, not from its execution: two runs of the same processing on the
+same item write to the same rows.
 
-**L'écrivain unique, plus tard.** LanceDB n'a pas la gestion de concurrence de PostgreSQL, et
-coordonner plusieurs workers écrivant le même dataset est un sujet ouvert. Que toutes les
-écritures passent par un seul endroit est ce qui rendra cette coordination possible sans
-toucher au moindre type de job.
+**The single writer, later.** LanceDB does not have PostgreSQL's concurrency control, and
+coordinating several workers writing to the same dataset is an open question. Having every
+write go through one place is what will make that coordination possible without touching a
+single job kind.
 """
 
 import hashlib
@@ -26,62 +26,104 @@ import json
 import logging
 import threading
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Iterable, Protocol, Sequence
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
+
+from pixano.schemas import DEFAULT_LABEL_FIELD, label_field_of
+from pixano.utils.python import to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
 
-# Longueur des identifiants dérivés. Assez pour qu'une collision soit hors de portée, assez
-# court pour rester lisible dans une table.
-_ID_LENGTH = 22
+# The provenance vocabulary of the Pixano schemas that means "a model produced this", and the
+# review status such a row arrives with. The strings are the schemas' (`AnnotationSourceKind`,
+# `ReviewStatus`); named here so that the writer does not import the application's schemas
+# for two words.
+MODEL_SOURCE = "model"
+PENDING_REVIEW = "pending"
 
-# Nombre de rangs sondés au-delà de la sortie courante quand on nettoie. Une sortie qui
-# rétrécit le fait de quelques lignes, pas de cent ; au-delà, des restes subsistent, ce qui
-# vaut mieux que balayer la table à chaque écriture.
-_LEFTOVER_PROBE = 32
+# The canonical table of a dataset's entities.
+ENTITY_TABLE = "entities"
 
-# Chaque écriture crée une version de la table Lance ; un job de 50 000 images en chunks de 8 en
-# crée 6 250, et rien ne les résorbait — 101 versions mesurées après deux jobs sur 400 images.
-# Une table fragmentée ralentit toutes les lectures de l'explorateur. On compacte donc à
-# intervalle régulier, en nombre d'écritures, et on efface les versions assez anciennes pour
-# qu'aucun lecteur ne les tienne encore.
+#: Which previous rows a write is about, given each with its entity (None when it has none).
+Coverage = Callable[[Any, Any | None], bool]
+
+# How many identifiers one filter or deletion names at most. Clearing a dataset's pending boxes
+# names every one of them — hundreds of thousands on a large dataset — and a filter that long
+# is slow to parse, when it is accepted at all.
+IDS_PER_QUERY = 1_000
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
+
+
+# Length of the digest that opens a derived identifier. Long enough that a collision is out of
+# reach, short enough to stay readable in a table; the rank follows it, so that everything a
+# key produced shares one prefix and can be found — and cleaned — exactly.
+_ID_PREFIX_LENGTH = 16
+
+# Every write creates a version of the Lance table; a job of 50,000 images in chunks of 8
+# creates 6,250 of them, and nothing reclaimed them — 101 versions measured after two jobs on
+# 400 images. A fragmented table slows down every read from the explorer. So we compact at a
+# regular interval, counted in writes, and we erase the versions old enough that no reader
+# still holds them.
 #
-# La compaction tourne sous le verrou d'écriture du dataset, dans le chunk qui la déclenche.
-# Mesuré (scripts/measure_compaction.py) sur une table de classifications remplie par lots de
-# huit : 0,12 s en médiane à 10 000 lignes, 0,30 s à 30 000, avec un maximum de 0,9 s — et
-# cela croît avec la table. Acceptable pour l'étape 1 ; la politique — tous les N chunks, en
-# fin de job, ou confiée à un rôle d'écrivain — se décide avant que les types de l'étape 2
-# écrivent dans des tables que les utilisateurs annotent en même temps.
+# Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured
+# (scripts/measure_compaction.py) on a classification table filled in batches of eight:
+# 0.12 s median at 10,000 rows, 0.30 s at 30,000, with a maximum of 0.9 s — and it grows with
+# the table. Acceptable for step 1; the policy — every N chunks, at the end of the job, or
+# handed to a writer role — is decided before step 2's kinds write into tables that users are
+# annotating at the same time.
 COMPACT_EVERY_WRITES = 64
-# Une heure : plus qu'aucune lecture d'un client Pixano ne tient une version — une page de
-# l'explorateur, un export — pour qu'aucun lecteur ne voie disparaître la version qu'il lit.
-# Plus court risquerait de faire échouer une lecture en cours ; plus long ne coûte que du
-# disque, le temps que les anciennes versions s'effacent.
+# One hour: longer than any read from a Pixano client holds a version — an explorer page, an
+# export — so that no reader sees the version it is reading disappear. Shorter would risk
+# failing a read in progress; longer only costs disk, until the old versions are erased.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
-# Le compte d'écritures par table, par dataset. Le runner sérialise les écritures d'un dataset,
-# donc le verrou ici ne protège que le compteur lui-même.
+# The write count per table, per dataset. The runner serialises a dataset's writes, so the
+# lock here only protects the counter itself.
 _writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
 _writes_guard = threading.Lock()
 
 
-class DatasetReadSource(Protocol):
-    """Les seules opérations dont la planification d'un job a besoin.
+@dataclass(frozen=True)
+class ModelIdentity:
+    """The model a job ran, as the inference declares it.
 
-    Un type de job doit pouvoir énumérer ce qu'il va traiter sans ouvrir un dataset lui-même :
-    c'est la même raison que pour l'écriture — un point unique, pour que sérialiser ou mettre
-    en cache les accès reste un jour une modification d'un seul fichier.
+    Attributes:
+        name: The model's name on the inference server — what the job's parameters name.
+        version: What the server gives as the model's identity beyond its name — the checkpoint
+            it loaded, typically. None when the server exposes nothing of the kind.
     """
 
+    name: str
+    version: str | None = None
+
+
+class DatasetReadSource(Protocol):
+    """The only operations planning a job needs.
+
+    A job kind must be able to enumerate what it is going to process without opening a dataset
+    itself: the same reason as for writing — a single point, so that serialising or caching
+    accesses one day remains a change to a single file.
+    """
+
+    #: What the dataset holds: its tables and their schemas.
+    info: Any
+
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
-        """Compter les lignes d'une table, sans la matérialiser."""
+        """Count the rows of a table, without materialising it."""
         ...
 
-    # Les paramètres reprennent ceux de `Dataset` un à un, noms compris. Un `**kwargs` ici
-    # exigerait d'un dataset qu'il accepte n'importe quel argument nommé, ce que le vrai ne fait
-    # pas : le protocole ne décrivait plus la classe qu'il abstrait, et seul mypy lancé sur tout
-    # le dépôt s'en apercevait.
+    # The parameters mirror those of `Dataset` one to one, names included. A `**kwargs` here
+    # would require a dataset to accept any keyword argument, which the real one does not: the
+    # protocol no longer described the class it abstracts, and only mypy run on the whole
+    # repository noticed.
     def get_data(
         self,
         table_name: str,
@@ -91,115 +133,151 @@ class DatasetReadSource(Protocol):
         where: str | None = None,
         record_ids: list[str] | None = None,
     ) -> list[Any]:
-        """Lire des lignes d'une table."""
+        """Read rows from a table."""
         ...
 
     def get_view_binary(self, table_name: str, row_id: str) -> tuple[bytes, str] | None:
-        """Les octets d'une vue embarquée, et leur type."""
+        """The bytes of an embedded view, and their type."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
-        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        """The model and dimension of the embeddings already computed, or None if there are none."""
         ...
 
 
 class DatasetWriteTarget(Protocol):
-    """Les seules opérations dont l'écriture d'un job a besoin.
+    """The only operations writing a job needs.
 
-    Dépendre de ce contrat plutôt que de `Dataset` suit la règle du projet — les frontières
-    dépendent d'interfaces — et permet à un test de fournir une doublure qui se comporte comme
-    LanceDB sans avoir à feindre d'être un dataset complet.
+    Depending on this contract rather than on `Dataset` follows the project rule — boundaries
+    depend on interfaces — and lets a test provide a stand-in that behaves like LanceDB without
+    having to pretend to be a complete dataset.
     """
 
     def update_data(self, table_name: str, data: list[Any]) -> Any:
-        """Écrire des lignes, en remplaçant celles qui portent déjà leur identifiant."""
+        """Write rows, replacing those that already carry their identifier."""
         ...
 
     def delete_data(self, table_name: str, ids: list[str]) -> Any:
-        """Supprimer des lignes par identifiant."""
+        """Delete rows by identifier."""
         ...
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        """Lire les lignes portant ces identifiants."""
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        """Read the rows carrying these identifiers, or those matching a filter."""
         ...
 
     def has_record_embeddings(self) -> bool:
-        """Si une table d'embeddings de records existe déjà."""
+        """Whether a record embeddings table already exists."""
         ...
 
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
-        """Créer la table d'embeddings pour une largeur de vecteur donnée."""
+        """Create the embeddings table for a given vector width."""
+        ...
+
+    def drop_record_embeddings(self) -> None:
+        """Delete the embeddings table and the model it declares."""
+        ...
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
-        """Le modèle et la dimension des embeddings déjà calculés, ou None s'il n'y en a pas."""
+        """The model and dimension of the embeddings already computed, or None if there are none."""
         ...
 
     def open_table(self, name: str) -> Any:
-        """La table LanceDB elle-même, pour la compacter."""
+        """The LanceDB table itself, to compact it."""
         ...
 
     @property
     def info(self) -> Any:
-        """Les métadonnées du dataset, dont les schémas de tables."""
+        """The dataset's metadata, including the table schemas."""
         ...
 
 
 def check_embedding_space(space: dict[str, Any] | None, model: str, dim: int | None = None) -> None:
-    """Refuser d'ajouter à une table d'embeddings des vecteurs d'un autre modèle.
+    """Refuse to add vectors from another model to an embeddings table.
 
     Args:
-        space: Ce que le dataset déclare de sa table, ou None s'il n'en a pas.
-        model: Le modèle du job.
-        dim: La dimension des vecteurs, quand elle est connue.
+        space: What the dataset declares about its table, or None if it has none.
+        model: The job's model.
+        dim: The dimension of the vectors, when known.
 
     Raises:
-        ValueError: La table porte un autre modèle ou une autre dimension.
+        ValueError: The table carries another model or another dimension.
     """
     if space is None:
         return
     existing_model = space.get("model_id")
     if existing_model != model:
         raise ValueError(
-            f"ce dataset porte déjà des embeddings du modèle « {existing_model} » : y ajouter ceux de "
-            f"« {model} » mélangerait deux modèles dans une même table et fausserait la recherche. "
-            "Supprimez la table d'embeddings existante, ou relancez le job avec ce modèle."
+            f"this dataset already carries embeddings from model '{existing_model}': adding those of "
+            f"'{model}' would mix two models in a single table and skew the search. "
+            "Delete the existing embeddings table, or rerun the job with that model."
         )
     existing_dim = space.get("dim")
     if dim is not None and existing_dim is not None and int(existing_dim) != dim:
         raise ValueError(
-            f"le modèle « {model} » rend des vecteurs de dimension {dim}, la table existante est de "
-            f"dimension {existing_dim}"
+            f"model '{model}' returns vectors of dimension {dim}, the existing table has dimension {existing_dim}"
         )
 
 
-def derive_id(kind: str, key: str, index: int = 0) -> str:
-    """Construire un identifiant stable pour une sortie.
+def derive_prefix(kind: str, key: str, model: str | None = None) -> str:
+    """The prefix every output of (kind, model, key) shares."""
+    digest = hashlib.blake2b(f"{kind}\x00{model or ''}\x00{key}".encode(), digest_size=16).hexdigest()
+    return digest[:_ID_PREFIX_LENGTH]
 
-    L'identité vient du **travail** — quel traitement, sur quoi, quelle sortie — et non de
-    l'exécution qui l'a produit. C'est ce qui fait qu'un job relancé remplace ses résultats au
-    lieu de les dupliquer : un identifiant qui porterait le job produirait des lignes neuves
-    à chaque soumission.
+
+def derive_id(kind: str, key: str, index: int = 0, model: str | None = None) -> str:
+    """Build a stable identifier for an output.
+
+    Identity comes from the **work** — which processing, with which model, on what, which
+    output — and not from the execution that produced it. This is what makes a rerun job
+    replace its results instead of duplicating them: an identifier that carried the job would
+    produce new rows on every submission. The model is part of it because another model's
+    outputs add to a kind's rather than replace them (step 2 design): two models, two sets of
+    rows for the same key.
+
+    The identifier is a prefix shared by everything the key produced, then the rank: this is
+    what lets a replay find every row of a previous run by prefix, and delete exactly those
+    beyond what it wrote — a bounded probe used to miss an output that shrank by more than
+    its window.
 
     Args:
-        kind: Le type de job, pour que deux traitements ne se marchent pas dessus.
-        key: Ce sur quoi porte la sortie — l'identifiant d'un item, en général.
-        index: Le rang de la sortie quand il y en a plusieurs pour une même clé.
+        kind: The job kind, so that two processings do not step on each other.
+        key: What the output is about — an item's identifier, generally.
+        index: The rank of the output when there are several for the same key.
+        model: The model that produced it, when the kind runs one.
 
     Returns:
-        Un identifiant déterministe.
+        A deterministic identifier.
     """
-    digest = hashlib.blake2b(f"{kind}\x00{key}\x00{index}".encode(), digest_size=16).hexdigest()
-    return digest[:_ID_LENGTH]
+    return f"{derive_prefix(kind, key, model)}-{index}"
+
+
+def _rank_of(row_id: str) -> int | None:
+    """The rank a derived identifier carries after its prefix; None for an id that has none.
+
+    The prefix is hexadecimal and fixed-length, so only a row written by hand under a derived
+    identifier could lack a rank. It is left alone rather than failing every attempt of the
+    chunk.
+    """
+    rank = row_id.rsplit("-", 1)[-1]
+    return int(rank) if rank.isdigit() else None
+
+
+def is_reviewed(row: Any) -> bool:
+    """Whether a human has looked at this row: then a rerun must leave it alone."""
+    return getattr(row, "review_status", "") not in ("", PENDING_REVIEW)
 
 
 class JobWriter:
-    """Écrit les sorties d'un job dans un dataset, de façon rejouable.
+    """Writes a job's outputs into a dataset, in a replayable way.
 
     Attributes:
-        dataset: Le dataset visé.
-        kind: Le type de job qui écrit, pour dériver les identifiants.
-        job_id: Le job, conservé comme provenance.
+        dataset: The target dataset.
+        kind: The job kind that writes, to derive the identifiers.
+        job_id: The job, kept as provenance.
     """
 
     def __init__(
@@ -210,22 +288,29 @@ class JobWriter:
         source_type: str = "model",
         reopen_dataset: Callable[[], DatasetWriteTarget] | None = None,
         dataset_id: str | None = None,
+        *,
+        params: dict[str, Any] | None = None,
+        model: ModelIdentity | None = None,
     ) -> None:
-        """Lier un écrivain à un job et à son dataset.
+        """Bind a writer to a job and to its dataset.
 
-        Le dataset est ouvert au premier usage, pas à la construction : un type de job qui
-        n'écrit rien ne doit pas exiger qu'un dataset existe, et le runner construit un
-        écrivain pour chaque chunk sans savoir si celui-ci s'en servira.
+        The dataset is opened on first use, not at construction: a job kind that writes nothing
+        must not require a dataset to exist, and the runner builds a writer for every chunk
+        without knowing whether that chunk will use it.
 
         Args:
-            open_dataset: Ouvre le dataset — d'un cache, en général.
-            kind: Le type de job qui écrit.
-            job_id: Le job, conservé comme provenance.
-            source_type: Ce que le type déclare produire.
-            reopen_dataset: Rouvre le dataset **en ignorant tout cache**, pour relire ce qu'un
-                autre process a pu y créer entre-temps. Sans lui, `open_dataset` fait foi.
-            dataset_id: L'identifiant du dataset, clé du compte d'écritures qui décide des
-                compactions. Sans lui, l'écrivain compte pour lui seul.
+            open_dataset: Opens the dataset — from a cache, generally.
+            kind: The job kind that writes.
+            job_id: The job, kept as provenance.
+            source_type: What the kind declares it produces.
+            reopen_dataset: Reopens the dataset **bypassing any cache**, to reread what another
+                process may have created in it meanwhile. Without it, `open_dataset` is
+                authoritative.
+            dataset_id: The dataset's identifier, key of the write count that decides
+                compactions. Without it, the writer counts for itself alone.
+            params: The job's validated parameters, as the provenance records them — those that
+                say what was computed, not how the engine ran it.
+            model: The model the job ran, when the kind runs one.
         """
         self._open_dataset = open_dataset
         self._dataset_id = dataset_id
@@ -234,65 +319,263 @@ class JobWriter:
         self.kind = kind
         self.job_id = job_id
         self.source_type = source_type
+        self.params = params
+        self.model = model
 
     @property
     def dataset(self) -> DatasetWriteTarget:
-        """Le dataset visé, ouvert à la demande."""
+        """The target dataset, opened on demand."""
         if self._dataset is None:
             self._dataset = self._open_dataset()
         return self._dataset
 
     def provenance(self) -> dict[str, str]:
-        """De quoi tracer une sortie jusqu'au traitement qui l'a produite.
+        """What it takes to trace an output back to the processing that produced it.
 
-        Les schémas d'annotation portent `source_type`, `source_name` et `source_metadata` ;
-        les remplir ici plutôt que dans chaque type de job garantit qu'aucune sortie de job
-        n'atterrit dans un dataset sans qu'on sache d'où elle vient. Le vocabulaire de
-        `source_type` est celui des schémas — `model`, `human`, `ground_truth`, `other` —
-        et c'est le type de job qui déclare lequel le décrit.
+        The annotation schemas carry `source_type`, `source_name` and `source_metadata`;
+        filling them here rather than in every job kind guarantees that no job output lands in
+        a dataset without knowing where it came from. The `source_type` vocabulary is that of
+        the schemas — `model`, `human`, `ground_truth`, `other` — and it is the job kind that
+        declares which one describes it.
+
+        `source_metadata` is self-contained: the job identifier is an opaque run label, since
+        jobs are cleaned by truncation, and the kind, the model, its version and the
+        parameters are what a reviewer needs to know how a row was produced without any
+        table to look it up in.
         """
-        return {
+        metadata: dict[str, Any] = {"job_id": self.job_id, "kind": self.kind}
+        if self.model is not None:
+            metadata["model"] = self.model.name
+            if self.model.version is not None:
+                metadata["model_version"] = self.model.version
+        if self.params is not None:
+            metadata["params"] = self.params
+        provenance = {
             "source_type": self.source_type,
             "source_name": self.kind,
-            "source_metadata": json.dumps({"job_id": self.job_id}),
+            "source_metadata": json.dumps(metadata, sort_keys=True),
         }
+        if self.source_type == MODEL_SOURCE:
+            # A model's output arrives to be reviewed; a human's has nothing to review, and a
+            # demonstration kind's is neither.
+            provenance["review_status"] = PENDING_REVIEW
+        return provenance
 
     def ids_for(self, key: str, count: int) -> list[str]:
-        """Les identifiants qu'une clé occupera pour `count` sorties."""
-        return [derive_id(self.kind, key, index) for index in range(count)]
+        """The identifiers a key will occupy for `count` outputs."""
+        return [derive_id(self.kind, key, index, self._model_name) for index in range(count)]
 
-    def replace(self, table_name: str, key: str, rows: Sequence[Any]) -> list[str]:
-        """Écrire les sorties d'une clé, en remplaçant intégralement les précédentes.
+    @property
+    def _model_name(self) -> str | None:
+        return self.model.name if self.model is not None else None
 
-        Deux opérations, et les deux sont nécessaires : les lignes sont écrites en upsert sur
-        leur identifiant dérivé, puis **les lignes surnuméraires d'une exécution précédente
-        sont supprimées**. Sans cette seconde étape, un rejeu qui produirait moins de sorties
-        qu'avant — un modèle qui détecte deux objets là où il en voyait cinq — laisserait
-        trois lignes orphelines que rien ne viendrait jamais nettoyer.
+    def replace(
+        self,
+        table_name: str,
+        key: str,
+        rows: Sequence[Any],
+        entities: Sequence[Any] | None = None,
+        covers: Coverage | None = None,
+    ) -> list[str]:
+        """Write a key's outputs, fully replacing the previous ones.
+
+        Three steps. What a previous run wrote for this (kind, model, key) is read by the
+        prefix its identifiers share. **Rows a human reviewed are frozen**: accepted, corrected
+        or rejected, they keep their rank and are not touched — a rerun replaces what is still
+        pending, never what someone looked at (step 2 design). The new rows take the free
+        ranks, in order, and are upserted; then **the pending rows of the previous run that no
+        new row replaced are deleted**. Without that last step, a replay that produced fewer
+        outputs than before — a model that detects two objects where it used to see five —
+        would leave three orphan rows that nothing would ever clean up.
+
+        The replacement is exact: scoped by (kind, model, key), which is what the prefix
+        encodes, so another model's rows for the same key are left alone, and no output
+        shrinks past what is cleaned.
+
+        An annotation can come with its entity — a detected box and the object it names. The
+        entity shares its annotation's identifier, in the entities table, and follows it: written
+        before it, since the annotation references it; kept when the annotation is frozen;
+        deleted with it when it is stale. A rank is also frozen when a person attached other
+        work to its entity — a mask, a keypoint, a child object: reassigning that object to
+        whatever the model finds at the same rank would contradict them silently. Stale
+        entities are looked up by the prefix too, in their own table, so that a crash between
+        the two writes leaves none behind for good.
 
         Args:
-            table_name: La table visée.
-            key: Ce sur quoi portent ces sorties, typiquement un identifiant d'item.
-            rows: Les lignes à écrire. Leur champ `id` est réécrit.
+            table_name: The target table.
+            key: What these outputs are about, typically an item identifier.
+            rows: The rows to write. Their `id` field is overwritten.
+            entities: One entity per row, when the rows are annotations of new objects. Their
+                `id` is overwritten, and each row's `entity_id` set to it.
+            covers: Which of the previous rows this write is about, given each with its entity
+                (None without `entities`). The others are left as they are and keep their rank,
+                like a reviewed row — a detection asked for dogs replaces the dogs it found
+                before, not the cars. Every row by default.
 
         Returns:
-            Les identifiants écrits.
-        """
-        written = self.ids_for(key, len(rows))
-        for row, row_id in zip(rows, written):
-            row.id = row_id
+            The identifiers written.
 
+        Raises:
+            ValueError: There is not one entity per row.
+        """
+        if entities is not None and len(entities) != len(rows):
+            raise ValueError(f"{len(entities)} entities for {len(rows)} rows")
+        prefix = derive_prefix(self.kind, key, self._model_name)
+        previous = [
+            row
+            for row in self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
+            if _rank_of(row.id) is not None
+        ]
+        frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
+        previous_entities: list[Any] = []
+        if entities is not None:
+            previous_entities = [
+                entity
+                for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id LIKE '{prefix}-%'")
+                if _rank_of(entity.id) is not None
+            ]
+            candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
+            frozen |= {_rank_of(entity_id) for entity_id in self._entities_in_use(candidates, table_name)}
+        if covers is not None:
+            entity_of = {entity.id: entity for entity in previous_entities}
+            frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
+
+        written: list[str] = []
+        rank = 0
+        for row in rows:
+            while rank in frozen:
+                rank += 1
+            row.id = f"{prefix}-{rank}"
+            written.append(row.id)
+            rank += 1
+
+        if entities:
+            for entity, row in zip(entities, rows, strict=True):
+                entity.id = row.id
+                row.entity_id = entity.id
+            self.dataset.update_data(ENTITY_TABLE, list(entities))
+            self._count_write(ENTITY_TABLE)
         if rows:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
 
-        self._drop_leftovers(table_name, key, kept=len(rows))
+        replaced = set(written)
+        stale = [row.id for row in previous if row.id not in replaced and _rank_of(row.id) not in frozen]
+        if stale:
+            self.dataset.delete_data(table_name, stale)
+            logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
+        stale_entities = [
+            entity.id
+            for entity in previous_entities
+            if entity.id not in replaced and _rank_of(entity.id) not in frozen
+        ]
+        if stale_entities:
+            self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
 
+    def drop_pending(self, table_name: str, with_entities: bool = False, covers: Coverage | None = None) -> int:
+        """Delete every row this kind wrote that nobody has reviewed yet, whatever its model.
+
+        For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
+        means the pending ones — a row a person accepted, corrected or rejected stays, and so
+        does one whose entity a person attached other work to.
+
+        Args:
+            table_name: The kind's annotation table.
+            with_entities: Delete the entities those rows name too.
+            covers: Which of those rows to delete, given each with its entity, as for `replace`.
+                Every row by default.
+
+        Returns:
+            How many rows were deleted.
+        """
+        rows = self.dataset.get_data(
+            table_name, where=f"source_name = '{self.kind}' AND review_status = '{PENDING_REVIEW}'"
+        )
+        if covers is not None:
+            named = {row.entity_id for row in rows if row.entity_id}
+            entity_of = (
+                {
+                    entity.id: entity
+                    for batch in _batched(named)
+                    for entity in self.dataset.get_data(ENTITY_TABLE, ids=batch)
+                }
+                if ENTITY_TABLE in self.dataset.info.tables
+                else {}
+            )
+            rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
+        pending = [row.id for row in rows]
+        if pending and with_entities:
+            in_use = self._entities_in_use(set(pending), table_name)
+            pending = [row_id for row_id in pending if row_id not in in_use]
+        if pending:
+            # The entities first: a crash between the two leaves boxes pointing at nothing, which
+            # the next attempt finds again as pending and finishes; the other order would leave
+            # entities nothing refers to, which no attempt would find.
+            if with_entities:
+                self._delete_existing(ENTITY_TABLE, pending)
+            for batch in _batched(pending):
+                self.dataset.delete_data(table_name, batch)
+            logger.info(
+                "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
+            )
+        return len(pending)
+
+    def ensure_label_field(self) -> str:
+        """The entity field this job writes a class into, added to the dataset if there is none.
+
+        Chosen with the rule the annotation interface uses to read a class. A dataset whose
+        entities hold no text field gets one, `category`, empty for the entities already there.
+
+        Returns:
+            The field name.
+        """
+        entity = self.dataset.info.entity
+        field = label_field_of(entity) if entity is not None else None
+        if field is None:
+            self.dataset.ensure_entity_text_field(DEFAULT_LABEL_FIELD)
+            field = DEFAULT_LABEL_FIELD
+            logger.info("job %s: the dataset's entities gained a '%s' field", self.job_id, field)
+        return field
+
+    def table_schema(self, table_name: str) -> Any:
+        """The schema of one of the dataset's tables, to build the rows a job writes into it."""
+        return self.dataset.info.tables[table_name]
+
+    def read(self, table_name: str, where: str) -> list[Any]:
+        """Rows of a table matching a filter — what a kind checks its outputs against."""
+        return self.dataset.get_data(table_name, where=where)
+
+    def _entities_in_use(self, entity_ids: set[str], own_table: str) -> set[str]:
+        """Those of these entities that something other than their own annotation refers to.
+
+        An annotation in any table that names one, apart from the row of `own_table` sharing its
+        identifier, or an entity whose parent it is.
+        """
+        used: set[str] = set()
+        for batch in _batched(entity_ids):
+            listed = to_sql_list(batch)
+            for name, schema in self.dataset.info.tables.items():
+                if "entity_id" not in getattr(schema, "model_fields", {}):
+                    continue
+                for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
+                    if not (name == own_table and row.id == row.entity_id):
+                        used.add(row.entity_id)
+            if ENTITY_TABLE in self.dataset.info.tables:
+                children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
+                used |= {entity.parent_id for entity in children}
+        return used & entity_ids
+
+    def _delete_existing(self, table_name: str, ids: list[str]) -> None:
+        for batch in _batched(ids):
+            existing = [row.id for row in self.dataset.get_data(table_name, ids=batch)]
+            if existing:
+                self.dataset.delete_data(table_name, existing)
+
     def _count_write(self, table_name: str) -> None:
-        """Compter une écriture, et compacter la table quand assez se sont accumulées."""
-        # Un identifiant plutôt que l'objet : un dataset rouvert est un autre objet pour la même
-        # table, et l'adresse d'un objet libéré est réutilisée.
+        """Count a write, and compact the table once enough have accumulated."""
+        # An identifier rather than the object: a reopened dataset is another object for the
+        # same table, and the address of a freed object gets reused.
         key = (self._dataset_id or f"writer-{id(self)}", table_name)
         with _writes_guard:
             _writes_since_compaction[key] += 1
@@ -303,69 +586,62 @@ class JobWriter:
             self.compact(table_name)
 
     def compact(self, table_name: str) -> None:
-        """Fusionner les fragments d'une table et effacer ses versions anciennes.
+        """Merge a table's fragments and erase its old versions.
 
-        Une compaction qui échoue n'est pas un échec du chunk : ses lignes sont écrites. On le
-        journalise, et la suivante réessaiera.
+        A failed compaction is not a chunk failure: its rows are written. We log it, and the
+        next one will retry.
         """
         try:
             self.dataset.open_table(table_name).optimize(cleanup_older_than=KEEP_OLD_VERSIONS_FOR)
         except Exception as error:
-            logger.warning("job %s : compaction de %s impossible (%s)", self.job_id, table_name, error)
+            logger.warning("job %s: cannot compact %s (%s)", self.job_id, table_name, error)
 
-    def _drop_leftovers(self, table_name: str, key: str, kept: int) -> None:
-        """Effacer ce qu'une exécution précédente avait écrit au-delà de `kept`.
-
-        Les identifiants étant dérivés d'une suite d'index, les survivants d'un rejeu plus
-        court sont exactement les rangs suivants. On en sonde un nombre borné : au-delà, une
-        sortie qui aurait rétréci de plus de `_LEFTOVER_PROBE` lignes laisserait des restes,
-        ce qui est préférable à balayer la table à chaque écriture.
-        """
-        candidates = [derive_id(self.kind, key, index) for index in range(kept, kept + _LEFTOVER_PROBE)]
-        existing = self._existing(table_name, candidates)
-        if existing:
-            self.dataset.delete_data(table_name, existing)
-            logger.debug("job %s : %d ligne(s) obsolète(s) retirée(s) pour %s", self.job_id, len(existing), key)
-
-    def _existing(self, table_name: str, ids: Iterable[str]) -> list[str]:
-        """Parmi ces identifiants, ceux qui sont réellement dans la table."""
-        wanted = list(ids)
-        if not wanted:
-            return []
-        found = self.dataset.get_data(table_name, ids=wanted)
-        return [row.id for row in found]
-
-    # Le nom canonique de la table d'embeddings de records dans Pixano.
+    # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"
 
-    def write_record_embeddings(self, record_ids: Sequence[str], vectors: Sequence[Any], model: str) -> None:
-        """Écrire un vecteur par enregistrement, en remplaçant le précédent.
+    def drop_embeddings(self) -> None:
+        """Delete the dataset's embeddings table, so that another model can fill it.
 
-        La table n'est pas ordinaire : sa largeur dépend du modèle, donc elle ne peut être
-        créée qu'une fois un premier vecteur connu. Créer au premier passage évite d'imposer
-        au type de job de connaître la dimension de son modèle.
+        Only for a kind's `prepare`, and only on an explicit parameter: this destroys every
+        vector of the dataset. Harmless when there is no table.
+        """
+        self.dataset.drop_record_embeddings()
+        logger.info("job %s: embeddings table dropped before recomputing", self.job_id)
 
-        Une table existante n'accepte que les vecteurs du modèle et de la dimension qu'elle
-        déclare. Mélanger deux modèles dans une même table ne lève aucune erreur à l'écriture
-        quand leurs dimensions coïncident — et fausse en silence toute recherche par similarité,
-        puisque la table continue d'annoncer l'ancien modèle.
+    def write_media_embeddings(
+        self, record_ids: Sequence[str], view_ids: Sequence[str], vectors: Sequence[Any], model: str
+    ) -> None:
+        """Write one vector per medium, replacing the previous one.
+
+        An embedding belongs to a medium — one camera of a nuScenes record, not the record: a
+        record with six images has six vectors, each carrying its `view_id`, and a search that
+        finds a medium returns its record. The medium is the replacement key.
+
+        The table is not an ordinary one: its width depends on the model, so it can only be
+        created once a first vector is known. Creating on the first pass avoids requiring the
+        job kind to know its model's dimension.
+
+        An existing table only accepts vectors of the model and dimension it declares. Mixing
+        two models in a single table raises no error on write when their dimensions coincide —
+        and silently skews every similarity search, since the table keeps announcing the old
+        model.
 
         Raises:
-            ValueError: Les vecteurs ne correspondent pas aux enregistrements, ou la table
-                existante a été calculée avec un autre modèle ou une autre dimension.
+            ValueError: The vectors do not match the media, or the existing table was
+                computed with another model or another dimension.
         """
-        if len(record_ids) != len(vectors):
-            raise ValueError(f"{len(record_ids)} enregistrements pour {len(vectors)} vecteurs")
+        if not len(record_ids) == len(view_ids) == len(vectors):
+            raise ValueError(f"{len(record_ids)} records, {len(view_ids)} media for {len(vectors)} vectors")
         if not vectors:
             return
 
         dataset = self.dataset
         dim = len(vectors[0])
         if not dataset.has_record_embeddings():
-            # Relire le dataset hors cache avant de créer : la création écrase une table qui
-            # existerait déjà, et un autre worker a pu la créer depuis que celui-ci a ouvert le
-            # dataset. Deux workers qui créent au même instant ne sont pas couverts — c'est le
-            # rôle d'écrivain par dataset que l'étape 4 doit décider.
+            # Reread the dataset bypassing the cache before creating: creation overwrites a
+            # table that would already exist, and another worker may have created it since this
+            # one opened the dataset. Two workers creating at the same instant are not covered —
+            # that is the per-dataset writer role that step 4 must decide.
             dataset = self._dataset = self._reopen_dataset()
         if not dataset.has_record_embeddings():
             dataset.create_record_embedding_table(dim=dim, model_id=model)
@@ -374,8 +650,8 @@ class JobWriter:
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
-            schema(id=derive_id(self.kind, record_id, 0), record_id=record_id, vector=list(vector))
-            for record_id, vector in zip(record_ids, vectors)
+            schema(id=derive_id(self.kind, view_id, 0), record_id=record_id, view_id=view_id, vector=list(vector))
+            for record_id, view_id, vector in zip(record_ids, view_ids, vectors)
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
         self._count_write(self.EMBEDDING_TABLE)

@@ -4,9 +4,20 @@
 # License: CECILL-C
 # =====================================
 
-"""Les types de jobs que ce worker sait exécuter."""
+"""The job kinds this worker knows how to run."""
 
-from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .base import (
+    CONFIRM_MARKER,
+    MODEL_TASK_MARKER,
+    Chunk,
+    JobKind,
+    JobParams,
+    Outcome,
+    QuarantinedItem,
+    TransientError,
+    media_chunks,
+)
+from .detection import DetectionKind, DetectionParams
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
@@ -14,28 +25,33 @@ from .registry import Registry
 
 
 def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: bool = False) -> Registry:
-    """Le registre livré avec ce worker.
+    """The registry shipped with this worker.
 
-    L'URL d'inférence est passée aux types qui en ont besoin plutôt que lue dans
-    l'environnement par chacun : un type ne doit pas avoir à connaître le déploiement.
+    The inference URL is handed to the kinds that need it rather than read from the
+    environment by each of them: a kind should not have to know about the deployment.
 
     Args:
-        inference_url: L'adresse du serveur d'inférence.
-        api_key: Sa clé d'API, vide s'il n'en demande pas.
-        demo_kinds: Enregistrer aussi `fake` et `label`. Ils existent pour éprouver le moteur
-            et le montrer ; ils laissent écrire n'importe où dans un dataset, et n'ont donc pas
-            leur place dans un déploiement partagé (revue indépendante, C1).
+        inference_url: The address of the inference server.
+        api_key: Its API key, empty if it does not ask for one.
+        demo_kinds: Also register `fake` and `label`. They exist to exercise the engine and to
+            show it off; they let anyone write anywhere in a dataset, and so have no place in a
+            shared deployment (independent review, C1).
     """
     registry = Registry()
     if demo_kinds:
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
+    registry.register(DetectionKind(inference_url, api_key))
     return registry
 
 
 __all__ = [
+    "CONFIRM_MARKER",
+    "MODEL_TASK_MARKER",
     "Chunk",
+    "DetectionKind",
+    "DetectionParams",
     "FakeKind",
     "EmbeddingsKind",
     "EmbeddingsParams",
@@ -48,5 +64,6 @@ __all__ = [
     "QuarantinedItem",
     "Registry",
     "TransientError",
+    "media_chunks",
     "default_registry",
 ]

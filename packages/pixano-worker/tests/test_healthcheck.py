@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests de la sonde de vivacité du worker."""
+"""Tests of the worker's liveness probe."""
 
 import os
 import time
@@ -18,14 +18,14 @@ from pixano_worker.healthcheck import main as probe
 
 @pytest.fixture
 def heartbeat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Rediriger le fichier de battement vers un emplacement jetable."""
+    """Redirect the heartbeat file to a throwaway location."""
     path = tmp_path / "battement"
     monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", str(path))
     return path
 
 
 def test_a_missing_heartbeat_is_unhealthy(heartbeat: Path) -> None:
-    """Avant le premier battement, il n'y a rien à lire : le worker n'est pas prêt."""
+    """Before the first heartbeat, there is nothing to read: the worker is not ready."""
     assert probe() == 1
 
 
@@ -54,9 +54,9 @@ def test_beating_again_revives_a_stale_worker(heartbeat: Path) -> None:
 
 
 def test_the_backoff_cannot_outlast_the_liveness_window() -> None:
-    """Le worker ne bat qu'une fois par tour d'attente.
+    """The worker beats only once per waiting round.
 
-    Si l'espacement des tentatives atteignait la limite d'âge, un worker en train d'attendre
-    une dépendance absente basculerait « unhealthy » alors qu'il fait exactement son travail.
+    If the spacing between attempts reached the age limit, a worker waiting for an absent
+    dependency would flip to "unhealthy" while doing exactly its job.
     """
     assert MAX_BACKOFF_S < MAX_HEARTBEAT_AGE_S

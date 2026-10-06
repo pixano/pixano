@@ -4,11 +4,11 @@
 # License: CECILL-C
 # =====================================
 
-"""Les contraintes du schéma encodent des décisions de conception.
+"""The schema constraints encode design decisions.
 
-Chaque test ici nomme le défaut qu'une contrainte rend impossible. Ce ne sont pas des tests
-de PostgreSQL : ce sont les garde-fous qui empêchent les lots suivants de réintroduire un
-problème qu'on a délibérément conçu hors d'atteinte.
+Each test here names the flaw a constraint makes impossible. These are not tests of
+PostgreSQL: they are the guardrails that keep the following lots from reintroducing a problem
+we deliberately designed out of reach.
 """
 
 from datetime import datetime, timezone
@@ -19,7 +19,7 @@ from pixano_worker.schema import SCHEMA_NAME
 
 
 def _new_job(db: psycopg.Connection, **fields: object) -> str:
-    columns = {"kind": "factice", "dataset": "ds", "total_tasks": 1, **fields}
+    columns = {"kind": "dummy", "dataset": "ds", "total_tasks": 1, **fields}
     names = ", ".join(columns)
     placeholders = ", ".join(["%s"] * len(columns))
     row = db.execute(
@@ -32,7 +32,7 @@ def _new_job(db: psycopg.Connection, **fields: object) -> str:
 
 class TestJobConstraints:
     def test_the_database_generates_the_identifier(self, db: psycopg.Connection) -> None:
-        """Ni l'application ni le worker n'ont besoin d'une bibliothèque d'identifiants."""
+        """Neither the application nor the worker needs an identifier library."""
         assert _new_job(db)
 
     def test_an_unknown_state_is_refused(self, db: psycopg.Connection) -> None:
@@ -40,11 +40,11 @@ class TestJobConstraints:
             _new_job(db, state="oops")
 
     def test_an_error_payload_requires_a_failed_job(self, db: psycopg.Connection) -> None:
-        """Le défaut du magasin SQLite : l'annulation planquée dans la charge d'erreur.
+        """The SQLite store's flaw: the cancellation stashed in the error payload.
 
-        Voir src/pixano/datasets/io/jobs.py:189-207 — `request_cancel` y écrit
-        `{"cancel_requested": True}` dans `error_json`, ce qui écrase l'erreur précédente et
-        se fait écraser en retour. Ici c'est structurellement impossible.
+        See src/pixano/datasets/io/jobs.py:189-207 — `request_cancel` writes
+        `{"cancel_requested": True}` into `error_json` there, which overwrites the previous
+        error and gets overwritten in return. Here it is structurally impossible.
         """
         with pytest.raises(psycopg.errors.CheckViolation):
             _new_job(db, state="done", error="{}")
@@ -54,15 +54,15 @@ class TestJobConstraints:
             _new_job(db, state="cancelled", error='{"cancel_requested": true}')
 
     def test_params_must_be_an_object(self, db: psycopg.Connection) -> None:
-        """Un modèle pydantic entre toujours ; un tableau nu, jamais."""
+        """A pydantic model always gets in; a bare array, never."""
         with pytest.raises(psycopg.errors.CheckViolation):
             _new_job(db, params="[1, 2]")
 
 
 class TestChunkConstraints:
     def test_a_lease_exists_exactly_while_running(self, db: psycopg.Connection) -> None:
-        """Un chunk terminé qui garderait son bail, ou un chunk actif sans bail — donc
-        jamais récupérable — sont refusés à l'écriture."""
+        """A finished chunk that kept its lease, or an active chunk without a lease — hence
+        never recoverable — are refused at write time."""
         job = _new_job(db)
 
         with pytest.raises(psycopg.errors.CheckViolation):
@@ -84,7 +84,7 @@ class TestChunkConstraints:
             )
 
     def test_the_same_rank_cannot_be_inserted_twice(self, db: psycopg.Connection) -> None:
-        """Rend l'insertion des chunks idempotente : un POST rejoué ne double pas le travail."""
+        """Makes inserting the chunks idempotent: a replayed POST does not double the work."""
         job = _new_job(db)
         db.execute(
             f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count) VALUES (%s, 0, 1)",
@@ -117,13 +117,13 @@ class TestChunkConstraints:
 
 class TestPlanningLease:
     def test_a_planning_lease_only_exists_while_planning(self, db: psycopg.Connection) -> None:
-        """Un job découpé qui garderait son bail semblerait encore réservé par un worker."""
+        """A split-up job that kept its lease would still look reserved by a worker."""
         with pytest.raises(psycopg.errors.CheckViolation):
             _new_job(db, state="pending", planning_until=datetime.now(timezone.utc))
 
 
 class TestOutcomeConstraints:
-    """Un bilan n'existe que pour un chunk terminé, et un item n'est en quarantaine qu'une fois."""
+    """An outcome only exists for a finished chunk, and an item is quarantined only once."""
 
     @staticmethod
     def _chunk(db: psycopg.Connection) -> tuple[str, int]:
@@ -136,7 +136,7 @@ class TestOutcomeConstraints:
         return job, row[0]
 
     def test_a_finished_chunk_must_say_what_it_produced(self, db: psycopg.Connection) -> None:
-        """Sans bilan, un job ne saurait dire que ce qu'il a tenté — le défaut du lot 10."""
+        """Without an outcome, a job could only say what it attempted — lot 10's flaw."""
         _, chunk = self._chunk(db)
 
         with pytest.raises(psycopg.errors.CheckViolation):
@@ -149,11 +149,11 @@ class TestOutcomeConstraints:
             db.execute(f"UPDATE {SCHEMA_NAME}.job_chunks SET produced = 10, skipped = 0 WHERE id = %s", (chunk,))
 
     def test_an_item_is_quarantined_once_per_job(self, db: psycopg.Connection) -> None:
-        """Un chunk rejoué après la mort de son worker ne doit pas doubler sa quarantaine."""
+        """A chunk replayed after its worker's death must not double its quarantine."""
         job, chunk = self._chunk(db)
         insert = (
             f"INSERT INTO {SCHEMA_NAME}.job_items (job_id, chunk_id, item_id, reason) "
-            "VALUES (%s, %s, 'img-1', 'illisible')"
+            "VALUES (%s, %s, 'img-1', 'unreadable')"
         )
         db.execute(insert, (job, chunk))
 

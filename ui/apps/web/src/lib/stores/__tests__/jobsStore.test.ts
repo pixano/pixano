@@ -29,6 +29,12 @@ const api = vi.hoisted(() => ({
   listJobs: vi.fn(),
   listJobKinds: vi.fn(),
   openJobStream: vi.fn(),
+  listInferenceModels: vi.fn(),
+}));
+
+vi.mock("$lib/api/inference", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("$lib/api/inference")>()),
+  listInferenceModels: api.listInferenceModels,
 }));
 
 vi.mock("$lib/api/jobs", async (importOriginal) => ({
@@ -73,6 +79,7 @@ beforeEach(() => {
   api.listJobs.mockReset().mockResolvedValue([job()]);
   api.listJobKinds.mockReset().mockResolvedValue([]);
   api.openJobStream.mockReset();
+  api.listInferenceModels.mockReset().mockResolvedValue([]);
 });
 
 describe("jobsStore after a stream outage", () => {
@@ -147,5 +154,47 @@ describe("jobsStore hearing a failure", () => {
     });
 
     expect(store.jobs[0].error).toEqual({ reason: "planning failed", detail: "boom" });
+  });
+});
+
+describe("jobsStore asking which models are served", () => {
+  const kind = (name: string, task: string) => ({
+    name,
+    params_schema: { properties: { model: { type: "string", "x-pixano-model-task": task } } },
+  });
+
+  it("asks once per task the kinds need, and keeps the names", async () => {
+    api.listJobKinds.mockResolvedValue([
+      kind("detection", "detection"),
+      kind("embeddings", "embedding"),
+    ]);
+    api.listInferenceModels.mockImplementation((task: string) =>
+      Promise.resolve([
+        { name: task === "detection" ? "yolo26s" : "clip", task, provider_name: "p" },
+      ]),
+    );
+
+    const { store } = await startedStore();
+
+    expect(
+      api.listInferenceModels.mock.calls.map((call: unknown[]) => String(call[0])).sort(),
+    ).toEqual(["detection", "embedding"]);
+    expect(store.servedModels).toEqual({ detection: ["yolo26s"], embedding: ["clip"] });
+  });
+
+  it("leaves out a task the inference cannot answer for, and still loads the others", async () => {
+    api.listJobKinds.mockResolvedValue([
+      kind("detection", "detection"),
+      kind("embeddings", "embedding"),
+    ]);
+    api.listInferenceModels.mockImplementation((task: string) =>
+      task === "detection"
+        ? Promise.reject(new Error("unsupported task"))
+        : Promise.resolve([{ name: "clip", task, provider_name: "p" }]),
+    );
+
+    const { store } = await startedStore();
+
+    expect(store.servedModels).toEqual({ embedding: ["clip"] });
   });
 });

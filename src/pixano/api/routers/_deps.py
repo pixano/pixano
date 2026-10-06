@@ -47,8 +47,11 @@ def get_dataset_dep(
         The dataset.
     """
     cache_key = f"{dataset_id}:{settings.library_dir}"
-    if cache_key in _dataset_cache:
-        return _dataset_cache[cache_key]
+    cached = _dataset_cache.get(cache_key)
+    # A worker changes a dataset from another process, which no invalidation hook reaches: a
+    # detection job adds a field to the entities while this one is open. Reopened then.
+    if cached is not None and not cached.is_stale():
+        return cached
     try:
         dataset = Dataset.find(dataset_id, settings.library_dir)
     except FileNotFoundError:

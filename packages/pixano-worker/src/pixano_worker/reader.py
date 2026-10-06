@@ -4,60 +4,66 @@
 # License: CECILL-C
 # =====================================
 
-"""Le point de lecture unique d'un dataset, pour la planification d'un job.
+"""The single read point of a dataset, for planning a job.
 
-Symétrique de l'écrivain, et pour la même raison : un type de job énumère ce qu'il va traiter
-sans ouvrir de dataset lui-même. Cela garde une seule porte d'entrée vers LanceDB, ce qui
-rendra possible d'y mettre un cache ou une coordination sans toucher au moindre type.
+Symmetric to the writer, and for the same reason: a job kind enumerates what it is going to
+process without opening a dataset itself. This keeps a single door into LanceDB, which will
+make it possible to put a cache or a coordination there without touching a single kind.
 
-Le dataset est ouvert au premier usage : un type dont le travail tient dans ses paramètres
-n'a rien à lire, et ne doit pas exiger qu'un dataset existe.
+The dataset is opened on first use: a kind whose work fits in its parameters has nothing to
+read, and must not require a dataset to exist.
 """
 
+import io
 import logging
-from typing import Any, Callable, Iterator, Sequence
+import os
+from typing import Any, BinaryIO, Callable, Iterator, Sequence
+
+from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
 
 from .media import MediaResolver, ResolvedMedia
 from .writer import DatasetReadSource
 
 
+__all__ = ["MEDIA_TYPES", "JobReader", "MediaType", "media_type_of"]
+
+
 logger = logging.getLogger("pixano-worker")
 
-# Combien de lignes on ramène par requête en énumérant une table. Assez pour amortir l'aller
-# et retour, assez peu pour qu'un dataset de plusieurs millions d'items ne tienne pas en
-# mémoire d'un coup.
+# How many rows we fetch per request when enumerating a table. Enough to amortise the round
+# trip, few enough that a dataset of several million items does not fit in memory at once.
 PAGE_SIZE = 2_000
 
 
 class JobReader:
-    """Lit un dataset pour le compte d'un type de job.
+    """Reads a dataset on behalf of a job kind.
 
     Attributes:
-        media: Comment désigner un média pour l'inference.
+        media: How to designate a media for the inference.
     """
 
     def __init__(self, open_dataset: Callable[[], DatasetReadSource], media: MediaResolver) -> None:
-        """Lier un lecteur à un dataset et à la façon de résoudre ses médias."""
+        """Bind a reader to a dataset and to the way its media are resolved."""
         self._open_dataset = open_dataset
         self._dataset: DatasetReadSource | None = None
         self.media = media
 
     @property
     def dataset(self) -> DatasetReadSource:
-        """Le dataset visé, ouvert à la demande."""
+        """The target dataset, opened on demand."""
         if self._dataset is None:
             self._dataset = self._open_dataset()
         return self._dataset
 
     def count(self, table_name: str, where: str | None = None) -> int:
-        """Combien de lignes une table contient, sans la matérialiser."""
+        """How many rows a table contains, without materialising it."""
         return self.dataset.count_rows_where(table_name, where)
 
     def ids(self, table_name: str, where: str | None = None) -> Iterator[str]:
-        """Énumérer les identifiants d'une table, par pages.
+        """Enumerate a table's identifiers, by pages.
 
-        Par pages, parce qu'un job peut viser des centaines de milliers d'items et que la
-        planification doit rester tenable en mémoire.
+        By pages, because a job may target hundreds of thousands of items and planning must
+        stay tractable in memory.
         """
         total = self.count(table_name, where)
         for offset in range(0, total, PAGE_SIZE):
@@ -65,10 +71,32 @@ class JobReader:
             for row in rows:
                 yield row.id
 
+    def media_tables(self, media_type: str) -> list[str]:
+        """The dataset's tables that hold media of this type, in a stable order.
+
+        Pixano stores every view of a type in one canonical table — nuScenes' six cameras are
+        all rows of `images`, told apart by their logical name — so this is usually one table.
+        """
+        return sorted(name for name, schema in self.dataset.info.tables.items() if media_type_of(schema) == media_type)
+
     def rows(self, table_name: str, ids: Sequence[str]) -> list[Any]:
-        """Lire des lignes précises, par identifiant."""
+        """Read specific rows, by identifier."""
         return self.dataset.get_data(table_name, ids=list(ids))
 
     def resolve_media(self, table_name: str, view: Any) -> ResolvedMedia | None:
-        """Désigner un média pour l'inference — un chemin si possible, les octets sinon."""
+        """Designate a media for the inference — a path if possible, the bytes otherwise."""
         return self.media.resolve(self.dataset, table_name, view)
+
+    def open_media(self, table_name: str, view: Any) -> BinaryIO | None:
+        """The media itself, for what a kind must read rather than send: its file, else its bytes.
+
+        Returns:
+            An open binary stream the caller closes, or None if this worker can reach neither.
+        """
+        path = self.media.local_path(view)
+        if path is not None and os.path.isfile(path):
+            return open(path, "rb")
+        found = self.dataset.get_view_binary(table_name, view.id)
+        if found is None or not found[0]:
+            return None
+        return io.BytesIO(found[0])

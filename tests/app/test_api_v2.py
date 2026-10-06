@@ -339,6 +339,59 @@ class TestStaticImage:
         assert resp.status_code == 200
         assert resp.json()["confidence"] == 0.95
 
+    def _model_box(self, client: TestClient, box_id: str) -> None:
+        resp = client.post(
+            f"{STATIC_BASE}/bboxes",
+            json={
+                "id": box_id,
+                "record_id": "record_0",
+                "entity_id": "entity_0_0",
+                "coords": [0.0, 0.0, 0.1, 0.1],
+                "format": "xywh",
+                "is_normalized": True,
+                "source_type": "model",
+                "source_name": "detection",
+                "source_metadata": '{"model": "yolo"}',
+                "review_status": "pending",
+            },
+        )
+        assert resp.status_code in (200, 201), resp.text
+
+    def test_a_person_editing_a_pending_model_box_corrects_it_and_keeps_its_provenance(
+        self, static_image_client: TestClient
+    ):
+        """Step 2, lot 2: a rerun replaces pending rows only; an edit left pending would be lost.
+
+        The annotation interface sends its own provenance with every edit, as here.
+        """
+        self._model_box(static_image_client, "bbox_model_edit")
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/bbox_model_edit",
+            json={
+                "coords": [0.2, 0.2, 0.3, 0.3],
+                "source_type": "other",
+                "source_name": "Pixano",
+                "source_metadata": "{}",
+            },
+        )
+
+        body = resp.json()
+        assert (body["review_status"], body["source_type"], body["source_name"]) == ("corrected", "model", "detection")
+        assert body["source_metadata"] == '{"model": "yolo"}'
+
+    def test_a_review_that_sets_the_status_itself_is_kept(self, static_image_client: TestClient):
+        self._model_box(static_image_client, "bbox_model_accept")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_model_accept", json={"review_status": "accepted"})
+
+        assert resp.json()["review_status"] == "accepted"
+
+    def test_a_human_box_is_edited_as_before(self, static_image_client: TestClient):
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_0_0", json={"confidence": 0.9})
+
+        assert resp.json()["review_status"] == ""
+
     def test_delete_bbox(self, static_image_client: TestClient):
         # Create then delete
         static_image_client.post(

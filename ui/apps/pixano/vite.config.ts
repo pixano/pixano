@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 
 import { pixanoAliases } from "./pixano-aliases.js";
 
-const proxies_list = ["datasets", "io", "inference", "app", "app_models", "media", "views"];
+const proxies_list = ["datasets", "io", "inference", "app", "app_models", "media", "views", "jobs"];
 
 export default defineConfig({
   plugins: [sveltekit(), tailwindcss()],
@@ -13,7 +13,7 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      [`^/(?:${proxies_list.map((s) => `${s}`).join("|")})(?:/|$).*`]: {
+      [`^/(?:${proxies_list.map((s) => `${s}`).join("|")})(?:[/?]|$).*`]: {
         target: "http://127.0.0.1:7492",
         changeOrigin: true,
         secure: false,

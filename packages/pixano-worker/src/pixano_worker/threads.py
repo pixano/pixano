@@ -4,20 +4,19 @@
 # License: CECILL-C
 # =====================================
 
-"""Les threads où tourne le code des types de jobs.
+"""The threads where the job kinds' code runs.
 
-Un pool dédié plutôt que celui d'asyncio, pour une raison précise : un thread ne s'interrompt
-pas de l'extérieur. Un chunk qui dépasse sa durée est rendu à la file, mais son thread continue
-jusqu'à ce que l'appel bloqué revienne — peut-être jamais. Dans le pool par défaut d'asyncio,
-ces threads s'accumulent sans que rien ne le voie, jusqu'à ce que plus aucun travail ne puisse
-démarrer, planification comprise ; et le battement, qui tourne sur la boucle d'événements,
-continue de dire que le worker va bien.
+A dedicated pool rather than asyncio's, for a precise reason: a thread cannot be interrupted
+from the outside. A chunk that exceeds its time limit is handed back to the queue, but its
+thread goes on until the blocked call returns — maybe never. In asyncio's default pool, these
+threads pile up without anything noticing, until no work can start any more, planning included;
+and the heartbeat, which runs on the event loop, keeps saying the worker is fine.
 
-Ici, les threads bloqués sont comptés. Passé un seuil, le pool se déclare saturé et se
-renouvelle : les threads bloqués sont abandonnés à leur sort, un exécuteur neuf prend le relais,
-et le worker continue. Renouveler plutôt que sortir du process : le redémarrage automatique du
-compose est borné — Docker ne remet pas son compteur à zéro, vérifié — et un worker qui
-compterait dessus finirait arrêté pour de bon au troisième incident.
+Here, stuck threads are counted. Past a threshold, the pool declares itself saturated and
+renews itself: the stuck threads are abandoned to their fate, a fresh executor takes over, and
+the worker goes on. Renewing rather than exiting the process: the compose's automatic restart
+is bounded — Docker does not reset its counter, verified — and a worker that relied on it would
+end up stopped for good at the third incident.
 """
 
 import asyncio
@@ -30,31 +29,31 @@ T = TypeVar("T")
 
 
 class WorkerThreads:
-    """Un pool borné, qui sait combien de ses threads sont bloqués.
+    """A bounded pool, which knows how many of its threads are stuck.
 
     Attributes:
-        stuck_limit: Nombre de threads bloqués à partir duquel le pool est saturé.
+        stuck_limit: Number of stuck threads from which the pool is saturated.
     """
 
     def __init__(self, workers: int, stuck_limit: int) -> None:
-        """Créer le pool.
+        """Create the pool.
 
         Args:
-            workers: Nombre de threads. Il doit dépasser `stuck_limit` : c'est ce qui laisse au
-                worker de quoi constater la saturation avant d'être entièrement bloqué.
-            stuck_limit: Nombre de threads bloqués qui rend le pool saturé.
+            workers: Number of threads. It must exceed `stuck_limit`: this is what leaves the
+                worker enough to notice the saturation before being entirely blocked.
+            stuck_limit: Number of stuck threads that makes the pool saturated.
 
         Raises:
-            ValueError: Le pool n'a pas plus de threads que le seuil de saturation.
+            ValueError: The pool does not have more threads than the saturation threshold.
         """
         if workers <= stuck_limit:
-            raise ValueError(f"{workers} thread(s) pour un seuil de saturation de {stuck_limit}")
+            raise ValueError(f"{workers} thread(s) for a saturation threshold of {stuck_limit}")
         self._workers = workers
         self._executor = self._new_executor()
         self.stuck_limit = stuck_limit
         self._stuck = 0
-        # Incrémentée à chaque renouvellement : un thread abandonné qui finit après coup ne doit
-        # pas décrémenter le compteur de l'exécuteur qui l'a remplacé.
+        # Incremented on every renewal: an abandoned thread that finishes afterwards must not
+        # decrement the counter of the executor that replaced it.
         self._generation = 0
         self._lock = threading.Lock()
 
@@ -63,33 +62,33 @@ class WorkerThreads:
 
     @classmethod
     def for_concurrency(cls, concurrency: int) -> "WorkerThreads":
-        """Dimensionner le pool pour un nombre de chunks en vol.
+        """Size the pool for a number of in-flight chunks.
 
-        Un thread par chunk en vol, un pour la planification, et autant de réserve que de
-        chunks : saturé quand autant de threads sont bloqués qu'il y a de chunks en vol, le
-        pool peut encore servir toute la concurrence au moment où il le signale.
+        One thread per in-flight chunk, one for planning, and as many in reserve as there are
+        chunks: saturated when as many threads are stuck as there are in-flight chunks, the
+        pool can still serve the whole concurrency at the moment it reports it.
         """
         return cls(workers=2 * concurrency + 1, stuck_limit=concurrency)
 
     @property
     def stuck(self) -> int:
-        """Threads encore occupés par un travail dont on a cessé d'attendre le résultat."""
+        """Threads still busy with work whose result we stopped waiting for."""
         with self._lock:
             return self._stuck
 
     @property
     def saturated(self) -> bool:
-        """Le pool a trop de threads bloqués pour que le worker continue."""
+        """The pool has too many stuck threads for the worker to go on."""
         return self.stuck >= self.stuck_limit
 
     async def run(self, work: Callable[[], T], timeout_s: float | None = None) -> T:
-        """Exécuter `work` dans un thread du pool, en attendant au plus `timeout_s`.
+        """Run `work` in a thread of the pool, waiting at most `timeout_s`.
 
         Raises:
-            TimeoutError: Le délai est dépassé. Le thread, s'il avait commencé, continue et est
-                compté comme bloqué jusqu'à ce qu'il finisse. Une annulation de l'attente — un
-                chunk abandonné à l'arrêt du worker — laisse le même thread derrière elle, et
-                le compte de la même façon.
+            TimeoutError: The time limit is exceeded. The thread, if it had started, goes on and
+                is counted as stuck until it finishes. A cancellation of the wait — a chunk
+                abandoned at the worker's stop — leaves the same thread behind, and counts it
+                the same way.
         """
         with self._lock:
             executor, generation = self._executor, self._generation
@@ -97,8 +96,8 @@ class WorkerThreads:
         try:
             return await asyncio.wait_for(asyncio.wrap_future(future), timeout_s)
         except (TimeoutError, asyncio.CancelledError):
-            # Un travail encore en file est annulé pour de bon et ne bloque rien ; seul un travail
-            # déjà commencé laisse un thread derrière lui.
+            # Work still queued is cancelled for good and blocks nothing; only work already
+            # started leaves a thread behind.
             if not future.cancelled():
                 self._count_stuck(future, generation)
             raise
@@ -116,14 +115,13 @@ class WorkerThreads:
         future.add_done_callback(release)
 
     def renew(self) -> int:
-        """Abandonner les threads bloqués et repartir avec un exécuteur neuf.
+        """Abandon the stuck threads and start over with a fresh executor.
 
-        Les threads abandonnés continuent jusqu'à ce que leur appel revienne — l'appel
-        d'inférence a son propre délai, qui les libérera — mais ils ne comptent plus, et rien
-        ne les attend.
+        The abandoned threads go on until their call returns — the inference call has its own
+        time limit, which will free them — but they no longer count, and nothing awaits them.
 
         Returns:
-            Le nombre de threads abandonnés.
+            The number of abandoned threads.
         """
         with self._lock:
             abandoned = self._stuck
@@ -134,5 +132,5 @@ class WorkerThreads:
         return abandoned
 
     def shutdown(self) -> None:
-        """Libérer le pool sans attendre les threads bloqués."""
+        """Release the pool without waiting for the stuck threads."""
         self._executor.shutdown(wait=False, cancel_futures=True)

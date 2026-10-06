@@ -4,19 +4,17 @@
 # License: CECILL-C
 # =====================================
 
-"""Mesurer ce que coûte la compaction d'une table d'annotations, sous le verrou d'écriture.
+"""Measure what compacting an annotation table costs, under the write lock.
 
-La compaction tourne toutes les `COMPACT_EVERY_WRITES` écritures, dans le chunk qui la déclenche,
-sous le verrou d'écriture du dataset : les autres chunks du même dataset attendent qu'elle
-finisse. Courte sur une table de vecteurs (63 fragments fusionnés en une fraction de seconde),
-elle n'avait pas été mesurée sur une table d'annotations — celle que les types de l'étape 2
-rempliront, et que les utilisateurs annotent en même temps.
+Compaction runs every `COMPACT_EVERY_WRITES` writes, in the chunk that triggers it, under the
+dataset's write lock: the other chunks of the same dataset wait for it to finish. Short on a
+vector table (63 fragments merged in a fraction of a second), it had not been measured on an
+annotation table — the one the step 2 kinds will fill, and that users annotate at the same time.
 
-Le script remplit une table de classifications par écritures de la taille d'un chunk, comme
-le ferait un job, et chronomètre chaque `optimize` : c'est le temps pendant lequel le dataset
-n'accepte aucune autre écriture.
+The script fills a classification table by writes of a chunk's size, as a job would, and times
+each `optimize`: this is the time during which the dataset accepts no other write.
 
-Usage :
+Usage:
     uv run --directory packages/pixano-worker python scripts/measure_compaction.py --rows 10000,30000
 """
 
@@ -34,16 +32,16 @@ from pixano.schemas.annotations.classification import Classification
 from pixano.schemas.records import Record
 
 
-# La taille d'un chunk d'annotations : une ligne par enregistrement, huit enregistrements par
-# chunk comme le défaut du type d'embeddings.
+# The size of an annotation chunk: one row per record, eight records per chunk like the
+# embeddings kind's default.
 ROWS_PER_WRITE = 8
 
 
 def measure(rows: int, root: Path) -> tuple[int, list[float]]:
-    """Remplir une table par écritures de chunk, compacter au rythme du writer, chronométrer.
+    """Fill a table by chunk writes, compact at the writer's pace, time it.
 
     Returns:
-        Le nombre de compactions, et la durée de chacune en secondes.
+        The number of compactions, and the duration of each in seconds.
     """
     dataset = Dataset.create(
         root / f"compaction-{rows}",
@@ -68,12 +66,12 @@ def measure(rows: int, root: Path) -> tuple[int, list[float]]:
 
 
 def main() -> None:
-    """Mesurer et rendre un tableau prêt à coller dans la documentation."""
+    """Measure and return a table ready to paste into the documentation."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--rows", default="10000,30000", help="Tailles de table à mesurer, en lignes.")
+    parser.add_argument("--rows", default="10000,30000", help="Table sizes to measure, in rows.")
     args = parser.parse_args()
 
-    print("| lignes | écritures | compactions | médiane | max | dernière |", flush=True)
+    print("| rows | writes | compactions | median | max | last |", flush=True)
     print("| ---: | ---: | ---: | ---: | ---: | ---: |", flush=True)
     with tempfile.TemporaryDirectory() as scratch:
         for rows in (int(r) for r in args.rows.split(",")):

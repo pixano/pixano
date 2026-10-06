@@ -4,14 +4,14 @@
 # License: CECILL-C
 # =====================================
 
-"""Un type de job qui pose la même étiquette sur une sélection d'enregistrements.
+"""A job kind that puts the same label on a selection of records.
 
-Il existe pour une raison précise : prouver qu'ajouter un type de job ne demande aucune
-modification du moteur. Sa forme diffère délibérément de celle du type factice — ses
-paramètres portent une liste et une valeur obligatoire, son découpage suit une sélection
-donnée plutôt qu'un compte, et il écrit une ligne par tâche plutôt qu'un lot par chunk.
+It exists for a precise reason: to prove that adding a job kind requires no change to the
+engine. Its shape deliberately differs from the fake kind's — its parameters carry a list and
+a mandatory value, its splitting follows a given selection rather than a count, and it writes
+one row per task rather than one batch per chunk.
 
-Si le moteur avait la moindre connaissance de ce que fait un type, l'un des deux casserait.
+If the engine had the slightest knowledge of what a kind does, one of the two would break.
 """
 
 from typing import Any, Iterable
@@ -26,15 +26,15 @@ from .base import Chunk, JobKind, JobParams
 
 
 class LabelParams(JobParams):
-    """Paramètres de l'étiquetage.
+    """Parameters of the labelling.
 
     Attributes:
-        record_ids: Les enregistrements à étiqueter. Une sélection, pas un compte : c'est la
-            forme que prend le cas le plus courant, « traite ce que j'ai coché ».
-        label: L'étiquette à poser. Obligatoire, pour éprouver le refus d'un paramètre
-            manquant à la soumission.
-        chunk_size: Enregistrements par chunk.
-        write_to: Table où écrire. Vide, le type n'écrit rien.
+        record_ids: The records to label. A selection, not a count: this is the shape the most
+            common case takes, "process what I ticked".
+        label: The label to put. Mandatory, to exercise the refusal of a missing parameter at
+            submission.
+        chunk_size: Records per chunk.
+        write_to: Table to write into. Empty, the kind writes nothing.
     """
 
     record_ids: list[str] = Field(default_factory=list)
@@ -44,30 +44,31 @@ class LabelParams(JobParams):
 
 
 class LabelKind(JobKind[LabelParams]):
-    """Pose une étiquette sur chaque enregistrement d'une sélection."""
+    """Puts a label on every record of a selection."""
 
     name = "label"
     params_model = LabelParams
-    # Une étiquette posée par une règle n'est pas une prédiction de modèle.
+    #: The selection would copy every labelled identifier into every row it produced.
+    params_not_in_provenance = JobKind.params_not_in_provenance | {"record_ids"}
+    # A label put by a rule is not a model prediction.
     source_type = "other"
 
     def plan(self, reader: JobReader, params: LabelParams) -> Iterable[Chunk]:
-        """Découper la sélection en chunks. Rien à lire : la sélection est donnée."""
+        """Split the selection into chunks. Nothing to read: the selection is given."""
         ids = params.record_ids
         for start in range(0, len(ids), params.chunk_size):
             batch = ids[start : start + params.chunk_size]
             yield Chunk(payload={"record_ids": batch}, task_count=len(batch))
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: LabelParams) -> dict[str, Any]:
-        """Il n'y a rien à calculer : l'étiquette est dans les paramètres."""
+        """There is nothing to compute: the label is in the parameters."""
         return {"label": params.label, "record_ids": payload["record_ids"]}
 
     def write(self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: LabelParams) -> None:
-        """Écrire une classification par enregistrement.
+        """Write one classification per record.
 
-        Une clé par enregistrement, contrairement au type factice qui en emploie une par
-        chunk : ré-étiqueter un seul enregistrement ne doit pas dépendre du découpage qui
-        l'avait traité la première fois.
+        One key per record, unlike the fake kind which uses one per chunk: relabelling a single
+        record must not depend on the splitting that processed it the first time.
         """
         if not params.write_to:
             return
