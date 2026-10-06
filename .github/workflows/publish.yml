@@ -80,7 +80,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   publish_docs:
-    name: Documentation
+    name: Publish documentation
     needs: publish_pypi
     # The public site describes the latest released version, not a pre-release.
     if: github.event.release.prerelease == false
@@ -146,7 +146,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   publish_docker:
-    name: Docker
+    name: Publish Docker image
     needs: publish_pypi
     runs-on: ubuntu-latest
     steps:

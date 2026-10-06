@@ -18,12 +18,6 @@ on:
       - "pyproject.toml"
       - "uv.lock"
   pull_request:
-    paths:
-      - "docs-astro/**"
-      - ".github/workflows/docs.yml"
-      - "src/pixano/**"
-      - "pyproject.toml"
-      - "uv.lock"
     branches:
       - "main"
       - "release/**"
@@ -39,7 +33,8 @@ concurrency:
 
 jobs:
   build:
-    name: Build
+    # Named after the workflow: this is the check that branch protection requires.
+    name: Documentation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

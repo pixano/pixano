@@ -27,18 +27,6 @@ on:
     branches:
       - "main"
       - "release/**"
-    paths:
-      - "dockerfiles/**"
-      - ".dockerignore"
-      - "LICENSE"
-      - ".github/workflows/docker.yml"
-      - "src/pixano/**"
-      - "ui/**"
-      - "packages/**"
-      - "docker-compose*.yml"
-      - "pyproject.toml"
-      - "hatch_build.py"
-      - "uv.lock"
 
 jobs:
   test:
@@ -140,3 +128,15 @@ jobs:
           cp .env.example .env
           docker compose config --quiet
           docker compose -f docker-compose.yml -f docker-compose.inference.yml config --quiet
+
+  # The one check that branch protection requires for this workflow. List every job above in
+  # `needs`. It runs even when one of them fails, because a skipped job would count as a pass.
+  result:
+    name: Docker
+    if: always()
+    needs: [test, worker, compose]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail unless every job passed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
