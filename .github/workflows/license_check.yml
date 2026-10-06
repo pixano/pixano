@@ -18,7 +18,8 @@ on:
 
 jobs:
   check_license_header:
-    name: Check
+    # Named after the workflow: this is the check that branch protection requires.
+    name: License header
     runs-on: ubuntu-latest
 
     steps:
