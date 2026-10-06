@@ -12,6 +12,8 @@ If you find a bug or you think of some missing features that could be useful whi
 
 To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
 
+Pull requests target the `main` branch. [RELEASING.md](./RELEASING.md) describes how branches, versions, and releases are managed.
+
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
 
 ## Running Pixano locally
