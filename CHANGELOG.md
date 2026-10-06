@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.8.0 (unreleased)
+## Unreleased
+
+## 0.8.0 (2026-09-23)
 
 Two redesigns. The data import/export core
 (`docs/specs/data-import-export.md`): one `analyze → plan → ingest` pipeline
