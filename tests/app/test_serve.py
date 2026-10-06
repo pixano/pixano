@@ -17,22 +17,25 @@ LEGACY_UI_TITLE = "<title>Pixano</title>"
 
 
 def _serve_bundles(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Install a fake build of both UIs and return the new UI's bundle directory."""
+    """Install a fake build of both UIs and return the legacy UI's bundle directory.
+
+    As in the real build, favicon.ico and robots.txt ship in the legacy bundle only.
+    """
     bundle = tmp_path / "dist"
     (bundle / "_app").mkdir(parents=True)
     (bundle / "index.html").write_text(f"<!doctype html>{NEW_UI_TITLE}")
-    (bundle / "favicon.ico").write_bytes(b"\x00\x00\x01\x00pixano-icon")
-    (bundle / "robots.txt").write_text("User-agent: *\nDisallow:\n")
     legacy_bundle = tmp_path / "legacy_dist"
     (legacy_bundle / "_legacy_app").mkdir(parents=True)
     (legacy_bundle / "index.html").write_text(f"<!doctype html>{LEGACY_UI_TITLE}")
+    (legacy_bundle / "favicon.ico").write_bytes(b"\x00\x00\x01\x00pixano-icon")
+    (legacy_bundle / "robots.txt").write_text("User-agent: *\nDisallow:\n")
     monkeypatch.setattr(serve, "TEMPLATE_PATH", str(bundle))
     monkeypatch.setattr(serve, "ASSETS_PATH", str(bundle / "_app"))
     monkeypatch.setattr(serve, "LEGACY_TEMPLATE_PATH", str(legacy_bundle))
     monkeypatch.setattr(serve, "LEGACY_ASSETS_PATH", str(legacy_bundle / "_legacy_app"))
     monkeypatch.setattr(serve.App, "get_env", lambda _: "none")
     monkeypatch.setitem(serve.task_functions, "none", lambda coro: coro.close())
-    return bundle
+    return legacy_bundle
 
 
 def _client(tmp_path: Path) -> TestClient:
