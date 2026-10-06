@@ -33,13 +33,11 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Only main deploys. Release branches and PRs build without publishing.
+# Builds without publishing. The Publish workflow deploys the site when a release is published.
 concurrency:
-  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('docs-{0}', github.ref) }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -87,21 +85,3 @@ jobs:
       - name: Run Pagefind
         run: pnpm exec pagefind --site dist
         working-directory: docs-astro
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: docs-astro/dist
-
-  deploy:
-    name: Deploy
-    needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
