@@ -43,7 +43,9 @@ The model only works if `main` can be released on any day, including by someone 
 | `Documentation`  | The Astro site builds, including the generated API reference                                                    |
 | `License header` | The copyright header is present in `.py`, `.ts`, and `.svelte` files                                            |
 
-A pull request merges only when the checks that ran have passed, with one approving review, and with every commit signed off (`git commit -s`).
+Every workflow runs on every pull request, whatever files it changes, and each one ends with a check named after it: `Backend`, `Frontend`, `Docker`, `Documentation`, and `License header`. A pull request merges only when these five have passed, with one approving review, and with every commit signed off (`git commit -s`).
+
+A job added to a workflow must also be added to the `needs` list of that workflow's last job. Otherwise its failure does not block the merge.
 
 ### Rules
 
@@ -213,11 +215,9 @@ A release candidate is optional. Use one when a minor is large enough to need a 
 
 This section lists what the repository still lacks relative to the process above. Remove each item when it is done, and the section when it is empty.
 
-- **Public documentation.** During the transition the site was deployed from `main`, so it describes unreleased work. Re-running the `Documentation` job of the `v0.8.0` run of `Publish` restores the 0.8.0 documentation.
 - **Changelog of the work in progress.** `main` carries the work that was developed on `dev/v0.9`, but `## Unreleased` in `CHANGELOG.md` has no entry for it.
-- **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows still trigger on `releases/**`, so the first change on that branch has to switch them to `release/**`. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
-- **Required checks.** `main` requires one review but no status check. The workflows above have to be made required. They use path filters, and GitHub leaves a required check that was skipped pending forever, so the filters have to be handled at the same time.
+- **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows predate this document: they trigger on `releases/**` and do not report the five checks, so both have to be fixed on that branch first. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
+- **Required checks.** The five checks exist, but the ruleset that protects `main` and `release/*` does not require them yet. They have to be added to it.
 - **Wheel smoke test.** `.github/scripts/smoke_wheel.py` runs only inside `Publish`, after the tag exists. It should run on pull requests.
 - **Slow and end-to-end tests.** Tests marked `slow`, `hub`, and `e2e` never run in CI, and no test drives the UI in a browser. A scheduled run on `main` is needed, and the manual checks of step 1 should shrink as it grows.
 - **Worker package.** `packages/pixano-worker` has its own version and no publication step in `Publish`. Whether it is released together with Pixano is still to be decided.
-- **Merged branches.** GitHub does not delete a branch when its pull request merges; the setting should be turned on.
