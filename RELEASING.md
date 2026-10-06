@@ -35,13 +35,13 @@ The model only works if `main` can be released on any day, including by someone 
 
 ### Checks on every pull request
 
-| Workflow         | What it verifies                                                                                                |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `Backend`        | pre-commit (Ruff, mypy, license headers) and `pytest` on Python 3.10 to 3.13, plus the `pixano-worker` tests    |
-| `Frontend`       | ESLint, Prettier, `svelte-check`, Vitest, and the production build                                              |
-| `Docker`         | The application and worker images build, the running container answers `/health`, and the compose files resolve |
-| `Documentation`  | The Astro site builds, including the generated API reference                                                    |
-| `License header` | The copyright header is present in `.py`, `.ts`, and `.svelte` files                                            |
+| Workflow         | What it verifies                                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `Backend`        | pre-commit (Ruff, mypy, license headers), `pytest` on Python 3.10 to 3.13, the `pixano-worker` tests, and the wheel smoke test |
+| `Frontend`       | ESLint, Prettier, `svelte-check`, Vitest, and the production build                                                             |
+| `Docker`         | The application and worker images build, the running container answers `/health`, and the compose files resolve                |
+| `Documentation`  | The Astro site builds, including the generated API reference                                                                   |
+| `License header` | The copyright header is present in `.py`, `.ts`, and `.svelte` files                                                           |
 
 Every workflow runs on every pull request, whatever files it changes, and each one ends with a check named after it: `Backend`, `Frontend`, `Docker`, `Documentation`, and `License header`. A pull request merges only when these five have passed, with one approving review, and with every commit signed off (`git commit -s`).
 
@@ -97,14 +97,7 @@ Replace `X.Y.0` with the version being released.
 - The latest runs on `main` are green: `gh run list --branch main --limit 10`.
 - No open issue is marked as blocking the release.
 - The `## Unreleased` section of `CHANGELOG.md` matches what was merged since the previous release: `git log --oneline v<previous>..origin/main`.
-- The wheel builds, installs in a clean environment, and starts. These are the commands the `Publish` workflow runs:
-
-  ```sh
-  uv build
-  python -m venv /tmp/pixano-smoke
-  /tmp/pixano-smoke/bin/python -m pip install dist/pixano-*.whl
-  /tmp/pixano-smoke/bin/python .github/scripts/smoke_wheel.py --expected-version "$(cat VERSION)"
-  ```
+- The wheel needs no manual check: on every pull request, the `Wheel` job of `Backend` builds it, installs it in a clean environment, and starts it.
 
 - The application has been checked by hand, with every feature flag at its default, on a **copy** of a real data directory (opening a dataset can migrate it):
   - the server starts and lists the existing datasets with the right record counts;
@@ -217,7 +210,5 @@ This section lists what the repository still lacks relative to the process above
 
 - **Changelog of the work in progress.** `main` carries the work that was developed on `dev/v0.9`, but `## Unreleased` in `CHANGELOG.md` has no entry for it.
 - **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows predate this document: they trigger on `releases/**` and do not report the five checks, so both have to be fixed on that branch first. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
-- **Required checks.** The five checks exist, but the ruleset that protects `main` and `release/*` does not require them yet. They have to be added to it.
-- **Wheel smoke test.** `.github/scripts/smoke_wheel.py` runs only inside `Publish`, after the tag exists. It should run on pull requests.
 - **Slow and end-to-end tests.** Tests marked `slow`, `hub`, and `e2e` never run in CI, and no test drives the UI in a browser. A scheduled run on `main` is needed, and the manual checks of step 1 should shrink as it grows.
 - **Worker package.** `packages/pixano-worker` has its own version and no publication step in `Publish`. Whether it is released together with Pixano is still to be decided.

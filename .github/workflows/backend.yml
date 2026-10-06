@@ -177,12 +177,48 @@ jobs:
           PIXANO_TEST_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
         run: uv run --directory packages/pixano-worker pytest
 
+  # Same steps as the Publish workflow, so that a packaging failure shows up on the pull
+  # request instead of on release day.
+  wheel:
+    name: Wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node.js 23
+        uses: actions/setup-node@v6
+        with:
+          node-version: 23
+
+      - name: Setup pnpm 10.4.1
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Build package
+        run: uv build
+
+      - name: Verify clean wheel installation and startup
+        run: |
+          python -m venv "$RUNNER_TEMP/pixano-wheel-smoke"
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" -m pip --isolated install --index-url https://pypi.org/simple dist/pixano-*.whl
+          "$RUNNER_TEMP/pixano-wheel-smoke/bin/python" .github/scripts/smoke_wheel.py --expected-version "$(cat VERSION)"
+
   # The one check that branch protection requires for this workflow. List every job above in
   # `needs`. It runs even when one of them fails, because a skipped job would count as a pass.
   result:
     name: Backend
     if: always()
-    needs: [pre-commit, pytest, worker]
+    needs: [pre-commit, pytest, worker, wheel]
     runs-on: ubuntu-latest
     steps:
       - name: Fail unless every job passed

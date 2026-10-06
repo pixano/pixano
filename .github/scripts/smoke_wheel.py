@@ -73,7 +73,8 @@ def smoke_test(expected_version: str) -> None:
                     if response.headers.get_content_type() != "text/html":
                         raise RuntimeError("The home page did not return HTML.")
                     html = response.read().decode("utf-8")
-                asset = re.search(r'["\'](/_app/[^"\']+\.js)["\']', html)
+                # The legacy UI is the default one, so the home page loads its bundle.
+                asset = re.search(r'["\'](/_legacy_app/[^"\']+\.js)["\']', html)
                 if asset is None:
                     raise RuntimeError("The home page contains no bundled JavaScript asset.")
                 with urlopen(f"{base}{asset.group(1)}", timeout=10) as response:
@@ -82,8 +83,14 @@ def smoke_test(expected_version: str) -> None:
                     if not response.read():
                         raise RuntimeError("The bundled JavaScript asset is empty.")
 
-                ui_root = Path(str(files("pixano").joinpath("api/dist")))
-                ui_assets = sorted(path for path in ui_root.rglob("*") if path.is_file())
+                # The whole legacy bundle is served from the root. The new UI stays behind
+                # ACTIVATE_UI_V1_0: its page must be in the wheel, and its /_app assets are served.
+                legacy_root = Path(str(files("pixano").joinpath("api/legacy_dist")))
+                new_root = Path(str(files("pixano").joinpath("api/dist")))
+                if not (new_root / "index.html").is_file():
+                    raise RuntimeError("The new UI's home page is missing from the wheel.")
+                ui_assets = [(legacy_root, path) for path in sorted(legacy_root.rglob("*")) if path.is_file()]
+                ui_assets += [(new_root, path) for path in sorted((new_root / "_app").rglob("*")) if path.is_file()]
                 content_types = {
                     ".css": {"text/css"},
                     ".ico": {"image/x-icon", "image/vnd.microsoft.icon"},
@@ -92,7 +99,7 @@ def smoke_test(expected_version: str) -> None:
                     ".png": {"image/png"},
                     ".txt": {"text/plain"},
                 }
-                for path in ui_assets:
+                for ui_root, path in ui_assets:
                     relative = path.relative_to(ui_root).as_posix()
                     if relative == "index.html":
                         # The home page above is rendered through Jinja.

@@ -177,7 +177,9 @@ class App:
             return legacy_templates.TemplateResponse(request, "index.html")
 
         def root_static_file(filename: str, media_type: str) -> FileResponse:
-            path = Path(TEMPLATE_PATH) / filename
+            # favicon.ico and robots.txt are static files of the legacy app; the new UI's bundle
+            # does not ship them.
+            path = Path(LEGACY_TEMPLATE_PATH) / filename
             if not path.is_file():
                 raise HTTPException(status_code=404, detail="Not Found")
             return FileResponse(path, media_type=media_type)
