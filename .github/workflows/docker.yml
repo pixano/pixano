@@ -10,8 +10,7 @@ on:
   push:
     branches:
       - main
-      - "releases/**"
-      - "dev/**"
+      - "release/**"
     paths:
       - "dockerfiles/**"
       - ".dockerignore"
@@ -27,11 +26,7 @@ on:
   pull_request:
     branches:
       - "main"
-      - "arch/**"
-      - "spec/**"
-      - "feat/**"
-      - "releases/**"
-      - "dev/**"
+      - "release/**"
     paths:
       - "dockerfiles/**"
       - ".dockerignore"

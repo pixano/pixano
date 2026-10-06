@@ -1,6 +1,6 @@
 {
   "name": "pixano",
-  "version": "0.8.0",
+  "version": "0.9.0.dev0",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

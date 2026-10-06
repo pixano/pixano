@@ -10,7 +10,7 @@ on:
   push:
     branches:
       - main
-      - "releases/**"
+      - "release/**"
     paths:
       - "docs-astro/**"
       - "src/pixano/**"
@@ -26,9 +26,7 @@ on:
       - "uv.lock"
     branches:
       - "main"
-      - "arch/**"
-      - "feat/**"
-      - "releases/**"
+      - "release/**"
   workflow_dispatch:
 
 permissions:

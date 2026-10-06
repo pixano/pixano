@@ -161,6 +161,16 @@ Add or update tests alongside the code you change. Backend tests should use `tes
 
 ## Git Workflow
 
+All pull requests target `main`, which stays releasable at any time. Branching, versioning, and the release procedures are described in [RELEASING.md](./RELEASING.md).
+
+### Starting Work on an Issue
+
+Work on each Linear issue in its own git worktree, next to the main checkout. Name the branch with the usual prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`) followed by the issue identifier:
+
+```bash
+git worktree add ../PIX-<n> -b feat/PIX-<n> origin/main
+```
+
 ### Committing Changes
 
 When committing changes:
