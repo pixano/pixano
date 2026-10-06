@@ -18,8 +18,7 @@ on:
       - ".pre-commit-config.yaml"
     branches:
       - "main"
-      - "releases/**"
-      - "dev/**"
+      - "release/**"
   pull_request:
     paths:
       - "src/pixano/**"
@@ -31,11 +30,7 @@ on:
       - ".pre-commit-config.yaml"
     branches:
       - "main"
-      - "arch/**"
-      - "spec/**"
-      - "feat/**"
-      - "releases/**"
-      - "dev/**"
+      - "release/**"
 
 permissions:
   contents: read
