@@ -82,6 +82,8 @@ jobs:
   publish_docs:
     name: Documentation
     needs: publish_pypi
+    # The public site describes the latest released version, not a pre-release.
+    if: github.event.release.prerelease == false
     runs-on: ubuntu-latest
     environment:
       name: github-pages
