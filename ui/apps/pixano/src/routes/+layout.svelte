@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Tooltip } from "bits-ui";
+  import { ArrowsLeftRight } from "phosphor-svelte";
   import { fade } from "svelte/transition";
 
   import pixanoFavicon from "../assets/favicon.ico";
@@ -19,6 +20,7 @@ License: CECILL-C
   import { datasetsStore, themeMode, toggleTheme } from "$lib/stores/appStores.svelte";
   import { getEffectProbeSnapshot, IconButton, ThemeToggle } from "$lib/ui";
   import { navigateToRoute } from "$lib/utils/navigation";
+  import { switchToNewUi } from "$lib/utils/uiVersion";
 
   import "./styles.css";
 
@@ -98,6 +100,17 @@ License: CECILL-C
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
+        {#if data.newUiEnabled}
+          <button
+            type="button"
+            onclick={switchToNewUi}
+            class="inline-flex items-center justify-center rounded-lg p-1.5 text-foreground/60 transition-colors hover:bg-primary/5 hover:text-foreground"
+            title="Switch to new UI"
+          >
+            <ArrowsLeftRight size={20} />
+          </button>
+        {/if}
+
         <InferenceStatusChip />
         <ThemeToggle mode={themeMode.value} onToggle={toggleTheme} />
       </div>

@@ -10,6 +10,7 @@ lerna-debug.log*
 # Modules
 node_modules
 dist
+legacy_dist
 dist-ssr
 *.local
 .vite
@@ -18,6 +19,11 @@ dist-ssr
 # Coverage
 .coverage
 coverage.xml
+coverage/
+
+# AI assistants
+CLAUDE.md
+.claude/
 
 # Docs
 site
@@ -57,3 +63,7 @@ venv
 *.lance
 tests/assets/library/*
 my_data/
+
+.svelte-kit
+build
+data/

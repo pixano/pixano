@@ -16,6 +16,7 @@ from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
 from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
     BBox,
+    BBox3D,
     Classification,
     CompressedRLE,
     Embedding,
@@ -231,6 +232,21 @@ class ImageResponse(ResponseModel):
     src: str
 
 
+class CalibratedImageResponse(ImageResponse):
+    """Response model for a calibrated image view row.
+
+    Extends ``ImageResponse`` with optional camera intrinsics, extrinsics and
+    ego-to-world pose.  Fields are ``None`` when the underlying row comes from
+    the plain ``images`` table so that callers always receive this type.
+    """
+
+    f: tuple[float, float] | None = None
+    c: tuple[float, float] | None = None
+    distortion: list[float] | None = None
+    extrinsic_matrix: list[float] | None = None
+    ego_to_world: list[float] | None = None
+
+
 class TextResponse(ResponseModel):
     """Response model for a text view row."""
 
@@ -257,6 +273,30 @@ class SFrameResponse(ResponseModel):
     timestamp: float = 0
     frame_index: int = 0
     src: str
+
+
+class PointCloudResponse(ResponseModel):
+    """Response model for a point-cloud view row.
+
+    Carries the sensor pose when the row comes from the ``CalibratedPointCloud``
+    table, mirroring what ``CalibratedImageResponse`` does for cameras. Fields
+    are ``None`` for a plain ``PointCloud`` row so callers always receive this
+    type.
+
+    ``extrinsic_matrix`` is the **world-to-sensor** transform (the builder
+    stores ``R = Rᵀ_sensor2world`` and ``t = -R·C``), so applying it to a stored
+    point yields that point in the sensor frame — which is what makes its norm
+    the range from the lidar.
+    """
+
+    id: str
+    record_id: str
+    logical_name: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    src: str
+    extrinsic_matrix: list[float] | None = None
+    ego_to_world: list[float] | None = None
 
 
 TrackletCreate = _create_transport_model(
@@ -286,6 +326,20 @@ BBoxUpdate = _create_transport_model(
     optional=True,
 )
 BBoxResponse = _create_transport_model("BBoxResponse", BBox)
+
+BBox3DCreate = _create_transport_model(
+    "BBox3DCreate",
+    BBox3D,
+    exclude_fields={"created_at", "updated_at"},
+    required_fields={"id"},
+)
+BBox3DUpdate = _create_transport_model(
+    "BBox3DUpdate",
+    BBox3D,
+    exclude_fields={"id", "created_at", "updated_at"},
+    optional=True,
+)
+BBox3DResponse = _create_transport_model("BBox3DResponse", BBox3D)
 
 MaskCreate = _create_transport_model(
     "MaskCreate",
@@ -415,6 +469,7 @@ class DatasetInfoResponse(DatasetInfo):
         "entity",
         "entity_dynamic_state",
         "bbox",
+        "bbox3d",
         "mask",
         "multi_path",
         "keypoint",
@@ -473,6 +528,9 @@ __all__ = [
     "BBoxCreate",
     "BBoxResponse",
     "BBoxUpdate",
+    "BBox3DCreate",
+    "BBox3DResponse",
+    "BBox3DUpdate",
     "ClassificationCreate",
     "ClassificationResponse",
     "ClassificationUpdate",
@@ -503,10 +561,12 @@ __all__ = [
     "MessageResponse",
     "MessageUpdate",
     "PaginatedResponse",
+    "CalibratedImageResponse",
     "RelationCreate",
     "RelationResponse",
     "RelationUpdate",
     "ImageResponse",
+    "PointCloudResponse",
     "SFrameResponse",
     "TextResponse",
     "TextSpanCreate",

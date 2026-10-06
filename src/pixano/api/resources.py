@@ -6,6 +6,7 @@
 
 """Canonical API resource definitions."""
 
+import typing
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 
 from pixano.schemas import (
     BBox,
+    BBox3D,
     Classification,
     CompressedRLE,
     Embedding,
@@ -32,6 +34,9 @@ from pixano.schemas import (
 )
 
 from .models import (
+    BBox3DCreate,
+    BBox3DResponse,
+    BBox3DUpdate,
     BBoxCreate,
     BBoxResponse,
     BBoxUpdate,
@@ -75,6 +80,7 @@ from .models import (
 
 
 CreateValidator = Callable[[Any, dict[str, Any]], None]
+PayloadPadder = Callable[[type[LanceModel], dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +102,43 @@ class ResourceSpec:
     allow_update: bool = True
     allow_delete: bool = True
     validate_create: CreateValidator | None = None
+    pad_payload: PayloadPadder | None = None
+
+
+def _pad_entity_payload(schema: type[LanceModel], payload: dict[str, Any]) -> dict[str, Any]:
+    """Fill type-appropriate empty defaults for required fields missing from payload.
+
+    Handles the case where the entity table uses a custom subschema with extra
+    required fields (e.g. CategoryEntity.category) while the UI only sends base
+    Entity fields.  The padded row can be updated with real values later.
+    """
+    import logging
+
+    logger_ = logging.getLogger(__name__)
+    patched = dict(payload)
+    for field_name, field_info in schema.model_fields.items():  # type: ignore[attr-defined]
+        if field_name in patched or not field_info.is_required():
+            continue
+        ann = field_info.annotation
+        origin = typing.get_origin(ann)
+        if ann is str:
+            patched[field_name] = ""
+        elif ann is int:
+            patched[field_name] = 0
+        elif ann is float:
+            patched[field_name] = 0.0
+        elif ann is bool:
+            patched[field_name] = False
+        elif origin in (list, tuple):
+            patched[field_name] = []
+        else:
+            logger_.warning(
+                "Cannot pad required field %r of unhandled type %r on schema %s — " "row may fail validation",
+                field_name,
+                ann,
+                schema.__name__,
+            )
+    return patched
 
 
 def _validate_entity_create(service: Any, data: dict[str, Any]) -> None:
@@ -181,6 +224,7 @@ ENTITY_RESOURCE = ResourceSpec(
     response_model=EntityResponse,
     list_filters=("record_id", "where"),
     validate_create=_validate_entity_create,
+    pad_payload=_pad_entity_payload,
 )
 
 ENTITY_DYNAMIC_STATE_RESOURCE = ResourceSpec(
@@ -229,6 +273,28 @@ BBOX_RESOURCE = ResourceSpec(
     create_model=BBoxCreate,
     update_model=BBoxUpdate,
     response_model=BBoxResponse,
+    list_filters=(
+        "record_id",
+        "entity_id",
+        "view_name",
+        "source_type",
+        "tracklet_id",
+        "frame_index",
+        "where",
+    ),
+    validate_create=_validate_per_frame_annotation_create,
+)
+
+BBOX3D_RESOURCE = ResourceSpec(
+    name="bbox3d",
+    path="bbox3ds",
+    tag="BBox3Ds",
+    schema_group=SchemaGroup.ANNOTATION,
+    schema_cls=BBox3D,
+    canonical_table_name=canonical_table_name_for_schema(BBox3D),
+    create_model=BBox3DCreate,
+    update_model=BBox3DUpdate,
+    response_model=BBox3DResponse,
     list_filters=(
         "record_id",
         "entity_id",
@@ -402,6 +468,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
     ENTITY_DYNAMIC_STATE_RESOURCE,
     TRACKLET_RESOURCE,
     BBOX_RESOURCE,
+    BBOX3D_RESOURCE,
     MASK_RESOURCE,
     MULTI_PATH_RESOURCE,
     KEYPOINTS_RESOURCE,
@@ -416,6 +483,7 @@ RESOURCE_SPECS: tuple[ResourceSpec, ...] = (
 
 __all__ = [
     "BBOX_RESOURCE",
+    "BBOX3D_RESOURCE",
     "CLASSIFICATION_RESOURCE",
     "EMBEDDING_RESOURCE",
     "TIMESERIES_RESOURCE",
@@ -426,6 +494,7 @@ __all__ = [
     "MASK_RESOURCE",
     "MESSAGE_RESOURCE",
     "MULTI_PATH_RESOURCE",
+    "PayloadPadder",
     "RELATION_RESOURCE",
     "ResourceSpec",
     "TEXT_SPAN_RESOURCE",

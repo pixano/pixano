@@ -16,7 +16,6 @@ def create_instance_of_schema(schema: type[LanceModel], **data) -> LanceModel:
         SequenceFrame,
         create_bbox,
         create_bbox3d,
-        create_cam_calibration,
         create_compressed_rle,
         create_keypoints,
         create_keypoints3d,
@@ -24,7 +23,6 @@ def create_instance_of_schema(schema: type[LanceModel], **data) -> LanceModel:
         create_video,
         is_bbox,
         is_bbox3d,
-        is_cam_calibration,
         is_compressed_rle,
         is_image,
         is_keypoints,
@@ -58,9 +56,6 @@ def create_instance_of_schema(schema: type[LanceModel], **data) -> LanceModel:
 
     elif is_bbox3d(schema, True):
         return create_bbox3d(**data)
-
-    elif is_cam_calibration(schema, True):
-        return create_cam_calibration(**data)
 
     elif is_compressed_rle(schema, True):
         return create_compressed_rle(**data)

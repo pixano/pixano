@@ -5,6 +5,7 @@ import js from "@eslint/js";
 import eslint from "@eslint/js";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import svelte from "eslint-plugin-svelte";
 import globals from "globals";
 import svelteParser from "svelte-eslint-parser";
 import tseslint from "typescript-eslint";
@@ -26,16 +27,26 @@ export default [
       "**/tailwind.config.cjs",
       "**/postcss.config.cjs",
       "**/vite.config.ts",
-      ".svelte-kit/**/*",
+      "**/vitest.config.ts",
+      "**/vitest.setup.ts",
+      "**/pixano-aliases.js",
+      // Generated output (eslint-plugin-svelte 2.x happened to skip these; with
+      // 3.x they must be ignored explicitly, and the old root-relative
+      // ".svelte-kit/**/*" pattern never covered the per-app directories).
+      "**/.svelte-kit/**",
+      "**/coverage/**",
+      "apps/*/build/**",
       "**/mask_utils.ts",
     ],
   },
   ...compat.extends(
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended-type-checked",
-    "plugin:svelte/recommended",
     "prettier",
   ),
+  // eslint-plugin-svelte 3.x ships native flat configs; the legacy eslintrc
+  // "plugin:svelte/recommended" shareable config no longer exists.
+  ...svelte.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
@@ -88,6 +99,16 @@ export default [
         },
       ],
       "svelte/no-inner-declarations": "off",
+      // Rules newly enabled by eslint-plugin-svelte 3.x "recommended" that
+      // require real refactors of existing (mostly apps/pixano) code. Disabled
+      // during the 2.x → 3.x upgrade to keep it behavior-neutral; re-enable
+      // rule by rule as the offending code gets cleaned up.
+      "svelte/require-each-key": "off",
+      "svelte/prefer-svelte-reactivity": "off",
+      "svelte/no-navigation-without-resolve": "off",
+      "svelte/prefer-writable-derived": "off",
+      "svelte/no-useless-children-snippet": "off",
+      "svelte/no-unused-props": "off",
     },
   },
   {

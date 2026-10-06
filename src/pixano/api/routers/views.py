@@ -12,21 +12,50 @@ from typing import Annotated, Any
 
 import PIL.Image
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from pixano.api.media import MULTIPART_BOUNDARY, iter_multipart_frames, media_type_from_format
-from pixano.api.models import ImageResponse, PaginatedResponse, SFrameResponse, TextResponse
+from pixano.api.models import (
+    CalibratedImageResponse,
+    ImageResponse,
+    PaginatedResponse,
+    PointCloudResponse,
+    SFrameResponse,
+    TextResponse,
+)
 from pixano.api.routers._deps import PaginationParams, get_dataset_dep
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetAccessError
+from pixano.schemas.schema_group import SchemaGroup
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Views"])
 
 IMAGE_TABLE = "images"
+CALIBRATED_IMAGE_TABLE = "calibrated_images"
 TEXT_TABLE = "texts"
 SFRAME_TABLE = "sequence_frames"
+POINT_CLOUD_TABLE = "point_clouds"
+
+
+def _resolve_image_table(dataset: Dataset) -> str:
+    """Return the image-family view table for this dataset.
+
+    A dataset stores its image rows in either the canonical ``images`` table
+    (``Image`` schema) or the ``calibrated_images`` table (``CalibratedImage``
+    extends ``Image`` but is its own canonical family). In practice the two are
+    mutually exclusive per dataset. If both are somehow present (e.g. a dataset
+    migrated mid-build), ``calibrated_images`` wins because it is the richer
+    schema and losing calibration data silently would be worse than the reverse.
+    Public endpoints stay rooted at ``/images`` regardless, since the UI treats
+    both families as plain images and only differs by extra calibration fields it
+    currently ignores.
+    """
+    view_tables = dataset.info.groups.get(SchemaGroup.VIEW, set())
+    if CALIBRATED_IMAGE_TABLE in view_tables:
+        return CALIBRATED_IMAGE_TABLE
+    return IMAGE_TABLE
 
 
 def _combine_where(*clauses: str | None) -> str | None:
@@ -173,6 +202,20 @@ def _to_image_response(dataset_id: str, row: Any) -> ImageResponse:
     )
 
 
+def _to_calibrated_image_response(dataset_id: str, row: Any) -> CalibratedImageResponse:
+    base = _to_image_response(dataset_id, row)
+    raw_extrinsic = getattr(row, "extrinsic_matrix", None)
+    raw_ego = getattr(row, "ego_to_world", None)
+    return CalibratedImageResponse(
+        **base.model_dump(),
+        f=getattr(row, "f", None),
+        c=getattr(row, "c", None),
+        distortion=getattr(row, "distortion", None),
+        extrinsic_matrix=list(raw_extrinsic) if raw_extrinsic is not None else None,
+        ego_to_world=list(raw_ego) if raw_ego is not None else None,
+    )
+
+
 def _to_text_response(row: Any) -> TextResponse:
     return TextResponse(
         id=row.id,
@@ -209,17 +252,18 @@ def _list_image_responses(
     record_id: str | None = None,
     view_name: str | None = None,
     where: str | None = None,
-) -> PaginatedResponse[ImageResponse]:
+) -> PaginatedResponse[CalibratedImageResponse]:
+    table_name = _resolve_image_table(dataset)
     rows, total = _list_rows(
         dataset,
-        IMAGE_TABLE,
+        table_name,
         pagination=pagination,
         record_id=record_id,
         view_name=view_name,
         where=where,
     )
     return PaginatedResponse(
-        items=[_to_image_response(dataset_id, row) for row in rows],
+        items=[_to_calibrated_image_response(dataset_id, row) for row in rows],
         total=total,
         limit=pagination.limit,
         offset=pagination.offset,
@@ -275,7 +319,47 @@ def _list_sframe_responses(
     )
 
 
-@router.get("/images", response_model=PaginatedResponse[ImageResponse], operation_id="list_images")
+def _to_point_cloud_response(dataset_id: str, row: Any) -> PointCloudResponse:
+    raw_extrinsic = getattr(row, "extrinsic_matrix", None)
+    raw_ego = getattr(row, "ego_to_world", None)
+    return PointCloudResponse(
+        id=row.id,
+        record_id=row.record_id,
+        logical_name=getattr(row, "logical_name", "") or "",
+        created_at=str(getattr(row, "created_at", "") or ""),
+        updated_at=str(getattr(row, "updated_at", "") or ""),
+        src=_image_src(dataset_id, "point-clouds", row),
+        extrinsic_matrix=list(raw_extrinsic) if raw_extrinsic is not None else None,
+        ego_to_world=list(raw_ego) if raw_ego is not None else None,
+    )
+
+
+def _list_point_cloud_responses(
+    dataset_id: str,
+    dataset: Dataset,
+    pagination: PaginationParams,
+    *,
+    record_id: str | None = None,
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    rows, total = _list_rows(
+        dataset,
+        POINT_CLOUD_TABLE,
+        pagination=pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
+    )
+    return PaginatedResponse(
+        items=[_to_point_cloud_response(dataset_id, row) for row in rows],
+        total=total,
+        limit=pagination.limit,
+        offset=pagination.offset,
+    )
+
+
+@router.get("/images", response_model=PaginatedResponse[CalibratedImageResponse], operation_id="list_images")
 def list_images(
     dataset_id: str,
     dataset: Dataset = Depends(get_dataset_dep),
@@ -283,7 +367,7 @@ def list_images(
     record_id: str | None = None,
     view_name: str | None = None,
     where: str | None = None,
-) -> PaginatedResponse[ImageResponse]:
+) -> PaginatedResponse[CalibratedImageResponse]:
     """List image views with optional filtering."""
     return _list_image_responses(
         dataset_id,
@@ -295,16 +379,20 @@ def list_images(
     )
 
 
-@router.get("/images/{id}", response_model=ImageResponse, operation_id="get_image")
-def get_image(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> ImageResponse:
+@router.get("/images/{id}", response_model=CalibratedImageResponse, operation_id="get_image")
+def get_image(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> CalibratedImageResponse:
     """Fetch a single image view by ID."""
-    return _to_image_response(dataset_id, _get_row(dataset, IMAGE_TABLE, id))
+    table_name = _resolve_image_table(dataset)
+    row = _get_row(dataset, table_name, id)
+    if table_name == CALIBRATED_IMAGE_TABLE:
+        return _to_calibrated_image_response(dataset_id, row)
+    return CalibratedImageResponse(**_to_image_response(dataset_id, row).model_dump())
 
 
 @router.get("/images/{id}/blob", operation_id="get_image_blob")
 def get_image_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> Response:
     """Stream the raw binary blob of an image."""
-    return _stream_blob(dataset, IMAGE_TABLE, id)
+    return _stream_blob(dataset, _resolve_image_table(dataset), id)
 
 
 @router.get("/images/{id}/preview", operation_id="get_image_preview")
@@ -312,7 +400,7 @@ def get_image_preview(
     id: str, dataset: Dataset = Depends(get_dataset_dep), size: Annotated[int | None, Query()] = None
 ) -> Response:
     """Stream the preview thumbnail of an image."""
-    return _stream_preview(dataset, IMAGE_TABLE, id, size=_validated_preview_size(size))
+    return _stream_preview(dataset, _resolve_image_table(dataset), id, size=_validated_preview_size(size))
 
 
 @router.get("/texts", response_model=PaginatedResponse[TextResponse], operation_id="list_texts")
@@ -381,7 +469,7 @@ def get_sframe_preview(
 
 @router.get(
     "/records/{record_id}/images",
-    response_model=PaginatedResponse[ImageResponse],
+    response_model=PaginatedResponse[CalibratedImageResponse],
     operation_id="list_record_images",
 )
 def list_record_images(
@@ -391,7 +479,7 @@ def list_record_images(
     pagination: PaginationParams = Depends(),
     view_name: str | None = None,
     where: str | None = None,
-) -> PaginatedResponse[ImageResponse]:
+) -> PaginatedResponse[CalibratedImageResponse]:
     """List images belonging to a specific record."""
     return _list_image_responses(
         dataset_id,
@@ -493,4 +581,66 @@ def get_record_sframe_batch(
             "X-Start-Frame": str(start_frame),
             "X-Batch-Size": str(batch_size),
         },
+    )
+
+
+@router.get("/point-clouds", response_model=PaginatedResponse[PointCloudResponse], operation_id="list_point_clouds")
+def list_point_clouds(
+    dataset_id: str,
+    dataset: Dataset = Depends(get_dataset_dep),
+    pagination: PaginationParams = Depends(),
+    record_id: str | None = None,
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    """List point-cloud views with optional filtering."""
+    return _list_point_cloud_responses(
+        dataset_id,
+        dataset,
+        pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
+    )
+
+
+@router.get("/point-clouds/{id}", response_model=PointCloudResponse, operation_id="get_point_cloud")
+def get_point_cloud(id: str, dataset_id: str, dataset: Dataset = Depends(get_dataset_dep)) -> PointCloudResponse:
+    """Fetch a single point-cloud view by ID."""
+    return _to_point_cloud_response(dataset_id, _get_row(dataset, POINT_CLOUD_TABLE, id))
+
+
+@router.get("/point-clouds/{id}/blob", operation_id="get_point_cloud_blob")
+def get_point_cloud_blob(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the raw binary blob of a point cloud."""
+    return _stream_blob(dataset, POINT_CLOUD_TABLE, id)
+
+
+@router.get("/point-clouds/{id}/preview", operation_id="get_point_cloud_preview")
+def get_point_cloud_preview(id: str, dataset: Dataset = Depends(get_dataset_dep)) -> StreamingResponse:
+    """Stream the bird's-eye-view preview thumbnail of a point cloud."""
+    return _stream_preview(dataset, POINT_CLOUD_TABLE, id)
+
+
+@router.get(
+    "/records/{record_id}/point-clouds",
+    response_model=PaginatedResponse[PointCloudResponse],
+    operation_id="list_record_point_clouds",
+)
+def list_record_point_clouds(
+    record_id: str,
+    dataset_id: str,
+    dataset: Dataset = Depends(get_dataset_dep),
+    pagination: PaginationParams = Depends(),
+    view_name: str | None = None,
+    where: str | None = None,
+) -> PaginatedResponse[PointCloudResponse]:
+    """List point clouds belonging to a specific record."""
+    return _list_point_cloud_responses(
+        dataset_id,
+        dataset,
+        pagination,
+        record_id=record_id,
+        view_name=view_name,
+        where=where,
     )

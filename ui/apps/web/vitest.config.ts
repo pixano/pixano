@@ -1,0 +1,35 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import { fileURLToPath } from "node:url";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  plugins: [svelte()],
+  resolve: {
+    alias: {
+      $lib: fileURLToPath(new URL("./src/lib", import.meta.url)),
+    },
+    conditions: ["browser"],
+  },
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/__tests__/**/*.test.ts"],
+    setupFiles: ["./vitest.setup.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: [
+        "src/lib/api/**",
+        "src/lib/annotations/**",
+        "src/lib/components/shell/**",
+        "src/lib/workspace/**",
+      ],
+      exclude: ["**/__tests__/**", "**/*.d.ts", "src/lib/api/restTypes.ts"],
+    },
+  },
+});

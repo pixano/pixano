@@ -51,16 +51,17 @@ class BaseService:
     def resolve_table(self) -> str:
         """Resolve the backing table for this resource.
 
-        For annotation resources, if the canonical table does not exist yet it
-        is created on the fly with the base schema.  This lets users start
-        annotating immediately even when the ``DatasetInfo`` did not originally
-        declare the slot.  To use a **custom** schema with extra fields,
+        For annotation and entity resources, if the canonical table does not
+        exist yet it is created on the fly with the base schema.  This lets
+        users start annotating immediately even when the ``DatasetInfo`` did
+        not originally declare the slot (e.g. a 3D-only dataset that gains 2D
+        bbox annotations).  To use a **custom** schema with extra fields,
         recreate the dataset with ``DatasetInfo(<slot>=YourCustomSchema)``.
         """
         resolved_table = self.resource.canonical_table_name
         schema_type = self.dataset.info.tables.get(resolved_table)
         if schema_type is None:
-            if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            if self.resource.schema_group in (SchemaGroup.ANNOTATION, SchemaGroup.ENTITY):
                 with self.dataset.write_lock():
                     if resolved_table in self.dataset.info.tables:
                         return self.resolve_table()
@@ -71,6 +72,11 @@ class BaseService:
                         self.resource.schema_cls.__name__,
                     )
                     self.dataset.create_table(resolved_table, self.resource.schema_cls, exist_ok=True)
+                    # Update the in-memory tables dict so that subsequent
+                    # validate_entity_exists / validate_tracklet_exists calls
+                    # can find the newly created table within the same request
+                    # chain without requiring a full reload from disk.
+                    self.dataset.info.tables[resolved_table] = self.resource.schema_cls
                     # Persist the slot as well as the physical table.
                     slot_name = self.resource.name
                     if hasattr(self.dataset.info, slot_name) and getattr(self.dataset.info, slot_name) is None:
@@ -267,6 +273,9 @@ class BaseService:
             self.resource.validate_create(self, payload)
 
         schema = self.dataset.info.tables[resolved_table]
+        if self.resource.pad_payload is not None:
+            payload = self.resource.pad_payload(schema, payload)
+
         try:
             row = schema.model_validate(payload)
         except Exception as err:
@@ -295,12 +304,20 @@ class BaseService:
         return self._response(created_rows[0])
 
     @_service_write
-    def update(self, id: str, data: dict[str, Any]) -> BaseModel:
-        """Update an existing resource row."""
+    def update(self, id: str, data: dict[str, Any], prune_orphan_entity: bool = False) -> BaseModel:
+        """Update an existing resource row.
+
+        When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
+        changes, the previously attached entity is deleted if it has no
+        remaining annotations — the server-side orphan check shared with delete.
+        """
         resolved_table = self.resolve_table()
         existing = self.dataset.get_data(resolved_table, ids=id)
         if existing is None:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
+
+        prune_old_entity = prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION
+        old_entity_id = getattr(existing, "entity_id", None) if prune_old_entity else None
 
         merged = merge_update_payload(existing, data)
         schema = self.dataset.info.tables[resolved_table]
@@ -309,6 +326,15 @@ class BaseService:
         except Exception as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        # Reassigning an annotation to a different entity must reference an
+        # existing one — the create path validates this, so update does too
+        # (raises 400). Only checked when entity_id actually changes, so plain
+        # geometry edits skip it.
+        if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            new_entity_id = getattr(row, "entity_id", None)
+            if new_entity_id and new_entity_id != getattr(existing, "entity_id", None):
+                self.validate_entity_exists(new_entity_id)
+
         try:
             updated_rows = self.dataset.update_data(resolved_table, [row])
         except DatasetIntegrityError as err:
@@ -316,15 +342,53 @@ class BaseService:
         except ValueError as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        # The annotation now points at the new entity, so the old one's count
+        # excludes it: an empty count means the reassignment orphaned it.
+        new_entity_id = getattr(updated_rows[0], "entity_id", None)
+        if old_entity_id and old_entity_id != new_entity_id and not self._entity_has_annotations(old_entity_id):
+            self._delete_orphan_entity(old_entity_id)
+
         return self._response(updated_rows[0])
 
     @_service_write
-    def delete(self, id: str) -> None:
-        """Delete a resource by ID."""
+    def delete(self, id: str, prune_orphan_entity: bool = False) -> None:
+        """Delete a resource by ID.
+
+        When ``prune_orphan_entity`` is set and this resource is an annotation,
+        the parent entity is also deleted if the removed annotation was its last
+        one. The check runs server-side because only the backend sees every
+        annotation referencing the entity (the front-end loads one record at a
+        time). Kind-agnostic: works for any annotation resource.
+        """
         resolved_table = self.resolve_table()
+
+        entity_id: str | None = None
+        if prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION:
+            row = self.dataset.get_data(resolved_table, ids=id)
+            if row is not None and hasattr(row, "entity_id"):
+                entity_id = row.entity_id
+
         ids_not_found = self.dataset.delete_data(resolved_table, [id])
         if ids_not_found:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
+
+        # The annotation row is gone now, so an empty count means it was the last.
+        if entity_id and not self._entity_has_annotations(entity_id):
+            self._delete_orphan_entity(entity_id)
+
+    def _entity_has_annotations(self, entity_id: str) -> bool:
+        """Whether any annotation in any table still references the entity."""
+        for table in self.dataset.info.groups.get(SchemaGroup.ANNOTATION, []):
+            if self.dataset.open_table(table).count_rows(f"entity_id = '{entity_id}'") > 0:
+                return True
+        return False
+
+    def _delete_orphan_entity(self, entity_id: str) -> None:
+        """Delete the entity row from whichever entity table holds it (idempotent)."""
+        for table in self.dataset.info.groups.get(SchemaGroup.ENTITY, []):
+            if self.dataset.get_data(table, ids=entity_id) is not None:
+                self.dataset.delete_data(table, [entity_id])
+                return
 
 
 __all__ = ["BaseService"]

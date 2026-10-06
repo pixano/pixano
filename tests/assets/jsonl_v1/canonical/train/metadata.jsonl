@@ -1,0 +1,1 @@
+{"status":"validated","views":{"image":"000042.jpg"},"entities":[{"category":"dog","is_difficult":false,"annotations":{"image":{"bbox":[0.132,0.28,0.41,0.55],"keypoint":{"template_id":"face","coords":[0.5,0.5,0.7,0.5],"states":["visible","visible"]}}}}]}

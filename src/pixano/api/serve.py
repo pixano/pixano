@@ -38,15 +38,39 @@ LOGO = """
 """
 ASSETS_PATH = str(files("pixano").joinpath("api/dist/_app"))
 TEMPLATE_PATH = str(files("pixano").joinpath("api/dist"))
+LEGACY_ASSETS_PATH = str(files("pixano").joinpath("api/legacy_dist/_legacy_app"))
+LEGACY_TEMPLATE_PATH = str(files("pixano").joinpath("api/legacy_dist"))
+# The legacy UI's switch button sets this cookie to NEW_UI_COOKIE_VALUE; the new UI's sets it back
+# to "legacy". Any value other than NEW_UI_COOKIE_VALUE serves the legacy UI.
+UI_VERSION_COOKIE = "pixano_ui_version"
+NEW_UI_COOKIE_VALUE = "next"
 NON_SPA_PREFIXES = (
     *API_PREFIXES,
     "/_app",
+    "/_legacy_app",
     "/app_models",
     "/health",
     "/docs",
     "/redoc",
     "/openapi.json",
 )
+
+
+def serves_new_ui(new_ui_enabled: bool, ui_version_cookie: str | None) -> bool:
+    """Whether the root page serves the v1.0 workspace UI rather than the legacy one.
+
+    The legacy UI is the default. The new one is served only when the deployment enables it and
+    the browser asked for it: a cookie left by an earlier deployment cannot reach it once the
+    deployment turns it off.
+
+    Args:
+        new_ui_enabled: The deployment's ACTIVATE_UI_V1_0 setting.
+        ui_version_cookie: The browser's UI_VERSION_COOKIE value, if any.
+
+    Returns:
+        True to serve the new UI, False to serve the legacy UI.
+    """
+    return new_ui_enabled and ui_version_cookie == NEW_UI_COOKIE_VALUE
 
 
 def _create_notebook_task(coro):
@@ -142,12 +166,15 @@ class App:
         # Create app
         settings = get_settings_override()
         templates = Jinja2Templates(directory=TEMPLATE_PATH)
+        legacy_templates = Jinja2Templates(directory=LEGACY_TEMPLATE_PATH)
         self.app = create_app(settings=settings)
         self.app.dependency_overrides[get_settings] = get_settings_override
 
         @self.app.get("/", response_class=HTMLResponse)
         def main_page(request: fastapi.Request):
-            return templates.TemplateResponse(request, "index.html")
+            if serves_new_ui(settings.activate_ui_v1_0, request.cookies.get(UI_VERSION_COOKIE)):
+                return templates.TemplateResponse(request, "index.html")
+            return legacy_templates.TemplateResponse(request, "index.html")
 
         def root_static_file(filename: str, media_type: str) -> FileResponse:
             path = Path(TEMPLATE_PATH) / filename
@@ -173,6 +200,14 @@ class App:
             warnings.warn(
                 "Pixano app assets not found. If it is a production environment, this is not expected, "
                 "check if you have built the assets for the UI."
+            )
+
+        try:
+            self.app.mount("/_legacy_app", StaticFiles(directory=LEGACY_ASSETS_PATH), name="legacy_assets")
+        except RuntimeError:
+            warnings.warn(
+                "Legacy app assets not found. If it is a production environment, this is not expected, "
+                "check if you have built the assets for the legacy UI."
             )
 
         @self.app.get("/{full_path:path}", include_in_schema=False)

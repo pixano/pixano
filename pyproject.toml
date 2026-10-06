@@ -30,6 +30,7 @@ dependencies = [
   "filelock >= 3.13, < 4.0",
   "ipython >= 8.0.0, < 10.0.0",
   "jinja2 >= 3.1.2, < 4.0.0",
+  "jsonschema >= 4.0.0, < 5.0.0",
   "lance-namespace >= 0.5.0, < 0.6.0",
   "lancedb >= 0.29.0, < 0.30.0",
   "numpy >= 1.26.0, < 3.0.0",
@@ -37,6 +38,7 @@ dependencies = [
   "pandas >= 1.5.0, < 3.0.0",
   "Pillow >= 12.3.0, < 13.0.0",
   "polars > 1.7.0, < 2.0.0",
+  "psycopg[binary] >= 3.1, < 4.0.0",
   "pycocotools >= 2.0.0, < 3.0.0",
   "pydantic >= 2.9.0, < 3.0.0",
   "pydantic-settings >= 2.14.2, < 3.0.0",
@@ -81,7 +83,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-artifacts = ["src/pixano/api/dist"]
+artifacts = ["src/pixano/api/dist", "src/pixano/api/legacy_dist"]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -112,6 +114,7 @@ exclude = [
 path = "src/pixano/__version__.py"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 markers = [
     "e2e: End-to-end tests requiring a live inference server (set PIXANO_INFERENCE_URL)",
     "slow: Long-running scale/soak tests, excluded from the default CI run",
@@ -127,7 +130,7 @@ ignore = ["D205", "C901", "D100", "D104"]
 select = ["C", "E", "F", "I", "W", "D"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "C408", "C901", "F401"]
+"**/tests/*" = ["D", "C408", "C901", "F401"]
 "docs/*" = ["D", "F401"]
 
 [tool.ruff.lint.isort]

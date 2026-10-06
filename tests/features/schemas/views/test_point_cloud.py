@@ -4,8 +4,9 @@
 # License: CECILL-C
 # =====================================
 
-from pixano.features import PointCloud, create_point_cloud, is_point_cloud
-from tests.features.utils import make_tests_is_sublass_strict
+from pixano.features import PointCloud, is_point_cloud
+
+from ...utils import make_tests_is_sublass_strict
 
 
 def test_is_point_cloud():
@@ -14,9 +15,7 @@ def test_is_point_cloud():
 
 def test_create_point_cloud():
     # Test 1: Default values
-    point_cloud = create_point_cloud(
-        uri="sample_data/point_cloud_ply.ply",
-    )
+    point_cloud = PointCloud(uri="sample_data/point_cloud_ply.ply")
 
     assert point_cloud.model_dump(exclude={"created_at", "updated_at"}) == PointCloud(
         uri="sample_data/point_cloud_ply.ply",
@@ -25,7 +24,7 @@ def test_create_point_cloud():
     ).model_dump(exclude={"created_at", "updated_at"})
 
     # Test 2: Custom values
-    point_cloud = create_point_cloud(
+    point_cloud = PointCloud(
         uri="sample_data/point_cloud_ply.ply",
         id="id",
         record_id="record_id",

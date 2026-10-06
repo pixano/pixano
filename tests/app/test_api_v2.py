@@ -359,6 +359,121 @@ class TestStaticImage:
         resp2 = static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_to_delete")
         assert resp2.status_code == 404
 
+    def _seed_entity_with_bboxes(self, client: TestClient, entity_id: str, bbox_ids: list[str]) -> None:
+        client.post(f"{STATIC_BASE}/entities", json={"id": entity_id, "record_id": "record_0", "parent_id": ""})
+        for bbox_id in bbox_ids:
+            resp = client.post(
+                f"{STATIC_BASE}/bboxes",
+                json={
+                    "id": bbox_id,
+                    "record_id": "record_0",
+                    "entity_id": entity_id,
+                    "coords": [0.0, 0.0, 0.1, 0.1],
+                    "format": "xywh",
+                    "is_normalized": True,
+                },
+            )
+            assert resp.status_code == 201
+
+    def test_delete_annotation_prunes_orphan_entity(self, static_image_client: TestClient):
+        """Deleting an entity's last annotation with the flag removes the entity too."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_orphan", ["bbox_orphan"])
+
+        resp = static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_orphan?prune_orphan_entity=true")
+        assert resp.status_code == 204
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_orphan").status_code == 404
+
+    def test_delete_annotation_keeps_shared_entity(self, static_image_client: TestClient):
+        """An entity with another annotation left survives; it goes only on the last one."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_shared", ["bbox_shared_a", "bbox_shared_b"])
+
+        static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_shared_a?prune_orphan_entity=true")
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_shared").status_code == 200
+
+        static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_shared_b?prune_orphan_entity=true")
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_shared").status_code == 404
+
+    def test_delete_without_prune_flag_keeps_entity(self, static_image_client: TestClient):
+        """Plain delete (no flag) leaves the entity untouched, even when orphaned."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_noprune", ["bbox_noprune"])
+
+        resp = static_image_client.delete(f"{STATIC_BASE}/bboxes/bbox_noprune")
+        assert resp.status_code == 204
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_noprune").status_code == 200
+
+    def _reassign_bbox_entity(self, client: TestClient, bbox_id: str, new_entity_id: str, prune: bool = True):
+        return client.put(
+            f"{STATIC_BASE}/bboxes/{bbox_id}",
+            params={"prune_orphan_entity": str(prune).lower()},
+            json={
+                "id": bbox_id,
+                "record_id": "record_0",
+                "entity_id": new_entity_id,
+                "coords": [0.0, 0.0, 0.1, 0.1],
+                "format": "xywh",
+                "is_normalized": True,
+            },
+        )
+
+    def test_reassign_entity_prunes_old_orphan(self, static_image_client: TestClient):
+        """Reassigning a box's only annotation to another entity deletes the old one."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_from", ["bbox_reassign"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_to", ["bbox_keepalive"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_reassign", "entity_to")
+        assert resp.status_code == 200
+        # The previous entity is now orphaned → gone; the new one stays.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_from").status_code == 404
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_to").status_code == 200
+
+    def test_reassign_entity_keeps_old_when_still_referenced(self, static_image_client: TestClient):
+        """The old entity survives reassignment when another annotation still uses it."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_multi", ["bbox_move", "bbox_stay"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_dest", ["bbox_dest_anchor"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_move", "entity_dest")
+        assert resp.status_code == 200
+        # bbox_stay still references entity_multi → kept.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_multi").status_code == 200
+
+    def test_reassign_without_prune_flag_keeps_old_entity(self, static_image_client: TestClient):
+        """Without the flag, the old entity is left even if reassignment orphaned it."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_np_from", ["bbox_np_reassign"])
+        self._seed_entity_with_bboxes(static_image_client, "entity_np_to", ["bbox_np_anchor"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_np_reassign", "entity_np_to", prune=False)
+        assert resp.status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_np_from").status_code == 200
+
+    def test_reassign_to_nonexistent_entity_is_rejected(self, static_image_client: TestClient):
+        """Update must reject a reassignment to a missing entity (no dangling FK, no prune)."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_src", ["bbox_badref"])
+
+        resp = self._reassign_bbox_entity(static_image_client, "bbox_badref", "entity_does_not_exist")
+        assert resp.status_code == 400
+        # The box still points at its original entity, which is left intact.
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_src").status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_badref").json()["entity_id"] == "entity_src"
+
+    def test_geometry_only_update_keeps_entity(self, static_image_client: TestClient):
+        """A geometry edit (entity_id unchanged) never prunes the entity."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_geom", ["bbox_geom"])
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/bbox_geom",
+            params={"prune_orphan_entity": "true"},
+            json={
+                "id": "bbox_geom",
+                "record_id": "record_0",
+                "entity_id": "entity_geom",
+                "coords": [0.2, 0.2, 0.3, 0.3],
+                "format": "xywh",
+                "is_normalized": True,
+            },
+        )
+        assert resp.status_code == 200
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_geom").status_code == 200
+
 
 # ===========================================================================
 # Scenario 2: Multi-view image (rgb + thermal) with annotations on both views
@@ -1134,6 +1249,152 @@ class TestPaginatedResponse:
         assert resp2.status_code == 200
         body2 = resp2.json()
         assert len(body2["items"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Empty library
+# ---------------------------------------------------------------------------
+
+
+# ===========================================================================
+# Scenario 5: Dataset with a custom entity subschema (CategoryEntity)
+# ===========================================================================
+#
+# Mirrors the NuScenes case: the entity table uses a schema that adds a
+# required `category` field, but the web UI only sends the base Entity
+# fields.  `service._pad_entity_payload` must fill in "" so the row is
+# accepted without a 400.
+
+
+CATEGORY_DATASET_ID = "category_entity_dataset"
+
+
+class CategoryEntity(Entity):
+    """Entity subclass that adds a required category label — like NuScenes."""
+
+    category: str
+
+
+class CategoryEntityBuilder(DatasetBuilder):
+    def __init__(self, target_dir: Path, info: DatasetInfo):
+        base = info.model_dump(include={"id", "name", "description", "size", "preview", "workspace", "storage_mode"})
+        info = DatasetInfo(
+            **base,
+            record=Record,
+            views={"image": Image},
+            entity=CategoryEntity,
+            bbox=BBox,
+        )
+        super().__init__(target_dir=target_dir, info=info)
+
+    def generate_data(self):
+        record_id = "rec_0"
+        image = Image(
+            id="img_0",
+            record_id=record_id,
+            logical_name="image",
+            uri="img_0.jpg",
+            width=640,
+            height=480,
+            format="jpg",
+            preview=_blob_bytes("img_0"),
+            preview_format="png",
+        )
+        entity = CategoryEntity(id="ent_0", record_id=record_id, category="car")
+        bbox = BBox(
+            id="bbox_0",
+            record_id=record_id,
+            entity_id="ent_0",
+            source_type="ground_truth",
+            source_name="Ground Truth",
+            view_id="img_0",
+            coords=[0.1, 0.1, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            confidence=1.0,
+        )
+        yield {
+            self.record_table_name: self.record_schema(id=record_id, split="train"),
+            "images": image,
+            "entities": [entity],
+            "bboxes": [bbox],
+        }
+
+
+@pytest.fixture(scope="module")
+def category_entity_dataset() -> Dataset:
+    tmp = Path(tempfile.mkdtemp())
+    target = tmp / CATEGORY_DATASET_ID
+    info = DatasetInfo(
+        id=CATEGORY_DATASET_ID,
+        name=CATEGORY_DATASET_ID,
+        description="Dataset with CategoryEntity for padding tests",
+        workspace=WorkspaceType.IMAGE,
+    )
+    builder = CategoryEntityBuilder(target_dir=target, info=info)
+    return builder.build(mode="overwrite", check_integrity="none")
+
+
+@pytest.fixture(scope="module")
+def category_entity_client(category_entity_dataset: Dataset) -> TestClient:
+    return _make_client(category_entity_dataset)
+
+
+CAT_BASE = f"/datasets/{CATEGORY_DATASET_ID}"
+
+
+class TestCategoryEntityPadding:
+    """Verify that _pad_entity_payload lets the UI create entities on datasets
+    whose entity table has extra required fields (e.g. category: str)."""
+
+    def test_create_entity_without_category_succeeds(self, category_entity_client: TestClient):
+        """POST with only base fields — category is padded to '' by the service."""
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "new_ent", "record_id": "rec_0", "parent_id": ""},
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["id"] == "new_ent"
+        assert body.get("category") == ""
+
+    def test_create_entity_with_category_succeeds(self, category_entity_client: TestClient):
+        """POST with an explicit category still works as expected."""
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "new_ent_cat", "record_id": "rec_0", "parent_id": "", "category": "truck"},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["category"] == "truck"
+
+    def test_create_bbox_after_auto_created_entity_succeeds(self, category_entity_client: TestClient):
+        """Bbox referencing a freshly-padded entity must pass FK validation."""
+        # Create entity first (padding path)
+        category_entity_client.post(
+            f"{CAT_BASE}/entities",
+            json={"id": "ent_for_bbox", "record_id": "rec_0", "parent_id": ""},
+        )
+        resp = category_entity_client.post(
+            f"{CAT_BASE}/bboxes",
+            json={
+                "id": "bbox_new",
+                "record_id": "rec_0",
+                "entity_id": "ent_for_bbox",
+                "view_id": "img_0",
+                "frame_id": "img_0",
+                "frame_index": -1,
+                "tracklet_id": "",
+                "entity_dynamic_state_id": "",
+                "coords": [0.1, 0.2, 0.3, 0.4],
+                "format": "xywh",
+                "is_normalized": True,
+                "confidence": 1.0,
+                "source_type": "other",
+                "source_name": "Pixano",
+                "source_metadata": "{}",
+            },
+        )
+        assert resp.status_code == 201
 
 
 # ---------------------------------------------------------------------------

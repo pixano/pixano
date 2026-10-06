@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pixano-worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    # Le pool donne une connexion à chaque chunk en vol : une connexion asynchrone ne sert
+    # qu'une requête à la fois, et le worker en fait tourner plusieurs.
+    "psycopg[binary,pool]>=3.1",
+    "httpx>=0.27",
+    # Le contrat des paramètres d'un type de job, et le schéma JSON qu'on en publie.
+    "pydantic>=2.9,<3.0",
+    # Les schémas et l'accès aux datasets. Mesuré avant de trancher : la couche dataset pèse
+    # 600 Mo des 647 Mo de pixano, parce que le poids est dans polars, opencv, pyarrow et
+    # lancedb — dont le worker a besoin quoi qu'il arrive. Un paquet partagé aurait économisé
+    # 7 %. Voir docs/specs/backend-processing.md §5ter.
+    "pixano",
+]
+
+[tool.uv.sources]
+# Éditable, et ce n'est pas un détail de confort : une installation non éditable construit le
+# wheel de pixano, dont le hook de build lance la compilation du frontend. Installer le worker
+# exigerait alors pnpm et node, ce qui n'a aucun sens pour un service qui ne sert aucune page.
+pixano = { path = "../..", editable = true }
+
+[project.scripts]
+pixano-worker = "pixano_worker.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pixano_worker"]
+
+[dependency-groups]
+test = ["pytest", "pytest-asyncio"]
+
+[tool.uv]
+default-groups = ["test"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Comme la suite de l'application : une coroutine de test s'exécute sans décorateur.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

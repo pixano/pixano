@@ -6,14 +6,20 @@ Pixano is an open-source data engine for multi-modal AI development. It provides
 
 ## Project Structure & Module Organization
 
-Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm workspace for frontend code. It contains frontend applications under `ui/apps/` and may contain shared frontend packages under `ui/packages/` as the workspace grows. The documentation website is built with Astro and lives in `docs-astro/`.
+Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm + Turbo workspace holding two frontend applications, both bundled into the wheel by `hatch_build.py`:
+
+- `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. This is where current frontend work happens; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
+- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend"), being migrated away from. Do not add features here.
+
+There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The documentation website is built with Astro and lives in `docs-astro/`.
 
 Backend modules are organized as follows:
 
 - `src/pixano/api`: REST API module with FastAPI routers.
 - `src/pixano/cli`: Pixano CLI module.
-- `src/pixano/datasets`: dataset builders, exporters, and Python API.
+- `src/pixano/datasets`: LanceDB dataset engine and Python API. `datasets/io/` holds the 0.8.0 import/export engine (`formats/{pixano_jsonl,coco,lerobot}`); the v1 folder builders were removed in that redesign.
 - `src/pixano/inference`: adapters for AI model inference services.
+- `src/pixano/features`: annotation feature definitions.
 - `src/pixano/schemas`: Pixano database schemas.
 - `src/pixano/utils`: shared utilities.
 - `tests`: unit and e2e test modules.
@@ -22,7 +28,7 @@ Design specifications live in `docs/specs/`. Before planning or implementing cha
 
 ## Tech Stack
 
-The backend uses FastAPI for the server, LanceDB as the dataset engine, Python for implementation, and `uv` for dependency management and builds. The frontend uses SvelteKit 5, Svelte 5, TypeScript, and `pnpm`. Important UI libraries include bits-ui, Tailwind CSS, phosphor-svelte, KonvaJS, ThretleJS, and Tiptap.
+The backend uses FastAPI for the server, LanceDB as the dataset engine, Python for implementation, and `uv` for dependency management and builds. The frontend uses SvelteKit, Svelte 5, TypeScript, and `pnpm`. UI libraries differ per app: `ui/apps/web` uses Tailwind CSS, bits-ui, Konva, Three.js with Threlte, Tiptap and lucide-svelte; the legacy `ui/apps/pixano` uses Tailwind CSS, bits-ui, Konva with svelte-konva, D3/Chart.js, ONNX Runtime Web, Tiptap and phosphor-svelte.
 
 ## Build, Test, and Development Commands
 
@@ -53,33 +59,101 @@ When using an existing initialized Pixano data directory during backend developm
 uv run pixano server run /path/to/data
 ```
 
-For frontend development, start the standalone SvelteKit dev server from the pnpm workspace:
+To run the whole local stack — the app, the `pixano-worker` job runner, PostgreSQL and an
+inference server — use the compose files at the repository root. Copy `.env.example` to `.env`
+first; every address the components use to reach each other lives there, so the same stack
+runs against a remote database or a shared inference server without a code change.
+
+```sh
+cp .env.example .env
+
+# Against an inference server already running somewhere (set PIXANO_INFERENCE_URL).
+docker compose up
+
+# Or with an inference built and run on this machine (CPU variant, no GPU required).
+docker compose -f docker-compose.yml -f docker-compose.inference.yml up
+```
+
+The compose is a convenience, not a requirement: [docs/running-by-hand.md](./docs/running-by-hand.md)
+runs the same four components as plain processes.
+
+A scripted walkthrough of the stack — a job submitted from the interface, cancelled, its worker
+killed and resumed, and failures that do not end the job — lives in
+[docs/demo-etape1.md](./docs/demo-etape1.md), with a script that prepares its datasets.
+
+The worker package lives in `packages/pixano-worker/` with its own lockfile and test suite:
+
+```sh
+uv run --directory packages/pixano-worker pytest
+```
+
+### Tests that need a live PostgreSQL
+
+Both suites have tests that talk to the job queue. They read `PIXANO_TEST_DATABASE_URL` and
+skip when it is unset — never `PIXANO_DATABASE_URL`, so that running the tests cannot wipe
+the database of a running stack. The worker suite goes further and refuses outright a database
+that already holds jobs, since it drops the schema.
+
+**Point the two suites at two different databases.** The worker suite drops and recreates the
+`pixano_jobs` schema around each test, while the application suite needs it to exist — the
+worker owns the schema and the application never creates it. Sharing one database means
+whichever suite runs second skips everything. CI gives each job its own database for the same
+reason.
+
+```sh
+# Once, against the compose PostgreSQL.
+docker compose exec postgres psql -U pixano -d postgres \
+  -c 'CREATE DATABASE pixano_worker_test' -c 'CREATE DATABASE pixano_api_test'
+
+# The worker suite manages its own schema.
+PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_worker_test \
+  uv run --directory packages/pixano-worker pytest
+
+# The application suite needs the schema installed first, as in production.
+PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_test \
+  uv run --directory packages/pixano-worker python -c \
+  "import os, psycopg; from pixano_worker.schema import ensure_schema; \
+   ensure_schema(psycopg.connect(os.environ['PIXANO_DATABASE_URL']))"
+PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_test \
+  uv run pytest tests/
+```
+
+Changing `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means bumping
+`SCHEMA_VERSION` in the same commit. There is no migration engine on purpose: until the
+database holds something irreplaceable, wiping and recreating is the migration strategy, and
+the version marker is what turns a stale schema into a clear refusal at startup instead of a
+failure far from its cause. See [docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
+
+For frontend development, start the dev server for the app you are working on:
 
 ```sh
 cd ui
 pnpm install
-cd apps/pixano
-pnpm run dev
+pnpm run dev:web      # the new workspace UI (ui/apps/web) — the usual target
+pnpm run dev:pixano   # the legacy app (ui/apps/pixano)
 ```
 
-Run backend tests with `uv run pytest --cov=src/pixano tests/`. Run frontend tests with `pnpm -C ui/apps/pixano test`. For broader checks, use `uv tool run pre-commit run --all-files`, `pnpm -C ui lint`, and `pnpm -C ui format_check`.
+The server (`pixano server run`) serves the legacy app. The new workspace UI is reachable through it
+only when the `ACTIVATE_UI_V1_0` environment variable is `true` (it defaults to `false`): the legacy
+header then shows a button that switches to the new UI. `pnpm run dev:web` does not depend on it.
 
-For release builds, build the UI first, then build the Python wheel:
+Run backend tests with `uv run pytest --cov=src/pixano tests/`. Run frontend tests with `pnpm -C ui test` (Turbo, both apps) or `pnpm -C ui/apps/web test` for the new UI alone — note `pnpm -C ui/apps/pixano test` covers only the legacy app. Type-check the new UI with `pnpm -C ui/apps/web run check`. For broader checks, use `uv tool run pre-commit run --all-files`, `pnpm -C ui lint`, and `pnpm -C ui format_check`.
+
+For release builds, just build the Python wheel:
 
 ```sh
-cd ui/apps/pixano
-pnpm run build
-cd ../../..
 uv build
 ```
 
-The UI build copies frontend artifacts into `dist`; `uv build` bundles those artifacts with the backend code in the wheel.
+`hatch_build.py` runs `pnpm install --frozen-lockfile` and then builds **both** frontends (legacy then web) as part of the wheel build, so there is no separate UI step. It is skipped for editable installs — build the app you need by hand there (`pnpm -C ui/apps/web run build`).
 
 ## Coding Style & Naming Conventions
 
 Python uses Ruff for linting and formatting, with a 119-character line limit, double quotes, and Google-style docstrings. Use `snake_case` for Python modules and functions, and `PascalCase` for classes.
 
 Frontend code uses TypeScript, Svelte 5, ESLint, and Prettier. Name Svelte components `PascalCase.svelte`, helpers `camelCase.ts`, and Vitest files `*.test.ts` under `src/**/__tests__/`. Preserve the repository copyright header in `.py`, `.ts`, and `.svelte` files.
+
+UI text is written as literal strings. Neither app has an i18n layer and none is planned — there is no translation module, no message catalogue and no key indirection. Write the string where it is displayed.
 
 ## Testing Guidelines
 
