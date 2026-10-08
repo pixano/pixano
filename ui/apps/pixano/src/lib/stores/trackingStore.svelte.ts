@@ -7,6 +7,10 @@ License: CECILL-C
 import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
+import {
+  resetTrackingByDetectionSession,
+  trackingByDetectionTimelineState,
+} from "./trackingByDetectionStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   beginVosPendingIntervalState,
@@ -25,6 +29,7 @@ import {
   BaseSchema,
   BBox,
   WorkspaceType,
+  type DisplayControl,
   type Reference,
   type SequenceFrame,
 } from "$lib/types/dataset";
@@ -77,6 +82,7 @@ export function startTrackingSession(
   if (isVosSessionActiveState(vosSession.value)) {
     resetVosSession();
   }
+  resetTrackingByDetectionSession();
   const tracker = new MultiSegmentTracker(viewName);
   trackingSession.value = {
     tracker,
@@ -275,6 +281,66 @@ export const pendingKeyframeIndex = reactiveDerived<number | null>(() => {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+export interface PreviewBBoxParams {
+  id: string;
+  viewName: string;
+  frameId: string;
+  frameIndex: number;
+  /** Normalized x, y, width, height. */
+  coords: readonly [number, number, number, number];
+  imageWidth: number;
+  imageHeight: number;
+  entityId?: string;
+  editable?: boolean;
+  highlighted?: DisplayControl["highlighted"];
+  opacity?: number;
+  strokeFactor?: number;
+  tooltip?: string;
+}
+
+/** A box drawn on the canvas without being an annotation of the record (table `_tracking_preview`). */
+export function createPreviewBBox(params: PreviewBBoxParams): BBox {
+  const pixelCoords = [
+    params.coords[0] * params.imageWidth,
+    params.coords[1] * params.imageHeight,
+    params.coords[2] * params.imageWidth,
+    params.coords[3] * params.imageHeight,
+  ];
+  const bbox = new BBox({
+    id: params.id,
+    table_info: { name: "_tracking_preview", group: "annotations", base_schema: BaseSchema.BBox },
+    created_at: "",
+    updated_at: "",
+    data: {
+      coords: pixelCoords,
+      format: "xywh",
+      is_normalized: false,
+      confidence: 1.0,
+      item_id: "",
+      view_name: params.viewName,
+      frame_id: params.frameId,
+      entity_id: params.entityId ?? "",
+      source_type: "",
+      source_name: "",
+      source_metadata: "{}",
+    },
+  });
+
+  bbox.ui = {
+    datasetItemType: WorkspaceType.VIDEO,
+    displayControl: {
+      hidden: false,
+      editing: params.editable ?? false,
+      highlighted: params.highlighted ?? "self",
+    },
+    frame_index: params.frameIndex,
+    opacity: params.opacity ?? 1.0,
+    strokeFactor: params.strokeFactor ?? 1.0,
+    tooltip: params.tooltip,
+  };
+  return bbox;
+}
+
 function buildTrackingPreviewBBox(
   kf: BBoxKeyframe,
   isKeyframe: boolean,
@@ -288,44 +354,19 @@ function buildTrackingPreviewBBox(
   const frame = viewFrames[kf.frameIndex] as SequenceFrame | undefined;
   if (!frame) return null;
 
-  const pixelCoords = [
-    kf.coords[0] * imageWidth,
-    kf.coords[1] * imageHeight,
-    kf.coords[2] * imageWidth,
-    kf.coords[3] * imageHeight,
-  ];
-
-  const syntheticId = `tracking-preview-${kf.frameIndex}`;
-  const bbox = new BBox({
-    id: syntheticId,
-    table_info: { name: "_tracking_preview", group: "annotations", base_schema: BaseSchema.BBox },
-    created_at: "",
-    updated_at: "",
-    data: {
-      coords: pixelCoords,
-      format: "xywh",
-      is_normalized: false,
-      confidence: 1.0,
-      item_id: "",
-      view_name: viewName,
-      frame_id: frame.id,
-      entity_id: "",
-      source_type: "",
-      source_name: "",
-      source_metadata: "{}",
-    },
-  });
-
-  bbox.ui = {
-    datasetItemType: WorkspaceType.VIDEO,
-    displayControl: { hidden: false, editing: editable, highlighted: "self" },
-    frame_index: kf.frameIndex,
+  return createPreviewBBox({
+    id: `tracking-preview-${kf.frameIndex}`,
+    viewName,
+    frameId: frame.id,
+    frameIndex: kf.frameIndex,
+    coords: kf.coords,
+    imageWidth,
+    imageHeight,
+    editable,
     opacity: isKeyframe ? 1.0 : 0.7,
     strokeFactor: isKeyframe ? 2.0 : 1.0,
     tooltip: isKeyframe ? "Keyframe" : "Interpolated",
-  };
-
-  return bbox;
+  });
 }
 
 // ─── VOS Tracking State ───────────────────────────────────────────────────
@@ -340,6 +381,7 @@ export function setVosAnchor(input: Parameters<typeof setVosAnchorState>[1]): vo
   if (trackingSession.value.tracker !== null) {
     cancelTrackingSession();
   }
+  resetTrackingByDetectionSession();
   vosSession.update((state) => setVosAnchorState(state, input));
 }
 
@@ -422,5 +464,7 @@ export const vosTimelineState = reactiveDerived<TrackingTimelineState | null>(()
 });
 
 export const activeTrackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
-  return trackingTimelineState.value ?? vosTimelineState.value;
+  return (
+    trackingTimelineState.value ?? vosTimelineState.value ?? trackingByDetectionTimelineState.value
+  );
 });

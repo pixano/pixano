@@ -13,6 +13,7 @@ License: CECILL-C
     PushPinSlash,
   } from "phosphor-svelte";
 
+  import DetectionTracksTimelineRows from "./DetectionTracksTimelineRows.svelte";
   import EntityTimelineRow from "./EntityTimelineRow.svelte";
   import TimelineFocusEmptyState from "./TimelineFocusEmptyState.svelte";
   import TimelineHeaderSurface from "./TimelineHeaderSurface.svelte";
@@ -24,6 +25,10 @@ License: CECILL-C
     timelineFocusEntityIds,
     togglePinnedTimelineEntity,
   } from "$lib/stores/timelineInspectorStore.svelte";
+  import {
+    detectionTimelineLanes,
+    selectDetectionTrack,
+  } from "$lib/stores/trackingByDetectionStore.svelte";
   import { activeTrackingTimelineState } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
@@ -178,6 +183,18 @@ License: CECILL-C
             class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
           >
             <TrackingTimelineRow state={activeTrackingTimelineState.value} />
+          </div>
+        {/if}
+
+        {#if detectionTimelineLanes.value.length > 0}
+          <div class="rounded-md border border-sky-500/25 bg-sky-500/5 px-1.5 py-1.5">
+            <DetectionTracksTimelineRows
+              lanes={detectionTimelineLanes.value}
+              onSelect={(trackId, startFrame) => {
+                selectDetectionTrack(trackId);
+                onFrameClick(startFrame);
+              }}
+            />
           </div>
         {/if}
 

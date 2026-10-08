@@ -28,6 +28,11 @@ License: CECILL-C
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
   import {
+    detectionTrackColorById,
+    resetTrackingByDetectionSession,
+    trackingByDetectionPreviewBBoxes,
+  } from "$lib/stores/trackingByDetectionStore.svelte";
+  import {
     addTrackingKeyframe,
     beginVosPendingInterval,
     cancelTrackingSession,
@@ -613,6 +618,7 @@ License: CECILL-C
       lastLoadedVideoKey = "";
       isLoaded = false;
       resetSmartTracking();
+      resetTrackingByDetectionSession();
       resetVideoStores();
       return;
     }
@@ -631,6 +637,7 @@ License: CECILL-C
       }));
       isLoaded = false;
       resetSmartTracking();
+      resetTrackingByDetectionSession();
 
       currentItemId.value = nextItemId;
       videoViewNames.value = viewNames;
@@ -729,7 +736,13 @@ License: CECILL-C
   const mergedBBoxes = $derived([
     ...(current_itemBBoxes.value ?? []),
     ...(newShape.value?.status === "saving" ? [] : trackingPreviewBBoxes.value),
+    ...trackingByDetectionPreviewBBoxes.value,
   ]);
+
+  // Proposed tracks are not entities yet: their preview boxes get their own palette colours.
+  const canvasColorScale = $derived((id: string): string => {
+    return detectionTrackColorById.value.get(id) ?? colorScale.value[1](id);
+  });
 
   // ─── Tracking: keyboard handler ───────────────────────────────────────────
 
@@ -911,7 +924,7 @@ License: CECILL-C
         confirmKeys={["t", "T"]}
         selectedItemId={selectedItem.item.id}
         imagesPerView={imagesPerView.value}
-        colorScale={colorScale.value[1]}
+        colorScale={canvasColorScale}
         bboxes={mergedBBoxes}
         masks={current_itemMasks.value}
         multiPaths={current_itemMultiPaths.value}
