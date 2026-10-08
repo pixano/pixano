@@ -48,6 +48,7 @@ License: CECILL-C
     defineCreatedAnnotation,
     findOrCreateEntity,
     getFrameIndex,
+    setTrackletOwnership,
   } from "$lib/utils/entityOperations";
   import { addNewInput, mapShapeInputsToFeatures } from "$lib/utils/featureMapping";
   import { highlightTrackletChildren } from "$lib/utils/highlightOperations";
@@ -104,12 +105,6 @@ License: CECILL-C
 
     mask.ui.bitmapCanvas = rleToBitmapCanvas(mask.data.counts, mask.data.size as [number, number]);
     mask.ui.bounds = getAlphaBoundingBox(mask.ui.bitmapCanvas) ?? undefined;
-  }
-
-  function setTrackletOwnership(trackletId: string, children: Annotation[]): void {
-    for (const child of children) {
-      child.data.tracklet_id = trackletId;
-    }
   }
 
   const handleFormSubmit = () => {

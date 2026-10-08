@@ -87,23 +87,37 @@ function parseProviderName(sourceMetadata: unknown): string | null {
   return null;
 }
 
-export function buildTrackingMaskSourceFields(
-  source?: TrackingMaskSourceInput,
-): TrackingMaskSourceFields {
+export interface ModelSourceInput extends TrackingMaskSourceInput {
+  /** Extra provenance stored next to `provider_name` in `source_metadata`. */
+  metadata?: Record<string, unknown>;
+}
+
+/** Provenance of an annotation a model produced: `source_type: "model"`, the model as source name. */
+export function buildModelSourceFields(source?: ModelSourceInput): TrackingMaskSourceFields {
   const sourceName =
     source?.modelName && source.modelName.trim().length > 0
       ? source.modelName
       : DEFAULT_TRACKING_SOURCE_NAME;
-  const sourceMetadata =
-    source?.providerName && source.providerName.trim().length > 0
-      ? JSON.stringify({ provider_name: source.providerName })
-      : "{}";
+  const metadata: Record<string, unknown> = {};
+  if (source?.providerName && source.providerName.trim().length > 0) {
+    metadata.provider_name = source.providerName;
+  }
+  Object.assign(metadata, source?.metadata ?? {});
 
   return {
     source_type: "model",
     source_name: sourceName,
-    source_metadata: sourceMetadata,
+    source_metadata: JSON.stringify(metadata),
   };
+}
+
+export function buildTrackingMaskSourceFields(
+  source?: TrackingMaskSourceInput,
+): TrackingMaskSourceFields {
+  return buildModelSourceFields({
+    modelName: source?.modelName,
+    providerName: source?.providerName,
+  });
 }
 
 export function normalizeTrackingMaskSourceFields(
