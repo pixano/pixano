@@ -254,6 +254,7 @@ class TestInferenceModels:
                 "provider_name": provider_a.name,
                 "model_path": "facebook/sam2-hiera-tiny",
                 "model_class": "SAM2",
+                "interface": None,
             },
             {
                 "name": "qwen-vl",
@@ -261,8 +262,34 @@ class TestInferenceModels:
                 "provider_name": provider_b.name,
                 "model_path": "Qwen/Qwen2.5-VL-3B-Instruct",
                 "model_class": "QwenVL",
+                "interface": None,
             },
         ]
+
+    def test_list_models_serializes_the_interface(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        interface = {
+            "capability": "tracking",
+            "prompts": [],
+            "prompt_free": True,
+            "classes": "closed",
+            "class_names": ["person", "car"],
+            "thresholds": ["box"],
+            "interval": False,
+            "outputs": ["box", "score", "class"],
+        }
+        provider.list_models = AsyncMock(
+            return_value=[ModelInfo(name="yolo-bytetrack", task="video_mask_generation", interface=interface)]
+        )
+        client, _ = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+
+        response = client.get("/inference/models/list")
+
+        assert response.status_code == 200
+        assert response.json()[0]["interface"] == interface
 
 
 class TestLegacyRoutesRemoved:

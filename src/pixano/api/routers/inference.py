@@ -108,6 +108,8 @@ class ModelInfoResponse(BaseModel):
     provider_name: str
     model_path: str | None = None
     model_class: str | None = None
+    # How the model is called, when the server publishes it (pixano-inference >= 0.7.1).
+    interface: dict[str, Any] | None = None
 
 
 class VLMRequest(BaseModel):
@@ -444,6 +446,7 @@ def _serialize_model_info(model: Any, provider_name: str) -> dict[str, Any]:
         "provider_name": provider_name,
         "model_path": model.model_path,
         "model_class": model.model_class,
+        "interface": getattr(model, "interface", None),
     }
 
 
