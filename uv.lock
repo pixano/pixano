@@ -1627,7 +1627,7 @@ requires-dist = [
     { name = "opencv-python", specifier = ">=4.7.0,<5.0.0" },
     { name = "pandas", specifier = ">=1.5.0,<3.0.0" },
     { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
-    { name = "pixano-inference", specifier = ">=0.7.0,<0.8.0" },
+    { name = "pixano-inference", specifier = ">=0.7.1,<0.8.0" },
     { name = "polars", specifier = ">1.7.0,<2.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1,<4.0.0" },
     { name = "pycocotools", specifier = ">=2.0.0,<3.0.0" },
@@ -1655,7 +1655,7 @@ test = [
 
 [[package]]
 name = "pixano-inference"
-version = "0.7.0"
+version = "0.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1664,9 +1664,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/22/ed/73e241e38218477f0e88cc876db4ac2cc6253ebda74148dfe079d53dbeb1/pixano_inference-0.7.0.tar.gz", hash = "sha256:2797cc947ba48bfa57cc0d481906ddc4b704baa4d8967397b4f1223aa769dd8f", size = 78110, upload-time = "2026-10-06T08:06:07.827Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/8c/e6e68a7194096463141512fc27210b654c9a27775cb39610272d03d46ec3/pixano_inference-0.7.1.tar.gz", hash = "sha256:7ea9152ef3ca8d1316ac550ff5d6e96f1195cd25877ab68da3f09a31def94e05", size = 82217, upload-time = "2026-10-08T19:33:11.801Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/3b/9d42767b312287970070e503757f4e94c901bc801cd111e311b7456aaa63/pixano_inference-0.7.0-py3-none-any.whl", hash = "sha256:412580f6e138b814f01726814a4edca5d553c2e2faa7cfc8e856e436eb2d0d8d", size = 106170, upload-time = "2026-10-06T08:06:06.473Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/99/e73bef89c7e04e5c2b90af0a7ab96893332cb12c7f75fae2f0e01f44f19d/pixano_inference-0.7.1-py3-none-any.whl", hash = "sha256:664a9ea1b135d5e99cf1c128723c7cde80e14637e5fa04ea196124b3b7f9a063", size = 111424, upload-time = "2026-10-08T19:33:10.373Z" },
 ]
 
 [[package]]
