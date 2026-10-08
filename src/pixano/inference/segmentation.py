@@ -171,14 +171,17 @@ async def tracking(
 ) -> tuple[list[CompressedRLE], list[int], list[int]]:
     """Video tracking task.
 
+    One object is prompted on the first frame of ``video`` (with ``bbox`` and/or ``points``); the
+    model follows it through the other frames.
+
     Args:
         provider: Inference provider.
         video: Video as list of SequenceFrame.
         source_name: Name of the model source.
         source_type: Kind of source (default "model").
         entity: Entity to put objects in, if provided.
-        bbox: Bounding box of the object in the original image.
-        points: Points to generate mask for.
+        bbox: Bounding box of the object in the first frame.
+        points: Points to generate mask for, in the first frame.
         labels: Labels of the points. If 0, the point is background else the point is foreground.
         provider_kwargs: Additional kwargs for the provider.
 
@@ -209,8 +212,8 @@ async def tracking(
     input_data = VideoMaskGenerationInput(
         video=video_request,
         model=source_name,
-        objects_ids=list(range(len(video))),
-        frame_indexes=list(range(len(video))),
+        objects_ids=[0],
+        frame_indexes=[0],
         points=points_request,
         labels=labels_request,
         boxes=boxes_request,

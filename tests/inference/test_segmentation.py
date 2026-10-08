@@ -310,6 +310,10 @@ async def test_tracking(
     assert masks[0].model_dump(exclude=exclude_keys) == expected_mask.model_dump(exclude=exclude_keys)
     assert objects_ids == expected_objects_ids
     assert frame_indexes == expected_frame_indexes
+    # One object, prompted on the first frame of the window.
+    input_data = simple_inference_provider.video_mask_generation.await_args.args[0]
+    assert input_data.objects_ids == [0]
+    assert input_data.frame_indexes == [0]
 
 
 @pytest.mark.asyncio
