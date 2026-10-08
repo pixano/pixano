@@ -87,17 +87,21 @@ export interface InferenceModel extends InferenceModelSelection {
 
 /**
  * A tracking model that follows prompted objects (SAM2-style). Without an interface every
- * tracking model qualifies: the server does not say, so the user picks.
+ * tracking model qualifies: that is what tracking models were before the server said more.
  */
 export function supportsPromptedTracking(model: InferenceModel): boolean {
   if (model.task !== VideoTask.TRACKING) return false;
   return model.interface == null || (model.interface.prompts?.length ?? 0) > 0;
 }
 
-/** A tracking model that detects what it follows (ByteTrack-style); see `supportsPromptedTracking`. */
+/**
+ * A tracking model that detects what it follows (ByteTrack-style). Only a model whose interface
+ * says `prompt_free` qualifies: a prompted model run without prompts fails on the server, so an
+ * unknown model is not offered.
+ */
 export function supportsTrackingByDetection(model: InferenceModel): boolean {
   if (model.task !== VideoTask.TRACKING) return false;
-  return model.interface == null || model.interface.prompt_free === true;
+  return model.interface?.prompt_free === true;
 }
 
 export type InferenceLoadStatus = "idle" | "loading" | "loaded" | "error";

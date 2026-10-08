@@ -67,7 +67,7 @@ License: CECILL-C
     if (selectedModel) return selectedModel.name;
     if (inferenceServerStore.value.status === "loading") return "Loading";
     if (!inferenceServerStore.value.connected) return "No server";
-    return "No tracking model";
+    return "No tracking-by-detection model";
   });
 
   let classText = $state("");

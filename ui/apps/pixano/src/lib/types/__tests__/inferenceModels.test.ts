@@ -22,11 +22,13 @@ const model = (overrides: Partial<InferenceModel>): InferenceModel => ({
 });
 
 describe("tracking model capabilities", () => {
-  it("lets every tracking model do both when the server publishes no interface", () => {
+  it("treats a tracking model without an interface as prompted only", () => {
+    // A prompted model run without prompts fails on the server: unknown is not offered for detection.
     const unknown = model({ interface: null });
     expect(supportsPromptedTracking(unknown)).toBe(true);
-    expect(supportsTrackingByDetection(unknown)).toBe(true);
+    expect(supportsTrackingByDetection(unknown)).toBe(false);
     expect(supportsPromptedTracking(model({ interface: undefined }))).toBe(true);
+    expect(supportsTrackingByDetection(model({ interface: undefined }))).toBe(false);
   });
 
   it("reads prompts and prompt_free from the interface", () => {

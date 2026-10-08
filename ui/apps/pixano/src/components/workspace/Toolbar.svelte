@@ -426,7 +426,7 @@ License: CECILL-C
   {#if currentWorkspaceType === WorkspaceType.VIDEO}
     <IconButton
       tooltipContent={trackingByDetectionUnavailable
-        ? "Connect an inference provider with a tracking model to track objects by detection"
+        ? "No tracking-by-detection model is served (the server must publish how its models are called, pixano-inference 0.7.1 or later)"
         : "Track objects by detection"}
       onclick={openTrackingByDetection}
       selected={trackingByDetectionActive}
