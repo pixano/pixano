@@ -187,7 +187,7 @@ class TestVideoMaskGeneration:
 
         assert isinstance(result, VideoMaskGenerationResult)
         assert result.status == "SUCCESS"
-        assert len(result.data.masks) > 0
+        assert any(tracked.mask is not None for frame in result.data.frames for tracked in frame.objects)
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_video_box_prompt(
@@ -208,5 +208,5 @@ class TestVideoMaskGeneration:
 
         assert isinstance(result, VideoMaskGenerationResult)
         assert result.status == "SUCCESS"
-        assert len(result.data.masks) > 0
-        assert len(result.data.frame_indexes) > 0
+        assert any(tracked.mask is not None for frame in result.data.frames for tracked in frame.objects)
+        assert len(result.data.frames) > 0

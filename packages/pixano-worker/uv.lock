@@ -1075,7 +1075,7 @@ dependencies = [
     { name = "opencv-python" },
     { name = "pandas" },
     { name = "pillow" },
-    { name = "pixano-inference-client" },
+    { name = "pixano-inference" },
     { name = "polars" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pycocotools" },
@@ -1107,7 +1107,7 @@ requires-dist = [
     { name = "opencv-python", specifier = ">=4.7.0,<5.0.0" },
     { name = "pandas", specifier = ">=1.5.0,<3.0.0" },
     { name = "pillow", specifier = ">=12.3.0,<13.0.0" },
-    { name = "pixano-inference-client", specifier = "==0.1.0" },
+    { name = "pixano-inference", specifier = ">=0.7.0,<0.8.0" },
     { name = "polars", specifier = ">1.7.0,<2.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1,<4.0.0" },
     { name = "pycocotools", specifier = ">=2.0.0,<3.0.0" },
@@ -1134,8 +1134,8 @@ test = [
 ]
 
 [[package]]
-name = "pixano-inference-client"
-version = "0.1.0"
+name = "pixano-inference"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -1144,9 +1144,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/a0/e24ff8f96436165d962e876ad473c5db95634287a430c068c7c89526fa08/pixano_inference_client-0.1.0.tar.gz", hash = "sha256:cec5cdc2a88283508db3d41ae5ba161b1560177ba3d4ea4d1fa47011f8ac88a8", size = 24083, upload-time = "2026-09-23T14:28:46.007Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/22/ed/73e241e38218477f0e88cc876db4ac2cc6253ebda74148dfe079d53dbeb1/pixano_inference-0.7.0.tar.gz", hash = "sha256:2797cc947ba48bfa57cc0d481906ddc4b704baa4d8967397b4f1223aa769dd8f", size = 78110, upload-time = "2026-10-06T08:06:07.827Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/b6/bc6ddf47208ecf90f577a818c096e849def4b01369bf83982f5f6ea334b9/pixano_inference_client-0.1.0-py3-none-any.whl", hash = "sha256:5b7f4ac45e130a3e098b21dc16a55c8175117a985cf4f8b4cb381d26aae90f72", size = 35437, upload-time = "2026-09-23T14:28:44.871Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/3b/9d42767b312287970070e503757f4e94c901bc801cd111e311b7456aaa63/pixano_inference-0.7.0-py3-none-any.whl", hash = "sha256:412580f6e138b814f01726814a4edca5d553c2e2faa7cfc8e856e436eb2d0d8d", size = 106170, upload-time = "2026-10-06T08:06:06.473Z" },
 ]
 
 [[package]]

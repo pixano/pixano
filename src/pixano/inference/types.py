@@ -207,51 +207,101 @@ class ImageMaskGenerationResult:
     status: str = "SUCCESS"
 
 
-# --- Video mask generation (SAM2 video tracking) ---
+# --- Video mask generation (video tracking: SAM2-style masks, or boxes from tracking by detection) ---
 
 
 @dataclass
 class VideoMaskGenerationInput:
     """Input for video mask generation.
 
+    A prompted request names the objects to track: ``objects_ids`` with one keyframe (or one flat
+    point/box prompt) per object. A prompt-free request (tracking by detection) names no object; the
+    model detects what to follow, optionally restricted by ``classes`` and ``box_threshold``.
+
     Attributes:
         video: List of frame images as base64 or URLs.
         model: Model name to use.
-        objects_ids: IDs for each object to track.
-        frame_indexes: Frame indices for prompts.
+        objects_ids: IDs of the prompted objects. Empty for a prompt-free request.
+        frame_indexes: Frame index of each object's prompt. Empty for a prompt-free request.
         points: Points for mask generation.
         labels: Labels for points.
         boxes: Bounding boxes.
         propagate: Whether to propagate masks beyond the prompted frames.
         interval: Optional propagation interval (window-relative).
         keyframes: Optional structured prompt payloads.
+        classes: Class names a tracking-by-detection model follows (``None``: the model's own set).
+        box_threshold: Minimum detection confidence for tracking by detection (``None``: model default).
     """
 
     video: list[str | bytes] | str | bytes
     model: str
-    objects_ids: list[int]
-    frame_indexes: list[int]
+    objects_ids: list[int] = field(default_factory=list)
+    frame_indexes: list[int] = field(default_factory=list)
     points: list[list[list[int]]] | None = None
     labels: list[list[int]] | None = None
     boxes: list[list[int]] | None = None
     propagate: bool = True
     interval: dict[str, Any] | None = None
     keyframes: list[dict[str, Any]] | None = None
+    classes: list[str] | str | None = None
+    box_threshold: float | None = None
+
+
+@dataclass
+class TrackedObjectData:
+    """One tracked object in one frame.
+
+    A mask-based tracker (SAM2) fills ``mask``; a detection-based tracker (ByteTrack) fills ``box``,
+    ``score`` and ``class_name``. At least one of ``box`` and ``mask`` is set.
+
+    Attributes:
+        track_id: Identity of the object across frames: the prompted object ID, or one the model assigned.
+        box: Bounding box ``[x1, y1, x2, y2]`` in frame pixels, if any.
+        score: Confidence of the object in this frame, if any.
+        class_name: Class name of the object, if any.
+        mask: Mask of the object, if any.
+    """
+
+    track_id: int
+    box: list[float] | None = None
+    score: float | None = None
+    class_name: str | None = None
+    mask: CompressedRLEData | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "track_id": self.track_id,
+            "box": self.box,
+            "score": self.score,
+            "class_name": self.class_name,
+            "mask": self.mask.to_dict() if self.mask is not None else None,
+        }
+
+
+@dataclass
+class TrackedFrameData:
+    """The objects tracked in one frame.
+
+    Attributes:
+        frame_index: Index of the frame: relative to the submitted window as the provider returns it,
+            absolute once the API router has remapped it.
+        objects: Objects tracked in the frame.
+    """
+
+    frame_index: int
+    objects: list[TrackedObjectData] = field(default_factory=list)
 
 
 @dataclass
 class VideoMaskGenerationOutput:
-    """Output for video mask generation.
+    """Output for video mask generation: for each frame, the objects tracked in it.
 
     Attributes:
-        objects_ids: IDs of tracked objects.
-        frame_indexes: Frame indices for each mask.
-        masks: Generated masks for each frame.
+        frames: Tracked frames, in the order the model processed them.
     """
 
-    objects_ids: list[int]
-    frame_indexes: list[int]
-    masks: list[CompressedRLEData]
+    frames: list[TrackedFrameData]
 
 
 @dataclass

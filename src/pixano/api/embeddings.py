@@ -20,7 +20,8 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from pixano_inference_client import EmbeddingRequest, SyncPixanoInferenceClient
+from pixano_inference.client import SyncPixanoInferenceClient
+from pixano_inference.schemas import EmbeddingRequest
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.io.jobs import JobSink, JobStore

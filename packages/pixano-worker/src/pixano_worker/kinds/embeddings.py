@@ -20,7 +20,8 @@ from typing import Any, Iterable
 
 import httpx
 from PIL import Image
-from pixano_inference_client import EmbeddingRequest, PixanoInferenceError, SyncPixanoInferenceClient
+from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
+from pixano_inference.schemas import EmbeddingRequest
 from pydantic import Field
 
 from pixano.inference.media import bytes_to_data_uri

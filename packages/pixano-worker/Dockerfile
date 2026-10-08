@@ -12,11 +12,10 @@
 FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# `git` parce que `pixano-inference-client` n'est pas publié sur PyPI et vient d'un dépôt git.
 # Les bibliothèques X11 parce qu'opencv entre par `pixano.schemas` et les réclame au chargement
 # — un service sans écran qui a besoin de libxcb, ce qui mesure bien ce que coûte cet import.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+        libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

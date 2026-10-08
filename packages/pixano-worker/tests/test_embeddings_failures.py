@@ -19,7 +19,7 @@ from typing import Any
 import httpx
 import numpy as np
 import pytest
-from pixano_inference_client import PixanoInferenceError
+from pixano_inference.client import PixanoInferenceError
 from pixano_worker.kinds import EmbeddingsKind, TransientError
 from pixano_worker.media import ResolvedMedia
 

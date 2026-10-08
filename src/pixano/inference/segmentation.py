@@ -183,7 +183,7 @@ async def tracking(
         provider_kwargs: Additional kwargs for the provider.
 
     Returns:
-        tuple of the compressed RLE masks, object IDs, and frame indexes.
+        tuple of the compressed RLE masks, object IDs, and frame indexes (one entry per mask).
     """
     if not isinstance(video, list):
         raise ValueError("Video format not currently supported, please use sequence frames.")
@@ -225,21 +225,24 @@ async def tracking(
     if result.status == "SUCCESS":
         generated_entity_id = shortuuid.uuid()  # used to group masks from one generation when no entity in input
 
-        for mask_data, obj_id, frame_idx in zip(result.data.masks, result.data.objects_ids, result.data.frame_indexes):
-            frame_image = video[frame_idx]
-            mask = CompressedRLE(
-                id=shortuuid.uuid(),
-                record_id=frame_image.record_id,
-                frame_id=frame_image.id,
-                view_id=_resolved_view_id(frame_image),
-                entity_id=entity.id if entity else generated_entity_id,
-                source_type=source_type,
-                source_name=source_name,
-                size=mask_data.size,
-                counts=mask_data.counts,
-            )
-            masks.append(mask)
-            objects_ids.append(obj_id)
-            frame_indexes.append(frame_idx)
+        for frame in sorted(result.data.frames, key=lambda tracked_frame: tracked_frame.frame_index):
+            frame_image = video[frame.frame_index]
+            for tracked in frame.objects:
+                if tracked.mask is None:  # a detection-based tracker returns boxes, not masks
+                    continue
+                mask = CompressedRLE(
+                    id=shortuuid.uuid(),
+                    record_id=frame_image.record_id,
+                    frame_id=frame_image.id,
+                    view_id=_resolved_view_id(frame_image),
+                    entity_id=entity.id if entity else generated_entity_id,
+                    source_type=source_type,
+                    source_name=source_name,
+                    size=tracked.mask.size,
+                    counts=tracked.mask.counts,
+                )
+                masks.append(mask)
+                objects_ids.append(tracked.track_id)
+                frame_indexes.append(frame.frame_index)
 
     return masks, objects_ids, frame_indexes
