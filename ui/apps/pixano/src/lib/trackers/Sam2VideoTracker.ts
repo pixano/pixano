@@ -272,14 +272,17 @@ export class Sam2VideoTracker extends BaseTracker<Sam2TrackerKeyframe> {
     }
 
     const normalizedMasks: SaveMaskShape[] = [];
-    for (let index = 0; index < trackingOutput.frame_indexes.length; index += 1) {
-      const frameIndex = trackingOutput.frame_indexes[index];
-      const mask = trackingOutput.masks[index];
-      const frameSource = this.frameSources.find((frame) => frame.frameIndex === frameIndex);
-      if (!mask || !frameSource) continue;
+    for (const frame of trackingOutput.frames) {
+      const frameIndex = frame.frame_index;
+      // The result lists every object tracked in the frame; keep the prompted object's mask.
+      const tracked = frame.objects.find(
+        (object) => object.track_id === keyframe.objectId && object.mask,
+      );
+      const frameSource = this.frameSources.find((source) => source.frameIndex === frameIndex);
+      if (!tracked?.mask || !frameSource) continue;
 
       const normalizedMask = normalizeMaskToSaveShape({
-        mask,
+        mask: tracked.mask,
         viewRef: frameSource.viewRef,
         itemId: keyframe.itemId,
         imageWidth: frameSource.width,
