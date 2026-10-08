@@ -31,6 +31,7 @@ License: CECILL-C
     detectionTrackColorById,
     resetTrackingByDetectionSession,
     trackingByDetectionPreviewBBoxes,
+    trackingByDetectionSession,
   } from "$lib/stores/trackingByDetectionStore.svelte";
   import {
     addTrackingKeyframe,
@@ -960,6 +961,13 @@ License: CECILL-C
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <AiProcessingBadge message="Buffering next frames..." />
+        </div>
+      {/if}
+      {#if trackingByDetectionSession.value.phase === "review"}
+        <div
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
+        >
+          Proposed tracks — keep or discard them in the inspector, then accept
         </div>
       {/if}
       {#if isTracking.value}
