@@ -61,10 +61,31 @@ async def sam2_model_name(provider: PixanoInferenceProvider) -> str:
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def sam2_video_model_name(provider: PixanoInferenceProvider) -> str:
+    """A prompted video tracker (SAM2).
+
+    The server lists prompted and prompt-free trackers under the same task, so the model is picked by
+    name (``PIXANO_E2E_SAM2_VIDEO_MODEL``, default ``sam2-video``), falling back to the first one.
+    """
     models = await provider.list_models(task=InferenceTask.VIDEO_MASK_GENERATION)
     if not models:
         pytest.skip("No video mask generation model available on server")
-    return models[0].name
+    prompted = [model.name for model in models if (model.interface or {}).get("prompts")]
+    preferred = os.environ.get("PIXANO_E2E_SAM2_VIDEO_MODEL") or (prompted[0] if prompted else "sam2-video")
+    names = [model.name for model in models]
+    return preferred if preferred in names else names[0]
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def tracking_by_detection_model_name(provider: PixanoInferenceProvider) -> str:
+    """A prompt-free tracker (YOLO + ByteTrack), named by ``PIXANO_E2E_TRACKING_BY_DETECTION_MODEL``."""
+    models = await provider.list_models(task=InferenceTask.VIDEO_MASK_GENERATION)
+    prompt_free = [model.name for model in models if (model.interface or {}).get("prompt_free")]
+    name = os.environ.get("PIXANO_E2E_TRACKING_BY_DETECTION_MODEL") or (
+        prompt_free[0] if prompt_free else "yolo-bytetrack"
+    )
+    if name not in {model.name for model in models}:
+        pytest.skip(f"No tracking-by-detection model '{name}' on server (set PIXANO_E2E_TRACKING_BY_DETECTION_MODEL)")
+    return name
 
 
 # ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { untrack } from "svelte";
 
+import { resetTrackingByDetectionSession } from "./trackingByDetectionStore.svelte";
 import { cancelTrackingSession } from "./trackingStore.svelte";
 import { resetVideoStores } from "./videoStores.svelte";
 import {
@@ -139,6 +140,7 @@ export function resetWorkspaceStores() {
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];
   cancelTrackingSession();
+  resetTrackingByDetectionSession();
   resetColorScale();
   clearAnnotationMappingCaches();
 }

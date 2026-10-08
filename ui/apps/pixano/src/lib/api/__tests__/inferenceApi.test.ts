@@ -174,6 +174,35 @@ describe("tracking job APIs", () => {
     });
   });
 
+  it("submits prompt-free tracking jobs with classes and a detection floor", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ job_id: "tracking-job-2", status: "running", detail: null, data: null }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    await submitTrackingJob({
+      model: "yolo-bytetrack",
+      provider_name: "pixano-inference@127.0.0.1:7463",
+      dataset_id: "dataset-1",
+      record_id: "record-1",
+      view_name: "camera",
+      start_frame_index: 0,
+      frame_count: 120,
+      objects_ids: [],
+      prompt_frame_indexes: [],
+      classes: ["person"],
+      box_threshold: 0.4,
+    });
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/inference/video_mask_generation/jobs");
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body).toMatchObject({ objects_ids: [], classes: ["person"], box_threshold: 0.4 });
+    expect(body).not.toHaveProperty("keyframes");
+  });
+
   it("polls tracking jobs", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(

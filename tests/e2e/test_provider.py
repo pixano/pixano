@@ -244,3 +244,85 @@ class TestVideoMaskGeneration:
         assert len(job.data.frames) > 0
         assert any(tracked.mask is not None for frame in job.data.frames for tracked in frame.objects)
         assert {tracked.track_id for frame in job.data.frames for tracked in frame.objects} == {1}
+
+
+# ---------------------------------------------------------------------------
+# Tracking by detection (prompt-free)
+# ---------------------------------------------------------------------------
+
+
+def _tracked_objects(frames):
+    return [tracked for frame in frames for tracked in frame.objects]
+
+
+def _check_detection_tracks(frames, expected_class: str | None = None) -> None:
+    assert frames
+    for tracked in _tracked_objects(frames):
+        assert tracked.track_id >= 1
+        assert tracked.box is not None and len(tracked.box) == 4
+        x1, y1, x2, y2 = tracked.box
+        assert x2 >= x1 and y2 >= y1
+        assert tracked.score is not None and 0.0 <= tracked.score <= 1.0
+        assert tracked.class_name
+        if expected_class is not None:
+            assert tracked.class_name == expected_class
+        assert tracked.mask is None
+    for frame in frames:
+        track_ids = [tracked.track_id for tracked in frame.objects]
+        assert len(track_ids) == len(set(track_ids))
+
+
+class TestTrackingByDetection:
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_prompt_free_run_returns_boxes_scores_and_classes(
+        self,
+        provider: PixanoInferenceProvider,
+        tracking_by_detection_model_name: str,
+        test_image_base64_png: str,
+    ):
+        # No object is named: the model detects what to follow with its own class set.
+        frames = [test_image_base64_png] * 3
+        input_data = VideoMaskGenerationInput(video=frames, model=tracking_by_detection_model_name, box_threshold=0.25)
+        result = await provider.video_mask_generation(input_data, timeout=180.0)
+
+        assert result.status == "SUCCESS"
+        _check_detection_tracks(result.data.frames)
+        assert _tracked_objects(result.data.frames), "a COCO image should yield at least one tracked object"
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_classes_restrict_what_is_tracked(
+        self,
+        provider: PixanoInferenceProvider,
+        tracking_by_detection_model_name: str,
+        test_image_base64_png: str,
+    ):
+        frames = [test_image_base64_png] * 2
+        input_data = VideoMaskGenerationInput(
+            video=frames, model=tracking_by_detection_model_name, classes=["person"], box_threshold=0.25
+        )
+        result = await provider.video_mask_generation(input_data, timeout=180.0)
+
+        assert result.status == "SUCCESS"
+        _check_detection_tracks(result.data.frames, expected_class="person")
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_prompt_free_job_round_trip(
+        self,
+        provider: PixanoInferenceProvider,
+        tracking_by_detection_model_name: str,
+        test_image_base64_png: str,
+    ):
+        frames = [test_image_base64_png] * 2
+        input_data = VideoMaskGenerationInput(video=frames, model=tracking_by_detection_model_name, box_threshold=0.25)
+        job = await provider.submit_video_mask_generation_job(input_data)
+        assert job.status in {"running", "completed"}
+
+        deadline = time.monotonic() + 180.0
+        while job.status == "running":
+            assert time.monotonic() < deadline, "tracking job did not finish in time"
+            await asyncio.sleep(1.0)
+            job = await provider.get_video_mask_generation_job(job.job_id)
+
+        assert job.status == "completed", job.detail
+        assert job.data is not None
+        _check_detection_tracks(job.data.frames)

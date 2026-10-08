@@ -3,8 +3,9 @@ layout: ../../layouts/DocsLayout.astro
 title: "Video Object Tracking with DAVIS"
 section: cookbook
 ---
-import Callout from '../../components/Callout.astro'
-import PrevNext from '../../components/PrevNext.astro'
+
+import Callout from "../../components/Callout.astro";
+import PrevNext from "../../components/PrevNext.astro";
 
 # Video Object Tracking with DAVIS
 
@@ -21,7 +22,7 @@ By the end of this page, you will understand how video object segmentation datas
 
 ## Background: What is DAVIS?
 
-**DAVIS (Densely Annotated Video Segmentation)** is a benchmark for video object segmentation, introduced in 2016 and extended through 2019. It addresses a fundamental challenge in video understanding: *given the mask of an object in the first frame of a video, can a system accurately segment that object in every subsequent frame?*
+**DAVIS (Densely Annotated Video Segmentation)** is a benchmark for video object segmentation, introduced in 2016 and extended through 2019. It addresses a fundamental challenge in video understanding: _given the mask of an object in the first frame of a video, can a system accurately segment that object in every subsequent frame?_
 
 This is the **semi-supervised** setting — the model (or annotator) receives one reference annotation and must propagate it across the entire video, handling appearance changes, occlusions, camera motion, and deformation.
 
@@ -59,14 +60,14 @@ To handle these challenges, Pixano introduces two concepts that don't exist in i
 
 Here is how DAVIS's structure maps to Pixano:
 
-| DAVIS concept | Pixano concept | Why |
-|---------------|---------------|-----|
-| A video sequence | **Record** | Each video is one sample in the dataset. The record holds the split and status. |
-| Individual video frames | **View** (`SequenceFrame`) | Each frame is a view with a `frame_index` and `timestamp`, linking it to its position in the video. |
-| A tracked object (e.g. "bear") | **Entity** | The real-world object being tracked. We subclass `Entity` to add a `category` field. |
-| The object's trajectory across frames | **Tracklet** | Defines the temporal extent (start/end frame) of the entity's visibility. Per-frame annotations link to this tracklet. |
-| The pixel mask at one frame | **Annotation** (`CompressedRLE`) | A per-frame segmentation mask stored in COCO-style run-length encoding. Each mask is linked to a tracklet and entity. |
-| Per-frame object state | **EntityDynamicState** | Per-frame attributes (visibility, occlusion) stored separately from geometry. |
+| DAVIS concept                         | Pixano concept                   | Why                                                                                                                    |
+| ------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| A video sequence                      | **Record**                       | Each video is one sample in the dataset. The record holds the split and status.                                        |
+| Individual video frames               | **View** (`SequenceFrame`)       | Each frame is a view with a `frame_index` and `timestamp`, linking it to its position in the video.                    |
+| A tracked object (e.g. "bear")        | **Entity**                       | The real-world object being tracked. We subclass `Entity` to add a `category` field.                                   |
+| The object's trajectory across frames | **Tracklet**                     | Defines the temporal extent (start/end frame) of the entity's visibility. Per-frame annotations link to this tracklet. |
+| The pixel mask at one frame           | **Annotation** (`CompressedRLE`) | A per-frame segmentation mask stored in COCO-style run-length encoding. Each mask is linked to a tracklet and entity.  |
+| Per-frame object state                | **EntityDynamicState**           | Per-frame attributes (visibility, occlusion) stored separately from geometry.                                          |
 
 The key insight: in image datasets, an entity has annotations directly. In video datasets, an entity has a **tracklet** that spans multiple frames, and each frame's annotation is linked to that tracklet. This extra level of indirection is what gives Pixano temporal tracking capabilities.
 
@@ -116,7 +117,10 @@ python data_importation/davis/generate_sample.py ./davis_sample /path/to/DAVIS \
 ```
 
 <Callout type="note" title="DAVIS download">
-You need to download the DAVIS 2017 dataset (Full-Resolution) from the [DAVIS website](https://davischallenge.org/davis2017/code.html) before running the script. The `/path/to/DAVIS` argument should point to the root of the downloaded dataset.
+  You need to download the DAVIS 2017 dataset (Full-Resolution) from the [DAVIS
+  website](https://davischallenge.org/davis2017/code.html) before running the
+  script. The `/path/to/DAVIS` argument should point to the root of the
+  downloaded dataset.
 </Callout>
 
 This produces a source folder with frames and masks organized by video:
@@ -154,12 +158,19 @@ Each line describes one video using **glob patterns** for frames and masks:
     "image": { "frame_pattern": "frames/bear/*.jpg", "fps": 24 }
   },
   "annotation_files": [
-    { "kind": "mask", "view": "image", "pattern": "masks/bear/*.png", "encoding": "index_png", "entity_map": "auto" }
+    {
+      "kind": "mask",
+      "view": "image",
+      "pattern": "masks/bear/*.png",
+      "encoding": "index_png",
+      "entity_map": "auto"
+    }
   ]
 }
 ```
 
 Notice the differences from image datasets:
+
 - `"views"` uses an object with `"frame_pattern"` (a glob) and `"fps"` (frame rate, required — nothing is inferred) instead of a simple filename. Pixano expands the glob to discover all frames, ordered alphabetically, one sequence frame per file.
 - `"annotation_files"` is a list of typed sidecars. `"encoding": "index_png"` means indexed PNGs where each pixel value is one object (0 = background); Pixano matches masks to frames by filename stem (e.g. `00000.png` matches `00000.jpg`). `"entity_map": "auto"` names the objects `object_1`, `object_2`, … — or map pixel values to names explicitly: `{"1": "bear"}`.
 - Tracklets are derived automatically from the frames each object appears in — no manual bookkeeping.
@@ -201,9 +212,13 @@ SAM integration extends to video: you can use the smart segmentation tool on any
 
 This is particularly powerful for video annotation: annotate a precise mask on one frame, propagate it forward, then correct on frames where the prediction drifts. The combination of tracklets (for temporal identity) and SAM (for per-frame precision) mirrors the workflow that made DAVIS such an influential benchmark.
 
+### Tracking by detection
+
+When the inference server serves a tracking-by-detection model (a detector followed by a tracker, such as YOLO + ByteTrack), the toolbar's **Track objects by detection** action runs it over the video in one pass. Choose the model, optionally the classes to follow and a detection threshold, whether to start at the current frame, and how many frames to keep between saved boxes. The proposed tracks appear on the canvas and as lanes on the timeline; keep or discard them in the inspector, then accept. Each kept track becomes an entity (its class written to the dataset's label field when the schema has one), one tracklet per contiguous run, and one box every N frames carrying the model's score as `confidence` and `source_type: "model"`. A run covers at most 600 frames.
+
 ### EntityDynamicState
 
-While tracklets and masks capture *where* an object is, `EntityDynamicState` captures *what state* the object is in at each frame. This is stored separately from geometric annotations because the same object can have different per-frame attributes (occluded, truncated, moving, stationary) independent of its mask or bounding box.
+While tracklets and masks capture _where_ an object is, `EntityDynamicState` captures _what state_ the object is in at each frame. This is stored separately from geometric annotations because the same object can have different per-frame attributes (occluded, truncated, moving, stationary) independent of its mask or bounding box.
 
 In the DAVIS example, `DAVISEntityDynamicState` is empty — but for your own datasets you can add custom fields. For example, in an autonomous driving dataset you might track:
 
@@ -234,5 +249,8 @@ Let's connect the dots:
 
 <PrevNext
   prev={{ title: "Object Detection", href: "/cookbook/object_detection/" }}
-  next={{ title: "Multi-View Detection", href: "/cookbook/multi_view_detection/" }}
+  next={{
+    title: "Multi-View Detection",
+    href: "/cookbook/multi_view_detection/",
+  }}
 />

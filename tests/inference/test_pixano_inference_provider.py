@@ -81,6 +81,80 @@ async def test_list_models_maps_capability_to_task():
 
 
 @pytest.mark.asyncio
+async def test_list_models_passes_the_interface_through_in_snake_case():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/models"
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "name": "sam2-video",
+                    "capability": "tracking",
+                    "modelClass": "Sam2VideoModel",
+                    "modelPath": "facebook/sam2-hiera-tiny",
+                    "status": "RUNNING",
+                    "interface": {
+                        "capability": "tracking",
+                        "prompts": ["points", "box", "mask"],
+                        "promptFree": False,
+                        "classes": "none",
+                        "classNames": None,
+                        "thresholds": [],
+                        "interval": True,
+                        "outputs": ["mask"],
+                    },
+                },
+                {"name": "yolo-bytetrack", "capability": "tracking", "status": "RUNNING"},
+            ],
+        )
+
+    provider = _provider_with_transport(handler)
+    try:
+        by_name = {m.name: m for m in await provider.list_models()}
+        assert by_name["sam2-video"].interface == {
+            "capability": "tracking",
+            "prompts": ["points", "box", "mask"],
+            "prompt_free": False,
+            "classes": "none",
+            "class_names": None,
+            "thresholds": [],
+            "interval": True,
+            "outputs": ["mask"],
+        }
+        assert by_name["sam2-video"].model_class == "Sam2VideoModel"
+        assert by_name["sam2-video"].model_path == "facebook/sam2-hiera-tiny"
+        # A server that does not publish it (0.7.0) leaves it unknown rather than guessed.
+        assert by_name["yolo-bytetrack"].interface is None
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_get_server_info_maps_models_to_tasks():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/info":
+            return httpx.Response(200, json={"appVersion": "0.7.1"})
+        assert request.url.path == "/v1/models"
+        return httpx.Response(
+            200,
+            json=[
+                {"name": "sam2-video", "capability": "tracking", "status": "RUNNING"},
+                {"name": "clip", "capability": "embedding", "status": "RUNNING"},
+                {"name": "mystery", "capability": "not-a-capability", "status": "RUNNING"},
+            ],
+        )
+
+    provider = _provider_with_transport(handler)
+    try:
+        info = await provider.get_server_info()
+        assert info.version == "0.7.1"
+        assert info.models == ["sam2-video", "clip"]
+        assert info.models_to_task == {"sam2-video": "video_mask_generation", "clip": "embedding"}
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
 async def test_image_mask_generation_converts_payloads():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/v1/inference/segmentation"

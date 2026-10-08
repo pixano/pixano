@@ -42,6 +42,11 @@ const defaultPalette = [
 const ABSOLUTE_URL_RE = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
 const INLINE_URL_RE = /^(?:blob:|data:)/i;
 
+export function paletteColorAt(index: number): string {
+  const size = defaultPalette.length;
+  return defaultPalette[((index % size) + size) % size];
+}
+
 export function ordinalColorScale(range: Iterable<string>) {
   const ids = [...range];
   const colorById = new Map<string, string>();

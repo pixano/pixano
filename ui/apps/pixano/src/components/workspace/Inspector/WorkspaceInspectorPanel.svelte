@@ -9,8 +9,10 @@ License: CECILL-C
   import { ClipboardText, Cube } from "phosphor-svelte";
 
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
+  import TrackingByDetectionPanel from "../TrackingByDetection/TrackingByDetectionPanel.svelte";
   import EntitiesInspector from "./EntitiesInspector.svelte";
   import SceneInspector from "./SceneInspector.svelte";
+  import { isTrackingByDetectionActive } from "$lib/stores/trackingByDetectionStore.svelte";
   import { newShape } from "$lib/stores/workspaceStores.svelte";
   import { Skeleton, Tabs } from "$lib/ui";
 
@@ -29,6 +31,8 @@ License: CECILL-C
 <div class="h-full flex flex-col border-l border-border bg-card font-sans overflow-hidden">
   {#if newShape.value?.status === "saving"}
     <SaveShapeForm bind:currentTab />
+  {:else if isTrackingByDetectionActive.value}
+    <TrackingByDetectionPanel />
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
       <div class="shrink-0 border-b border-border/50 bg-card px-2.5 py-2">

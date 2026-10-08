@@ -48,6 +48,10 @@ router = APIRouter(prefix="/inference", tags=["Inference"])
 IMAGE_TABLE = "images"
 SFRAME_TABLE = "sequence_frames"
 TRACKING_JOB_TERMINAL_STATES = {"completed", "failed", "canceled"}
+# One tracking run is one request to the inference server: a tracking-by-detection model assigns its track ids
+# per request, so a video cannot be split, and the request carries the frames as base64 under the server's body
+# limit (100 MB by default).
+MAX_TRACKING_FRAMES = 600
 
 # Default URLs for providers that have well-known endpoints.
 _DEFAULT_PROVIDER_URLS: dict[str, str] = {
@@ -104,6 +108,8 @@ class ModelInfoResponse(BaseModel):
     provider_name: str
     model_path: str | None = None
     model_class: str | None = None
+    # How the model is called, when the server publishes it (pixano-inference >= 0.7.1).
+    interface: dict[str, Any] | None = None
 
 
 class VLMRequest(BaseModel):
@@ -440,6 +446,7 @@ def _serialize_model_info(model: Any, provider_name: str) -> dict[str, Any]:
         "provider_name": provider_name,
         "model_path": model.model_path,
         "model_class": model.model_class,
+        "interface": getattr(model, "interface", None),
     }
 
 
@@ -567,6 +574,14 @@ def _raise_http_from_request_error(exc: InferenceRequestError) -> None:
 def _build_video_mask_generation_input(
     request: VideoMaskGenerationRequest, settings: Settings
 ) -> tuple[VideoMaskGenerationInput, list[int]]:
+    if request.frame_count > MAX_TRACKING_FRAMES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"A tracking run covers at most {MAX_TRACKING_FRAMES} frames; narrow the frame range "
+                f"(requested {request.frame_count})."
+            ),
+        )
     dataset = _get_dataset(request.dataset_id, settings)
     resolved_frames = _resolve_tracking_frames(
         dataset,

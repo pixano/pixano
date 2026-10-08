@@ -67,6 +67,9 @@ class ModelInfo:
         model_path: Path to the model weights (optional).
         model_class: Class name of the model (optional).
         status: Deployment status on the server (optional).
+        interface: How the model is called, as the server publishes it (pixano-inference >= 0.7.1):
+            for a tracking model, ``prompts``, ``prompt_free``, ``classes``, ``class_names``, ...
+            ``None`` when the server does not say.
     """
 
     name: str
@@ -74,6 +77,7 @@ class ModelInfo:
     model_path: str | None = None
     model_class: str | None = None
     status: str | None = None
+    interface: dict[str, Any] | None = None
 
 
 # --- Shared array / mask payloads (frontend wire shape — DO NOT change fields) ---

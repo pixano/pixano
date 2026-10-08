@@ -12,6 +12,12 @@ export const DISPLAY_MENTION_FEATURES = ["role", "concept", "mention"];
 // default entity features used to display tooltip, in this order
 const DEFAULT_FEATURES = ["name", "category", "category_name"];
 
+/** The entity field that holds an object's label, in display order; null when the table has none. */
+export const resolveEntityLabelField = (fieldNames: Iterable<string>): string | null => {
+  const names = new Set(fieldNames);
+  return DEFAULT_FEATURES.find((feature) => names.has(feature)) ?? null;
+};
+
 export const getDefaultDisplayFeat = (entity: Entity): string | null => {
   for (const default_feature of DEFAULT_FEATURES) {
     if (default_feature in entity.data) {

@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 
 from pixano.api.main import create_app
+from pixano.api.routers.inference import MAX_TRACKING_FRAMES
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
@@ -253,6 +254,7 @@ class TestInferenceModels:
                 "provider_name": provider_a.name,
                 "model_path": "facebook/sam2-hiera-tiny",
                 "model_class": "SAM2",
+                "interface": None,
             },
             {
                 "name": "qwen-vl",
@@ -260,8 +262,34 @@ class TestInferenceModels:
                 "provider_name": provider_b.name,
                 "model_path": "Qwen/Qwen2.5-VL-3B-Instruct",
                 "model_class": "QwenVL",
+                "interface": None,
             },
         ]
+
+    def test_list_models_serializes_the_interface(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        interface = {
+            "capability": "tracking",
+            "prompts": [],
+            "prompt_free": True,
+            "classes": "closed",
+            "class_names": ["person", "car"],
+            "thresholds": ["box"],
+            "interval": False,
+            "outputs": ["box", "score", "class"],
+        }
+        provider.list_models = AsyncMock(
+            return_value=[ModelInfo(name="yolo-bytetrack", task="video_mask_generation", interface=interface)]
+        )
+        client, _ = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+
+        response = client.get("/inference/models/list")
+
+        assert response.status_code == 200
+        assert response.json()[0]["interface"] == interface
 
 
 class TestLegacyRoutesRemoved:
@@ -754,6 +782,46 @@ class TestVideoTracking:
 
         assert response.status_code == 400
         assert response.json() == {"detail": "Invalid binary metadata"}
+
+    def test_track_video_rejects_runs_over_the_frame_cap(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+        request = {
+            "model": "yolo-bytetrack",
+            "dataset_id": dataset_id,
+            "record_id": record_id,
+            "view_name": "camera",
+            "start_frame_index": 0,
+            "frame_count": MAX_TRACKING_FRAMES + 1,
+            "classes": ["person"],
+        }
+
+        for route in ("/inference/video_mask_generation", "/inference/video_mask_generation/jobs"):
+            response = client.post(route, json=request)
+            assert response.status_code == 400, response.text
+            assert f"at most {MAX_TRACKING_FRAMES} frames" in response.json()["detail"]
+        provider.video_mask_generation.assert_not_called()
+        provider.submit_video_mask_generation_job.assert_not_called()
+
+        # The cap itself is allowed: the window simply holds the frames the record has.
+        provider.video_mask_generation = AsyncMock(
+            return_value=VideoMaskGenerationResult(
+                data=VideoMaskGenerationOutput(frames=[]),
+                timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
+                processing_time=0.1,
+                metadata={},
+                id="track-cap",
+                status="SUCCESS",
+            )
+        )
+        response = client.post(
+            "/inference/video_mask_generation", json={**request, "frame_count": MAX_TRACKING_FRAMES}
+        )
+        assert response.status_code == 200, response.text
 
     def test_track_video_prompt_free_request_passes_classes_and_threshold(self):
         provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")

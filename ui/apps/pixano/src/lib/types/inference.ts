@@ -63,10 +63,45 @@ export interface InferenceModelSelection {
   provider_name: string;
 }
 
+/**
+ * How a model is called, as pixano-inference publishes it on `/v1/models` from 0.7.1 (snake_case
+ * through Pixano's API). Absent on older servers and on models that declare none.
+ */
+export interface InferenceModelInterface {
+  capability?: string;
+  prompts?: string[];
+  prompt_free?: boolean;
+  classes?: string;
+  class_names?: string[] | null;
+  thresholds?: string[];
+  outputs?: string[];
+  [key: string]: unknown;
+}
+
 export interface InferenceModel extends InferenceModelSelection {
   task: Task;
   model_path?: string | null;
   model_class?: string | null;
+  interface?: InferenceModelInterface | null;
+}
+
+/**
+ * A tracking model that follows prompted objects (SAM2-style). Without an interface every
+ * tracking model qualifies: that is what tracking models were before the server said more.
+ */
+export function supportsPromptedTracking(model: InferenceModel): boolean {
+  if (model.task !== VideoTask.TRACKING) return false;
+  return model.interface == null || (model.interface.prompts?.length ?? 0) > 0;
+}
+
+/**
+ * A tracking model that detects what it follows (ByteTrack-style). Only a model whose interface
+ * says `prompt_free` qualifies: a prompted model run without prompts fails on the server, so an
+ * unknown model is not offered.
+ */
+export function supportsTrackingByDetection(model: InferenceModel): boolean {
+  if (model.task !== VideoTask.TRACKING) return false;
+  return model.interface?.prompt_free === true;
 }
 
 export type InferenceLoadStatus = "idle" | "loading" | "loaded" | "error";
@@ -184,6 +219,9 @@ export interface VideoTrackingTaskInput {
     box?: { x: number; y: number; width: number; height: number } | null;
     mask?: CompressedRLEPayload | null;
   }> | null;
+  /** Tracking by detection: the classes to follow (null: the model's own set) and the detection floor. */
+  classes?: string[] | null;
+  box_threshold?: number | null;
 }
 
 export interface VideoTrackedObject {

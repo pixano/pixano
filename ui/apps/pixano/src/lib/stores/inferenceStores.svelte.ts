@@ -17,7 +17,8 @@ import {
   ImageTask,
   isSameInferenceModel,
   MultimodalImageNLPTask,
-  VideoTask,
+  supportsPromptedTracking,
+  supportsTrackingByDetection,
   type InferenceModel,
   type InferenceModelSelection,
   type InferenceServerState,
@@ -35,6 +36,7 @@ export const inferenceServerStore = reactiveStore<InferenceServerState>({
 
 const STATIC_SEGMENTATION_MODEL_STORAGE_KEY = "pixano-static-segmentation-model";
 const VIDEO_SEGMENTATION_MODEL_STORAGE_KEY = "pixano-video-segmentation-model";
+const TRACKING_BY_DETECTION_MODEL_STORAGE_KEY = "pixano-tracking-by-detection-model";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -116,7 +118,13 @@ export const staticSegmentationModels = {
 
 export const videoSegmentationModels = {
   get value() {
-    return inferenceServerStore.value.models.filter((m) => m.task === VideoTask.TRACKING);
+    return inferenceServerStore.value.models.filter(supportsPromptedTracking);
+  },
+};
+
+export const trackingByDetectionModels = {
+  get value() {
+    return inferenceServerStore.value.models.filter(supportsTrackingByDetection);
   },
 };
 
@@ -133,6 +141,10 @@ export const selectedVideoSegmentationModel = reactiveStore<InferenceModelSelect
   readStoredSelection(VIDEO_SEGMENTATION_MODEL_STORAGE_KEY),
 );
 export const selectedVqaModel = reactiveStore<InferenceModelSelection | null>(null);
+// Its own store: changing `selectedVideoSegmentationModel` resets the VOS session.
+export const selectedTrackingByDetectionModel = reactiveStore<InferenceModelSelection | null>(
+  readStoredSelection(TRACKING_BY_DETECTION_MODEL_STORAGE_KEY),
+);
 
 export const currentSegmentationModels = {
   get value() {
@@ -180,6 +192,19 @@ $effect.root(() => {
       return;
     }
     writeStoredSelection(VIDEO_SEGMENTATION_MODEL_STORAGE_KEY, nextSelection);
+  });
+});
+
+$effect.root(() => {
+  $effect(() => {
+    const availableModels = trackingByDetectionModels.value;
+    const currentSelection = selectedTrackingByDetectionModel.value;
+    const nextSelection = reconcileSegmentationSelection(availableModels, currentSelection);
+    if (!hasSameSelection(currentSelection, nextSelection)) {
+      selectedTrackingByDetectionModel.value = nextSelection;
+      return;
+    }
+    writeStoredSelection(TRACKING_BY_DETECTION_MODEL_STORAGE_KEY, nextSelection);
   });
 });
 

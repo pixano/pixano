@@ -118,7 +118,7 @@ export const applyEditedShapeDataToAnnotation = (ann: Annotation, shape: EditSha
 };
 
 export const defineCreatedEntity = (
-  shape: SaveShape,
+  shape: Pick<SaveShape, "itemId">,
   features: Record<string, ItemFeature>,
   entitySchema: DS_NamedSchema,
 ): Entity => {
@@ -180,7 +180,7 @@ function getSingleEntitySchema(workspaceManifest: WorkspaceManifest): DS_NamedSc
 
 export const findOrCreateEntity = (
   selectedEntityId: string,
-  shape: SaveShape,
+  shape: Pick<SaveShape, "itemId">,
   features: Record<string, Record<string, ItemFeature>>,
   workspaceManifest: WorkspaceManifest,
 ): Entity => {
@@ -216,6 +216,19 @@ export const findOrCreateSubAndTopEntities = (
   };
 };
 
+/** Provenance stamped on a created annotation; the default is the interactive `PIXANO_SOURCE`. */
+export interface AnnotationSourceFields {
+  source_type: string;
+  source_name: string;
+  source_metadata: string;
+}
+
+export const setTrackletOwnership = (trackletId: string, children: Annotation[]): void => {
+  for (const child of children) {
+    child.data.tracklet_id = trackletId;
+  }
+};
+
 export const defineCreatedAnnotation = (
   entity: Entity,
   features: Record<string, Record<string, ItemFeature>>,
@@ -224,6 +237,7 @@ export const defineCreatedAnnotation = (
   workspaceManifest: WorkspaceManifest,
   isVideo: boolean,
   currentFrameIndex: number,
+  options: { source?: AnnotationSourceFields } = {},
 ): Annotation | undefined => {
   const now = nowTimestamp();
   const videoFrameRef =
@@ -243,14 +257,19 @@ export const defineCreatedAnnotation = (
     created_at: now,
     updated_at: now,
   };
+  const source = options.source ?? {
+    source_type: PIXANO_SOURCE.type,
+    source_name: PIXANO_SOURCE.name,
+    source_metadata: PIXANO_SOURCE.metadata,
+  };
   const baseData = {
     item_id: entity.data.item_id,
     view_name: annotationViewRef.name,
     view_id: annotationViewRef.id,
     entity_id: entity.id,
-    source_type: PIXANO_SOURCE.type,
-    source_name: PIXANO_SOURCE.name,
-    source_metadata: PIXANO_SOURCE.metadata,
+    source_type: source.source_type,
+    source_name: source.source_name,
+    source_metadata: source.source_metadata,
     inference_metadata: {},
   };
   const perFrameData = {

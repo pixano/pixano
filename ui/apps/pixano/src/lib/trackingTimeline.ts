@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-export type TrackingTimelineVariant = "bbox" | "vos";
+export type TrackingTimelineVariant = "bbox" | "vos" | "detection";
 
 export interface TrackingTimelineState {
   variant: TrackingTimelineVariant;
@@ -81,7 +81,7 @@ export function buildTrackingTimelineVisualState(
       : {
           startFrame: Math.min(state.pendingInterval[0], state.pendingInterval[1]),
           endFrame: Math.max(state.pendingInterval[0], state.pendingInterval[1]),
-          label: "Tracking...",
+          label: state.variant === "detection" ? "Detecting and tracking..." : "Tracking...",
         };
 
   const markers: TrackingTimelineMarkerVisual[] = keyframes.map((frameIndex) => ({
@@ -97,4 +97,57 @@ export function buildTrackingTimelineVisualState(
     pendingBar,
     markers,
   };
+}
+
+// ─── Tracking by detection: one lane per proposed track ─────────────────────
+
+export type DetectionTimelineLaneState = "kept" | "discarded" | "selected";
+
+export interface DetectionTimelineLane {
+  trackId: number;
+  label: string;
+  color: string;
+  segments: Array<[number, number]>;
+  state: DetectionTimelineLaneState;
+}
+
+export interface DetectionTimelineTrackInput {
+  trackId: number;
+  className: string | null;
+  frames: Array<{ frameIndex: number }>;
+}
+
+export function buildDetectionTimelineLanes(
+  tracks: DetectionTimelineTrackInput[],
+  options: {
+    discardedTrackIds: Iterable<number>;
+    selectedTrackId: number | null;
+    maxGapFrames: number;
+    colorOf: (trackId: number) => string;
+  },
+): DetectionTimelineLane[] {
+  const discarded = new Set(options.discardedTrackIds);
+  return tracks.map((track) => {
+    const segments: Array<[number, number]> = [];
+    for (const frame of track.frames) {
+      const last = segments[segments.length - 1];
+      if (last && frame.frameIndex - last[1] <= options.maxGapFrames) {
+        last[1] = frame.frameIndex;
+      } else {
+        segments.push([frame.frameIndex, frame.frameIndex]);
+      }
+    }
+    return {
+      trackId: track.trackId,
+      label: `${track.className ?? "object"} #${track.trackId}`,
+      color: options.colorOf(track.trackId),
+      segments,
+      state:
+        options.selectedTrackId === track.trackId
+          ? "selected"
+          : discarded.has(track.trackId)
+            ? "discarded"
+            : "kept",
+    };
+  });
 }

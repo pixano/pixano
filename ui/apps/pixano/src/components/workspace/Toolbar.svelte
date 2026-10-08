@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import {
+    Binoculars,
     Cursor,
     Eraser,
     Graph,
@@ -21,13 +22,20 @@ License: CECILL-C
   import BrushSettings from "./Toolbar/BrushSettings.svelte";
   import DisplaySettings from "./Toolbar/DisplaySettings.svelte";
   import KeyboardShortcuts from "./Toolbar/KeyboardShortcuts.svelte";
+  import { page } from "$app/state";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
     currentSegmentationModels,
     inferenceServerStore,
     selectedStaticSegmentationModel,
     selectedVideoSegmentationModel,
+    trackingByDetectionModels,
   } from "$lib/stores/inferenceStores.svelte";
+  import {
+    isTrackingByDetectionActive,
+    openTrackingByDetectionSetup,
+  } from "$lib/stores/trackingByDetectionStore.svelte";
+  import { videoViewNames } from "$lib/stores/videoStores.svelte";
   import {
     itemMetas,
     selectedTool,
@@ -48,6 +56,14 @@ License: CECILL-C
   import { WorkspaceType } from "$lib/types/dataset";
   import { getInferenceModelKey } from "$lib/types/inference";
   import { cn, IconButton, ModelSelectBadge } from "$lib/ui";
+
+  const openTrackingByDetection = () => {
+    const datasetId = page.params.datasetId;
+    const recordId = itemMetas.value?.item.id;
+    const viewName = videoViewNames.value[0];
+    if (!datasetId || !recordId || !viewName) return;
+    openTrackingByDetectionSetup({ datasetId, recordId }, viewName);
+  };
 
   const selectPanTool = () => {
     if (selectedTool.value !== panTool) {
@@ -156,6 +172,12 @@ License: CECILL-C
   );
   let showPolygonTools = $derived(selectedTool.value?.type === ToolType.Polygon);
   let smartInferencePending = $derived(smartSegmentationUiState.value.phase === "pending");
+  let trackingByDetectionActive = $derived(isTrackingByDetectionActive.value);
+  // A detection session owns the canvas until it is accepted or discarded; only Pan stays.
+  let drawingDisabled = $derived(smartInferencePending || trackingByDetectionActive);
+  let trackingByDetectionUnavailable = $derived(
+    !inferenceServerStore.value.connected || trackingByDetectionModels.value.length === 0,
+  );
   let currentWorkspaceType = $derived(itemMetas.value?.type ?? WorkspaceType.IMAGE);
   let compatibleSegmentationModels = $derived(currentSegmentationModels.value);
   let currentSegmentationSelection = $derived(
@@ -216,7 +238,7 @@ License: CECILL-C
     tooltipContent={rectangleTool.name}
     onclick={selectRectangleTool}
     selected={selectedTool.value?.type === ToolType.Rectangle && !selectedTool.value?.isSmart}
-    disabled={smartInferencePending}
+    disabled={drawingDisabled}
     class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
   >
     <Square class="h-4.5 w-4.5" />
@@ -234,7 +256,7 @@ License: CECILL-C
       tooltipContent="Polygon Tool (P)"
       onclick={selectPolygonTool}
       selected={selectedTool.value?.type === ToolType.Polygon}
-      disabled={smartInferencePending}
+      disabled={drawingDisabled}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <Polygon class="h-4.5 w-4.5" />
@@ -249,7 +271,7 @@ License: CECILL-C
           selected={selectedTool.value?.type === ToolType.Polygon &&
             selectedTool.value.outputMode === "polygon"}
           onclick={() => setPolygonOutputMode("polygon")}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <Graph weight="regular" class="h-4.5 w-4.5" />
@@ -259,7 +281,7 @@ License: CECILL-C
           selected={selectedTool.value?.type === ToolType.Polygon &&
             selectedTool.value.outputMode === "mask"}
           onclick={() => setPolygonOutputMode("mask")}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <PaintBucket class="h-4.5 w-4.5" />
@@ -272,7 +294,7 @@ License: CECILL-C
     tooltipContent="Polyline Tool (L)"
     onclick={selectPolylineTool}
     selected={selectedTool.value?.type === ToolType.Polyline}
-    disabled={smartInferencePending}
+    disabled={drawingDisabled}
     class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
   >
     <LineSegments weight="regular" class="h-4.5 w-4.5" />
@@ -290,7 +312,7 @@ License: CECILL-C
       tooltipContent="Brush Tool (B)"
       onclick={selectBrushTool}
       selected={selectedTool.value?.type === ToolType.Brush}
-      disabled={smartInferencePending}
+      disabled={drawingDisabled}
       class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
     >
       <PaintBrush weight="regular" class="h-4.5 w-4.5" />
@@ -305,7 +327,7 @@ License: CECILL-C
           onclick={() => (selectedTool.value = brushDrawTool)}
           selected={selectedTool.value?.type === ToolType.Brush &&
             selectedTool.value.mode === "draw"}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <PencilSimple weight="regular" class="h-4.5 w-4.5" />
@@ -315,14 +337,14 @@ License: CECILL-C
           onclick={() => (selectedTool.value = brushEraseTool)}
           selected={selectedTool.value?.type === ToolType.Brush &&
             selectedTool.value.mode === "erase"}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <Eraser class="h-4.5 w-4.5" />
         </IconButton>
 
         <div class="w-px h-3 bg-border/20 mx-0.5"></div>
-        <BrushSettings disabled={smartInferencePending} />
+        <BrushSettings disabled={drawingDisabled} />
       </div>
     {/if}
   </div>
@@ -359,7 +381,7 @@ License: CECILL-C
           selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
             selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "positive"}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <span class="text-base font-semibold leading-none">+</span>
@@ -370,7 +392,7 @@ License: CECILL-C
           selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
             selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "negative"}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <span class="text-base font-semibold leading-none">-</span>
@@ -381,7 +403,7 @@ License: CECILL-C
           selected={(selectedTool.value?.type === ToolType.InteractiveSegmenter ||
             selectedTool.value?.type === ToolType.VOS) &&
             selectedTool.value.promptMode === "box"}
-          disabled={smartInferencePending}
+          disabled={drawingDisabled}
           class="h-8 w-8"
         >
           <Square class="h-4 w-4" />
@@ -400,6 +422,21 @@ License: CECILL-C
     {/if}
   </div>
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  {#if currentWorkspaceType === WorkspaceType.VIDEO}
+    <IconButton
+      tooltipContent={trackingByDetectionUnavailable
+        ? "No tracking-by-detection model is served (the server must publish how its models are called, pixano-inference 0.7.1 or later)"
+        : "Track objects by detection"}
+      onclick={openTrackingByDetection}
+      selected={trackingByDetectionActive}
+      disabled={smartInferencePending || trackingByDetectionUnavailable}
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+    >
+      <Binoculars weight="regular" class="h-4.5 w-4.5" />
+    </IconButton>
+    <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+  {/if}
 
   <!-- Display settings (canvas tools, not record data) -->
   {#if currentWorkspaceType !== WorkspaceType.PCL_3D}
