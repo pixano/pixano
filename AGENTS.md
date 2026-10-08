@@ -9,7 +9,7 @@ Pixano is an open-source data engine for multi-modal AI development. It provides
 Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm + Turbo workspace holding two frontend applications, both bundled into the wheel by `hatch_build.py`:
 
 - `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. This is where current frontend work happens; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
-- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend"), being migrated away from. Do not add features here.
+- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend"), being migrated away from. Do not add features here, with one exception: the new UI has no video medium yet, so video-workspace features (tracking, VOS) still land in the legacy app until it does.
 
 There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The documentation website is built with Astro and lives in `docs-astro/`.
 
