@@ -208,7 +208,12 @@ class VideoTrackingKeyframeRequest(BaseModel):
 
 
 class VideoMaskGenerationRequest(BaseModel):
-    """Request schema for video mask generation inference."""
+    """Request schema for video mask generation inference.
+
+    A prompted request names the objects (``objects_ids``, with one keyframe or flat prompt each). A
+    prompt-free request (tracking by detection) names none; ``classes`` and ``box_threshold`` then
+    restrict what the model follows.
+    """
 
     model: str
     provider_name: str | None = None
@@ -217,7 +222,7 @@ class VideoMaskGenerationRequest(BaseModel):
     view_name: str
     start_frame_index: int = Field(ge=0)
     frame_count: int = Field(ge=1)
-    objects_ids: list[int]
+    objects_ids: list[int] = Field(default_factory=list)
     prompt_frame_indexes: list[int] = Field(default_factory=list)
     points: list[list[list[int]]] | None = None
     labels: list[list[int]] | None = None
@@ -225,14 +230,31 @@ class VideoMaskGenerationRequest(BaseModel):
     propagate: bool = True
     interval: VideoTrackingIntervalRequest | None = None
     keyframes: list[VideoTrackingKeyframeRequest] | None = None
+    classes: list[str] | str | None = None
+    box_threshold: float | None = None
+
+
+class VideoTrackingObjectResponse(BaseModel):
+    """Response schema for one tracked object in one frame: a mask, or a box with its score and class."""
+
+    track_id: int
+    box: list[float] | None = None
+    score: float | None = None
+    class_name: str | None = None
+    mask: VideoTrackingMaskPromptRequest | None = None
+
+
+class VideoTrackingFrameResponse(BaseModel):
+    """Response schema for the objects tracked in one frame (``frame_index`` is a dataset frame index)."""
+
+    frame_index: int
+    objects: list[VideoTrackingObjectResponse] = Field(default_factory=list)
 
 
 class VideoTrackingTaskOutputResponse(BaseModel):
-    """Response schema for video mask generation task output."""
+    """Response schema for video mask generation task output: for each frame, the objects tracked in it."""
 
-    objects_ids: list[int]
-    frame_indexes: list[int]
-    masks: list[VideoTrackingMaskPromptRequest]
+    frames: list[VideoTrackingFrameResponse]
 
 
 class VideoTrackingJobStatusResponse(BaseModel):
@@ -467,13 +489,20 @@ def _serialize_image_mask_generation_result(result: Any) -> dict[str, Any]:
     }
 
 
-def _serialize_video_mask_generation_result(result: Any) -> dict[str, Any]:
+def _serialize_tracked_frames(frames: list[Any], resolved_frame_indexes: list[int] | None) -> list[dict[str, Any]]:
+    """Serialize tracked frames, remapping their window-relative indexes to dataset frame indexes."""
+    frame_indexes = [frame.frame_index for frame in frames]
+    if resolved_frame_indexes is not None:
+        frame_indexes = _to_absolute_frame_indexes(frame_indexes, resolved_frame_indexes)
+    return [
+        {"frame_index": frame_index, "objects": [tracked.to_dict() for tracked in frame.objects]}
+        for frame, frame_index in zip(frames, frame_indexes, strict=True)
+    ]
+
+
+def _serialize_video_mask_generation_result(result: Any, resolved_frame_indexes: list[int]) -> dict[str, Any]:
     return {
-        "data": {
-            "objects_ids": result.data.objects_ids,
-            "frame_indexes": result.data.frame_indexes,
-            "masks": [mask.to_dict() for mask in result.data.masks],
-        },
+        "data": {"frames": _serialize_tracked_frames(result.data.frames, resolved_frame_indexes)},
         "timestamp": result.timestamp.isoformat(),
         "processing_time": result.processing_time,
         "metadata": result.metadata,
@@ -487,14 +516,7 @@ def _serialize_tracking_job_status(
 ) -> dict[str, Any]:
     data = None
     if getattr(result, "data", None) is not None:
-        frame_indexes = result.data.frame_indexes
-        if resolved_frame_indexes is not None:
-            frame_indexes = _to_absolute_frame_indexes(frame_indexes, resolved_frame_indexes)
-        data = {
-            "objects_ids": result.data.objects_ids,
-            "frame_indexes": frame_indexes,
-            "masks": [mask.to_dict() for mask in result.data.masks],
-        }
+        data = {"frames": _serialize_tracked_frames(result.data.frames, resolved_frame_indexes)}
     timestamp = getattr(result, "timestamp", None)
     return {
         "job_id": job_id,
@@ -578,6 +600,8 @@ def _build_video_mask_generation_input(
         propagate=request.propagate,
         interval=_serialize_tracking_interval(request.interval, resolved_frame_indexes),
         keyframes=serialized_keyframes,
+        classes=request.classes,
+        box_threshold=request.box_threshold,
     )
     return input_data, resolved_frame_indexes
 
@@ -801,8 +825,7 @@ async def video_mask_generation(
         result = await provider.video_mask_generation(input_data=input_data)
     except InferenceRequestError as exc:
         _raise_http_from_request_error(exc)
-    result.data.frame_indexes = _to_absolute_frame_indexes(result.data.frame_indexes, resolved_frame_indexes)
-    return _serialize_video_mask_generation_result(result)
+    return _serialize_video_mask_generation_result(result, resolved_frame_indexes)
 
 
 @router.post(

@@ -4,31 +4,33 @@
 # License: CECILL-C
 # =====================================
 
-"""Provider backed by a pixano-inference `/v1` server, via `pixano-inference-client`.
+"""Provider backed by a pixano-inference `/v1` server, through the client shipped in `pixano-inference`.
 
-Translates between Pixano's inference types and the client's wire models. The ML models run on
-the pixano-inference server; this process only speaks HTTP through the client.
+Translates between Pixano's inference types and the wire schemas (`pixano_inference.schemas`). The
+ML models run on the pixano-inference server; this process only speaks HTTP through the client.
 """
 
 from typing import Any
 
 import numpy as np
-from pixano_inference_client import (
+from pixano_inference.client import PixanoInferenceClient, PixanoInferenceError
+from pixano_inference.schemas import (
     CompressedRLE,
     DetectionRequest,
     EmbeddingRequest,
+    JobStatus,
     NDArrayFloat,
-    PixanoInferenceClient,
-    PixanoInferenceError,
     SegmentationRequest,
     TrackingBoxPrompt,
     TrackingInterval,
     TrackingKeyframeV1,
+    TrackingOutput,
     TrackingPointPrompt,
     TrackingPrompts,
     TrackingRequestV1,
     VLMRequest,
 )
+from pydantic import ValidationError
 
 from ..exceptions import InferenceRequestError, ProviderConnectionError
 from ..media import bytes_to_data_uri
@@ -50,6 +52,8 @@ from ..types import (
     ModelInfo,
     NDArrayData,
     ServerInfo,
+    TrackedFrameData,
+    TrackedObjectData,
     UsageInfo,
     VideoMaskGenerationInput,
     VideoMaskGenerationJobStatus,
@@ -87,6 +91,37 @@ def _rle_to_data(rle: CompressedRLE) -> CompressedRLEData:
 
 def _frame_to_str(frame: str | bytes) -> str:
     return bytes_to_data_uri(frame) if isinstance(frame, bytes) else frame
+
+
+def _output_from_tracking(output: TrackingOutput) -> VideoMaskGenerationOutput:
+    return VideoMaskGenerationOutput(
+        frames=[
+            TrackedFrameData(
+                frame_index=frame.frame_index,
+                objects=[
+                    TrackedObjectData(
+                        track_id=tracked.track_id,
+                        box=list(tracked.box) if tracked.box is not None else None,
+                        score=tracked.score,
+                        class_name=tracked.class_name,
+                        mask=_rle_to_data(tracked.mask) if tracked.mask is not None else None,
+                    )
+                    for tracked in frame.objects
+                ],
+            )
+            for frame in output.frames
+        ]
+    )
+
+
+def _validation_message(exc: ValidationError) -> str:
+    """Summarize a pydantic error on one line (its ``str`` spans many lines and echoes the input)."""
+    parts = []
+    for error in exc.errors():
+        location = ".".join(str(item) for item in error.get("loc", ()))
+        message = str(error.get("msg", ""))
+        parts.append(f"{location}: {message}" if location else message)
+    return "; ".join(parts)
 
 
 # --- Provider ----------------------------------------------------------------
@@ -250,10 +285,16 @@ class PixanoInferenceProvider(InferenceProvider):
     def _build_tracking_request(self, input_data: VideoMaskGenerationInput) -> TrackingRequestV1:
         """Build a `/v1` tracking request.
 
-        Two prompt formats are supported: structured ``keyframes`` (dicts carrying point/box/mask
-        prompts, box already x,y,width,height) are passed through; otherwise flat points/boxes are
-        converted to keyframes (keyframe i ↔ ``objects_ids[i]``/``frame_indexes[i]``, boxes
-        xyxy→x,y,width,height).
+        Structured ``keyframes`` (dicts carrying point/box/mask prompts, box already x,y,width,height)
+        pass through; otherwise flat points/boxes become one keyframe per object (keyframe i ↔
+        ``objects_ids[i]``/``frame_indexes[i]``, boxes xyxy→x,y,width,height). With no object ID the
+        request is prompt-free (tracking by detection): ``keyframes`` is omitted and ``classes`` /
+        ``box_threshold`` tell the model what to follow.
+
+        Raises:
+            InferenceRequestError: 422 when the prompts are inconsistent. The request validates them
+                before anything is sent: prompts without object IDs, not one keyframe per object, a
+                keyframe carrying no prompt.
         """
         video = (
             [_frame_to_str(f) for f in input_data.video]
@@ -262,8 +303,15 @@ class PixanoInferenceProvider(InferenceProvider):
         )
         interval = TrackingInterval(**input_data.interval) if input_data.interval is not None else None
 
-        if input_data.keyframes:
-            keyframes = [self._keyframe_from_dict(kf) for kf in input_data.keyframes]
+        try:
+            keyframes: list[TrackingKeyframeV1] | None
+            if input_data.keyframes:
+                keyframes = [self._keyframe_from_dict(kf) for kf in input_data.keyframes]
+            elif input_data.objects_ids:
+                keyframes = self._keyframes_from_flat_prompts(input_data)
+            else:
+                # An empty list would count as prompts, and prompts without object IDs are rejected.
+                keyframes = None
             return TrackingRequestV1(
                 model=input_data.model,
                 video=video,
@@ -272,8 +320,17 @@ class PixanoInferenceProvider(InferenceProvider):
                 propagate=input_data.propagate,
                 interval=interval,
                 keyframes=keyframes,
+                classes=input_data.classes,
+                box_threshold=input_data.box_threshold,
             )
+        except ValidationError as exc:
+            raise InferenceRequestError(
+                status_code=422, code="invalid_request", message=_validation_message(exc)
+            ) from exc
 
+    @staticmethod
+    def _keyframes_from_flat_prompts(input_data: VideoMaskGenerationInput) -> list[TrackingKeyframeV1]:
+        """Build one keyframe per object from the flat ``points``/``labels``/``boxes`` prompts."""
         keyframes = []
         for i, _obj_id in enumerate(input_data.objects_ids):
             frame_index = input_data.frame_indexes[i] if i < len(input_data.frame_indexes) else 0
@@ -302,16 +359,7 @@ class PixanoInferenceProvider(InferenceProvider):
                     prompts=TrackingPrompts(points=point_prompts, box=box_prompt),
                 )
             )
-
-        return TrackingRequestV1(
-            model=input_data.model,
-            video=video,
-            objects_ids=list(input_data.objects_ids),
-            frame_indexes=list(input_data.frame_indexes),
-            propagate=input_data.propagate,
-            interval=interval,
-            keyframes=keyframes,
-        )
+        return keyframes
 
     @staticmethod
     def _keyframe_from_dict(keyframe: dict[str, Any]) -> TrackingKeyframeV1:
@@ -346,14 +394,13 @@ class PixanoInferenceProvider(InferenceProvider):
             response = await self._client.tracking(request, timeout=timeout)
         except PixanoInferenceError as exc:
             raise self._request_error(exc) from exc
-        data = response.data
-        output = VideoMaskGenerationOutput(
-            objects_ids=list(data.objects_ids),
-            frame_indexes=list(data.frame_indexes),
-            masks=[_rle_to_data(m) for m in data.masks],
-        )
+        except ValidationError as exc:
+            # The server answered, but not with a tracking output the schemas can read.
+            raise InferenceRequestError(
+                status_code=502, code="invalid_response", message=_validation_message(exc)
+            ) from exc
         return VideoMaskGenerationResult(
-            data=output,
+            data=_output_from_tracking(response.data),
             status=response.status.upper(),
             timestamp=response.timestamp,
             processing_time=response.processing_time,
@@ -398,15 +445,37 @@ class PixanoInferenceProvider(InferenceProvider):
             raise self._request_error(exc) from exc
         return self._job_status(job)
 
-    def _job_status(self, job: Any) -> VideoMaskGenerationJobStatus:
-        """Convert a client `JobStatus` (camelCase `data` dict) to Pixano's type."""
+    @staticmethod
+    def _job_status(job: JobStatus) -> VideoMaskGenerationJobStatus:
+        """Convert a client `JobStatus` to Pixano's type.
+
+        The job ``data`` is the camelCase dump of a `TrackingOutput`, only present once the job
+        completed. It is parsed through the schema, so a shape the server and this provider disagree
+        on is an error rather than an empty result.
+
+        Raises:
+            InferenceRequestError: 502 when a completed job carries no result or one the schema
+                cannot read.
+        """
         output: VideoMaskGenerationOutput | None = None
-        payload = job.data
-        if payload:
-            output = VideoMaskGenerationOutput(
-                objects_ids=list(payload.get("objectsIds", [])),
-                frame_indexes=list(payload.get("frameIndexes", [])),
-                masks=[CompressedRLEData.from_dict(m) for m in payload.get("masks", [])],
+        if job.data is not None:
+            try:
+                payload = job.data if isinstance(job.data, TrackingOutput) else TrackingOutput.model_validate(job.data)
+            except ValidationError as exc:
+                raise InferenceRequestError(
+                    status_code=502,
+                    code="invalid_response",
+                    message=(
+                        f"Tracking job '{job.job_id}' returned a result Pixano cannot read: "
+                        f"{_validation_message(exc)}"
+                    ),
+                ) from exc
+            output = _output_from_tracking(payload)
+        elif job.status == "completed":
+            raise InferenceRequestError(
+                status_code=502,
+                code="invalid_response",
+                message=f"Tracking job '{job.job_id}' completed without a result.",
             )
         return VideoMaskGenerationJobStatus(
             job_id=job.job_id,
@@ -518,9 +587,16 @@ class PixanoInferenceProvider(InferenceProvider):
 
     @staticmethod
     def _request_error(exc: PixanoInferenceError) -> InferenceRequestError:
+        code = getattr(exc, "code", "")
+        status_code = exc.status_code
+        # A client from 0.7.1 on reports a body it cannot parse as "invalid_response", with the status
+        # the server used (a 200, typically). For Pixano that answer is unusable whatever its status:
+        # a bad gateway, like the same failure detected here with an older client.
+        if code == "invalid_response":
+            status_code = 502
         return InferenceRequestError(
-            status_code=exc.status_code,
-            code=getattr(exc, "code", ""),
+            status_code=status_code,
+            code=code,
             message=str(exc),
             request_id=getattr(exc, "request_id", None),
         )

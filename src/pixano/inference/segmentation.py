@@ -171,19 +171,22 @@ async def tracking(
 ) -> tuple[list[CompressedRLE], list[int], list[int]]:
     """Video tracking task.
 
+    One object is prompted on the first frame of ``video`` (with ``bbox`` and/or ``points``); the
+    model follows it through the other frames.
+
     Args:
         provider: Inference provider.
         video: Video as list of SequenceFrame.
         source_name: Name of the model source.
         source_type: Kind of source (default "model").
         entity: Entity to put objects in, if provided.
-        bbox: Bounding box of the object in the original image.
-        points: Points to generate mask for.
+        bbox: Bounding box of the object in the first frame.
+        points: Points to generate mask for, in the first frame.
         labels: Labels of the points. If 0, the point is background else the point is foreground.
         provider_kwargs: Additional kwargs for the provider.
 
     Returns:
-        tuple of the compressed RLE masks, object IDs, and frame indexes.
+        tuple of the compressed RLE masks, object IDs, and frame indexes (one entry per mask).
     """
     if not isinstance(video, list):
         raise ValueError("Video format not currently supported, please use sequence frames.")
@@ -209,8 +212,8 @@ async def tracking(
     input_data = VideoMaskGenerationInput(
         video=video_request,
         model=source_name,
-        objects_ids=list(range(len(video))),
-        frame_indexes=list(range(len(video))),
+        objects_ids=[0],
+        frame_indexes=[0],
         points=points_request,
         labels=labels_request,
         boxes=boxes_request,
@@ -225,21 +228,24 @@ async def tracking(
     if result.status == "SUCCESS":
         generated_entity_id = shortuuid.uuid()  # used to group masks from one generation when no entity in input
 
-        for mask_data, obj_id, frame_idx in zip(result.data.masks, result.data.objects_ids, result.data.frame_indexes):
-            frame_image = video[frame_idx]
-            mask = CompressedRLE(
-                id=shortuuid.uuid(),
-                record_id=frame_image.record_id,
-                frame_id=frame_image.id,
-                view_id=_resolved_view_id(frame_image),
-                entity_id=entity.id if entity else generated_entity_id,
-                source_type=source_type,
-                source_name=source_name,
-                size=mask_data.size,
-                counts=mask_data.counts,
-            )
-            masks.append(mask)
-            objects_ids.append(obj_id)
-            frame_indexes.append(frame_idx)
+        for frame in sorted(result.data.frames, key=lambda tracked_frame: tracked_frame.frame_index):
+            frame_image = video[frame.frame_index]
+            for tracked in frame.objects:
+                if tracked.mask is None:  # a detection-based tracker returns boxes, not masks
+                    continue
+                mask = CompressedRLE(
+                    id=shortuuid.uuid(),
+                    record_id=frame_image.record_id,
+                    frame_id=frame_image.id,
+                    view_id=_resolved_view_id(frame_image),
+                    entity_id=entity.id if entity else generated_entity_id,
+                    source_type=source_type,
+                    source_name=source_name,
+                    size=tracked.mask.size,
+                    counts=tracked.mask.counts,
+                )
+                masks.append(mask)
+                objects_ids.append(tracked.track_id)
+                frame_indexes.append(frame.frame_index)
 
     return masks, objects_ids, frame_indexes

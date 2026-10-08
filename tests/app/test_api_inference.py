@@ -33,6 +33,8 @@ from pixano.inference.types import (
     ModelInfo,
     NDArrayData,
     ServerInfo,
+    TrackedFrameData,
+    TrackedObjectData,
     UsageInfo,
     VideoMaskGenerationJobStatus,
     VideoMaskGenerationOutput,
@@ -433,19 +435,25 @@ class TestImageSegmentation:
         provider.image_mask_generation.assert_not_called()
 
 
+def _tracked_output(frames: list[tuple[int, bytes]], track_id: int = 7) -> VideoMaskGenerationOutput:
+    """A mask-tracking output: one object per frame, window-relative frame indexes."""
+    return VideoMaskGenerationOutput(
+        frames=[
+            TrackedFrameData(
+                frame_index=frame_index,
+                objects=[TrackedObjectData(track_id=track_id, mask=CompressedRLEData(size=[8, 8], counts=counts))],
+            )
+            for frame_index, counts in frames
+        ]
+    )
+
+
 class TestVideoTracking:
     def test_track_video_uses_default_provider(self):
         provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
         provider.video_mask_generation = AsyncMock(
             return_value=VideoMaskGenerationResult(
-                data=VideoMaskGenerationOutput(
-                    objects_ids=[7],
-                    frame_indexes=[0, 1],
-                    masks=[
-                        CompressedRLEData(size=[8, 8], counts=b"abc"),
-                        CompressedRLEData(size=[8, 8], counts=b"xyz"),
-                    ],
-                ),
+                data=_tracked_output([(0, b"abc"), (1, b"xyz")]),
                 timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
                 processing_time=0.45,
                 metadata={"backend": "mock"},
@@ -476,7 +484,11 @@ class TestVideoTracking:
         )
 
         assert response.status_code == 200
-        assert response.json()["data"]["frame_indexes"] == [0, 1]
+        data = response.json()["data"]
+        assert [frame["frame_index"] for frame in data["frames"]] == [0, 1]
+        assert data["frames"][0]["objects"] == [
+            {"track_id": 7, "box": None, "score": None, "class_name": None, "mask": {"size": [8, 8], "counts": "abc"}}
+        ]
         provider.video_mask_generation.assert_called_once()
         input_data = provider.video_mask_generation.await_args.kwargs["input_data"]
         assert len(input_data.video) == 2
@@ -511,14 +523,7 @@ class TestVideoTracking:
         provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
         provider.video_mask_generation = AsyncMock(
             return_value=VideoMaskGenerationResult(
-                data=VideoMaskGenerationOutput(
-                    objects_ids=[7],
-                    frame_indexes=[0, 1],
-                    masks=[
-                        CompressedRLEData(size=[8, 8], counts=b"abc"),
-                        CompressedRLEData(size=[8, 8], counts=b"xyz"),
-                    ],
-                ),
+                data=_tracked_output([(0, b"abc"), (1, b"xyz")]),
                 timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
                 processing_time=0.45,
                 metadata={"backend": "mock"},
@@ -579,11 +584,7 @@ class TestVideoTracking:
         provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
         provider.video_mask_generation = AsyncMock(
             return_value=VideoMaskGenerationResult(
-                data=VideoMaskGenerationOutput(
-                    objects_ids=[7],
-                    frame_indexes=[0],
-                    masks=[CompressedRLEData(size=[8, 8], counts=b"abc")],
-                ),
+                data=_tracked_output([(0, b"abc")]),
                 timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
                 processing_time=0.45,
                 metadata={"backend": "mock"},
@@ -633,14 +634,7 @@ class TestVideoTracking:
             return_value=VideoMaskGenerationJobStatus(
                 job_id="provider-job-1",
                 status="completed",
-                data=VideoMaskGenerationOutput(
-                    objects_ids=[7],
-                    frame_indexes=[0, 1],
-                    masks=[
-                        CompressedRLEData(size=[8, 8], counts=b"abc"),
-                        CompressedRLEData(size=[8, 8], counts=b"xyz"),
-                    ],
-                ),
+                data=_tracked_output([(0, b"abc"), (1, b"xyz")]),
                 metadata={"backend": "mock"},
                 timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
                 processing_time=0.45,
@@ -680,7 +674,8 @@ class TestVideoTracking:
         poll_response = client.get(f"/inference/video_mask_generation/jobs/{local_job_id}")
         assert poll_response.status_code == 200
         assert poll_response.json()["status"] == "completed"
-        assert poll_response.json()["data"]["frame_indexes"] == [2, 3]
+        # Window-relative frame indexes come back as dataset frame indexes.
+        assert [frame["frame_index"] for frame in poll_response.json()["data"]["frames"]] == [2, 3]
         provider.get_video_mask_generation_job.assert_awaited_once_with("provider-job-1")
 
     def test_cancel_tracking_job_marks_job_canceled(self):
@@ -759,6 +754,109 @@ class TestVideoTracking:
 
         assert response.status_code == 400
         assert response.json() == {"detail": "Invalid binary metadata"}
+
+    def test_track_video_prompt_free_request_passes_classes_and_threshold(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.video_mask_generation = AsyncMock(
+            return_value=VideoMaskGenerationResult(
+                data=VideoMaskGenerationOutput(
+                    frames=[
+                        TrackedFrameData(
+                            frame_index=0,
+                            objects=[
+                                TrackedObjectData(track_id=3, box=[1.0, 2.0, 3.0, 4.0], score=0.9, class_name="person")
+                            ],
+                        ),
+                        TrackedFrameData(frame_index=1),
+                    ]
+                ),
+                timestamp=datetime.fromisoformat("2026-03-20T10:05:00"),
+                processing_time=0.45,
+                metadata={"backend": "mock"},
+                id="track-by-detection-1",
+                status="SUCCESS",
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        response = client.post(
+            "/inference/video_mask_generation",
+            json={
+                "model": "yolo-bytetrack",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 0,
+                "frame_count": 2,
+                "classes": ["person"],
+                "box_threshold": 0.4,
+            },
+        )
+
+        assert response.status_code == 200
+        input_data = provider.video_mask_generation.await_args.kwargs["input_data"]
+        assert input_data.objects_ids == []
+        assert input_data.frame_indexes == []
+        assert input_data.keyframes is None
+        assert input_data.points is None
+        assert input_data.classes == ["person"]
+        assert input_data.box_threshold == 0.4
+        assert response.json()["data"]["frames"] == [
+            {
+                "frame_index": 0,
+                "objects": [
+                    {"track_id": 3, "box": [1.0, 2.0, 3.0, 4.0], "score": 0.9, "class_name": "person", "mask": None}
+                ],
+            },
+            {"frame_index": 1, "objects": []},
+        ]
+
+    def test_poll_tracking_job_surfaces_invalid_provider_response(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.submit_video_mask_generation_job = AsyncMock(
+            return_value=VideoMaskGenerationJobStatus(job_id="provider-job-3", status="running")
+        )
+        provider.get_video_mask_generation_job = AsyncMock(
+            side_effect=InferenceRequestError(
+                status_code=502,
+                code="invalid_response",
+                message="Tracking job 'provider-job-3' returned a result Pixano cannot read",
+            )
+        )
+        client, settings = _make_client(
+            inference_providers={provider.name: provider},
+            default_inference_provider=provider.name,
+        )
+        dataset_id, record_id, _, _ = _create_dataset_with_embedded_views(settings.library_dir)
+
+        submit_response = client.post(
+            "/inference/video_mask_generation/jobs",
+            json={
+                "model": "sam2-video",
+                "dataset_id": dataset_id,
+                "record_id": record_id,
+                "view_name": "camera",
+                "start_frame_index": 0,
+                "frame_count": 1,
+                "objects_ids": [7],
+                "prompt_frame_indexes": [0],
+                "points": [[[4, 4]]],
+                "labels": [[1]],
+                "propagate": False,
+            },
+        )
+        local_job_id = submit_response.json()["job_id"]
+
+        # The error is not an empty result, and the job is not remembered as finished.
+        for _ in range(2):
+            poll_response = client.get(f"/inference/video_mask_generation/jobs/{local_job_id}")
+            assert poll_response.status_code == 502
+            assert "cannot read" in poll_response.json()["detail"]
+        assert provider.get_video_mask_generation_job.await_count == 2
 
 
 class TestVLM:

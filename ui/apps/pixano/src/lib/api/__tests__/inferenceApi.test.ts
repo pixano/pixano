@@ -181,9 +181,9 @@ describe("tracking job APIs", () => {
           job_id: "tracking-job-1",
           status: "completed",
           data: {
-            objects_ids: [1],
-            frame_indexes: [0],
-            masks: [{ size: [8, 8], counts: "abc" }],
+            frames: [
+              { frame_index: 0, objects: [{ track_id: 1, mask: { size: [8, 8], counts: "abc" } }] },
+            ],
           },
         }),
         {
@@ -196,6 +196,7 @@ describe("tracking job APIs", () => {
     await expect(getTrackingJob("tracking-job-1")).resolves.toMatchObject({
       job_id: "tracking-job-1",
       status: "completed",
+      data: { frames: [{ frame_index: 0, objects: [{ track_id: 1 }] }] },
     });
   });
 

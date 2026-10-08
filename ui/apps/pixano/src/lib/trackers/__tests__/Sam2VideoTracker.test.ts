@@ -79,9 +79,7 @@ describe("Sam2VideoTracker", () => {
   it("builds a windowed tracking request with dataset metadata", async () => {
     const trackingClient = vi.fn().mockResolvedValue({
       data: {
-        objects_ids: [1],
-        frame_indexes: [],
-        masks: [],
+        frames: [],
       },
     });
     const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient);
@@ -140,9 +138,7 @@ describe("Sam2VideoTracker", () => {
   it("serializes interval keyframes with a mask anchor", async () => {
     const trackingClient = vi.fn().mockResolvedValue({
       data: {
-        objects_ids: [1],
-        frame_indexes: [],
-        masks: [],
+        frames: [],
       },
     });
     const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient);
@@ -214,9 +210,7 @@ describe("Sam2VideoTracker", () => {
   it("uses a single-frame non-propagating request for prompted-frame previews", async () => {
     const trackingClient = vi.fn().mockResolvedValue({
       data: {
-        objects_ids: [1],
-        frame_indexes: [],
-        masks: [],
+        frames: [],
       },
     });
     const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera", trackingClient);
@@ -347,9 +341,12 @@ describe("Sam2VideoTracker", () => {
 
     const masks = tracker.applyTrackingResult(
       {
-        objects_ids: [1],
-        frame_indexes: [5],
-        masks: [{ size: [8, 8], counts: [4, 8, 52] }],
+        frames: [
+          {
+            frame_index: 5,
+            objects: [{ track_id: 1, mask: { size: [8, 8], counts: [4, 8, 52] } }],
+          },
+        ],
       },
       {
         frameIndex: 5,
@@ -366,5 +363,47 @@ describe("Sam2VideoTracker", () => {
     expect(tracker.getPropagatedMask(5)?.viewRef.id).toBe("frame-5");
     expect(tracker.getTrackingOutputsInRange(5, 5)[0]?.data.source_type).toBe("model");
     expect(tracker.getTrackingOutputsInRange(5, 5)[0]?.data.source_name).toBe("sam2");
+  });
+
+  it("ignores other tracks and objects without a mask", () => {
+    const normalize = vi
+      .spyOn(maskNormalization, "normalizeMaskToSaveShape")
+      .mockReturnValue(makeMask(5));
+    const tracker = new Sam2VideoTracker("dataset-1", "record-1", "camera");
+    tracker.setFrameSources([
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        width: 8,
+        height: 8,
+      },
+    ]);
+
+    const masks = tracker.applyTrackingResult(
+      {
+        frames: [
+          {
+            frame_index: 5,
+            objects: [
+              { track_id: 2, mask: { size: [8, 8], counts: [4, 8, 52] } },
+              { track_id: 1, box: [0, 0, 4, 4], score: 0.9, class_name: "person", mask: null },
+            ],
+          },
+        ],
+      },
+      {
+        frameIndex: 5,
+        viewRef: { id: "frame-5", name: "camera" },
+        objectId: 1,
+        model: "sam2",
+        providerName: "pixano-inference@127.0.0.1:7463",
+        itemId: "item-1",
+        prompt: { points: [{ x: 4, y: 4, label: 1 }], box: null },
+      },
+    );
+
+    expect(masks).toHaveLength(0);
+    expect(normalize).not.toHaveBeenCalled();
+    expect(tracker.getPropagatedMask(5)).toBeFalsy();
   });
 });

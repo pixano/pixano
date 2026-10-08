@@ -4,6 +4,9 @@
 # License: CECILL-C
 # =====================================
 
+import asyncio
+import time
+
 import pytest
 
 from pixano.inference.exceptions import ProviderConnectionError
@@ -187,7 +190,7 @@ class TestVideoMaskGeneration:
 
         assert isinstance(result, VideoMaskGenerationResult)
         assert result.status == "SUCCESS"
-        assert len(result.data.masks) > 0
+        assert any(tracked.mask is not None for frame in result.data.frames for tracked in frame.objects)
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_video_box_prompt(
@@ -208,5 +211,36 @@ class TestVideoMaskGeneration:
 
         assert isinstance(result, VideoMaskGenerationResult)
         assert result.status == "SUCCESS"
-        assert len(result.data.masks) > 0
-        assert len(result.data.frame_indexes) > 0
+        assert any(tracked.mask is not None for frame in result.data.frames for tracked in frame.objects)
+        assert len(result.data.frames) > 0
+
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_video_job_round_trip(
+        self,
+        provider: PixanoInferenceProvider,
+        sam2_video_model_name: str,
+        test_image_base64_png: str,
+    ):
+        # The job result travels as an untyped dict; it must come back as frames with masks.
+        frames = [test_image_base64_png] * 2
+        input_data = VideoMaskGenerationInput(
+            video=frames,
+            model=sam2_video_model_name,
+            objects_ids=[1],
+            frame_indexes=[0],
+            boxes=[[100, 100, 400, 300]],
+        )
+        job = await provider.submit_video_mask_generation_job(input_data)
+        assert job.status in {"running", "completed"}
+
+        deadline = time.monotonic() + 180.0
+        while job.status == "running":
+            assert time.monotonic() < deadline, "tracking job did not finish in time"
+            await asyncio.sleep(1.0)
+            job = await provider.get_video_mask_generation_job(job.job_id)
+
+        assert job.status == "completed", job.detail
+        assert job.data is not None
+        assert len(job.data.frames) > 0
+        assert any(tracked.mask is not None for frame in job.data.frames for tracked in frame.objects)
+        assert {tracked.track_id for frame in job.data.frames for tracked in frame.objects} == {1}

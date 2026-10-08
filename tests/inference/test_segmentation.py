@@ -26,6 +26,8 @@ from pixano.inference.types import (
     ImageMaskGenerationOutput,
     ImageMaskGenerationResult,
     NDArrayData,
+    TrackedFrameData,
+    TrackedObjectData,
     VideoMaskGenerationOutput,
     VideoMaskGenerationResult,
 )
@@ -173,9 +175,16 @@ async def test_segmentation(
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
-                    objects_ids=[0],
-                    frame_indexes=[0],
+                    frames=[
+                        TrackedFrameData(
+                            frame_index=0,
+                            objects=[
+                                TrackedObjectData(
+                                    track_id=0, mask=CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))
+                                )
+                            ],
+                        )
+                    ],
                 ),
             ),
             (
@@ -203,9 +212,16 @@ async def test_segmentation(
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
-                    objects_ids=[0],
-                    frame_indexes=[0],
+                    frames=[
+                        TrackedFrameData(
+                            frame_index=0,
+                            objects=[
+                                TrackedObjectData(
+                                    track_id=0, mask=CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))
+                                )
+                            ],
+                        )
+                    ],
                 ),
             ),
             (
@@ -233,9 +249,16 @@ async def test_segmentation(
                 processing_time=1.0,
                 metadata={"metadata": "value"},
                 data=VideoMaskGenerationOutput(
-                    masks=[CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))],
-                    objects_ids=[0],
-                    frame_indexes=[0],
+                    frames=[
+                        TrackedFrameData(
+                            frame_index=0,
+                            objects=[
+                                TrackedObjectData(
+                                    track_id=0, mask=CompressedRLEData(size=[10, 2], counts=bytes([3, 4]))
+                                )
+                            ],
+                        )
+                    ],
                 ),
             ),
             (
@@ -287,6 +310,35 @@ async def test_tracking(
     assert masks[0].model_dump(exclude=exclude_keys) == expected_mask.model_dump(exclude=exclude_keys)
     assert objects_ids == expected_objects_ids
     assert frame_indexes == expected_frame_indexes
+    # One object, prompted on the first frame of the window.
+    input_data = simple_inference_provider.video_mask_generation.await_args.args[0]
+    assert input_data.objects_ids == [0]
+    assert input_data.frame_indexes == [0]
+
+
+@pytest.mark.asyncio
+async def test_tracking_skips_objects_without_mask(simple_inference_provider: InferenceProvider, image_url: Image):
+    # A detection-based tracker returns boxes; the helper only stores masks.
+    simple_inference_provider.video_mask_generation.return_value = VideoMaskGenerationResult(
+        status="SUCCESS",
+        timestamp=datetime(year=2025, month=2, day=19),
+        processing_time=1.0,
+        metadata={},
+        data=VideoMaskGenerationOutput(
+            frames=[
+                TrackedFrameData(
+                    frame_index=0,
+                    objects=[TrackedObjectData(track_id=3, box=[1.0, 2.0, 3.0, 4.0], score=0.9, class_name="car")],
+                )
+            ]
+        ),
+    )
+
+    masks, objects_ids, frame_indexes = await tracking(
+        provider=simple_inference_provider, video=[image_url], source_name="test_source"
+    )
+
+    assert (masks, objects_ids, frame_indexes) == ([], [], [])
 
 
 @pytest.mark.asyncio

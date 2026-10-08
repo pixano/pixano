@@ -186,10 +186,21 @@ export interface VideoTrackingTaskInput {
   }> | null;
 }
 
+export interface VideoTrackedObject {
+  track_id: number;
+  box?: number[] | null;
+  score?: number | null;
+  class_name?: string | null;
+  mask?: CompressedRLEPayload | null;
+}
+
+export interface VideoTrackedFrame {
+  frame_index: number;
+  objects: VideoTrackedObject[];
+}
+
 export interface VideoTrackingTaskOutput {
-  objects_ids: number[];
-  frame_indexes: number[];
-  masks: CompressedRLEPayload[];
+  frames: VideoTrackedFrame[];
 }
 
 export interface VideoTrackingTaskResult {
