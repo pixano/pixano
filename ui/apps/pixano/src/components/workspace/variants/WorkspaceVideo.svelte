@@ -82,6 +82,7 @@ License: CECILL-C
     type SelectionTool,
   } from "$lib/tools";
   import { Sam2VideoTracker } from "$lib/trackers";
+  import { createTrackingJobRunner, type ActiveTrackingJob } from "$lib/tracking/trackingJobRunner";
   import type { VideoTrackingJobStatus } from "$lib/types/inference";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import { toLegacyReference } from "$lib/types/workspaceLocators";
@@ -130,13 +131,7 @@ License: CECILL-C
   let lastLoadedVideoKey = "";
   let sam2Tracker = $state<Sam2VideoTracker | null>(null);
   let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
-  let activeVosJob = $state<{
-    requestId: string;
-    jobId: string | null;
-    kind: "preview" | "interval";
-    viewName: string;
-    tracker: Sam2VideoTracker;
-  } | null>(null);
+  let activeVosJob = $state<ActiveTrackingJob | null>(null);
   const isRouteLoading = $derived(navigating.from !== null);
   const TRACKING_JOB_POLL_MS = 500;
 
@@ -176,7 +171,7 @@ License: CECILL-C
   }
 
   function resetSmartTracking(): void {
-    void cancelActiveVosJob();
+    void vosJobRunner.cancelActive();
     clearSmartPreview();
     sam2Tracker?.clear();
     sam2Tracker = null;
@@ -239,31 +234,14 @@ License: CECILL-C
     );
   });
 
-  function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }
+  const vosJobRunner = createTrackingJobRunner({
+    pollMs: TRACKING_JOB_POLL_MS,
+    onActiveChange: (active) => {
+      activeVosJob = active;
+    },
+  });
 
-  async function cancelActiveVosJob(): Promise<void> {
-    const job = activeVosJob;
-    if (!job) {
-      return;
-    }
-
-    activeVosJob = null;
-    if (!job.jobId) {
-      return;
-    }
-
-    try {
-      await job.tracker.cancelTrackingJob(job.jobId);
-    } catch (error) {
-      console.warn("Failed to cancel tracking job", error);
-    }
-  }
-
-  async function runVosTrackingJob({
+  function runVosTrackingJob({
     requestId,
     viewName,
     tracker,
@@ -276,78 +254,14 @@ License: CECILL-C
     kind: "preview" | "interval";
     submit: () => Promise<VideoTrackingJobStatus | null>;
   }): Promise<VideoTrackingJobStatus | null> {
-    await cancelActiveVosJob();
-    activeVosJob = {
+    return vosJobRunner.run({
       requestId,
-      jobId: null,
       kind,
       viewName,
-      tracker,
-    };
-
-    try {
-      const submittedJob = await submit();
-      if (!submittedJob) {
-        if (activeVosJob?.requestId === requestId) {
-          activeVosJob = null;
-        }
-        return null;
-      }
-
-      if (activeVosJob?.requestId !== requestId) {
-        try {
-          await tracker.cancelTrackingJob(submittedJob.job_id);
-        } catch (error) {
-          console.warn("Failed to cancel stale tracking job", error);
-        }
-        return null;
-      }
-
-      activeVosJob = {
-        requestId,
-        jobId: submittedJob.job_id,
-        kind,
-        viewName,
-        tracker,
-      };
-
-      if (
-        submittedJob.status === "completed" ||
-        submittedJob.status === "failed" ||
-        submittedJob.status === "canceled"
-      ) {
-        if (activeVosJob?.requestId === requestId) {
-          activeVosJob = null;
-        }
-        return submittedJob;
-      }
-
-      while (activeVosJob?.requestId === requestId && activeVosJob?.jobId === submittedJob.job_id) {
-        await sleep(TRACKING_JOB_POLL_MS);
-        if (activeVosJob?.requestId !== requestId || activeVosJob?.jobId !== submittedJob.job_id) {
-          return null;
-        }
-
-        const polledJob = await tracker.getTrackingJobStatus(submittedJob.job_id);
-        if (activeVosJob?.requestId !== requestId || activeVosJob?.jobId !== submittedJob.job_id) {
-          return null;
-        }
-
-        if (polledJob.status === "queued" || polledJob.status === "running") {
-          continue;
-        }
-
-        activeVosJob = null;
-        return polledJob;
-      }
-
-      return null;
-    } catch (error) {
-      if (activeVosJob?.requestId === requestId) {
-        activeVosJob = null;
-      }
-      throw error;
-    }
+      submit,
+      getStatus: (jobId) => tracker.getTrackingJobStatus(jobId),
+      cancel: (jobId) => tracker.cancelTrackingJob(jobId),
+    });
   }
 
   function getOrCreateTracker(viewName: string): Sam2VideoTracker | null {
