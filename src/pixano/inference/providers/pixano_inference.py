@@ -587,9 +587,16 @@ class PixanoInferenceProvider(InferenceProvider):
 
     @staticmethod
     def _request_error(exc: PixanoInferenceError) -> InferenceRequestError:
+        code = getattr(exc, "code", "")
+        status_code = exc.status_code
+        # A client from 0.7.1 on reports a body it cannot parse as "invalid_response", with the status
+        # the server used (a 200, typically). For Pixano that answer is unusable whatever its status:
+        # a bad gateway, like the same failure detected here with an older client.
+        if code == "invalid_response":
+            status_code = 502
         return InferenceRequestError(
-            status_code=exc.status_code,
-            code=getattr(exc, "code", ""),
+            status_code=status_code,
+            code=code,
             message=str(exc),
             request_id=getattr(exc, "request_id", None),
         )
