@@ -93,19 +93,6 @@ def _frame_to_str(frame: str | bytes) -> str:
     return bytes_to_data_uri(frame) if isinstance(frame, bytes) else frame
 
 
-def _snake_case(name: str) -> str:
-    return "".join(f"_{char.lower()}" if char.isupper() else char for char in name)
-
-
-def _snake_case_keys(value: Any) -> Any:
-    """Rename the camelCase keys of a wire payload to Pixano's snake_case, at any depth."""
-    if isinstance(value, dict):
-        return {_snake_case(str(key)): _snake_case_keys(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_snake_case_keys(item) for item in value]
-    return value
-
-
 def _output_from_tracking(output: TrackingOutput) -> VideoMaskGenerationOutput:
     return VideoMaskGenerationOutput(
         frames=[
@@ -196,37 +183,28 @@ class PixanoInferenceProvider(InferenceProvider):
 
     # --- Discovery ---
 
-    async def _list_models_raw(self) -> list[dict[str, Any]]:
-        """The ``/v1/models`` listing as the server sends it.
-
-        From 0.7.1 the server publishes how each model is called as ``interface``, a field the 0.7.0
-        client's ``ModelStatusInfo`` drops. The listing is read raw until the pin moves to 0.7.1.
-        """
-        try:
-            response = await self._client._request("GET", "/v1/models")
-        except PixanoInferenceError as exc:
-            raise self._request_error(exc) from exc
-        payload = response.json()
-        return [model for model in payload if isinstance(model, dict)] if isinstance(payload, list) else []
-
     async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
         """List available models, optionally filtered by Pixano task."""
+        try:
+            models = await self._client.list_models()
+        except PixanoInferenceError as exc:
+            raise self._request_error(exc) from exc
         infos: list[ModelInfo] = []
-        for model in await self._list_models_raw():
-            model_task = CAPABILITY_TO_TASK.get(str(model.get("capability", "")))
+        for model in models:
+            model_task = CAPABILITY_TO_TASK.get(model.capability)
             if model_task is None:
                 continue
             if task is not None and model_task != task:
                 continue
-            interface = model.get("interface")
             infos.append(
                 ModelInfo(
-                    name=str(model.get("name", "")),
+                    name=model.name,
                     task=model_task.value,
-                    model_class=model.get("modelClass"),
-                    model_path=model.get("modelPath"),
-                    status=model.get("status"),
-                    interface=_snake_case_keys(interface) if isinstance(interface, dict) else None,
+                    model_class=model.model_class,
+                    model_path=model.model_path,
+                    status=model.status,
+                    # How the model is called, published from 0.7.1; snake_case like the rest of Pixano's API.
+                    interface=model.interface.model_dump(mode="json") if model.interface is not None else None,
                 )
             )
         return infos
@@ -414,11 +392,6 @@ class PixanoInferenceProvider(InferenceProvider):
             response = await self._client.tracking(request, timeout=timeout)
         except PixanoInferenceError as exc:
             raise self._request_error(exc) from exc
-        except ValidationError as exc:
-            # The server answered, but not with a tracking output the schemas can read.
-            raise InferenceRequestError(
-                status_code=502, code="invalid_response", message=_validation_message(exc)
-            ) from exc
         return VideoMaskGenerationResult(
             data=_output_from_tracking(response.data),
             status=response.status.upper(),
@@ -469,28 +442,16 @@ class PixanoInferenceProvider(InferenceProvider):
     def _job_status(job: JobStatus) -> VideoMaskGenerationJobStatus:
         """Convert a client `JobStatus` to Pixano's type.
 
-        The job ``data`` is the camelCase dump of a `TrackingOutput`, only present once the job
-        completed. It is parsed through the schema, so a shape the server and this provider disagree
-        on is an error rather than an empty result.
+        The job ``data`` is a `TrackingOutput`, only present once the job completed; the client
+        refuses a payload that does not match the schema, so a shape drift is an error rather than
+        an empty result.
 
         Raises:
-            InferenceRequestError: 502 when a completed job carries no result or one the schema
-                cannot read.
+            InferenceRequestError: 502 when a completed job carries no result.
         """
         output: VideoMaskGenerationOutput | None = None
         if job.data is not None:
-            try:
-                payload = job.data if isinstance(job.data, TrackingOutput) else TrackingOutput.model_validate(job.data)
-            except ValidationError as exc:
-                raise InferenceRequestError(
-                    status_code=502,
-                    code="invalid_response",
-                    message=(
-                        f"Tracking job '{job.job_id}' returned a result Pixano cannot read: "
-                        f"{_validation_message(exc)}"
-                    ),
-                ) from exc
-            output = _output_from_tracking(payload)
+            output = _output_from_tracking(job.data)
         elif job.status == "completed":
             raise InferenceRequestError(
                 status_code=502,
@@ -609,9 +570,8 @@ class PixanoInferenceProvider(InferenceProvider):
     def _request_error(exc: PixanoInferenceError) -> InferenceRequestError:
         code = getattr(exc, "code", "")
         status_code = exc.status_code
-        # A client from 0.7.1 on reports a body it cannot parse as "invalid_response", with the status
-        # the server used (a 200, typically). For Pixano that answer is unusable whatever its status:
-        # a bad gateway, like the same failure detected here with an older client.
+        # The client reports a body it cannot parse as "invalid_response", with the status the server
+        # used (a 200, typically). For Pixano that answer is unusable whatever its status: a bad gateway.
         if code == "invalid_response":
             status_code = 502
         return InferenceRequestError(
