@@ -156,15 +156,23 @@ License: CECILL-C
             </Tooltip.Content>
           </Tooltip.Root>
           {#if pinnedTimelineEntityIds.value.length > 0}
-            <button
-              type="button"
-              class="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-              onclick={clearPinnedTimelineEntities}
-              title="Clear pinned timeline entities"
-            >
-              <PushPinSlash class="h-3.5 w-3.5" />
-              {pinnedTimelineEntityIds.value.length}
-            </button>
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                type="button"
+                class="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+                onclick={clearPinnedTimelineEntities}
+              >
+                <PushPinSlash class="h-3.5 w-3.5" />
+                {pinnedTimelineEntityIds.value.length}
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                side="bottom"
+                sideOffset={6}
+                class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+              >
+                <p>Clear pinned timeline entities</p>
+              </Tooltip.Content>
+            </Tooltip.Root>
           {/if}
           <Tooltip.Root>
             <Tooltip.Trigger

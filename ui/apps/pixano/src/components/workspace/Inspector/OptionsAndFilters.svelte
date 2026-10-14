@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
 
-  import { Checkbox, Slider } from "bits-ui";
+  import { Checkbox, Slider, Tooltip } from "bits-ui";
   import { Check, Plus, Prohibit } from "phosphor-svelte";
 
   import FilterLine from "./FilterLine.svelte";
@@ -362,24 +362,40 @@ License: CECILL-C
         <span class="text-label">Advanced Rules</span>
 
         <div class="flex items-center gap-1.5">
-          <button
-            type="button"
-            onclick={() => handleAddFilter("AND")}
-            class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
-            title="Add an AND condition"
-          >
-            <Plus class="h-3 w-3" />
-            AND
-          </button>
-          <button
-            type="button"
-            onclick={() => handleAddFilter("OR")}
-            class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
-            title="Add an OR condition"
-          >
-            <Plus class="h-3 w-3" />
-            OR
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              onclick={() => handleAddFilter("AND")}
+              class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
+            >
+              <Plus class="h-3 w-3" />
+              AND
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Add an AND condition</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              onclick={() => handleAddFilter("OR")}
+              class="h-7 inline-flex items-center gap-1 rounded-md border border-border/50 bg-background px-2 text-[10px] font-semibold tracking-wide text-foreground hover:bg-accent transition-colors"
+            >
+              <Plus class="h-3 w-3" />
+              OR
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Add an OR condition</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         </div>
       </div>
 
@@ -394,24 +410,40 @@ License: CECILL-C
       </div>
 
       <div class="flex items-center justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onclick={handleClearFilter}
-          class="h-8 inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          title="Clear all filter rules"
-        >
-          <Prohibit class="h-3.5 w-3.5" />
-          Clear
-        </button>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            type="button"
+            onclick={handleClearFilter}
+            class="h-8 inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          >
+            <Prohibit class="h-3.5 w-3.5" />
+            Clear
+          </Tooltip.Trigger>
+          <Tooltip.Content
+            side="bottom"
+            sideOffset={6}
+            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+          >
+            <p>Clear all filter rules</p>
+          </Tooltip.Content>
+        </Tooltip.Root>
 
-        <button
-          type="button"
-          onclick={handleFilterOK}
-          class="h-8 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
-          title="Apply current filter rules"
-        >
-          Apply filters
-        </button>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            type="button"
+            onclick={handleFilterOK}
+            class="h-8 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            Apply filters
+          </Tooltip.Trigger>
+          <Tooltip.Content
+            side="bottom"
+            sideOffset={6}
+            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+          >
+            <p>Apply current filter rules</p>
+          </Tooltip.Content>
+        </Tooltip.Root>
       </div>
     </div>
   {:else}

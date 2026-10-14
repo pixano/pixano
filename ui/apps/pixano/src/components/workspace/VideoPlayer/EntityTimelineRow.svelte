@@ -19,7 +19,7 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { ToolType } from "$lib/tools";
   import type { TrackTimelineEntry, View } from "$lib/ui";
-  import { BaseSchema, cn, ContextMenu, Entity, IconButton, Tracklet } from "$lib/ui";
+  import { BaseSchema, cn, ContextMenu, Entity, IconButton, Tooltip, Tracklet } from "$lib/ui";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
@@ -170,7 +170,6 @@ License: CECILL-C
 
 {#if entity}
   <section
-    title={displayName}
     class={cn("group relative transition-all", isPrimaryFocus ? "z-[1]" : "")}
     style="width: 100%;"
   >
@@ -195,13 +194,26 @@ License: CECILL-C
                 : "border-border/30",
           )}
         >
-          <button
-            type="button"
-            class="h-2.5 w-2.5 rounded-full border border-background/90 shadow-sm transition-transform hover:scale-125"
-            style={`background: ${color}`}
-            title={displayName}
-            onclick={onColoredDotClick}
-          ></button>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              {#snippet child({ props })}
+                <button
+                  {...props}
+                  type="button"
+                  class="h-2.5 w-2.5 rounded-full border border-background/90 shadow-sm transition-transform hover:scale-125"
+                  style={`background: ${color}`}
+                  onclick={onColoredDotClick}
+                ></button>
+              {/snippet}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>{displayName}</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           {#if onTogglePin}
             <div
               class={cn(

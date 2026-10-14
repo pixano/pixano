@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Tooltip } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -409,98 +410,130 @@ License: CECILL-C
           {@const imgH = thumb.baseImageDimensions.height * imgScale}
           {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
           {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
-          <button
-            type="button"
-            class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden transition-all duration-200 hover:ring-2 hover:ring-primary/30"
-            style="width: 40px; height: 40px; border: 2px solid {color}; background: hsl(var(--muted) / 0.8);"
-            title="Highlight entity"
-            onclick={onColoredDotClick}
-          >
-            <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
-              <img
-                src="/{thumb.uri}"
-                alt=""
-                class="absolute max-w-none"
-                style="width: {imgW}px; height: {imgH}px; left: {offX}px; top: {offY}px;"
-              />
-            </div>
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+              style="width: 40px; height: 40px; border: 2px solid {color}; background: hsl(var(--muted) / 0.8);"
+              onclick={onColoredDotClick}
+            >
+              <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
+                <img
+                  src="/{thumb.uri}"
+                  alt=""
+                  class="absolute max-w-none"
+                  style="width: {imgW}px; height: {imgH}px; left: {offX}px; top: {offY}px;"
+                />
+              </div>
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Highlight entity</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         {:else if hasOnlyTextSpans}
           <!-- Typographic fallback thumbnail for text-only entities -->
-          <button
-            type="button"
-            class="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 hover:ring-2 hover:ring-primary/30"
-            style="width: 40px; height: 40px; border: 2px solid {color}; background: color-mix(in srgb, {color} 12%, transparent);"
-            title="Highlight entity (text entity)"
-            onclick={onColoredDotClick}
-          >
-            <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+              style="width: 40px; height: 40px; border: 2px solid {color}; background: color-mix(in srgb, {color} 12%, transparent);"
+              onclick={onColoredDotClick}
+            >
+              <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Highlight entity (text entity)</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         {:else}
           <!-- Minimal colored dot fallback -->
-          <button
-            type="button"
-            class="rounded-full w-3 h-3 mx-1 mt-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
-            style="background:{color}"
-            title="Highlight entity"
-            onclick={onColoredDotClick}
-          ></button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="rounded-full w-3 h-3 mx-1 mt-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
+              style="background:{color}"
+              onclick={onColoredDotClick}
+            ></Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Highlight entity</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         {/if}
 
         <!-- Entity ID + annotation summary pills -->
-        <button
-          type="button"
-          class="min-w-0 text-left flex flex-col gap-1"
-          onclick={onColoredDotClick}
-          title="Highlight entity"
-        >
-          <span
-            class={cn(
-              "block truncate text-[13px] font-semibold leading-tight transition-colors font-mono",
-              {
-                "text-foreground": highlightState !== "none",
-                "text-muted-foreground":
-                  highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
-              },
-            )}
-            title={entity.id}
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            type="button"
+            class="min-w-0 text-left flex flex-col gap-1"
+            onclick={onColoredDotClick}
           >
-            {entity.id}
-          </span>
+            <span
+              class={cn(
+                "block truncate text-[13px] font-semibold leading-tight transition-colors font-mono",
+                {
+                  "text-foreground": highlightState !== "none",
+                  "text-muted-foreground":
+                    highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
+                },
+              )}
+              title={entity.id}
+            >
+              {entity.id}
+            </span>
 
-          <!-- Annotation type summary pills -->
-          {#if Object.keys(annotationTypeSummary).length > 0}
-            <div class="flex flex-wrap gap-1">
-              {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
-                {@const typedSchema = schema as BaseSchema}
-                {@const meta = ANNOTATION_TYPE_META[schema]}
-                {#if meta}
-                  <span
-                    class={cn(
-                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
-                      meta.badgeClass,
-                    )}
-                  >
-                    {#if typedSchema === BaseSchema.BBox}
-                      <Square class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Mask}
-                      <Ghost weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Keypoints}
-                      <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.TextSpan}
-                      <TextT weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.MultiPath}
-                      <LineSegments weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Tracklet}
-                      <GitCommit weight="regular" class="h-2.5 w-2.5" />
-                    {/if}
-                    {count}
-                  </span>
-                {/if}
-              {/each}
-            </div>
-          {/if}
-        </button>
+            <!-- Annotation type summary pills -->
+            {#if Object.keys(annotationTypeSummary).length > 0}
+              <div class="flex flex-wrap gap-1">
+                {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
+                  {@const typedSchema = schema as BaseSchema}
+                  {@const meta = ANNOTATION_TYPE_META[schema]}
+                  {#if meta}
+                    <span
+                      class={cn(
+                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
+                        meta.badgeClass,
+                      )}
+                    >
+                      {#if typedSchema === BaseSchema.BBox}
+                        <Square class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Mask}
+                        <Ghost weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Keypoints}
+                        <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.TextSpan}
+                        <TextT weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.MultiPath}
+                        <LineSegments weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Tracklet}
+                        <GitCommit weight="regular" class="h-2.5 w-2.5" />
+                      {/if}
+                      {count}
+                    </span>
+                  {/if}
+                {/each}
+              </div>
+            {/if}
+          </Tooltip.Trigger>
+          <Tooltip.Content
+            side="bottom"
+            sideOffset={6}
+            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+          >
+            <p>Highlight entity</p>
+          </Tooltip.Content>
+        </Tooltip.Root>
       </div>
 
       <!-- Right: Action buttons -->

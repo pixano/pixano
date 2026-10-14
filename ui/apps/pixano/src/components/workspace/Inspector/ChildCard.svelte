@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   /* eslint-disable svelte/no-at-html-tags */
 
-  import { Button } from "bits-ui";
+  import { Button, Tooltip } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -377,19 +377,27 @@ License: CECILL-C
       </div>
 
       <!-- Detail toggle chevron -->
-      <button
-        type="button"
-        class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
-        onclick={() => {
-          showDetails = !showDetails;
-        }}
-        title={showDetails ? "Hide details" : "Show details"}
-      >
-        <CaretRight
-          weight="regular"
-          class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
-        />
-      </button>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          type="button"
+          class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+          onclick={() => {
+            showDetails = !showDetails;
+          }}
+        >
+          <CaretRight
+            weight="regular"
+            class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
+          />
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          side="bottom"
+          sideOffset={6}
+          class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+        >
+          <p>{showDetails ? "Hide details" : "Show details"}</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
     </div>
   </div>
 
