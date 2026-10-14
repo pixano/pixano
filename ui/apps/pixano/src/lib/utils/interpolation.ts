@@ -46,7 +46,10 @@ export const boxLinearInterpolation = (
   const { ui, ...noUIfieldsBBox } = structuredClone(startBox);
   const interpolatedBox = new BBox(noUIfieldsBBox);
   interpolatedBox.ui = ui;
-  interpolatedBox.id = nanoid(10);
+  // Deterministic per (start box, frame): stable across renders so the UI does not
+  // churn a fresh id on every pass. Uniqueness holds because only one start box
+  // interpolates into any given frame.
+  interpolatedBox.id = `${startBox.id}::${imageIndex}`;
   interpolatedBox.ui.frame_index = imageIndex;
   interpolatedBox.ui.displayControl = {
     hidden: startBox.ui.displayControl.hidden,

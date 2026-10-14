@@ -660,7 +660,7 @@ License: CECILL-C
     <!-- NOTE: trackChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
     {#each currentTrackChilds as { trackChild, interpolated }}
       {@const displayName = interpolated
-        ? `<i class="text-muted-foreground/50">interpolated</i> (${trackChild.id})`
+        ? `<i class="text-muted-foreground/50">interpolated</i>`
         : trackChild.id}
       <div
         class="flex items-center justify-between w-full overflow-hidden py-0.5 px-1 rounded hover:bg-muted/30 transition-colors group/trackchild"
