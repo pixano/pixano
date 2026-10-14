@@ -8,6 +8,7 @@ License: CECILL-C
   import { Slider, Tooltip } from "bits-ui";
   import {
     CircleNotch,
+    List,
     MagnifyingGlassMinus,
     MagnifyingGlassPlus,
     PushPinSlash,
@@ -34,6 +35,7 @@ License: CECILL-C
     currentFrameIndex,
     lastFrameIndex,
     playbackState,
+    showTrackTimelines,
     timelineZoom,
   } from "$lib/stores/videoStores.svelte";
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
@@ -137,6 +139,29 @@ License: CECILL-C
         </div>
 
         <div class="flex items-center gap-2">
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class={`flex items-center rounded-md border px-1.5 py-1.5 text-[11px] transition-colors ${
+                showTrackTimelines.value
+                  ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+                  : "border-border/40 bg-background/70 text-muted-foreground hover:text-foreground"
+              }`}
+              aria-pressed={showTrackTimelines.value}
+              onclick={() => {
+                showTrackTimelines.value = !showTrackTimelines.value;
+              }}
+            >
+              <List class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>{showTrackTimelines.value ? "Hide track timelines" : "Show track timelines"}</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           {#if pinnedTimelineEntityIds.value.length > 0}
             <button
               type="button"
@@ -241,43 +266,45 @@ License: CECILL-C
 
         <TimelineHeaderSurface entities={videoEntities} {onFrameClick} />
 
-        {#if activeTrackingTimelineState.value}
-          <div
-            class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
-          >
-            <TrackingTimelineRow state={activeTrackingTimelineState.value} />
-          </div>
-        {/if}
-
-        {#if detectionTimelineLanes.value.length > 0}
-          <div class="rounded-md border border-sky-500/25 bg-sky-500/5 px-1.5 py-1.5">
-            <DetectionTracksTimelineRows
-              lanes={detectionTimelineLanes.value}
-              onSelect={(trackId, startFrame) => {
-                selectDetectionTrack(trackId);
-                onFrameClick(startFrame);
-              }}
-            />
-          </div>
-        {/if}
-
-        <div class="flex flex-col gap-1">
-          {#if focusedTimelineEntities.length === 0}
-            <TimelineFocusEmptyState />
-          {:else}
-            {#each focusedTimelineEntities as entity, index (entity.id)}
-              <EntityTimelineRow
-                {entity}
-                views={mediaViews.value}
-                {onFrameClick}
-                {resetTool}
-                isPrimaryFocus={index === 0}
-                isPinned={pinnedTimelineEntityIds.value.includes(entity.id)}
-                onTogglePin={() => togglePinnedTimelineEntity(entity.id)}
-              />
-            {/each}
+        {#if showTrackTimelines.value}
+          {#if activeTrackingTimelineState.value}
+            <div
+              class="rounded-md border border-amber-500/25 bg-[linear-gradient(180deg,rgba(245,158,11,0.10)_0%,rgba(245,158,11,0.03)_100%)] px-1.5 py-1.5"
+            >
+              <TrackingTimelineRow state={activeTrackingTimelineState.value} />
+            </div>
           {/if}
-        </div>
+
+          {#if detectionTimelineLanes.value.length > 0}
+            <div class="rounded-md border border-sky-500/25 bg-sky-500/5 px-1.5 py-1.5">
+              <DetectionTracksTimelineRows
+                lanes={detectionTimelineLanes.value}
+                onSelect={(trackId, startFrame) => {
+                  selectDetectionTrack(trackId);
+                  onFrameClick(startFrame);
+                }}
+              />
+            </div>
+          {/if}
+
+          <div class="flex flex-col gap-1">
+            {#if focusedTimelineEntities.length === 0}
+              <TimelineFocusEmptyState />
+            {:else}
+              {#each focusedTimelineEntities as entity, index (entity.id)}
+                <EntityTimelineRow
+                  {entity}
+                  views={mediaViews.value}
+                  {onFrameClick}
+                  {resetTool}
+                  isPrimaryFocus={index === 0}
+                  isPinned={pinnedTimelineEntityIds.value.includes(entity.id)}
+                  onTogglePin={() => togglePinnedTimelineEntity(entity.id)}
+                />
+              {/each}
+            {/if}
+          </div>
+        {/if}
       </div>
     </div>
   </div>

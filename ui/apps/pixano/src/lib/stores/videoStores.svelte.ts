@@ -29,6 +29,11 @@ export const playbackState = reactiveStore<PlaybackState>({
 
 export const timelineZoom = reactiveStore<number[]>([100]);
 
+// ─── Track timelines visibility ─────────────────────────────────────────────
+
+// Whether the per-track timelines below the main timeline are shown.
+export const showTrackTimelines = reactiveStore<boolean>(true);
+
 // ─── Frame navigation ───────────────────────────────────────────────────────
 
 export const imagesPerView = reactiveStore<LoadedImagesPerView>({});
