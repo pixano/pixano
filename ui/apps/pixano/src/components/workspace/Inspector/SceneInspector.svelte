@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Pencil } from "phosphor-svelte";
+  import { Check, Copy, Pencil } from "phosphor-svelte";
 
   import RecordStatusControl from "../../layout/RecordStatusControl.svelte";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -21,6 +21,7 @@ License: CECILL-C
   // The Record tab: everything record-level — status, attributes, view metadata.
   // Display adjustments are canvas tools and live in the toolbar (DisplaySettings).
   let isEditing: boolean = $state(false);
+  let copied: boolean = $state(false);
   const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
@@ -67,6 +68,17 @@ License: CECILL-C
     isEditing = !isEditing;
   };
 
+  const handleCopyId = async (): Promise<void> => {
+    if (!recordId) return;
+    try {
+      await navigator.clipboard.writeText(recordId);
+      copied = true;
+      setTimeout(() => (copied = false), 1500);
+    } catch {
+      // Clipboard API unavailable; leave copied state untouched.
+    }
+  };
+
   const handleTextInputChange = (
     value: string | boolean | number | Array<string | number | boolean>,
     propertyName: string,
@@ -82,6 +94,32 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-6 p-4 text-foreground">
+  <!-- Record ID -->
+  {#if recordId}
+    <section class="flex flex-col gap-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-label text-left">ID</h3>
+        <IconButton
+          onclick={handleCopyId}
+          tooltipContent={copied ? "Copied!" : "Copy record ID"}
+          class="h-8 w-8 rounded-lg"
+        >
+          {#if copied}
+            <Check class="h-4 w-4" />
+          {:else}
+            <Copy class="h-4 w-4" />
+          {/if}
+        </IconButton>
+      </div>
+      <span
+        class="truncate rounded-xl border border-border/60 bg-background p-3 font-mono text-sm text-foreground"
+        title={recordId}
+      >
+        {recordId}
+      </span>
+    </section>
+  {/if}
+
   <!-- Status -->
   {#if datasetId && recordId}
     <section class="flex flex-col gap-2">
