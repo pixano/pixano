@@ -10,6 +10,7 @@ License: CECILL-C
     CircleNotch,
     MagnifyingGlassMinus,
     MagnifyingGlassPlus,
+    PushPin,
     PushPinSlash,
   } from "phosphor-svelte";
 
@@ -21,6 +22,7 @@ License: CECILL-C
   import VideoControls from "./VideoControls.svelte";
   import {
     clearPinnedTimelineEntities,
+    pinAllTimelineEntities,
     pinnedTimelineEntityIds,
     timelineFocusEntityIds,
     togglePinnedTimelineEntity,
@@ -137,6 +139,22 @@ License: CECILL-C
         </div>
 
         <div class="flex items-center gap-2">
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              onclick={pinAllTimelineEntities}
+            >
+              <PushPin class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Pin all timeline entities</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           {#if pinnedTimelineEntityIds.value.length > 0}
             <button
               type="button"

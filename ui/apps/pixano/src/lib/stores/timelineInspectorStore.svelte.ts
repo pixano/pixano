@@ -45,6 +45,12 @@ export function clearPinnedTimelineEntities(): void {
   pinnedTimelineEntityIds.value = [];
 }
 
+export function pinAllTimelineEntities(): void {
+  pinnedTimelineEntityIds.value = entities.value
+    .filter((entity) => entityHasTracklets(entity) && !entity.ui.displayControl.hidden)
+    .map((entity) => entity.id);
+}
+
 export function isTimelineEntityPinned(entityId: string): boolean {
   return pinnedTimelineEntityIds.value.includes(entityId);
 }
