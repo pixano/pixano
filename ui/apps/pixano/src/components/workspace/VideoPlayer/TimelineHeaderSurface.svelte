@@ -75,22 +75,39 @@ License: CECILL-C
     }));
   });
 
+  const MIN_TICKS = 8;
+  const MAX_TICKS = 24;
+  const NICE_STEPS = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+
   const tickStepSeconds = $derived.by(() => {
+    const totalSeconds = Math.max(1, Math.ceil(totalDurationMs / 1000));
     const pixelsPerFrame = surfaceWidth > 0 ? surfaceWidth / totalFrames : 0;
 
-    if (pixelsPerFrame < 0.25) return 30;
-    if (pixelsPerFrame < 0.5) return 15;
-    if (pixelsPerFrame < 1.2) return 10;
-    if (pixelsPerFrame < 3) return 5;
-    if (pixelsPerFrame < 6) return 2;
-    return 1;
+    // Zooming in adds tick density, but never below the guaranteed minimum.
+    const desiredTicks = Math.round(
+      Math.min(MAX_TICKS, Math.max(MIN_TICKS, 10 + pixelsPerFrame * 4)),
+    );
+
+    let step = NICE_STEPS[NICE_STEPS.length - 1];
+    let bestDiff = Number.POSITIVE_INFINITY;
+    for (const candidate of NICE_STEPS) {
+      const count = totalSeconds / candidate;
+      if (count < MIN_TICKS) break;
+      const diff = Math.abs(count - desiredTicks);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        step = candidate;
+      }
+    }
+    return step;
   });
 
   const ticks = $derived.by(() => {
     const marks: Array<{ second: number; leftPct: number; label: string }> = [];
     const totalSeconds = Math.max(1, Math.ceil(totalDurationMs / 1000));
 
-    for (let second = 0; second <= totalSeconds; second += tickStepSeconds) {
+    for (let i = 0; i * tickStepSeconds <= totalSeconds + 1e-9; i += 1) {
+      const second = i * tickStepSeconds;
       marks.push({
         second,
         leftPct: ((second * 1000) / totalDurationMs) * 100,
