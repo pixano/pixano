@@ -83,3 +83,10 @@ export const canSave = {
 export const interpolate = reactiveStore<boolean>(true);
 export const confidenceThreshold = reactiveStore<number[]>([0.0]);
 export const entityFilters = reactiveStore<EntityFilter[]>([]);
+
+// Interpolated track children currently being edited (anchored via the pencil in
+// the inspector). Keyed by their deterministic interpolated id
+// `${startBoxId}::${frameIndex}`. While an id is present, the derived current-frame
+// stores render that interpolated ghost as editable so dragging it materialises a
+// real annotation (editKeyItemInTracklet).
+export const interpolatedEditingIds = reactiveStore<Set<string>>(new Set());

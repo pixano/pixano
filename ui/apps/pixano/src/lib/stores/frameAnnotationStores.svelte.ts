@@ -18,6 +18,7 @@ import {
   annotations,
   highlightedEntity,
   interpolate,
+  interpolatedEditingIds,
   selectedTool,
 } from "./workspaceBaseStores.svelte";
 import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
@@ -106,6 +107,13 @@ export const current_itemBBoxes = reactiveDerived(() => {
     entitiesById: eById,
   });
 
+  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
+  for (const bbox of results) {
+    if (bbox.ui?.startRef && interpolatedEditingIds.value.has(bbox.id)) {
+      bbox.ui.displayControl.editing = true;
+    }
+  }
+
   return results;
 });
 
@@ -127,6 +135,13 @@ export const current_itemKeypoints = reactiveDerived(() => {
     selectedToolType: selectedTool.value?.type ?? ToolType.Pan,
     entitiesById: entitiesById.value,
   });
+
+  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
+  for (const kpt of results) {
+    if (kpt.ui?.startRef && interpolatedEditingIds.value.has(kpt.id)) {
+      kpt.ui.displayControl.editing = true;
+    }
+  }
 
   return results;
 });

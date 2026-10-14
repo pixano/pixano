@@ -77,6 +77,7 @@ License: CECILL-C
     current_itemMultiPaths,
     entities,
     imageSmoothing,
+    interpolatedEditingIds,
     newShape,
     selectedTool,
     smartSegmentationUiState,
@@ -680,6 +681,16 @@ License: CECILL-C
       );
       commitNormalizedWorkspaceRuntime(objects, entities.value);
       if (save_data) saveTo(save_data.change_type, save_data.data);
+      // The interpolated ghost has been materialised into a real annotation: it is
+      // no longer an ephemeral child being anchored, so stop marking it as editable.
+      if (save_data?.change_type === "add") {
+        interpolatedEditingIds.update((ids) => {
+          if (!ids.has(shape.shapeId)) return ids;
+          const next = new Set(ids);
+          next.delete(shape.shapeId);
+          return next;
+        });
+      }
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
     }

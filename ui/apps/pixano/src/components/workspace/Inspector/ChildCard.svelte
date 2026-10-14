@@ -35,6 +35,7 @@ License: CECILL-C
     current_itemKeypoints,
     current_itemMasks,
     interpolate,
+    interpolatedEditingIds,
     mediaViews,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -251,6 +252,21 @@ License: CECILL-C
     });
     return result;
   });
+
+  const toggleInterpolatedEditing = (trackChild: Annotation) => {
+    interpolatedEditingIds.update((ids) => {
+      const next = new Set(ids);
+      if (next.has(trackChild.id)) {
+        next.delete(trackChild.id);
+      } else {
+        next.add(trackChild.id);
+      }
+      return next;
+    });
+  };
+
+  const isInterpolatedEditing = (trackChild: Annotation) =>
+    interpolatedEditingIds.value.has(trackChild.id);
 
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
@@ -681,11 +697,20 @@ License: CECILL-C
             {@html displayName}
           </span>
         </div>
-        {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}
+        {#if selectedTool.value?.type !== ToolType.Fusion && [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
           <div
             class="flex items-center gap-0.5 opacity-0 group-hover/trackchild:opacity-100 transition-opacity duration-200"
           >
-            {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
+            {#if interpolated}
+              <IconButton
+                tooltipContent="Edit interpolated annotation"
+                selected={isInterpolatedEditing(trackChild)}
+                onclick={() => toggleInterpolatedEditing(trackChild)}
+                class="h-6 w-6"
+              >
+                <Pencil class="h-3 w-3" />
+              </IconButton>
+            {:else}
               <IconButton
                 tooltipContent="Edit annotation"
                 selected={trackChild.ui.displayControl.editing}
@@ -695,14 +720,16 @@ License: CECILL-C
                 <Pencil class="h-3 w-3" />
               </IconButton>
             {/if}
-            <IconButton
-              tooltipContent="Delete annotation"
-              redconfirm
-              onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
-              class="h-6 w-6 text-muted-foreground hover:text-destructive"
-            >
-              <Trash weight="regular" class="h-3 w-3" />
-            </IconButton>
+            {#if !interpolated}
+              <IconButton
+                tooltipContent="Delete annotation"
+                redconfirm
+                onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
+                class="h-6 w-6 text-muted-foreground hover:text-destructive"
+              >
+                <Trash weight="regular" class="h-3 w-3" />
+              </IconButton>
+            {/if}
           </div>
         {/if}
       </div>
