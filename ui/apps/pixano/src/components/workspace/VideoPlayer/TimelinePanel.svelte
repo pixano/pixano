@@ -163,25 +163,40 @@ License: CECILL-C
               <p>Zoom out</p>
             </Tooltip.Content>
           </Tooltip.Root>
-          <div
-            class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
-          >
-            <Slider.Root
-              type="multiple"
-              bind:value={timelineZoom.value}
-              min={100}
-              max={Math.max((lastFrameIndex.value ?? 0) * 3, 200)}
-              class="relative flex w-full touch-none select-none items-center"
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
             >
-              <span class="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary/80">
-                <Slider.Range class="absolute h-full bg-primary" />
-              </span>
-              <Slider.Thumb
-                index={0}
-                class="block h-3.5 w-3.5 rounded-full border border-primary bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </Slider.Root>
-          </div>
+              {#snippet child({ props })}
+                <div {...props}>
+                  <Slider.Root
+                    type="multiple"
+                    bind:value={timelineZoom.value}
+                    min={100}
+                    max={Math.max((lastFrameIndex.value ?? 0) * 3, 200)}
+                    class="relative flex w-full touch-none select-none items-center"
+                  >
+                    <span
+                      class="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary/80"
+                    >
+                      <Slider.Range class="absolute h-full bg-primary" />
+                    </span>
+                    <Slider.Thumb
+                      index={0}
+                      class="block h-3.5 w-3.5 rounded-full border border-primary bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                  </Slider.Root>
+                </div>
+              {/snippet}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Timeline zoom</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           <Tooltip.Root>
             <Tooltip.Trigger
               type="button"
