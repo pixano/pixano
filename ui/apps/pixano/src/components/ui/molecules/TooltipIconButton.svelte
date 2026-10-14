@@ -77,7 +77,9 @@ License: CECILL-C
   </Tooltip.Trigger>
   {#if tooltipContent}
     <Tooltip.Content
-      class="z-50 overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+      side="top"
+      sideOffset={6}
+      class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
     >
       <p>{tooltipContent}</p>
     </Tooltip.Content>

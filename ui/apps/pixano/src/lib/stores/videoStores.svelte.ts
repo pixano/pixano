@@ -14,6 +14,7 @@ type PlaybackState = {
   isLoaded: boolean;
   isBuffering: boolean;
   videoSpeed: number;
+  loop: boolean;
 };
 
 export const playbackState = reactiveStore<PlaybackState>({
@@ -21,6 +22,7 @@ export const playbackState = reactiveStore<PlaybackState>({
   isLoaded: false,
   isBuffering: false,
   videoSpeed: 100,
+  loop: false,
 });
 
 // ─── Timeline zoom ──────────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ export function resetVideoStores() {
     isLoaded: false,
     isBuffering: false,
     videoSpeed: 100,
+    loop: false,
   };
   imagesPerView.value = {};
   lastFrameIndex.value = undefined;
