@@ -128,6 +128,14 @@ License: CECILL-C
 
   let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
 
+  // Whether the track is being actively edited: the keyframe dots then mark the
+  // instants with an effective (non-interpolated) bbox. Editing can be entered from
+  // the timeline itself (which sets highlighted "self") or from the inspector pencil
+  // (which only toggles `editing`), so both are taken into account here.
+  let isTrackletEditing = $derived(
+    (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing),
+  );
+
   let canAddKeyFrame = $derived(
     currentFrameIndex.value > tracklet.data.start_frame &&
       currentFrameIndex.value < tracklet.data.end_frame &&
@@ -362,7 +370,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
+{#if (tracklet.ui.displayControl.highlighted === "self" || isTrackletEditing) && oneFrameInPixel > 15}
   {#key keyframeIndexes.length}
     {#each keyframeIndexes as itemFrameIndex}
       <KeyframeDot
