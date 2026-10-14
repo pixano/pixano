@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Slider } from "bits-ui";
+  import { Slider, Tooltip } from "bits-ui";
   import {
     CircleNotch,
     MagnifyingGlassMinus,
@@ -94,18 +94,38 @@ License: CECILL-C
       <div class="flex items-center justify-between gap-3 px-3 py-2">
         <div class="flex min-w-0 items-center gap-2">
           <VideoControls {resetHighlight} />
-          <div
-            class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
-          >
-            <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
-            <span class="text-border">/</span>
-            <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
-          </div>
-          <div
-            class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
-          >
-            {currentTimeLabel}
-          </div>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
+            >
+              <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
+              <span class="text-border">/</span>
+              <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>
+                Frame {currentFrameIndex.value} of {totalFrameCount - 1}
+              </p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
+            >
+              {currentTimeLabel}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Current time: {currentTimeLabel}</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           {#if playbackState.value.isBuffering}
             <div
               class="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300"
@@ -128,10 +148,24 @@ License: CECILL-C
               {pinnedTimelineEntityIds.value.length}
             </button>
           {/if}
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <MagnifyingGlassMinus class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Zoom out</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           <div
             class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
           >
-            <MagnifyingGlassMinus class="h-3.5 w-3.5 text-muted-foreground" />
             <Slider.Root
               type="multiple"
               bind:value={timelineZoom.value}
@@ -147,8 +181,22 @@ License: CECILL-C
                 class="block h-3.5 w-3.5 rounded-full border border-primary bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </Slider.Root>
-            <MagnifyingGlassPlus class="h-3.5 w-3.5 text-muted-foreground" />
           </div>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <MagnifyingGlassPlus class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Zoom in</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         </div>
       </div>
     </div>
