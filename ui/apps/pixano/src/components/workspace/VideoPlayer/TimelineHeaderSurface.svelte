@@ -102,6 +102,12 @@ License: CECILL-C
     return step;
   });
 
+  const tickLabelLength = $derived.by(() => {
+    if (tickStepSeconds >= 1) return 5;
+    const decimals = String(tickStepSeconds).split(".")[1]?.length ?? 1;
+    return 6 + decimals;
+  });
+
   const ticks = $derived.by(() => {
     const marks: Array<{ second: number; leftPct: number; label: string }> = [];
     const totalSeconds = Math.max(1, Math.ceil(totalDurationMs / 1000));
@@ -114,7 +120,7 @@ License: CECILL-C
         label: getCurrentImageTime(
           Math.floor((second * 1000) / playbackState.value.videoSpeed),
           playbackState.value.videoSpeed,
-        ).slice(0, 5),
+        ).slice(0, tickLabelLength),
       });
     }
 
