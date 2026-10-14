@@ -20,6 +20,7 @@ License: CECILL-C
 
   let surfaceElement: HTMLButtonElement = $state();
   let surfaceWidth = $state(0);
+  let viewportWidth = $state(0);
   let hoveredFrameIndex = $state<number | null>(null);
 
   const totalFrames = $derived(Math.max((lastFrameIndex.value ?? 0) + 1, 1));
@@ -76,16 +77,17 @@ License: CECILL-C
   });
 
   const MIN_TICKS = 8;
-  const MAX_TICKS = 24;
+  const MAX_TICKS = 120;
   const NICE_STEPS = [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
 
   const tickStepSeconds = $derived.by(() => {
     const totalSeconds = Math.max(1, Math.ceil(totalDurationMs / 1000));
-    const pixelsPerFrame = surfaceWidth > 0 ? surfaceWidth / totalFrames : 0;
 
-    // Zooming in adds tick density, but never below the guaranteed minimum.
+    // Scale the desired tick count with the zoom ratio so the visible viewport
+    // always keeps at least MIN_TICKS/4-5 ticks, capped for a sane DOM budget.
+    const zoomRatio = surfaceWidth > 0 && viewportWidth > 0 ? surfaceWidth / viewportWidth : 1;
     const desiredTicks = Math.round(
-      Math.min(MAX_TICKS, Math.max(MIN_TICKS, 10 + pixelsPerFrame * 4)),
+      Math.min(MAX_TICKS, Math.max(MIN_TICKS, Math.ceil(5 * zoomRatio))),
     );
 
     let step = NICE_STEPS[NICE_STEPS.length - 1];
@@ -151,17 +153,34 @@ License: CECILL-C
     return Math.min(totalFrames - 1, Math.max(0, Math.round(ratio * (totalFrames - 1))));
   }
 
+  function getViewportWidth(): number {
+    if (!surfaceElement) return 0;
+    let node: HTMLElement | null = surfaceElement.parentElement;
+    while (node) {
+      const overflow = getComputedStyle(node).overflowX;
+      if (overflow === "auto" || overflow === "scroll" || overflow === "hidden") {
+        return node.clientWidth;
+      }
+      node = node.parentElement;
+    }
+    return surfaceElement.parentElement?.clientWidth ?? 0;
+  }
+
   $effect(() => {
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     timelineZoom.value[0];
     if (!surfaceElement) return;
 
     surfaceWidth = surfaceElement.getBoundingClientRect().width;
+    viewportWidth = getViewportWidth();
     const observer = new ResizeObserver(() => {
       surfaceWidth = surfaceElement?.getBoundingClientRect().width ?? 0;
+      viewportWidth = getViewportWidth();
     });
 
     observer.observe(surfaceElement);
+    const viewport = surfaceElement.parentElement?.parentElement;
+    if (viewport) observer.observe(viewport);
     return () => observer.disconnect();
   });
 
