@@ -11,7 +11,8 @@ License: CECILL-C
 
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
-  import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
+  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
+  import { mapShapeType2BaseSchema } from "$lib/constants/workspaceConstants";
   import { cloneMaskUiForPersistence } from "$lib/segmentation/maskNormalization";
   import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import {
@@ -515,8 +516,8 @@ License: CECILL-C
   };
 
   function removeTemporaryTextSpan() {
-    if (annotations.value.find((ann) => ann.id === temporayTextSpanId)) {
-      annotations.update((anns) => anns.filter((ann) => ann.id !== temporayTextSpanId));
+    if (annotations.value.find((ann) => ann.id === TEMPORARY_TEXT_SPAN_ID)) {
+      annotations.update((anns) => anns.filter((ann) => ann.id !== TEMPORARY_TEXT_SPAN_ID));
     }
   }
   function handleCancel() {
