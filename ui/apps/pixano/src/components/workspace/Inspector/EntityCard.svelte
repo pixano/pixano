@@ -33,6 +33,7 @@ License: CECILL-C
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
   import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
+  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -371,7 +372,10 @@ License: CECILL-C
       if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entityDisplayControl.editing);
     }
-    if (!entityDisplayControl.editing) selectedTool.value = panTool;
+    // Editing a shape needs the pan tool, except during a tracking session: the
+    // session runs on the Rectangle tool and cancels itself on any other tool, while
+    // editing an existing box is one of its advertised actions (pending keyframe).
+    if (!entityDisplayControl.editing && !isTracking.value) selectedTool.value = panTool;
   };
 
   const toggleCardOpen = () => {

@@ -60,7 +60,7 @@ export function editKeyItemInTracklet(
       if (interpolatedBox && sourceBBox) {
         newAnn = BBox.cloneForFrame(sourceBBox, {
           id: nanoid(10),
-          coords: shape.coords,
+          coords: [...shape.coords],
           view_name: shape.viewRef.name,
           frame_id: shape.viewRef.id,
           frame_index: currentFrame,

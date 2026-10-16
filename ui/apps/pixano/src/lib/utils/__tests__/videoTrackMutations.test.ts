@@ -199,6 +199,35 @@ describe("videoTrackMutations", () => {
     expect(createdBBox.ui.frame_index).toBe(1);
   });
 
+  it("copies the edited coords instead of adopting the shape's array", async () => {
+    const { editKeyItemInTracklet } = await import("$lib/utils/videoShapeEditing");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-2", entity, 2, "track-1", [0.5, 0.2, 0.2, 0.2]);
+    // The workspace hands over shapes read from a $state store, i.e. reactive proxies,
+    // which structuredClone (used by the ghost derivation) refuses to clone.
+    const coords = new Proxy([0.15, 0.2, 0.2, 0.2], {});
+    const shape: EditShape = {
+      status: "editing",
+      type: ShapeType.bbox,
+      shapeId: "bbox-0",
+      viewRef: { id: "camera-frame-0", name: "camera" },
+      coords,
+      highlighted: "self",
+    };
+
+    const result = editKeyItemInTracklet([startBBox, endBBox], shape, 0, [], []);
+
+    expect(result.save_data.change_type).toBe("update");
+    expect(startBBox.data.coords).toEqual([0.15, 0.2, 0.2, 0.2]);
+    expect(startBBox.data.coords).not.toBe(coords);
+    expect(() => structuredClone(startBBox)).not.toThrow();
+    expect(
+      boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1")?.data.coords[0],
+    ).toBeCloseTo(0.325);
+  });
+
   it("never matches a regenerated ghost against a materialised keyframe", async () => {
     const { editKeyItemInTracklet } = await import("$lib/utils/videoShapeEditing");
 

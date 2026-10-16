@@ -694,8 +694,13 @@ License: CECILL-C
   };
 
   $effect(() => {
-    const shape = newShape.value;
-    if (!shape || shape.status !== "editing") return;
+    const editingShape = newShape.value;
+    if (!editingShape || editingShape.status !== "editing") return;
+    // Detach the edit from the store's reactive proxy before it reaches the stores:
+    // its coords array is copied as-is into the annotation (applyEditedShapeData,
+    // cloneForFrame), and the next ghost derivation structuredClones that annotation,
+    // which throws on a proxy and freezes the workspace (GitHub #752).
+    const shape = $state.snapshot(editingShape);
 
     const toolType = selectedTool.value?.type ?? ToolType.Pan;
     untrack(() => {

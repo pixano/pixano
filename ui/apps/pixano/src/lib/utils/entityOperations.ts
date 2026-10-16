@@ -72,7 +72,7 @@ export const buildMaskDataAndInferenceMetadata = (
 export const applyEditedShapeDataToAnnotation = (ann: Annotation, shape: EditShape): boolean => {
   if (shape.type === ShapeType.mask && ann.is_type(BaseSchema.Mask)) {
     if ("counts" in shape && Array.isArray(shape.counts)) {
-      (ann as Mask).data.counts = shape.counts;
+      (ann as Mask).data.counts = [...shape.counts];
     }
     return true;
   }
@@ -103,7 +103,8 @@ export const applyEditedShapeDataToAnnotation = (ann: Annotation, shape: EditSha
   }
 
   if (shape.type === ShapeType.bbox && ann.is_type(BaseSchema.BBox)) {
-    (ann as BBox).data.coords = shape.coords;
+    // Copy: the shape may be a reactive proxy, and annotations get structuredCloned.
+    (ann as BBox).data.coords = [...shape.coords];
     return true;
   }
 
