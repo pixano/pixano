@@ -26,6 +26,7 @@ License: CECILL-C
     updateViewAndWait,
     waitForReadyAheadFrames,
   } from "$lib/utils/videoOperations";
+  import { homeShortcutIsTaken, resolveNextPlaybackFrame } from "$lib/utils/videoPlayback";
 
   interface Props {
     resetHighlight: () => void;
@@ -194,19 +195,16 @@ License: CECILL-C
         const max = lastFrameIndex.value;
         if (max === undefined) return;
 
-        if (currentFrameIndex.value >= max) {
-          if (playbackState.value.loop) {
-            const rendered = await goToFrame(0);
-            if (!rendered) {
-              stopPlayback(true);
-              return;
-            }
-          } else {
-            stopPlayback(true);
-            return;
-          }
+        const step = resolveNextPlaybackFrame(
+          currentFrameIndex.value,
+          max,
+          playbackState.value.loop,
+        );
+        if (step.action === "stop") {
+          stopPlayback(true);
+          return;
         }
-        const rendered = await goToFrame(currentFrameIndex.value + 1);
+        const rendered = await goToFrame(step.frame);
         if (!rendered) {
           stopPlayback(true);
           return;
@@ -251,8 +249,15 @@ License: CECILL-C
       cancelBuffering();
     } else {
       const max = lastFrameIndex.value;
-      if (max !== undefined && currentFrameIndex.value >= max && !playbackState.value.loop) return;
-      if (currentFrameIndex.value >= max) void goToFrame(0);
+      const atEnd = max !== undefined && currentFrameIndex.value >= max;
+      if (atEnd && !playbackState.value.loop) return;
+      if (atEnd) {
+        // Looping from the last frame: show frame 0 before the interval starts.
+        void goToFrame(0).then((rendered) => {
+          if (rendered) playVideo();
+        });
+        return;
+      }
       playVideo();
     }
   };
@@ -299,6 +304,7 @@ License: CECILL-C
         onPlayStepBackClick();
         break;
       case "Home":
+        if (homeShortcutIsTaken(event)) break;
         event.preventDefault();
         onFirstFrameClick();
         break;
