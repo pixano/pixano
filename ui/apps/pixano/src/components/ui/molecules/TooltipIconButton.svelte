@@ -8,6 +8,7 @@ License: CECILL-C
   import { Button, Tooltip } from "bits-ui";
   import type { Snippet } from "svelte";
 
+  import TooltipContent from "./TooltipContent.svelte";
   import { cn } from "$lib/utils/styleUtils";
 
   interface Props {
@@ -76,12 +77,8 @@ License: CECILL-C
     </Button.Root>
   </Tooltip.Trigger>
   {#if tooltipContent}
-    <Tooltip.Content
-      side="bottom"
-      sideOffset={6}
-      class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-    >
+    <TooltipContent>
       <p>{tooltipContent}</p>
-    </Tooltip.Content>
+    </TooltipContent>
   {/if}
 </Tooltip.Root>

@@ -27,6 +27,7 @@ License: CECILL-C
     Keypoints,
     Mask,
     TextSpan,
+    TooltipContent,
     Tracklet,
   } from "$lib/ui";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -371,13 +372,9 @@ License: CECILL-C
               <Plus class="h-3 w-3" />
               AND
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Add an AND condition</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           <Tooltip.Root>
             <Tooltip.Trigger
@@ -388,13 +385,9 @@ License: CECILL-C
               <Plus class="h-3 w-3" />
               OR
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Add an OR condition</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         </div>
       </div>
@@ -419,13 +412,9 @@ License: CECILL-C
             <Prohibit class="h-3.5 w-3.5" />
             Clear
           </Tooltip.Trigger>
-          <Tooltip.Content
-            side="bottom"
-            sideOffset={6}
-            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-          >
+          <TooltipContent>
             <p>Clear all filter rules</p>
-          </Tooltip.Content>
+          </TooltipContent>
         </Tooltip.Root>
 
         <Tooltip.Root>
@@ -436,13 +425,9 @@ License: CECILL-C
           >
             Apply filters
           </Tooltip.Trigger>
-          <Tooltip.Content
-            side="bottom"
-            sideOffset={6}
-            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-          >
+          <TooltipContent>
             <p>Apply current filter rules</p>
-          </Tooltip.Content>
+          </TooltipContent>
         </Tooltip.Root>
       </div>
     </div>

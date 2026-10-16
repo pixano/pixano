@@ -19,7 +19,16 @@ License: CECILL-C
   } from "$lib/stores/workspaceStores.svelte";
   import { ToolType } from "$lib/tools";
   import type { TrackTimelineEntry, View } from "$lib/ui";
-  import { BaseSchema, cn, ContextMenu, Entity, IconButton, Tooltip, Tracklet } from "$lib/ui";
+  import {
+    BaseSchema,
+    cn,
+    ContextMenu,
+    Entity,
+    IconButton,
+    Tooltip,
+    TooltipContent,
+    Tracklet,
+  } from "$lib/ui";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
@@ -27,6 +36,7 @@ License: CECILL-C
     highlightTrackletChildren,
     highlightWithEditing,
   } from "$lib/utils/highlightOperations";
+  import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import {
     addKeyItemToTracklet,
     findNeighborFrameIndices,
@@ -173,7 +183,7 @@ License: CECILL-C
     <Tooltip.Trigger>
       {#snippet child({ props })}
         <section
-          {...props}
+          {...passiveTriggerProps(props)}
           class={cn("group relative transition-all", isPrimaryFocus ? "z-[1]" : "")}
           style="width: 100%;"
         >
@@ -263,12 +273,8 @@ License: CECILL-C
         </section>
       {/snippet}
     </Tooltip.Trigger>
-    <Tooltip.Content
-      side="bottom"
-      sideOffset={6}
-      class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-    >
+    <TooltipContent>
       <p>{displayName}</p>
-    </Tooltip.Content>
+    </TooltipContent>
   </Tooltip.Root>
 {/if}
