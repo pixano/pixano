@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import { Check, Copy, Pencil } from "phosphor-svelte";
+  import { onDestroy } from "svelte";
 
   import RecordStatusControl from "../../layout/RecordStatusControl.svelte";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -22,6 +23,7 @@ License: CECILL-C
   // Display adjustments are canvas tools and live in the toolbar (DisplaySettings).
   let isEditing: boolean = $state(false);
   let copiedKey = $state<string | null>(null);
+  let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
   const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
@@ -75,11 +77,16 @@ License: CECILL-C
     try {
       await navigator.clipboard.writeText(text);
       copiedKey = key;
-      setTimeout(() => (copiedKey = null), 1500);
+      // One timer at a time: a second copy restarts the feedback window instead of
+      // being cut short by the first one.
+      clearTimeout(copiedResetTimer);
+      copiedResetTimer = setTimeout(() => (copiedKey = null), 1500);
     } catch {
       // Clipboard API unavailable; leave copied state untouched.
     }
   };
+
+  onDestroy(() => clearTimeout(copiedResetTimer));
 
   const handleTextInputChange = (
     value: string | boolean | number | Array<string | number | boolean>,
