@@ -5,20 +5,14 @@ License: CECILL-C
 -------------------------------------*/
 
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
+import { pinnableTimelineEntityIds, togglePinnedId } from "./timelinePinning";
 import { currentItemId } from "./videoStores.svelte";
 import { entities, highlightedEntity } from "./workspaceStores.svelte";
-import { entityHasTracklets } from "$lib/types/dataset";
-
-const MAX_PINNED_TIMELINE_ENTITIES = 2;
 
 export const pinnedTimelineEntityIds = reactiveStore<string[]>([]);
 
 export const timelineFocusEntityIds = reactiveDerived<string[]>(() => {
-  const validEntityIds = new Set(
-    entities.value
-      .filter((entity) => entityHasTracklets(entity) && !entity.ui.displayControl.hidden)
-      .map((entity) => entity.id),
-  );
+  const validEntityIds = new Set(pinnableTimelineEntityIds(entities.value));
 
   const focusedEntityId = highlightedEntity.value;
   const pinnedIds = pinnedTimelineEntityIds.value.filter(
@@ -32,13 +26,7 @@ export const timelineFocusEntityIds = reactiveDerived<string[]>(() => {
 });
 
 export function togglePinnedTimelineEntity(entityId: string): void {
-  pinnedTimelineEntityIds.update((currentIds) => {
-    if (currentIds.includes(entityId)) {
-      return currentIds.filter((id) => id !== entityId);
-    }
-
-    return [entityId, ...currentIds].slice(0, MAX_PINNED_TIMELINE_ENTITIES);
-  });
+  pinnedTimelineEntityIds.update((currentIds) => togglePinnedId(currentIds, entityId));
 }
 
 export function clearPinnedTimelineEntities(): void {
@@ -46,9 +34,7 @@ export function clearPinnedTimelineEntities(): void {
 }
 
 export function pinAllTimelineEntities(): void {
-  pinnedTimelineEntityIds.value = entities.value
-    .filter((entity) => entityHasTracklets(entity) && !entity.ui.displayControl.hidden)
-    .map((entity) => entity.id);
+  pinnedTimelineEntityIds.value = pinnableTimelineEntityIds(entities.value);
 }
 
 export function isTimelineEntityPinned(entityId: string): boolean {
