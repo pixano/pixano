@@ -21,7 +21,7 @@ License: CECILL-C
   // The Record tab: everything record-level — status, attributes, view metadata.
   // Display adjustments are canvas tools and live in the toolbar (DisplaySettings).
   let isEditing: boolean = $state(false);
-  let copiedKey: string | null = $state(null);
+  let copiedKey = $state<string | null>(null);
   const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
