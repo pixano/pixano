@@ -108,9 +108,21 @@ License: CECILL-C
   };
   calcOneFrameInPixel();
 
+  // Whether the track is being actively edited: the keyframe dots then mark the
+  // instants with an effective (non-interpolated) bbox. Editing can be entered from
+  // the timeline itself (which sets highlighted "self") or from the inspector pencil
+  // (which only toggles `editing`), so both gate the dots and the frame-width
+  // measurement they need (observe() reports the current size right away).
+  let isTrackletEditing = $derived(
+    (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing),
+  );
+  let showsKeyframeDots = $derived(
+    tracklet.ui.displayControl.highlighted === "self" || isTrackletEditing,
+  );
+
   $effect(() => {
     if (resizeObs) {
-      if (tracklet.ui.displayControl.highlighted === "self") {
+      if (showsKeyframeDots) {
         resizeObs.observe(trackElement);
       } else {
         resizeObs.unobserve(trackElement);
@@ -127,14 +139,6 @@ License: CECILL-C
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
-
-  // Whether the track is being actively edited: the keyframe dots then mark the
-  // instants with an effective (non-interpolated) bbox. Editing can be entered from
-  // the timeline itself (which sets highlighted "self") or from the inspector pencil
-  // (which only toggles `editing`), so both are taken into account here.
-  let isTrackletEditing = $derived(
-    (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing),
-  );
 
   let canAddKeyFrame = $derived(
     currentFrameIndex.value > tracklet.data.start_frame &&
@@ -370,7 +374,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if (tracklet.ui.displayControl.highlighted === "self" || isTrackletEditing) && oneFrameInPixel > 15}
+{#if showsKeyframeDots && oneFrameInPixel > 15}
   {#key keyframeIndexes.length}
     {#each keyframeIndexes as itemFrameIndex}
       <KeyframeDot
