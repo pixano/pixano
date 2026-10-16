@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { nanoid } from "nanoid";
+
 import { BaseSchema, BBox, Keypoints, type Annotation, type SaveItem } from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
@@ -16,7 +18,8 @@ import { verticesToCoordsAndStates } from "$lib/utils/keypointsUtils";
  * If `shape.shapeId` refers to an existing annotation the coords are updated
  * in-place. Otherwise the shape is assumed to be an interpolated ghost — we
  * clone the reference annotation and materialise a new one at the current
- * frame.
+ * frame, under a fresh id: the ghost id (`start::frame`) stays ghost-only, so a
+ * ghost derived later at that frame can never be mistaken for the keyframe.
  */
 export function editKeyItemInTracklet(
   allAnnotations: Annotation[],
@@ -56,7 +59,7 @@ export function editKeyItemInTracklet(
       const sourceBBox = interpolatedBox?.ui?.startRef;
       if (interpolatedBox && sourceBBox) {
         newAnn = BBox.cloneForFrame(sourceBBox, {
-          id: shape.shapeId,
+          id: nanoid(10),
           coords: shape.coords,
           view_name: shape.viewRef.name,
           frame_id: shape.viewRef.id,
@@ -73,7 +76,7 @@ export function editKeyItemInTracklet(
         if (keypointRef) {
           const { coords, states } = verticesToCoordsAndStates(shape.vertices);
           newAnn = Keypoints.cloneForFrame(keypointRef, {
-            id: shape.shapeId,
+            id: nanoid(10),
             coords,
             states,
             view_name: shape.viewRef.name,

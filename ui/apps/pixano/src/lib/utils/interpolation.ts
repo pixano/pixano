@@ -4,14 +4,24 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { nanoid } from "nanoid";
-
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
   NOT_ANNOTATION_ITEM_OPACITY,
 } from "$lib/constants/workspaceConstants";
 import { BBox } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
+
+/**
+ * Deterministic id of the ghost interpolated from the annotation `startId` at
+ * `frameIndex`.
+ *
+ * Stable across renders, so the UI does not churn a fresh id on every pass, and
+ * unique because only one start annotation interpolates into a given frame. The
+ * form is ghost-only: materialising a ghost mints a fresh id (editKeyItemInTracklet),
+ * so a ghost derived later at the same frame never matches a stored annotation.
+ */
+export const interpolatedAnnotationId = (startId: string, frameIndex: number): string =>
+  `${startId}::${frameIndex}`;
 
 export const boxLinearInterpolation = (
   boxes: BBox[], //bboxes of the tracklet
@@ -46,10 +56,7 @@ export const boxLinearInterpolation = (
   const { ui, ...noUIfieldsBBox } = structuredClone(startBox);
   const interpolatedBox = new BBox(noUIfieldsBBox);
   interpolatedBox.ui = ui;
-  // Deterministic per (start box, frame): stable across renders so the UI does not
-  // churn a fresh id on every pass. Uniqueness holds because only one start box
-  // interpolates into any given frame.
-  interpolatedBox.id = `${startBox.id}::${imageIndex}`;
+  interpolatedBox.id = interpolatedAnnotationId(startBox.id, imageIndex);
   interpolatedBox.ui.frame_index = imageIndex;
   interpolatedBox.ui.displayControl = {
     hidden: startBox.ui.displayControl.hidden,
@@ -105,7 +112,7 @@ export const keypointsLinearInterpolation = (
     });
     // make a new KeypointAnnotation with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
-    interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
+    interpolatedKpt.id = interpolatedAnnotationId(startKpt.id, imageIndex);
     interpolatedKpt.ui.frame_index = imageIndex;
     interpolatedKpt.ui.displayControl = {
       hidden: startKpt.ui.displayControl.hidden,

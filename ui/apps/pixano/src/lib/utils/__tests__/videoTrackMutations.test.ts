@@ -188,13 +188,58 @@ describe("videoTrackMutations", () => {
 
     const result = editKeyItemInTracklet([startBBox, endBBox], shape, 1, [interpolatedBBox], []);
 
-    const createdBBox = result.objects.find(
-      (annotation) => annotation.id === interpolatedBBox.id,
-    ) as BBox | undefined;
     expect(result.save_data.change_type).toBe("add");
-    expect(createdBBox?.data.tracklet_id).toBe("track-1");
-    expect(createdBBox?.data.frame_id).toBe("camera-frame-1");
-    expect(createdBBox?.ui.frame_index).toBe(1);
+    const createdBBox = result.save_data.data as BBox;
+    // The ghost id (`start::frame`) stays ghost-only: the keyframe gets a fresh id.
+    expect(createdBBox.id).not.toBe(interpolatedBBox.id);
+    expect(createdBBox.id).not.toContain("::");
+    expect(result.objects).toContain(createdBBox);
+    expect(createdBBox.data.tracklet_id).toBe("track-1");
+    expect(createdBBox.data.frame_id).toBe("camera-frame-1");
+    expect(createdBBox.ui.frame_index).toBe(1);
+  });
+
+  it("never matches a regenerated ghost against a materialised keyframe", async () => {
+    const { editKeyItemInTracklet } = await import("$lib/utils/videoShapeEditing");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-2", entity, 2, "track-1", [0.5, 0.2, 0.2, 0.2]);
+    const ghost = boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1");
+    if (!ghost) {
+      throw new Error("Expected interpolated bbox");
+    }
+    const shape: EditShape = {
+      status: "editing",
+      type: ShapeType.bbox,
+      shapeId: ghost.id,
+      viewRef: { id: "camera-frame-1", name: "camera" },
+      coords: [0.3, 0.2, 0.2, 0.2],
+      highlighted: "self",
+    };
+
+    const first = editKeyItemInTracklet([startBBox, endBBox], shape, 1, [ghost], []);
+    const keyframe = first.save_data.data as BBox;
+
+    // The keyframe later moves to frame 3 (a keyframe-dot drag keeps its id), so the
+    // ghost at frame 1 is derived again from the same start box, with the same id.
+    keyframe.ui.frame_index = 3;
+    const regenerated = boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1");
+    if (!regenerated) {
+      throw new Error("Expected interpolated bbox");
+    }
+    expect(regenerated.id).toBe(ghost.id);
+
+    const second = editKeyItemInTracklet(
+      first.objects,
+      { ...shape, coords: [0.35, 0.2, 0.2, 0.2] },
+      1,
+      [regenerated],
+      [],
+    );
+
+    expect(second.save_data.change_type).toBe("add");
+    expect(keyframe.data.coords).toEqual([0.3, 0.2, 0.2, 0.2]);
   });
 
   it("reassigns child ownership on both sides of a split tracklet", async () => {
