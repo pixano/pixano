@@ -86,7 +86,14 @@ export const entityFilters = reactiveStore<EntityFilter[]>([]);
 
 // Interpolated track children currently being edited (anchored via the pencil in
 // the inspector). Keyed by their deterministic interpolated id
-// `${startBoxId}::${frameIndex}`. While an id is present, the derived current-frame
-// stores render that interpolated ghost as editable so dragging it materialises a
-// real annotation (editKeyItemInTracklet).
+// `${startId}::${frameIndex}` (interpolatedAnnotationId). While an id is present, the
+// derived current-frame stores render that interpolated ghost as editable so dragging
+// it materialises a real annotation (editKeyItemInTracklet). Every path that stops
+// editing stored annotations clears it through clearInterpolatedEditing.
 export const interpolatedEditingIds = reactiveStore<Set<string>>(new Set());
+
+/** Stop anchoring every interpolated ghost; a no-op when none is being edited. */
+export function clearInterpolatedEditing(): void {
+  if (interpolatedEditingIds.value.size === 0) return;
+  interpolatedEditingIds.value = new Set();
+}

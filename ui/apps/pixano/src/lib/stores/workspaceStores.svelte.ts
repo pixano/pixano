@@ -13,6 +13,7 @@ import {
   annotations,
   brushSettings,
   canSave,
+  clearInterpolatedEditing,
   confidenceThreshold,
   embeddings,
   entities,
@@ -43,6 +44,7 @@ export {
   annotations,
   brushSettings,
   canSave,
+  clearInterpolatedEditing,
   confidenceThreshold,
   embeddings,
   entities,
@@ -141,6 +143,7 @@ export function resetWorkspaceStores() {
   interpolate.value = true;
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];
+  clearInterpolatedEditing();
   cancelTrackingSession();
   resetTrackingByDetectionSession();
   resetColorScale();

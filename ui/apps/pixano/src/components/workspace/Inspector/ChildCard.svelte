@@ -29,6 +29,7 @@ License: CECILL-C
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
   import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
+  import { toggleInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
   import {
     annotations,
     current_itemBBoxes,
@@ -86,6 +87,7 @@ License: CECILL-C
       displayControlProperty: keyof DisplayControl,
       new_value: boolean,
       child: Annotation | null,
+      other_anns_value?: boolean | null,
     ) => void;
     onEditIconClick: (child: Annotation | null) => void;
   }
@@ -254,15 +256,12 @@ License: CECILL-C
   });
 
   const toggleInterpolatedEditing = (trackChild: Annotation) => {
-    interpolatedEditingIds.update((ids) => {
-      const next = new Set(ids);
-      if (next.has(trackChild.id)) {
-        next.delete(trackChild.id);
-      } else {
-        next.add(trackChild.id);
-      }
-      return next;
-    });
+    // One editable shape at a time: anchoring a ghost first stops editing the stored
+    // annotations, which also empties the ghost set, hence the toggle afterwards.
+    if (!interpolatedEditingIds.value.has(trackChild.id)) {
+      handleSetDisplayControl("editing", false, child, false);
+    }
+    interpolatedEditingIds.update((ids) => toggleInterpolatedEditingId(ids, trackChild.id));
   };
 
   const isInterpolatedEditing = (trackChild: Annotation) =>

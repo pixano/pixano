@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { ReactiveValue } from "$lib/stores/reactiveStore.svelte";
+import { clearInterpolatedEditing } from "$lib/stores/workspaceBaseStores.svelte";
 import {
   Annotation,
   BaseSchema,
@@ -86,6 +87,11 @@ export function handleSetDisplayControl(
   if (!child && displayControlProperty === "editing") {
     setEntityDisplayControl(entityId, currentDisplayControl, { editing: new_value }, entitiesStore);
   } else {
+    // Turning editing off, on this child or on every other annotation, also stops
+    // anchoring interpolated ghosts: their editing state lives outside the flags.
+    if (displayControlProperty === "editing" && (!new_value || other_anns_value === false)) {
+      clearInterpolatedEditing();
+    }
     let track_childs_ids = new Set<string>();
     if (child && child.is_type(BaseSchema.Tracklet)) {
       track_childs_ids = new Set((child as Tracklet).ui.childs.map((ann) => ann.id));
