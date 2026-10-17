@@ -25,6 +25,8 @@ License: CECILL-C
     onNewShapeChange?: (shape: Shape) => void;
     /** A click on the box itself (not its handles or label), when the canvas handles it. */
     onSelect?: (event: Konva.KonvaEventObject<MouseEvent>) => void;
+    /** While edited, the interior grabs the pointer too, so the box drags from anywhere. */
+    interiorDraggable?: boolean;
     forceNeutralColor?: boolean;
   }
 
@@ -38,6 +40,7 @@ License: CECILL-C
     merge,
     onNewShapeChange,
     onSelect,
+    interiorDraggable = false,
     forceNeutralColor = false,
   }: Props = $props();
 
@@ -158,6 +161,8 @@ License: CECILL-C
     width={bbox.data.coords[2]}
     height={bbox.data.coords[3]}
     stroke={color}
+    fill="rgba(0,0,0,0.001)"
+    fillEnabled={editing && interiorDraggable}
     strokeScaleEnabled={false}
     perfectDrawEnabled={false}
     shadowForStrokeEnabled={false}

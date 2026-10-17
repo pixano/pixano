@@ -2082,6 +2082,7 @@ License: CECILL-C
                   {onNewShapeChange}
                   onSelect={(event: Konva.KonvaEventObject<MouseEvent>) =>
                     handleBoxHitClick(event, view_name, bbox)}
+                  interiorDraggable={selectedTool?.type === ToolType.Pan}
                 />
               {/if}
             {/each}
