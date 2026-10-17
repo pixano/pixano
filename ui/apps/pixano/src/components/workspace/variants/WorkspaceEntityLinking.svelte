@@ -41,6 +41,7 @@ License: CECILL-C
     TextSpan,
     type LoadedImagesPerView,
   } from "$lib/ui";
+  import { imageBoxActions } from "$lib/utils/boxActions";
   import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   // Import stores and API functions
@@ -209,6 +210,7 @@ License: CECILL-C
         canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
         onEditBox={(box) => enterEditMode(box)}
         onStopEditingBox={exitEditMode}
+        getBoxActions={imageBoxActions}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

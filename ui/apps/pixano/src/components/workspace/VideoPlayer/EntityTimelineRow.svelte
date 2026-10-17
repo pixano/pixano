@@ -43,7 +43,7 @@ License: CECILL-C
   import {
     addKeyItemToTracklet,
     findNeighborFrameIndices,
-    splitTracklet,
+    splitTrackletAfter,
   } from "$lib/utils/trackletOperations";
   import { updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
@@ -152,7 +152,7 @@ License: CECILL-C
   };
 
   const onSplitTrackletClick = (tracklet: Tracklet) => {
-    splitTracklet(tracklet, entity.id);
+    splitTrackletAfter(tracklet, entity, currentFrameIndex.value, views);
   };
 
   const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {

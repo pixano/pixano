@@ -100,6 +100,7 @@ License: CECILL-C
     type EditShape,
     type SaveMaskShape,
   } from "$lib/ui";
+  import { videoBoxActions } from "$lib/utils/boxActions";
   import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import {
     tryHighlightSelectionShape,
@@ -970,6 +971,7 @@ License: CECILL-C
         canEditBoxes={editModeBlockedReason() === null}
         onEditBox={(box) => enterEditMode(box)}
         onStopEditingBox={exitEditMode}
+        getBoxActions={videoBoxActions}
       />
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">

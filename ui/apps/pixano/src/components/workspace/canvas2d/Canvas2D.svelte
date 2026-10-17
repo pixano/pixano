@@ -1717,8 +1717,9 @@ License: CECILL-C
 
   function setChipMenuOpen(open: boolean) {
     if (open === chipMenuOpen) return;
-    chipMenuOpen = open;
+    // Freeze on the current target before flipping the flag: chipTargetKey reads it.
     chipFrozenKey = open ? chipTargetKey : null;
+    chipMenuOpen = open;
     if (open) chipHoverIntent.freeze();
     else chipHoverIntent.unfreeze();
   }

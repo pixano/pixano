@@ -318,6 +318,59 @@ describe("videoTrackMutations", () => {
         (annotation) => annotation.data.tracklet_id === rightTracklet.id,
       ),
     ).toBe(true);
+    // The moved keyframes are saved with their new track; the others are left alone.
+    const childUpdates = mockSaveDataStore.value.filter(
+      (mutation) => mutation.op === "update" && mutation.target.resource !== "tracklets",
+    );
+    expect(childUpdates.map((mutation) => mutation.target.id).sort()).toEqual(["bbox-2", "bbox-3"]);
+  });
+
+  it("splits right after an interpolated frame and keeps every box", async () => {
+    const { splitTrackletAfter } = await import("$lib/utils/trackletOperations");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-3", entity, 3, "track-1", [0.4, 0.2, 0.2, 0.2]);
+    const tracklet = makeTracklet("track-1", entity, [startBBox, endBBox]);
+    entity.ui.childs = [tracklet, startBBox, endBBox];
+    mockEntitiesStore.value = [entity];
+    mockAnnotationsStore.value = [tracklet, startBBox, endBBox];
+
+    const split = splitTrackletAfter(
+      tracklet,
+      entity,
+      1,
+      mockViewsStore.value as Record<string, View | View[]>,
+    );
+
+    expect(split).toBe(true);
+    const tracklets = mockAnnotationsStore.value.filter((annotation) =>
+      annotation.is_type(BaseSchema.Tracklet),
+    ) as Tracklet[];
+    const right = tracklets.find((candidate) => candidate.id !== "track-1");
+    if (!right) throw new Error("Expected a right tracklet");
+    expect([tracklet.data.start_frame, tracklet.data.end_frame]).toEqual([0, 1]);
+    expect([right.data.start_frame, right.data.end_frame]).toEqual([2, 3]);
+    // Frames 1 and 2 were interpolated: they became the parts' boundary keyframes.
+    expect(tracklet.ui.childs.map((child) => child.ui.frame_index)).toEqual([0, 1]);
+    expect(right.ui.childs.map((child) => child.ui.frame_index)).toEqual([2, 3]);
+    const atFrame2 = right.ui.childs[0] as BBox;
+    expect(atFrame2.data.coords[0]).toBeCloseTo(0.3);
+    expect(atFrame2.data.frame_index).toBe(2);
+
+    // Everything that changed is staged, with the moved keyframes on the right track.
+    const staged = new Map(
+      mockSaveDataStore.value.map((mutation) => [mutation.target.id, mutation] as const),
+    );
+    expect(staged.get(right.id)?.op).toBe("create");
+    expect(staged.get("track-1")?.op).toBe("update");
+    expect(staged.get(tracklet.ui.childs[1].id)?.op).toBe("create");
+    expect(staged.get(atFrame2.id)?.op).toBe("create");
+    expect(staged.get("bbox-3")?.op).toBe("update");
+    expect(staged.has("bbox-0")).toBe(false);
+    for (const id of [atFrame2.id, "bbox-3"]) {
+      expect(JSON.stringify(staged.get(id))).toContain(right.id);
+    }
   });
 
   it("adds a keyframe at the current frame with a fresh id (Add a point)", async () => {
