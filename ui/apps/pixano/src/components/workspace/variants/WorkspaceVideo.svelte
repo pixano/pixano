@@ -100,6 +100,7 @@ License: CECILL-C
     type EditShape,
     type SaveMaskShape,
   } from "$lib/ui";
+  import { exitEditMode } from "$lib/utils/editMode";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -581,6 +582,8 @@ License: CECILL-C
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
       if (!isTracking.value) {
+        // Drawing a new track ends edit mode: the session owns every box edit from now on.
+        exitEditMode();
         startTrackingSession(viewRef.name, viewRef, itemId, imageWidth, imageHeight);
       }
 

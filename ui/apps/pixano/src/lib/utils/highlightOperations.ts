@@ -4,10 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { trackletTopEntityId } from "$lib/stores/trackEditing";
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import {
   annotations,
   clearTrackEditing,
+  editedTrackletId,
   entities,
   highlightedEntity,
   newShape,
@@ -15,8 +17,33 @@ import {
 } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
 import { BaseSchema, Entity, Tracklet } from "$lib/types/dataset";
+import { updateDisplayControl } from "$lib/utils/displayControl";
+import { tryGetTopEntity } from "$lib/utils/entityLookupUtils";
 
 let fusionHighlightedEntityId: string | null = null;
+
+/**
+ * Every change of the focused entity goes through here. Edit mode belongs to the focused
+ * entity (lib/utils/editMode.ts), so moving the focus elsewhere, or clearing it, ends it:
+ * for an edited track and for annotations edited through their own flag alike.
+ */
+function setFocusedEntity(next: string | null): void {
+  highlightedEntity.value = next;
+  const trackletId = editedTrackletId.value;
+  if (trackletId !== null) {
+    const tracklet = annotations.value.find((ann) => ann.id === trackletId) as Tracklet | undefined;
+    if (!tracklet || trackletTopEntityId(tracklet) !== next) clearTrackEditing();
+  }
+  const isEditedElsewhere = (ann: (typeof annotations.value)[number]) =>
+    ann.ui.displayControl.editing && tryGetTopEntity(ann)?.id !== next;
+  if (annotations.value.some(isEditedElsewhere)) {
+    annotations.update((anns) =>
+      anns.map((ann) =>
+        isEditedElsewhere(ann) ? updateDisplayControl(ann, { editing: false }) : ann,
+      ),
+    );
+  }
+}
 
 function setEntityChildHighlight(
   entity: Entity | undefined,
@@ -87,10 +114,10 @@ export const highlightEntity = (
   }
 
   if (useFastPanHighlight) {
-    highlightedEntity.value = isHighlighted ? null : entity_id;
+    setFocusedEntity(isHighlighted ? null : entity_id);
     fusionHighlightedEntityId = null;
   } else if (shouldUpdateFusionDisplayControl && targetEntity) {
-    highlightedEntity.value = null;
+    setFocusedEntity(null);
     annotations.update((objects) => {
       let hasChanged = false;
       const activeEntityId = resolveActiveHighlightedEntity(entitiesList);
@@ -178,7 +205,7 @@ export function highlightAnnotationIds(
  */
 export function highlightTrackletChildren(tracklet: Tracklet): void {
   const ids = new Set([tracklet.id, ...(tracklet.ui.childs ?? []).map((ann) => ann.id)]);
-  highlightedEntity.value = null;
+  setFocusedEntity(null);
   highlightAnnotationIds(ids, true);
 }
 

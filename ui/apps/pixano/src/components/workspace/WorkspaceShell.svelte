@@ -19,6 +19,7 @@ License: CECILL-C
   import {
     annotations,
     canSave,
+    clearTrackEditing,
     entities,
     itemMetas,
     modelsUiStore,
@@ -101,6 +102,8 @@ License: CECILL-C
   // --- Data loading ---
 
   const loadData = () => {
+    // Another item: nothing of the previous one stays in edit mode.
+    clearTrackEditing();
     workspaceSaveQueue.reset();
     isSaving = false;
     saveErrorMessage = "";

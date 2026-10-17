@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { annotations, newShape } from "$lib/stores/workspaceStores.svelte";
+import { annotations, clearTrackEditing, newShape } from "$lib/stores/workspaceStores.svelte";
 import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -74,6 +74,10 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
     if (shape.top_entity_id) highlightEntity(shape.top_entity_id, false);
     return objects;
   }
+
+  // Deselecting everything (a click on the empty image with a drawing tool) also ends
+  // track edit mode; stored flags are reset below.
+  if (shape.status === "editing" && shape.highlighted === "all") clearTrackEditing();
 
   return objects.map((ann) => {
     if (shape.status !== "editing") return ann;
