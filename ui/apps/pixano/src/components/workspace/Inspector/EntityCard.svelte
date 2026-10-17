@@ -366,15 +366,16 @@ License: CECILL-C
 
   const onEditIconClick = (child: Annotation | null = null) => {
     if (child) {
+      // A box edited during a tracking session would become a keyframe of the new track.
+      if (isTracking.value) return;
       handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
     } else {
       detailsTab = "attributes";
       if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
       handleSetDisplayControl("editing", !entityDisplayControl.editing);
     }
-    // Editing a shape needs the pan tool, except during a tracking session: the
-    // session runs on the Rectangle tool and cancels itself on any other tool, while
-    // editing an existing box is one of its advertised actions (pending keyframe).
+    // Editing a shape needs the pan tool. During a tracking session only the entity's
+    // attributes can be edited, and switching tool would cancel the session.
     if (!entityDisplayControl.editing && !isTracking.value) selectedTool.value = panTool;
   };
 

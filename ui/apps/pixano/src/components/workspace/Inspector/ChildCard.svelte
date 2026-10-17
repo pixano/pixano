@@ -30,6 +30,7 @@ License: CECILL-C
   import { keypointsIcon } from "$lib/assets";
   import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
   import { toggleInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
+  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import {
     annotations,
     current_itemBBoxes,
@@ -267,6 +268,12 @@ License: CECILL-C
   const isInterpolatedEditing = (trackChild: Annotation) =>
     interpolatedEditingIds.value.has(trackChild.id);
 
+  // During a tracking session every box edit becomes a keyframe of the track being
+  // drawn, whichever box was moved: existing shapes stay read-only until it ends.
+  const shapeEditBlocked = $derived(isTracking.value);
+  const editTooltip = (label: string) =>
+    shapeEditBlocked ? "Finish or cancel the tracking session first" : label;
+
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
     showRelink = false;
@@ -346,8 +353,9 @@ License: CECILL-C
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
-              tooltipContent="Edit annotation"
+              tooltipContent={editTooltip("Edit annotation")}
               selected={childEditing}
+              disabled={shapeEditBlocked}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
             >
@@ -710,8 +718,9 @@ License: CECILL-C
           >
             {#if interpolated}
               <IconButton
-                tooltipContent="Edit interpolated annotation"
+                tooltipContent={editTooltip("Edit interpolated annotation")}
                 selected={isInterpolatedEditing(trackChild)}
+                disabled={shapeEditBlocked}
                 onclick={() => toggleInterpolatedEditing(trackChild)}
                 class="h-6 w-6"
               >
@@ -719,8 +728,9 @@ License: CECILL-C
               </IconButton>
             {:else}
               <IconButton
-                tooltipContent="Edit annotation"
+                tooltipContent={editTooltip("Edit annotation")}
                 selected={trackChild.ui.displayControl.editing}
+                disabled={shapeEditBlocked}
                 onclick={() => onEditIconClick(trackChild)}
                 class="h-6 w-6"
               >
