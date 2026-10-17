@@ -11,6 +11,7 @@ License: CECILL-C
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
   import BBox2D from "./BBox2D.svelte";
+  import { pickBoxAtPoint } from "./boxInteraction";
   import BrushCursor from "./BrushCursor.svelte";
   import {
     computeCursorFlushAction,
@@ -27,7 +28,7 @@ License: CECILL-C
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
   import { CanvasFilterPipeline } from "./filterPipeline";
-  import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
+  import { INTERACTION_COOLDOWN_MS, PAN_DRAG_DISTANCE_PX } from "./konvaConstants";
   import Mask from "./Mask.svelte";
   import MultiPathShape from "./MultiPathShape.svelte";
   import {
@@ -985,6 +986,13 @@ License: CECILL-C
     endViewportInteraction();
   }
 
+  function handleClickOnImageRelease(event: MouseEvent) {
+    if (isSmartInferencePending) return;
+    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
+      clearHighlighting();
+    }
+  }
+
   function handlePointerUpOnImage(viewRef: Reference) {
     if (isSmartInferencePending) {
       return;
@@ -1017,6 +1025,22 @@ License: CECILL-C
       });
     }
     merge?.(bbox);
+  }
+
+  /**
+   * A left click on a box (its hit area, or the edited box itself): act on the smallest
+   * box under the pointer, so a box nested in a larger one stays reachable. Clicks, unlike
+   * presses, do not fire after a drag, so dragging from a box pans the view.
+   */
+  function handleBoxHitClick(
+    event: Konva.KonvaEventObject<MouseEvent>,
+    viewName: string,
+    clicked: BBox,
+  ) {
+    if (event.evt.button !== 0 || isSmartInferencePending) return;
+    const pointer = getViewLayer(viewName)?.getRelativePointerPosition();
+    const box = (pointer && pickBoxAtPoint(bboxesByView[viewName] ?? [], pointer)) || clicked;
+    handleSelectBBox(box);
   }
 
   function computeMultiPathBounds(
@@ -1062,11 +1086,8 @@ License: CECILL-C
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
 
-    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
-      clearHighlighting();
-      return;
-    }
-
+    // With the Pan tool a press only starts a pan: deselecting waits for the click
+    // (handleClickOnImageRelease), which Konva does not fire after a drag.
     if (selectedTool?.type === ToolType.Pan && event.button !== 1) {
       return;
     }
@@ -1734,7 +1755,7 @@ License: CECILL-C
         const viewLayer = getViewLayer(name);
         if (viewLayer) {
           viewLayer.draggable(isPan);
-          viewLayer.dragDistance(0);
+          viewLayer.dragDistance(PAN_DRAG_DISTANCE_PX);
         }
       }
     });
@@ -1875,7 +1896,7 @@ License: CECILL-C
         <Group
           id={`active-${view_name}`}
           bind:this={viewRefs.activeViewRefs[view_name]}
-          dragDistance={0}
+          dragDistance={PAN_DRAG_DISTANCE_PX}
           ondragstart={beginViewportInteraction}
           ondragmove={() => {
             viewRefs.syncLinkedViewGroupsFromActive(view_name);
@@ -1898,6 +1919,8 @@ License: CECILL-C
             onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) =>
               handleClickOnImage(event.evt, viewRef)}
             onpointerup={() => handlePointerUpOnImage(viewRef)}
+            onclick={(event: Konva.KonvaEventObject<MouseEvent>) =>
+              handleClickOnImageRelease(event.evt)}
             ondblclick={() => handleDoubleClickOnImage(view_name)}
           />
 
@@ -1993,22 +2016,61 @@ License: CECILL-C
                 (bbox) => bbox.ui.displayControl.editing,
               )
             : (bboxesByView[view_name] ?? [])}
-          {#if !shouldHideShapes || activeBboxes.length > 0}
+          <!-- svelte-konva adds a node to its parent once, at mount, so these always-mounted
+               groups fix the stacking: hit areas, then multipath hit areas, then the edited
+               box, which stays on top and can be dragged wherever it overlaps others. -->
+          <Group name="box-hits">
+            {#if selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan}
+              {#each activeBboxes as bbox (bbox.id)}
+                {#if !bbox.ui.displayControl.editing && !bbox.ui.displayControl.hidden}
+                  <Rect
+                    name="box-hit"
+                    x={bbox.data.coords[0]}
+                    y={bbox.data.coords[1]}
+                    width={bbox.data.coords[2]}
+                    height={bbox.data.coords[3]}
+                    fill="rgba(0,0,0,0.001)"
+                    strokeEnabled={false}
+                    onclick={(event: Konva.KonvaEventObject<MouseEvent>) =>
+                      handleBoxHitClick(event, view_name, bbox)}
+                  />
+                {/if}
+              {/each}
+            {/if}
+          </Group>
+
+          <Group name="multipath-hits">
+            {#if !shouldHideShapes}
+              {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
+                {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
+                  {@const bounds = computeMultiPathBounds(
+                    multiPath,
+                    currentImage?.width ?? 0,
+                    currentImage?.height ?? 0,
+                  )}
+                  {#if bounds}
+                    <Rect
+                      name="multipath-hit"
+                      x={bounds.x}
+                      y={bounds.y}
+                      width={bounds.width}
+                      height={bounds.height}
+                      fill="rgba(0,0,0,0.001)"
+                      strokeEnabled={false}
+                      onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
+                        event.cancelBubble = true;
+                        handleSelectMultiPath(multiPath);
+                      }}
+                    />
+                  {/if}
+                {/if}
+              {/each}
+            {/if}
+          </Group>
+
+          <Group name="box-editing">
             {#each activeBboxes as bbox (bbox.id)}
-              {#if !bbox.ui.displayControl.editing && (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan)}
-                <Rect
-                  x={bbox.data.coords[0]}
-                  y={bbox.data.coords[1]}
-                  width={bbox.data.coords[2]}
-                  height={bbox.data.coords[3]}
-                  fill="rgba(0,0,0,0.001)"
-                  strokeEnabled={false}
-                  onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
-                    event.cancelBubble = true;
-                    handleSelectBBox(bbox);
-                  }}
-                />
-              {:else if bbox.ui.displayControl.editing}
+              {#if bbox.ui.displayControl.editing}
                 <BBox2D
                   {bbox}
                   {colorScale}
@@ -2018,36 +2080,12 @@ License: CECILL-C
                   imageHeight={currentImage?.height ?? 0}
                   {merge}
                   {onNewShapeChange}
+                  onSelect={(event: Konva.KonvaEventObject<MouseEvent>) =>
+                    handleBoxHitClick(event, view_name, bbox)}
                 />
               {/if}
             {/each}
-          {/if}
-
-          {#if !shouldHideShapes}
-            {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
-              {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
-                {@const bounds = computeMultiPathBounds(
-                  multiPath,
-                  currentImage?.width ?? 0,
-                  currentImage?.height ?? 0,
-                )}
-                {#if bounds}
-                  <Rect
-                    x={bounds.x}
-                    y={bounds.y}
-                    width={bounds.width}
-                    height={bounds.height}
-                    fill="rgba(0,0,0,0.001)"
-                    strokeEnabled={false}
-                    onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
-                      event.cancelBubble = true;
-                      handleSelectMultiPath(multiPath);
-                    }}
-                  />
-                {/if}
-              {/if}
-            {/each}
-          {/if}
+          </Group>
 
           {#if draftPolygon && "viewRef" in draftPolygon && draftPolygon.viewRef?.name === view_name}
             <CreateMultiPath

@@ -23,6 +23,8 @@ License: CECILL-C
     imageHeight?: number;
     merge?: (ann: { id: string }) => void;
     onNewShapeChange?: (shape: Shape) => void;
+    /** A click on the box itself (not its handles or label), when the canvas handles it. */
+    onSelect?: (event: Konva.KonvaEventObject<MouseEvent>) => void;
     forceNeutralColor?: boolean;
   }
 
@@ -35,6 +37,7 @@ License: CECILL-C
     imageHeight = 0,
     merge,
     onNewShapeChange,
+    onSelect,
     forceNeutralColor = false,
   }: Props = $props();
 
@@ -72,7 +75,12 @@ License: CECILL-C
     }
   });
 
-  function handleClick() {
+  function handleClick(event: Konva.KonvaEventObject<MouseEvent>) {
+    if (onSelect) {
+      // Clicks on the Transformer's handles or on the label bubble here too: ignore them.
+      if (event.target === rectComponent?.node) onSelect(event);
+      return;
+    }
     if (bbox.ui.displayControl.highlighted !== "self") {
       onNewShapeChange?.({
         status: "editing",
@@ -143,6 +151,7 @@ License: CECILL-C
 <Group {listening} onclick={handleClick}>
   <Rect
     bind:this={rectComponent}
+    name="box-edit"
     id={`rect${bbox.id}`}
     x={bbox.data.coords[0]}
     y={bbox.data.coords[1]}
