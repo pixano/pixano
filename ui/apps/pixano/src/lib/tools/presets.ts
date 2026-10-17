@@ -14,10 +14,11 @@ import {
   type VOSSelectionTool,
 } from "$lib/types/tools";
 
+// "grab" for the image; "move" is kept for the box being edited (canvas hover cursor).
 export const panTool: SelectionTool = {
   name: "Selection & Move image",
   type: ToolType.Pan,
-  cursor: "move",
+  cursor: "grab",
 };
 
 export const rectangleTool: SelectionTool = {
