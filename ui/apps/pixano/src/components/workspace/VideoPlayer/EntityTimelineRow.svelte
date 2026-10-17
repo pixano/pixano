@@ -5,9 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { PushPin, PushPinSlash } from "phosphor-svelte";
+  import { Pencil, PushPin, PushPinSlash } from "phosphor-svelte";
 
   import TrackletSegment from "./TrackletSegment.svelte";
+  import { shapeTopEntityId } from "$lib/stores/trackEditing";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -30,7 +31,12 @@ License: CECILL-C
     TooltipContent,
     Tracklet,
   } from "$lib/ui";
-  import { editTrack } from "$lib/utils/editMode";
+  import {
+    editModeBlockedReason,
+    editTrack,
+    isEntityEditing,
+    toggleEditModeForEntity,
+  } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { highlightEntity, highlightTrackletChildren } from "$lib/utils/highlightOperations";
   import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
@@ -153,6 +159,20 @@ License: CECILL-C
     return findNeighborFrameIndices(tracklet, frameIndex, tracklets);
   };
 
+  // Pencil in the row's chip: edit mode for this object's box on the current frame.
+  let currentShapes = $derived([...current_itemBBoxes.value, ...current_itemKeypoints.value]);
+  let hasShapeHere = $derived(currentShapes.some((shape) => shapeTopEntityId(shape) === entity.id));
+  let isEditingEntity = $derived(isEntityEditing(entity.id));
+  let editBlockedReason = $derived(editModeBlockedReason());
+  let editPencilTooltip = $derived.by(() => {
+    if (isEditingEntity) return "Stop editing (E)";
+    if (editBlockedReason) return editBlockedReason;
+    return hasShapeHere ? "Edit this object's box (E)" : "No box on this frame";
+  });
+  const onEditPencilClick = () => {
+    toggleEditModeForEntity(entity.id, currentShapes, { reveal: false });
+  };
+
   const onColoredDotClick = () => {
     const newFrameIndex = highlightEntity(entity.id, highlightState === "self");
     if (newFrameIndex != currentFrameIndex.value) {
@@ -213,6 +233,15 @@ License: CECILL-C
                   style={`background: ${color}`}
                   onclick={onColoredDotClick}
                 ></button>
+                <IconButton
+                  onclick={onEditPencilClick}
+                  tooltipContent={editPencilTooltip}
+                  selected={isEditingEntity}
+                  disabled={!isEditingEntity && (editBlockedReason !== null || !hasShapeHere)}
+                  class="h-4 w-4 rounded-sm bg-transparent"
+                >
+                  <Pencil class="h-2.5 w-2.5" />
+                </IconButton>
                 {#if onTogglePin}
                   <div
                     class={cn(

@@ -344,7 +344,19 @@ License: CECILL-C
         class="flex items-center gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200"
       >
         {#if selectedTool.value?.type !== ToolType.Fusion}
-          {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
+          {#if child.is_type(BaseSchema.Tracklet)}
+            <IconButton
+              tooltipContent={editTooltip(
+                isTrackEdited ? "Stop editing the track" : "Edit the track",
+              )}
+              selected={isTrackEdited}
+              disabled={shapeEditBlocked && !isTrackEdited}
+              onclick={() => toggleEditTrack(child.id, { reveal: false })}
+              class="h-6 w-6"
+            >
+              <Pencil class="h-3 w-3" />
+            </IconButton>
+          {:else if !child.is_type(BaseSchema.TextSpan)}
             <IconButton
               tooltipContent={editTooltip("Edit annotation")}
               selected={childEditing}
