@@ -11,10 +11,14 @@ License: CECILL-C
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
   import BBox2D from "./BBox2D.svelte";
+  import BoxActionChip from "./BoxActionChip.svelte";
   import {
     boxStableKey,
+    chipAnchorPoint,
     computeBoxHoverCursor,
+    findBoxByStableKey,
     isEditToggleKey,
+    isInteractiveBox,
     pickBoxAtPoint,
     resolveKeyboardEditTarget,
     viewNameOfNode,
@@ -31,6 +35,7 @@ License: CECILL-C
   } from "./canvasEventHandlers";
   import { zoomViewTransform } from "./canvasGeometry";
   import { resolveCanvasViewRef } from "./canvasViewRefs";
+  import { createChipHoverIntent } from "./chipHoverIntent";
   import CreateMultiPath from "./CreateMultiPath.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
@@ -78,6 +83,7 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
+  import type { BoxAction } from "$lib/types/boxActions";
   import type {
     BBox,
     Mask as DatasetMask,
@@ -168,6 +174,8 @@ License: CECILL-C
     /** Put a displayed box in edit mode; false when it cannot, so the click only selects. */
     onEditBox?: (box: BBox) => boolean;
     onStopEditingBox?: () => void;
+    /** Contextual actions of a box, listed in its chip's "…" menu. */
+    getBoxActions?: (box: BBox) => BoxAction[];
   }
 
   let {
@@ -200,6 +208,7 @@ License: CECILL-C
     canEditBoxes = false,
     onEditBox,
     onStopEditingBox,
+    getBoxActions,
   }: Props = $props();
 
   let isReady = $state(false);
@@ -1459,6 +1468,11 @@ License: CECILL-C
       return;
     }
 
+    if (event.key === "Escape" && chipMenuOpen) {
+      setChipMenuOpen(false);
+      return;
+    }
+
     if (event.key === "Escape") {
       const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
@@ -1499,8 +1513,9 @@ License: CECILL-C
     // E toggles edit mode on the pointed box, else on the focused entity's box. Edit mode
     // needs the Pan tool, so the Brush tool keeps its own E (brush size).
     if (boxEditingEnabled && isEditToggleKey(event)) {
+      if (isBoxTransforming) return;
       const target = resolveKeyboardEditTarget(bboxes, {
-        pointedKey: hoveredBox ? boxStableKey(hoveredBox) : null,
+        pointedKey: pointerOnChip ? chipTargetKey : hoveredKey,
         pointerView: hoverPointer?.view ?? lastPointerView,
         viewOrder: Object.keys(imagesPerView),
       });
@@ -1659,6 +1674,114 @@ License: CECILL-C
   );
 
   let hoverCursor = $derived(boxEditingEnabled ? computeBoxHoverCursor(hoveredBox) : null);
+
+  // ********** BOX ACTION CHIP ********** //
+  // The chip follows the hovered box (after the hover-intent delays), else stays on the
+  // edited box; while its menu is open it stays on the box it was opened for. Boxes are
+  // keyed by track, so the chip stays put while frames go by.
+
+  let hoveredKey = $derived(hoveredBox ? boxStableKey(hoveredBox) : null);
+  let chipHoverKey = $state<string | null>(null);
+  const chipHoverIntent = createChipHoverIntent((key) => (chipHoverKey = key));
+  let chipMenuOpen = $state(false);
+  let chipFrozenKey = $state<string | null>(null);
+  let pointerOnChip = $state(false);
+  let isBoxTransforming = $state(false);
+
+  let editedBox = $derived.by(() => {
+    if (!boxEditingEnabled) return undefined;
+    const edited = bboxes.filter((box) => box.ui.displayControl.editing && isInteractiveBox(box));
+    return edited.find((box) => box.data.view_name === hoverPointer?.view) ?? edited[0];
+  });
+  let chipTargetKey = $derived(
+    chipMenuOpen ? chipFrozenKey : (chipHoverKey ?? (editedBox ? boxStableKey(editedBox) : null)),
+  );
+  let chipBox = $derived(boxEditingEnabled ? findBoxByStableKey(bboxes, chipTargetKey) : undefined);
+  let chipVisible = $derived(chipBox !== undefined && !isViewportInteracting && !isBoxTransforming);
+  let chipActions = $derived(chipBox && getBoxActions ? getBoxActions(chipBox) : []);
+
+  $effect(() => {
+    const key = hoveredKey;
+    untrack(() => chipHoverIntent.pointerOn(key));
+  });
+  $effect(() => {
+    if (boxEditingEnabled) return;
+    untrack(() => {
+      setChipMenuOpen(false);
+      chipHoverIntent.reset();
+    });
+  });
+  $effect(() => {
+    if (chipMenuOpen && !chipVisible) untrack(() => setChipMenuOpen(false));
+  });
+
+  function setChipMenuOpen(open: boolean) {
+    if (open === chipMenuOpen) return;
+    chipMenuOpen = open;
+    chipFrozenKey = open ? chipTargetKey : null;
+    if (open) chipHoverIntent.freeze();
+    else chipHoverIntent.unfreeze();
+  }
+
+  function toggleChipEdit() {
+    const box = chipBox;
+    if (!box) return;
+    if (box.ui.displayControl.editing) {
+      onStopEditingBox?.();
+    } else if (!onEditBox?.(box)) {
+      handleSelectBBox(box);
+    }
+  }
+
+  // The chip's anchor is measured from the box's Konva node on every animation frame while
+  // the chip shows (updatePositionStrategy "always"), so it follows zoom, pan and drags,
+  // which Konva applies outside Svelte's reactivity.
+  let anchoredBox: BBox | undefined = undefined;
+  $effect(() => {
+    anchoredBox = chipBox;
+  });
+  let anchorNode: Konva.Node | null = null;
+  let anchorNodeId: string | null = null;
+  function findAnchorNode(boxId: string): Konva.Node | null {
+    if (anchorNodeId === boxId && anchorNode?.getStage()) return anchorNode;
+    anchorNodeId = boxId;
+    // Ids of interpolated boxes contain "::", which a selector string would misread.
+    anchorNode = stage?.findOne((node: Konva.Node) => node.id() === `rect${boxId}`) ?? null;
+    return anchorNode;
+  }
+  const farAwayRect = () => new DOMRect(-100000, -100000, 0, 0);
+  const chipAnchor = {
+    getBoundingClientRect(): DOMRect {
+      const box = anchoredBox;
+      const container = stage?.container();
+      if (!box || !container) return farAwayRect();
+      const host = container.getBoundingClientRect();
+      const node = findAnchorNode(box.id);
+      let rect: { x: number; y: number; width: number; height: number };
+      if (node) {
+        const r = node.getClientRect({ skipStroke: true });
+        rect = { x: host.left + r.x, y: host.top + r.y, width: r.width, height: r.height };
+      } else {
+        const group = getViewLayer(box.data.view_name);
+        if (!group) return farAwayRect();
+        const scale = group.scaleX();
+        const [x, y, width, height] = box.data.coords;
+        rect = {
+          x: host.left + group.x() + x * scale,
+          y: host.top + group.y() + y * scale,
+          width: width * scale,
+          height: height * scale,
+        };
+      }
+      const point = chipAnchorPoint(rect, {
+        x: host.left,
+        y: host.top,
+        width: host.width,
+        height: host.height,
+      });
+      return point ? new DOMRect(point.x, point.y, 0, 0) : farAwayRect();
+    },
+  };
 
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
@@ -2162,6 +2285,7 @@ License: CECILL-C
                   onSelect={(event: Konva.KonvaEventObject<MouseEvent>) =>
                     handleBoxHitClick(event, view_name, bbox)}
                   interiorDraggable={selectedTool?.type === ToolType.Pan}
+                  onInteractionChange={(active: boolean) => (isBoxTransforming = active)}
                 />
               {/if}
             {/each}
@@ -2218,6 +2342,28 @@ License: CECILL-C
       {/if}
     </Layer>
   </Stage>
+
+  {#if onEditBox}
+    <BoxActionChip
+      open={chipVisible}
+      anchor={chipAnchor}
+      boundary={stageContainer}
+      editing={chipBox?.ui.displayControl.editing ?? false}
+      editTooltip={chipBox?.ui.displayControl.editing ? "Stop editing (E)" : "Edit (E)"}
+      actions={chipActions}
+      menuOpen={chipMenuOpen}
+      onToggleEdit={toggleChipEdit}
+      onMenuOpenChange={setChipMenuOpen}
+      onPointerEnter={() => {
+        pointerOnChip = true;
+        chipHoverIntent.enterChip();
+      }}
+      onPointerLeave={() => {
+        pointerOnChip = false;
+        chipHoverIntent.leaveChip();
+      }}
+    />
+  {/if}
 
   {#if isSmartInferencePending}
     <div class="absolute inset-0 z-20 bg-transparent" aria-hidden="true"></div>

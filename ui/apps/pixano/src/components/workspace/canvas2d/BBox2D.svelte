@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import type Konva from "konva";
+  import { onDestroy } from "svelte";
   import { Group, Rect, Transformer } from "svelte-konva";
 
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
@@ -27,6 +28,8 @@ License: CECILL-C
     onSelect?: (event: Konva.KonvaEventObject<MouseEvent>) => void;
     /** While edited, the interior grabs the pointer too, so the box drags from anywhere. */
     interiorDraggable?: boolean;
+    /** The box starts (true) or stops (false) being dragged or resized. */
+    onInteractionChange?: (active: boolean) => void;
     forceNeutralColor?: boolean;
   }
 
@@ -41,8 +44,17 @@ License: CECILL-C
     onNewShapeChange,
     onSelect,
     interiorDraggable = false,
+    onInteractionChange,
     forceNeutralColor = false,
   }: Props = $props();
+
+  let interacting = false;
+  function setInteracting(active: boolean) {
+    if (interacting === active) return;
+    interacting = active;
+    onInteractionChange?.(active);
+  }
+  onDestroy(() => setInteracting(false));
 
   let rectComponent: { node: Konva.Rect } | undefined = $state();
   let trComponent: { node: Konva.Transformer } | undefined = $state();
@@ -132,6 +144,7 @@ License: CECILL-C
   }
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
+    setInteracting(false);
     emitCoords(e.target as Konva.Rect);
   }
 
@@ -147,6 +160,7 @@ License: CECILL-C
   }
 
   function handleTransformEnd(e: Konva.KonvaEventObject<Event>) {
+    setInteracting(false);
     emitCoords(e.target as Konva.Rect);
   }
 </script>
@@ -169,6 +183,8 @@ License: CECILL-C
     {opacity}
     visible={!bbox.ui.displayControl.hidden}
     draggable={editing}
+    ondragstart={() => setInteracting(true)}
+    ontransformstart={() => setInteracting(true)}
     ondragmove={handleDragMove}
     ondragend={handleDragEnd}
     ontransform={handleTransform}
