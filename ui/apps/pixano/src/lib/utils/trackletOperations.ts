@@ -12,7 +12,7 @@ import {
   getKeypointsInterpolationIdentity,
 } from "$lib/stores/frameAnnotationSelectors";
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
+import { annotations, editedTrackletId, entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
@@ -163,6 +163,42 @@ export function findPreviousAndNextFrames(
     previousItem ? previousItem.ui.frame_index : frameIndex,
     nextItem ? nextItem.ui.frame_index : frameIndex + 1,
   ];
+}
+
+/**
+ * Glue `neighbor`, the closest track before or after `tracklet` (same object, same view),
+ * onto `tracklet`: its keyframes move over, `tracklet` stretches across the gap, and
+ * `neighbor` is deleted. The surviving range and every moved keyframe are saved (on load,
+ * keyframes attach to the track their saved tracklet_id names), and edit mode on
+ * `neighbor` carries over to `tracklet`.
+ */
+export function glueTracklets(tracklet: Tracklet, neighbor: Tracklet, entityId: string): void {
+  const survivor =
+    (annotations.value.find((ann) => ann.id === tracklet.id) as Tracklet | undefined) ?? tracklet;
+  const moved = [...neighbor.ui.childs];
+  for (const child of moved) child.data.tracklet_id = survivor.id;
+  if (neighbor.data.end_frame < survivor.data.start_frame) {
+    survivor.data.start_frame = neighbor.data.start_frame;
+  } else {
+    survivor.data.end_frame = neighbor.data.end_frame;
+  }
+
+  const nextEntities = entities.value.map((ent) => {
+    if (ent.id === entityId) {
+      ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
+    }
+    return ent;
+  });
+  commitNormalizedWorkspaceRuntime(
+    annotations.value.filter((ann) => ann.id !== neighbor.id),
+    nextEntities,
+  );
+
+  applyPixanoSourceFields(survivor);
+  saveTo("update", survivor);
+  for (const child of moved) saveTo("update", child);
+  saveTo("delete", neighbor);
+  if (editedTrackletId.value === neighbor.id) editedTrackletId.value = survivor.id;
 }
 
 /** The boxes and keypoints `tracklet` interpolates on `frameIndex`, as displayed. */

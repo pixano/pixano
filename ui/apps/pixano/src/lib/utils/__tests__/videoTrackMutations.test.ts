@@ -55,8 +55,11 @@ const mockSaveQueue = createSaveQueue((mutations) => {
   mockSaveDataStore.value = mutations;
 });
 
+const mockEditedTrackletId = { value: null as string | null };
+
 vi.mock("$lib/stores/workspaceStores.svelte", () => ({
   annotations: mockAnnotationsStore,
+  editedTrackletId: mockEditedTrackletId,
   entities: mockEntitiesStore,
   itemMetas: { value: { type: WorkspaceType.VIDEO } },
   views: mockViewsStore,
@@ -180,6 +183,7 @@ describe("videoTrackMutations", () => {
     const { currentFrameIndex } = await import("$lib/stores/videoStores.svelte");
     currentFrameIndex.value = 0;
     mockAnnotationsStore.value = [];
+    mockEditedTrackletId.value = null;
     mockEntitiesStore.value = [];
     mockSaveDataStore.value = [];
     mockSaveQueue.reset();
@@ -426,5 +430,48 @@ describe("videoTrackMutations", () => {
     expect(mockSaveDataStore.value.map((mutation) => [mutation.op, mutation.target.id])).toEqual([
       ["create", keyframe.id],
     ]);
+  });
+
+  it("glues a neighbour track on, saving the range and the keyframes it moves", async () => {
+    const { glueTracklets } = await import("$lib/utils/trackletOperations");
+
+    const entity = makeEntity();
+    const left = [
+      makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]),
+      makeBBox("bbox-1", entity, 1, "track-1", [0.2, 0.2, 0.2, 0.2]),
+    ];
+    const right = [
+      makeBBox("bbox-2", entity, 2, "track-2", [0.3, 0.2, 0.2, 0.2]),
+      makeBBox("bbox-3", entity, 3, "track-2", [0.4, 0.2, 0.2, 0.2]),
+    ];
+    const track1 = makeTracklet("track-1", entity, left);
+    const track2 = makeTracklet("track-2", entity, right);
+    entity.ui.childs = [track1, track2, ...left, ...right];
+    mockEntitiesStore.value = [entity];
+    mockAnnotationsStore.value = [track1, track2, ...left, ...right];
+    mockEditedTrackletId.value = "track-2";
+
+    glueTracklets(track1, track2, entity.id);
+
+    expect([track1.data.start_frame, track1.data.end_frame]).toEqual([0, 3]);
+    expect(track1.ui.childs.map((child) => child.id)).toEqual([
+      "bbox-0",
+      "bbox-1",
+      "bbox-2",
+      "bbox-3",
+    ]);
+    expect(mockAnnotationsStore.value.some((annotation) => annotation.id === "track-2")).toBe(
+      false,
+    );
+    expect(mockEditedTrackletId.value).toBe("track-1");
+    const staged = new Map(
+      mockSaveDataStore.value.map((mutation) => [mutation.target.id, mutation] as const),
+    );
+    expect(staged.get("track-1")?.op).toBe("update");
+    expect(staged.get("track-2")?.op).toBe("delete");
+    expect(staged.get("bbox-2")?.op).toBe("update");
+    expect(staged.get("bbox-3")?.op).toBe("update");
+    expect(JSON.stringify(staged.get("bbox-3"))).toContain("track-1");
+    expect(staged.has("bbox-0")).toBe(false);
   });
 });

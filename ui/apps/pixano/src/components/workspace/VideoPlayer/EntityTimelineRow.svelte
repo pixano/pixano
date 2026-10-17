@@ -38,7 +38,7 @@ License: CECILL-C
     toggleEditModeForEntity,
   } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
-  import { highlightEntity, highlightTrackletChildren } from "$lib/utils/highlightOperations";
+  import { highlightEntity } from "$lib/utils/highlightOperations";
   import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import {
     addKeyItemToTracklet,
@@ -117,16 +117,11 @@ License: CECILL-C
     onFrameClick(newFrameIndex);
   };
 
-  const onContextMenu = (tracklet: Tracklet | null = null) => {
-    if (tracklet && selectedToolType !== ToolType.Fusion) {
-      highlightTrackletChildren(tracklet);
-    }
-    resetTool();
-  };
-
+  // A right-click on the empty part of the row only leaves drawing tools; a right-click on
+  // a track opens its menu (TrackletSegment) and keeps the row and its focus.
   const handleTrackContextMenu = (event: MouseEvent) => {
     event.preventDefault();
-    onContextMenu();
+    resetTool();
   };
 
   // Jump to the keyframe and put its track in edit mode, which keeps this row focused.
@@ -287,7 +282,6 @@ License: CECILL-C
                 {views}
                 compact={true}
                 onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
-                {onContextMenu}
                 {onEditKeyItemClick}
                 onSplitTrackClick={() => onSplitTrackletClick(tracklet)}
                 onDeleteTrackClick={() => deleteEntity(entity, tracklet)}

@@ -32,6 +32,7 @@ License: CECILL-C
   import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { relink } from "$lib/utils/entityRelink";
   import { saveTo } from "$lib/utils/saveItemUtils";
+  import { glueTracklets } from "$lib/utils/trackletOperations";
   import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -42,7 +43,6 @@ License: CECILL-C
     tracklet: Tracklet;
     views: MView;
     compact?: boolean;
-    onContextMenu: (tracklet: Tracklet) => void;
     onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], tracklet: Tracklet) => void;
     onAddKeyItemClick: (event: MouseEvent) => void;
     onSplitTrackClick: () => void;
@@ -57,7 +57,6 @@ License: CECILL-C
     tracklet = $bindable(),
     views,
     compact = false,
-    onContextMenu,
     onEditKeyItemClick,
     onAddKeyItemClick,
     onSplitTrackClick,
@@ -269,34 +268,7 @@ License: CECILL-C
   const onGlueTrackletClick = (direction: "left" | "right") => {
     const neighbor = direction === "left" ? leftNeighbor : rightNeighbor;
     if (!neighbor) return;
-
-    const nextAnnotations = annotations.value
-      .filter((ann) => ann.id !== neighbor.id)
-      .map((ann) => {
-        if (ann.id === tracklet.id) {
-          const currentTracklet = ann as Tracklet;
-          const neighborTracklet = neighbor as Tracklet;
-          [...currentTracklet.ui.childs, ...neighborTracklet.ui.childs].forEach((child) => {
-            child.data.tracklet_id = currentTracklet.id;
-          });
-          if (direction === "left") {
-            currentTracklet.data.start_frame = neighborTracklet.data.start_frame;
-          } else {
-            currentTracklet.data.end_frame = neighborTracklet.data.end_frame;
-          }
-        }
-        return ann;
-      });
-
-    const nextEntities = entities.value.map((ent) => {
-      if (ent.id === entityId) {
-        ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
-      }
-      return ent;
-    });
-    commitNormalizedWorkspaceRuntime(nextAnnotations, nextEntities);
-
-    saveTo("delete", neighbor);
+    glueTracklets(tracklet, neighbor as Tracklet, entityId);
   };
 
   const onClick = (button: number, clientX: number) => {
@@ -304,11 +276,6 @@ License: CECILL-C
       moveCursorToPosition(clientX);
       resetTool();
     }
-  };
-
-  const handleTrackContextMenu = (event: MouseEvent) => {
-    event.preventDefault();
-    onContextMenu(tracklet);
   };
 
   const onRelinkTrackClick = (event: MouseEvent) => {
@@ -340,7 +307,6 @@ License: CECILL-C
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      oncontextmenu={handleTrackContextMenu}
       aria-label="Track segment handle"
       class="absolute h-full w-full"
       bind:this={trackElement}
