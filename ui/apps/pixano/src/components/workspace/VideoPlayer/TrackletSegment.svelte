@@ -93,8 +93,17 @@ License: CECILL-C
     return 10 + (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length;
   };
 
-  let left = $derived(getLeft(tracklet));
-  let right = $derived(getRight(tracklet));
+  // A committed change updates the tracklet objects in place (normalization rebuilds
+  // their children on the same instances), which Svelte does not see through the prop:
+  // everything read from the tracklet re-reads it on every annotations commit.
+  let left = $derived.by(() => {
+    void annotations.value;
+    return getLeft(tracklet);
+  });
+  let right = $derived.by(() => {
+    void annotations.value;
+    return getRight(tracklet);
+  });
   let height = $derived(getHeight(views, compact));
   let top = $derived(getTop(tracklet, views));
   let trackElement: HTMLElement = $state();
@@ -141,18 +150,35 @@ License: CECILL-C
   let color = $derived(colorScale.value[1](entityId));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
-  let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
+  let keyframeIndexes = $derived.by(() => {
+    void annotations.value;
+    return (tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index);
+  });
 
-  let canAddKeyFrame = $derived(
-    currentFrameIndex.value > tracklet.data.start_frame &&
+  let canAddKeyFrame = $derived.by(() => {
+    void annotations.value;
+    return (
+      currentFrameIndex.value > tracklet.data.start_frame &&
       currentFrameIndex.value < tracklet.data.end_frame &&
-      !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value),
-  );
+      !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value)
+    );
+  });
 
-  let canSplit = $derived(
-    currentFrameIndex.value >= tracklet.data.start_frame &&
-      currentFrameIndex.value < tracklet.data.end_frame,
-  );
+  let canSplit = $derived.by(() => {
+    void annotations.value;
+    return (
+      currentFrameIndex.value >= tracklet.data.start_frame &&
+      currentFrameIndex.value < tracklet.data.end_frame
+    );
+  });
+
+  let segmentDisplay = $derived.by(() => {
+    void annotations.value;
+    return {
+      highlighted: tracklet.ui.displayControl.highlighted,
+      hidden: tracklet.ui.displayControl.hidden,
+    };
+  });
 
   const getNeighborTracklet = (
     allAnnotations: Annotation[],
@@ -313,11 +339,10 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
-      "opacity-100": tracklet.ui.displayControl.highlighted === "self",
+      "opacity-100": segmentDisplay.highlighted === "self",
       "opacity-30":
-        (tracklet.ui.displayControl.highlighted === "none" &&
-          selectedToolType === ToolType.Fusion) ||
-        tracklet.ui.displayControl.hidden,
+        (segmentDisplay.highlighted === "none" && selectedToolType === ToolType.Fusion) ||
+        segmentDisplay.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >

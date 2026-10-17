@@ -14,6 +14,7 @@ License: CECILL-C
     colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
+    entities,
     highlightedEntity,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -68,7 +69,10 @@ License: CECILL-C
   }: Props = $props();
 
   let objectTimeTrack: HTMLElement = $state();
+  // The entity and its tracklets are updated in place by committed changes, which
+  // Svelte does not see through the prop: re-read them on every commit of their store.
   let displayName: string = $derived.by(() => {
+    void entities.value;
     const displayFeat = getDefaultDisplayFeat(entity);
     return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
   });
@@ -81,9 +85,10 @@ License: CECILL-C
   let color = $derived(colorScale.value[1](entity.id));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
-  let tracklets: Tracklet[] = $derived(
-    (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[],
-  );
+  let tracklets: Tracklet[] = $derived.by(() => {
+    void annotations.value;
+    return (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[];
+  });
 
   let highlightState: string = $derived.by(() => {
     if (selectedToolType === ToolType.Pan) {

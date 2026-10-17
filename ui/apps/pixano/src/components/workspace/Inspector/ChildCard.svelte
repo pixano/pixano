@@ -222,6 +222,7 @@ License: CECILL-C
 
   // ─── Tracklet-specific derived data ───────────────────────────────────────
   const trackletData = $derived.by(() => {
+    void annotations.value; // the tracklet's range changes in place (split, glue, dot drag)
     if (!child.is_type(BaseSchema.Tracklet)) return null;
     const data = (child as Tracklet).data;
     return {
