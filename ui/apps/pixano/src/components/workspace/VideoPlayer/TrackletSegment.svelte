@@ -113,12 +113,15 @@ License: CECILL-C
   // the timeline itself (which sets highlighted "self") or from the inspector pencil
   // (which only toggles `editing`), so both gate the dots and the frame-width
   // measurement they need (observe() reports the current size right away).
-  let isTrackletEditing = $derived(
-    (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing),
-  );
-  let showsKeyframeDots = $derived(
-    tracklet.ui.displayControl.highlighted === "self" || isTrackletEditing,
-  );
+  // Display flags are replaced on the same annotation objects, which Svelte does not
+  // track: re-read them whenever the annotations store commits a change.
+  let showsKeyframeDots = $derived.by(() => {
+    void annotations.value;
+    return (
+      tracklet.ui.displayControl.highlighted === "self" ||
+      (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing)
+    );
+  });
 
   $effect(() => {
     if (resizeObs) {
