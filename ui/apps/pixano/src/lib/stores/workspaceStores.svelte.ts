@@ -13,8 +13,9 @@ import {
   annotations,
   brushSettings,
   canSave,
-  clearInterpolatedEditing,
+  clearTrackEditing,
   confidenceThreshold,
+  editedTrackletId,
   embeddings,
   entities,
   entityFilters,
@@ -23,7 +24,6 @@ import {
   imageSmoothing,
   interactiveSegmenterModel,
   interpolate,
-  interpolatedEditingIds,
   itemMetas,
   merges,
   modelsUiStore,
@@ -44,8 +44,9 @@ export {
   annotations,
   brushSettings,
   canSave,
-  clearInterpolatedEditing,
+  clearTrackEditing,
   confidenceThreshold,
+  editedTrackletId,
   embeddings,
   entities,
   entityFilters,
@@ -54,7 +55,6 @@ export {
   imageSmoothing,
   interactiveSegmenterModel,
   interpolate,
-  interpolatedEditingIds,
   itemMetas,
   merges,
   modelsUiStore,
@@ -143,7 +143,7 @@ export function resetWorkspaceStores() {
   interpolate.value = true;
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];
-  clearInterpolatedEditing();
+  clearTrackEditing();
   cancelTrackingSession();
   resetTrackingByDetectionSession();
   resetColorScale();
@@ -161,6 +161,7 @@ export {
   itemKeypoints,
   itemMultiPaths,
   tracks,
+  trackletIdByChildId,
   textSpans,
   messages,
 } from "./annotationDerivedStores.svelte";

@@ -7,14 +7,14 @@ License: CECILL-C
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import {
   annotations,
-  clearInterpolatedEditing,
+  clearTrackEditing,
   entities,
   highlightedEntity,
   newShape,
   selectedTool,
 } from "$lib/stores/workspaceStores.svelte";
 import { ToolType } from "$lib/tools";
-import { BaseSchema, Entity, Tracklet, type Annotation } from "$lib/types/dataset";
+import { BaseSchema, Entity, Tracklet } from "$lib/types/dataset";
 
 let fusionHighlightedEntityId: string | null = null;
 
@@ -174,26 +174,6 @@ export function highlightAnnotationIds(
 }
 
 /**
- * Set highlight+editing for annotations matching a predicate,
- * dim+not-editing for the rest.
- */
-export function highlightWithEditing(predicate: (ann: Annotation) => boolean): void {
-  highlightedEntity.value = null;
-  clearInterpolatedEditing();
-  annotations.update((anns) =>
-    anns.map((ann) => {
-      const shouldHighlight = predicate(ann);
-      ann.ui.displayControl = {
-        ...ann.ui.displayControl,
-        highlighted: shouldHighlight ? "self" : "none",
-        editing: shouldHighlight,
-      };
-      return ann;
-    }),
-  );
-}
-
-/**
  * Highlight a tracklet and all its children as "self", dim everything else.
  */
 export function highlightTrackletChildren(tracklet: Tracklet): void {
@@ -205,7 +185,7 @@ export function highlightTrackletChildren(tracklet: Tracklet): void {
 export const clearHighlighting = () => {
   fusionHighlightedEntityId = null;
   highlightedEntity.value = null;
-  clearInterpolatedEditing();
+  clearTrackEditing();
   //deselect everything = unhighlight all and stop editing
   newShape.value = { status: "none" };
   annotations.update((anns) =>

@@ -27,7 +27,6 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
-  import { withoutInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
   import {
     detectionTrackColorById,
     resetTrackingByDetectionSession,
@@ -78,7 +77,6 @@ License: CECILL-C
     current_itemMultiPaths,
     entities,
     imageSmoothing,
-    interpolatedEditingIds,
     newShape,
     selectedTool,
     smartSegmentationUiState,
@@ -681,12 +679,9 @@ License: CECILL-C
         current_itemKeypoints.value as any,
       );
       commitNormalizedWorkspaceRuntime(objects, entities.value);
+      // A ghost materialises into a keyframe of the same track, so a track in edit
+      // mode stays editable on this frame without further bookkeeping.
       if (save_data) saveTo(save_data.change_type, save_data.data);
-      // The interpolated ghost has been materialised into a real annotation: it is
-      // no longer an ephemeral child being anchored, so stop marking it as editable.
-      if (save_data?.change_type === "add") {
-        interpolatedEditingIds.update((ids) => withoutInterpolatedEditingId(ids, shape.shapeId));
-      }
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
     }

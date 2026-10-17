@@ -30,13 +30,9 @@ License: CECILL-C
     TooltipContent,
     Tracklet,
   } from "$lib/ui";
+  import { editTrack } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import {
-    highlightEntity,
-    highlightTrackletChildren,
-    highlightWithEditing,
-  } from "$lib/utils/highlightOperations";
+  import { highlightEntity, highlightTrackletChildren } from "$lib/utils/highlightOperations";
   import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import {
     addKeyItemToTracklet,
@@ -127,16 +123,13 @@ License: CECILL-C
     onContextMenu();
   };
 
-  const onEditKeyItemClick = (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => {
+  // Jump to the keyframe and put its track in edit mode, which keeps this row focused.
+  const onEditKeyItemClick = (
+    frameIndex: TrackTimelineEntry["frame_index"],
+    tracklet: Tracklet,
+  ) => {
     onFrameClick(frameIndex);
-    highlightWithEditing(
-      (ann) =>
-        ann.data.view_name === viewname &&
-        ((!ann.is_type(BaseSchema.Tracklet) &&
-          getTopEntity(ann).id === entity.id &&
-          ann.ui.frame_index === frameIndex) ||
-          (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_id === entity.id)),
-    );
+    editTrack(tracklet.id, { reveal: false });
   };
 
   const onAddKeyItemClick = (tracklet: Tracklet) => {
@@ -148,7 +141,7 @@ License: CECILL-C
       current_itemKeypoints.value,
     );
     if (added) {
-      onEditKeyItemClick(currentFrameIndex.value, tracklet.data.view_name);
+      editTrack(tracklet.id, { reveal: false });
     }
   };
 

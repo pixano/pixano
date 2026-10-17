@@ -29,15 +29,13 @@ License: CECILL-C
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
   import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
-  import { toggleInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
-  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import {
     annotations,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    editedTrackletId,
     interpolate,
-    interpolatedEditingIds,
     mediaViews,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -58,6 +56,7 @@ License: CECILL-C
     type DisplayControl,
     type KeypointAnnotation,
   } from "$lib/ui";
+  import { editModeBlockedReason, toggleEditTrack } from "$lib/utils/editMode";
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
   import { cn } from "$lib/utils/styleUtils";
@@ -258,23 +257,15 @@ License: CECILL-C
     return result;
   });
 
-  const toggleInterpolatedEditing = (trackChild: Annotation) => {
-    // One editable shape at a time: anchoring a ghost first stops editing the stored
-    // annotations, which also empties the ghost set, hence the toggle afterwards.
-    if (!interpolatedEditingIds.value.has(trackChild.id)) {
-      handleSetDisplayControl("editing", false, child, false);
-    }
-    interpolatedEditingIds.update((ids) => toggleInterpolatedEditingId(ids, trackChild.id));
-  };
-
-  const isInterpolatedEditing = (trackChild: Annotation) =>
-    interpolatedEditingIds.value.has(trackChild.id);
+  // The per-frame rows edit the whole track: edit mode then follows it from frame to
+  // frame, keyframe or interpolated (lib/utils/editMode.ts).
+  const isTrackEdited = $derived(editedTrackletId.value === child.id);
 
   // During a tracking session every box edit becomes a keyframe of the track being
   // drawn, whichever box was moved: existing shapes stay read-only until it ends.
-  const shapeEditBlocked = $derived(isTracking.value);
-  const editTooltip = (label: string) =>
-    shapeEditBlocked ? "Finish or cancel the tracking session first" : label;
+  const editBlockedReason = $derived(editModeBlockedReason());
+  const shapeEditBlocked = $derived(editBlockedReason !== null);
+  const editTooltip = (label: string) => editBlockedReason ?? label;
 
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
@@ -717,9 +708,9 @@ License: CECILL-C
             {#if interpolated}
               <IconButton
                 tooltipContent={editTooltip("Edit interpolated annotation")}
-                selected={isInterpolatedEditing(trackChild)}
+                selected={isTrackEdited}
                 disabled={shapeEditBlocked}
-                onclick={() => toggleInterpolatedEditing(trackChild)}
+                onclick={() => toggleEditTrack(child.id, { reveal: false })}
                 class="h-6 w-6"
               >
                 <Pencil class="h-3 w-3" />
@@ -727,9 +718,9 @@ License: CECILL-C
             {:else}
               <IconButton
                 tooltipContent={editTooltip("Edit annotation")}
-                selected={trackChild.ui.displayControl.editing}
+                selected={isTrackEdited}
                 disabled={shapeEditBlocked}
-                onclick={() => onEditIconClick(trackChild)}
+                onclick={() => toggleEditTrack(child.id, { reveal: false })}
                 class="h-6 w-6"
               >
                 <Pencil class="h-3 w-3" />

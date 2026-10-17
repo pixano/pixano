@@ -84,16 +84,15 @@ export const interpolate = reactiveStore<boolean>(true);
 export const confidenceThreshold = reactiveStore<number[]>([0.0]);
 export const entityFilters = reactiveStore<EntityFilter[]>([]);
 
-// Interpolated track children currently being edited (anchored via the pencil in
-// the inspector). Keyed by their deterministic interpolated id
-// `${startId}::${frameIndex}` (interpolatedAnnotationId). While an id is present, the
-// derived current-frame stores render that interpolated ghost as editable so dragging
-// it materialises a real annotation (editKeyItemInTracklet). Every path that stops
-// editing stored annotations clears it through clearInterpolatedEditing.
-export const interpolatedEditingIds = reactiveStore<Set<string>>(new Set());
+// The track in edit mode, if any. Edit mode follows the track: on every frame the
+// derived current-frame stores render the shape it shows there, stored keyframe or
+// interpolated ghost, as editable (markTrackEditing), and dragging a ghost materialises
+// a keyframe of the same track, which stays editable. Stored `editing` flags only apply
+// to annotations outside every track; see lib/utils/editMode.ts.
+export const editedTrackletId = reactiveStore<string | null>(null);
 
-/** Stop anchoring every interpolated ghost; a no-op when none is being edited. */
-export function clearInterpolatedEditing(): void {
-  if (interpolatedEditingIds.value.size === 0) return;
-  interpolatedEditingIds.value = new Set();
+/** Leave track edit mode; a no-op when no track is being edited. */
+export function clearTrackEditing(): void {
+  if (editedTrackletId.value === null) return;
+  editedTrackletId.value = null;
 }

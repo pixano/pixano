@@ -14,6 +14,7 @@ License: CECILL-C
   import {
     annotations,
     colorScale,
+    editedTrackletId,
     entities,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -42,7 +43,7 @@ License: CECILL-C
     views: MView;
     compact?: boolean;
     onContextMenu: (tracklet: Tracklet) => void;
-    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => void;
+    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], tracklet: Tracklet) => void;
     onAddKeyItemClick: (event: MouseEvent) => void;
     onSplitTrackClick: () => void;
     onDeleteTrackClick: () => void;
@@ -117,20 +118,20 @@ License: CECILL-C
   };
   calcOneFrameInPixel();
 
-  // Whether the track is being actively edited: the keyframe dots then mark the
-  // instants with an effective (non-interpolated) bbox. Editing can be entered from
-  // the timeline itself (which sets highlighted "self") or from the inspector pencil
-  // (which only toggles `editing`), so both gate the dots and the frame-width
-  // measurement they need (observe() reports the current size right away).
-  // Display flags are replaced on the same annotation objects, which Svelte does not
-  // track: re-read them whenever the annotations store commits a change.
-  let showsKeyframeDots = $derived.by(() => {
+  let segmentDisplay = $derived.by(() => {
     void annotations.value;
-    return (
-      tracklet.ui.displayControl.highlighted === "self" ||
-      (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing)
-    );
+    return {
+      highlighted: tracklet.ui.displayControl.highlighted,
+      hidden: tracklet.ui.displayControl.hidden,
+    };
   });
+
+  // While the track is in edit mode, or highlighted from the timeline, keyframe dots mark
+  // the instants with an effective (non-interpolated) shape; they gate the frame-width
+  // measurement the dots need (observe() reports the current size right away).
+  let showsKeyframeDots = $derived(
+    editedTrackletId.value === tracklet.id || segmentDisplay.highlighted === "self",
+  );
 
   $effect(() => {
     if (resizeObs) {
@@ -170,14 +171,6 @@ License: CECILL-C
       currentFrameIndex.value >= tracklet.data.start_frame &&
       currentFrameIndex.value < tracklet.data.end_frame
     );
-  });
-
-  let segmentDisplay = $derived.by(() => {
-    void annotations.value;
-    return {
-      highlighted: tracklet.ui.displayControl.highlighted,
-      hidden: tracklet.ui.displayControl.hidden,
-    };
   });
 
   const getNeighborTracklet = (
@@ -412,9 +405,9 @@ License: CECILL-C
         {height}
         {top}
         {oneFrameInPixel}
-        {onEditKeyItemClick}
+        onEditKeyItemClick={(frameIndex: TrackTimelineEntry["frame_index"]) =>
+          onEditKeyItemClick(frameIndex, tracklet)}
         {onClick}
-        {entityId}
         {canContinueDragging}
         {updateTrackletWidth}
         {resetTool}

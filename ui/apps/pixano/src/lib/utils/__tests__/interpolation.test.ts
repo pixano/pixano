@@ -94,6 +94,24 @@ describe("boxLinearInterpolation", () => {
     expect(first?.data.coords[0]).toBeCloseTo(0.2);
     expect(first?.ui.startRef).toBe(boxes[0]);
   });
+
+  it("keeps the start keyframe's highlight, even while that keyframe is edited", () => {
+    const boxes = [
+      makeBBox("bbox-0", 0, [0, 0, 0.2, 0.2]),
+      makeBBox("bbox-4", 4, [0.4, 0, 0.2, 0.2]),
+    ];
+    boxes[0].ui.displayControl = { hidden: false, editing: true, highlighted: "self" };
+
+    const ghost = boxLinearInterpolation(boxes, 2, "camera-frame-2");
+
+    // Edit mode is decided per frame from the track in edit mode, not inherited here.
+    expect(ghost?.ui.displayControl).toEqual({
+      hidden: false,
+      editing: false,
+      highlighted: "self",
+    });
+    expect(ghost?.ui.opacity).toBe(1);
+  });
 });
 
 describe("keypointsLinearInterpolation", () => {
