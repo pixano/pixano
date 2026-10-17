@@ -45,6 +45,7 @@ License: CECILL-C
   } from "$lib/types/shapeTypes";
   import type { WorkspaceViewerItem } from "$lib/types/workspace";
   import { CanvasStateOverlay, Image, type LoadedImagesPerView } from "$lib/ui";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
@@ -333,6 +334,9 @@ License: CECILL-C
       onAIRequest={(requestId, request) => {
         void handleSmartSegmentationRequest(requestId, request);
       }}
+      canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
+      onEditBox={(box) => enterEditMode(box)}
+      onStopEditingBox={exitEditMode}
     />
   {:else}
     <div class="w-full h-full bg-canvas"></div>

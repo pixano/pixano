@@ -11,7 +11,14 @@ License: CECILL-C
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
   import BBox2D from "./BBox2D.svelte";
-  import { pickBoxAtPoint } from "./boxInteraction";
+  import {
+    boxStableKey,
+    computeBoxHoverCursor,
+    isEditToggleKey,
+    pickBoxAtPoint,
+    resolveKeyboardEditTarget,
+    viewNameOfNode,
+  } from "./boxInteraction";
   import BrushCursor from "./BrushCursor.svelte";
   import {
     computeCursorFlushAction,
@@ -155,6 +162,12 @@ License: CECILL-C
     filters?: ImageFilters;
     canvasSize?: number;
     confirmKeys?: string[];
+    // Box edit mode from the canvas (click, hover, E and Esc). Off by default: the
+    // workspace turns it on when edit mode is available (no session in progress).
+    canEditBoxes?: boolean;
+    /** Put a displayed box in edit mode; false when it cannot, so the click only selects. */
+    onEditBox?: (box: BBox) => boolean;
+    onStopEditingBox?: () => void;
   }
 
   let {
@@ -184,6 +197,9 @@ License: CECILL-C
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
     confirmKeys = [],
+    canEditBoxes = false,
+    onEditBox,
+    onStopEditingBox,
   }: Props = $props();
 
   let isReady = $state(false);
@@ -219,6 +235,10 @@ License: CECILL-C
   let cursor = $state("default");
   let cursorFrameRequested = false;
   let queuedCursorPosition: Konva.Vector2d | null = null;
+  let queuedHoverTarget: Konva.Node | null = null;
+  // Pointer over a box, in that view's image coordinates (see updateHoverPointer).
+  let hoverPointer = $state.raw<{ view: string; x: number; y: number } | null>(null);
+  let lastPointerView: string | undefined = undefined;
 
   // Centralized view-group and image ref management
   const viewRefs = new ViewRefManager(() => stage);
@@ -890,10 +910,24 @@ License: CECILL-C
     crosshairPosition = { x: mousePos.x, y: mousePos.y };
   }
 
+  /**
+   * Remember where the pointer is over a box, in that view's image coordinates. Only box
+   * hit areas and the edited box count, so the image, multipath areas and the Transformer's
+   * handles clear the hover; the box itself is picked from geometry (hoveredBox).
+   */
+  function updateHoverPointer(target: Konva.Node | null) {
+    const name = target?.name();
+    const view = name === "box-hit" || name === "box-edit" ? viewNameOfNode(target) : undefined;
+    const point = view ? getViewLayer(view)?.getRelativePointerPosition() : null;
+    hoverPointer = view && point ? { view, x: point.x, y: point.y } : null;
+    if (view) lastPointerView = view;
+  }
+
   function flushCursorOverlayState() {
     cursorFrameRequested = false;
     const position = queuedCursorPosition;
     if (!position) return;
+    updateHoverPointer(queuedHoverTarget);
 
     const flush = computeCursorFlushAction(selectedTool);
     if (flush.showCrosshair) {
@@ -954,11 +988,12 @@ License: CECILL-C
 
   // ********** MOUSE EVENTS ********** //
 
-  function handleMouseMoveStage() {
+  function handleMouseMoveStage(event?: Konva.KonvaEventObject<MouseEvent>) {
     if (!stage) return;
     const position = stage.getRelativePointerPosition();
     if (!position) return;
     queuedCursorPosition = position;
+    queuedHoverTarget = event?.target ?? null;
     if (!cursorFrameRequested) {
       cursorFrameRequested = true;
       requestAnimationFrame(flushCursorOverlayState);
@@ -966,6 +1001,8 @@ License: CECILL-C
   }
 
   function handleMouseLeaveStage() {
+    hoverPointer = null;
+    queuedHoverTarget = null;
     // Hide crosshair and brush cursor when mouse leaves stage
     crosshairPosition = null;
     brushCursorState = null;
@@ -1040,6 +1077,7 @@ License: CECILL-C
     if (event.evt.button !== 0 || isSmartInferencePending) return;
     const pointer = getViewLayer(viewName)?.getRelativePointerPosition();
     const box = (pointer && pickBoxAtPoint(bboxesByView[viewName] ?? [], pointer)) || clicked;
+    if (boxEditingEnabled && onEditBox?.(box)) return;
     handleSelectBBox(box);
   }
 
@@ -1452,7 +1490,27 @@ License: CECILL-C
       clearRectangleTransformer();
       localDraftShape = null;
       onNewShapeChange?.({ status: "none", shouldReset: true });
+      // Esc also leaves box edit mode (a no-op when nothing is edited).
+      if (canEditBoxes && selectedTool?.type === ToolType.Pan) onStopEditingBox?.();
       onSelectedToolChange?.(panTool);
+      return;
+    }
+
+    // E toggles edit mode on the pointed box, else on the focused entity's box. Edit mode
+    // needs the Pan tool, so the Brush tool keeps its own E (brush size).
+    if (boxEditingEnabled && isEditToggleKey(event)) {
+      const target = resolveKeyboardEditTarget(bboxes, {
+        pointedKey: hoveredBox ? boxStableKey(hoveredBox) : null,
+        pointerView: hoverPointer?.view ?? lastPointerView,
+        viewOrder: Object.keys(imagesPerView),
+      });
+      if (!target) return;
+      event.preventDefault();
+      if (target.ui.displayControl.editing) {
+        onStopEditingBox?.();
+      } else if (!onEditBox?.(target)) {
+        handleSelectBBox(target);
+      }
       return;
     }
 
@@ -1580,6 +1638,27 @@ License: CECILL-C
 
   // Whether store-backed annotations should be hidden right now.
   let shouldHideShapes = $derived(shouldHideAnnotationsForToolMode(isDrawingTool, isPeeking));
+
+  // Canvas box edit mode (click, hover, E): with the Pan tool, outside playback, while no
+  // AI request or shape save is pending and shapes are shown.
+  let boxEditingEnabled = $derived(
+    canEditBoxes &&
+      onEditBox !== undefined &&
+      selectedTool?.type === ToolType.Pan &&
+      isReady &&
+      !isPlaybackActive &&
+      !isSmartInferencePending &&
+      newShape.status !== "saving" &&
+      !shouldHideShapes,
+  );
+
+  let hoveredBox = $derived(
+    boxEditingEnabled && hoverPointer
+      ? pickBoxAtPoint(bboxesByView[hoverPointer.view] ?? [], hoverPointer)
+      : undefined,
+  );
+
+  let hoverCursor = $derived(boxEditingEnabled ? computeBoxHoverCursor(hoveredBox) : null);
 
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
@@ -1780,7 +1859,7 @@ License: CECILL-C
     height={stageHeight}
     name="konva"
     id="stage"
-    divWrapperProps={{ style: `cursor: ${cursor}` }}
+    divWrapperProps={{ style: `cursor: ${hoverCursor ?? cursor}` }}
     onmousemove={handleMouseMoveStage}
     onmouseleave={handleMouseLeaveStage}
   >

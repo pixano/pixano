@@ -41,6 +41,7 @@ License: CECILL-C
     TextSpan,
     type LoadedImagesPerView,
   } from "$lib/ui";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   // Import stores and API functions
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -205,6 +206,9 @@ License: CECILL-C
         onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
         onNewShapeChange={handleCanvasShapeChange}
         onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
+        canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

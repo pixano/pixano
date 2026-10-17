@@ -100,7 +100,7 @@ License: CECILL-C
     type EditShape,
     type SaveMaskShape,
   } from "$lib/ui";
-  import { exitEditMode } from "$lib/utils/editMode";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -967,6 +967,9 @@ License: CECILL-C
           void handleSmartSegmentationRequest(requestId, request);
         }}
         {merge}
+        canEditBoxes={editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
       />
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">

@@ -20,7 +20,8 @@ License: CECILL-C
   const generalShortcuts: ShortcutCategory = {
     title: "General",
     shortcuts: [
-      { keys: ["Esc"], action: "Switch to Pan tool" },
+      { keys: ["Esc"], action: "Switch to Pan tool, stop editing" },
+      { keys: ["E"], action: "Edit the pointed box, or the selected object's box" },
       { keys: ["Delete", "Backspace"], action: "Delete selected point" },
       { keys: ["Ctrl+S", "⌘+S"], action: "Save all annotations" },
       { keys: ["Alt (hold)"], action: "Peek at existing annotations" },
