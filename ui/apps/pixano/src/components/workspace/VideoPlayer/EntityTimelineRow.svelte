@@ -233,7 +233,7 @@ License: CECILL-C
                   tooltipContent={editPencilTooltip}
                   selected={isEditingEntity}
                   disabled={!isEditingEntity && (editBlockedReason !== null || !hasShapeHere)}
-                  class="h-4 w-4 rounded-sm bg-transparent"
+                  class={cn("h-4 w-4 rounded-sm", !isEditingEntity && "bg-transparent")}
                 >
                   <Pencil class="h-2.5 w-2.5" />
                 </IconButton>
