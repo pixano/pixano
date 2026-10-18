@@ -13,6 +13,7 @@ import {
   annotations,
   brushSettings,
   canSave,
+  clearInterpolatedEditing,
   confidenceThreshold,
   embeddings,
   entities,
@@ -22,6 +23,7 @@ import {
   imageSmoothing,
   interactiveSegmenterModel,
   interpolate,
+  interpolatedEditingIds,
   itemMetas,
   merges,
   modelsUiStore,
@@ -42,6 +44,7 @@ export {
   annotations,
   brushSettings,
   canSave,
+  clearInterpolatedEditing,
   confidenceThreshold,
   embeddings,
   entities,
@@ -51,6 +54,7 @@ export {
   imageSmoothing,
   interactiveSegmenterModel,
   interpolate,
+  interpolatedEditingIds,
   itemMetas,
   merges,
   modelsUiStore,
@@ -139,6 +143,7 @@ export function resetWorkspaceStores() {
   interpolate.value = true;
   confidenceThreshold.value = [0.0];
   entityFilters.value = [];
+  clearInterpolatedEditing();
   cancelTrackingSession();
   resetTrackingByDetectionSession();
   resetColorScale();

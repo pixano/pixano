@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { nanoid } from "nanoid";
+
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
 import {
@@ -50,7 +52,13 @@ export function addKeyItemToTracklet(
       tracklet.ui.childs.some((ann) => ann.id === box.ui?.startRef?.id),
   );
   if (interpolatedBox) {
-    newItemBBox = BBox.cloneForFrame(interpolatedBox, {});
+    // The ghost's id (`start::frame`) is display-only and its data.frame_index is still the
+    // start keyframe's: the keyframe gets a fresh id and the frame it is created on.
+    newItemBBox = BBox.cloneForFrame(interpolatedBox, {
+      id: nanoid(10),
+      frame_index: interpolatedBox.ui.frame_index,
+    });
+    newItemBBox.ui.displayControl = { ...newItemBBox.ui.displayControl, editing: false };
     newItemBBox.data.tracklet_id = tracklet.id;
     applyPixanoSourceFields(newItemBBox);
     // Coords are denormalized: normalize them
@@ -91,13 +99,13 @@ export function addKeyItemToTracklet(
         states.push(meta?.state ? meta.state : "visible");
       }
       newItemKpt = Keypoints.cloneForFrame(keypointsRef, {
-        id: interpolatedKpt.id,
+        id: nanoid(10),
         coords,
         states,
         view_name: interpolatedKpt.viewRef.name,
         frame_id: interpolatedKpt.viewRef.id,
         frame_index: interpolatedKpt.ui.frame_index,
-        displayControl: interpolatedKpt.ui.displayControl,
+        displayControl: { ...interpolatedKpt.ui.displayControl, editing: false },
       });
       newItemKpt.data.tracklet_id = tracklet.id;
       applyPixanoSourceFields(newItemKpt);

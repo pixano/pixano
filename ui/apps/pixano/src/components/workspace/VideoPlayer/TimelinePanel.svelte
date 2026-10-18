@@ -5,11 +5,12 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Slider } from "bits-ui";
+  import { Slider, Tooltip } from "bits-ui";
   import {
     CircleNotch,
     MagnifyingGlassMinus,
     MagnifyingGlassPlus,
+    PushPin,
     PushPinSlash,
   } from "phosphor-svelte";
 
@@ -21,6 +22,7 @@ License: CECILL-C
   import VideoControls from "./VideoControls.svelte";
   import {
     clearPinnedTimelineEntities,
+    pinAllTimelineEntities,
     pinnedTimelineEntityIds,
     timelineFocusEntityIds,
     togglePinnedTimelineEntity,
@@ -94,18 +96,38 @@ License: CECILL-C
       <div class="flex items-center justify-between gap-3 px-3 py-2">
         <div class="flex min-w-0 items-center gap-2">
           <VideoControls {resetHighlight} />
-          <div
-            class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
-          >
-            <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
-            <span class="text-border">/</span>
-            <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
-          </div>
-          <div
-            class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
-          >
-            {currentTimeLabel}
-          </div>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
+            >
+              <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
+              <span class="text-border">/</span>
+              <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>
+                Frame {currentFrameIndex.value} of {totalFrameCount - 1}
+              </p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
+            >
+              {currentTimeLabel}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Current time: {currentTimeLabel}</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
           {#if playbackState.value.isBuffering}
             <div
               class="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300"
@@ -117,38 +139,105 @@ License: CECILL-C
         </div>
 
         <div class="flex items-center gap-2">
-          {#if pinnedTimelineEntityIds.value.length > 0}
-            <button
+          <Tooltip.Root>
+            <Tooltip.Trigger
               type="button"
-              class="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-              onclick={clearPinnedTimelineEntities}
-              title="Clear pinned timeline entities"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              onclick={pinAllTimelineEntities}
             >
-              <PushPinSlash class="h-3.5 w-3.5" />
-              {pinnedTimelineEntityIds.value.length}
-            </button>
+              <PushPin class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Pin all timeline entities</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          {#if pinnedTimelineEntityIds.value.length > 0}
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                type="button"
+                class="inline-flex h-7 items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 text-[11px] text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+                onclick={clearPinnedTimelineEntities}
+              >
+                <PushPinSlash class="h-3.5 w-3.5" />
+                {pinnedTimelineEntityIds.value.length}
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                side="bottom"
+                sideOffset={6}
+                class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+              >
+                <p>Clear pinned timeline entities</p>
+              </Tooltip.Content>
+            </Tooltip.Root>
           {/if}
-          <div
-            class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
-          >
-            <MagnifyingGlassMinus class="h-3.5 w-3.5 text-muted-foreground" />
-            <Slider.Root
-              type="multiple"
-              bind:value={timelineZoom.value}
-              min={100}
-              max={Math.max((lastFrameIndex.value ?? 0) * 3, 200)}
-              class="relative flex w-full touch-none select-none items-center"
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
             >
-              <span class="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary/80">
-                <Slider.Range class="absolute h-full bg-primary" />
-              </span>
-              <Slider.Thumb
-                index={0}
-                class="block h-3.5 w-3.5 rounded-full border border-primary bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </Slider.Root>
-            <MagnifyingGlassPlus class="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
+              <MagnifyingGlassMinus class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Zoom out</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
+            >
+              {#snippet child({ props })}
+                <div {...props}>
+                  <Slider.Root
+                    type="multiple"
+                    bind:value={timelineZoom.value}
+                    min={100}
+                    max={Math.max((lastFrameIndex.value ?? 0) * 3, 200)}
+                    class="relative flex w-full touch-none select-none items-center"
+                  >
+                    <span
+                      class="relative h-1.5 w-full grow overflow-hidden rounded-full bg-secondary/80"
+                    >
+                      <Slider.Range class="absolute h-full bg-primary" />
+                    </span>
+                    <Slider.Thumb
+                      index={0}
+                      class="block h-3.5 w-3.5 rounded-full border border-primary bg-background shadow-sm ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                  </Slider.Root>
+                </div>
+              {/snippet}
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Timeline zoom</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <MagnifyingGlassPlus class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <Tooltip.Content
+              side="bottom"
+              sideOffset={6}
+              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+            >
+              <p>Zoom in</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         </div>
       </div>
     </div>

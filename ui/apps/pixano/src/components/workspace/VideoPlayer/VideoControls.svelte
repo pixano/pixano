@@ -5,10 +5,19 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
+  import {
+    CircleNotch,
+    Pause,
+    Play,
+    Repeat,
+    SkipBack,
+    SkipBackCircle,
+    SkipForward,
+  } from "phosphor-svelte";
 
   import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
   import { IconButton } from "$lib/ui";
+  import { cn } from "$lib/utils/styleUtils";
   import {
     ensureFrameAvailable,
     getReadyAheadFrames,
@@ -186,8 +195,16 @@ License: CECILL-C
         if (max === undefined) return;
 
         if (currentFrameIndex.value >= max) {
-          stopPlayback(true);
-          return;
+          if (playbackState.value.loop) {
+            const rendered = await goToFrame(0);
+            if (!rendered) {
+              stopPlayback(true);
+              return;
+            }
+          } else {
+            stopPlayback(true);
+            return;
+          }
         }
         const rendered = await goToFrame(currentFrameIndex.value + 1);
         if (!rendered) {
@@ -234,9 +251,25 @@ License: CECILL-C
       cancelBuffering();
     } else {
       const max = lastFrameIndex.value;
-      if (max !== undefined && currentFrameIndex.value >= max) return;
+      if (max !== undefined && currentFrameIndex.value >= max && !playbackState.value.loop) return;
+      if (currentFrameIndex.value >= max) void goToFrame(0);
       playVideo();
     }
+  };
+
+  const onFirstFrameClick = () => {
+    resetHighlight();
+    if (playbackState.value.intervalId) {
+      stopPlayback(true);
+    } else {
+      if (!playbackState.value.isLoaded) return;
+      cancelBuffering();
+    }
+    void goToFrame(0);
+  };
+
+  const toggleLoop = () => {
+    playbackState.update((old) => ({ ...old, loop: !old.loop }));
   };
 
   function shortcutHandler(event: KeyboardEvent) {
@@ -264,6 +297,10 @@ License: CECILL-C
       case "KeyA":
         if (event.shiftKey) break;
         onPlayStepBackClick();
+        break;
+      case "Home":
+        event.preventDefault();
+        onFirstFrameClick();
         break;
     }
   }
@@ -300,6 +337,25 @@ License: CECILL-C
     class="h-7 w-7 rounded-lg text-primary"
   >
     <SkipForward weight="fill" class="h-4 w-4" />
+  </IconButton>
+  <IconButton
+    tooltipContent="Go to first frame (Home)"
+    onclick={onFirstFrameClick}
+    class="h-7 w-7 rounded-lg text-primary"
+  >
+    <SkipBackCircle weight="fill" class="h-4 w-4" />
+  </IconButton>
+  <IconButton
+    tooltipContent="Loop playback"
+    onclick={toggleLoop}
+    class={cn(
+      "h-7 w-7 rounded-lg",
+      playbackState.value.loop
+        ? "bg-primary/20 text-primary hover:bg-primary/30"
+        : "text-foreground hover:bg-accent",
+    )}
+  >
+    <Repeat weight={playbackState.value.loop ? "fill" : "regular"} class="h-4 w-4" />
   </IconButton>
 </div>
 <svelte:window onkeydown={shortcutHandler} />

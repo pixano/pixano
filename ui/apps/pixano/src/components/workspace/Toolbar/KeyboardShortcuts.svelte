@@ -81,6 +81,7 @@ License: CECILL-C
       { keys: ["Space"], action: "Play / Pause" },
       { keys: ["\u2192", "D"], action: "Next frame" },
       { keys: ["\u2190", "A"], action: "Previous frame" },
+      { keys: ["Home"], action: "Go to first frame" },
     ],
   };
 

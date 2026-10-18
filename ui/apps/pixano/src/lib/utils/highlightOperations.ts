@@ -7,6 +7,7 @@ License: CECILL-C
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
 import {
   annotations,
+  clearInterpolatedEditing,
   entities,
   highlightedEntity,
   newShape,
@@ -178,6 +179,7 @@ export function highlightAnnotationIds(
  */
 export function highlightWithEditing(predicate: (ann: Annotation) => boolean): void {
   highlightedEntity.value = null;
+  clearInterpolatedEditing();
   annotations.update((anns) =>
     anns.map((ann) => {
       const shouldHighlight = predicate(ann);
@@ -203,6 +205,7 @@ export function highlightTrackletChildren(tracklet: Tracklet): void {
 export const clearHighlighting = () => {
   fusionHighlightedEntityId = null;
   highlightedEntity.value = null;
+  clearInterpolatedEditing();
   //deselect everything = unhighlight all and stop editing
   newShape.value = { status: "none" };
   annotations.update((anns) =>

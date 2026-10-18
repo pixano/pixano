@@ -12,12 +12,14 @@ import {
   getBBoxInterpolationIdentity,
   getKeypointsInterpolationIdentity,
 } from "./frameAnnotationSelectors";
+import { markInterpolatedEditing } from "./interpolatedEditing";
 import { reactiveDerived } from "./reactiveStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   annotations,
   highlightedEntity,
   interpolate,
+  interpolatedEditingIds,
   selectedTool,
 } from "./workspaceBaseStores.svelte";
 import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
@@ -106,7 +108,8 @@ export const current_itemBBoxes = reactiveDerived(() => {
     entitiesById: eById,
   });
 
-  return results;
+  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
+  return markInterpolatedEditing(results, interpolatedEditingIds.value);
 });
 
 export const current_itemKeypoints = reactiveDerived(() => {
@@ -128,7 +131,8 @@ export const current_itemKeypoints = reactiveDerived(() => {
     entitiesById: entitiesById.value,
   });
 
-  return results;
+  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
+  return markInterpolatedEditing(results, interpolatedEditingIds.value);
 });
 
 export const current_itemMasks = reactiveDerived(() => {

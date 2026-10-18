@@ -108,9 +108,24 @@ License: CECILL-C
   };
   calcOneFrameInPixel();
 
+  // Whether the track is being actively edited: the keyframe dots then mark the
+  // instants with an effective (non-interpolated) bbox. Editing can be entered from
+  // the timeline itself (which sets highlighted "self") or from the inspector pencil
+  // (which only toggles `editing`), so both gate the dots and the frame-width
+  // measurement they need (observe() reports the current size right away).
+  // Display flags are replaced on the same annotation objects, which Svelte does not
+  // track: re-read them whenever the annotations store commits a change.
+  let showsKeyframeDots = $derived.by(() => {
+    void annotations.value;
+    return (
+      tracklet.ui.displayControl.highlighted === "self" ||
+      (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing)
+    );
+  });
+
   $effect(() => {
     if (resizeObs) {
-      if (tracklet.ui.displayControl.highlighted === "self") {
+      if (showsKeyframeDots) {
         resizeObs.observe(trackElement);
       } else {
         resizeObs.unobserve(trackElement);
@@ -362,7 +377,7 @@ License: CECILL-C
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#if tracklet.ui.displayControl.highlighted === "self" && oneFrameInPixel > 15}
+{#if showsKeyframeDots && oneFrameInPixel > 15}
   {#key keyframeIndexes.length}
     {#each keyframeIndexes as itemFrameIndex}
       <KeyframeDot

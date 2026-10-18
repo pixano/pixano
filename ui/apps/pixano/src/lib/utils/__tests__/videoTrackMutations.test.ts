@@ -6,8 +6,17 @@ License: CECILL-C
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ResourceMutation } from "$lib/api/resourcePayloads";
 import { createSaveQueue } from "$lib/stores/saveQueue";
-import { BaseSchema, BBox, Entity, Tracklet, WorkspaceType } from "$lib/types/dataset";
+import {
+  Annotation,
+  BaseSchema,
+  BBox,
+  Entity,
+  Tracklet,
+  WorkspaceType,
+  type View,
+} from "$lib/types/dataset";
 import { ShapeType, type EditShape } from "$lib/types/shapeTypes";
 import { boxLinearInterpolation } from "$lib/utils/interpolation";
 
@@ -20,20 +29,25 @@ const mockEntitiesStore = {
   },
 };
 
+const mockAnnotationsStore = {
+  value: [] as Annotation[],
+  update(updater: (annotations: Annotation[]) => Annotation[]) {
+    this.value = updater(this.value);
+  },
+};
+
 const mockViewsStore = {
   value: {
-    camera: [
-      { id: "camera-frame-0", data: { frame_index: 0 } },
-      { id: "camera-frame-1", data: { frame_index: 1 } },
-      { id: "camera-frame-2", data: { frame_index: 2 } },
-      { id: "camera-frame-3", data: { frame_index: 3 } },
-    ],
+    camera: [0, 1, 2, 3].map((frameIndex) => ({
+      id: `camera-frame-${frameIndex}`,
+      data: { frame_index: frameIndex, width: 100, height: 100 },
+    })),
   } as Record<string, unknown>,
 };
 
 const mockSaveDataStore = {
-  value: [] as unknown[],
-  update(updater: (mutations: unknown[]) => unknown[]) {
+  value: [] as ResourceMutation[],
+  update(updater: (mutations: ResourceMutation[]) => ResourceMutation[]) {
     this.value = updater(this.value);
   },
 };
@@ -42,7 +56,9 @@ const mockSaveQueue = createSaveQueue((mutations) => {
 });
 
 vi.mock("$lib/stores/workspaceStores.svelte", () => ({
+  annotations: mockAnnotationsStore,
   entities: mockEntitiesStore,
+  itemMetas: { value: { type: WorkspaceType.VIDEO } },
   views: mockViewsStore,
   saveData: mockSaveDataStore,
   workspaceSaveQueue: mockSaveQueue,
@@ -160,7 +176,10 @@ function makeTracklet(id: string, entity: Entity, childs: BBox[]): Tracklet {
 }
 
 describe("videoTrackMutations", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { currentFrameIndex } = await import("$lib/stores/videoStores.svelte");
+    currentFrameIndex.value = 0;
+    mockAnnotationsStore.value = [];
     mockEntitiesStore.value = [];
     mockSaveDataStore.value = [];
     mockSaveQueue.reset();
@@ -188,13 +207,87 @@ describe("videoTrackMutations", () => {
 
     const result = editKeyItemInTracklet([startBBox, endBBox], shape, 1, [interpolatedBBox], []);
 
-    const createdBBox = result.objects.find(
-      (annotation) => annotation.id === interpolatedBBox.id,
-    ) as BBox | undefined;
     expect(result.save_data.change_type).toBe("add");
-    expect(createdBBox?.data.tracklet_id).toBe("track-1");
-    expect(createdBBox?.data.frame_id).toBe("camera-frame-1");
-    expect(createdBBox?.ui.frame_index).toBe(1);
+    const createdBBox = result.save_data.data as BBox;
+    // The ghost id (`start::frame`) stays ghost-only: the keyframe gets a fresh id.
+    expect(createdBBox.id).not.toBe(interpolatedBBox.id);
+    expect(createdBBox.id).not.toContain("::");
+    expect(result.objects).toContain(createdBBox);
+    expect(createdBBox.data.tracklet_id).toBe("track-1");
+    expect(createdBBox.data.frame_id).toBe("camera-frame-1");
+    expect(createdBBox.ui.frame_index).toBe(1);
+  });
+
+  it("copies the edited coords instead of adopting the shape's array", async () => {
+    const { editKeyItemInTracklet } = await import("$lib/utils/videoShapeEditing");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-2", entity, 2, "track-1", [0.5, 0.2, 0.2, 0.2]);
+    // The workspace hands over shapes read from a $state store, i.e. reactive proxies,
+    // which structuredClone (used by the ghost derivation) refuses to clone.
+    const coords = new Proxy([0.15, 0.2, 0.2, 0.2], {});
+    const shape: EditShape = {
+      status: "editing",
+      type: ShapeType.bbox,
+      shapeId: "bbox-0",
+      viewRef: { id: "camera-frame-0", name: "camera" },
+      coords,
+      highlighted: "self",
+    };
+
+    const result = editKeyItemInTracklet([startBBox, endBBox], shape, 0, [], []);
+
+    expect(result.save_data.change_type).toBe("update");
+    expect(startBBox.data.coords).toEqual([0.15, 0.2, 0.2, 0.2]);
+    expect(startBBox.data.coords).not.toBe(coords);
+    expect(() => structuredClone(startBBox)).not.toThrow();
+    expect(
+      boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1")?.data.coords[0],
+    ).toBeCloseTo(0.325);
+  });
+
+  it("never matches a regenerated ghost against a materialised keyframe", async () => {
+    const { editKeyItemInTracklet } = await import("$lib/utils/videoShapeEditing");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-2", entity, 2, "track-1", [0.5, 0.2, 0.2, 0.2]);
+    const ghost = boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1");
+    if (!ghost) {
+      throw new Error("Expected interpolated bbox");
+    }
+    const shape: EditShape = {
+      status: "editing",
+      type: ShapeType.bbox,
+      shapeId: ghost.id,
+      viewRef: { id: "camera-frame-1", name: "camera" },
+      coords: [0.3, 0.2, 0.2, 0.2],
+      highlighted: "self",
+    };
+
+    const first = editKeyItemInTracklet([startBBox, endBBox], shape, 1, [ghost], []);
+    const keyframe = first.save_data.data as BBox;
+
+    // The keyframe later moves to frame 3 (a keyframe-dot drag keeps its id), so the
+    // ghost at frame 1 is derived again from the same start box, with the same id.
+    keyframe.ui.frame_index = 3;
+    const regenerated = boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1");
+    if (!regenerated) {
+      throw new Error("Expected interpolated bbox");
+    }
+    expect(regenerated.id).toBe(ghost.id);
+
+    const second = editKeyItemInTracklet(
+      first.objects,
+      { ...shape, coords: [0.35, 0.2, 0.2, 0.2] },
+      1,
+      [regenerated],
+      [],
+    );
+
+    expect(second.save_data.change_type).toBe("add");
+    expect(keyframe.data.coords).toEqual([0.3, 0.2, 0.2, 0.2]);
   });
 
   it("reassigns child ownership on both sides of a split tracklet", async () => {
@@ -225,5 +318,60 @@ describe("videoTrackMutations", () => {
         (annotation) => annotation.data.tracklet_id === rightTracklet.id,
       ),
     ).toBe(true);
+  });
+
+  it("adds a keyframe at the current frame with a fresh id (Add a point)", async () => {
+    const { addKeyItemToTracklet } = await import("$lib/utils/trackletOperations");
+    const { currentFrameIndex } = await import("$lib/stores/videoStores.svelte");
+
+    const entity = makeEntity();
+    const startBBox = makeBBox("bbox-0", entity, 0, "track-1", [0.1, 0.2, 0.2, 0.2]);
+    const endBBox = makeBBox("bbox-2", entity, 2, "track-1", [0.5, 0.2, 0.2, 0.2]);
+    const tracklet = makeTracklet("track-1", entity, [startBBox, endBBox]);
+    entity.ui.childs = [tracklet, startBBox, endBBox];
+    mockEntitiesStore.value = [entity];
+    mockAnnotationsStore.value = [tracklet, startBBox, endBBox];
+    currentFrameIndex.value = 1;
+
+    // As displayed on the canvas: pixel coords, anchored for editing.
+    const ghost = boxLinearInterpolation([startBBox, endBBox], 1, "camera-frame-1");
+    if (!ghost) {
+      throw new Error("Expected interpolated bbox");
+    }
+    ghost.data.coords = ghost.data.coords.map((value) => value * 100);
+    ghost.ui.displayControl = { ...ghost.ui.displayControl, editing: true };
+
+    const added = addKeyItemToTracklet(
+      tracklet,
+      entity,
+      mockViewsStore.value as Record<string, View | View[]>,
+      [ghost],
+      [],
+    );
+
+    expect(added).toBe(true);
+    const keyframe = mockAnnotationsStore.value.find(
+      (annotation) =>
+        annotation.is_type(BaseSchema.BBox) && ![startBBox.id, endBBox.id].includes(annotation.id),
+    ) as BBox;
+    expect(keyframe.id).not.toBe(ghost.id);
+    expect(keyframe.id).not.toContain("::");
+    // Committing re-derives ui.frame_index from data.frame_index: both must be frame 1.
+    expect(keyframe.data.frame_index).toBe(1);
+    expect(keyframe.ui.frame_index).toBe(1);
+    expect(keyframe.data.frame_id).toBe("camera-frame-1");
+    expect(keyframe.data.tracklet_id).toBe("track-1");
+    [0.3, 0.2, 0.2, 0.2].forEach((value, index) =>
+      expect(keyframe.data.coords[index]).toBeCloseTo(value),
+    );
+    expect(keyframe.ui.displayControl.editing).toBe(false);
+    expect(tracklet.ui.childs.map((annotation) => annotation.id)).toEqual([
+      startBBox.id,
+      keyframe.id,
+      endBBox.id,
+    ]);
+    expect(mockSaveDataStore.value.map((mutation) => [mutation.op, mutation.target.id])).toEqual([
+      ["create", keyframe.id],
+    ]);
   });
 });

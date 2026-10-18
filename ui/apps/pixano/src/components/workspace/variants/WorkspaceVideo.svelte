@@ -27,6 +27,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { withoutInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
   import {
     detectionTrackColorById,
     resetTrackingByDetectionSession,
@@ -77,6 +78,7 @@ License: CECILL-C
     current_itemMultiPaths,
     entities,
     imageSmoothing,
+    interpolatedEditingIds,
     newShape,
     selectedTool,
     smartSegmentationUiState,
@@ -680,6 +682,11 @@ License: CECILL-C
       );
       commitNormalizedWorkspaceRuntime(objects, entities.value);
       if (save_data) saveTo(save_data.change_type, save_data.data);
+      // The interpolated ghost has been materialised into a real annotation: it is
+      // no longer an ephemeral child being anchored, so stop marking it as editable.
+      if (save_data?.change_type === "add") {
+        interpolatedEditingIds.update((ids) => withoutInterpolatedEditingId(ids, shape.shapeId));
+      }
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
     }
@@ -687,8 +694,13 @@ License: CECILL-C
   };
 
   $effect(() => {
-    const shape = newShape.value;
-    if (!shape || shape.status !== "editing") return;
+    const editingShape = newShape.value;
+    if (!editingShape || editingShape.status !== "editing") return;
+    // Detach the edit from the store's reactive proxy before it reaches the stores:
+    // its coords array is copied as-is into the annotation (applyEditedShapeData,
+    // cloneForFrame), and the next ghost derivation structuredClones that annotation,
+    // which throws on a proxy and freezes the workspace (GitHub #752).
+    const shape = $state.snapshot(editingShape);
 
     const toolType = selectedTool.value?.type ?? ToolType.Pan;
     untrack(() => {

@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   /* eslint-disable svelte/no-at-html-tags */
 
-  import { Button } from "bits-ui";
+  import { Button, Tooltip } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -29,12 +29,15 @@ License: CECILL-C
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
   import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
+  import { toggleInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
+  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import {
     annotations,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
     interpolate,
+    interpolatedEditingIds,
     mediaViews,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -85,6 +88,7 @@ License: CECILL-C
       displayControlProperty: keyof DisplayControl,
       new_value: boolean,
       child: Annotation | null,
+      other_anns_value?: boolean | null,
     ) => void;
     onEditIconClick: (child: Annotation | null) => void;
   }
@@ -252,6 +256,24 @@ License: CECILL-C
     return result;
   });
 
+  const toggleInterpolatedEditing = (trackChild: Annotation) => {
+    // One editable shape at a time: anchoring a ghost first stops editing the stored
+    // annotations, which also empties the ghost set, hence the toggle afterwards.
+    if (!interpolatedEditingIds.value.has(trackChild.id)) {
+      handleSetDisplayControl("editing", false, child, false);
+    }
+    interpolatedEditingIds.update((ids) => toggleInterpolatedEditingId(ids, trackChild.id));
+  };
+
+  const isInterpolatedEditing = (trackChild: Annotation) =>
+    interpolatedEditingIds.value.has(trackChild.id);
+
+  // During a tracking session every box edit becomes a keyframe of the track being
+  // drawn, whichever box was moved: existing shapes stay read-only until it ends.
+  const shapeEditBlocked = $derived(isTracking.value);
+  const editTooltip = (label: string) =>
+    shapeEditBlocked ? "Finish or cancel the tracking session first" : label;
+
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
     showRelink = false;
@@ -331,8 +353,9 @@ License: CECILL-C
         {#if selectedTool.value?.type !== ToolType.Fusion}
           {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
             <IconButton
-              tooltipContent="Edit annotation"
+              tooltipContent={editTooltip("Edit annotation")}
               selected={childEditing}
+              disabled={shapeEditBlocked}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
             >
@@ -361,19 +384,27 @@ License: CECILL-C
       </div>
 
       <!-- Detail toggle chevron -->
-      <button
-        type="button"
-        class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
-        onclick={() => {
-          showDetails = !showDetails;
-        }}
-        title={showDetails ? "Hide details" : "Show details"}
-      >
-        <CaretRight
-          weight="regular"
-          class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
-        />
-      </button>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          type="button"
+          class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+          onclick={() => {
+            showDetails = !showDetails;
+          }}
+        >
+          <CaretRight
+            weight="regular"
+            class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
+          />
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          side="bottom"
+          sideOffset={6}
+          class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
+        >
+          <p>{showDetails ? "Hide details" : "Show details"}</p>
+        </Tooltip.Content>
+      </Tooltip.Root>
     </div>
   </div>
 
@@ -660,7 +691,7 @@ License: CECILL-C
     <!-- NOTE: trackChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
     {#each currentTrackChilds as { trackChild, interpolated }}
       {@const displayName = interpolated
-        ? `<i class="text-muted-foreground/50">interpolated</i> (${trackChild.id})`
+        ? `<i class="text-muted-foreground/50">interpolated</i>`
         : trackChild.id}
       <div
         class="flex items-center justify-between w-full overflow-hidden py-0.5 px-1 rounded hover:bg-muted/30 transition-colors group/trackchild"
@@ -681,28 +712,41 @@ License: CECILL-C
             {@html displayName}
           </span>
         </div>
-        {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}
+        {#if selectedTool.value?.type !== ToolType.Fusion && [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
           <div
             class="flex items-center gap-0.5 opacity-0 group-hover/trackchild:opacity-100 transition-opacity duration-200"
           >
-            {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
+            {#if interpolated}
               <IconButton
-                tooltipContent="Edit annotation"
+                tooltipContent={editTooltip("Edit interpolated annotation")}
+                selected={isInterpolatedEditing(trackChild)}
+                disabled={shapeEditBlocked}
+                onclick={() => toggleInterpolatedEditing(trackChild)}
+                class="h-6 w-6"
+              >
+                <Pencil class="h-3 w-3" />
+              </IconButton>
+            {:else}
+              <IconButton
+                tooltipContent={editTooltip("Edit annotation")}
                 selected={trackChild.ui.displayControl.editing}
+                disabled={shapeEditBlocked}
                 onclick={() => onEditIconClick(trackChild)}
                 class="h-6 w-6"
               >
                 <Pencil class="h-3 w-3" />
               </IconButton>
             {/if}
-            <IconButton
-              tooltipContent="Delete annotation"
-              redconfirm
-              onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
-              class="h-6 w-6 text-muted-foreground hover:text-destructive"
-            >
-              <Trash weight="regular" class="h-3 w-3" />
-            </IconButton>
+            {#if !interpolated}
+              <IconButton
+                tooltipContent="Delete annotation"
+                redconfirm
+                onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
+                class="h-6 w-6 text-muted-foreground hover:text-destructive"
+              >
+                <Trash weight="regular" class="h-3 w-3" />
+              </IconButton>
+            {/if}
           </div>
         {/if}
       </div>
