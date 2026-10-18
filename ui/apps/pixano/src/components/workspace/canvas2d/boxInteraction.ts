@@ -6,8 +6,8 @@ License: CECILL-C
 
 /**
  * Pure helpers for pointer and keyboard interaction with boxes on the canvas: which box
- * is under the pointer, how a box is identified from frame to frame, what the E key acts
- * on, and where the box action chip is anchored.
+ * is under the pointer, how a box is identified from frame to frame, what the E and Enter
+ * keys act on, and where the box action chip is anchored.
  */
 
 import { PREVIEW_TABLE_NAME } from "$lib/stores/trackEditing";
@@ -116,6 +116,28 @@ export function isEditToggleKey(event: {
     !event.altKey &&
     !event.repeat
   );
+}
+
+/** The Enter key without Ctrl, Cmd or Alt: finishes edit mode, keeping the changes. */
+export function isFinishEditKey(event: {
+  key: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+}): boolean {
+  return event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey;
+}
+
+/** Dialogs, menus and list boxes handle Enter themselves. */
+const ENTER_OWNING_OVERLAYS =
+  '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]';
+
+/** A key event target: an element, or the window or document, which have no `closest`. */
+export type KeyTargetLike = { closest?: (selectors: string) => unknown } | null;
+
+/** Whether a key event comes from inside a dialog, menu or list box. */
+export function isInOverlay(target: KeyTargetLike): boolean {
+  return typeof target?.closest === "function" && target.closest(ENTER_OWNING_OVERLAYS) !== null;
 }
 
 /**

@@ -13,6 +13,8 @@ import {
   computeBoxHoverCursor,
   findBoxByStableKey,
   isEditToggleKey,
+  isFinishEditKey,
+  isInOverlay,
   isInteractiveBox,
   pickBoxAtPoint,
   resolveKeyboardEditTarget,
@@ -130,6 +132,31 @@ describe("keyboard", () => {
     expect(isEditToggleKey(key("e", { metaKey: true }))).toBe(false);
     expect(isEditToggleKey(key("e", { repeat: true }))).toBe(false);
     expect(isEditToggleKey(key("r"))).toBe(false);
+  });
+
+  it("finishes on Enter without Ctrl, Cmd or Alt", () => {
+    expect(isFinishEditKey(key("Enter"))).toBe(true);
+    expect(isFinishEditKey(key("Enter", { ctrlKey: true }))).toBe(false);
+    expect(isFinishEditKey(key("Enter", { metaKey: true }))).toBe(false);
+    expect(isFinishEditKey(key("Enter", { altKey: true }))).toBe(false);
+    expect(isFinishEditKey(key("Escape"))).toBe(false);
+  });
+
+  it("leaves Enter to dialogs, menus and list boxes", () => {
+    // An element whose closest ancestor with a role has `role`, if any.
+    const inside = (role?: string) => ({
+      closest: (selectors: string) =>
+        role !== undefined && selectors.includes(`[role="${role}"]`) ? {} : null,
+    });
+    expect(isInOverlay(inside("dialog"))).toBe(true);
+    expect(isInOverlay(inside("alertdialog"))).toBe(true);
+    expect(isInOverlay(inside("menu"))).toBe(true);
+    expect(isInOverlay(inside("listbox"))).toBe(true);
+    expect(isInOverlay(inside("tab"))).toBe(false);
+    expect(isInOverlay(inside())).toBe(false);
+    // The window and the document are targets without `closest`.
+    expect(isInOverlay({})).toBe(false);
+    expect(isInOverlay(null)).toBe(false);
   });
 
   it("targets the pointed box, else the focused entity's edited, pointer-view, first box", () => {

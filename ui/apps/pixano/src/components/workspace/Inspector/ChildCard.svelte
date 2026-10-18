@@ -347,7 +347,7 @@ License: CECILL-C
           {#if child.is_type(BaseSchema.Tracklet)}
             <IconButton
               tooltipContent={editTooltip(
-                isTrackEdited ? "Stop editing the track" : "Edit the track",
+                isTrackEdited ? "Finish editing the track (Enter)" : "Edit the track",
               )}
               selected={isTrackEdited}
               disabled={shapeEditBlocked && !isTrackEdited}
@@ -358,7 +358,9 @@ License: CECILL-C
             </IconButton>
           {:else if !child.is_type(BaseSchema.TextSpan)}
             <IconButton
-              tooltipContent={editTooltip("Edit annotation")}
+              tooltipContent={editTooltip(
+                childEditing ? "Finish editing (Enter)" : "Edit annotation",
+              )}
               selected={childEditing}
               disabled={shapeEditBlocked}
               onclick={() => onEditIconClick(child)}
@@ -719,7 +721,9 @@ License: CECILL-C
           >
             {#if interpolated}
               <IconButton
-                tooltipContent={editTooltip("Edit interpolated annotation")}
+                tooltipContent={editTooltip(
+                  isTrackEdited ? "Finish editing (Enter)" : "Edit interpolated annotation",
+                )}
                 selected={isTrackEdited}
                 disabled={shapeEditBlocked}
                 onclick={() => toggleEditTrack(child.id, { reveal: false })}
@@ -729,7 +733,9 @@ License: CECILL-C
               </IconButton>
             {:else}
               <IconButton
-                tooltipContent={editTooltip("Edit annotation")}
+                tooltipContent={editTooltip(
+                  isTrackEdited ? "Finish editing (Enter)" : "Edit annotation",
+                )}
                 selected={isTrackEdited}
                 disabled={shapeEditBlocked}
                 onclick={() => toggleEditTrack(child.id, { reveal: false })}

@@ -160,7 +160,7 @@ License: CECILL-C
   let isEditingEntity = $derived(isEntityEditing(entity.id));
   let editBlockedReason = $derived(editModeBlockedReason());
   let editPencilTooltip = $derived.by(() => {
-    if (isEditingEntity) return "Stop editing (E)";
+    if (isEditingEntity) return "Finish editing (Enter)";
     if (editBlockedReason) return editBlockedReason;
     return hasShapeHere ? "Edit this object's box (E)" : "No box on this frame";
   });

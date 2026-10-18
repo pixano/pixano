@@ -18,6 +18,8 @@ License: CECILL-C
     computeBoxHoverCursor,
     findBoxByStableKey,
     isEditToggleKey,
+    isFinishEditKey,
+    isInOverlay,
     isInteractiveBox,
     pickBoxAtPoint,
     resolveKeyboardEditTarget,
@@ -168,12 +170,13 @@ License: CECILL-C
     filters?: ImageFilters;
     canvasSize?: number;
     confirmKeys?: string[];
-    // Box edit mode from the canvas (click, hover, E and Esc). Off by default: the
+    // Box edit mode from the canvas (click, hover, E and Enter). Off by default: the
     // workspace turns it on when edit mode is available (no session in progress).
     canEditBoxes?: boolean;
     /** Put a displayed box in edit mode; false when it cannot, so the click only selects. */
     onEditBox?: (box: BBox) => boolean;
-    onStopEditingBox?: () => void;
+    /** Leave edit mode, keeping the changes; returns whether something was being edited. */
+    onStopEditingBox?: () => boolean;
     /** Contextual actions of a box, listed in its chip's "…" menu. */
     getBoxActions?: (box: BBox) => BoxAction[];
   }
@@ -1504,8 +1507,6 @@ License: CECILL-C
       clearRectangleTransformer();
       localDraftShape = null;
       onNewShapeChange?.({ status: "none", shouldReset: true });
-      // Esc also leaves box edit mode (a no-op when nothing is edited).
-      if (canEditBoxes && selectedTool?.type === ToolType.Pan) onStopEditingBox?.();
       onSelectedToolChange?.(panTool);
       return;
     }
@@ -1526,6 +1527,26 @@ License: CECILL-C
       } else if (!onEditBox?.(target)) {
         handleSelectBBox(target);
       }
+      return;
+    }
+
+    // Enter finishes edit mode and keeps the changes, like clicking the pencil again.
+    // Dialogs, menus and lists keep their own Enter.
+    if (
+      isFinishEditKey(event) &&
+      canEditBoxes &&
+      selectedTool?.type === ToolType.Pan &&
+      !isInOverlay(event.target as Element | null)
+    ) {
+      // The pencil that started editing may still have the focus: its default action would
+      // press it again and turn edit mode back on, so it is cancelled whenever Enter acts,
+      // including while the key is held. A drag in progress keeps the box editable.
+      if (event.repeat || isBoxTransforming) {
+        event.preventDefault();
+        return;
+      }
+      setChipMenuOpen(false);
+      if (onStopEditingBox?.()) event.preventDefault();
       return;
     }
 
@@ -2350,7 +2371,7 @@ License: CECILL-C
       anchor={chipAnchor}
       boundary={stageContainer}
       editing={chipBox?.ui.displayControl.editing ?? false}
-      editTooltip={chipBox?.ui.displayControl.editing ? "Stop editing (E)" : "Edit (E)"}
+      editTooltip={chipBox?.ui.displayControl.editing ? "Finish editing (Enter)" : "Edit (E)"}
       actions={chipActions}
       menuOpen={chipMenuOpen}
       onToggleEdit={toggleChipEdit}

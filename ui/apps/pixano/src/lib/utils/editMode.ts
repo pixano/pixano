@@ -77,17 +77,18 @@ function focusEntity(entityId: string | undefined, reveal: boolean): void {
   highlightEntity(entityId, false, reveal);
 }
 
-/** Turn off the stored editing flag of every annotation but `keepId`. */
-function setStoredEditing(keepId: string | null): void {
+/** Turn off the stored editing flag of every annotation but `keepId`; true when one changed. */
+function setStoredEditing(keepId: string | null): boolean {
   const needsChange = annotations.value.some(
     (annotation) => (annotation.ui.displayControl.editing ?? false) !== (annotation.id === keepId),
   );
-  if (!needsChange) return;
+  if (!needsChange) return false;
   annotations.update((current) =>
     current.map((annotation) =>
       updateDisplayControl(annotation, { editing: annotation.id === keepId }),
     ),
   );
+  return true;
 }
 
 /** Put a track in edit mode; returns false when edit mode is blocked or the track is gone. */
@@ -115,10 +116,12 @@ export function editAnnotation(
   return true;
 }
 
-/** Leave edit mode, whatever is being edited. */
-export function exitEditMode(): void {
+/** Leave edit mode, whatever is being edited; returns whether something was. */
+export function exitEditMode(): boolean {
+  const wasEditingTrack = editedTrackletId.value !== null;
   clearTrackEditing();
-  setStoredEditing(null);
+  const wasEditingAnnotation = setStoredEditing(null);
+  return wasEditingTrack || wasEditingAnnotation;
 }
 
 export function isTrackEditing(trackletId: string): boolean {
