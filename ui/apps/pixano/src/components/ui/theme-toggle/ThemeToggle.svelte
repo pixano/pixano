@@ -8,6 +8,8 @@ License: CECILL-C
   import { Tooltip } from "bits-ui";
   import { Moon, Sun } from "phosphor-svelte";
 
+  import TooltipContent from "../molecules/TooltipContent.svelte";
+
   interface Props {
     mode: "light" | "dark";
     onToggle: () => void;
@@ -28,11 +30,7 @@ License: CECILL-C
       <Moon size={22} />
     {/if}
   </Tooltip.Trigger>
-  <Tooltip.Content
-    side="bottom"
-    sideOffset={6}
-    class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-  >
+  <TooltipContent>
     <p>{mode === "dark" ? "Dark mode" : "Light mode"}</p>
-  </Tooltip.Content>
+  </TooltipContent>
 </Tooltip.Root>

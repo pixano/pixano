@@ -36,13 +36,16 @@ License: CECILL-C
     currentFrameIndex,
     lastFrameIndex,
     playbackState,
+    stepTimelineZoom,
     timelineZoom,
   } from "$lib/stores/videoStores.svelte";
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
-  import { entityHasTracklets, type Entity } from "$lib/ui";
+  import { entityHasTracklets, TooltipContent, type Entity } from "$lib/ui";
   import { sortEntities } from "$lib/utils/entityLookupUtils";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
+  import { timelineZoomMax } from "$lib/utils/timelineZoom";
+  import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import { updateView } from "$lib/utils/videoOperations";
   import { getCurrentImageTime } from "$lib/utils/videoUtils";
 
@@ -97,36 +100,38 @@ License: CECILL-C
         <div class="flex min-w-0 items-center gap-2">
           <VideoControls {resetHighlight} />
           <Tooltip.Root>
-            <Tooltip.Trigger
-              class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
-            >
-              <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
-              <span class="text-border">/</span>
-              <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
+            <Tooltip.Trigger>
+              {#snippet child({ props })}
+                <div
+                  {...passiveTriggerProps(props)}
+                  class="flex items-center gap-1.5 rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] text-foreground"
+                >
+                  <span class="font-medium tabular-nums">#{currentFrameIndex.value}</span>
+                  <span class="text-border">/</span>
+                  <span class="tabular-nums text-muted-foreground">{totalFrameCount - 1}</span>
+                </div>
+              {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>
                 Frame {currentFrameIndex.value} of {totalFrameCount - 1}
               </p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           <Tooltip.Root>
-            <Tooltip.Trigger
-              class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
-            >
-              {currentTimeLabel}
+            <Tooltip.Trigger>
+              {#snippet child({ props })}
+                <div
+                  {...passiveTriggerProps(props)}
+                  class="rounded-md border border-border/40 bg-background/70 px-2 py-1 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {currentTimeLabel}
+                </div>
+              {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Current time: {currentTimeLabel}</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           {#if playbackState.value.isBuffering}
             <div
@@ -147,13 +152,9 @@ License: CECILL-C
             >
               <PushPin class="h-3.5 w-3.5" />
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Pin all timeline entities</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           {#if pinnedTimelineEntityIds.value.length > 0}
             <Tooltip.Root>
@@ -165,41 +166,34 @@ License: CECILL-C
                 <PushPinSlash class="h-3.5 w-3.5" />
                 {pinnedTimelineEntityIds.value.length}
               </Tooltip.Trigger>
-              <Tooltip.Content
-                side="bottom"
-                sideOffset={6}
-                class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-              >
+              <TooltipContent>
                 <p>Clear pinned timeline entities</p>
-              </Tooltip.Content>
+              </TooltipContent>
             </Tooltip.Root>
           {/if}
           <Tooltip.Root>
             <Tooltip.Trigger
               type="button"
+              onclick={() => stepTimelineZoom(-1)}
               class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
             >
               <MagnifyingGlassMinus class="h-3.5 w-3.5" />
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Zoom out</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           <Tooltip.Root>
             <Tooltip.Trigger
               class="flex w-[180px] items-center gap-2 rounded-md border border-border/40 bg-background/70 px-2 py-1.5"
             >
               {#snippet child({ props })}
-                <div {...props}>
+                <div {...passiveTriggerProps(props)}>
                   <Slider.Root
                     type="multiple"
                     bind:value={timelineZoom.value}
                     min={100}
-                    max={Math.max((lastFrameIndex.value ?? 0) * 3, 200)}
+                    max={timelineZoomMax(lastFrameIndex.value)}
                     class="relative flex w-full touch-none select-none items-center"
                   >
                     <span
@@ -215,28 +209,21 @@ License: CECILL-C
                 </div>
               {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Timeline zoom</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           <Tooltip.Root>
             <Tooltip.Trigger
               type="button"
+              onclick={() => stepTimelineZoom(1)}
               class="flex items-center rounded-md border border-border/40 bg-background/70 px-1.5 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
             >
               <MagnifyingGlassPlus class="h-3.5 w-3.5" />
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Zoom in</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         </div>
       </div>

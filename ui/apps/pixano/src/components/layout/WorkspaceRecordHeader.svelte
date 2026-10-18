@@ -21,7 +21,8 @@ License: CECILL-C
   import { navigating } from "$app/state";
   import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { saveData } from "$lib/stores/workspaceStores.svelte";
-  import { IconButton } from "$lib/ui";
+  import { IconButton, TooltipContent } from "$lib/ui";
+  import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
 
   interface Props {
     currentItemId: string;
@@ -107,13 +108,9 @@ License: CECILL-C
           >
             {currentDatasetStore.value?.name}
           </Tooltip.Trigger>
-          <Tooltip.Content
-            side="bottom"
-            sideOffset={6}
-            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-          >
+          <TooltipContent>
             <p>Back to explorer</p>
-          </Tooltip.Content>
+          </TooltipContent>
         </Tooltip.Root>
         <span class="shrink-0 text-sm text-muted-foreground/50">·</span>
         <div class="flex shrink-0 items-center gap-1">
@@ -128,18 +125,17 @@ License: CECILL-C
           <Tooltip.Root>
             <Tooltip.Trigger>
               {#snippet child({ props })}
-                <span {...props} class="text-sm tabular-nums text-muted-foreground">
+                <span
+                  {...passiveTriggerProps(props)}
+                  class="text-sm tabular-nums text-muted-foreground"
+                >
                   {recordLabel}
                 </span>
               {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Record ID: {currentItemId}</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
           <IconButton
             onclick={() => goToNeighborItem("next")}
@@ -176,20 +172,16 @@ License: CECILL-C
                 {dirtyCount}
               </span>
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Save {dirtyCount} change{dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {:else}
           <Tooltip.Root>
             <Tooltip.Trigger>
               {#snippet child({ props })}
                 <span
-                  {...props}
+                  {...passiveTriggerProps(props)}
                   role="status"
                   class="inline-flex h-9 items-center gap-1.5 px-3.5 text-xs font-medium text-muted-foreground"
                 >
@@ -198,13 +190,9 @@ License: CECILL-C
                 </span>
               {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>No changes to save</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {/if}
       </div>

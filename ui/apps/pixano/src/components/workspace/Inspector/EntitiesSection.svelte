@@ -12,7 +12,7 @@ License: CECILL-C
   import OptionsAndFilters from "./OptionsAndFilters.svelte";
   import { GROUND_TRUTH, OTHER } from "$lib/constants/workspaceConstants";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
-  import { IconButton, type Entity } from "$lib/ui";
+  import { IconButton, TooltipContent, type Entity } from "$lib/ui";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
 
   interface Props {
@@ -141,13 +141,9 @@ License: CECILL-C
             >
               <X class="h-3.5 w-3.5" />
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Clear search</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {/if}
       </div>
@@ -208,13 +204,9 @@ License: CECILL-C
           <FunnelSimple class="h-4 w-4" />
           <span class="text-[11px] font-semibold tracking-wide">Rules</span>
         </Tooltip.Trigger>
-        <Tooltip.Content
-          side="bottom"
-          sideOffset={6}
-          class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-        >
+        <TooltipContent>
           <p>{showFilters ? "Hide advanced rule builder" : "Show advanced rule builder"}</p>
-        </Tooltip.Content>
+        </TooltipContent>
       </Tooltip.Root>
     </div>
 

@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { reactiveStore } from "./reactiveStore.svelte";
 import { type LoadedImagesPerView } from "$lib/types/dataset";
+import { nextTimelineZoom, TIMELINE_ZOOM_MIN, timelineZoomMax } from "$lib/utils/timelineZoom";
 
 // ─── Playback state ─────────────────────────────────────────────────────────
 
@@ -36,6 +37,13 @@ export const lastFrameIndex = reactiveStore<number | undefined>(undefined);
 export const currentFrameIndex = reactiveStore<number>(0);
 export const currentItemId = reactiveStore<string>("");
 export const videoViewNames = reactiveStore<string[]>([]);
+
+/** Zoom the timeline one step in (`1`) or out (`-1`), within the slider's range. */
+export function stepTimelineZoom(direction: 1 | -1): void {
+  const current = timelineZoom.value[0] ?? TIMELINE_ZOOM_MIN;
+  const max = timelineZoomMax(lastFrameIndex.value);
+  timelineZoom.value = [nextTimelineZoom(current, direction, max)];
+}
 
 export function resetVideoStores() {
   playbackState.value = {

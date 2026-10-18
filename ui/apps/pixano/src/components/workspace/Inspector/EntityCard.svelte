@@ -55,6 +55,7 @@ License: CECILL-C
     entityHasTracklets,
     IconButton,
     Item,
+    TooltipContent,
     Tracklet,
     WorkspaceType,
     type AnnotationThumbnail,
@@ -431,13 +432,9 @@ License: CECILL-C
                 />
               </div>
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Highlight entity</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {:else if hasOnlyTextSpans}
           <!-- Typographic fallback thumbnail for text-only entities -->
@@ -450,13 +447,9 @@ License: CECILL-C
             >
               <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
             </Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Highlight entity (text entity)</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {:else}
           <!-- Minimal colored dot fallback -->
@@ -467,13 +460,9 @@ License: CECILL-C
               style="background:{color}"
               onclick={onColoredDotClick}
             ></Tooltip.Trigger>
-            <Tooltip.Content
-              side="bottom"
-              sideOffset={6}
-              class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-            >
+            <TooltipContent>
               <p>Highlight entity</p>
-            </Tooltip.Content>
+            </TooltipContent>
           </Tooltip.Root>
         {/if}
 
@@ -531,13 +520,9 @@ License: CECILL-C
               </div>
             {/if}
           </Tooltip.Trigger>
-          <Tooltip.Content
-            side="bottom"
-            sideOffset={6}
-            class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-          >
+          <TooltipContent>
             <p>Highlight entity</p>
-          </Tooltip.Content>
+          </TooltipContent>
         </Tooltip.Root>
       </div>
 

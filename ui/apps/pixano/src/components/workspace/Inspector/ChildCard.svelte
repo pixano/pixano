@@ -53,6 +53,7 @@ License: CECILL-C
     Keypoints,
     Mask,
     TextSpan,
+    TooltipContent,
     Tracklet,
     type DisplayControl,
     type KeypointAnnotation,
@@ -397,13 +398,9 @@ License: CECILL-C
             class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
           />
         </Tooltip.Trigger>
-        <Tooltip.Content
-          side="bottom"
-          sideOffset={6}
-          class="z-[9999] overflow-hidden rounded-md border border-border/40 bg-popover/95 backdrop-blur-md px-3 py-1.5 text-sm text-popover-foreground shadow-glass-sm"
-        >
+        <TooltipContent>
           <p>{showDetails ? "Hide details" : "Show details"}</p>
-        </Tooltip.Content>
+        </TooltipContent>
       </Tooltip.Root>
     </div>
   </div>
