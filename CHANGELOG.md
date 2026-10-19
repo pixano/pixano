@@ -84,6 +84,8 @@
 - The masks, polygons, keypoints and text spans of a sub-entity, its timeline
   row and the pre-annotation review icon take the color of their object instead
   of pink.
+- A "similar to" search on a record whose id holds a quote answered 503: the id
+  is now escaped.
 
 ## 0.8.0 (2026-09-23)
 
