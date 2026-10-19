@@ -61,6 +61,7 @@ License: CECILL-C
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
+  import { toggleEditAnnotation } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
@@ -367,16 +368,14 @@ License: CECILL-C
 
   const onEditIconClick = (child: Annotation | null = null) => {
     if (child) {
-      // A box edited during a tracking session would become a keyframe of the new track.
-      if (isTracking.value) return;
-      handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
-    } else {
-      detailsTab = "attributes";
-      if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
-      handleSetDisplayControl("editing", !entityDisplayControl.editing);
+      // Shape edit mode, the child's track's when it has one (lib/utils/editMode.ts).
+      toggleEditAnnotation(child, { reveal: false });
+      return;
     }
-    // Editing a shape needs the pan tool. During a tracking session only the entity's
-    // attributes can be edited, and switching tool would cancel the session.
+    detailsTab = "attributes";
+    if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
+    handleSetDisplayControl("editing", !entityDisplayControl.editing);
+    // Switching tool would cancel a tracking session; attributes do not need the Pan tool.
     if (!entityDisplayControl.editing && !isTracking.value) selectedTool.value = panTool;
   };
 

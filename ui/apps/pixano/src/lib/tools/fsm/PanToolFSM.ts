@@ -14,7 +14,7 @@ export class PanToolFSM implements ToolFSM {
   readonly id = "pan";
   readonly name = "Move image";
   readonly icon = "pan";
-  readonly defaultCursor = "move";
+  readonly defaultCursor = "grab";
 
   getInitialState(): ToolState {
     return { phase: "idle" };
@@ -42,13 +42,13 @@ export class PanToolFSM implements ToolFSM {
         if (event.type === "pointerUp") {
           return {
             newState: { phase: "idle" },
-            sideEffects: [{ type: "setCursor", cursor: "move" }],
+            sideEffects: [{ type: "setCursor", cursor: "grab" }],
           };
         }
         if (event.type === "cancel") {
           return {
             newState: { phase: "idle" },
-            sideEffects: [{ type: "setCursor", cursor: "move" }],
+            sideEffects: [{ type: "setCursor", cursor: "grab" }],
           };
         }
         break;

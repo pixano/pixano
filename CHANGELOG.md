@@ -12,6 +12,18 @@
   track (its class in the dataset's label field when it has one), one tracklet
   per run, one box every N frames with the model's score as confidence. A run
   covers at most 600 frames.
+- **Edit a box from the canvas.** With the Pan tool, click a box to edit it, or
+  point at it and press `E`; press `Enter`, or click the pencil again, to finish.
+  Hovering a box shows a chip with that pencil and a "…" menu to add or remove a
+  keyframe, split the track after the current frame, or delete the track or the
+  box. In a video, edit mode follows the track from frame to frame, so a track
+  can be corrected with the arrow keys; the first change on an interpolated frame
+  creates the keyframe. Each object's timeline row has the same pencil. The image,
+  VQA and entity-linking workspaces edit boxes the same way.
+- **Video player.** Loop playback, a button and the `Home` key to go back to the
+  first frame, timeline ticks that adapt to the video's length (with sub-second
+  labels on short clips), a button that pins every object to the timeline, and
+  copy buttons for the record ID in the Record tab.
 
 ### Changed
 
@@ -26,6 +38,18 @@
   tracking request no longer needs `objects_ids`; `classes` and `box_threshold`
   select what a prompt-free model follows. A job result Pixano cannot read is a
   502 instead of an empty result.
+
+### Fixed
+
+- Video workspace: moving a box after clicking its pencil in the inspector no
+  longer freezes frame navigation. An interpolated box or keypoints shape keeps
+  the same id instead of getting a new one each time it is shown, and "Add a
+  point" puts the new keyframe on the current frame. Keyframe dots show on the
+  timeline while a track is edited. During a tracking session, where any box edit
+  becomes a keyframe of the track being drawn, the box pencils are disabled.
+- The timeline's track menu (right-click a track) opens again. Split cuts right
+  after the current frame and keeps every box, and Split and Glue save the
+  keyframes they move, which used to return to the old track on reload.
 
 ## 0.8.0 (2026-09-23)
 

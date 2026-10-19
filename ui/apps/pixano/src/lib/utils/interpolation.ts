@@ -58,13 +58,12 @@ export const boxLinearInterpolation = (
   interpolatedBox.ui = ui;
   interpolatedBox.id = interpolatedAnnotationId(startBox.id, imageIndex);
   interpolatedBox.ui.frame_index = imageIndex;
+  // A ghost shows the start keyframe's highlight. Whether it is editable is decided per
+  // frame from the track in edit mode (markTrackEditing), not from the start keyframe.
   interpolatedBox.ui.displayControl = {
     hidden: startBox.ui.displayControl.hidden,
     editing: false,
-    //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-    highlighted: startBox.ui.displayControl.editing
-      ? "none"
-      : startBox.ui.displayControl.highlighted,
+    highlighted: startBox.ui.displayControl.highlighted,
   };
   interpolatedBox.data.frame_id = view_id;
   //we also need to adapt opacity & strokeFactor accordingly
@@ -114,13 +113,11 @@ export const keypointsLinearInterpolation = (
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = interpolatedAnnotationId(startKpt.id, imageIndex);
     interpolatedKpt.ui.frame_index = imageIndex;
+    // Same rule as boxes: the highlight follows the start keyframe, editing the track.
     interpolatedKpt.ui.displayControl = {
       hidden: startKpt.ui.displayControl.hidden,
       editing: false,
-      //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-      highlighted: startKpt.ui.displayControl.editing
-        ? "none"
-        : startKpt.ui.displayControl.highlighted,
+      highlighted: startKpt.ui.displayControl.highlighted,
     };
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts

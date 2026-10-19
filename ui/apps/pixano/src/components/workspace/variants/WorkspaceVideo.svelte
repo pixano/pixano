@@ -27,7 +27,6 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
-  import { withoutInterpolatedEditingId } from "$lib/stores/interpolatedEditing";
   import {
     detectionTrackColorById,
     resetTrackingByDetectionSession,
@@ -78,7 +77,6 @@ License: CECILL-C
     current_itemMultiPaths,
     entities,
     imageSmoothing,
-    interpolatedEditingIds,
     newShape,
     selectedTool,
     smartSegmentationUiState,
@@ -102,6 +100,8 @@ License: CECILL-C
     type EditShape,
     type SaveMaskShape,
   } from "$lib/ui";
+  import { videoBoxActions } from "$lib/utils/boxActions";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -583,6 +583,8 @@ License: CECILL-C
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
       if (!isTracking.value) {
+        // Drawing a new track ends edit mode: the session owns every box edit from now on.
+        exitEditMode();
         startTrackingSession(viewRef.name, viewRef, itemId, imageWidth, imageHeight);
       }
 
@@ -681,12 +683,9 @@ License: CECILL-C
         current_itemKeypoints.value as any,
       );
       commitNormalizedWorkspaceRuntime(objects, entities.value);
+      // A ghost materialises into a keyframe of the same track, so a track in edit
+      // mode stays editable on this frame without further bookkeeping.
       if (save_data) saveTo(save_data.change_type, save_data.data);
-      // The interpolated ghost has been materialised into a real annotation: it is
-      // no longer an ephemeral child being anchored, so stop marking it as editable.
-      if (save_data?.change_type === "add") {
-        interpolatedEditingIds.update((ids) => withoutInterpolatedEditingId(ids, shape.shapeId));
-      }
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
     }
@@ -969,6 +968,10 @@ License: CECILL-C
           void handleSmartSegmentationRequest(requestId, request);
         }}
         {merge}
+        canEditBoxes={editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
+        getBoxActions={videoBoxActions}
       />
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">

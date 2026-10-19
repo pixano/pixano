@@ -4,7 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
+import {
+  entitiesById,
+  mediaViews,
+  trackletIdByChildId,
+  tracks,
+} from "./annotationDerivedStores.svelte";
 import {
   collectExactFrameAnnotations,
   collectFrameAnnotations,
@@ -12,14 +17,14 @@ import {
   getBBoxInterpolationIdentity,
   getKeypointsInterpolationIdentity,
 } from "./frameAnnotationSelectors";
-import { markInterpolatedEditing } from "./interpolatedEditing";
 import { reactiveDerived } from "./reactiveStore.svelte";
+import { markTrackEditing } from "./trackEditing";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   annotations,
+  editedTrackletId,
   highlightedEntity,
   interpolate,
-  interpolatedEditingIds,
   selectedTool,
 } from "./workspaceBaseStores.svelte";
 import { NOT_ANNOTATION_ITEM_OPACITY } from "$lib/constants/workspaceConstants";
@@ -108,8 +113,8 @@ export const current_itemBBoxes = reactiveDerived(() => {
     entitiesById: eById,
   });
 
-  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
-  return markInterpolatedEditing(results, interpolatedEditingIds.value);
+  // The edited track's shape is editable on every frame, keyframe or ghost.
+  return markTrackEditing(results, editedTrackletId.value, trackletIdByChildId.value);
 });
 
 export const current_itemKeypoints = reactiveDerived(() => {
@@ -131,8 +136,7 @@ export const current_itemKeypoints = reactiveDerived(() => {
     entitiesById: entitiesById.value,
   });
 
-  // Interpolated ghosts being anchored (pencil in the inspector) render as editable.
-  return markInterpolatedEditing(results, interpolatedEditingIds.value);
+  return markTrackEditing(results, editedTrackletId.value, trackletIdByChildId.value);
 });
 
 export const current_itemMasks = reactiveDerived(() => {

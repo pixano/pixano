@@ -14,6 +14,7 @@ License: CECILL-C
   import {
     annotations,
     colorScale,
+    editedTrackletId,
     entities,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -31,6 +32,7 @@ License: CECILL-C
   import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
   import { relink } from "$lib/utils/entityRelink";
   import { saveTo } from "$lib/utils/saveItemUtils";
+  import { glueTracklets } from "$lib/utils/trackletOperations";
   import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -41,8 +43,7 @@ License: CECILL-C
     tracklet: Tracklet;
     views: MView;
     compact?: boolean;
-    onContextMenu: (tracklet: Tracklet) => void;
-    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => void;
+    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], tracklet: Tracklet) => void;
     onAddKeyItemClick: (event: MouseEvent) => void;
     onSplitTrackClick: () => void;
     onDeleteTrackClick: () => void;
@@ -56,7 +57,6 @@ License: CECILL-C
     tracklet = $bindable(),
     views,
     compact = false,
-    onContextMenu,
     onEditKeyItemClick,
     onAddKeyItemClick,
     onSplitTrackClick,
@@ -93,8 +93,17 @@ License: CECILL-C
     return 10 + (80 * Object.keys(views).indexOf(trk.data.view_name)) / Object.keys(views).length;
   };
 
-  let left = $derived(getLeft(tracklet));
-  let right = $derived(getRight(tracklet));
+  // A committed change updates the tracklet objects in place (normalization rebuilds
+  // their children on the same instances), which Svelte does not see through the prop:
+  // everything read from the tracklet re-reads it on every annotations commit.
+  let left = $derived.by(() => {
+    void annotations.value;
+    return getLeft(tracklet);
+  });
+  let right = $derived.by(() => {
+    void annotations.value;
+    return getRight(tracklet);
+  });
   let height = $derived(getHeight(views, compact));
   let top = $derived(getTop(tracklet, views));
   let trackElement: HTMLElement = $state();
@@ -108,20 +117,20 @@ License: CECILL-C
   };
   calcOneFrameInPixel();
 
-  // Whether the track is being actively edited: the keyframe dots then mark the
-  // instants with an effective (non-interpolated) bbox. Editing can be entered from
-  // the timeline itself (which sets highlighted "self") or from the inspector pencil
-  // (which only toggles `editing`), so both gate the dots and the frame-width
-  // measurement they need (observe() reports the current size right away).
-  // Display flags are replaced on the same annotation objects, which Svelte does not
-  // track: re-read them whenever the annotations store commits a change.
-  let showsKeyframeDots = $derived.by(() => {
+  let segmentDisplay = $derived.by(() => {
     void annotations.value;
-    return (
-      tracklet.ui.displayControl.highlighted === "self" ||
-      (tracklet.ui.childs ?? []).some((ann) => ann.ui.displayControl.editing)
-    );
+    return {
+      highlighted: tracklet.ui.displayControl.highlighted,
+      hidden: tracklet.ui.displayControl.hidden,
+    };
   });
+
+  // While the track is in edit mode, or highlighted from the timeline, keyframe dots mark
+  // the instants with an effective (non-interpolated) shape; they gate the frame-width
+  // measurement the dots need (observe() reports the current size right away).
+  let showsKeyframeDots = $derived(
+    editedTrackletId.value === tracklet.id || segmentDisplay.highlighted === "self",
+  );
 
   $effect(() => {
     if (resizeObs) {
@@ -141,18 +150,27 @@ License: CECILL-C
   let color = $derived(colorScale.value[1](entityId));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
-  let keyframeIndexes = $derived((tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index));
+  let keyframeIndexes = $derived.by(() => {
+    void annotations.value;
+    return (tracklet.ui.childs ?? []).map((ann) => ann.ui.frame_index);
+  });
 
-  let canAddKeyFrame = $derived(
-    currentFrameIndex.value > tracklet.data.start_frame &&
+  let canAddKeyFrame = $derived.by(() => {
+    void annotations.value;
+    return (
+      currentFrameIndex.value > tracklet.data.start_frame &&
       currentFrameIndex.value < tracklet.data.end_frame &&
-      !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value),
-  );
+      !(tracklet.ui.childs ?? []).some((ann) => ann.ui.frame_index === currentFrameIndex.value)
+    );
+  });
 
-  let canSplit = $derived(
-    currentFrameIndex.value >= tracklet.data.start_frame &&
-      currentFrameIndex.value < tracklet.data.end_frame,
-  );
+  let canSplit = $derived.by(() => {
+    void annotations.value;
+    return (
+      currentFrameIndex.value >= tracklet.data.start_frame &&
+      currentFrameIndex.value < tracklet.data.end_frame
+    );
+  });
 
   const getNeighborTracklet = (
     allAnnotations: Annotation[],
@@ -250,34 +268,7 @@ License: CECILL-C
   const onGlueTrackletClick = (direction: "left" | "right") => {
     const neighbor = direction === "left" ? leftNeighbor : rightNeighbor;
     if (!neighbor) return;
-
-    const nextAnnotations = annotations.value
-      .filter((ann) => ann.id !== neighbor.id)
-      .map((ann) => {
-        if (ann.id === tracklet.id) {
-          const currentTracklet = ann as Tracklet;
-          const neighborTracklet = neighbor as Tracklet;
-          [...currentTracklet.ui.childs, ...neighborTracklet.ui.childs].forEach((child) => {
-            child.data.tracklet_id = currentTracklet.id;
-          });
-          if (direction === "left") {
-            currentTracklet.data.start_frame = neighborTracklet.data.start_frame;
-          } else {
-            currentTracklet.data.end_frame = neighborTracklet.data.end_frame;
-          }
-        }
-        return ann;
-      });
-
-    const nextEntities = entities.value.map((ent) => {
-      if (ent.id === entityId) {
-        ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
-      }
-      return ent;
-    });
-    commitNormalizedWorkspaceRuntime(nextAnnotations, nextEntities);
-
-    saveTo("delete", neighbor);
+    glueTracklets(tracklet, neighbor as Tracklet, entityId);
   };
 
   const onClick = (button: number, clientX: number) => {
@@ -285,11 +276,6 @@ License: CECILL-C
       moveCursorToPosition(clientX);
       resetTool();
     }
-  };
-
-  const handleTrackContextMenu = (event: MouseEvent) => {
-    event.preventDefault();
-    onContextMenu(tracklet);
   };
 
   const onRelinkTrackClick = (event: MouseEvent) => {
@@ -313,16 +299,14 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("video-tracklet absolute scale-y-90 rounded-sm", {
-      "opacity-100": tracklet.ui.displayControl.highlighted === "self",
+      "opacity-100": segmentDisplay.highlighted === "self",
       "opacity-30":
-        (tracklet.ui.displayControl.highlighted === "none" &&
-          selectedToolType === ToolType.Fusion) ||
-        tracklet.ui.displayControl.hidden,
+        (segmentDisplay.highlighted === "none" && selectedToolType === ToolType.Fusion) ||
+        segmentDisplay.hidden,
     })}
     style={`left: ${left}%; width: ${right - left}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      oncontextmenu={handleTrackContextMenu}
       aria-label="Track segment handle"
       class="absolute h-full w-full"
       bind:this={trackElement}
@@ -387,9 +371,9 @@ License: CECILL-C
         {height}
         {top}
         {oneFrameInPixel}
-        {onEditKeyItemClick}
+        onEditKeyItemClick={(frameIndex: TrackTimelineEntry["frame_index"]) =>
+          onEditKeyItemClick(frameIndex, tracklet)}
         {onClick}
-        {entityId}
         {canContinueDragging}
         {updateTrackletWidth}
         {resetTool}

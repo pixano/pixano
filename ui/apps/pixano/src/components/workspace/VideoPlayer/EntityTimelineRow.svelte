@@ -5,15 +5,17 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { PushPin, PushPinSlash } from "phosphor-svelte";
+  import { Pencil, PushPin, PushPinSlash } from "phosphor-svelte";
 
   import TrackletSegment from "./TrackletSegment.svelte";
+  import { shapeTopEntityId } from "$lib/stores/trackEditing";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
+    entities,
     highlightedEntity,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
@@ -29,18 +31,19 @@ License: CECILL-C
     TooltipContent,
     Tracklet,
   } from "$lib/ui";
-  import { deleteEntity } from "$lib/utils/entityDeletion";
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import {
-    highlightEntity,
-    highlightTrackletChildren,
-    highlightWithEditing,
-  } from "$lib/utils/highlightOperations";
+    editModeBlockedReason,
+    editTrack,
+    isEntityEditing,
+    toggleEditModeForEntity,
+  } from "$lib/utils/editMode";
+  import { deleteEntity } from "$lib/utils/entityDeletion";
+  import { highlightEntity } from "$lib/utils/highlightOperations";
   import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import {
     addKeyItemToTracklet,
     findNeighborFrameIndices,
-    splitTracklet,
+    splitTrackletAfter,
   } from "$lib/utils/trackletOperations";
   import { updateView } from "$lib/utils/videoOperations";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
@@ -68,7 +71,10 @@ License: CECILL-C
   }: Props = $props();
 
   let objectTimeTrack: HTMLElement = $state();
+  // The entity and its tracklets are updated in place by committed changes, which
+  // Svelte does not see through the prop: re-read them on every commit of their store.
   let displayName: string = $derived.by(() => {
+    void entities.value;
     const displayFeat = getDefaultDisplayFeat(entity);
     return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
   });
@@ -81,9 +87,10 @@ License: CECILL-C
   let color = $derived(colorScale.value[1](entity.id));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
-  let tracklets: Tracklet[] = $derived(
-    (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[],
-  );
+  let tracklets: Tracklet[] = $derived.by(() => {
+    void annotations.value;
+    return (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[];
+  });
 
   let highlightState: string = $derived.by(() => {
     if (selectedToolType === ToolType.Pan) {
@@ -110,28 +117,20 @@ License: CECILL-C
     onFrameClick(newFrameIndex);
   };
 
-  const onContextMenu = (tracklet: Tracklet | null = null) => {
-    if (tracklet && selectedToolType !== ToolType.Fusion) {
-      highlightTrackletChildren(tracklet);
-    }
+  // A right-click on the empty part of the row only leaves drawing tools; a right-click on
+  // a track opens its menu (TrackletSegment) and keeps the row and its focus.
+  const handleTrackContextMenu = (event: MouseEvent) => {
+    event.preventDefault();
     resetTool();
   };
 
-  const handleTrackContextMenu = (event: MouseEvent) => {
-    event.preventDefault();
-    onContextMenu();
-  };
-
-  const onEditKeyItemClick = (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => {
+  // Jump to the keyframe and put its track in edit mode, which keeps this row focused.
+  const onEditKeyItemClick = (
+    frameIndex: TrackTimelineEntry["frame_index"],
+    tracklet: Tracklet,
+  ) => {
     onFrameClick(frameIndex);
-    highlightWithEditing(
-      (ann) =>
-        ann.data.view_name === viewname &&
-        ((!ann.is_type(BaseSchema.Tracklet) &&
-          getTopEntity(ann).id === entity.id &&
-          ann.ui.frame_index === frameIndex) ||
-          (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_id === entity.id)),
-    );
+    editTrack(tracklet.id, { reveal: false });
   };
 
   const onAddKeyItemClick = (tracklet: Tracklet) => {
@@ -143,16 +142,30 @@ License: CECILL-C
       current_itemKeypoints.value,
     );
     if (added) {
-      onEditKeyItemClick(currentFrameIndex.value, tracklet.data.view_name);
+      editTrack(tracklet.id, { reveal: false });
     }
   };
 
   const onSplitTrackletClick = (tracklet: Tracklet) => {
-    splitTracklet(tracklet, entity.id);
+    splitTrackletAfter(tracklet, entity, currentFrameIndex.value, views);
   };
 
   const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
     return findNeighborFrameIndices(tracklet, frameIndex, tracklets);
+  };
+
+  // Pencil in the row's chip: edit mode for this object's box on the current frame.
+  let currentShapes = $derived([...current_itemBBoxes.value, ...current_itemKeypoints.value]);
+  let hasShapeHere = $derived(currentShapes.some((shape) => shapeTopEntityId(shape) === entity.id));
+  let isEditingEntity = $derived(isEntityEditing(entity.id));
+  let editBlockedReason = $derived(editModeBlockedReason());
+  let editPencilTooltip = $derived.by(() => {
+    if (isEditingEntity) return "Finish editing (Enter)";
+    if (editBlockedReason) return editBlockedReason;
+    return hasShapeHere ? "Edit this object's box (E)" : "No box on this frame";
+  });
+  const onEditPencilClick = () => {
+    toggleEditModeForEntity(entity.id, currentShapes, { reveal: false });
   };
 
   const onColoredDotClick = () => {
@@ -215,6 +228,15 @@ License: CECILL-C
                   style={`background: ${color}`}
                   onclick={onColoredDotClick}
                 ></button>
+                <IconButton
+                  onclick={onEditPencilClick}
+                  tooltipContent={editPencilTooltip}
+                  selected={isEditingEntity}
+                  disabled={!isEditingEntity && (editBlockedReason !== null || !hasShapeHere)}
+                  class={cn("h-4 w-4 rounded-sm", !isEditingEntity && "bg-transparent")}
+                >
+                  <Pencil class="h-2.5 w-2.5" />
+                </IconButton>
                 {#if onTogglePin}
                   <div
                     class={cn(
@@ -260,7 +282,6 @@ License: CECILL-C
                 {views}
                 compact={true}
                 onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
-                {onContextMenu}
                 {onEditKeyItemClick}
                 onSplitTrackClick={() => onSplitTrackletClick(tracklet)}
                 onDeleteTrackClick={() => deleteEntity(entity, tracklet)}

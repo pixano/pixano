@@ -26,6 +26,7 @@ License: CECILL-C
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
+    clearTrackEditing,
     entities,
     itemMetas,
     newShape,
@@ -479,9 +480,15 @@ License: CECILL-C
     const nextEntities = entities.value.includes(entity)
       ? entities.value
       : [...entities.value, entity];
+    // A new shape ends edit mode. Display controls are replaced, never written in place:
+    // loaded annotations share one initial display control object.
+    clearTrackEditing();
     const objectsWithoutHighlighted: Annotation[] = annotations.value.map((object) => {
-      object.ui.displayControl.highlighted = "none";
-      object.ui.displayControl = { ...object.ui.displayControl, editing: false };
+      object.ui.displayControl = {
+        ...object.ui.displayControl,
+        highlighted: "none",
+        editing: false,
+      };
       return object;
     });
     const normalized = commitNormalizedWorkspaceRuntime(

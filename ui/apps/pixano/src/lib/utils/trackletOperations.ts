@@ -6,8 +6,13 @@ License: CECILL-C
 
 import { nanoid } from "nanoid";
 
+import {
+  collectFrameAnnotations,
+  getBBoxInterpolationIdentity,
+  getKeypointsInterpolationIdentity,
+} from "$lib/stores/frameAnnotationSelectors";
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-import { annotations, entities } from "$lib/stores/workspaceStores.svelte";
+import { annotations, editedTrackletId, entities } from "$lib/stores/workspaceStores.svelte";
 import {
   Annotation,
   BaseSchema,
@@ -20,8 +25,12 @@ import {
   type View,
 } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
+import { ToolType } from "$lib/types/tools";
+import type { MView as MediaViews } from "$lib/types/workspace";
+import { mapBBoxForDisplay, mapKeypointsForDisplay } from "$lib/utils/annotationMapping";
 import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
+import { boxLinearInterpolation, keypointsLinearInterpolation } from "$lib/utils/interpolation";
 import { saveTo } from "$lib/utils/saveItemUtils";
 import { splitTrackInTwo } from "$lib/utils/videoOperations";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
@@ -30,8 +39,9 @@ import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMut
 type MView = Record<string, View | View[]>;
 
 /**
- * Add a keyframe at the current frame position within a tracklet.
- * Materialises the interpolated bbox/keypoints into real annotations.
+ * Add a keyframe at `frameIndex` (the current frame by default) within a tracklet.
+ * Materialises the interpolated bbox/keypoints displayed on that frame, found among
+ * `bboxes` and `keypoints`, into real annotations.
  *
  * Returns `true` if new annotations were added, `false` otherwise.
  */
@@ -41,6 +51,7 @@ export function addKeyItemToTracklet(
   views: MView,
   bboxes: BBox[],
   keypoints: KeypointAnnotation[],
+  frameIndex: number = currentFrameIndex.value,
 ): boolean {
   let newItemBBox: BBox | undefined = undefined;
   let newItemKpt: Keypoints | undefined = undefined;
@@ -48,7 +59,7 @@ export function addKeyItemToTracklet(
   // Find interpolated bbox for the current frame
   const interpolatedBox = bboxes.find(
     (box) =>
-      box.ui.frame_index === currentFrameIndex.value &&
+      box.ui.frame_index === frameIndex &&
       tracklet.ui.childs.some((ann) => ann.id === box.ui?.startRef?.id),
   );
   if (interpolatedBox) {
@@ -78,7 +89,7 @@ export function addKeyItemToTracklet(
   // Find interpolated keypoints for the current frame
   const interpolatedKpt = keypoints.find(
     (kpt) =>
-      kpt.ui?.frame_index === currentFrameIndex.value &&
+      kpt.ui?.frame_index === frameIndex &&
       tracklet.ui.childs.some((ann) => ann.id === kpt.ui?.startRef?.id),
   );
   if (interpolatedKpt && interpolatedKpt.ui?.startRef) {
@@ -128,7 +139,10 @@ export function addKeyItemToTracklet(
  * Binary search within a tracklet's children to find the frame indices of
  * the previous and next annotations relative to the current frame cursor.
  */
-export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] {
+export function findPreviousAndNextFrames(
+  tracklet: Tracklet,
+  frameIndex: number = currentFrameIndex.value,
+): [number, number] {
   let low = 0;
   let high = tracklet.ui.childs.length - 1;
   let mid = 0;
@@ -137,7 +151,7 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
 
   while (low <= high) {
     mid = Math.floor((low + high) / 2);
-    if (tracklet.ui.childs[mid].ui.frame_index <= currentFrameIndex.value) {
+    if (tracklet.ui.childs[mid].ui.frame_index <= frameIndex) {
       previousItem = tracklet.ui.childs[mid];
       low = mid + 1;
     } else {
@@ -146,25 +160,115 @@ export function findPreviousAndNextFrames(tracklet: Tracklet): [number, number] 
     }
   }
   return [
-    previousItem ? previousItem.ui.frame_index : currentFrameIndex.value,
-    nextItem ? nextItem.ui.frame_index : currentFrameIndex.value + 1,
+    previousItem ? previousItem.ui.frame_index : frameIndex,
+    nextItem ? nextItem.ui.frame_index : frameIndex + 1,
   ];
 }
 
 /**
- * Split a tracklet at the current frame position into two tracklets.
- * The left tracklet retains the original ID; a new right tracklet is created.
+ * Glue `neighbor`, the closest track before or after `tracklet` (same object, same view),
+ * onto `tracklet`: its keyframes move over, `tracklet` stretches across the gap, and
+ * `neighbor` is deleted. The surviving range and every moved keyframe are saved (on load,
+ * keyframes attach to the track their saved tracklet_id names), and edit mode on
+ * `neighbor` carries over to `tracklet`.
  */
-export function splitTracklet(tracklet: Tracklet, entityId: string): void {
-  const [prev, next] = findPreviousAndNextFrames(tracklet);
+export function glueTracklets(tracklet: Tracklet, neighbor: Tracklet, entityId: string): void {
+  const survivor =
+    (annotations.value.find((ann) => ann.id === tracklet.id) as Tracklet | undefined) ?? tracklet;
+  const moved = [...neighbor.ui.childs];
+  for (const child of moved) child.data.tracklet_id = survivor.id;
+  if (neighbor.data.end_frame < survivor.data.start_frame) {
+    survivor.data.start_frame = neighbor.data.start_frame;
+  } else {
+    survivor.data.end_frame = neighbor.data.end_frame;
+  }
+
+  const nextEntities = entities.value.map((ent) => {
+    if (ent.id === entityId) {
+      ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== neighbor.id);
+    }
+    return ent;
+  });
+  commitNormalizedWorkspaceRuntime(
+    annotations.value.filter((ann) => ann.id !== neighbor.id),
+    nextEntities,
+  );
+
+  applyPixanoSourceFields(survivor);
+  saveTo("update", survivor);
+  for (const child of moved) saveTo("update", child);
+  saveTo("delete", neighbor);
+  if (editedTrackletId.value === neighbor.id) editedTrackletId.value = survivor.id;
+}
+
+/** The boxes and keypoints `tracklet` interpolates on `frameIndex`, as displayed. */
+function interpolatedShapesAt(
+  tracklet: Tracklet,
+  frameIndex: number,
+  views: MView,
+): { bboxes: BBox[]; keypoints: KeypointAnnotation[] } {
+  // The tracklet's views are media views (sequence frames), as the display mapping expects.
+  const mediaViews = views as unknown as MediaViews;
+  const common = {
+    frameAnnotations: [],
+    frameIdx: frameIndex,
+    doInterpolate: true,
+    tracks: [tracklet],
+    mViews: mediaViews,
+    focusedEntityId: null,
+    selectedToolType: ToolType.Pan,
+    entitiesById: null,
+  };
+  const { results: bboxes } = collectFrameAnnotations<BBox, BBox>({
+    ...common,
+    typeFilter: (ann): ann is BBox => ann.is_type(BaseSchema.BBox),
+    mapForDisplay: (bbox, highlight) => mapBBoxForDisplay(bbox, mediaViews, highlight),
+    interpolateFn: boxLinearInterpolation,
+    interpolationIdentity: getBBoxInterpolationIdentity,
+  });
+  const { results: keypoints } = collectFrameAnnotations<Keypoints, KeypointAnnotation>({
+    ...common,
+    typeFilter: (ann): ann is Keypoints => ann.is_type(BaseSchema.Keypoints),
+    mapForDisplay: (kpt, highlight) => mapKeypointsForDisplay(kpt, mediaViews, highlight),
+    interpolateFn: keypointsLinearInterpolation,
+    interpolationIdentity: getKeypointsInterpolationIdentity,
+  });
+  return { bboxes, keypoints };
+}
+
+/**
+ * Split a tracklet right after `frameIndex`: the left part ends on that frame and the
+ * right part starts on the next one. Interpolated boxes on these two frames become
+ * keyframes first, so both parts keep showing what the track showed. When no box can be
+ * materialised on one of them, the cut falls back to the nearest keyframes, so a part
+ * never starts or ends without one.
+ *
+ * Returns `true` if the tracklet was split.
+ */
+export function splitTrackletAfter(
+  tracklet: Tracklet,
+  entity: Entity,
+  frameIndex: number,
+  views: MView,
+): boolean {
+  if (frameIndex < tracklet.data.start_frame || frameIndex >= tracklet.data.end_frame) {
+    return false;
+  }
+  for (const frame of [frameIndex, frameIndex + 1]) {
+    if (tracklet.ui.childs.some((ann) => ann.ui.frame_index === frame)) continue;
+    const { bboxes, keypoints } = interpolatedShapesAt(tracklet, frame, views);
+    addKeyItemToTracklet(tracklet, entity, views, bboxes, keypoints, frame);
+  }
+  const [prev, next] = findPreviousAndNextFrames(tracklet, frameIndex);
   const newOnRight = splitTrackInTwo(tracklet, prev, next);
   const nextEntities = entities.value.map((ent) => {
-    if (entityHasTracklets(ent) && ent.id === entityId) {
+    if (entityHasTracklets(ent) && ent.id === entity.id) {
       ent.ui.childs = appendAnnotationsSorted(ent.ui.childs, [newOnRight], sortByFrameIndex);
     }
     return ent;
   });
   commitNormalizedWorkspaceRuntime(annotations.value.concat(newOnRight), nextEntities);
+  return true;
 }
 
 /**

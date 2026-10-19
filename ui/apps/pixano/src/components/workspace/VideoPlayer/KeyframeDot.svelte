@@ -7,20 +7,19 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { annotations } from "$lib/stores/workspaceStores.svelte";
+  import { editedTrackletId } from "$lib/stores/workspaceStores.svelte";
   import type { TrackTimelineEntry } from "$lib/ui";
   import { cn, ContextMenu, Tracklet } from "$lib/ui";
   import { onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
 
   interface Props {
-    entityId: string;
     itemFrameIndex: number;
     tracklet: Tracklet;
     color: string;
     height: number;
     top: number;
     oneFrameInPixel: number;
-    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => void;
+    onEditKeyItemClick: (frameIndex: TrackTimelineEntry["frame_index"]) => void;
     onClick: (button: number, clientX: number) => void;
     updateTrackletWidth: (
       newIndex: TrackTimelineEntry["frame_index"],
@@ -34,7 +33,6 @@ License: CECILL-C
   }
 
   let {
-    entityId,
     itemFrameIndex,
     tracklet,
     color,
@@ -48,15 +46,9 @@ License: CECILL-C
     resetTool,
   }: Props = $props();
 
+  // The keyframe under edit: its track is in edit mode and the playhead is on it.
   let isItemBeingEdited = $derived(
-    annotations.value.filter(
-      (ann) =>
-        ann.ui.displayControl.editing &&
-        (tracklet.ui.childs ?? []).includes(ann) &&
-        ann.ui.frame_index === itemFrameIndex &&
-        ann.ui.frame_index === currentFrameIndex.value &&
-        ann.data.entity_id === entityId,
-    ).length === 1,
+    editedTrackletId.value === tracklet.id && itemFrameIndex === currentFrameIndex.value,
   );
 
   const getKeyItemLeftPosition = (frameIndex: number) => {
@@ -157,7 +149,7 @@ License: CECILL-C
       </ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item onclick={() => onEditKeyItemClick(itemFrameIndex, tracklet.data.view_name)}>
+      <ContextMenu.Item onclick={() => onEditKeyItemClick(itemFrameIndex)}>
         Edit item
       </ContextMenu.Item>
     {/if}

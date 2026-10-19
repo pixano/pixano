@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { reactiveDerived } from "./reactiveStore.svelte";
+import { buildTrackletIdByChildId } from "./trackEditing";
 import {
   annotations,
   entities,
@@ -158,6 +159,10 @@ export const tracks = reactiveDerived(
   () =>
     annotations.value.filter((annotation) => annotation.is_type(BaseSchema.Tracklet)) as Tracklet[],
 );
+
+// Track of every track child, by child id: resolves which track a displayed shape
+// belongs to, including interpolated ghosts and keypoint shapes (trackletIdOfShape).
+export const trackletIdByChildId = reactiveDerived(() => buildTrackletIdByChildId(tracks.value));
 
 export const textSpans = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
