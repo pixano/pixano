@@ -12,9 +12,9 @@ License: CECILL-C
 
   import TextAnnotator from "../textAnnotator/TextAnnotator.svelte";
   import {
+    annotationColors,
     annotations,
     brushSettings,
-    colorScale,
     embeddings,
     filters,
     imageSmoothing,
@@ -174,7 +174,7 @@ License: CECILL-C
     <TextAnnotator
       textViews={textViews.value}
       selectedItemId={selectedItem.item.id}
-      colorScale={colorScale.value[1]}
+      colorOf={annotationColors.value.colorOfAnnotation}
       textSpans={textSpans.value}
       newShape={newShape.value}
       onNewShapeChange={handleTextSpanAreaShapeChange}
@@ -193,7 +193,7 @@ License: CECILL-C
       <Canvas2D
         {imagesPerView}
         selectedItemId={selectedItem.item.id}
-        colorScale={colorScale.value[1]}
+        colorOf={annotationColors.value.colorOfAnnotation}
         bboxes={itemBboxes.value}
         masks={itemMasks.value}
         multiPaths={itemMultiPaths.value}

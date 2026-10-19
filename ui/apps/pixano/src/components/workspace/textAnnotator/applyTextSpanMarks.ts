@@ -8,6 +8,7 @@ import type { Editor } from "@tiptap/core";
 
 import { MARK_UPDATE_META } from "./extensions/ReadOnlyContent";
 import { charOffsetToPmPos } from "./positionMapping";
+import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
 import type { TextSpan } from "$lib/ui";
 import { isLuminanceHigh } from "$lib/ui";
 
@@ -49,7 +50,7 @@ function getGluedRanges(textSpan: TextSpan): Array<{ start: number; end: number 
 export function applyTextSpanMarks(
   editor: Editor,
   textSpans: TextSpan[],
-  colorScale: (value: string) => string,
+  colorOf: AnnotationColorFn,
 ): void {
   const { state } = editor;
   const markType = state.schema.marks.textSpanMark;
@@ -68,7 +69,7 @@ export function applyTextSpanMarks(
 
   // 2. Add marks for each text span
   for (const textSpan of textSpans) {
-    const bgColor = colorScale(textSpan.data.entity_id);
+    const bgColor = colorOf(textSpan);
     const hidden = textSpan.ui.displayControl.hidden ?? false;
     const highlighted = textSpan.ui.displayControl.highlighted === "self";
     const textColor = getTextColor(bgColor);

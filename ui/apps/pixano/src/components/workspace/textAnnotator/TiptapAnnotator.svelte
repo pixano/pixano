@@ -12,17 +12,18 @@ License: CECILL-C
   import { ReadOnlyContent } from "./extensions/ReadOnlyContent";
   import { TextSpanMark } from "./extensions/TextSpanMark";
   import { pmPosToCharOffset } from "./positionMapping";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import type { TextSpan, TextSpanTypeWithViewName, TextView } from "$lib/ui";
 
   interface Props {
     textSpans?: TextSpan[];
-    colorScale: (value: string) => string;
+    colorOf: AnnotationColorFn;
     textView: TextView;
     onSelectionChange?: (attrs: TextSpanTypeWithViewName) => void;
     onSpanClick?: (id: string) => void;
   }
 
-  let { textSpans = [], colorScale, textView, onSelectionChange, onSpanClick }: Props = $props();
+  let { textSpans = [], colorOf, textView, onSelectionChange, onSpanClick }: Props = $props();
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   let editorElement: HTMLDivElement | undefined = $state(undefined);
@@ -89,13 +90,13 @@ License: CECILL-C
     };
   });
 
-  // Apply marks when textSpans or colorScale change
+  // Apply marks when textSpans or their colors change
   $effect(() => {
     if (!editor) return;
     // Access reactive deps
     const spans = textSpans;
-    const scale = colorScale;
-    applyTextSpanMarks(editor, spans, scale);
+    const colors = colorOf;
+    applyTextSpanMarks(editor, spans, colors);
   });
 </script>
 

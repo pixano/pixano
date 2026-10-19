@@ -9,6 +9,8 @@ License: CECILL-C
   import { Eye, EyeClosed, FunnelSimple, MagnifyingGlass, Question, X } from "phosphor-svelte";
   import type { Snippet } from "svelte";
 
+  import ColorByControl from "./ColorByControl.svelte";
+  import ColorByLegend from "./ColorByLegend.svelte";
   import OptionsAndFilters from "./OptionsAndFilters.svelte";
   import { GROUND_TRUTH, OTHER } from "$lib/constants/workspaceConstants";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
@@ -118,6 +120,8 @@ License: CECILL-C
         {countText}
       </span>
     </div>
+
+    <ColorByControl />
 
     <div class="flex items-center gap-2">
       <div class="relative flex-1">
@@ -238,6 +242,7 @@ License: CECILL-C
 
   <div class="relative z-0 flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1.5 py-2">
     <div class="flex flex-col gap-1.5 px-0.5">
+      <ColorByLegend />
       {@render children?.()}
     </div>
   </div>

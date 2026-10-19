@@ -12,8 +12,8 @@ License: CECILL-C
   import KeyframeDot from "./KeyframeDot.svelte";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
-    colorScale,
     editedTrackletId,
     entities,
     selectedTool,
@@ -147,7 +147,10 @@ License: CECILL-C
     return () => obs.disconnect();
   });
 
-  let color = $derived(colorScale.value[1](entityId));
+  let color = $derived.by(() => {
+    void annotations.value;
+    return annotationColors.value.colorOfAnnotation(tracklet);
+  });
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let keyframeIndexes = $derived.by(() => {

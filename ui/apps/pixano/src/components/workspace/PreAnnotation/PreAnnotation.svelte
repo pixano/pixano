@@ -11,10 +11,11 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { UNLINKED_COLOR } from "$lib/coloring/colorByPalette";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
-    colorScale,
     preAnnotationIsActive,
   } from "$lib/stores/workspaceStores.svelte";
   import type { EntityProperties } from "$lib/types/workspace";
@@ -34,7 +35,11 @@ License: CECILL-C
     sortAndFilterAnnotations(annotationsToReview, confidenceFilterValue, currentFrameIndex.value),
   );
   let annotationToReview = $derived(filteredAnnotationsToReview[0]);
-  let color: string = $derived(colorScale.value[1](annotationToReview?.id || ""));
+  let color: string = $derived(
+    annotationToReview
+      ? annotationColors.value.colorOfAnnotation(annotationToReview)
+      : UNLINKED_COLOR,
+  );
 
   $effect(() => {
     const isActive = preAnnotationIsActive.value;

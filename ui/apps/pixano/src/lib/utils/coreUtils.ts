@@ -47,15 +47,6 @@ export function paletteColorAt(index: number): string {
   return defaultPalette[((index % size) + size) % size];
 }
 
-export function ordinalColorScale(range: Iterable<string>) {
-  const ids = [...range];
-  const colorById = new Map<string, string>();
-  ids.forEach((id, index) => {
-    colorById.set(id, defaultPalette[index % defaultPalette.length]);
-  });
-  return (id: string) => colorById.get(id) ?? defaultPalette[0];
-}
-
 export function isValidURL(urlString: string) {
   try {
     return Boolean(new URL(urlString));

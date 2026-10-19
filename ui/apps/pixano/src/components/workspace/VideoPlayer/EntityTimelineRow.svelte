@@ -11,8 +11,8 @@ License: CECILL-C
   import { shapeTopEntityId } from "$lib/stores/trackEditing";
   import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
-    colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
     entities,
@@ -84,7 +84,7 @@ License: CECILL-C
       ? (lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100
       : 100,
   );
-  let color = $derived(colorScale.value[1](entity.id));
+  let color = $derived(annotationColors.value.colorOfEntity(entity.id));
   let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
 
   let tracklets: Tracklet[] = $derived.by(() => {

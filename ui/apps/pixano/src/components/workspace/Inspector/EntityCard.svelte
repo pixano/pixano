@@ -36,8 +36,8 @@ License: CECILL-C
   import { isTracking } from "$lib/stores/trackingStore.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
-    colorScale,
     entities,
     highlightedEntity,
     itemMetas,
@@ -110,7 +110,7 @@ License: CECILL-C
   const { manifest } = getWorkspaceContext();
   let detailsTab = $state<"attributes" | "annotations">("attributes");
 
-  const color = $derived(colorScale.value[1](entity.id));
+  const color = $derived(annotationColors.value.colorOfEntity(entity.id));
   const entityDisplayControl = $derived.by(() => {
     void entities.value;
     return entity.ui.displayControl;
