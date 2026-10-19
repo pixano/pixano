@@ -8,7 +8,7 @@ import type { MutationGateway } from "./datasetGateway.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 import { sortMutations } from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
-import { ApiError } from "$lib/api/apiClient.js";
+import { ApiError, isRefusal } from "$lib/api/apiClient.js";
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
 /**
@@ -51,6 +51,15 @@ export class MutationQueue {
    * record's queue on failure nor reports its error there.
    */
   private generation = 0;
+
+  /**
+   * The creates on the wire that nothing wants any more — a draft deleted — each
+   * with the delete queued to undo what it makes once it lands. Should the
+   * server refuse the create, it made nothing: that delete is dropped. Should it
+   * fail any other way, it may have made it: the delete stays queued, and the
+   * create is not tried again.
+   */
+  private abandoned = new Map<ResourceMutation, ResourceMutation>();
 
   constructor(
     private gateway: MutationGateway,
@@ -139,11 +148,6 @@ export class MutationQueue {
   }
 
   /**
-   * Drop every queued mutation that references the given local annotation id.
-   * Used when an annotation is deleted locally before it has been persisted,
-   * so we don't POST-then-DELETE it for nothing.
-   */
-  /**
    * Forget an entity this annotation was going to be moved onto, because the
    * user then picked a different one.
    *
@@ -164,6 +168,19 @@ export class MutationQueue {
     );
   }
 
+  /**
+   * Drop every queued mutation that references the given local annotation id.
+   * Used when an annotation is deleted locally before it has been persisted,
+   * so we don't POST-then-DELETE it for nothing.
+   *
+   * What has already left cannot be called back. A draft's create on the wire:
+   * the row it makes is deleted once it lands. So dropping a draft while its
+   * create is on the wire never leaves it in the dataset — unless the queue is
+   * reset (Discard, another record) before that delete is sent. A create that
+   * failed without a refusal is back in the queue, and dropped here as any
+   * queued create: it may have stored its row before its answer was lost, and
+   * that row stays in the dataset.
+   */
   dropForLocalAnnotation(localAnnotationId: string): ResourceMutation[] {
     const dropped: ResourceMutation[] = [];
     this.pending = this.pending.filter((m) => {
@@ -173,6 +190,22 @@ export class MutationQueue {
       }
       return true;
     });
+    const sending = this.inFlight;
+    const sentId = sending?.op === "create" ? sending.body.id : undefined;
+    if (
+      sending?.localAnnotationId === localAnnotationId &&
+      sending.resource !== ENTITY_RESOURCE &&
+      typeof sentId === "string"
+    ) {
+      const compensation = this.append({
+        op: "delete",
+        resource: sending.resource,
+        id: sentId,
+        widgetId: sending.widgetId,
+        localAnnotationId,
+      });
+      this.abandoned.set(sending, compensation);
+    }
     return dropped;
   }
 
@@ -180,6 +213,7 @@ export class MutationQueue {
   reset(): void {
     this.pending = [];
     this.saveError = null;
+    this.abandoned.clear();
     this.generation++;
   }
 
@@ -272,8 +306,9 @@ export class MutationQueue {
   /**
    * Send one mutation. It leaves `pending` as its request leaves, so nothing
    * queued meanwhile can be written into it, and comes back at the head of the
-   * queue if the request fails — unless the queue was reset meanwhile: then
-   * there is nothing to retry.
+   * queue if the request fails — unless the queue was reset meanwhile, or
+   * nothing wants what it makes any more (`abandoned`): then there is nothing
+   * to retry.
    */
   private async send(
     datasetId: string,
@@ -295,6 +330,7 @@ export class MutationQueue {
 
   /** What a write that landed leaves to do. */
   private landed(mutation: ResourceMutation): void {
+    this.abandoned.delete(mutation);
     if (
       mutation.op === "create" &&
       mutation.resource !== ENTITY_RESOURCE &&
@@ -306,10 +342,29 @@ export class MutationQueue {
   }
 
   /**
-   * What a write that failed leaves to do; throws its error. It comes back at
-   * the head of the queue, unless the queue was reset meanwhile.
+   * What a write that failed leaves to do; throws its error, unless nothing is
+   * left of it to report.
+   *
+   * A refusal — a 4xx (`isRefusal`) — says the server stored nothing. Any other
+   * failure says nothing of the kind: it may have stored the write before the
+   * answer was lost.
+   *
+   * A create nothing wants any more (`abandoned`) is not tried again. Refused,
+   * it made nothing: the delete queued to undo it is dropped, and there is no
+   * failure to report. Otherwise that delete stays queued — answered "not
+   * found" if nothing was made — and the failure is reported.
+   *
+   * Any other write comes back at the head of the queue, unless the queue was
+   * reset meanwhile.
    */
   private failed(mutation: ResourceMutation, err: unknown, generation: number): void {
+    const compensation = this.abandoned.get(mutation);
+    if (compensation !== undefined) {
+      this.abandoned.delete(mutation);
+      if (!isRefusal(err)) throw err;
+      this.pending = this.pending.filter((m) => m !== compensation);
+      return;
+    }
     if (generation === this.generation) this.pending = [mutation, ...this.pending];
     throw err;
   }

@@ -17,6 +17,7 @@ import {
   openManager,
   openWithBoxes,
   REC,
+  refusal,
   serveLikeTheApi,
   STORED,
   updatesSent,
@@ -27,11 +28,15 @@ import {
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { commitNewAnnotation, reassignEntity } from "$lib/annotations/payloadBuilders.js";
+import { ApiError } from "$lib/api/apiClient.js";
 
 // What a save does with the work around it, run through the real workspace —
 // manager, mutation queue, record loader, commit helpers — over a recording
 // fake backend: work begun while a request is on the wire, and the entities a
 // save creates.
+
+/** A 5xx a proxy answers after the server stored the write: no refusal, so it may have been stored. */
+const GATEWAY_TIMEOUT = new ApiError("Gateway Timeout", 504, "");
 
 /** Where a first drag puts a box, before one to `MOVED`. */
 const DRAGGED_FIRST: BBoxGeometry = [0.2, 0.2, 0.2, 0.2];
@@ -96,6 +101,76 @@ describe("Work begun while a save is on the wire", () => {
     ]);
     expect(geometryOf(manager, draft.id)).toEqual(DRAGGED_LAST);
   });
+
+  it("a box deleted while its create is on the wire is deleted once it lands", async () => {
+    const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
+
+    manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+    release();
+
+    await saving;
+    await manager.flushSave();
+    expect(backend.writes.at(-1)).toEqual({ op: "delete", resource: BBOX_RESOURCE, id: draft.id });
+  });
+
+  it("a box deleted while its create is on the wire leaves nothing to send if the server refuses that create", async () => {
+    const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
+    const serve = backend.onWrite!;
+    // Refused for good, as an invalid body is: the server stored nothing.
+    backend.onWrite = (write) => {
+      if (write.op === "create" && write.resource === BBOX_RESOURCE) throw refusal("Invalid data");
+      serve(write);
+    };
+
+    manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+    release();
+    await saving;
+
+    // There is no row to create again, nor one to delete, nor a failure to report.
+    expect(manager.saveError).toBeNull();
+    expect(manager.pendingMutations).toEqual([]);
+    expect(backend.writes.filter((w) => w.resource === BBOX_RESOURCE)).toEqual([]);
+  });
+
+  it("a box deleted while its create is on the wire leaves no box behind if that create is lost on the way", async () => {
+    const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
+
+    manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+    // Nothing reached the server: the create may as well have, so its undoing stays.
+    backend.failWrites = new Error("network down");
+    release();
+    await saving;
+    expect(manager.saveError).toBe("network down");
+    backend.failWrites = undefined;
+
+    await manager.flushSave();
+    expect(manager.pendingCount).toBe(0);
+    expect(backend.records[REC][BBOX_RESOURCE]).toEqual([]);
+  });
+
+  it.each([
+    ["the connection reset", new Error("connection reset")],
+    ["a proxy's 5xx", GATEWAY_TIMEOUT],
+  ])(
+    "a box deleted while its create is on the wire leaves nothing behind if that create's answer is lost — %s",
+    async (_answer, lostAnswer) => {
+      const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
+
+      manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+      // The server stored the box; its answer never came back. A 5xx is no
+      // refusal: it says nothing of what was stored.
+      backend.loseAnswers = lostAnswer;
+      release();
+      await saving;
+      backend.loseAnswers = undefined;
+      expect(backend.records[REC][BBOX_RESOURCE].map((row) => row.id)).toEqual([draft.id]);
+
+      await manager.flushSave();
+      expect(backend.records[REC][BBOX_RESOURCE]).toEqual([]);
+      expect(backend.entities).toEqual([]);
+      expect(manager.annotations.find(draft.id)).toBeUndefined();
+    },
+  );
 
   /**
    * Box b1 dragged to `DRAGGED_FIRST` and saved, a drag to `MOVED` queued
