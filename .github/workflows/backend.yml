@@ -139,6 +139,9 @@ jobs:
   worker:
     name: Worker
     runs-on: ubuntu-latest
+    # The suite takes about a minute. A test that hangs used to hold the job for GitHub's six-hour
+    # limit; pytest dumps the stacks of a test stuck for two minutes (faulthandler_timeout).
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -175,7 +178,7 @@ jobs:
         # déploiement, fût-il local.
         env:
           PIXANO_TEST_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
-        run: uv run --directory packages/pixano-worker pytest
+        run: uv run --directory packages/pixano-worker pytest -v
 
   # Same steps as the Publish workflow, so that a packaging failure shows up on the pull
   # request instead of on release day.
