@@ -79,7 +79,7 @@ A chunk carries a `jsonb` payload the job kind interprets, not a fixed range of 
 
 What the version marker buys is that the failure is loud. `CREATE TABLE IF NOT EXISTS` creates a missing table but never alters an existing one, so a changed schema would otherwise leave a worker running against tables that are no longer its own, breaking later and far from the cause. Instead the worker compares the version recorded in the database with the one the code expects, and on a mismatch refuses to start with the command to run.
 
-**Any change to `schema.sql` must increment `SCHEMA_VERSION`.**
+**Any change to the DDL of `schema.sql` must increment `SCHEMA_VERSION`.** A change to its comments alone does not: it changes nothing in the database.
 
 When this database does hold something irreplaceable, a real runner is added by _baseline_: a first migration containing the schema as it then stands, marked already-applied on existing databases and executed on new ones. That retrofit is cheap, which is what makes deferring it safe.
 

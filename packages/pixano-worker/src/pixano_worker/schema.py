@@ -17,7 +17,8 @@ mais ne modifie jamais une table existante. Sans lui, un worker tournerait joyeu
 un schéma qui n'est plus le sien et échouerait plus tard, loin de la cause. Avec lui, il
 refuse de démarrer et dit quoi faire.
 
-**Toute modification de `sql/schema.sql` impose d'incrémenter `SCHEMA_VERSION`.**
+**Any change to the DDL of `sql/schema.sql` requires bumping `SCHEMA_VERSION`.** A change to its
+comments alone does not: it changes nothing in the database.
 """
 
 import logging
@@ -28,7 +29,7 @@ import psycopg
 
 logger = logging.getLogger("pixano-worker")
 
-# Incrémenter à chaque modification de sql/schema.sql.
+# Bump on every change to the DDL of sql/schema.sql, not on a change to its comments alone.
 SCHEMA_VERSION = 5
 
 SCHEMA_NAME = "pixano_jobs"

@@ -118,11 +118,12 @@ PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_
   uv run pytest tests/
 ```
 
-Changing `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means bumping
-`SCHEMA_VERSION` in the same commit. There is no migration engine on purpose: until the
-database holds something irreplaceable, wiping and recreating is the migration strategy, and
-the version marker is what turns a stale schema into a clear refusal at startup instead of a
-failure far from its cause. See [docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
+Any change to the DDL of `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means
+bumping `SCHEMA_VERSION` in the same commit; a change to its comments alone does not. There is
+no migration engine on purpose: until the database holds something irreplaceable, wiping and
+recreating is the migration strategy, and the version marker is what turns a stale schema into
+a clear refusal at startup instead of a failure far from its cause. See
+[docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
 
 For frontend development, start the dev server for the app you are working on:
 
