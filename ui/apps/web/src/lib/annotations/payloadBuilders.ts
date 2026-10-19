@@ -155,9 +155,8 @@ export function commitGeometryEdit<G>(ctx: CommitContext, annotationId: string, 
 
 /**
  * Delete mutation for a persisted annotation: just the annotation row. The
- * parent entity is pruned server-side when this was its last annotation (the
- * backend is the only place that sees every annotation referencing the
- * entity); the API delete opts in via `?prune_orphan_entity=true`. Kind-agnostic
+ * parent entity is pruned server-side when no stored row names it any more (the
+ * backend is the only place that sees every row referencing the entity); the API delete opts in via `?prune_orphan_entity=true`. Kind-agnostic
  * — only the resource name comes from the kind's builder.
  */
 export function buildDeleteMutations(
@@ -255,7 +254,7 @@ export interface ReassignEntityContext {
  * Kind-agnostic reassignment of an existing annotation's entity: point it at a
  * different entity (an existing one, or a freshly created one), then queue the
  * annotation update carrying the new `entity_id`. The previously attached
- * entity is pruned server-side when this leaves it with no annotations — the
+ * entity is pruned server-side when no stored row names it any more — the
  * update is sent with `?prune_orphan_entity=true` (see `updateAnnotation`).
  * Mirrors `commitDraftWithEntity` for the edit lifecycle.
  */
