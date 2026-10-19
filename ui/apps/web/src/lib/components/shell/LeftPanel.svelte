@@ -121,17 +121,27 @@ License: CECILL-C
 
   let hasMoreRecords = $derived(records.length < recordsTotal);
 
-  onMount(async () => {
-    loading = true;
+  /**
+   * Fetch the dataset list: on mount, and again each time the person comes back
+   * to it. The library changes behind an open page — a dataset imported from the
+   * command line, one removed and imported again under a new id — and the server
+   * reads it afresh on every request. Only the first fetch shows the spinner; a
+   * later one leaves the list on screen until the new one replaces it.
+   */
+  async function loadDatasets() {
+    const firstLoad = datasets.length === 0;
+    if (firstLoad) loading = true;
     error = null;
     try {
       datasets = await listDatasets();
     } catch (e) {
       error = e instanceof Error ? e.message : "Failed to load datasets";
     } finally {
-      loading = false;
+      if (firstLoad) loading = false;
     }
-  });
+  }
+
+  onMount(loadDatasets);
 
   async function openDataset(dataset: DatasetInfo) {
     selectedDataset = dataset;
@@ -179,6 +189,7 @@ License: CECILL-C
     recordsTotal = 0;
     selectedDataset = null;
     error = null;
+    void loadDatasets();
   }
 
   async function openRecord(recordId: string) {
