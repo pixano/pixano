@@ -10,23 +10,18 @@ License: CECILL-C
 
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { BBOX_STROKEWIDTH } from "./konvaConstants";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import type { MultiPath } from "$lib/types/dataset";
 
   interface Props {
     multiPath: MultiPath;
-    colorScale: (id: string) => string;
+    colorOf: AnnotationColorFn;
     imageWidth: number;
     imageHeight: number;
     forceNeutralColor?: boolean;
   }
 
-  let {
-    multiPath,
-    colorScale,
-    imageWidth,
-    imageHeight,
-    forceNeutralColor = false,
-  }: Props = $props();
+  let { multiPath, colorOf, imageWidth, imageHeight, forceNeutralColor = false }: Props = $props();
 
   let peekPresentation = $derived(
     resolveNeutralPeekPresentation({
@@ -38,11 +33,7 @@ License: CECILL-C
   let color = $derived.by(() => {
     if (forceNeutralColor || multiPath.ui.displayControl.highlighted === "none")
       return peekPresentation.neutralColor;
-    const entityId =
-      multiPath.ui.top_entities && multiPath.ui.top_entities.length > 0
-        ? multiPath.ui.top_entities[0].id
-        : multiPath.data.entity_id;
-    return colorScale(entityId);
+    return colorOf(multiPath);
   });
 
   let isClosed = $derived(multiPath.data.is_closed);

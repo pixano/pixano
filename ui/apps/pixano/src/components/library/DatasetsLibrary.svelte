@@ -14,7 +14,11 @@ License: CECILL-C
   import ImportWizard from "./import-wizard/ImportWizard.svelte";
   import { goto } from "$app/navigation";
   import { datasetFilter, datasetSortMode, datasetsStore } from "$lib/stores/appStores.svelte";
-  import { modelsUiStore, resetColorScale, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import {
+    modelsUiStore,
+    resetEntityColorOrder,
+    selectedTool,
+  } from "$lib/stores/workspaceStores.svelte";
   import type { DatasetInfo } from "$lib/ui";
   import { icons, Tabs } from "$lib/ui";
   import { sortDatasets } from "$lib/utils/datasetSort";
@@ -107,7 +111,7 @@ License: CECILL-C
 
   $effect(() => {
     untrack(() => {
-      resetColorScale();
+      resetEntityColorOrder();
       modelsUiStore.value = {
         currentModalOpen: "none",
         selectedModelName: "",

@@ -17,6 +17,7 @@ License: CECILL-C
   } from "./videoMaskSessionLifecycle";
   import { buildCurrentSequenceFrameLocatorsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
+  import { annotationEntityId, type AnnotationColorFn } from "$lib/coloring/colorResolver";
   import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
   import {
     createErrorSmartSegmentationUiState,
@@ -68,9 +69,9 @@ License: CECILL-C
     videoViewNames,
   } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
     brushSettings,
-    colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
@@ -752,8 +753,10 @@ License: CECILL-C
   ]);
 
   // Proposed tracks are not entities yet: their preview boxes get their own palette colours.
-  const canvasColorScale = $derived((id: string): string => {
-    return detectionTrackColorById.value.get(id) ?? colorScale.value[1](id);
+  const canvasColorOf = $derived.by((): AnnotationColorFn => {
+    const colorOfAnnotation = annotationColors.value.colorOfAnnotation;
+    const detectionColors = detectionTrackColorById.value;
+    return (target) => detectionColors.get(annotationEntityId(target)) ?? colorOfAnnotation(target);
   });
 
   // ─── Tracking: keyboard handler ───────────────────────────────────────────
@@ -936,7 +939,7 @@ License: CECILL-C
         confirmKeys={["t", "T"]}
         selectedItemId={selectedItem.item.id}
         imagesPerView={imagesPerView.value}
-        colorScale={canvasColorScale}
+        colorOf={canvasColorOf}
         bboxes={mergedBBoxes}
         masks={current_itemMasks.value}
         multiPaths={current_itemMultiPaths.value}

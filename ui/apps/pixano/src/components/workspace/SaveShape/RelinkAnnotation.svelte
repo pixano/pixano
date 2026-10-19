@@ -11,7 +11,12 @@ License: CECILL-C
   import { tick } from "svelte";
 
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { colorScale, entities, itemMetas, mediaViews } from "$lib/stores/workspaceStores.svelte";
+  import {
+    annotationColors,
+    entities,
+    itemMetas,
+    mediaViews,
+  } from "$lib/stores/workspaceStores.svelte";
   import {
     Annotation,
     BaseSchema,
@@ -165,7 +170,7 @@ License: CECILL-C
 
   // ── Visual identity helpers (all reused from EntityCard's proven patterns) ──
 
-  const entityColor = (id: string): string => colorScale.value[1](id);
+  const entityColor = (id: string): string => annotationColors.value.colorOfEntity(id);
 
   const shortId = (id: string): string => (id.length > 6 ? id.slice(-6) : id);
 

@@ -9,6 +9,7 @@ License: CECILL-C
 
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import KeyPoints from "./keypoints/Keypoint.svelte";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import type { Reference } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
   import type { KeypointAnnotation, KeypointVertex } from "$lib/types/shapeTypes";
@@ -18,7 +19,7 @@ License: CECILL-C
     keypoints?: KeypointAnnotation[];
     newShape: Shape;
     zoomFactor: number;
-    colorScale: (id: string) => string;
+    colorOf: AnnotationColorFn;
     viewRef: Reference;
     imageSize?: { width: number; height: number };
     isPlaybackActive?: boolean;
@@ -31,7 +32,7 @@ License: CECILL-C
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     newShape: _newShape,
     zoomFactor,
-    colorScale,
+    colorOf,
     viewRef,
     imageSize = { width: 1, height: 1 },
     isPlaybackActive = false,
@@ -69,10 +70,6 @@ License: CECILL-C
 {#if keypoints}
   {#each keypoints as keypointStructure}
     {#if !keypointStructure.ui?.displayControl.hidden && keypointStructure.viewRef?.name === viewRef.name}
-      {@const colorId =
-        (keypointStructure.ui?.top_entities ?? []).length > 0
-          ? (keypointStructure.ui?.top_entities ?? [])[0].id
-          : (keypointStructure.entityRef?.id ?? "")}
       {@const keypointPresentation = resolveNeutralPeekPresentation({
         isPeeking: forceNeutralColor,
         highlighted: keypointStructure.ui?.displayControl.highlighted,
@@ -81,7 +78,7 @@ License: CECILL-C
       {@const keypointColor =
         forceNeutralColor || keypointStructure.ui?.displayControl.highlighted === "none"
           ? keypointPresentation.neutralColor
-          : colorScale(colorId)}
+          : colorOf(keypointStructure)}
       {@const keypointOpacity = keypointPresentation.opacity}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}

@@ -21,8 +21,8 @@ License: CECILL-C
   } from "$lib/segmentation/smartInferenceStatus";
   import { selectedStaticSegmentationModel } from "$lib/stores/inferenceStores.svelte";
   import {
+    annotationColors,
     brushSettings,
-    colorScale,
     embeddings,
     filters,
     imageSmoothing,
@@ -315,7 +315,7 @@ License: CECILL-C
     <Canvas2D
       {imagesPerView}
       selectedItemId={selectedItem.item.id}
-      colorScale={colorScale.value[1]}
+      colorOf={annotationColors.value.colorOfAnnotation}
       bboxes={itemBboxes.value}
       masks={itemMasks.value}
       multiPaths={itemMultiPaths.value}

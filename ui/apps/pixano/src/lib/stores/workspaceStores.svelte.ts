@@ -6,6 +6,13 @@ License: CECILL-C
 
 import { untrack } from "svelte";
 
+import {
+  colorByCatalogue,
+  colorBySettings,
+  rememberColorByLearned,
+  resetColorBy,
+} from "./colorByStore.svelte";
+import { reactiveDerived } from "./reactiveStore.svelte";
 import { resetTrackingByDetectionSession } from "./trackingByDetectionStore.svelte";
 import { cancelTrackingSession } from "./trackingStore.svelte";
 import { resetVideoStores } from "./videoStores.svelte";
@@ -36,9 +43,15 @@ import {
   views,
   workspaceSaveQueue,
 } from "./workspaceBaseStores.svelte";
+import { paletteOf } from "$lib/coloring/colorBySettings";
+import {
+  buildColorResolver,
+  createEntityColorOrder,
+  resolveActiveMode,
+  type ColorResolver,
+} from "$lib/coloring/colorResolver";
 import { panTool } from "$lib/tools";
 import { clearAnnotationMappingCaches } from "$lib/utils/annotationMapping";
-import * as utils from "$lib/utils/coreUtils";
 
 export {
   annotations,
@@ -68,38 +81,45 @@ export {
   workspaceSaveQueue,
 };
 
-// --- Color scale (accumulative derived with $effect + untrack) ---
+// --- Annotation colors ---
 
-type ColorScale = [Array<string>, (id: string) => string];
+// Palette slots of top-level objects, kept across the records of a workspace session.
+let entityColorOrder = $state.raw(createEntityColorOrder());
+let lastColorResolver: ColorResolver | null = null;
 
-const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
-let _colorScale = $state<ColorScale>(initialColorScale);
+/**
+ * The one place that resolves the color of an object or an annotation, for the "Color by" mode
+ * of the open dataset. Annotations are read only when the mode depends on them, and the previous
+ * resolver is kept when no color changes, so display-only commits re-render nothing.
+ */
+export const annotationColors = reactiveDerived<ColorResolver>(() => {
+  const settings = colorBySettings.value;
+  const mode = resolveActiveMode(colorByCatalogue.value, settings);
+  const readsAnnotations = mode.kind === "attribute" && mode.attribute.scope === "annotation";
+  const resolver = buildColorResolver(
+    {
+      mode,
+      palette: mode.kind === "attribute" ? paletteOf(settings, mode.attribute.id) : undefined,
+      entities: entities.value,
+      annotations: readsAnnotations ? annotations.value : [],
+      entityOrder: entityColorOrder,
+    },
+    lastColorResolver,
+  );
+  lastColorResolver = resolver;
+  return resolver;
+});
 
+// Remember the categories and the range met, so a value keeps its color on the next records.
 $effect.root(() => {
   $effect(() => {
-    const ents = entities.value;
-    const old = untrack(() => _colorScale);
-    let allIds = ents.filter((ent) => ent.data.parent_id === "").map((obj) => obj.id);
-    if (old) {
-      allIds = [...old[0], ...allIds];
-      allIds = [...new Set(allIds)];
-    }
-    // Guard: skip write if IDs unchanged
-    if (old && old[0].length === allIds.length && old[0].every((id, i) => allIds[i] === id)) {
-      return;
-    }
-    _colorScale = [allIds, utils.ordinalColorScale(allIds)];
+    const pending = annotationColors.value.pendingLearned;
+    if (pending) untrack(() => rememberColorByLearned(pending));
   });
 });
 
-export const colorScale = {
-  get value() {
-    return _colorScale;
-  },
-};
-
-export function resetColorScale() {
-  _colorScale = initialColorScale;
+export function resetEntityColorOrder() {
+  entityColorOrder = createEntityColorOrder();
 }
 
 export function resetWorkspaceStores() {
@@ -146,7 +166,8 @@ export function resetWorkspaceStores() {
   clearTrackEditing();
   cancelTrackingSession();
   resetTrackingByDetectionSession();
-  resetColorScale();
+  resetEntityColorOrder();
+  resetColorBy();
   clearAnnotationMappingCaches();
 }
 

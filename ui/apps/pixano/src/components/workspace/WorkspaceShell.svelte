@@ -15,6 +15,7 @@ License: CECILL-C
   import LoadModelModal from "./LoadModelModal.svelte";
   import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
+  import { configureColorBy } from "$lib/stores/colorByStore.svelte";
   import { playbackState } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
@@ -115,9 +116,7 @@ License: CECILL-C
       playbackState.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
     }
 
-    // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
-
     annotations.value = result.annotations;
 
     itemMetas.value = {
@@ -141,6 +140,8 @@ License: CECILL-C
       if (currentShape?.status !== "none") {
         newShape.value = { ...currentShape, status: "none" };
       }
+      // Colors first, so the record's shapes are drawn once, in the dataset's color mode.
+      configureColorBy(workspaceData.ui.datasetId, workspaceManifest);
       loadData();
     });
   });

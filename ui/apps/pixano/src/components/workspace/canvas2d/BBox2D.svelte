@@ -12,12 +12,13 @@ License: CECILL-C
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import LabelTag from "./LabelTag.svelte";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
   interface Props {
     bbox: BBox;
-    colorScale: (id: string) => string;
+    colorOf: AnnotationColorFn;
     zoomFactor: number;
     listening: boolean;
     imageWidth?: number;
@@ -35,7 +36,7 @@ License: CECILL-C
 
   let {
     bbox,
-    colorScale,
+    colorOf,
     zoomFactor,
     listening,
     imageWidth = 0,
@@ -70,11 +71,7 @@ License: CECILL-C
   let color = $derived.by(() => {
     if (forceNeutralColor || bbox.ui.displayControl.highlighted === "none")
       return peekPresentation.neutralColor;
-    return colorScale(
-      (bbox.ui.top_entities ?? []).length > 0
-        ? (bbox.ui.top_entities ?? [])[0].id
-        : bbox.data.entity_id,
-    );
+    return colorOf(bbox);
   });
   let opacity = $derived(peekPresentation.opacity);
 

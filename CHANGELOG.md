@@ -50,6 +50,9 @@
 - The timeline's track menu (right-click a track) opens again. Split cuts right
   after the current frame and keeps every box, and Split and Glue save the
   keyframes they move, which used to return to the old track on reload.
+- The masks, polygons, keypoints and text spans of a sub-entity, its timeline
+  row and the pre-annotation review icon take the color of their object instead
+  of pink.
 
 ## 0.8.0 (2026-09-23)
 

@@ -56,6 +56,7 @@ License: CECILL-C
   import ShowKeypoints from "./ShowKeypoint.svelte";
   import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import { ViewRefManager } from "./viewRefs";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import { createIdleSmartSegmentationUiState } from "$lib/segmentation/smartInferenceStatus";
   import {
     currentSegmentationModels,
@@ -151,7 +152,7 @@ License: CECILL-C
     selectedTool: SelectionTool;
     newShape: Shape;
     imagesPerView: LoadedImagesPerView;
-    colorScale: (value: string) => string;
+    colorOf: AnnotationColorFn;
     enableRenderCache?: boolean;
     imageSmoothing?: boolean;
     isPlaybackActive?: boolean;
@@ -190,7 +191,7 @@ License: CECILL-C
     selectedTool,
     newShape,
     imagesPerView,
-    colorScale,
+    colorOf,
     enableRenderCache = true,
     imageSmoothing = true,
     isPlaybackActive = false,
@@ -2040,7 +2041,7 @@ License: CECILL-C
             {#if !bbox.ui.displayControl.editing}
               <BBox2D
                 {bbox}
-                {colorScale}
+                {colorOf}
                 zoomFactor={zoomFactor[view_name] ?? 1}
                 listening={false}
                 imageWidth={currentImage?.width ?? 0}
@@ -2062,7 +2063,7 @@ License: CECILL-C
               {currentImage}
               masks={visibleMasks}
               previewMask={getPreviewMaskForView(view_name)}
-              {colorScale}
+              {colorOf}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
               {selectedItemId}
@@ -2078,7 +2079,7 @@ License: CECILL-C
             {#if !multiPath.ui.displayControl.hidden}
               <MultiPathShape
                 {multiPath}
-                {colorScale}
+                {colorOf}
                 imageWidth={currentImage?.width ?? 0}
                 imageHeight={currentImage?.height ?? 0}
                 forceNeutralColor={isPeeking}
@@ -2092,7 +2093,7 @@ License: CECILL-C
           {#if visibleKeypoints.length > 0}
             <Group listening={false}>
               <ShowKeypoints
-                {colorScale}
+                {colorOf}
                 {viewRef}
                 keypoints={visibleKeypoints}
                 zoomFactor={zoomFactor[view_name] ?? 1}
@@ -2297,7 +2298,7 @@ License: CECILL-C
               {#if bbox.ui.displayControl.editing}
                 <BBox2D
                   {bbox}
-                  {colorScale}
+                  {colorOf}
                   zoomFactor={zoomFactor[view_name] ?? 1}
                   listening={true}
                   imageWidth={currentImage?.width ?? 0}
@@ -2327,7 +2328,7 @@ License: CECILL-C
 
           {#if !shouldHideShapes}
             <ShowKeypoints
-              {colorScale}
+              {colorOf}
               {viewRef}
               keypoints={(keypointsByView[view_name] ?? []).filter(
                 (kpt) => kpt.ui?.displayControl.editing,

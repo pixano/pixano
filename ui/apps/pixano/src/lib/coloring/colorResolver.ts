@@ -97,7 +97,8 @@ export type ColorTarget = {
   readonly id: string;
   readonly data?: { readonly entity_id?: unknown };
   readonly entityRef?: { readonly id: string };
-  readonly ui?: { readonly startRef?: { readonly id: string } };
+  /** An interpolated ghost carries the keyframe it was interpolated from as `ui.startRef`. */
+  readonly ui?: object;
 };
 
 export type AnnotationColorFn = (target: ColorTarget) => string;
@@ -192,6 +193,12 @@ const TEMPORARY_SPAN_TABLE = "not_a_table";
 const UNDRAWN_TABLES = new Set([PREVIEW_TABLE_NAME, TEMPORARY_SPAN_TABLE]);
 const EMPTY_COLORS: ReadonlyMap<string, string> = new Map();
 const TRACKLET_BASE_SCHEMA: string = BaseSchema.Tracklet;
+
+/** The stored row a target is drawn for: the start keyframe of a ghost, else the target itself. */
+function storedRowId(target: ColorTarget): string {
+  const startRef = (target.ui as { startRef?: { id?: unknown } } | undefined)?.startRef;
+  return typeof startRef?.id === "string" ? startRef.id : target.id;
+}
 
 /** The object an annotation, a display copy or a keypoints shape belongs to. */
 export function annotationEntityId(target: ColorTarget): string {
@@ -561,8 +568,7 @@ export function buildColorResolver(
   const colorOfEntity = (entityId: string): string =>
     state.entityColor.get(state.topIdOf.get(entityId) ?? entityId) ?? UNLINKED_COLOR;
   const colorOfAnnotation: AnnotationColorFn = (target) =>
-    state.annotationColor.get(target.ui?.startRef?.id ?? target.id) ??
-    colorOfEntity(annotationEntityId(target));
+    state.annotationColor.get(storedRowId(target)) ?? colorOfEntity(annotationEntityId(target));
 
   const resolver: ColorResolver = {
     mode,
