@@ -67,6 +67,12 @@ export class RecordLoader {
    * edit would throw away the user's arrangement and tool state along with it.
    */
   private currentViews: Map<string, ViewInfo> = new Map();
+  /**
+   * The record `currentViews` were read for. From the start of a load until
+   * its views are read, the session already names the new record while the
+   * views are still the previous one's.
+   */
+  private viewsRecord: { datasetId: string; recordId: string } | null = null;
 
   constructor(deps: RecordLoaderDeps) {
     this.workspace = deps.workspace;
@@ -85,11 +91,16 @@ export class RecordLoader {
    * Narrower than a full `load()` on purpose: the widgets, their arrangement
    * and their active tools are untouched, so undoing an edit does not feel like
    * reopening the record.
+   *
+   * Nothing is read while the record is still loading: its rows would be
+   * placed against the previous record's views, which places none of them.
    */
   async reloadAnnotations(): Promise<void> {
     const datasetId = this.session.datasetId;
     const recordId = this.session.recordId;
     if (!datasetId || !recordId) return;
+    const views = this.viewsRecord;
+    if (views?.datasetId !== datasetId || views.recordId !== recordId) return;
     // Observe (don't bump) the load token, as `reloadEntities` does: a record
     // switch mid-fetch must win over our stale result.
     const token = this.loadToken;
@@ -235,7 +246,11 @@ export class RecordLoader {
       entitiesById,
       views,
     };
+    // A newer load() was started while the views were resolving: the views it
+    // reads are the ones a reload must use, not ours.
+    if (token !== this.loadToken) return;
     this.currentViews = views;
+    this.viewsRecord = { datasetId, recordId };
     const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
 
     // A newer load() was started while annotations were fetching.
