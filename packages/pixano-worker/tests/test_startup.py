@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Tests de l'enchaînement de démarrage du worker."""
+"""Tests of the worker's startup sequence."""
 
 import pytest
 from pixano_worker import __main__ as entrypoint
@@ -22,7 +22,7 @@ ENV = {
 
 @pytest.fixture
 def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
-    """Remplacer chaque étape de démarrage par une trace, et couper la boucle."""
+    """Replace each startup step with a trace, and cut the loop short."""
     for name, value in ENV.items():
         monkeypatch.setenv(name, value)
     monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", str(tmp_path / "battement"))
@@ -35,7 +35,7 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
     monkeypatch.setattr(entrypoint, "default_registry", _FakeRegistry)
 
     async def _stop(*_args: object) -> None:
-        order.append("boucle")
+        order.append("loop")
         raise KeyboardInterrupt
 
     monkeypatch.setattr(entrypoint, "serve", _stop)
@@ -43,10 +43,10 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
 
 
 class _FakeRegistry:
-    """Un registre qui ne déclare rien, pour isoler l'ordre de démarrage."""
+    """A registry that declares nothing, to isolate the startup order."""
 
     def __init__(self, *_args: object, **_kwargs: object) -> None:
-        """Le registre reçoit l'adresse de l'inference, qu'un faux ignore."""
+        """The registry receives the inference address, which a fake ignores."""
 
     def declare(self, *_args: object) -> int:
         return 0
@@ -71,12 +71,12 @@ class _FakePsycopg:
 
 
 def test_the_schema_is_checked_between_the_two_waits(steps: list[str]) -> None:
-    """Un schéma incompatible est fatal : l'opérateur doit l'apprendre tout de suite, pas
-    après une longue attente d'un serveur d'inférence dont ce worker ne se servira pas."""
+    """An incompatible schema is fatal: the operator must learn it right away, not after a
+    long wait for an inference server this worker will not use."""
     with pytest.raises(KeyboardInterrupt):
         entrypoint.main()
 
-    assert steps == ["database", "schema", "inference", "boucle"]
+    assert steps == ["database", "schema", "inference", "loop"]
 
 
 def test_an_incompatible_schema_stops_the_worker(steps: list[str], monkeypatch: pytest.MonkeyPatch) -> None:
@@ -90,10 +90,10 @@ def test_an_incompatible_schema_stops_the_worker(steps: list[str], monkeypatch: 
 
 
 def test_a_database_failure_stops_the_worker(steps: list[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Une base injoignable au moment de la DDL n'est pas une raison de continuer."""
+    """A database unreachable at the time of the DDL is no reason to carry on."""
 
     def fail(_conn: object) -> None:
-        raise entrypoint.psycopg.Error("permission refusée")
+        raise entrypoint.psycopg.Error("permission denied")
 
     monkeypatch.setattr(entrypoint, "ensure_schema", fail)
 
@@ -102,7 +102,7 @@ def test_a_database_failure_stops_the_worker(steps: list[str], monkeypatch: pyte
 
 
 def test_the_worker_exits_without_waiting_for_its_threads(steps: list[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Une sortie normale attendrait des threads qui ne reviennent pas : le worker ne quitterait jamais."""
+    """A normal exit would wait for threads that never return: the worker would never quit."""
 
     async def stopped(*_args: object) -> int:
         return 0
@@ -117,7 +117,7 @@ def test_the_worker_exits_without_waiting_for_its_threads(steps: list[str], monk
 
 
 def test_a_worker_that_gave_up_exits_in_error(steps: list[str], monkeypatch: pytest.MonkeyPatch) -> None:
-    """Le code de sortie est ce que la politique de redémarrage voit : un défaut persistant sort en 1."""
+    """The exit code is what the restart policy sees: a persistent failure exits with 1."""
 
     async def gave_up(*_args: object) -> int:
         return 1
