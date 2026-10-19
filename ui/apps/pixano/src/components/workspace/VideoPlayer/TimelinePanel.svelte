@@ -28,6 +28,7 @@ License: CECILL-C
   import TimelineRuler from "./TimelineRuler.svelte";
   import TimelineTrackMenu from "./TimelineTrackMenu.svelte";
   import TrackingTimelineRow from "./TrackingTimelineRow.svelte";
+  import { activeTrackingTimelineState } from "$lib/stores/activeTrackingTimeline.svelte";
   import {
     effectiveActiveCamera,
     effectiveTimelineViewFilter,
@@ -51,7 +52,6 @@ License: CECILL-C
     detectionTimelineLanes,
     selectDetectionTrack,
   } from "$lib/stores/trackingByDetectionStore.svelte";
-  import { activeTrackingTimelineState } from "$lib/stores/trackingStore.svelte";
   import {
     currentFrameIndex,
     currentItemId,

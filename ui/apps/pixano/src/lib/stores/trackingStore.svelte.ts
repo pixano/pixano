@@ -7,10 +7,7 @@ License: CECILL-C
 import type { MaskSegmentationOutput } from "$components/inference/segmentation/inference";
 
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
-import {
-  resetTrackingByDetectionSession,
-  trackingByDetectionTimelineState,
-} from "./trackingByDetectionStore.svelte";
+import { resetTrackingByDetectionSession } from "./trackingByDetectionStore.svelte";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   beginVosPendingIntervalState,
@@ -461,10 +458,4 @@ export const vosTimelineState = reactiveDerived<TrackingTimelineState | null>(()
     pendingMarkerIndex: pending?.endFrame ?? null,
     pendingInterval: pending ? [pending.startFrame, pending.endFrame] : null,
   };
-});
-
-export const activeTrackingTimelineState = reactiveDerived<TrackingTimelineState | null>(() => {
-  return (
-    trackingTimelineState.value ?? vosTimelineState.value ?? trackingByDetectionTimelineState.value
-  );
 });
