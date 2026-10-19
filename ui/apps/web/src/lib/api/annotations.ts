@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { JSON_HEADERS, requestJson } from "./apiClient";
+import { apiErrorFrom, JSON_HEADERS, requestJson } from "./apiClient";
 
 /**
  * Minimal POST/PUT/DELETE wrappers for the REST resources used by 2D box
@@ -16,6 +16,9 @@ function resourceUrl(datasetId: string, resource: string, id?: string): string {
   const base = `/datasets/${datasetId}/${resource}`;
   return id ? `${base}/${encodeURIComponent(id)}` : base;
 }
+
+/** The status a delete of what is not there is answered with: nothing is left to delete. */
+const HTTP_NOT_FOUND = 404;
 
 /**
  * Minimal shape of a BBox row as returned by `GET /datasets/:id/bboxes`.
@@ -148,10 +151,16 @@ export function createEntity(
   );
 }
 
+/**
+ * Delete an entity. One that is not there (a 404) counts as deleted.
+ *
+ * @throws ApiError On any other failure, with its status: a refusal (4xx)
+ *   deleted nothing.
+ */
 export async function deleteEntity(datasetId: string, id: string): Promise<void> {
   const res = await fetch(resourceUrl(datasetId, "entities", id), { method: "DELETE" });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`deleteEntity failed with ${res.status} ${res.statusText}`);
+  if (!res.ok && res.status !== HTTP_NOT_FOUND) {
+    throw await apiErrorFrom(res, "deleteEntity");
   }
 }
 
@@ -185,6 +194,12 @@ export function updateAnnotation(
   );
 }
 
+/**
+ * Delete an annotation row. One that is not there (a 404) counts as deleted.
+ *
+ * @throws ApiError On any other failure, with its status: a refusal (4xx), such
+ *   as the 409 of a dataset another writer holds, deleted nothing.
+ */
 export async function deleteAnnotation(
   datasetId: string,
   resource: string,
@@ -194,7 +209,7 @@ export async function deleteAnnotation(
   // it any more — the server is the only place that sees every reference.
   const url = `${resourceUrl(datasetId, resource, id)}?prune_orphan_entity=true`;
   const res = await fetch(url, { method: "DELETE" });
-  if (!res.ok && res.status !== 404) {
-    throw new Error(`deleteAnnotation(${resource}) failed with ${res.status} ${res.statusText}`);
+  if (!res.ok && res.status !== HTTP_NOT_FOUND) {
+    throw await apiErrorFrom(res, `deleteAnnotation(${resource})`);
   }
 }
