@@ -16,24 +16,20 @@ License: CECILL-C
   import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { configureColorBy } from "$lib/stores/colorByStore.svelte";
-  import { DEFAULT_VIDEO_SPEED_MS, playbackState, videoFps } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     canSave,
-    clearTrackEditing,
     entities,
-    itemMetas,
     modelsUiStore,
     newShape,
     resetWorkspaceStores,
     saveData,
-    views,
     workspaceSaveQueue,
   } from "$lib/stores/workspaceStores.svelte";
   import type { WorkspaceData } from "$lib/types/workspace";
   import { effectProbe, type FeaturesValues } from "$lib/ui";
   import { loadViewEmbeddings } from "$lib/utils/embeddingOperations";
-  import { buildWorkspaceRuntimeData } from "$lib/utils/itemDataProcessing";
+  import { commitLoadedWorkspace } from "$lib/utils/workspaceRuntimeMutations";
   import { setWorkspaceContext } from "$lib/workspace/context";
   import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
@@ -103,30 +99,9 @@ License: CECILL-C
   // --- Data loading ---
 
   const loadData = () => {
-    // Another item: nothing of the previous one stays in edit mode.
-    clearTrackEditing();
-    workspaceSaveQueue.reset();
     isSaving = false;
     saveErrorMessage = "";
-    views.value = workspaceData.views;
-
-    const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
-
-    // A record without frame timestamps plays at the default rate, not at the last one's.
-    playbackState.update((old) => ({
-      ...old,
-      videoSpeed: result.videoSpeed ?? DEFAULT_VIDEO_SPEED_MS,
-    }));
-    videoFps.value = result.videoFps ?? null;
-
-    entities.value = result.entities;
-    annotations.value = result.annotations;
-
-    itemMetas.value = {
-      featuresList: featureValues || { main: {}, objects: {} },
-      item: workspaceData.item,
-      type: workspaceData.ui.type,
-    };
+    commitLoadedWorkspace(workspaceData, featureValues);
   };
 
   // --- Item change detection ---
