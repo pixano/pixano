@@ -56,23 +56,89 @@ function job(overrides: Partial<Job> = {}): Job {
   };
 }
 
-async function startedStore(): Promise<{
-  store: (typeof import("../jobs.svelte"))["jobsStore"];
-  stream: FakeStream;
-}> {
+type Store = (typeof import("../jobs.svelte"))["jobsStore"];
+
+/** A store of its own, in a browser that has EventSource, and the stream it would open. */
+async function freshStore(): Promise<{ store: Store; stream: FakeStream }> {
   vi.resetModules();
   const stream = new FakeStream();
   api.openJobStream.mockReturnValue(stream);
   vi.stubGlobal("EventSource", FakeStream);
   const { jobsStore } = await import("../jobs.svelte");
-  await jobsStore.start();
   return { store: jobsStore, stream };
 }
+
+async function startedStore(): Promise<{ store: Store; stream: FakeStream }> {
+  const started = await freshStore();
+  await started.store.start();
+  return started;
+}
+
+/** A kind the worker runs; what it does is beside the point here. */
+const EMBEDDINGS_KIND = { name: "embeddings", params_schema: { type: "object", properties: {} } };
 
 beforeEach(() => {
   api.listJobs.mockReset().mockResolvedValue([job()]);
   api.listJobKinds.mockReset().mockResolvedValue([]);
   api.openJobStream.mockReset();
+});
+
+describe("jobsStore closed while its lists load", () => {
+  it("opens no stream once stopped before the lists arrive", async () => {
+    // Escape right after opening the panel: stop() runs while start() still awaits.
+    let finishListing: (jobs: Job[]) => void = () => {};
+    api.listJobs.mockReturnValue(new Promise<Job[]>((resolve) => (finishListing = resolve)));
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+    const { store } = await freshStore();
+
+    const starting = store.start();
+    store.stop();
+    finishListing([job()]);
+    await starting;
+
+    expect(api.openJobStream).not.toHaveBeenCalled();
+    expect(store.live).toBe(false);
+  });
+
+  it("follows for the panel opened again before the first lists arrived", async () => {
+    // Closing a panel must not stop the next one from following. The first start, landing
+    // last, leaves the following to the second: no second stream.
+    let finishFirstListing: (jobs: Job[]) => void = () => {};
+    api.listJobs.mockReturnValueOnce(
+      new Promise<Job[]>((resolve) => (finishFirstListing = resolve)),
+    );
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+    const { store, stream } = await freshStore();
+
+    const closed = store.start();
+    store.stop();
+    await store.start();
+    finishFirstListing([job()]);
+    await closed;
+    stream.onopen?.();
+
+    expect(api.openJobStream).toHaveBeenCalledTimes(1);
+    expect(store.live).toBe(true);
+  });
+  it("keeps the lists of the panel opened again when the first answer lands last", async () => {
+    // Open, Escape, open again, and the first panel's lists are the slowest: they must not
+    // replace the newer ones the second opening already shows.
+    let finishFirstListing: (jobs: Job[]) => void = () => {};
+    api.listJobs
+      .mockReturnValueOnce(new Promise<Job[]>((resolve) => (finishFirstListing = resolve)))
+      .mockResolvedValueOnce([job({ id: "newer" })]);
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+    const { store } = await freshStore();
+
+    const closed = store.start();
+    store.stop();
+    await store.start();
+    finishFirstListing([job({ id: "older" })]);
+    await closed;
+
+    expect(store.jobs.map((listed) => listed.id)).toEqual(["newer"]);
+    expect(store.loading).toBe(false);
+  });
 });
 
 describe("jobsStore after a stream outage", () => {

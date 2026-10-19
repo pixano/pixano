@@ -42,25 +42,42 @@ class JobsStore {
   #missedEvents = false;
   /** The reload in progress, shared by everyone who asks for one meanwhile. */
   #refreshing: Promise<void> | null = null;
+  /**
+   * The `start()` a panel is still open for: set as it begins, cleared by `stop()`. A panel
+   * closed while its lists loaded — Escape right after opening — has already called `stop()`,
+   * which found no stream to close. Without this, the lists landing after it would open a stream
+   * for a panel that is gone, holding one of the few connections a browser allows per host.
+   */
+  #opening: symbol | null = null;
 
-  /** Load the list and the runnable kinds, then follow along. */
+  /** Load the list and the runnable kinds, then follow along — unless stopped meanwhile. */
   async start(): Promise<void> {
+    const opening = Symbol("jobs panel opening");
+    this.#opening = opening;
     this.loading = true;
     try {
       const [jobs, kinds] = await Promise.all([listJobs(), listJobKinds()]);
+      // A start superseded meanwhile leaves the lists to the one that replaced it: its own
+      // answers, landing last, would put back lists older than that one's.
+      if (this.#opening !== opening && this.#opening !== null) return;
       this.jobs = jobs;
       this.kinds = kinds;
       this.error = null;
     } catch (cause) {
+      if (this.#opening !== opening && this.#opening !== null) return;
       this.error = describe(cause);
     } finally {
-      this.loading = false;
+      // The start that replaced this one owns the spinner until its own lists land.
+      if (this.#opening === opening || this.#opening === null) this.loading = false;
     }
+    // Stopped while the lists loaded, or superseded by a later start that follows in its place.
+    if (this.#opening !== opening) return;
     this.#follow();
   }
 
-  /** Stop following. Safe to call twice. */
+  /** Stop following, including a `start()` still loading. Safe to call twice. */
   stop(): void {
+    this.#opening = null;
     this.#stream?.close();
     this.#stream = null;
     this.live = false;
@@ -110,7 +127,7 @@ class JobsStore {
     stream.onopen = () => {
       this.live = true;
       // A job that finished during the outage would otherwise read "running" until the panel is
-      // reopened: the global stream has no catch-up. Found in the step 1 code review.
+      // reopened: the global stream has no catch-up.
       if (this.#missedEvents) {
         this.#missedEvents = false;
         void this.refresh();
