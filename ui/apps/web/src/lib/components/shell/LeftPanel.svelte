@@ -199,12 +199,11 @@ License: CECILL-C
 
   async function openRecord(recordId: string) {
     if (!selectedDataset) return;
-    manager.clearWorkspace();
     // Measure the grid viewport from this component (which lives next to
     // GridWorkspace in the page) and pass it explicitly. Keeping the DOM
     // read here lets the manager stay environment-agnostic and unit-testable.
     const viewport = measureGridViewport();
-    await manager.selectRecordInDataset(selectedDataset.id, recordId, viewport);
+    await manager.openRecord(selectedDataset.id, recordId, viewport);
   }
 </script>
 

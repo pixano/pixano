@@ -319,6 +319,16 @@ export class WorkspaceManager {
 
   // ─── Record loader forwarder ──────────────────────────────────────────────
 
+  /**
+   * Replace the open record with another one, or open it again: the widgets,
+   * the unsaved changes and the arrangement of the previous record go, the new
+   * record's come. The way the record list switches records.
+   */
+  openRecord(datasetId: string, recordId: string, viewport?: Viewport): Promise<void> {
+    this.clearWorkspace();
+    return this.selectRecordInDataset(datasetId, recordId, viewport);
+  }
+
   /** Load a record's widgets via the registered extensions' `addRecordSeed` hooks. */
   selectRecordInDataset(datasetId: string, recordId: string, viewport?: Viewport): Promise<void> {
     // A box drawn on the previous record must not carry over to the next one.
