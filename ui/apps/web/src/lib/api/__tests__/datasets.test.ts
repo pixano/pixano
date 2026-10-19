@@ -86,20 +86,18 @@ describe("listDatasets", () => {
     expect(result).toEqual([]);
   });
 
-  it("returns empty array (fallback) on HTTP error", async () => {
+  // A failure must not read as an empty library: the Explorer would replace the list on
+  // screen with "No datasets found.".
+  it("throws ApiError on HTTP error, rather than answering an empty list", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(errorResponse(500, "Internal Server Error", "crash"));
 
-    const result = await listDatasets();
-
-    expect(result).toEqual([]);
+    await expect(listDatasets()).rejects.toMatchObject({ name: "ApiError", status: 500 });
   });
 
-  it("returns empty array (fallback) on network error", async () => {
+  it("rejects on network error, rather than answering an empty list", async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error("Network failure"));
 
-    const result = await listDatasets();
-
-    expect(result).toEqual([]);
+    await expect(listDatasets()).rejects.toThrow("Network failure");
   });
 
   it("calls /datasets endpoint", async () => {
