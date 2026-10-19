@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
+import { toRawAnnotation } from "$lib/api/adapters";
 import {
   collectFrameAnnotations,
   getBBoxInterpolationIdentity,
@@ -16,13 +17,16 @@ import {
   Entity,
   Image,
   Item,
+  Mask,
   SequenceFrame,
   Tracklet,
   WorkspaceType,
 } from "$lib/types/dataset";
 import { ToolType } from "$lib/types/tools";
 import type { WorkspaceData } from "$lib/types/workspace";
+import { createTypedAnnotation } from "$lib/utils/domainFactories";
 import { boxLinearInterpolation } from "$lib/utils/interpolation";
+import type { MaskBounds } from "$lib/utils/maskUtils";
 
 const NOW = "2026-03-31T00:00:00+00:00";
 
@@ -72,7 +76,13 @@ function makeItem(id = "item-1"): Item {
   });
 }
 
-function makeImage(viewName = "camera"): Image {
+const DEFAULT_IMAGE_SIDE = 100;
+
+function makeImage(
+  viewName = "camera",
+  width = DEFAULT_IMAGE_SIDE,
+  height = DEFAULT_IMAGE_SIDE,
+): Image {
   return new Image({
     id: `${viewName}-image`,
     table_info: {
@@ -87,8 +97,8 @@ function makeImage(viewName = "camera"): Image {
       parent_id: "",
       view_name: viewName,
       url: "",
-      width: 100,
-      height: 100,
+      width,
+      height,
       format: "png",
     },
   });
@@ -360,4 +370,96 @@ describe("workspaceRuntime", () => {
     expect(normalizedOrphanBBox?.ui.top_entities).toEqual([]);
     expect(normalizedOrphanBBox?.data.tracklet_id).toBe("");
   });
+});
+
+/**
+ * Masks as the backend stores them: encoded by pycocotools
+ * (`CompressedRLE.from_mask`), `counts` served as a utf-8 string, on an image
+ * wider than tall. Produced by:
+ *
+ *   import numpy as np
+ *   from pycocotools import mask as mask_api
+ *   from pixano.features import CompressedRLE
+ *
+ *   triangle = np.zeros((24, 40), dtype=np.uint8)
+ *   for c in range(9, 29):
+ *       triangle[5 : 5 + (c - 9) // 2 + 1, c] = 1
+ *   corner = np.zeros((24, 40), dtype=np.uint8)
+ *   corner[0:7, 0:12] = 1
+ *
+ *   for m in (triangle, corner):
+ *       rle = CompressedRLE.from_mask(m).model_dump()
+ *       raw = mask_api.encode(np.asfortranarray(m))
+ *       print(rle["counts"], mask_api.toBbox(raw), mask_api.area(raw))
+ *
+ * `bounds` and `area` are pycocotools' own reading (`toBbox`, `area`), so they
+ * are the expected values, not a second decode of ours.
+ */
+interface PycocotoolsMask {
+  counts: string;
+  bounds: MaskBounds;
+  area: number;
+}
+
+/** `[height, width]` of the image the masks were segmented on. */
+const SEGMENTED_IMAGE_SIZE: [number, number] = [24, 40];
+
+/** A triangle: run lengths that change from column to column, negative differences encoded. */
+const TRIANGLE: PycocotoolsMask = {
+  counts: "m61g0001O001O001O001O001O001O001O001O001O0S8",
+  bounds: { x: 9, y: 5, width: 20, height: 10 },
+  area: 110,
+};
+
+/** An object cut by the image's top-left corner: its counts start with an empty run, a `0`. */
+const CORNER: PycocotoolsMask = {
+  counts: "07a0000000000000000000000Pe0",
+  bounds: { x: 0, y: 0, width: 12, height: 7 },
+  area: 84,
+};
+
+/** How many pixels a run-length list paints: every second run, from the second. */
+function paintedArea(runs: number[]): number {
+  return runs.reduce((sum, run, index) => (index % 2 === 1 ? sum + run : sum), 0);
+}
+
+describe("workspaceRuntime, a mask the backend stored", () => {
+  it.each([
+    ["inside the image", TRIANGLE],
+    ["cut by the image's top-left corner", CORNER],
+  ])(
+    "finds pycocotools' paint on a non-square image, column by column: a mask %s",
+    async (_case, mask) => {
+      const { normalizeWorkspaceRuntimeState } = await import("$lib/utils/workspaceRuntime");
+      const [height, width] = SEGMENTED_IMAGE_SIZE;
+      const image = makeImage("camera", width, height);
+      const entity = makeEntity();
+      // The row `GET /masks` serves, through the loader's own adapter and factory.
+      const row = {
+        id: "mask-1",
+        record_id: "item-1",
+        entity_id: entity.id,
+        view_id: image.id,
+        size: [...SEGMENTED_IMAGE_SIZE],
+        counts: mask.counts,
+        source_type: "model",
+      };
+      const loaded = createTypedAnnotation(
+        toRawAnnotation(row, new Map([[image.id, image.data.view_name]]), "masks"),
+      );
+      expect(loaded).toBeInstanceOf(Mask);
+
+      const normalized = normalizeWorkspaceRuntimeState(
+        { annotations: [loaded], entities: [entity] },
+        WorkspaceType.IMAGE,
+        { camera: image },
+      );
+
+      const normalizedMask = normalized.annotations[0] as Mask;
+      expect(normalizedMask.data.view_name).toBe("camera");
+      expect(normalizedMask.ui.bounds).toEqual(mask.bounds);
+      expect(paintedArea(normalizedMask.data.counts as number[])).toBe(mask.area);
+      expect(normalized.entities[0]?.ui.childs?.map((child) => child.id)).toEqual(["mask-1"]);
+    },
+  );
 });
