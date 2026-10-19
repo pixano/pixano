@@ -11,6 +11,7 @@ import {
   listJobQuarantine,
   listJobs,
   openJobStream,
+  queueUnavailableReason,
   submitJob,
   type Job,
   type JobEvent,
@@ -32,6 +33,15 @@ class JobsStore {
   loading = $state(false);
   /** What went wrong last, for the panel to show. Null when all is well. */
   error = $state<string | null>(null);
+  /**
+   * Why this installation cannot run jobs, in the server's words — or null while it can.
+   *
+   * Set when the server answers that it has no job queue: no PostgreSQL database configured,
+   * pixano-worker never started on it, or the database out of reach. That lasts until someone
+   * sets it up, so the panel says it in place of a form whose Run could only fail. Cleared by
+   * the next start that finds the queue.
+   */
+  unavailable = $state<string | null>(null);
   /** True once the stream is carrying events. */
   live = $state(false);
   /** The quarantine of each job someone asked to see, by job identifier. */
@@ -63,24 +73,24 @@ class JobsStore {
       this.jobs = jobs;
       this.kinds = kinds;
       this.error = null;
+      this.unavailable = null;
     } catch (cause) {
       if (this.#opening !== opening && this.#opening !== null) return;
-      this.error = describe(cause);
+      this.#fail(cause);
     } finally {
       // The start that replaced this one owns the spinner until its own lists land.
       if (this.#opening === opening || this.#opening === null) this.loading = false;
     }
     // Stopped while the lists loaded, or superseded by a later start that follows in its place.
-    if (this.#opening !== opening) return;
+    // Without a queue, there is nothing to follow.
+    if (this.#opening !== opening || this.unavailable !== null) return;
     this.#follow();
   }
 
   /** Stop following, including a `start()` still loading. Safe to call twice. */
   stop(): void {
     this.#opening = null;
-    this.#stream?.close();
-    this.#stream = null;
-    this.live = false;
+    this.#unfollow();
   }
 
   /** Whether anything can be launched at all — no worker means no kinds. */
@@ -95,7 +105,7 @@ class JobsStore {
       this.error = null;
       return true;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
       return false;
     }
   }
@@ -106,7 +116,7 @@ class JobsStore {
       this.quarantines[jobId] = await listJobQuarantine(jobId);
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
   }
 
@@ -115,8 +125,27 @@ class JobsStore {
       this.#merge(await cancelJob(jobId));
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
+  }
+
+  /**
+   * Record what went wrong.
+   *
+   * A missing queue is not one error among others: it holds until someone sets the queue up. The
+   * kinds and jobs read before it went missing can no longer be run or followed, so they go.
+   */
+  #fail(cause: unknown): void {
+    const reason = queueUnavailableReason(cause);
+    if (reason === null) {
+      this.error = describe(cause);
+      return;
+    }
+    this.unavailable = reason;
+    this.error = null;
+    this.kinds = [];
+    this.jobs = [];
+    this.#unfollow();
   }
 
   #follow(): void {
@@ -141,6 +170,13 @@ class JobsStore {
     };
     stream.addEventListener("state", (event) => this.#apply(event));
     stream.addEventListener("progress", (event) => this.#apply(event));
+  }
+
+  /** Close the stream, if one is open. */
+  #unfollow(): void {
+    this.#stream?.close();
+    this.#stream = null;
+    this.live = false;
   }
 
   #apply(message: MessageEvent): void {
@@ -196,7 +232,7 @@ class JobsStore {
       this.jobs = await listJobs();
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
   }
 }

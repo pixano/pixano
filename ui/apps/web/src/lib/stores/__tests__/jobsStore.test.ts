@@ -6,12 +6,14 @@ License: CECILL-C
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "$lib/api/apiClient";
 import type { Job } from "$lib/api/jobs";
 
 /** A stand-in for the browser's EventSource, driven by the test. */
 class FakeStream {
   onopen: (() => void) | null = null;
   onerror: (() => void) | null = null;
+  closed = false;
   #listeners = new Map<string, (message: MessageEvent) => void>();
 
   addEventListener(type: string, listener: (message: MessageEvent) => void): void {
@@ -22,20 +24,29 @@ class FakeStream {
     this.#listeners.get(type)?.({ data: JSON.stringify(data) } as MessageEvent);
   }
 
-  close(): void {}
+  close(): void {
+    this.closed = true;
+  }
 }
 
 const api = vi.hoisted(() => ({
   listJobs: vi.fn(),
   listJobKinds: vi.fn(),
   openJobStream: vi.fn(),
+  submitJob: vi.fn(),
 }));
+
+// Mocked as it is, so that it outlives `vi.resetModules()` as mocked modules do: the jobs module
+// below, mocked and so loaded once, tells refusals apart by this ApiError class, and the tests
+// build theirs from the same one.
+vi.mock("$lib/api/apiClient", async (importOriginal) => await importOriginal());
 
 vi.mock("$lib/api/jobs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("$lib/api/jobs")>()),
   listJobs: api.listJobs,
   listJobKinds: api.listJobKinds,
   openJobStream: api.openJobStream,
+  submitJob: api.submitJob,
 }));
 
 function job(overrides: Partial<Job> = {}): Job {
@@ -81,6 +92,110 @@ beforeEach(() => {
   api.listJobs.mockReset().mockResolvedValue([job()]);
   api.listJobKinds.mockReset().mockResolvedValue([]);
   api.openJobStream.mockReset();
+  api.submitJob.mockReset();
+});
+
+/** What the server answers on an installation without a PostgreSQL database configured. */
+const NO_QUEUE_REASON =
+  "no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker";
+
+/** A refusal of the jobs endpoints, with the body the server sent. */
+function refusal(status: number, body: string): ApiError {
+  return new ApiError(`failed with ${status}`, status, body);
+}
+
+/** The refusal the jobs endpoints send when the installation has no job queue. */
+function queueUnavailable(reason = NO_QUEUE_REASON): ApiError {
+  return refusal(503, JSON.stringify({ detail: reason }));
+}
+
+/** Make the lists a panel reads on opening answer that there is no job queue. */
+function refuseListsForWantOfAQueue(): void {
+  api.listJobs.mockRejectedValue(queueUnavailable());
+  api.listJobKinds.mockRejectedValue(queueUnavailable());
+}
+
+describe("jobsStore on an installation without a job queue", () => {
+  it("says why in the server's words, and offers nothing to run or follow", async () => {
+    const { store } = await freshStore();
+    refuseListsForWantOfAQueue();
+
+    await store.start();
+
+    expect(store.unavailable).toBe(NO_QUEUE_REASON);
+    expect(store.error).toBeNull();
+    expect(store.runnable).toBe(false);
+    expect(store.loading).toBe(false);
+    // The stream would be refused too, and nothing would ever say it reconnected.
+    expect(api.openJobStream).not.toHaveBeenCalled();
+  });
+
+  it("drops the kinds of an earlier opening, so no form offers a Run that would fail", async () => {
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+    const { store } = await startedStore();
+    store.stop();
+    refuseListsForWantOfAQueue();
+
+    await store.start();
+
+    expect(store.runnable).toBe(false);
+    expect(store.jobs).toEqual([]);
+  });
+
+  it("finds the queue again when checked once it is set up, and follows from then on", async () => {
+    const { store, stream } = await freshStore();
+    refuseListsForWantOfAQueue();
+    await store.start();
+    api.listJobs.mockResolvedValue([job()]);
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+
+    await store.start();
+    stream.onopen?.();
+
+    expect(store.unavailable).toBeNull();
+    expect(store.runnable).toBe(true);
+    expect(api.openJobStream).toHaveBeenCalledTimes(1);
+    expect(store.live).toBe(true);
+  });
+
+  it("stops following when a Run finds the queue gone", async () => {
+    // The database went down while the panel was open: the form would only fail again.
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+    const { store, stream } = await startedStore();
+    stream.onopen?.();
+    const unreachable = "the job queue is unreachable: connection refused";
+    api.submitJob.mockRejectedValue(queueUnavailable(unreachable));
+
+    const accepted = await store.submit("embeddings", "ds", {});
+
+    expect(accepted).toBe(false);
+    expect(store.unavailable).toBe(unreachable);
+    expect(store.runnable).toBe(false);
+    expect(store.live).toBe(false);
+    expect(stream.closed).toBe(true);
+  });
+
+  it("keeps any other failure an error line, and still follows", async () => {
+    const { store } = await freshStore();
+    api.listJobs.mockRejectedValue(refusal(500, "boom"));
+
+    await store.start();
+
+    expect(store.unavailable).toBeNull();
+    expect(store.error).toBe("failed with 500");
+    expect(api.openJobStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes a 503 without the server's reason for an error, not for a missing queue", async () => {
+    // A proxy in front of a server that is down answers 503 too, with a page of its own.
+    const { store } = await freshStore();
+    api.listJobs.mockRejectedValue(refusal(503, "<html>Service Unavailable</html>"));
+
+    await store.start();
+
+    expect(store.unavailable).toBeNull();
+    expect(store.error).toBe("failed with 503");
+  });
 });
 
 describe("jobsStore closed while its lists load", () => {
