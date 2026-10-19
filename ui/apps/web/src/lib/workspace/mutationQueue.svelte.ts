@@ -188,6 +188,13 @@ export class MutationQueue {
    * before the annotations that reference them; deletes run last. On success,
    * the corresponding local annotation (if any) is marked `persisted: true`
    * via the locator the manager provided.
+   *
+   * Sends what was queued when it began, and of it only what is still queued
+   * when its turn comes (`sendIfStillQueued`). A gesture made meanwhile can
+   * still rewrite a queued body this save is about to send — moving that
+   * annotation onto an entity created for it, whose create was queued after the
+   * save began. That create is sent first, so no write names an entity that
+   * does not exist yet.
    */
   async flush(): Promise<void> {
     if (this.saving) return;
@@ -208,18 +215,50 @@ export class MutationQueue {
     const generation = this.generation;
 
     // Snapshot and sort; elements are still the same object references as in
-    // this.pending, so each leaves it by identity as its request leaves.
+    // this.pending, so a mutation dropped meanwhile is recognised by identity.
     const toProcess = sortMutations([...this.pending]);
 
     try {
       for (const mutation of toProcess) {
-        await this.send(datasetId, mutation, generation);
+        await this.sendIfStillQueued(datasetId, mutation, generation);
       }
     } catch (err) {
       if (generation === this.generation) this.saveError = describeFailure(err);
     } finally {
       this.saving = false;
     }
+  }
+
+  /**
+   * Send one write of a flush, if it is still queued — preceded by the create
+   * of the entity it names when that create is queued too: one queued after
+   * the flush began, by the gesture that moved the annotation onto it.
+   *
+   * Every request is awaited, and a gesture made meanwhile may drop the write
+   * (a change of mind, a draft deleted), rewrite it to name another new entity,
+   * or reset the queue (Discard, another record). So it is looked at again
+   * after each one: a write dropped is not sent, and one rewritten waits for
+   * the create of the entity it names now, until none is left to send first.
+   */
+  private async sendIfStillQueued(
+    datasetId: string,
+    mutation: ResourceMutation,
+    generation: number,
+  ): Promise<void> {
+    for (;;) {
+      if (generation !== this.generation || !this.pending.includes(mutation)) return;
+      const entityCreate = this.entityCreateToSendBefore(mutation);
+      if (!entityCreate) break;
+      await this.send(datasetId, entityCreate, generation);
+    }
+    await this.send(datasetId, mutation, generation);
+  }
+
+  /** The queued create of the entity this write names, which must be sent first. */
+  private entityCreateToSendBefore(mutation: ResourceMutation): ResourceMutation | undefined {
+    const entityId = entityNamedBy(mutation);
+    if (entityId === undefined) return undefined;
+    return this.pending.find((m) => createdEntityId(m) === entityId);
   }
 
   /** Append to the queue; returns the mutation as the queue holds it. */
@@ -292,6 +331,29 @@ export class MutationQueue {
       await this.gateway.deleteAnnotation(datasetId, mutation.resource, mutation.id);
     }
   }
+}
+
+/**
+ * The column through which an annotation row names its entity — every entity
+ * annotation table has it, and the server checks that it names one on write.
+ */
+const ENTITY_REFERENCE_FIELD = "entity_id";
+
+/** The id of the entity this write creates, if it creates one. */
+function createdEntityId(mutation: ResourceMutation): string | undefined {
+  if (mutation.op !== "create" || mutation.resource !== ENTITY_RESOURCE) return undefined;
+  const id = mutation.body.id;
+  return typeof id === "string" ? id : undefined;
+}
+
+/**
+ * The entity an annotation's create or update names, if any. Read when asked:
+ * a queued body may be rewritten by a later gesture.
+ */
+function entityNamedBy(mutation: ResourceMutation): string | undefined {
+  if (mutation.op === "delete" || mutation.resource === ENTITY_RESOURCE) return undefined;
+  const id = mutation.body[ENTITY_REFERENCE_FIELD];
+  return typeof id === "string" ? id : undefined;
 }
 
 /**
