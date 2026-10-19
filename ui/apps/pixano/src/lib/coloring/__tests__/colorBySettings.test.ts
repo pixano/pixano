@@ -261,7 +261,7 @@ describe("storage", () => {
     const storage = memoryStorage();
     const settings = withSelected(DEFAULT_COLOR_BY_SETTINGS, "entities.category");
 
-    expect(writeStoredColorBySettings(storage, "a", settings)).toBe(true);
+    expect(writeStoredColorBySettings(storage, "a", settings)).toBe("full");
     expect(readStoredColorBySettings(storage, "a")).toEqual(settings);
     expect(readStoredColorBySettings(storage, "b")).toBeNull();
   });
@@ -288,7 +288,7 @@ describe("storage", () => {
       "#123456",
     );
 
-    expect(writeStoredColorBySettings({ ...storage, setItem }, "a", settings)).toBe(true);
+    expect(writeStoredColorBySettings({ ...storage, setItem }, "a", settings)).toBe("reduced");
     expect(paletteOf(readStoredColorBySettings(storage, "a"), "t.f")).toEqual({
       colors: { a: "#123456" },
     });
@@ -308,9 +308,9 @@ describe("storage", () => {
     };
 
     expect(readStoredColorBySettings(throwing, "a")).toBeNull();
-    expect(writeStoredColorBySettings(throwing, "a", DEFAULT_COLOR_BY_SETTINGS)).toBe(false);
+    expect(writeStoredColorBySettings(throwing, "a", DEFAULT_COLOR_BY_SETTINGS)).toBe("failed");
     expect(readStoredColorBySettings(null, "a")).toBeNull();
-    expect(writeStoredColorBySettings(null, "a", DEFAULT_COLOR_BY_SETTINGS)).toBe(false);
+    expect(writeStoredColorBySettings(null, "a", DEFAULT_COLOR_BY_SETTINGS)).toBe("failed");
   });
 
   it("reads the browser's storage through window only", () => {

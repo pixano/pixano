@@ -108,6 +108,28 @@ export function compareValueKeys(a: string, b: string): number {
 }
 
 /**
+ * The `count` first keys in natural order, sorted. Runs in O(n log count), so a record with a
+ * huge number of distinct values never sorts them all.
+ */
+export function firstKeys(keys: Iterable<string>, count: number): string[] {
+  const kept: string[] = [];
+  if (count <= 0) return kept;
+  for (const key of keys) {
+    if (kept.length === count && compareValueKeys(key, kept[count - 1]) >= 0) continue;
+    let low = 0;
+    let high = kept.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (compareValueKeys(kept[middle], key) < 0) low = middle + 1;
+      else high = middle;
+    }
+    kept.splice(low, 0, key);
+    if (kept.length > count) kept.pop();
+  }
+  return kept;
+}
+
+/**
  * The order in which values receive their colors, extended with the seeds and the values just
  * seen. Known values keep their place; new ones are appended in natural order, up to
  * MAX_LEARNED_VALUES. Returns `order` itself (or a shared empty array) when nothing is added.
@@ -118,6 +140,9 @@ export function extendCategoricalOrder(
   observed: Iterable<string>,
 ): readonly string[] {
   const base = order ?? EMPTY_ORDER;
+  const room = MAX_LEARNED_VALUES - base.length;
+  if (room <= 0) return base;
+
   const known = new Set(base);
   const added: string[] = [];
   for (const seed of seeds ?? []) {
@@ -130,10 +155,9 @@ export function extendCategoricalOrder(
   for (const key of observed) {
     if (!known.has(key) && key.length <= MAX_VALUE_KEY_LENGTH) fresh.add(key);
   }
-  added.push(...[...fresh].sort(compareValueKeys));
-  const room = MAX_LEARNED_VALUES - base.length;
-  if (room <= 0 || added.length === 0) return base;
-  return [...base, ...added.slice(0, room)];
+  for (const key of firstKeys(fresh, room - added.length)) added.push(key);
+  if (added.length === 0) return base;
+  return base.concat(added.slice(0, room));
 }
 
 /** A stable palette slot for a value with no remembered place (FNV-1a). */

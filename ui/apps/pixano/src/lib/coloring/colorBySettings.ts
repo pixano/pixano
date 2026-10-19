@@ -299,28 +299,30 @@ export function readStoredColorBySettings(
   }
 }
 
+/** What a write kept: everything, the settings without what was learned, or nothing. */
+export type StoredWrite = "full" | "reduced" | "failed";
+
 /**
  * Store a dataset's settings, or remove them when they are the defaults. When the storage is
- * full, try again without what was learned automatically. Returns false when nothing could be
- * written.
+ * full, try again without what was learned automatically.
  */
 export function writeStoredColorBySettings(
   storage: KeyValueStorage | null,
   datasetId: string,
   settings: ColorBySettings,
-): boolean {
-  if (!storage) return false;
+): StoredWrite {
+  if (!storage) return "failed";
   const key = colorByStorageKey(datasetId);
   try {
     if (isDefaultColorBySettings(settings)) storage.removeItem(key);
     else storage.setItem(key, encodeColorBySettings(settings));
-    return true;
+    return "full";
   } catch {
     try {
       storage.setItem(key, encodeColorBySettings(withoutLearned(settings)));
-      return true;
+      return "reduced";
     } catch {
-      return false;
+      return "failed";
     }
   }
 }

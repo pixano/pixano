@@ -7,7 +7,14 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import { buildColorByCatalogue, ENTITY_COLOR_MODE } from "../colorByCatalogue";
-import { ATTRIBUTE_PALETTE, createRamp, NO_VALUE_COLOR, UNLINKED_COLOR } from "../colorByPalette";
+import {
+  ATTRIBUTE_PALETTE,
+  createRamp,
+  MAX_LEARNED_VALUES,
+  MAX_VALUE_KEY_LENGTH,
+  NO_VALUE_COLOR,
+  UNLINKED_COLOR,
+} from "../colorByPalette";
 import {
   DEFAULT_COLOR_BY_SETTINGS,
   paletteOf,
@@ -21,6 +28,7 @@ import {
   buildColorResolver,
   createEntityColorOrder,
   ENTITY_MODE,
+  MAX_LEGEND_ENTRIES,
   resolveActiveMode,
   type ActiveColorMode,
   type ColorAnnotation,
@@ -294,14 +302,38 @@ describe("entity attributes", () => {
       palette: paletteOf(settings, "entities.category"),
     });
     settings = remember(settings, first);
+    // Sorted on its own, this record would give truck the third color, not the second.
     const second = build("entities.category", {
-      entities: [ent("b", { category: "bus" }), ent("c", { category: "truck" })],
+      entities: [
+        ent("b", { category: "bus" }),
+        ent("c", { category: "truck" }),
+        ent("d", { category: "car" }),
+      ],
       palette: paletteOf(settings, "entities.category"),
     });
 
-    expect(second.colorOfEntity("c")).toBe(first.colorOfEntity("a"));
-    expect(second.colorOfEntity("b")).not.toBe(second.colorOfEntity("c"));
-    expect(second.pendingLearned?.order).toEqual(["plane", "truck", "bus"]);
+    expect(first.colorOfEntity("a")).toBe(ATTRIBUTE_PALETTE[1]);
+    expect(second.colorOfEntity("c")).toBe(ATTRIBUTE_PALETTE[1]);
+    expect(second.colorOfEntity("b")).toBe(ATTRIBUTE_PALETTE[2]);
+    expect(second.colorOfEntity("d")).toBe(ATTRIBUTE_PALETTE[3]);
+    expect(second.pendingLearned?.order).toEqual(["plane", "truck", "bus", "car"]);
+  });
+
+  it("has nothing left to learn once an overlong value is met", () => {
+    const entities = [
+      ent("decoy", { category: "plane" }),
+      ent("a", { category: "x".repeat(MAX_VALUE_KEY_LENGTH + 1) }),
+    ];
+    let settings = withSelected(DEFAULT_COLOR_BY_SETTINGS, "entities.category");
+    settings = remember(
+      settings,
+      build("entities.category", { entities, palette: paletteOf(settings, "entities.category") }),
+    );
+
+    expect(
+      build("entities.category", { entities, palette: paletteOf(settings, "entities.category") })
+        .pendingLearned,
+    ).toBeNull();
   });
 
   it("follows an edited value once rebuilt", () => {
@@ -466,16 +498,29 @@ describe("annotation attributes", () => {
     expect(resolver.colorOfAnnotation(ANNOTATIONS[10])).toBe(NO_VALUE_COLOR);
   });
 
-  it("breaks a tie toward the value with the earlier color", () => {
+  it("breaks a tie toward the value with the earlier color, whatever the row order", () => {
+    const zoe = ann("x2", "bboxes", "car1", { annotator: "zoe" });
     const resolver = build("bboxes.annotator", {
-      annotations: [
-        ann("x1", "bboxes", "car1", { annotator: "zoe" }),
-        ann("x2", "bboxes", "car1", { annotator: "adam" }),
-      ],
+      annotations: [ann("x1", "bboxes", "car1", { annotator: "adam" }), zoe],
       palette: { order: ["zoe", "adam"] },
     });
 
+    expect(resolver.colorOfEntity("car1")).toBe(resolver.colorOfAnnotation(zoe));
     expect(resolver.colorOfEntity("car1")).toBe(ATTRIBUTE_PALETTE[0]);
+  });
+
+  it("handles a huge number of distinct values", () => {
+    const annotations = Array.from({ length: 130_000 }, (_, i) =>
+      ann(`n${i}`, "bboxes", "car1", { annotator: `note ${i}` }),
+    );
+    const resolver = build("bboxes.annotator", { annotations });
+    const legend = resolver.legend;
+
+    if (legend?.kind !== "categorical") throw new Error("categorical legend expected");
+    expect(legend.entries).toHaveLength(MAX_LEGEND_ENTRIES);
+    expect(legend.moreCount).toBe(130_000 - MAX_LEGEND_ENTRIES);
+    expect(legend.itemCount).toBe(130_000);
+    expect(resolver.pendingLearned?.order).toHaveLength(MAX_LEARNED_VALUES);
   });
 
   it("averages numbers on objects", () => {

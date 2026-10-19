@@ -19,8 +19,8 @@ import {
  *
  * The workspace is not remounted between the records of a dataset, nor when the URL switches to
  * another dataset, so `configure` runs on every record and reads storage only when the dataset
- * changes. Settings are also kept in memory per dataset, for browsers where storage is missing
- * or fails.
+ * changes. Settings are also kept in memory per dataset: they win over the stored copy when
+ * storage is missing, or when the last write lost something (storage full or failing).
  */
 export interface ColorBySession {
   readonly datasetId: string | null;
@@ -41,6 +41,8 @@ export function createColorBySession(
   let settings: ColorBySettings = DEFAULT_COLOR_BY_SETTINGS;
   let catalogue: ColorByCatalogue = EMPTY_COLOR_BY_CATALOGUE;
   const inMemory = new Map<string, ColorBySettings>();
+  // Datasets whose stored copy is older or poorer than the one in memory.
+  const unsaved = new Set<string>();
 
   return {
     get datasetId() {
@@ -57,9 +59,10 @@ export function createColorBySession(
       let changed = false;
       if (nextDatasetId !== datasetId) {
         datasetId = nextDatasetId;
+        const stored = readStoredColorBySettings(storage(), nextDatasetId);
+        const remembered = inMemory.get(nextDatasetId);
         const loaded =
-          readStoredColorBySettings(storage(), nextDatasetId) ??
-          inMemory.get(nextDatasetId) ??
+          (unsaved.has(nextDatasetId) ? (remembered ?? stored) : (stored ?? remembered)) ??
           DEFAULT_COLOR_BY_SETTINGS;
         changed = loaded !== settings;
         settings = loaded;
@@ -83,7 +86,11 @@ export function createColorBySession(
       settings = next;
       if (datasetId !== null) {
         inMemory.set(datasetId, next);
-        writeStoredColorBySettings(storage(), datasetId, next);
+        if (writeStoredColorBySettings(storage(), datasetId, next) === "full") {
+          unsaved.delete(datasetId);
+        } else {
+          unsaved.add(datasetId);
+        }
       }
       return true;
     },

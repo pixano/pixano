@@ -14,6 +14,7 @@ import {
   compareValueKeys,
   createRamp,
   extendCategoricalOrder,
+  firstKeys,
   NO_VALUE_COLOR,
   rampPosition,
   readAttributeValue,
@@ -278,25 +279,33 @@ function categoricalScale(
       return best;
     },
     legend(counts, unit, otherCount) {
-      const keys = [...counts.categories.keys()].sort(compareValueKeys);
-      const entries = keys.map((key) => entryOf(key, counts.categories.get(key) ?? 0));
+      // Every value counts; only the first ones in natural order are listed.
+      const colorByKey = new Map<string, string>();
       const colorUses = new Map<string, number>();
-      for (const entry of entries)
-        colorUses.set(entry.color, (colorUses.get(entry.color) ?? 0) + 1);
-      const known = order.filter((key) => !counts.categories.has(key)).sort(compareValueKeys);
       let itemCount = 0;
-      for (const count of counts.categories.values()) itemCount += count;
+      for (const [key, count] of counts.categories) {
+        const color = colorOfKey(key);
+        colorByKey.set(key, color);
+        colorUses.set(color, (colorUses.get(color) ?? 0) + 1);
+        itemCount += count;
+      }
+      let sharedColorCount = 0;
+      for (const color of colorByKey.values()) {
+        if ((colorUses.get(color) ?? 0) > 1) sharedColorCount++;
+      }
+      const listed = firstKeys(counts.categories.keys(), MAX_LEGEND_ENTRIES);
+      const known = order.filter((key) => !counts.categories.has(key));
       return {
         kind: "categorical",
         attribute,
         unit,
-        entries: entries.slice(0, MAX_LEGEND_ENTRIES),
-        moreCount: Math.max(0, entries.length - MAX_LEGEND_ENTRIES),
-        knownEntries: known.slice(0, MAX_LEGEND_ENTRIES).map((key) => entryOf(key, 0)),
+        entries: listed.map((key) => entryOf(key, counts.categories.get(key) ?? 0)),
+        moreCount: counts.categories.size - listed.length,
+        knownEntries: firstKeys(known, MAX_LEGEND_ENTRIES).map((key) => entryOf(key, 0)),
         itemCount,
         noValueCount: counts.noValueCount,
         otherCount,
-        sharedColorCount: entries.filter((entry) => (colorUses.get(entry.color) ?? 0) > 1).length,
+        sharedColorCount,
         customized: !!overrides && Object.keys(overrides).length > 0,
       };
     },

@@ -14,6 +14,7 @@ import {
   createRamp,
   DEFAULT_RAMP,
   extendCategoricalOrder,
+  firstKeys,
   formatAttributeNumber,
   hashSlot,
   isHexColor,
@@ -146,14 +147,37 @@ describe("extendCategoricalOrder", () => {
     expect(extendCategoricalOrder(undefined, undefined, [])).toEqual([]);
   });
 
-  it("remembers at most MAX_LEARNED_VALUES values, and no overlong value", () => {
-    const many = Array.from({ length: MAX_LEARNED_VALUES + 10 }, (_, i) => `v${i}`);
-    const long = "x".repeat(MAX_VALUE_KEY_LENGTH + 1);
-    const order = extendCategoricalOrder(undefined, undefined, [long, ...many]);
+  it("remembers at most MAX_LEARNED_VALUES values, the first ones in natural order", () => {
+    const many = Array.from({ length: MAX_LEARNED_VALUES + 10 }, (_, i) => `v${i}`).reverse();
+    const order = extendCategoricalOrder(undefined, undefined, many);
 
     expect(order).toHaveLength(MAX_LEARNED_VALUES);
-    expect(order).not.toContain(long);
+    expect(order[0]).toBe("v0");
+    expect(order[MAX_LEARNED_VALUES - 1]).toBe(`v${MAX_LEARNED_VALUES - 1}`);
     expect(extendCategoricalOrder(order, undefined, ["new"])).toBe(order);
+  });
+
+  // An overlong value is never stored, so remembering it would be asked again on every build.
+  it("never remembers an overlong value", () => {
+    const long = "x".repeat(MAX_VALUE_KEY_LENGTH + 1);
+
+    expect(extendCategoricalOrder(undefined, undefined, ["a", long])).toEqual(["a"]);
+  });
+
+  it("handles records with a huge number of distinct values", () => {
+    const keys = Array.from({ length: 150_000 }, (_, i) => `value ${i}`);
+
+    const order = extendCategoricalOrder(undefined, undefined, keys);
+    expect(order).toHaveLength(MAX_LEARNED_VALUES);
+    expect(extendCategoricalOrder(order, undefined, keys)).toBe(order);
+  });
+});
+
+describe("firstKeys", () => {
+  it("returns the first keys in natural order, sorted", () => {
+    expect(firstKeys(["10", "b", "2", "a", "1"], 3)).toEqual(["1", "2", "10"]);
+    expect(firstKeys(["b", "a"], 5)).toEqual(["a", "b"]);
+    expect(firstKeys(["b", "a"], 0)).toEqual([]);
   });
 });
 

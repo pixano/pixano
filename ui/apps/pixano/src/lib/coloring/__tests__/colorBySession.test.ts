@@ -12,6 +12,8 @@ import {
   colorByStorageKey,
   DEFAULT_COLOR_BY_SETTINGS,
   encodeColorBySettings,
+  paletteOf,
+  withLearned,
   withSelected,
   type KeyValueStorage,
 } from "../colorBySettings";
@@ -132,6 +134,78 @@ describe("createColorBySession", () => {
 
     session.configure("b", catalogue("x"));
     expect(session.settings).toBe(DEFAULT_COLOR_BY_SETTINGS);
+  });
+
+  // Regression: a failed write left an older stored copy, which won when the dataset was reopened.
+  it("keeps the settings of a failed write over an older stored copy", () => {
+    const storage = memoryStorage();
+    storage.data.set(
+      colorByStorageKey("a"),
+      encodeColorBySettings(withSelected(DEFAULT_COLOR_BY_SETTINGS, "entities.category")),
+    );
+    const full: KeyValueStorage = {
+      ...storage,
+      setItem: () => {
+        throw new DOMException("full", "QuotaExceededError");
+      },
+    };
+    const session = createColorBySession(() => full);
+    session.configure("a", catalogue("x"));
+
+    session.apply(select("bboxes.annotator"));
+    session.reset();
+    session.configure("a", catalogue("x"));
+
+    expect(session.settings.selected).toBe("bboxes.annotator");
+  });
+
+  it("keeps what was learned when only a reduced copy could be stored", () => {
+    const storage = memoryStorage();
+    const tight: KeyValueStorage = {
+      ...storage,
+      setItem: (key: string, value: string) => {
+        if (value.includes('"order"')) throw new DOMException("full", "QuotaExceededError");
+        storage.data.set(key, value);
+      },
+    };
+    const session = createColorBySession(() => tight);
+    session.configure("a", catalogue("x"));
+
+    session.apply((settings) =>
+      withLearned(withSelected(settings, "entities.category"), "entities.category", {
+        order: ["car", "truck"],
+      }),
+    );
+    session.reset();
+    session.configure("a", catalogue("x"));
+
+    expect(paletteOf(session.settings, "entities.category")?.order).toEqual(["car", "truck"]);
+  });
+
+  it("reads storage again once a write succeeds", () => {
+    const storage = memoryStorage();
+    let failing = true;
+    const flaky: KeyValueStorage = {
+      ...storage,
+      setItem: (key: string, value: string) => {
+        if (failing) throw new DOMException("full", "QuotaExceededError");
+        storage.data.set(key, value);
+      },
+    };
+    const session = createColorBySession(() => flaky);
+    session.configure("a", catalogue("x"));
+    session.apply(select("t.f"));
+
+    failing = false;
+    session.apply(select("t.g"));
+    storage.data.set(
+      colorByStorageKey("a"),
+      encodeColorBySettings(withSelected(DEFAULT_COLOR_BY_SETTINGS, "t.from_another_tab")),
+    );
+    session.reset();
+    session.configure("a", catalogue("x"));
+
+    expect(session.settings.selected).toBe("t.from_another_tab");
   });
 
   it("keeps settings in memory when storage fails", () => {
