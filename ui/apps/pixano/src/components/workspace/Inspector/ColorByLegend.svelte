@@ -145,7 +145,7 @@ License: CECILL-C
           onclick={() => (showKnownValues = !showKnownValues)}
         >
           {showKnownValues ? "Hide" : "Show"}
-          {countOf(legend.knownEntries.length, ["value", "values"])} from other records
+          {countOf(legend.knownEntries.length, ["other known value", "other known values"])}
         </button>
         {#if showKnownValues}
           <ul class="flex flex-col gap-0.5">

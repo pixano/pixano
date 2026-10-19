@@ -6,11 +6,23 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
-import { handleMenuKeydown, menuKeyAction } from "../menuKeys";
+import {
+  BUTTON_TRIGGER_KEYS,
+  handleMenuKeydown,
+  menuKeyAction,
+  SELECT_TRIGGER_KEYS,
+} from "../menuKeys";
 
-function keydown(key: string) {
+const key = (value: string, modifiers: { ctrlKey?: boolean; metaKey?: boolean } = {}) => ({
+  key: value,
+  ctrlKey: false,
+  metaKey: false,
+  ...modifiers,
+});
+
+function keydown(value: string, modifiers: { ctrlKey?: boolean; metaKey?: boolean } = {}) {
   return {
-    key,
+    ...key(value, modifiers),
     stopPropagation: vi.fn(),
     preventDefault: vi.fn(),
   } as unknown as KeyboardEvent & {
@@ -20,20 +32,39 @@ function keydown(key: string) {
 }
 
 describe("menuKeyAction", () => {
-  it("keeps letters, Space, Enter and arrows away from the workspace shortcuts", () => {
-    for (const key of ["e", "B", " ", "Enter", "ArrowLeft", "ArrowRight", "ArrowDown", "Home"]) {
-      expect(menuKeyAction(key, true)).toBe("isolate");
-      expect(menuKeyAction(key, false)).toBe("isolate");
+  it("keeps every key of an open menu away from the workspace shortcuts", () => {
+    for (const value of ["e", "B", " ", "Enter", "ArrowLeft", "ArrowRight", "ArrowDown", "Home"]) {
+      expect(menuKeyAction(key(value), true)).toBe("isolate");
     }
   });
 
   it("closes an open menu on Escape, and lets Escape through when it is closed", () => {
-    expect(menuKeyAction("Escape", true)).toBe("close");
-    expect(menuKeyAction("Escape", false)).toBe("pass");
+    expect(menuKeyAction(key("Escape"), true)).toBe("close");
+    expect(menuKeyAction(key("Escape"), false, SELECT_TRIGGER_KEYS)).toBe("pass");
   });
 
-  it("lets Tab move the focus", () => {
-    expect(menuKeyAction("Tab", true)).toBe("pass");
+  it("lets the save shortcut and Tab through, open or closed", () => {
+    for (const open of [true, false]) {
+      expect(menuKeyAction(key("s", { metaKey: true }), open, SELECT_TRIGGER_KEYS)).toBe("pass");
+      expect(menuKeyAction(key("S", { ctrlKey: true }), open, SELECT_TRIGGER_KEYS)).toBe("pass");
+      expect(menuKeyAction(key("Tab"), open, SELECT_TRIGGER_KEYS)).toBe("pass");
+    }
+  });
+
+  it("keeps other modified keys inside an open menu", () => {
+    expect(menuKeyAction(key("a", { metaKey: true }), true)).toBe("isolate");
+    expect(menuKeyAction(key("ArrowRight", { ctrlKey: true }), true)).toBe("isolate");
+  });
+
+  it("keeps only the keys that open a closed trigger", () => {
+    for (const value of SELECT_TRIGGER_KEYS) {
+      expect(menuKeyAction(key(value), false, SELECT_TRIGGER_KEYS)).toBe("isolate");
+    }
+    for (const value of ["e", "b", "ArrowLeft", "ArrowRight", "d", "Alt", "Backspace"]) {
+      expect(menuKeyAction(key(value), false, SELECT_TRIGGER_KEYS)).toBe("pass");
+    }
+    expect(menuKeyAction(key(" "), false, BUTTON_TRIGGER_KEYS)).toBe("isolate");
+    expect(menuKeyAction(key("ArrowDown"), false, BUTTON_TRIGGER_KEYS)).toBe("pass");
   });
 });
 
@@ -60,10 +91,20 @@ describe("handleMenuKeydown", () => {
     expect(close).toHaveBeenCalled();
   });
 
-  it("leaves a passed key alone", () => {
-    const event = keydown("Tab");
+  // Regression: the save shortcut was swallowed, so the browser offered to save the page.
+  it("leaves the save shortcut to the workspace", () => {
+    const event = keydown("s", { metaKey: true });
 
-    handleMenuKeydown(event, true, vi.fn());
+    handleMenuKeydown(event, false, vi.fn(), SELECT_TRIGGER_KEYS);
+
+    expect(event.stopPropagation).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("leaves a tool shortcut alone on a closed trigger", () => {
+    const event = keydown("b");
+
+    handleMenuKeydown(event, false, vi.fn(), SELECT_TRIGGER_KEYS);
 
     expect(event.stopPropagation).not.toHaveBeenCalled();
   });

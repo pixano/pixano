@@ -18,7 +18,7 @@ License: CECILL-C
   import { annotationColors, itemMetas } from "$lib/stores/workspaceStores.svelte";
   import { WorkspaceType } from "$lib/types/dataset";
   import { TooltipContent } from "$lib/ui";
-  import { handleMenuKeydown } from "$lib/utils/menuKeys";
+  import { handleMenuKeydown, SELECT_TRIGGER_KEYS } from "$lib/utils/menuKeys";
 
   let open = $state(false);
 
@@ -49,8 +49,13 @@ License: CECILL-C
 
   const legendTooltip = $derived(colorByLegendOpen.value ? "Hide the legend" : "Show the legend");
 
-  function onKeydown(event: KeyboardEvent) {
-    handleMenuKeydown(event, open, () => (open = false));
+  // Keys typed in the menu stay in it; a closed trigger only keeps the keys that open it.
+  function onTriggerKeydown(event: KeyboardEvent) {
+    handleMenuKeydown(event, open, () => (open = false), SELECT_TRIGGER_KEYS);
+  }
+
+  function onContentKeydown(event: KeyboardEvent) {
+    handleMenuKeydown(event, true, () => (open = false));
   }
 
   const triggerClass =
@@ -85,7 +90,7 @@ License: CECILL-C
         <Select.Trigger
           aria-label={`Color by: ${triggerLabel}`}
           title={isUnavailable ? "This dataset has no attribute to color by" : triggerLabel}
-          onkeydown={onKeydown}
+          onkeydown={onTriggerKeydown}
           class={triggerClass}
         >
           {#snippet children()}
@@ -94,7 +99,7 @@ License: CECILL-C
           {/snippet}
         </Select.Trigger>
         <Select.Portal>
-          <Select.Content sideOffset={6} onkeydown={onKeydown} class={contentClass}>
+          <Select.Content sideOffset={6} onkeydown={onContentKeydown} class={contentClass}>
             <Select.Item value={ENTITY_COLOR_MODE} label="Entity" class={itemClass}>
               {#snippet children()}
                 <Check

@@ -10,7 +10,7 @@ License: CECILL-C
 
   import { ATTRIBUTE_PALETTE, normalizeHexColor } from "$lib/coloring/colorByPalette";
   import { isLuminanceHigh } from "$lib/utils/coreUtils";
-  import { handleMenuKeydown } from "$lib/utils/menuKeys";
+  import { BUTTON_TRIGGER_KEYS, handleMenuKeydown } from "$lib/utils/menuKeys";
   import { cn } from "$lib/utils/styleUtils";
 
   interface Props {
@@ -39,8 +39,12 @@ License: CECILL-C
     open = false;
   }
 
-  function onKeydown(event: KeyboardEvent) {
-    handleMenuKeydown(event, open, () => (open = false));
+  function onTriggerKeydown(event: KeyboardEvent) {
+    handleMenuKeydown(event, open, () => (open = false), BUTTON_TRIGGER_KEYS);
+  }
+
+  function onContentKeydown(event: KeyboardEvent) {
+    handleMenuKeydown(event, true, () => (open = false));
   }
 
   function onDraftKeydown(event: KeyboardEvent) {
@@ -55,9 +59,9 @@ License: CECILL-C
     type="button"
     aria-label={label}
     title={label}
-    onkeydown={onKeydown}
+    onkeydown={onTriggerKeydown}
     class={cn(
-      "h-4 w-4 shrink-0 cursor-pointer rounded-full ring-1 ring-foreground/50 transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      "h-4 w-4 shrink-0 cursor-pointer rounded-full ring-1 ring-foreground/50 transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       custom && "ring-2 ring-primary",
     )}
     style={`background-color: ${color}`}
@@ -66,7 +70,7 @@ License: CECILL-C
     <Popover.Content
       sideOffset={6}
       align="start"
-      onkeydown={onKeydown}
+      onkeydown={onContentKeydown}
       class="z-[130] w-56 space-y-2.5 rounded-2xl border border-border/50 bg-popover/95 p-3 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
     >
       <p class="truncate text-[11px] font-semibold text-muted-foreground">{label}</p>
@@ -78,7 +82,7 @@ License: CECILL-C
             aria-pressed={swatch === color}
             title={swatch}
             onclick={() => apply(swatch)}
-            class="relative h-5 w-5 rounded-full ring-1 ring-foreground/50 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="relative h-5 w-5 rounded-full ring-1 ring-foreground/50 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             style={`background-color: ${swatch}`}
           >
             {#if swatch === color}
