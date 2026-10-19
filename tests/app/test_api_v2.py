@@ -339,6 +339,22 @@ class TestStaticImage:
         assert resp.status_code == 200
         assert resp.json()["confidence"] == 0.95
 
+    def test_update_refuses_a_body_naming_another_box(self, static_image_client: TestClient):
+        """The row was written under the body's id: `PUT /bboxes/A` with `{"id": "B"}` replaced
+        box B with A's content and answered 200."""
+        self._seed_entity_with_bboxes(static_image_client, "entity_body_id", ["bbox_body_a", "bbox_body_b"])
+        static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_body_b", json={"coords": [0.5, 0.5, 0.2, 0.2]})
+        stored_a = static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_a").json()
+        stored_b = static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_b").json()
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/bbox_body_a", json={"id": "bbox_body_b", "confidence": 0.5}
+        )
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_b").json() == stored_b
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_a").json() == stored_a
+
     def test_delete_bbox(self, static_image_client: TestClient):
         # Create then delete
         static_image_client.post(

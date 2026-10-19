@@ -311,6 +311,14 @@ class BaseService:
         changes, the previously attached entity is deleted if it has no
         remaining annotations — the server-side orphan check shared with delete.
         """
+        body_id = data.get("id")
+        if body_id is not None and body_id != id:
+            # The rules below are checked on the row the path names, and the merged row is
+            # written under the body's id: another row would be overwritten without them.
+            raise HTTPException(
+                status_code=400,
+                detail=f"The body's id '{body_id}' is not the id of the resource it updates, '{id}'.",
+            )
         resolved_table = self.resolve_table()
         existing = self.dataset.get_data(resolved_table, ids=id)
         if existing is None:
