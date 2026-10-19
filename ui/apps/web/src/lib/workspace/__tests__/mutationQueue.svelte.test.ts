@@ -377,3 +377,95 @@ describe("dropPendingEntityCreate", () => {
     expect(queue.pending[0].localAnnotationId).toBe("a2");
   });
 });
+
+describe("MutationQueue — a request on the wire", () => {
+  /** A gateway whose updates wait for the test, then fail or succeed. */
+  function heldUpdates() {
+    let release!: (outcome: Error | null) => void;
+    const answered = new Promise<Error | null>((r) => (release = r));
+    const { gateway } = makeGateway();
+    gateway.updateAnnotation = async () => {
+      const error = await answered;
+      if (error) throw error;
+      return {};
+    };
+    return { gateway, release };
+  }
+
+  const update = (body: Record<string, unknown>, widgetId = "w1") => ({
+    op: "update" as const,
+    resource: "bboxes",
+    id: "b1",
+    body,
+    widgetId,
+    localAnnotationId: "b1",
+  });
+
+  /** Where two edits made one after the other move the row. */
+  const FIRST_COORDS = [0.1, 0.1, 0.2, 0.2];
+  const SECOND_COORDS = [0.3, 0.3, 0.2, 0.2];
+
+  it("queues a change of the row being sent after it, never into it", async () => {
+    const { gateway, release } = heldUpdates();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.upsertUpdate(update({ coords: FIRST_COORDS }));
+
+    const flushing = queue.flush();
+    queue.upsertUpdate(update({ coords: SECOND_COORDS }));
+    expect(queue.count).toBe(2); // one on the wire, one waiting
+    release(null);
+    await flushing;
+
+    expect(queue.pending).toEqual([update({ coords: SECOND_COORDS })]);
+  });
+
+  it("neither takes back nor reports a failed request of a queue reset meanwhile", async () => {
+    const { gateway, release } = heldUpdates();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.upsertUpdate(update({ coords: FIRST_COORDS }));
+
+    const flushing = queue.flush();
+    queue.reset(); // another record opened
+    release(new Error("backend down"));
+    await flushing;
+
+    expect(queue.pending).toEqual([]);
+    expect(queue.saveError).toBeNull();
+  });
+});
+
+describe("MutationQueue — what a save reports", () => {
+  it("clears the error of a failed save once nothing is left of it", async () => {
+    const { gateway } = makeGateway({ failOn: "createAnnotation" });
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+    queue.queue({
+      op: "create",
+      resource: "bboxes",
+      body: { id: "d1" },
+      localAnnotationId: "d1",
+    });
+    await queue.flush();
+    expect(queue.saveError).not.toBeNull();
+
+    queue.dropForLocalAnnotation("d1"); // the draft is deleted
+    await queue.flush();
+
+    expect(queue.saveError).toBeNull();
+  });
+
+  it("gives an update to the gesture that last wrote its body", () => {
+    const { gateway } = makeGateway();
+    const queue = new MutationQueue(gateway, makeSession(), noopLocator);
+
+    queue.upsertUpdate({ op: "update", resource: "bboxes", id: "b1", body: {}, widgetId: "panel" });
+    queue.upsertUpdate({
+      op: "update",
+      resource: "bboxes",
+      id: "b1",
+      body: {},
+      widgetId: "canvas",
+    });
+
+    expect(queue.pending.map((m) => m.widgetId)).toEqual(["canvas"]);
+  });
+});
