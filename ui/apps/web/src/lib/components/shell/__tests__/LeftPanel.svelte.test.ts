@@ -345,6 +345,65 @@ describe("LeftPanel — explorer section", () => {
     await waitFor(() => screen.getByRole("button", { name: /Imported meanwhile/ }));
   });
 
+  describe("when GET /datasets fails", () => {
+    // The real listDatasets, over a stubbed fetch: mocking listDatasets itself would skip
+    // the path a failed answer really takes.
+    const listedResponse = () =>
+      new Response(
+        JSON.stringify([
+          {
+            id: "ds-1",
+            name: "COCO 2017",
+            description: "",
+            size: "",
+            preview: "",
+            workspace: "image",
+            storage_mode: "embedded",
+            num_records: 5000,
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    // What the dev proxy answers while the app restarts.
+    const restartingResponse = () => new Response("", { status: 502, statusText: "Bad Gateway" });
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import("$lib/api/datasets")>("$lib/api/datasets");
+      mockedListDatasets.mockImplementation(actual.listDatasets);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("keeps the list on screen, with a note, when fetching it again fails", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(listedResponse())
+        .mockResolvedValue(restartingResponse());
+      vi.stubGlobal("fetch", fetchMock);
+      renderPanel();
+
+      await waitFor(() => screen.getByRole("button", { name: /COCO 2017/ }));
+      await fireEvent.click(screen.getByRole("button", { name: /COCO 2017/ }));
+      await waitFor(() => screen.getByRole("button", { name: "Back to datasets" }));
+      await fireEvent.click(screen.getByRole("button", { name: "Back to datasets" }));
+
+      await waitFor(() => screen.getByText(/could not be refreshed/));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole("button", { name: /COCO 2017/ })).not.toBeNull();
+      expect(screen.queryByText("No datasets found.")).toBeNull();
+    });
+
+    it("says the first fetch failed, rather than that there is no dataset", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(restartingResponse()));
+      renderPanel();
+
+      await waitFor(() => screen.getByText(/502 Bad Gateway/));
+      expect(screen.queryByText("No datasets found.")).toBeNull();
+    });
+  });
+
   it("clicking a record calls manager.selectRecordInDataset with correct ids", async () => {
     mockedListDatasets.mockResolvedValue([mockDataset]);
     renderPanel();
