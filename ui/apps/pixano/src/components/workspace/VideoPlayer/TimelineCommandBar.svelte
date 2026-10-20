@@ -48,7 +48,10 @@ License: CECILL-C
   );
 </script>
 
-<div class="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border px-3">
+<!-- Narrow panels drop the slider's length, then the word "Pinned" (container queries). -->
+<div
+  class="@container flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border px-3"
+>
   <div class="flex min-w-0 items-center gap-1.5">
     <VideoControls {resetHighlight} />
     <span class="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true"></span>
@@ -85,7 +88,8 @@ License: CECILL-C
         )}
       >
         <PushPin weight={pinnedOnly ? "fill" : "regular"} class="h-3.5 w-3.5" />
-        Pinned
+        <span class="hidden @2xl:inline">Pinned</span>
+        <span class="sr-only @2xl:hidden">Pinned</span>
         <span class="font-mono tabular-nums">{pinnedCount}</span>
       </Tooltip.Trigger>
       <TooltipContent><p>{pinnedTooltip}</p></TooltipContent>

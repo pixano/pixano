@@ -43,7 +43,7 @@ License: CECILL-C
     bind:value={() => zoom, (value) => onZoom(value)}
     min={TIMELINE_ZOOM_MIN}
     {max}
-    class="relative flex w-28 touch-none select-none items-center"
+    class="relative flex w-16 touch-none select-none items-center @3xl:w-28"
   >
     <span class="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted">
       <Slider.Range class="absolute h-full bg-primary" />
