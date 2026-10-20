@@ -56,7 +56,7 @@ async def test_work_still_queued_when_it_times_out_is_not_stuck() -> None:
 
 def test_the_pool_must_outnumber_its_saturation_threshold() -> None:
     """Sinon il serait entièrement bloqué avant d'avoir pu signaler sa saturation."""
-    with pytest.raises(ValueError, match="seuil"):
+    with pytest.raises(ValueError, match="threshold"):
         WorkerThreads(workers=2, stuck_limit=2)
 
 

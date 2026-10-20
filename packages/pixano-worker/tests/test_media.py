@@ -118,7 +118,7 @@ class TestResolve:
 
         assert resolved is not None
         assert resolved.carried_bytes is True
-        assert "hors racine" in resolved.reason
+        assert "outside the root" in resolved.reason
 
     def test_a_media_that_is_nowhere_resolves_to_nothing(self, resolver: MediaResolver) -> None:
         """Ni chemin ni octets : le type de job doit pouvoir sauter cet item plutôt que

@@ -791,7 +791,7 @@ class TestOutcome:
 
         assert _state(declared, job)[0] == "error"
         row = declared.execute(f"SELECT error->>'reason' FROM {SCHEMA_NAME}.job_chunks LIMIT 1").fetchone()
-        assert row is not None and "bilan" in row[0]
+        assert row is not None and "outcome" in row[0]
 
 
 class TestChunkTimeLimit:
