@@ -53,7 +53,7 @@ class InvalidParamsError(ValueError):
 
 @dataclass(frozen=True)
 class JobRecord:
-    """Un job tel que l'interface le voit."""
+    """A job as the interface sees it."""
 
     id: str
     kind: str
@@ -89,7 +89,7 @@ class JobRecord:
 
 @dataclass(frozen=True)
 class QuarantinedItem:
-    """Un item qu'un job n'a pas su traiter, et pourquoi."""
+    """An item a job could not process, and why."""
 
     item_id: str
     reason: str
