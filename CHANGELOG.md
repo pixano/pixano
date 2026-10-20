@@ -21,9 +21,19 @@
   creates the keyframe. Each object's timeline row has the same pencil. The image,
   VQA and entity-linking workspaces edit boxes the same way.
 - **Video player.** Loop playback, a button and the `Home` key to go back to the
-  first frame, timeline ticks that adapt to the video's length (with sub-second
-  labels on short clips), a button that pins every object to the timeline, and
-  copy buttons for the record ID in the Record tab.
+  first frame, and copy buttons for the record ID in the Record tab.
+- **Video timeline.** Every tracked object has a row: a thin line where it is
+  present, a tick on each keyframe and taller ticks where its tracks start and
+  end, with the keyframe under the playhead drawn white. Hover a tick for its
+  frame and time, click it to select the object and jump to it, and drag it to
+  retime the keyframe between its neighbours (a track's first or last keyframe
+  drags its start or end; `Esc` cancels). Right-click a track to edit, add or
+  remove a keyframe there, split, glue, relink or delete it. Pin rows to keep
+  them on top, and show only them with **Pinned**. The keyframe buttons and
+  `J`/`K` jump between the selected object's keyframes. The ruler starts at
+  frame 0 with three tick levels, time and frame labels, the frame rate and the
+  frame count, and the current frame in a badge. An object seen by several
+  cameras has one row merging them.
 - **Color annotations by an attribute.** A "Color by" menu in the Entities tab
   colors boxes, polygons, masks, keypoints, text spans and tracks by an entity
   attribute (a category, a yes/no flag) or an annotation attribute (a box's
@@ -53,12 +63,19 @@
 - Video workspace: moving a box after clicking its pencil in the inspector no
   longer freezes frame navigation. An interpolated box or keypoints shape keeps
   the same id instead of getting a new one each time it is shown, and "Add a
-  point" puts the new keyframe on the current frame. Keyframe dots show on the
-  timeline while a track is edited. During a tracking session, where any box edit
-  becomes a keyframe of the track being drawn, the box pencils are disabled.
+  point" puts the new keyframe on the current frame. During a tracking session,
+  where any box edit becomes a keyframe of the track being drawn, the box pencils
+  are disabled.
 - The timeline's track menu (right-click a track) opens again. Split cuts right
-  after the current frame and keeps every box, and Split and Glue save the
+  after the frame it names and keeps every box, and Split and Glue save the
   keyframes they move, which used to return to the old track on reload.
+- Video timeline: a dragged keyframe keeps its new frame after a reload and
+  takes every annotation of its frame along, and can no longer pass a
+  neighbouring keyframe. The tracks of an object seen by several cameras no
+  longer overlap in its row, and a sub-entity's track no longer shows in its
+  parent's row. Clicking the timeline during a tracking session no longer
+  cancels it. The current time no longer depends on the time zone, and comes
+  from the exact frame rate.
 - The masks, polygons, keypoints and text spans of a sub-entity, its timeline
   row and the pre-annotation review icon take the color of their object instead
   of pink.

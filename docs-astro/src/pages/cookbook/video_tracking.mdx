@@ -196,11 +196,11 @@ Open **http://127.0.0.1:7492** and click the DAVIS dataset card. When you open a
 
 ### Tracklets
 
-A tracklet is the core concept that connects single-frame annotations into a temporal identity. Select an entity in the **Entities** tab to reveal its track as a horizontal bar along the timeline; you can pin up to two entities to compare them side by side. Colored segments within a bar represent tracklets — continuous periods where the entity is visible.
+A tracklet is the core concept that connects single-frame annotations into a temporal identity. Each tracked entity has a row in the timeline: a thin line marks the tracklets — the continuous periods where the entity is visible — and leaves a gap where it is not. Rows keep their order while you work; pin a row to keep it at the top, and click **Pinned** to show only the pinned rows.
 
-Keyframes (frames with real annotations) are shown as dots on the tracklet. Frames between keyframes can be interpolated automatically for bounding boxes and keypoints.
+Keyframes (frames with real annotations) are shown as ticks on the line, with taller ticks where a tracklet starts or ends. Frames between keyframes can be interpolated automatically for bounding boxes and keypoints. Hover a tick to see its frame and time, and click it to select the entity and jump to that frame; the keyframe under the playhead is drawn white. The keyframe buttons of the player bar, or `J` and `K`, jump to the selected entity's previous and next keyframe. Drag a tick to move the keyframe to another frame, between its neighbours: the first or last keyframe of a tracklet also moves its start or end, and `Esc` cancels the drag.
 
-You can split, merge, and relink tracklets to correct tracking errors — for example, splitting a tracklet when an object is temporarily occluded, or merging two tracklets that belong to the same entity after an identity switch.
+Right-click a tracklet to add, edit or remove a keyframe at that frame, split the tracklet after it, glue it to the tracklet before or after, relink it to another entity, or delete it. These tools correct tracking errors — for example, splitting a tracklet when an object is temporarily occluded, or gluing two tracklets that belong to the same entity after an identity switch.
 
 ### Bbox tracking
 
