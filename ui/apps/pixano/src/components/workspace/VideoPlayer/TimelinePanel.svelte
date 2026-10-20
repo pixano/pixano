@@ -40,6 +40,7 @@ License: CECILL-C
     timelineZoom,
   } from "$lib/stores/videoStores.svelte";
   import { entities, mediaViews, selectedTool } from "$lib/stores/workspaceStores.svelte";
+  import { formatTimecode } from "$lib/timeline/timeFormat";
   import { panTool, ToolType } from "$lib/tools";
   import { entityHasTracklets, TooltipContent, type Entity } from "$lib/ui";
   import { sortEntities } from "$lib/utils/entityLookupUtils";
@@ -47,7 +48,6 @@ License: CECILL-C
   import { timelineZoomMax } from "$lib/utils/timelineZoom";
   import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
   import { updateView } from "$lib/utils/videoOperations";
-  import { getCurrentImageTime } from "$lib/utils/videoUtils";
 
   let videoEntities: Entity[] = $derived.by(() =>
     entities.value
@@ -68,7 +68,7 @@ License: CECILL-C
   });
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
   const currentTimeLabel = $derived(
-    getCurrentImageTime(currentFrameIndex.value, playbackState.value.videoSpeed),
+    formatTimecode((currentFrameIndex.value * playbackState.value.videoSpeed) / 1000),
   );
   const totalFrameCount = $derived((lastFrameIndex.value ?? 0) + 1);
   const playheadLeft = $derived((currentFrameIndex.value / Math.max(totalFrameCount - 1, 1)) * 100);

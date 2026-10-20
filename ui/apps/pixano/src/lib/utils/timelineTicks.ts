@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { getCurrentImageTime } from "./videoUtils";
+import { formatTimecode } from "$lib/timeline/timeFormat";
 
 export const MIN_TIMELINE_TICKS = 8;
 export const MAX_TIMELINE_TICKS = 120;
@@ -55,8 +55,7 @@ export function timelineTickSeconds(totalSeconds: number, stepSeconds: number): 
  * index, so labels neither repeat nor land on frame boundaries.
  */
 export function formatTickLabel(seconds: number, stepSeconds: number): string {
-  const label = getCurrentImageTime(Math.round(seconds * 1000), 1);
-  if (stepSeconds >= 1) return label.slice(0, 5);
-  const decimals = String(stepSeconds).split(".")[1]?.length ?? 1;
-  return label.slice(0, 6 + decimals);
+  if (stepSeconds >= 1) return formatTimecode(seconds, 0);
+  const decimals = Math.min(3, String(stepSeconds).split(".")[1]?.length ?? 1) as 1 | 2 | 3;
+  return formatTimecode(seconds, decimals);
 }

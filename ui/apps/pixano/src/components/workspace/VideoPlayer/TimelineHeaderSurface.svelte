@@ -8,13 +8,13 @@ License: CECILL-C
   import { interpolatePlasma, scaleLinear } from "d3";
 
   import { lastFrameIndex, playbackState, timelineZoom } from "$lib/stores/videoStores.svelte";
+  import { formatTimecode } from "$lib/timeline/timeFormat";
   import { BaseSchema, type Entity, type Tracklet } from "$lib/ui";
   import {
     computeTickStepSeconds,
     formatTickLabel,
     timelineTickSeconds,
   } from "$lib/utils/timelineTicks";
-  import { getCurrentImageTime } from "$lib/utils/videoUtils";
 
   interface Props {
     entities: Entity[];
@@ -109,7 +109,7 @@ License: CECILL-C
   const hoveredTimeLabel = $derived(
     hoveredFrameIndex === null
       ? null
-      : getCurrentImageTime(hoveredFrameIndex, playbackState.value.videoSpeed),
+      : formatTimecode((hoveredFrameIndex * playbackState.value.videoSpeed) / 1000),
   );
 
   function getFrameFromClientX(clientX: number): number {
