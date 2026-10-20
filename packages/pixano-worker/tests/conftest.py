@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Accès à un PostgreSQL vivant pour les tests qui en ont besoin."""
+"""Access to a live PostgreSQL for the tests that need one."""
 
 import os
 from collections.abc import AsyncIterator, Iterator
@@ -14,27 +14,28 @@ import pytest
 from pixano_worker.schema import SCHEMA_NAME, ensure_schema
 
 
-# Variable dédiée, et c'est délibéré : un développeur qui fait tourner le worker a
-# PIXANO_DATABASE_URL dans son environnement. Si les tests s'y branchaient, lancer pytest
-# tronquerait sa base de travail. On ne doit pas pouvoir viser un déploiement par accident.
+# A dedicated variable, and deliberately so: a developer running the worker has
+# PIXANO_DATABASE_URL in their environment. If the tests hooked onto it, running pytest
+# would truncate their working database. It must not be possible to target a deployment by
+# accident.
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
 
 
 @pytest.fixture(scope="session")
 def postgres_url() -> str:
-    """URL de la base jetable réservée aux tests."""
+    """URL of the throwaway database reserved for the tests."""
     url = os.environ.get(TEST_DATABASE_URL, "")
     if not url:
-        pytest.skip(f"{TEST_DATABASE_URL} non défini")
+        pytest.skip(f"{TEST_DATABASE_URL} not set")
     return url
 
 
 def _refuse_a_populated_database(conn: psycopg.Connection) -> None:
-    """Interdire d'effacer un schéma qui contient des jobs.
+    """Forbid wiping a schema that holds jobs.
 
-    La variable dédiée ne protège que de l'oubli ; elle ne protège pas de la main qui la
-    pose sur une vraie base. Ce garde-fou attrape le cas restant — au prix d'une requête
-    par test, ce qui est dérisoire face à une file effacée par erreur.
+    The dedicated variable only protects against forgetfulness; it does not protect against
+    the hand that points it at a real database. This safeguard catches the remaining case — at
+    the cost of one query per test, which is trivial next to a queue wiped by mistake.
     """
     exists = conn.execute(f"SELECT to_regclass('{SCHEMA_NAME}.jobs')").fetchone()
     if exists is None or exists[0] is None:
@@ -42,14 +43,14 @@ def _refuse_a_populated_database(conn: psycopg.Connection) -> None:
     row = conn.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.jobs").fetchone()
     if row is not None and row[0]:
         raise RuntimeError(
-            f"{TEST_DATABASE_URL} désigne une base qui contient {row[0]} job(s). "
-            "Les tests effacent le schéma : pointez-les sur une base jetable."
+            f"{TEST_DATABASE_URL} points at a database that holds {row[0]} job(s). "
+            "The tests wipe the schema: point them at a throwaway database."
         )
 
 
 @pytest.fixture
 def blank_db(postgres_url: str) -> Iterator[psycopg.Connection]:
-    """Connexion sur une base sans schéma de jobs, effacé avant et après le test."""
+    """Connection to a database without the jobs schema, wiped before and after the test."""
     with psycopg.connect(postgres_url, autocommit=True) as conn:
         _refuse_a_populated_database(conn)
         conn.execute(f"DROP SCHEMA IF EXISTS {SCHEMA_NAME} CASCADE")
@@ -59,17 +60,17 @@ def blank_db(postgres_url: str) -> Iterator[psycopg.Connection]:
 
 @pytest.fixture
 def db(blank_db: psycopg.Connection) -> psycopg.Connection:
-    """Connexion sur une base dont le schéma est installé."""
+    """Connection to a database whose schema is installed."""
     ensure_schema(blank_db)
     return blank_db
 
 
 @pytest.fixture
 async def adb(db: psycopg.Connection, postgres_url: str) -> AsyncIterator[psycopg.AsyncConnection]:
-    """Connexion asynchrone sur la même base, pour la file et le runner.
+    """Asynchronous connection to the same database, for the queue and the runner.
 
-    Les deux connexions sont en autocommit : ce que le test prépare par `db` est visible
-    tout de suite par `adb`, et inversement.
+    Both connections are in autocommit: what the test prepares through `db` is visible right
+    away through `adb`, and conversely.
     """
     async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as conn:
         yield conn
