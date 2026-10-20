@@ -11,6 +11,8 @@ License: CECILL-C
  */
 
 import {
+  timelineActiveCamera,
+  timelineAddInViewTarget,
   timelineFocusedRowId,
   timelineSelectedEntityId,
 } from "$lib/stores/timelineInspectorStore.svelte";
@@ -19,7 +21,7 @@ import { isTracking, isVosSessionActive } from "$lib/stores/trackingStore.svelte
 import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
 import { newShape, selectedTool } from "$lib/stores/workspaceStores.svelte";
 import { timelinePolicy, type TimelinePolicy } from "$lib/timeline/timelineInteraction";
-import { panTool, ToolType } from "$lib/tools";
+import { panTool, rectangleTool, ToolType } from "$lib/tools";
 import { editModeBlockedReason } from "$lib/utils/editMode";
 import { highlightEntity } from "$lib/utils/highlightOperations";
 import { updateView } from "$lib/utils/videoOperations";
@@ -93,4 +95,35 @@ export function selectTimelineKeyframe(
     timelineFocusedRowId.value = row.rowId;
   }
   seekTimeline(frame, policy);
+}
+
+/**
+ * A camera sub-row click: that camera becomes the active one, and the row is selected (never
+ * deselected), with the playhead brought into the camera's tracks.
+ */
+export function activateTimelineCamera(
+  row: TimelineRowTarget,
+  view: string,
+  entryFrame: number | null,
+  policy: TimelinePolicy = currentTimelinePolicy(),
+): void {
+  timelineActiveCamera.value = view;
+  activateTimelineRow(row, { selected: false, entryFrame }, policy);
+}
+
+/**
+ * "+ Add in this view": select the object, make the camera active and pick the box tool, so
+ * the next box drawn in that camera can be saved to the object (the save form preselects it).
+ * Returns false when a session or the save form is in the way.
+ */
+export function armAddInView(row: TimelineRowTarget, view: string): boolean {
+  if (editModeBlockedReason() !== null || newShape.value.status === "saving") return false;
+  // Selection only works under Pan: select first, then pick the box tool.
+  if (selectedTool.value?.type !== ToolType.Pan) selectedTool.value = panTool;
+  if (timelineSelectedEntityId.value !== row.topId) highlightEntity(row.topId, false, true);
+  timelineFocusedRowId.value = row.rowId;
+  timelineActiveCamera.value = view;
+  timelineAddInViewTarget.value = { entityId: row.rowId, viewName: view };
+  selectedTool.value = rectangleTool;
+  return true;
 }

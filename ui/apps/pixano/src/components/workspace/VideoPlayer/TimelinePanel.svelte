@@ -15,6 +15,7 @@ License: CECILL-C
 
   import DetectionTracksTimelineRows from "./DetectionTracksTimelineRows.svelte";
   import EntityTimelineRow from "./EntityTimelineRow.svelte";
+  import EntityViewSubRow from "./EntityViewSubRow.svelte";
   import TimelineCommandBar from "./TimelineCommandBar.svelte";
   import {
     setTimelineLayoutContext,
@@ -28,13 +29,22 @@ License: CECILL-C
   import TimelineTrackMenu from "./TimelineTrackMenu.svelte";
   import TrackingTimelineRow from "./TrackingTimelineRow.svelte";
   import {
+    effectiveActiveCamera,
+    effectiveTimelineViewFilter,
+    selectTimelineView,
+    timelineActiveCamera,
     timelineCandidateIds,
+    timelineExpandedEntityIds,
+    timelineMultiView,
     timelineNavLane,
+    timelineNavScopeView,
     timelineRows,
     timelineSelectedRowId,
     timelineTopEntityIds,
     timelineTrackedCount,
     timelineTrackModels,
+    timelineViewOrder,
+    toggleTimelineRowExpanded,
   } from "$lib/stores/timelineInspectorStore.svelte";
   import { trackletIdOfShape } from "$lib/stores/trackEditing";
   import {
@@ -57,12 +67,20 @@ License: CECILL-C
     current_itemKeypoints,
     editedTrackletId,
     entities,
+    newShape,
     selectedTool,
     trackletIdByChildId,
     tracks,
   } from "$lib/stores/workspaceStores.svelte";
   import { keyframeColorAt, keyframeIndexAt, tracksCoveringFrame } from "$lib/timeline/laneQueries";
   import { formatTimecode, frameTime } from "$lib/timeline/timeFormat";
+  import {
+    cameraRowKey,
+    cameraRowsDomId,
+    canAddInView,
+    rowHeaderMeta,
+    scopedLane,
+  } from "$lib/timeline/timelineCameras";
   import {
     anchoredScrollLeft,
     createTimelineGeometry,
@@ -81,6 +99,7 @@ License: CECILL-C
     formatTickTooltip,
     pressKeyframe,
     reduceKeyframeDrag,
+    SAVE_FORM_REASON,
     type DragState,
   } from "$lib/timeline/timelineInteraction";
   import {
@@ -102,14 +121,22 @@ License: CECILL-C
     TIMELINE_EMPTY_TEXT,
     timelineEmptyState,
   } from "$lib/timeline/timelineRows";
-  import { MARKS_ENTITY, type EntityTrackModel } from "$lib/timeline/types";
+  import {
+    MARKS_ENTITY,
+    MARKS_VIEW,
+    type EntityTrackModel,
+    type LaneGeom,
+    type MarkGeometry,
+  } from "$lib/timeline/types";
   import { ToolType } from "$lib/tools";
-  import type { Tracklet } from "$lib/types/dataset";
+  import type { Entity, Tracklet } from "$lib/types/dataset";
   import { editModeBlockedReason, editTrack, exitEditMode } from "$lib/utils/editMode";
   import { clearHighlighting } from "$lib/utils/highlightOperations";
   import { handleMenuKeydown } from "$lib/utils/menuKeys";
   import {
+    activateTimelineCamera,
     activateTimelineRow,
+    armAddInView,
     currentTimelinePolicy,
     leaveDrawingTool,
     seekTimeline,
@@ -172,16 +199,76 @@ License: CECILL-C
   const sessionState = $derived(activeTrackingTimelineState.value);
   const detectionLanes = $derived(detectionTimelineLanes.value);
   const selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
+  const multiView = $derived(timelineMultiView.value);
+  const viewOrder = $derived(timelineViewOrder.value);
+  const viewFilter = $derived(effectiveTimelineViewFilter.value);
+  const activeCamera = $derived(effectiveActiveCamera.value);
+  const expandedIds = $derived(new Set(timelineExpandedEntityIds.value));
+
+  /** A row shown as one sub-row per camera (multi-camera records, every camera shown). */
+  const isExpanded = (rowId: string) => multiView && viewFilter === null && expandedIds.has(rowId);
 
   const layout = $derived(
     buildTimelineLayout([
-      ...(sessionState ? [{ key: "session", kind: "session" } satisfies SlotInput] : []),
+      // Keys with the unit separator never equal an object id.
+      ...(sessionState ? [{ key: "\u001fsession", kind: "session" } satisfies SlotInput] : []),
       ...detectionLanes.map(
-        (lane): SlotInput => ({ key: `detection:${lane.trackId}`, kind: "detection" }),
+        (lane): SlotInput => ({ key: `\u001fdetection\u001f${lane.trackId}`, kind: "detection" }),
       ),
-      ...rowIds.map((id): SlotInput => ({ key: id, kind: "entity" })),
+      ...rowIds.flatMap((id): SlotInput[] => [
+        { key: id, kind: "entity" },
+        ...(isExpanded(id)
+          ? viewOrder.map((view): SlotInput => ({ key: cameraRowKey(id, view), kind: "view" }))
+          : []),
+      ]),
     ]),
   );
+
+  /** The object, and the camera, each row and sub-row of the layout shows. */
+  const slotTargets = $derived.by(() => {
+    const targets = new Map<string, { rowId: string; view: string | null; subRow: boolean }>();
+    for (const id of rowIds) {
+      targets.set(id, { rowId: id, view: viewFilter, subRow: false });
+      if (!isExpanded(id)) continue;
+      for (const view of viewOrder)
+        targets.set(cameraRowKey(id, view), { rowId: id, view, subRow: true });
+    }
+    return targets;
+  });
+
+  // An expanded row draws only its merged line: its ticks and caps are on its sub-rows.
+  const faintLanes = new WeakMap<LaneGeom, LaneGeom>();
+  function faintLane(lane: LaneGeom): LaneGeom {
+    let faint = faintLanes.get(lane);
+    if (!faint) {
+      faint = { ...lane, capFrames: new Int32Array(0) };
+      faintLanes.set(lane, faint);
+    }
+    return faint;
+  }
+
+  interface SlotLane {
+    lane: LaneGeom;
+    rowId: string;
+    view: string | null;
+    subRow: boolean;
+    showTicks: boolean;
+    geo: MarkGeometry;
+  }
+
+  /** What a row or sub-row draws, hit-tests and opens menus on. */
+  function slotLane(key: string): SlotLane | null {
+    const target = slotTargets.get(key);
+    const model = target ? models.get(target.rowId) : undefined;
+    if (!target || !model) return null;
+    if (target.subRow) {
+      return { ...target, lane: scopedLane(model, target.view), showTicks: true, geo: MARKS_VIEW };
+    }
+    if (isExpanded(target.rowId)) {
+      return { ...target, lane: faintLane(model.union), showTicks: false, geo: MARKS_ENTITY };
+    }
+    return { ...target, lane: scopedLane(model, target.view), showTicks: true, geo: MARKS_ENTITY };
+  }
   const bodyHeight = $derived(layout.height + fillerHeight(layout, bodyViewportHeight));
   const sessionHeight = $derived(layout.slots.find((slot) => slot.kind === "session")?.height ?? 0);
   const detectionHeight = $derived(
@@ -239,13 +326,22 @@ License: CECILL-C
   });
   const editBlockedReason = $derived(editModeBlockedReason());
 
+  /** The camera the pencil edits, as for the keyframe tools: shown alone, or active and expanded. */
+  function pencilCamera(rowId: string): string | null {
+    return viewFilter ?? (isExpanded(rowId) ? activeCamera : null);
+  }
+
   function editableTrackId(model: EntityTrackModel): string | null {
-    return model.union.tracks.find((track) => trackIdsWithShapeHere.has(track.id))?.id ?? null;
+    const here = model.union.tracks.filter((track) => trackIdsWithShapeHere.has(track.id));
+    const camera = pencilCamera(model.entityId);
+    return (camera === null ? here[0] : here.find((track) => track.view === camera))?.id ?? null;
   }
 
   function editUnavailableReason(model: EntityTrackModel): string | null {
     if (editBlockedReason) return editBlockedReason;
-    return editableTrackId(model) ? null : "No box on this frame";
+    if (editableTrackId(model)) return null;
+    const camera = pencilCamera(model.entityId);
+    return camera === null ? "No box on this frame" : `No box in ${camera} on this frame`;
   }
 
   function onTogglePencil(rowId: string, model: EntityTrackModel) {
@@ -257,18 +353,32 @@ License: CECILL-C
     if (trackletId) editTrack(trackletId, { reveal: false });
   }
 
-  /** Where a header click brings the playhead: into the row's tracks, unless it is in them. */
-  function entryFrame(model: EntityTrackModel): number | null {
+  /** Where a header click brings the playhead: into the lane's tracks, unless it is in them. */
+  function entryFrame(lane: LaneGeom): number | null {
     const frame = currentFrameIndex.value;
-    const inside = model.union.spans.some((span) => span.start <= frame && frame <= span.end);
-    return inside || !Number.isFinite(model.firstFrame) ? null : model.firstFrame;
+    const inside = lane.spans.some((span) => span.start <= frame && frame <= span.end);
+    return inside ? null : (lane.spans[0]?.start ?? null);
   }
 
+  const rowTarget = (rowId: string) => ({ rowId, topId: topIds.get(rowId) ?? rowId });
+
   function onSelectRow(rowId: string, model: EntityTrackModel) {
-    activateTimelineRow(
-      { rowId, topId: topIds.get(rowId) ?? rowId },
-      { selected: selectedRowId === rowId, entryFrame: entryFrame(model) },
-    );
+    activateTimelineRow(rowTarget(rowId), {
+      selected: selectedRowId === rowId,
+      entryFrame: entryFrame(scopedLane(model, viewFilter)),
+    });
+  }
+
+  // "+ Add in this view": blocked by a session, Fusion or an open save form.
+  const addInViewUnavailableReason = $derived(
+    editBlockedReason ?? (newShape.value.status === "saving" ? SAVE_FORM_REASON : null),
+  );
+
+  function rowCanAddInView(entity: Entity): boolean {
+    return canAddInView({
+      parentId: entity.data.parent_id || null,
+      isConversation: entity.is_conversation,
+    });
   }
 
   const resetHighlight = () => {
@@ -279,7 +389,11 @@ License: CECILL-C
 
   interface KeyframeDrag {
     pointerId: number;
+    slotKey: string;
     rowId: string;
+    /** The camera of a sub-row, which becomes the active one. */
+    view: string | null;
+    lane: LaneGeom;
     ownerIds: string[];
     state: DragState;
   }
@@ -287,8 +401,18 @@ License: CECILL-C
   let scrubPointerId: number | null = null;
   let scrubbing = false;
   let drag: KeyframeDrag | null = null;
-  let dragPreview = $state<{ rowId: string; source: number; frame: number } | null>(null);
-  let hover = $state<{ slot: Slot; hit: Extract<LaneHit, { kind: "tick" }> } | null>(null);
+  let dragPreview = $state<{
+    slotKey: string;
+    lane: LaneGeom;
+    source: number;
+    frame: number;
+  } | null>(null);
+  let hover = $state<{
+    slot: Slot;
+    lane: LaneGeom;
+    geo: MarkGeometry;
+    hit: Extract<LaneHit, { kind: "tick" }>;
+  } | null>(null);
   let cursor = $state("");
   let pendingMove: { laneX: number; y: number } | null = null;
   let moveRequest = 0;
@@ -309,9 +433,9 @@ License: CECILL-C
     );
   }
 
-  function entitySlotAt(y: number): Slot | null {
+  function laneSlotAt(y: number): Slot | null {
     const slot = layout.slots[slotAtY(layout, y)];
-    return slot?.kind === "entity" ? slot : null;
+    return slot?.kind === "entity" || slot?.kind === "view" ? slot : null;
   }
 
   function startScrub(event: PointerEvent, laneX: number) {
@@ -324,20 +448,27 @@ License: CECILL-C
   function onBodyPointerDown(event: PointerEvent) {
     if (event.button !== 0 || event.ctrlKey || isOnHeader(event)) return;
     const point = bodyPoint(event);
-    const slot = entitySlotAt(point.y);
-    const model = slot ? models.get(slot.key) : undefined;
+    const slot = laneSlotAt(point.y);
+    const target = slot ? slotLane(slot.key) : null;
     hover = null;
-    if (slot && model) {
-      const hit = hitTestLane(model.union, geometry, point.laneX);
+    if (slot && target) {
+      const hit = hitTestLane(target.lane, geometry, point.laneX, { showTicks: target.showTicks });
       if (hit.kind === "tick") {
         const ownerIds = hit.owners.map((track) => track.id);
         const policy = currentTimelinePolicy();
         const bounds = policy.retime
-          ? keyframeRetimeBoundsFor({ entityId: slot.key, frame: hit.frame, trackletIds: ownerIds })
+          ? keyframeRetimeBoundsFor({
+              entityId: target.rowId,
+              frame: hit.frame,
+              trackletIds: ownerIds,
+            })
           : null;
         drag = {
           pointerId: event.pointerId,
-          rowId: slot.key,
+          slotKey: slot.key,
+          rowId: target.rowId,
+          view: target.subRow ? target.view : null,
+          lane: target.lane,
           ownerIds,
           state: pressKeyframe(point.laneX, hit.frame, bounds),
         };
@@ -359,10 +490,15 @@ License: CECILL-C
       seekTimeline(xToFrame(geometry, move.laneX));
       return;
     }
-    const slot = entitySlotAt(move.y);
-    const model = slot ? models.get(slot.key) : undefined;
-    const hit = slot && model ? hitTestLane(model.union, geometry, move.laneX) : null;
-    hover = slot && hit?.kind === "tick" ? { slot, hit } : null;
+    const slot = laneSlotAt(move.y);
+    const target = slot ? slotLane(slot.key) : null;
+    const hit = target
+      ? hitTestLane(target.lane, geometry, move.laneX, { showTicks: target.showTicks })
+      : null;
+    hover =
+      slot && target && hit?.kind === "tick"
+        ? { slot, lane: target.lane, geo: target.geo, hit }
+        : null;
     cursor = hover ? (currentTimelinePolicy().retime ? "grab" : "pointer") : "";
   }
 
@@ -376,7 +512,12 @@ License: CECILL-C
       });
       drag.state = state;
       if (effect.type === "preview" && state.phase === "dragging") {
-        dragPreview = { rowId: drag.rowId, source: state.source, frame: effect.frame };
+        dragPreview = {
+          slotKey: drag.slotKey,
+          lane: drag.lane,
+          source: state.source,
+          frame: effect.frame,
+        };
         cursor = "grabbing";
       }
       return;
@@ -419,7 +560,11 @@ License: CECILL-C
       const current = drag;
       const { effect } = reduceKeyframeDrag(current.state, { type: "up" });
       endDrag();
-      const row = { rowId: current.rowId, topId: topIds.get(current.rowId) ?? current.rowId };
+      const row = rowTarget(current.rowId);
+      // A tick of a camera sub-row makes that camera the active one.
+      if (current.view !== null && effect.type !== "none" && effect.type !== "cancelled") {
+        timelineActiveCamera.value = current.view;
+      }
       if (effect.type === "click") {
         selectTimelineKeyframe(row, effect.frame);
       } else if (effect.type === "commit") {
@@ -469,23 +614,24 @@ License: CECILL-C
     const point = bodyPoint(event);
     let slot: Slot | null = null;
     if (onHeader && event.target instanceof Element) {
-      const rowKey = event.target.closest("[data-timeline-row]")?.getAttribute("data-timeline-row");
-      const index = rowKey ? layout.indexByKey.get(rowKey) : undefined;
+      const slotKey = event.target
+        .closest("[data-timeline-slot]")
+        ?.getAttribute("data-timeline-slot");
+      const index = slotKey ? layout.indexByKey.get(slotKey) : undefined;
       slot = index === undefined ? null : layout.slots[index];
     } else if (!onHeader) {
-      slot = entitySlotAt(point.y);
+      slot = laneSlotAt(point.y);
     }
-    if (!slot || slot.kind !== "entity") return null;
-    const model = models.get(slot.key);
-    const entity = entitiesById.get(slot.key);
-    if (!model || !entity) return null;
+    const target = slot ? slotLane(slot.key) : null;
+    const entity = target ? entitiesById.get(target.rowId) : undefined;
+    if (!target || !entity) return null;
     let frame: number;
     let ids: string[];
     if (onHeader) {
       frame = currentFrameIndex.value;
-      ids = tracksCoveringFrame(model.union, frame).map((track) => track.id);
+      ids = tracksCoveringFrame(target.lane, frame).map((track) => track.id);
     } else {
-      const hit = hitTestLane(model.union, geometry, point.laneX);
+      const hit = hitTestLane(target.lane, geometry, point.laneX, { showTicks: target.showTicks });
       if (hit.kind === "gap") return null;
       frame = hit.frame;
       ids = (hit.kind === "tick" ? hit.owners : hit.tracks).map((track) => track.id);
@@ -517,47 +663,57 @@ License: CECILL-C
 
   const playheadX = $derived(frameToX(geometry, currentFrameIndex.value));
 
+  const slotGeo = (slot: Slot) => (slot.kind === "view" ? MARKS_VIEW : MARKS_ENTITY);
+
+  // Where the selected keyframe shows: the active camera's sub-row of an expanded row.
+  const navSlotKey = $derived.by(() => {
+    if (!selectedRowId) return null;
+    const scope = timelineNavScopeView.value;
+    return isExpanded(selectedRowId) && scope !== null
+      ? cameraRowKey(selectedRowId, scope)
+      : selectedRowId;
+  });
+
   // The keyframe under the playhead on the selected row, or the one being dragged.
   const selectedMark = $derived.by<OverlayMark | null>(() => {
     if (dragPreview) {
-      const index = layout.indexByKey.get(dragPreview.rowId);
-      const lane = models.get(dragPreview.rowId)?.union;
-      if (index === undefined || !lane) return null;
+      const index = layout.indexByKey.get(dragPreview.slotKey);
+      if (index === undefined) return null;
+      const slot = layout.slots[index];
       return {
         x: frameToX(geometry, dragPreview.frame),
-        laneTop: layout.slots[index].contentTop,
-        box: MARKS_ENTITY.selected,
-        color: keyframeColorAt(lane, dragPreview.source),
+        laneTop: slot.contentTop,
+        box: slotGeo(slot).selected,
+        color: keyframeColorAt(dragPreview.lane, dragPreview.source),
       };
     }
     const lane = timelineNavLane.value;
-    const index = selectedRowId ? layout.indexByKey.get(selectedRowId) : undefined;
+    const index = navSlotKey ? layout.indexByKey.get(navSlotKey) : undefined;
     const frame = currentFrameIndex.value;
     if (!lane || index === undefined || keyframeIndexAt(lane.frames, frame) < 0) return null;
+    const slot = layout.slots[index];
     return {
       x: frameToX(geometry, frame),
-      laneTop: layout.slots[index].contentTop,
-      box: MARKS_ENTITY.selected,
+      laneTop: slot.contentTop,
+      box: slotGeo(slot).selected,
       color: keyframeColorAt(lane, frame),
     };
   });
 
   const hoverMark = $derived.by<OverlayMark | null>(() => {
     if (!hover || dragPreview) return null;
-    const lane = models.get(hover.slot.key)?.union;
-    if (!lane) return null;
     return {
       x: frameToX(geometry, hover.hit.frame),
       laneTop: hover.slot.contentTop,
-      box: hover.hit.isCap ? MARKS_ENTITY.hoverCap : MARKS_ENTITY.hoverTick,
-      color: keyframeColorAt(lane, hover.hit.frame),
+      box: hover.hit.isCap ? hover.geo.hoverCap : hover.geo.hoverTick,
+      color: keyframeColorAt(hover.lane, hover.hit.frame),
     };
   });
 
   const tooltip = $derived.by<OverlayTooltip | null>(() => {
     const preview = dragPreview;
     if (preview) {
-      const index = layout.indexByKey.get(preview.rowId);
+      const index = layout.indexByKey.get(preview.slotKey);
       if (index === undefined) return null;
       const slot = layout.slots[index];
       return {
@@ -693,6 +849,9 @@ License: CECILL-C
       buffering={playbackState.value.isBuffering}
       {zoom}
       {zoomMax}
+      views={viewOrder}
+      {viewFilter}
+      onSelectView={selectTimelineView}
       {resetHighlight}
       onZoom={(next) => void applyZoom(next)}
     />
@@ -773,21 +932,72 @@ License: CECILL-C
                 {@const model = models.get(rowId)}
                 {@const slot = layout.slots[layout.indexByKey.get(rowId) ?? -1]}
                 {#if entity && model && slot}
+                  {@const expanded = isExpanded(rowId)}
+                  {@const missingView =
+                    viewFilter !== null && !model.byView.has(viewFilter) ? viewFilter : null}
+                  {@const graphicsOpacity = rowGraphics.get(rowId) ?? 1}
+                  {@const addable = rowCanAddInView(entity)}
                   <div role="listitem">
                     <EntityTimelineRow
                       {entity}
-                      {model}
+                      lane={slotLane(rowId)?.lane ?? model.union}
+                      meta={rowHeaderMeta(model, { viewOrder, viewFilter })}
                       height={slot.height}
                       {laneWidth}
                       dotColor={annotationColors.value.colorOfEntity(rowId)}
                       selected={selectedRowId === rowId}
-                      graphicsOpacity={rowGraphics.get(rowId) ?? 1}
+                      graphicsOpacity={missingView ? graphicsOpacity * 0.75 : graphicsOpacity}
                       marksVisible={slotInRange(slot, yRange)}
+                      {expanded}
+                      leading={multiView ? (viewFilter === null ? "chevron" : "spacer") : null}
+                      onToggleExpanded={() => toggleTimelineRowExpanded(rowId)}
+                      {missingView}
+                      canAddInView={addable}
+                      {addInViewUnavailableReason}
+                      onAddInView={() => {
+                        if (missingView) armAddInView(rowTarget(rowId), missingView);
+                      }}
                       editing={editingRowId === rowId}
                       editUnavailableReason={editUnavailableReason(model)}
                       onSelect={() => onSelectRow(rowId, model)}
                       onTogglePencil={() => onTogglePencil(rowId, model)}
                     />
+                    {#if expanded}
+                      <div
+                        id={cameraRowsDomId(rowId)}
+                        role="group"
+                        aria-label={`Cameras of ${rowId}`}
+                      >
+                        {#each viewOrder as view (view)}
+                          {@const subSlot =
+                            layout.slots[layout.indexByKey.get(cameraRowKey(rowId, view)) ?? -1]}
+                          {@const viewLane = model.byView.get(view) ?? null}
+                          {#if subSlot}
+                            <EntityViewSubRow
+                              slotKey={cameraRowKey(rowId, view)}
+                              entityId={rowId}
+                              {view}
+                              lane={viewLane}
+                              height={subSlot.height}
+                              {laneWidth}
+                              active={activeCamera === view}
+                              highlighted={selectedRowId === rowId && activeCamera === view}
+                              {graphicsOpacity}
+                              marksVisible={slotInRange(subSlot, yRange)}
+                              canAddInView={addable}
+                              {addInViewUnavailableReason}
+                              onActivate={() =>
+                                activateTimelineCamera(
+                                  rowTarget(rowId),
+                                  view,
+                                  viewLane ? entryFrame(viewLane) : null,
+                                )}
+                              onAddInView={() => armAddInView(rowTarget(rowId), view)}
+                            />
+                          {/if}
+                        {/each}
+                      </div>
+                    {/if}
                   </div>
                 {/if}
               {/each}

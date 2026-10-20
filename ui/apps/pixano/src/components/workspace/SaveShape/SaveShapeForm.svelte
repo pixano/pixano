@@ -18,6 +18,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { timelineAddInViewTarget } from "$lib/stores/timelineInspectorStore.svelte";
   import {
     cancelTrackingSession,
     trackingSession,
@@ -76,6 +77,14 @@ License: CECILL-C
   let objectProperties: EntityProperties = $state({});
   let selectedEntityId: string = $state("");
   const { manifest } = getWorkspaceContext();
+
+  // An object armed from the timeline ("+ Add in this view") is preselected for a shape drawn
+  // in its camera.
+  const preselectEntityId = $derived.by(() => {
+    const target = timelineAddInViewTarget.value;
+    if (!target || newShape.value.status !== "saving") return null;
+    return newShape.value.viewRef?.name === target.viewName ? target.entityId : null;
+  });
 
   function buildShapeResetState(reason: "save-confirmed" | "save-cancelled") {
     if (newShape.value.status !== "saving") {
@@ -596,6 +605,7 @@ License: CECILL-C
       bind:selectedEntityId
       baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
       viewRef={newShape.value.viewRef}
+      {preselectEntityId}
     />
     <div class="flex flex-col gap-1.5">
       <span class="text-label text-left">Attributes</span>

@@ -33,7 +33,12 @@
   off the timeline. The keyframe buttons and `J`/`K` jump between the selected
   object's keyframes. The ruler starts at frame 0 with three tick levels, time
   and frame labels, the frame rate and the frame count, and the current frame in
-  a badge. An object seen by several cameras has one row merging them.
+  a badge. In a multi-camera record, an object's row says how many cameras see
+  it (`2/3 views`) and opens into one row per camera; clicking a camera row
+  makes it the active camera, which the keyframe buttons, `J`/`K`, the pencil
+  and a dragged tick follow. The player bar shows every camera or one alone, and
+  **Add in this view** on a camera without the object picks the box tool for it
+  there and proposes the object in the save form.
 - **Color annotations by an attribute.** A "Color by" menu in the Entities tab
   colors boxes, polygons, masks, keypoints, text spans and tracks by an entity
   attribute (a category, a yes/no flag) or an annotation attribute (a box's

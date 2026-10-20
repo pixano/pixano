@@ -19,6 +19,7 @@ License: CECILL-C
 
   import {
     timelineNavLane,
+    timelineNavScopeView,
     timelineSelectedRowId,
   } from "$lib/stores/timelineInspectorStore.svelte";
   import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
@@ -304,6 +305,8 @@ License: CECILL-C
   const keyframeTooltip = (direction: -1 | 1): string => {
     if (!navLane) return "Select an object to jump between its keyframes";
     if (saving) return SAVE_FORM_REASON;
+    const camera = timelineNavScopeView.value;
+    if (navLane.frames.length === 0 && camera !== null) return `Not annotated in ${camera}`;
     if (direction < 0)
       return previousTarget === null ? "No earlier keyframe" : "Previous keyframe (J)";
     return nextTarget === null ? "No later keyframe" : "Next keyframe (K)";
