@@ -220,6 +220,8 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **A refused plan fails the job, not the worker.** A kind that plans a chunk the schema refuses — an empty one, a payload that does not serialise — gets its job marked `error` with the reason.
 
+**A planning has a time limit; past it, the job fails.** The preparation and the split each get `PLANNING_TIMEOUT_S`, ten minutes, a ceiling rather than an estimate, set far above that work, so that only a planning stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it and gives the loop's turn back. The job fails with "planning exceeded its time limit": planned again, it would hold the loop's turn for the whole limit each time, with no bound on the tries, and leave one more thread stuck each time. A time-out the planning meets itself, a socket's, is its failure, not the limit.
+
 **An embeddings job with another model is refused at planning**, before inference runs (§12).
 
 ## 11. Events and the stream

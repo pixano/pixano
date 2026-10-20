@@ -10,7 +10,11 @@ import asyncio
 import threading
 
 import pytest
-from pixano_worker.threads import WorkerThreads
+from pixano_worker.threads import TimeLimitExceeded, WorkerThreads
+
+
+#: A time limit the works below outlast at once.
+SHORT_LIMIT_S = 0.05
 
 
 async def test_returns_what_the_work_returns() -> None:
@@ -52,6 +56,36 @@ async def test_work_still_queued_when_it_times_out_is_not_stuck() -> None:
     assert threads.stuck == 0
     release.set()
     await asyncio.gather(*occupying)
+
+
+async def test_a_work_over_its_limit_says_it_is_the_pools_limit() -> None:
+    """Planning fails a job whose planning overran its limit, and
+    must be able to tell that from any other failure of the planning."""
+    threads = WorkerThreads(workers=2, stuck_limit=1)
+    release = threading.Event()
+
+    # Released whatever the outcome: a thread left waiting would hold the interpreter at exit,
+    # and a failure here would show as a suite that never ends.
+    try:
+        with pytest.raises(TimeLimitExceeded):
+            await threads.run(release.wait, timeout_s=SHORT_LIMIT_S)
+    finally:
+        release.set()
+
+
+async def test_a_timeout_the_work_raises_itself_is_not_the_pools_limit() -> None:
+    """A socket's timeout is the work's failure: reported as the pool's limit, a planning would say
+    it overran a limit it never reached. Its thread is free, so nothing counts as stuck."""
+    threads = WorkerThreads(workers=2, stuck_limit=1)
+
+    def times_out_on_its_own() -> None:
+        raise TimeoutError("the storage did not answer the socket in time")
+
+    with pytest.raises(TimeoutError, match="socket") as raised:
+        await threads.run(times_out_on_its_own, timeout_s=60)
+
+    assert not isinstance(raised.value, TimeLimitExceeded)
+    assert threads.stuck == 0
 
 
 def test_the_pool_must_outnumber_its_saturation_threshold() -> None:

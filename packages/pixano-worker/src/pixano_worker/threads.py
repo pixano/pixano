@@ -28,6 +28,14 @@ from typing import Callable, TypeVar
 T = TypeVar("T")
 
 
+class TimeLimitExceeded(TimeoutError):
+    """`WorkerThreads.run` stopped waiting: the work outlasted its time limit.
+
+    A `TimeoutError`, so that a caller catching that catches this too. A caller that must tell the
+    pool's limit from a `TimeoutError` the work raised itself — a socket's — catches this one.
+    """
+
+
 class WorkerThreads:
     """A bounded pool, which knows how many of its threads are stuck.
 
@@ -85,22 +93,34 @@ class WorkerThreads:
         """Run `work` in a thread of the pool, waiting at most `timeout_s`.
 
         Raises:
-            TimeoutError: The time limit is exceeded. The thread, if it had started, goes on and
-                is counted as stuck until it finishes. A cancellation of the wait — a chunk
+            TimeLimitExceeded: The time limit is exceeded. The thread, if it had started, goes on
+                and is counted as stuck until it finishes. A cancellation of the wait — a chunk
                 abandoned at the worker's stop — leaves the same thread behind, and counts it
-                the same way.
+                the same way. A `TimeoutError` the work raises itself comes through as it is.
         """
         with self._lock:
             executor, generation = self._executor, self._generation
         future = executor.submit(work)
         try:
             return await asyncio.wait_for(asyncio.wrap_future(future), timeout_s)
-        except (TimeoutError, asyncio.CancelledError):
-            # Work still queued is cancelled for good and blocks nothing; only work already
-            # started leaves a thread behind.
-            if not future.cancelled():
-                self._count_stuck(future, generation)
+        except TimeoutError as error:
+            # Told apart by the work's own outcome, not by the exception object: before Python
+            # 3.13, asyncio hands a work's `TimeoutError` over as a copy.
+            if future.done() and not future.cancelled() and isinstance(future.exception(), TimeoutError):
+                # The work raised it itself: its failure, not the limit, and its thread is free.
+                raise
+            self._abandon(future, generation)
+            raise TimeLimitExceeded(f"no result within the time limit of {timeout_s} s") from error
+        except asyncio.CancelledError:
+            self._abandon(future, generation)
             raise
+
+    def _abandon(self, future: Future, generation: int) -> None:
+        """Stop waiting for a work: its thread, if it had started, now counts as stuck."""
+        # Work still queued is cancelled for good and blocks nothing; only work already started
+        # leaves a thread behind.
+        if not future.cancelled():
+            self._count_stuck(future, generation)
 
     def _count_stuck(self, future: Future, generation: int) -> None:
         with self._lock:
