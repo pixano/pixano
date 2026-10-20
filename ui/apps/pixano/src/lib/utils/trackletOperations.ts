@@ -11,8 +11,23 @@ import {
   getBBoxInterpolationIdentity,
   getKeypointsInterpolationIdentity,
 } from "$lib/stores/frameAnnotationSelectors";
+import { trackKeyframeFrames } from "$lib/stores/trackEditing";
 import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-import { annotations, editedTrackletId, entities } from "$lib/stores/workspaceStores.svelte";
+import {
+  annotations,
+  editedTrackletId,
+  entities,
+  views as workspaceViews,
+} from "$lib/stores/workspaceStores.svelte";
+import {
+  keyframeRetimeBounds,
+  planKeyframeRetime,
+  retimedTrackletTimestamps,
+  type RetimeBounds,
+  type RetimeInput,
+  type RetimeRejection,
+  type RetimeTrack,
+} from "$lib/timeline/keyframeRetime";
 import {
   Annotation,
   BaseSchema,
@@ -21,6 +36,7 @@ import {
   entityHasTracklets,
   Keypoints,
   Tracklet,
+  type PerFrameAnnotationData,
   type SequenceFrame,
   type View,
 } from "$lib/types/dataset";
@@ -32,7 +48,8 @@ import { applyPixanoSourceFields } from "$lib/utils/entityLookupUtils";
 import { appendAnnotationsSorted } from "$lib/utils/entityOperations";
 import { boxLinearInterpolation, keypointsLinearInterpolation } from "$lib/utils/interpolation";
 import { saveTo } from "$lib/utils/saveItemUtils";
-import { splitTrackInTwo } from "$lib/utils/videoOperations";
+import { findSequenceFrameByIndex, sequenceFrameRange } from "$lib/utils/videoFrameIdentity";
+import { splitTrackInTwo, updateView } from "$lib/utils/videoOperations";
 import { sortByFrameIndex } from "$lib/utils/videoUtils";
 import { commitNormalizedWorkspaceRuntime } from "$lib/utils/workspaceRuntimeMutations";
 
@@ -202,7 +219,7 @@ export function glueTracklets(tracklet: Tracklet, neighbor: Tracklet, entityId: 
 }
 
 /** The boxes and keypoints `tracklet` interpolates on `frameIndex`, as displayed. */
-function interpolatedShapesAt(
+export function interpolatedShapesAt(
   tracklet: Tracklet,
   frameIndex: number,
   views: MView,
@@ -294,4 +311,121 @@ export function findNeighborFrameIndices(
     }
   }
   return [previous, next];
+}
+
+/** A keyframe of an entity's timeline lane: its frame and the tracks with a keyframe on it. */
+export interface KeyframeRef {
+  entityId: string;
+  frame: number;
+  trackletIds: readonly string[];
+}
+
+export type KeyframeRetimeOutcome =
+  | { ok: true; frame: number; movedIds: string[] }
+  | { ok: false; reason: RetimeRejection | "no-frame" };
+
+function ownTracklets(entityId: string): Tracklet[] {
+  return annotations.value.filter(
+    (annotation) =>
+      annotation.is_type(BaseSchema.Tracklet) && annotation.data.entity_id === entityId,
+  ) as Tracklet[];
+}
+
+function sequenceFramesOf(viewName: string): SequenceFrame[] | undefined {
+  const view = workspaceViews.value[viewName];
+  return Array.isArray(view) ? (view as SequenceFrame[]) : undefined;
+}
+
+function retimeTrackOf(tracklet: Tracklet): RetimeTrack {
+  const { start_frame, end_frame, view_name } = tracklet.data;
+  return {
+    id: tracklet.id,
+    view: view_name,
+    start: Math.min(start_frame, end_frame),
+    end: Math.max(start_frame, end_frame),
+    keyframes: trackKeyframeFrames(tracklet),
+  };
+}
+
+function retimeInputOf(ref: KeyframeRef, tracklets: Tracklet[]): RetimeInput {
+  const siblings = tracklets.map(retimeTrackOf);
+  const ownerIds = new Set(ref.trackletIds);
+  return {
+    frame: ref.frame,
+    owners: siblings.filter((track) => ownerIds.has(track.id)),
+    siblings,
+    frameRange: (view) => sequenceFrameRange(sequenceFramesOf(view), lastFrameIndex.value),
+  };
+}
+
+/** The frames a keyframe can be dragged to, for the drag preview; null when it cannot move. */
+export function keyframeRetimeBoundsFor(ref: KeyframeRef): RetimeBounds | null {
+  return keyframeRetimeBounds(retimeInputOf(ref, ownTracklets(ref.entityId)));
+}
+
+const seekFrame = (frame: number) => {
+  currentFrameIndex.value = frame;
+  updateView(frame);
+};
+
+/**
+ * Move a keyframe of an entity to `target`: every annotation its tracks have on that frame
+ * (box, keypoints, mask...) moves along, and a track's first or last keyframe drags the
+ * track's start or end. The move is checked again here with the store's current data and is
+ * all or nothing: it is refused when it would pass a neighbouring keyframe or track, or when
+ * a camera has no frame `target`. The playhead then follows the keyframe.
+ */
+export function retimeKeyframe(
+  ref: KeyframeRef & { target: number },
+  { seek = seekFrame }: { seek?: (frame: number) => void } = {},
+): KeyframeRetimeOutcome {
+  const tracklets = ownTracklets(ref.entityId);
+  const plan = planKeyframeRetime({ ...retimeInputOf(ref, tracklets), target: ref.target });
+  if (plan.ok === false) return { ok: false, reason: plan.reason };
+
+  const trackletsById = new Map(tracklets.map((tracklet) => [tracklet.id, tracklet]));
+  const moves: { child: Annotation; frame: SequenceFrame }[] = [];
+  for (const { id } of plan.tracks) {
+    for (const child of trackletsById.get(id)?.ui.childs ?? []) {
+      if (child.ui.frame_index !== ref.frame) continue;
+      const frame = findSequenceFrameByIndex(sequenceFramesOf(child.data.view_name), ref.target);
+      if (!frame) return { ok: false, reason: "no-frame" };
+      moves.push({ child, frame });
+    }
+  }
+
+  for (const { child, frame } of moves) {
+    const data = child.data as PerFrameAnnotationData;
+    // Annotations created in the app reference their frame as their view too.
+    if (data.view_id === data.frame_id) data.view_id = frame.id;
+    data.frame_id = frame.id;
+    data.frame_index = ref.target;
+    // The entity's state row of the old frame no longer describes it.
+    data.entity_dynamic_state_id = "";
+    child.ui.frame_index = ref.target;
+    applyPixanoSourceFields(child);
+  }
+  for (const trackPlan of plan.tracks) {
+    if (!trackPlan.rangeChanged) continue;
+    const tracklet = trackletsById.get(trackPlan.id);
+    if (!tracklet) continue;
+    const frames = sequenceFramesOf(tracklet.data.view_name);
+    const timestamps = retimedTrackletTimestamps(
+      tracklet.data,
+      trackPlan.start,
+      trackPlan.end,
+      (frame) => findSequenceFrameByIndex(frames, frame)?.data.timestamp,
+    );
+    tracklet.data.start_frame = trackPlan.start;
+    tracklet.data.end_frame = trackPlan.end;
+    tracklet.data.start_timestamp = timestamps.start_timestamp;
+    tracklet.data.end_timestamp = timestamps.end_timestamp;
+    applyPixanoSourceFields(tracklet);
+    saveTo("update", tracklet);
+  }
+
+  commitNormalizedWorkspaceRuntime(annotations.value.slice(), entities.value);
+  for (const { child } of moves) saveTo("update", child);
+  seek(ref.target);
+  return { ok: true, frame: ref.target, movedIds: moves.map(({ child }) => child.id) };
 }
