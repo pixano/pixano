@@ -42,7 +42,7 @@ from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import SCHEMA_NAME
-from .threads import WorkerThreads
+from .threads import TimeLimitExceeded, WorkerThreads
 from .writer import JobWriter
 
 
@@ -99,6 +99,16 @@ _write_locks_guard = threading.Lock()
 # its thread freed, instead of waiting that whole limit out, five times, and staying stuck on the
 # lock for good.
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
+
+# How long the loop waits for each step of a planning — the preparation, then the split — before
+# it fails the job. Planning prepares the dataset, then reads the identifiers it splits. Not
+# measured: a ceiling rather than an estimate, set far above that work, so that only a planning
+# stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it,
+# and the loop's turn, which it holds, is given back.
+PLANNING_TIMEOUT_S = 600.0
+
+# What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
+PLANNING_TIMED_OUT = "planning exceeded its time limit"
 
 
 @lru_cache(maxsize=1)
@@ -248,8 +258,16 @@ async def plan_one(
             # Preparation precedes the split, under the same lease: a planner that dies between
             # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
             # is why `prepare` must be idempotent.
-            await pool.run(lambda: kind.prepare(writer, params))
-            chunks = await pool.run(lambda: list(kind.plan(reader, params)))
+            await pool.run(lambda: kind.prepare(writer, params), PLANNING_TIMEOUT_S)
+            chunks = await pool.run(lambda: list(kind.plan(reader, params)), PLANNING_TIMEOUT_S)
+    except TimeLimitExceeded:
+        # This is the planning's own work that does not end: its reads or its `prepare`, on storage
+        # that stopped answering, or a kind's bug. Planned again, it would hold the loop's turn for
+        # the whole limit each time, with no bound on the number of tries (backend-processing §10),
+        # and leave one more thread stuck each time. Failing says it once.
+        await _fail_job(conn, job_id, {"reason": PLANNING_TIMED_OUT, "timeout_s": PLANNING_TIMEOUT_S})
+        log.error("job %s: planning still running after %ss, the job fails", job_id, PLANNING_TIMEOUT_S)
+        return job_id
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s: planning failed", job_id)
