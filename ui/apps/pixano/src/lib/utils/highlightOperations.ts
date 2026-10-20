@@ -73,6 +73,7 @@ function resolveActiveHighlightedEntity(entitiesList: Entity[]): string | null {
   return fusionHighlightedEntityId;
 }
 
+/** Scroll the entity's inspector card into view; the timeline reveals its own row on selection. */
 export const scrollIntoView = (entity_id: string) => {
   const cardElement = document.querySelector(`#card-object-${entity_id}`);
   if (!cardElement) return;
@@ -80,13 +81,6 @@ export const scrollIntoView = (entity_id: string) => {
   requestAnimationFrame(() => {
     cardElement.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-
-  const trackElement = document
-    .querySelector(`#video-object-${entity_id}`)
-    ?.getElementsByClassName("video-tracklet");
-  if (trackElement && trackElement.length > 0) {
-    trackElement[0].scrollIntoView({ block: "center", inline: "center" });
-  }
 };
 
 export const highlightEntity = (

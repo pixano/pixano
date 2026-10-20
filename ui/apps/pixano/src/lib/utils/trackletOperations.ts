@@ -288,31 +288,6 @@ export function splitTrackletAfter(
   return true;
 }
 
-/**
- * Find the frame indices of the nearest neighbor annotations (across all
- * tracklets in the same view) that bracket the given frame index.
- */
-export function findNeighborFrameIndices(
-  tracklet: Tracklet,
-  frameIndex: number,
-  allTracklets: Tracklet[],
-): [number, number] {
-  let previous: number = 0;
-  let next: number = lastFrameIndex.value ?? 0;
-  for (const subtrack of allTracklets) {
-    if (subtrack.data.view_name === tracklet.data.view_name) {
-      for (const child of subtrack.ui.childs) {
-        if (child.ui.frame_index < frameIndex && child.ui.frame_index > previous) {
-          previous = child.ui.frame_index!;
-        } else if (child.ui.frame_index > frameIndex && child.ui.frame_index < next) {
-          next = child.ui.frame_index!;
-        }
-      }
-    }
-  }
-  return [previous, next];
-}
-
 /** A keyframe of an entity's timeline lane: its frame and the tracks with a keyframe on it. */
 export interface KeyframeRef {
   entityId: string;
