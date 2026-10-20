@@ -142,10 +142,10 @@ class TestWorkerConfig:
     def test_describe_says_whether_the_inference_is_authenticated(
         self, env: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        assert "sans clé d'API" in WorkerConfig.from_env().describe()
+        assert "no API key" in WorkerConfig.from_env().describe()
 
-        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "jeton")
-        assert "authentifiée" in WorkerConfig.from_env().describe()
+        monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "token")
+        assert "authenticated" in WorkerConfig.from_env().describe()
 
     def test_describe_never_leaks_the_inference_key(self, env: None, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("PIXANO_INFERENCE_API_KEY", "jeton-secret")
