@@ -5,31 +5,45 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // One object of the timeline: a sticky header (select, keyframe count, edit pencil)
-  // and its lane. Pointer work on the lane (ticks, scrubbing, dragging, the track menu) is
-  // delegated to the panel, which hit-tests the lane's model.
-  import { Pencil } from "phosphor-svelte";
+  // One object of the timeline: a sticky header (cameras chevron, select, keyframe count or
+  // camera coverage, edit pencil) and its lane. Pointer work on the lane (ticks,
+  // scrubbing, dragging, the track menu) is delegated to the panel, which hit-tests the lane.
+  import { CaretRight, Pencil } from "phosphor-svelte";
 
+  import TimelineMissingCamera from "./TimelineMissingCamera.svelte";
   import TrackMarks from "./TrackMarks.svelte";
   import { entities } from "$lib/stores/workspaceStores.svelte";
+  import { cameraRowsDomId } from "$lib/timeline/timelineCameras";
   import { TIMELINE_HEADER_WIDTH } from "$lib/timeline/timelineGeometry";
-  import { rowKeyframeLabel } from "$lib/timeline/timelineRows";
-  import { MARKS_ENTITY, type EntityTrackModel } from "$lib/timeline/types";
+  import { MARKS_ENTITY, type LaneGeom } from "$lib/timeline/types";
   import type { Entity } from "$lib/types/dataset";
   import { cn } from "$lib/utils/styleUtils";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
   interface Props {
     entity: Entity;
-    model: EntityTrackModel;
+    /** The lane drawn: every camera merged, or the camera shown alone. */
+    lane: LaneGeom;
+    /** "12 kf", "2/3 views", or "—" for an object a camera shown alone does not see. */
+    meta: string;
     /** The row's block height, its 4 px gap included. */
     height: number;
     laneWidth: number;
     dotColor: string;
     selected: boolean;
-    /** Opacity of the row's graphics: dimmed when hidden in the inspector or out of a fusion. */
+    /** Opacity of the row's graphics: dimmed when hidden, out of a fusion, or not in the camera. */
     graphicsOpacity: number;
     marksVisible: boolean;
+    /** Expanded into camera sub-rows: only a faint line, its ticks are on the sub-rows. */
+    expanded?: boolean;
+    /** A chevron to expand the row into cameras, a spacer to keep names aligned, or nothing. */
+    leading?: "chevron" | "spacer" | null;
+    onToggleExpanded?: () => void;
+    /** The camera shown alone, when the object has no track in it. */
+    missingView?: string | null;
+    canAddInView?: boolean;
+    addInViewUnavailableReason?: string | null;
+    onAddInView?: () => void;
     editing: boolean;
     /** Why the pencil cannot edit on this frame, or null when it can. */
     editUnavailableReason: string | null;
@@ -39,13 +53,21 @@ License: CECILL-C
 
   let {
     entity,
-    model,
+    lane,
+    meta,
     height,
     laneWidth,
     dotColor,
     selected,
     graphicsOpacity,
     marksVisible,
+    expanded = false,
+    leading = null,
+    onToggleExpanded,
+    missingView = null,
+    canAddInView = false,
+    addInViewUnavailableReason = null,
+    onAddInView,
     editing,
     editUnavailableReason,
     onSelect,
@@ -61,13 +83,12 @@ License: CECILL-C
   });
   const name = $derived(entity.id);
   const title = $derived(displayFeat ? `${displayFeat} (${entity.id})` : entity.id);
-  const keyframeLabel = $derived(rowKeyframeLabel(model.union.frames.length));
   const pencilTitle = $derived(
     editing ? "Finish editing (Enter)" : (editUnavailableReason ?? "Edit this object's box (E)"),
   );
 </script>
 
-<div class="flex" style:height="{height}px" data-timeline-row={entity.id}>
+<div class="flex" style:height="{height}px" data-timeline-slot={entity.id}>
   <div
     class="sticky left-0 z-20 shrink-0 bg-card pt-1"
     style:width="{TIMELINE_HEADER_WIDTH}px"
@@ -75,10 +96,32 @@ License: CECILL-C
   >
     <div
       class={cn(
-        "group flex h-9 items-center gap-1.5 rounded-r-lg pl-3 pr-1.5",
+        "group flex h-9 items-center gap-1.5 rounded-r-lg pr-1.5",
+        leading ? "pl-1.5" : "pl-3",
         selected && "bg-timeline-row-selected",
       )}
     >
+      {#if leading === "chevron"}
+        <button
+          type="button"
+          class="grid size-6 shrink-0 place-items-center rounded-md text-foreground/65 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          title={expanded ? "Hide the cameras" : "Show the cameras"}
+          aria-label={`Cameras of ${name}`}
+          aria-expanded={expanded}
+          aria-controls={expanded ? cameraRowsDomId(entity.id) : undefined}
+          onclick={onToggleExpanded}
+        >
+          <CaretRight
+            weight="bold"
+            class={cn(
+              "size-3.5 transition-transform motion-reduce:transition-none",
+              expanded && "rotate-90",
+            )}
+          />
+        </button>
+      {:else if leading === "spacer"}
+        <span class="size-6 shrink-0" aria-hidden="true"></span>
+      {/if}
       <button
         type="button"
         class="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
@@ -100,9 +143,7 @@ License: CECILL-C
           {name}
         </span>
       </button>
-      <span class="shrink-0 font-mono text-[11px] tabular-nums text-foreground/65">
-        {keyframeLabel}
-      </span>
+      <span class="shrink-0 font-mono text-[11px] tabular-nums text-foreground/65">{meta}</span>
       <button
         type="button"
         class={cn(
@@ -135,11 +176,21 @@ License: CECILL-C
   >
     <div class="absolute inset-0" style:opacity={graphicsOpacity}>
       <TrackMarks
-        lane={model.union}
+        {lane}
         geo={MARKS_ENTITY}
-        lineOpacity={selected ? 0.9 : 0.5}
+        lineOpacity={expanded ? 0.25 : selected ? 0.9 : 0.5}
+        showTicks={!expanded}
         visible={marksVisible}
       />
     </div>
+    {#if missingView}
+      <TimelineMissingCamera
+        view={missingView}
+        label={name}
+        canAdd={canAddInView}
+        addUnavailableReason={addInViewUnavailableReason}
+        onAdd={() => onAddInView?.()}
+      />
+    {/if}
   </div>
 </div>

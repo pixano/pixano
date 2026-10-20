@@ -138,3 +138,14 @@ export const MARKS_ENTITY: MarkGeometry = {
   hoverTick: { y: 11, h: 14, w: 3 },
   hoverCap: { y: 8, h: 20, w: 4 },
 };
+
+/** Camera sub-rows (28 px lanes), from the design canvas's `geoSmall`. */
+export const MARKS_VIEW: MarkGeometry = {
+  rowHeight: 28,
+  line: { y: 13, h: 2, w: 0 },
+  tick: { y: 9, h: 10, w: 2 },
+  cap: { y: 7, h: 14, w: 3 },
+  selected: { y: 4, h: 20, w: 4 },
+  hoverTick: { y: 8, h: 12, w: 3 },
+  hoverCap: { y: 6, h: 16, w: 4 },
+};
