@@ -45,8 +45,8 @@ def _call(url: str, payload: dict | None = None) -> dict:
 
 #: Ce que le type d'embeddings journalise pour chaque chunk écrit, avec l'identifiant du job.
 PHASES = re.compile(
-    r"job (?P<job>[0-9a-f-]{36}) : phases lecture (?P<read>[\d.]+) s, inférence (?P<inference>[\d.]+) s, "
-    r"écriture (?P<write>[\d.]+) s"
+    r"job (?P<job>[0-9a-f-]{36}): phases read (?P<read>[\d.]+) s, inference (?P<inference>[\d.]+) s, "
+    r"write (?P<write>[\d.]+) s"
 )
 
 
