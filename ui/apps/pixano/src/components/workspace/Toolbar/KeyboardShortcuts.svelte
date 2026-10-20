@@ -84,6 +84,8 @@ License: CECILL-C
       { keys: ["\u2192", "D"], action: "Next frame" },
       { keys: ["\u2190", "A"], action: "Previous frame" },
       { keys: ["Home"], action: "Go to first frame" },
+      { keys: ["K"], action: "Next keyframe of the selected object" },
+      { keys: ["J"], action: "Previous keyframe of the selected object" },
     ],
   };
 
