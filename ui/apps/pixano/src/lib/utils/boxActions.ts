@@ -32,6 +32,7 @@ import {
   type Entity,
   type Tracklet,
 } from "$lib/types/dataset";
+import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import { editTrack, exitEditMode, isTrackEditing } from "$lib/utils/editMode";
 import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
 import { tryGetTopEntity } from "$lib/utils/entityLookupUtils";
@@ -73,30 +74,36 @@ export function imageBoxActions(box: BBox): BoxAction[] {
   return deleteBoxAction(box);
 }
 
-/** Actions for a video box: keyframe, split and delete for a track's box. */
-export function videoBoxActions(box: BBox): BoxAction[] {
-  const trackletId = trackletIdOfShape(box, trackletIdByChildId.value);
-  if (trackletId === undefined) return deleteBoxAction(box);
-  const tracklet = annotations.value.find(
-    (annotation) => annotation.id === trackletId && annotation.is_type(BaseSchema.Tracklet),
-  ) as Tracklet | undefined;
-  const entity = tracklet ? findEntity(trackletTopEntityId(tracklet)) : undefined;
-  if (!tracklet || !entity) return [];
+/** The interpolated shapes a track shows on a frame, from which a keyframe can be added there. */
+export interface TrackGhosts {
+  bboxes: BBox[];
+  keypoints: KeypointAnnotation[];
+}
 
-  const frame = currentFrameIndex.value;
+/**
+ * The keyframe, split and delete actions of a track on `frame`. `here` words them for the
+ * canvas chip (the current frame); otherwise they name the frame, for the timeline menu.
+ * "Add a keyframe" is offered only with `ghosts`, the interpolated shapes shown on that frame.
+ */
+export function trackActionsAt(
+  tracklet: Tracklet,
+  entity: Entity,
+  frame: number,
+  { here = false, ghosts }: { here?: boolean; ghosts?: TrackGhosts } = {},
+): BoxAction[] {
   const can = trackFrameActions(tracklet, frame);
   const actions: BoxAction[] = [];
-  if (can.canAddKeyframe && box.ui.startRef) {
+  if (can.canAddKeyframe && ghosts) {
     actions.push({
       id: "add-keyframe",
-      label: "Add a keyframe here",
+      label: here ? "Add a keyframe here" : `Add a keyframe at #${frame}`,
       run: () => {
         const added = addKeyItemToTracklet(
           tracklet,
           entity,
           mediaViews.value,
-          current_itemBBoxes.value,
-          current_itemKeypoints.value,
+          ghosts.bboxes,
+          ghosts.keypoints,
           frame,
         );
         if (added) editTrack(tracklet.id, { reveal: false });
@@ -106,7 +113,7 @@ export function videoBoxActions(box: BBox): BoxAction[] {
   if (can.canRemoveKeyframe) {
     actions.push({
       id: "remove-keyframe",
-      label: "Remove this keyframe",
+      label: here ? "Remove this keyframe" : `Remove keyframe #${frame}`,
       destructive: true,
       confirmLabel: "Click again to remove the keyframe",
       run: () => onDeleteTrackItemClick(tracklet, frame),
@@ -115,7 +122,7 @@ export function videoBoxActions(box: BBox): BoxAction[] {
   if (can.canSplit) {
     actions.push({
       id: "split-track",
-      label: "Split the track after this frame",
+      label: here ? "Split the track after this frame" : `Split after #${frame}`,
       run: () => {
         splitTrackletAfter(tracklet, entity, frame, mediaViews.value);
       },
@@ -137,4 +144,21 @@ export function videoBoxActions(box: BBox): BoxAction[] {
     },
   });
   return actions;
+}
+
+/** Actions for a video box: keyframe, split and delete for a track's box. */
+export function videoBoxActions(box: BBox): BoxAction[] {
+  const trackletId = trackletIdOfShape(box, trackletIdByChildId.value);
+  if (trackletId === undefined) return deleteBoxAction(box);
+  const tracklet = annotations.value.find(
+    (annotation) => annotation.id === trackletId && annotation.is_type(BaseSchema.Tracklet),
+  ) as Tracklet | undefined;
+  const entity = tracklet ? findEntity(trackletTopEntityId(tracklet)) : undefined;
+  if (!tracklet || !entity) return [];
+
+  // A keyframe can be added from the box shown here only when it is an interpolated ghost.
+  const ghosts = box.ui.startRef
+    ? { bboxes: current_itemBBoxes.value, keypoints: current_itemKeypoints.value }
+    : undefined;
+  return trackActionsAt(tracklet, entity, currentFrameIndex.value, { here: true, ghosts });
 }

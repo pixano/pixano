@@ -34,6 +34,8 @@
   --color-info: hsl(var(--info));
   --color-info-foreground: hsl(var(--info-foreground));
   --color-canvas-bg: hsl(var(--canvas-bg));
+  --color-timeline-ruler: hsl(var(--timeline-ruler));
+  --color-timeline-row-selected: hsl(var(--timeline-row-selected));
 
   --radius-2xl: calc(var(--radius-xl) + 4px);
   --radius-xl: var(--radius-xl);
@@ -98,6 +100,10 @@
 
     --canvas-bg: 240 5% 20%;
 
+    /* Video timeline: the ruler band and the selected row */
+    --timeline-ruler: 240 5% 96%;
+    --timeline-row-selected: 240 6% 94%;
+
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
     --radius-xl: 1rem;
@@ -143,6 +149,9 @@
     --info-foreground: 0 0% 100%;
 
     --canvas-bg: 240 8% 14%;
+
+    --timeline-ruler: 240 8% 15%;
+    --timeline-row-selected: 240 8% 18%;
   }
 
   * {

@@ -16,7 +16,7 @@ License: CECILL-C
   import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { configureColorBy } from "$lib/stores/colorByStore.svelte";
-  import { playbackState } from "$lib/stores/videoStores.svelte";
+  import { DEFAULT_VIDEO_SPEED_MS, playbackState, videoFps } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     canSave,
@@ -112,9 +112,12 @@ License: CECILL-C
 
     const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
 
-    if (result.videoSpeed !== undefined) {
-      playbackState.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
-    }
+    // A record without frame timestamps plays at the default rate, not at the last one's.
+    playbackState.update((old) => ({
+      ...old,
+      videoSpeed: result.videoSpeed ?? DEFAULT_VIDEO_SPEED_MS,
+    }));
+    videoFps.value = result.videoFps ?? null;
 
     entities.value = result.entities;
     annotations.value = result.annotations;
