@@ -35,8 +35,6 @@ License: CECILL-C
     timelineTopEntityIds,
     timelineTrackedCount,
     timelineTrackModels,
-    togglePinnedTimelineEntity,
-    toggleTimelinePinnedOnly,
   } from "$lib/stores/timelineInspectorStore.svelte";
   import { trackletIdOfShape } from "$lib/stores/trackEditing";
   import {
@@ -166,7 +164,7 @@ License: CECILL-C
 
   // ─── Rows ─────────────────────────────────────────────────────────────────
 
-  const rowList = $derived(timelineRows.value);
+  const rowIds = $derived(timelineRows.value);
   const models = $derived(timelineTrackModels.value);
   const entitiesById = $derived(new Map(entities.value.map((entity) => [entity.id, entity])));
   const topIds = $derived(timelineTopEntityIds.value);
@@ -181,7 +179,7 @@ License: CECILL-C
       ...detectionLanes.map(
         (lane): SlotInput => ({ key: `detection:${lane.trackId}`, kind: "detection" }),
       ),
-      ...rowList.ids.map((id): SlotInput => ({ key: id, kind: "entity" })),
+      ...rowIds.map((id): SlotInput => ({ key: id, kind: "entity" })),
     ]),
   );
   const bodyHeight = $derived(layout.height + fillerHeight(layout, bodyViewportHeight));
@@ -190,12 +188,9 @@ License: CECILL-C
     layout.slots.find((slot) => slot.kind === "detection")?.height ?? 0,
   );
   const emptyState = $derived(
-    rowList.ids.length > 0
+    rowIds.length > 0
       ? null
-      : timelineEmptyState({
-          trackedCount: timelineTrackedCount.value,
-          visibleCount: rowList.candidateCount,
-        }),
+      : timelineEmptyState({ trackedCount: timelineTrackedCount.value, visibleCount: 0 }),
   );
   const corner = $derived(cornerLabel(videoFps.value, (lastFrameIndex.value ?? 0) + 1));
 
@@ -696,12 +691,9 @@ License: CECILL-C
     <TimelineCommandBar
       time={formatTimecode(frameTime(currentFrameIndex.value, fps))}
       buffering={playbackState.value.isBuffering}
-      pinnedCount={rowList.pinnedCount}
-      pinnedOnly={rowList.pinnedOnly}
       {zoom}
       {zoomMax}
       {resetHighlight}
-      onTogglePinnedOnly={toggleTimelinePinnedOnly}
       onZoom={(next) => void applyZoom(next)}
     />
 
@@ -776,7 +768,7 @@ License: CECILL-C
                   }}
                 />
               {/if}
-              {#each rowList.ids as rowId (rowId)}
+              {#each rowIds as rowId (rowId)}
                 {@const entity = entitiesById.get(rowId)}
                 {@const model = models.get(rowId)}
                 {@const slot = layout.slots[layout.indexByKey.get(rowId) ?? -1]}
@@ -789,13 +781,11 @@ License: CECILL-C
                       {laneWidth}
                       dotColor={annotationColors.value.colorOfEntity(rowId)}
                       selected={selectedRowId === rowId}
-                      pinned={rowList.pinnedIds.has(rowId)}
                       graphicsOpacity={rowGraphics.get(rowId) ?? 1}
                       marksVisible={slotInRange(slot, yRange)}
                       editing={editingRowId === rowId}
                       editUnavailableReason={editUnavailableReason(model)}
                       onSelect={() => onSelectRow(rowId, model)}
-                      onTogglePin={() => togglePinnedTimelineEntity(rowId)}
                       onTogglePencil={() => onTogglePencil(rowId, model)}
                     />
                   </div>

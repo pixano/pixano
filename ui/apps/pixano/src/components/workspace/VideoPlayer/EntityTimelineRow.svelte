@@ -5,10 +5,10 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // One object of the timeline: a sticky header (select, keyframe count, edit pencil, pin)
+  // One object of the timeline: a sticky header (select, keyframe count, edit pencil)
   // and its lane. Pointer work on the lane (ticks, scrubbing, dragging, the track menu) is
   // delegated to the panel, which hit-tests the lane's model.
-  import { Pencil, PushPin } from "phosphor-svelte";
+  import { Pencil } from "phosphor-svelte";
 
   import TrackMarks from "./TrackMarks.svelte";
   import { entities } from "$lib/stores/workspaceStores.svelte";
@@ -27,7 +27,6 @@ License: CECILL-C
     laneWidth: number;
     dotColor: string;
     selected: boolean;
-    pinned: boolean;
     /** Opacity of the row's graphics: dimmed when hidden in the inspector or out of a fusion. */
     graphicsOpacity: number;
     marksVisible: boolean;
@@ -35,7 +34,6 @@ License: CECILL-C
     /** Why the pencil cannot edit on this frame, or null when it can. */
     editUnavailableReason: string | null;
     onSelect: () => void;
-    onTogglePin: () => void;
     onTogglePencil: () => void;
   }
 
@@ -46,13 +44,11 @@ License: CECILL-C
     laneWidth,
     dotColor,
     selected,
-    pinned,
     graphicsOpacity,
     marksVisible,
     editing,
     editUnavailableReason,
     onSelect,
-    onTogglePin,
     onTogglePencil,
   }: Props = $props();
 
@@ -126,19 +122,6 @@ License: CECILL-C
         }}
       >
         <Pencil class="size-3.5" />
-      </button>
-      <button
-        type="button"
-        class={cn(
-          "grid size-6 shrink-0 place-items-center rounded-md transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-          pinned ? "text-foreground" : "text-foreground/50 hover:text-foreground",
-        )}
-        title={pinned ? "Unpin" : "Pin to the top"}
-        aria-label={`Pin ${name}`}
-        aria-pressed={pinned}
-        onclick={onTogglePin}
-      >
-        <PushPin weight={pinned ? "fill" : "regular"} class="size-[15px]" />
       </button>
     </div>
   </div>

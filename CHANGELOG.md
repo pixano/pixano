@@ -28,12 +28,12 @@
   frame and time, click it to select the object and jump to it, and drag it to
   retime the keyframe between its neighbours (a track's first or last keyframe
   drags its start or end; `Esc` cancels). Right-click a track to edit, add or
-  remove a keyframe there, split, glue, relink or delete it. Pin rows to keep
-  them on top, and show only them with **Pinned**. The keyframe buttons and
-  `J`/`K` jump between the selected object's keyframes. The ruler starts at
-  frame 0 with three tick levels, time and frame labels, the frame rate and the
-  frame count, and the current frame in a badge. An object seen by several
-  cameras has one row merging them.
+  remove a keyframe there, split, glue, relink or delete it. Rows keep their
+  order while you work; **Hide track** in the Entities tab takes an object's row
+  off the timeline. The keyframe buttons and `J`/`K` jump between the selected
+  object's keyframes. The ruler starts at frame 0 with three tick levels, time
+  and frame labels, the frame rate and the frame count, and the current frame in
+  a badge. An object seen by several cameras has one row merging them.
 - **Color annotations by an attribute.** A "Color by" menu in the Entities tab
   colors boxes, polygons, masks, keypoints, text spans and tracks by an entity
   attribute (a category, a yes/no flag) or an annotation attribute (a box's

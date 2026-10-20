@@ -5,10 +5,10 @@ License: CECILL-C
 -------------------------------------*/
 
 /**
- * What the video timeline shows: one row per object with tracks of its own, pinned rows
- * first, and the row the selection points at. The rules live in lib/timeline; this module
- * wires them to the workspace stores, keeping each result while its inputs are unchanged
- * so a display-only commit re-renders nothing.
+ * What the video timeline shows: one row per object with tracks of its own (unless its
+ * track is hidden), and the row the selection points at. The rules live in lib/timeline;
+ * this module wires them to the workspace stores, keeping each result while its inputs are
+ * unchanged so a display-only commit re-renders nothing.
  */
 
 import { untrack } from "svelte";
@@ -27,11 +27,9 @@ import {
   extendTimelineRanks,
   orderTimelineRows,
   resolveSelectedRow,
-  sameTimelineRowList,
+  sameTimelineRows,
   storedSelfEntityId,
-  togglePinnedId,
   type RankKey,
-  type TimelineRowList,
 } from "$lib/timeline/timelineRows";
 import { buildTrackModels, sortViewNames, type TrackModelCache } from "$lib/timeline/trackModel";
 import type { EntityTrackModel, LaneGeom } from "$lib/timeline/types";
@@ -40,9 +38,6 @@ import { effectProbe } from "$lib/utils/effectProbe";
 import { buildTopEntityIdByEntityId } from "$lib/utils/entityHierarchy";
 import { TIMELINE_ZOOM_MIN } from "$lib/utils/timelineZoom";
 
-export const pinnedTimelineEntityIds = reactiveStore<string[]>([]);
-/** Show only the pinned rows; only effective while a pin is valid. */
-export const timelinePinnedOnly = reactiveStore<boolean>(false);
 /** The row last clicked, so a sub-entity's row stays selected while its parent is focused. */
 export const timelineFocusedRowId = reactiveStore<string | null>(null);
 
@@ -115,17 +110,12 @@ const timelineRowRanks = reactiveDerived<ReadonlyMap<string, number>>(() => {
   });
 });
 
-let lastRows: TimelineRowList | null = null;
+let lastRows: readonly string[] | null = null;
 
-/** The rows, in order, with the pins. */
-export const timelineRows = reactiveDerived<TimelineRowList>(() => {
-  const next = orderTimelineRows(
-    timelineCandidateIds.value,
-    timelineRowRanks.value,
-    pinnedTimelineEntityIds.value,
-    timelinePinnedOnly.value,
-  );
-  if (lastRows && sameTimelineRowList(lastRows, next)) return lastRows;
+/** The rows, in order. */
+export const timelineRows = reactiveDerived<readonly string[]>(() => {
+  const next = orderTimelineRows(timelineCandidateIds.value, timelineRowRanks.value);
+  if (lastRows && sameTimelineRows(lastRows, next)) return lastRows;
   lastRows = next;
   return next;
 });
@@ -162,36 +152,17 @@ export const timelineNavLane = reactiveDerived<LaneGeom | null>(() => {
   return rowId ? (timelineTrackModels.value.get(rowId)?.union ?? null) : null;
 });
 
-export function togglePinnedTimelineEntity(entityId: string): void {
-  pinnedTimelineEntityIds.update((ids) => togglePinnedId(ids, entityId));
-}
-
-/** Toggle the Pinned filter; it cannot turn on without a pinned row. */
-export function toggleTimelinePinnedOnly(): void {
-  if (!timelinePinnedOnly.value && timelineRows.value.pinnedCount === 0) return;
-  timelinePinnedOnly.value = !timelinePinnedOnly.value;
-}
-
 $effect.root(() => {
   let lastItemId = "";
 
-  // Pins, the filter, the focused row and the zoom belong to one record.
+  // The focused row and the zoom belong to one record.
   $effect(() => {
     const itemId = currentItemId.value;
     if (itemId === lastItemId) return;
     lastItemId = itemId;
     untrack(() => {
-      pinnedTimelineEntityIds.value = [];
-      timelinePinnedOnly.value = false;
       timelineFocusedRowId.value = null;
       timelineZoom.value = [TIMELINE_ZOOM_MIN];
     });
-  });
-
-  // The filter turns off when its last pinned row goes (unpinned, hidden or deleted).
-  $effect(() => {
-    if (timelinePinnedOnly.value && timelineRows.value.pinnedCount === 0) {
-      untrack(() => (timelinePinnedOnly.value = false));
-    }
   });
 });

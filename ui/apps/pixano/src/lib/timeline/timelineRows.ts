@@ -117,64 +117,26 @@ export function extendTimelineRanks(
   return extended;
 }
 
-// ─── Rows and pins ──────────────────────────────────────────────────────────
+// ─── Rows ───────────────────────────────────────────────────────────────────
 
-/** The rows the timeline lists. */
-export interface TimelineRowList {
-  /** Pinned rows first, then the others, each part in rank order. */
-  readonly ids: readonly string[];
-  /** The pins that are candidates. */
-  readonly pinnedIds: ReadonlySet<string>;
-  readonly pinnedCount: number;
-  /** Only pinned rows are listed: asked for, with at least one pin among the candidates. */
-  readonly pinnedOnly: boolean;
-  readonly candidateCount: number;
-}
-
-/**
- * The candidates in rank order (ids without a rank last, by id), pinned ones first; under
- * Pinned-only, the pinned ones only, which needs a pin among the candidates.
- */
+/** The candidates in rank order; ids without a rank last, by id. */
 export function orderTimelineRows(
   candidateIds: Iterable<string>,
   ranks: ReadonlyMap<string, number>,
-  pinnedIds: Iterable<string>,
-  pinnedOnly: boolean,
-): TimelineRowList {
+): string[] {
   const rankOf = (id: string) => ranks.get(id) ?? Infinity;
-  const candidates = [...new Set(candidateIds)].sort((a, b) => {
+  return [...new Set(candidateIds)].sort((a, b) => {
     const rankA = rankOf(a);
     const rankB = rankOf(b);
     return rankA !== rankB ? (rankA < rankB ? -1 : 1) : compareIds(a, b);
   });
-  const pins = new Set(pinnedIds);
-  const pinned = candidates.filter((id) => pins.has(id));
-  const onlyPinned = pinnedOnly && pinned.length > 0;
-  return {
-    ids: onlyPinned ? pinned : [...pinned, ...candidates.filter((id) => !pins.has(id))],
-    pinnedIds: new Set(pinned),
-    pinnedCount: pinned.length,
-    pinnedOnly: onlyPinned,
-    candidateCount: candidates.length,
-  };
 }
 
-/** Whether two row lists list the same rows the same way, so the store can keep the old one. */
-export function sameTimelineRowList(a: TimelineRowList | null, b: TimelineRowList | null): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+/** Whether two row lists list the same rows in the same order, so the store keeps the old one. */
+export function sameTimelineRows(a: readonly string[] | null, b: readonly string[]): boolean {
   return (
-    a.pinnedCount === b.pinnedCount &&
-    a.pinnedOnly === b.pinnedOnly &&
-    a.candidateCount === b.candidateCount &&
-    a.ids.length === b.ids.length &&
-    a.ids.every((id, index) => id === b.ids[index])
+    a === b || (a !== null && a.length === b.length && a.every((id, index) => id === b[index]))
   );
-}
-
-/** `ids` with `id` appended when absent, or removed when present. */
-export function togglePinnedId(ids: readonly string[], id: string): string[] {
-  return ids.includes(id) ? ids.filter((pinned) => pinned !== id) : [...ids, id];
 }
 
 // ─── Selection ──────────────────────────────────────────────────────────────

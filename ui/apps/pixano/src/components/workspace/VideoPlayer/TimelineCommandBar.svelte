@@ -5,50 +5,25 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  // The player bar: playback and keyframe navigation, the current time, then the Pinned
-  // filter and the zoom.
-  import { Tooltip } from "bits-ui";
-  import { CircleNotch, PushPin } from "phosphor-svelte";
+  // The player bar: playback and keyframe navigation, the current time, then the zoom.
+  import { CircleNotch } from "phosphor-svelte";
 
   import TimelineZoomControl from "./TimelineZoomControl.svelte";
   import VideoControls from "./VideoControls.svelte";
-  import { TooltipContent } from "$lib/ui";
-  import { cn } from "$lib/utils/styleUtils";
 
   interface Props {
     time: string;
     buffering: boolean;
-    pinnedCount: number;
-    pinnedOnly: boolean;
     zoom: number;
     zoomMax: number;
     resetHighlight: () => void;
-    onTogglePinnedOnly: () => void;
     onZoom: (zoom: number) => void;
   }
 
-  let {
-    time,
-    buffering,
-    pinnedCount,
-    pinnedOnly,
-    zoom,
-    zoomMax,
-    resetHighlight,
-    onTogglePinnedOnly,
-    onZoom,
-  }: Props = $props();
-
-  const pinnedTooltip = $derived(
-    pinnedOnly
-      ? "Show all objects"
-      : pinnedCount > 0
-        ? "Show pinned objects only"
-        : "Pin objects to filter them",
-  );
+  let { time, buffering, zoom, zoomMax, resetHighlight, onZoom }: Props = $props();
 </script>
 
-<!-- Narrow panels drop the slider's length, then the word "Pinned" (container queries). -->
+<!-- Narrow panels drop the slider's length (container queries). -->
 <div
   class="@container flex h-10 shrink-0 items-center justify-between gap-3 border-b border-border px-3"
 >
@@ -73,27 +48,6 @@ License: CECILL-C
   </div>
 
   <div class="flex shrink-0 items-center gap-2">
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        type="button"
-        aria-pressed={pinnedOnly}
-        aria-disabled={!pinnedOnly && pinnedCount === 0}
-        onclick={onTogglePinnedOnly}
-        class={cn(
-          "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
-          pinnedOnly
-            ? "border-primary/40 bg-primary/15 text-foreground"
-            : "border-border bg-muted/50 text-foreground/65 hover:text-foreground",
-          !pinnedOnly && pinnedCount === 0 && "cursor-default opacity-60 hover:text-foreground/65",
-        )}
-      >
-        <PushPin weight={pinnedOnly ? "fill" : "regular"} class="h-3.5 w-3.5" />
-        <span class="hidden @2xl:inline">Pinned</span>
-        <span class="sr-only @2xl:hidden">Pinned</span>
-        <span class="font-mono tabular-nums">{pinnedCount}</span>
-      </Tooltip.Trigger>
-      <TooltipContent><p>{pinnedTooltip}</p></TooltipContent>
-    </Tooltip.Root>
     <TimelineZoomControl {zoom} max={zoomMax} {onZoom} />
   </div>
 </div>

@@ -16,11 +16,10 @@ import {
   resolveSelectedRow,
   rowGraphicsOpacity,
   rowKeyframeLabel,
-  sameTimelineRowList,
+  sameTimelineRows,
   storedSelfEntityId,
   TIMELINE_EMPTY_TEXT,
   timelineEmptyState,
-  togglePinnedId,
   type DisplayedChild,
   type HighlightedTrack,
   type RankKey,
@@ -217,7 +216,7 @@ describe("extendTimelineRanks", () => {
     expect(order(rankTimelineRows(retimed))).toEqual(["b", "a"]);
     const extended = extendTimelineRanks(ranks, retimed);
     expect(extended).toBe(ranks);
-    expect(orderTimelineRows(["a", "b"], extended, [], false).ids).toEqual(["a", "b"]);
+    expect(orderTimelineRows(["a", "b"], extended)).toEqual(["a", "b"]);
   });
 
   it("appends a new row last, whatever its first frame", () => {
@@ -277,151 +276,42 @@ describe("extendTimelineRanks", () => {
 
 describe("orderTimelineRows", () => {
   const ranks = rankTimelineRows([key("a", 0), key("b", 10), key("c", 20), key("d", 30)]);
-  const all = ["a", "b", "c", "d"];
 
-  it("lists pinned rows first, in rank order rather than pin order", () => {
-    const rows = orderTimelineRows(all, ranks, ["d", "b"], false);
-
-    expect(rows.ids).toEqual(["b", "d", "a", "c"]);
-    expect(rows.pinnedCount).toBe(2);
-    expect([...rows.pinnedIds]).toEqual(["b", "d"]);
-    expect(rows.pinnedOnly).toBe(false);
-    expect(rows.candidateCount).toBe(4);
+  it("lists the candidates in rank order", () => {
+    expect(orderTimelineRows(["d", "b", "a", "c"], ranks)).toEqual(["a", "b", "c", "d"]);
   });
 
-  it("lists only the pinned rows under Pinned-only", () => {
-    const rows = orderTimelineRows(all, ranks, ["d", "b"], true);
-
-    expect(rows.ids).toEqual(["b", "d"]);
-    expect(rows.pinnedOnly).toBe(true);
-    expect(rows.pinnedCount).toBe(2);
-    expect(rows.candidateCount).toBe(4);
+  it("lists ids without a rank last, by id", () => {
+    expect(orderTimelineRows(["new10", "d", "new2", "a", "c"], ranks)).toEqual([
+      "a",
+      "c",
+      "d",
+      "new2",
+      "new10",
+    ]);
   });
 
-  it("ignores pins that are not candidates", () => {
-    const stale = orderTimelineRows(all, ranks, ["zzz"], true);
-
-    expect(stale.pinnedCount).toBe(0);
-    expect(stale.pinnedIds.size).toBe(0);
-    expect(stale.pinnedOnly).toBe(false);
-    expect(stale.ids).toEqual(all);
-
-    const mixed = orderTimelineRows(all, ranks, ["zzz", "c"], false);
-    expect(mixed.ids).toEqual(["c", "a", "b", "d"]);
-    expect(mixed.pinnedCount).toBe(1);
-
-    const filtered = orderTimelineRows(all, ranks, ["zzz", "c"], true);
-    expect(filtered.ids).toEqual(["c"]);
-    expect([...filtered.pinnedIds]).toEqual(["c"]);
-    expect(filtered.pinnedOnly).toBe(true);
-    expect(filtered.candidateCount).toBe(4);
-  });
-
-  it("lists every row under Pinned-only without pins", () => {
-    const rows = orderTimelineRows(all, ranks, [], true);
-
-    expect(rows.ids).toEqual(all);
-    expect(rows.pinnedOnly).toBe(false);
-  });
-
-  it("sorts candidates by rank, ids without a rank last by id", () => {
-    const rows = orderTimelineRows(["new10", "d", "new2", "a", "c"], ranks, [], false);
-
-    expect(rows.ids).toEqual(["a", "c", "d", "new2", "new10"]);
-  });
-
-  it("puts a pinned candidate without a rank first", () => {
-    const rows = orderTimelineRows(["new", ...all], ranks, new Set(["new", "c"]), false);
-
-    expect(rows.ids).toEqual(["c", "new", "a", "b", "d"]);
-  });
-
-  it("lists each candidate once and counts each pin once", () => {
-    const rows = orderTimelineRows(["b", "a", "b"], ranks, ["b", "b"], false);
-
-    expect(rows.ids).toEqual(["b", "a"]);
-    expect(rows.pinnedCount).toBe(1);
-    expect(rows.candidateCount).toBe(2);
+  it("lists each candidate once", () => {
+    expect(orderTimelineRows(["b", "a", "b"], ranks)).toEqual(["a", "b"]);
   });
 
   it("lists nothing without candidates", () => {
-    const rows = orderTimelineRows([], ranks, ["a"], true);
-
-    expect(rows.ids).toEqual([]);
-    expect(rows.pinnedCount).toBe(0);
-    expect(rows.pinnedOnly).toBe(false);
-    expect(rows.candidateCount).toBe(0);
+    expect(orderTimelineRows([], ranks)).toEqual([]);
   });
 });
 
-describe("sameTimelineRowList", () => {
-  const ranks = rankTimelineRows([key("a", 0), key("b", 10), key("c", 20), key("d", 30)]);
-  const all = ["a", "b", "c", "d"];
+describe("sameTimelineRows", () => {
+  it("matches lists with the same rows in the same order", () => {
+    const list = ["a", "b"];
 
-  it("matches lists with the same rows, order and counts", () => {
-    const list = orderTimelineRows(all, ranks, ["d"], false);
-
-    expect(sameTimelineRowList(list, orderTimelineRows(all, ranks, ["d"], false))).toBe(true);
-    expect(sameTimelineRowList(list, list)).toBe(true);
-    expect(sameTimelineRowList(null, null)).toBe(true);
+    expect(sameTimelineRows(list, ["a", "b"])).toBe(true);
+    expect(sameTimelineRows(list, list)).toBe(true);
   });
 
-  it("tells apart another order", () => {
-    expect(
-      sameTimelineRowList(
-        orderTimelineRows(all, ranks, ["d"], false),
-        orderTimelineRows(all, ranks, ["c"], false),
-      ),
-    ).toBe(false);
-  });
-
-  it("tells apart another pinned count with the same ids", () => {
-    const none = orderTimelineRows(all, ranks, [], false);
-    const first = orderTimelineRows(all, ranks, ["a"], false);
-
-    expect(first.ids).toEqual(none.ids);
-    expect(sameTimelineRowList(none, first)).toBe(false);
-  });
-
-  it("tells apart Pinned-only with the same ids", () => {
-    expect(
-      sameTimelineRowList(
-        orderTimelineRows(["a"], ranks, ["a"], true),
-        orderTimelineRows(["a"], ranks, ["a"], false),
-      ),
-    ).toBe(false);
-  });
-
-  it("tells apart another candidate count with the same ids", () => {
-    expect(
-      sameTimelineRowList(
-        orderTimelineRows(["a", "b"], ranks, ["a"], true),
-        orderTimelineRows(["a"], ranks, ["a"], true),
-      ),
-    ).toBe(false);
-  });
-
-  it("tells apart a missing list", () => {
-    expect(sameTimelineRowList(null, orderTimelineRows(all, ranks, [], false))).toBe(false);
-  });
-});
-
-describe("togglePinnedId", () => {
-  it("appends an id that is not pinned", () => {
-    expect(togglePinnedId(["a", "b"], "c")).toEqual(["a", "b", "c"]);
-    expect(togglePinnedId([], "a")).toEqual(["a"]);
-  });
-
-  it("removes an id that is pinned", () => {
-    expect(togglePinnedId(["a", "b", "c"], "b")).toEqual(["a", "c"]);
-  });
-
-  it("leaves the given list unchanged", () => {
-    const ids = ["a"];
-
-    togglePinnedId(ids, "b");
-    togglePinnedId(ids, "a");
-    expect(ids).toEqual(["a"]);
+  it("tells apart another order, another length or a missing list", () => {
+    expect(sameTimelineRows(["a", "b"], ["b", "a"])).toBe(false);
+    expect(sameTimelineRows(["a", "b"], ["a"])).toBe(false);
+    expect(sameTimelineRows(null, ["a"])).toBe(false);
   });
 });
 
