@@ -118,7 +118,11 @@ class WorkerThreads:
         """Abandon the stuck threads and start over with a fresh executor.
 
         The abandoned threads go on until their call returns — the inference call has its own
-        time limit, which will free them — but they no longer count, and nothing awaits them.
+        time limit, and the wait for a dataset's write lock its own bound (runner), which will
+        free them — but they no longer count, and nothing awaits them. A write that never
+        returns — storage that stopped answering — frees nothing: its thread keeps that dataset's
+        write lock, which lives outside the pool, and only the bound on every wait for it keeps
+        it from holding up more than that dataset's writes.
 
         Returns:
             The number of abandoned threads.
