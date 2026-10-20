@@ -14,15 +14,24 @@ License: CECILL-C
 import { untrack } from "svelte";
 
 import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
+import { isTracking } from "./trackingStore.svelte";
 import { currentItemId, timelineZoom, videoViewNames } from "./videoStores.svelte";
 import {
   annotationColors,
   editedTrackletId,
   entities,
   highlightedEntity,
+  newShape,
   selectedTool,
   tracks,
 } from "./workspaceStores.svelte";
+import {
+  keyframeScopeView,
+  nextArming,
+  resolveViewChoice,
+  scopedLane,
+  type AddInViewTarget,
+} from "$lib/timeline/timelineCameras";
 import {
   extendTimelineRanks,
   orderTimelineRows,
@@ -40,10 +49,37 @@ import { TIMELINE_ZOOM_MIN } from "$lib/utils/timelineZoom";
 
 /** The row last clicked, so a sub-entity's row stays selected while its parent is focused. */
 export const timelineFocusedRowId = reactiveStore<string | null>(null);
+/** Rows expanded into one sub-row per camera. */
+export const timelineExpandedEntityIds = reactiveStore<string[]>([]);
+/** The camera the timeline shows alone, or null for all of them. */
+export const timelineViewFilter = reactiveStore<string | null>(null);
+/** The camera the keyframe tools and the pencil follow on an expanded row. */
+export const timelineActiveCamera = reactiveStore<string | null>(null);
+/** The object armed for drawing in a camera ("+ Add in this view"). */
+export const timelineAddInViewTarget = reactiveStore<AddInViewTarget | null>(null);
 
 /** The record's cameras, in natural order. */
 export const timelineViewOrder = reactiveDerived<string[]>(() =>
   sortViewNames(videoViewNames.value),
+);
+
+/** Whether the record has several cameras: only then does the timeline show camera rows. */
+export const timelineMultiView = reactiveDerived<boolean>(() => timelineViewOrder.value.length > 1);
+
+/** The camera shown alone, if it is still one of the record's. */
+export const effectiveTimelineViewFilter = reactiveDerived<string | null>(() =>
+  timelineMultiView.value
+    ? resolveViewChoice(timelineViewFilter.value, timelineViewOrder.value, null)
+    : null,
+);
+
+/** The active camera, the first one until another is chosen. */
+export const effectiveActiveCamera = reactiveDerived<string | null>(() =>
+  resolveViewChoice(
+    timelineActiveCamera.value,
+    timelineViewOrder.value,
+    timelineViewOrder.value[0] ?? null,
+  ),
 );
 
 let trackModelCache: TrackModelCache | null = null;
@@ -146,11 +182,35 @@ export const timelineSelectedRowId = reactiveDerived<string | null>(() => {
   });
 });
 
+/** The camera the keyframe tools follow on the selected row, or null for all its cameras. */
+export const timelineNavScopeView = reactiveDerived<string | null>(() => {
+  const rowId = timelineSelectedRowId.value;
+  return keyframeScopeView({
+    viewCount: timelineViewOrder.value.length,
+    viewFilter: effectiveTimelineViewFilter.value,
+    expanded: rowId !== null && timelineExpandedEntityIds.value.includes(rowId),
+    activeCamera: effectiveActiveCamera.value,
+  });
+});
+
 /** The lane the keyframe buttons, J/K and the selected keyframe follow. */
 export const timelineNavLane = reactiveDerived<LaneGeom | null>(() => {
   const rowId = timelineSelectedRowId.value;
-  return rowId ? (timelineTrackModels.value.get(rowId)?.union ?? null) : null;
+  const model = rowId ? timelineTrackModels.value.get(rowId) : undefined;
+  return model ? scopedLane(model, timelineNavScopeView.value) : null;
 });
+
+export function toggleTimelineRowExpanded(entityId: string): void {
+  timelineExpandedEntityIds.update((ids) =>
+    ids.includes(entityId) ? ids.filter((id) => id !== entityId) : [...ids, entityId],
+  );
+}
+
+/** Show one camera alone (null for all of them); it becomes the active camera too. */
+export function selectTimelineView(view: string | null): void {
+  timelineViewFilter.value = view;
+  if (view !== null) timelineActiveCamera.value = view;
+}
 
 $effect.root(() => {
   let lastItemId = "";
@@ -163,6 +223,43 @@ $effect.root(() => {
     untrack(() => {
       timelineFocusedRowId.value = null;
       timelineZoom.value = [TIMELINE_ZOOM_MIN];
+      timelineExpandedEntityIds.value = [];
+      timelineViewFilter.value = null;
+      timelineActiveCamera.value = null;
+      timelineAddInViewTarget.value = null;
+    });
+  });
+
+  // An armed object lasts while the box tool or its tracking session is on, and until the
+  // save form closes or the object is gone.
+  $effect(() => {
+    const toolType = selectedTool.value?.type ?? ToolType.Pan;
+    const tracking = isTracking.value;
+    untrack(() => {
+      const target = timelineAddInViewTarget.value;
+      const next = nextArming(target, { type: "tool", toolType, tracking });
+      if (next !== target) timelineAddInViewTarget.value = next;
+    });
+  });
+  let wasSaving = false;
+  $effect(() => {
+    const saving = newShape.value.status === "saving";
+    if (wasSaving && !saving) {
+      untrack(() => {
+        timelineAddInViewTarget.value = nextArming(timelineAddInViewTarget.value, {
+          type: "save-closed",
+          tracking: isTracking.value,
+        });
+      });
+    }
+    wasSaving = saving;
+  });
+  $effect(() => {
+    const ids = new Set(entities.value.map((entity) => entity.id));
+    untrack(() => {
+      const target = timelineAddInViewTarget.value;
+      const next = nextArming(target, { type: "entities", ids });
+      if (next !== target) timelineAddInViewTarget.value = next;
     });
   });
 });

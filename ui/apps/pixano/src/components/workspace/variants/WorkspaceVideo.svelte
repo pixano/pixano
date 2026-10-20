@@ -28,6 +28,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { timelineAddInViewTarget } from "$lib/stores/timelineInspectorStore.svelte";
   import {
     detectionTrackColorById,
     resetTrackingByDetectionSession,
@@ -55,6 +56,7 @@ License: CECILL-C
     startNewVosSegment,
     startTrackingSession,
     trackingPreviewBBoxes,
+    trackingSession,
     vosAnchorFrameIndex,
     vosSession,
     vosTrackedMasks,
@@ -142,6 +144,11 @@ License: CECILL-C
   let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
   let activeVosJob = $state<ActiveTrackingJob | null>(null);
   const isRouteLoading = $derived(navigating.from !== null);
+  // The object armed from the timeline, while the session draws in its camera.
+  const addingInView = $derived.by(() => {
+    const target = timelineAddInViewTarget.value;
+    return target && trackingSession.value.tracker?.viewName === target.viewName ? target : null;
+  });
   const TRACKING_JOB_POLL_MS = 500;
 
   function getSequenceFrameViews(item: WorkspaceViewerItem): Record<string, SequenceFrame[]> {
@@ -988,10 +995,34 @@ License: CECILL-C
           Proposed tracks — keep or discard them in the inspector, then accept
         </div>
       {/if}
+      {#if timelineAddInViewTarget.value && !isTracking.value && selectedTool.value?.type === ToolType.Rectangle}
+        <div
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
+        >
+          Draw a box in <span class="font-semibold">{timelineAddInViewTarget.value.viewName}</span>
+          to add
+          <span class="font-semibold">{timelineAddInViewTarget.value.entityId}</span>
+          ·
+          <kbd
+            class="rounded border border-primary/40 bg-primary/15 px-1 font-mono text-[10px] font-semibold"
+          >
+            Esc
+          </kbd>
+          cancels
+        </div>
+      {/if}
       {#if isTracking.value}
         <div
           class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
         >
+          {#if addingInView}
+            <span>
+              Adding <span class="font-semibold">{addingInView.entityId}</span>
+              in
+              <span class="font-semibold">{addingInView.viewName}</span>
+              —
+            </span>
+          {/if}
           {#if hasPendingKeyframe.value}
             Drag to adjust, <kbd
               class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"
