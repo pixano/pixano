@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { fpsFromSequenceFrames } from "$lib/timeline/timeFormat";
 import {
   Annotation,
   BaseSchema,
@@ -12,6 +13,7 @@ import {
   isSequenceFrameArray,
   WorkspaceType,
   type FeaturesValues,
+  type SequenceFrame,
   type View,
 } from "$lib/types/dataset";
 import type { WorkspaceData } from "$lib/types/workspace";
@@ -50,33 +52,42 @@ function flattenWorkspaceEntities(entitiesByTable: WorkspaceData["entities"]): E
   return newEntities;
 }
 
+/** The frames of the first sequence view: the playback rate is read from them. */
+function firstSequenceFrames(views: Record<string, View | View[]>): SequenceFrame[] | undefined {
+  for (const view in views) {
+    const frames = views[view];
+    if (isSequenceFrameArray(frames)) return frames;
+  }
+  return undefined;
+}
+
 /**
- * The playback interval in MILLISECONDS per frame, derived from the stored
- * frame timestamps (seconds, stamped at import as frame_index / fps).
- *
- * Undefined when the rate cannot be known — fewer than two frames, or
- * timestamps all zero (fps-unknown imports) — so the caller keeps the
- * playback default instead of racing at setInterval(0).
+ * The frame rate, from the stored frame timestamps (seconds, stamped at import as
+ * frame_index / fps). Undefined when the rate cannot be known: fewer than two frames,
+ * or timestamps all zero (fps-unknown imports).
+ */
+export function computeWorkspaceVideoFps(views: Record<string, View | View[]>): number | undefined {
+  const frames = firstSequenceFrames(views);
+  return frames ? fpsFromSequenceFrames(frames) : undefined;
+}
+
+/**
+ * The playback interval in MILLISECONDS per frame, from the frame rate. Undefined when
+ * the rate cannot be known, so the caller uses the playback default instead of racing at
+ * setInterval(0).
  */
 export function computeWorkspaceVideoSpeed(
   views: Record<string, View | View[]>,
 ): number | undefined {
-  for (const view in views) {
-    if (isSequenceFrameArray(views[view])) {
-      const video = views[view];
-      if (video.length < 2) return undefined;
-      const spanSeconds = video[video.length - 1].data.timestamp - video[0].data.timestamp;
-      if (!(spanSeconds > 0)) return undefined;
-      return Math.max(1, Math.round((spanSeconds * 1000) / (video.length - 1)));
-    }
-  }
-  return undefined;
+  const fps = computeWorkspaceVideoFps(views);
+  return fps === undefined ? undefined : Math.max(1, Math.round(1000 / fps));
 }
 
 export interface WorkspaceRuntimeData {
   annotations: Annotation[];
   entities: Entity[];
   videoSpeed: number | undefined;
+  videoFps: number | undefined;
 }
 
 /**
@@ -90,8 +101,7 @@ export function buildWorkspaceRuntimeData(
 ): WorkspaceRuntimeData {
   const workspaceType = workspaceData.ui.type;
 
-  // Compute video speed
-  const videoSpeed = computeWorkspaceVideoSpeed(workspaceData.views);
+  const videoFps = computeWorkspaceVideoFps(workspaceData.views);
 
   // Prepare all annotations
   const newAnns: Annotation[] = [];
@@ -117,7 +127,8 @@ export function buildWorkspaceRuntimeData(
   return {
     annotations: normalized.annotations,
     entities: normalized.entities,
-    videoSpeed,
+    videoSpeed: videoFps === undefined ? undefined : Math.max(1, Math.round(1000 / videoFps)),
+    videoFps,
   };
 }
 

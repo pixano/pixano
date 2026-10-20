@@ -4,11 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { reactiveStore } from "./reactiveStore.svelte";
+import { reactiveDerived, reactiveStore } from "./reactiveStore.svelte";
 import { type LoadedImagesPerView } from "$lib/types/dataset";
 import { nextTimelineZoom, TIMELINE_ZOOM_MIN, timelineZoomMax } from "$lib/utils/timelineZoom";
 
 // ─── Playback state ─────────────────────────────────────────────────────────
+
+/** Milliseconds per frame when a record's frame rate is unknown (10 fps). */
+export const DEFAULT_VIDEO_SPEED_MS = 100;
 
 type PlaybackState = {
   intervalId: number;
@@ -22,9 +25,17 @@ export const playbackState = reactiveStore<PlaybackState>({
   intervalId: 0,
   isLoaded: false,
   isBuffering: false,
-  videoSpeed: 100,
+  videoSpeed: DEFAULT_VIDEO_SPEED_MS,
   loop: false,
 });
+
+/** The record's frame rate, read from its frame timestamps; null when unknown. */
+export const videoFps = reactiveStore<number | null>(null);
+
+/** The frame rate times and the ruler are computed with: the playback rate when unknown. */
+export const timelineFps = reactiveDerived<number>(
+  () => videoFps.value ?? 1000 / Math.max(playbackState.value.videoSpeed, 1),
+);
 
 // ─── Timeline zoom ──────────────────────────────────────────────────────────
 
@@ -50,9 +61,10 @@ export function resetVideoStores() {
     intervalId: 0,
     isLoaded: false,
     isBuffering: false,
-    videoSpeed: 100,
+    videoSpeed: DEFAULT_VIDEO_SPEED_MS,
     loop: false,
   };
+  videoFps.value = null;
   imagesPerView.value = {};
   lastFrameIndex.value = undefined;
   currentFrameIndex.value = 0;

@@ -7,10 +7,13 @@ License: CECILL-C
 import { describe, expect, it, vi } from "vitest";
 
 import { BaseSchema, SequenceFrame } from "$lib/types/dataset";
-import { computeWorkspaceVideoSpeed } from "$lib/utils/itemDataProcessing";
+import {
+  computeWorkspaceVideoFps,
+  computeWorkspaceVideoSpeed,
+} from "$lib/utils/itemDataProcessing";
 
 // Rune-using store modules cannot load under plain vitest — stub them like
-// workspaceRuntime.test.ts does. computeWorkspaceVideoSpeed touches none of them.
+// workspaceRuntime.test.ts does. The rate helpers touch none of them.
 vi.mock("$lib/stores/workspaceStores.svelte", () => ({
   entities: { value: [] },
 }));
@@ -94,5 +97,26 @@ describe("computeWorkspaceVideoSpeed", () => {
   it("ignores non-sequence views", () => {
     const imageOnly = { image: { table_info: { base_schema: BaseSchema.Image } } as never };
     expect(computeWorkspaceVideoSpeed(imageOnly)).toBeUndefined();
+  });
+});
+
+describe("computeWorkspaceVideoFps", () => {
+  it("reads the exact frame rate from the stored timestamps", () => {
+    const at25fps = Array.from({ length: 100 }, (_, i) => i / 25);
+    expect(computeWorkspaceVideoFps(sequence(at25fps))).toBeCloseTo(25, 9);
+    const ntsc = Array.from({ length: 200 }, (_, i) => (i * 1001) / 30000);
+    expect(computeWorkspaceVideoFps(sequence(ntsc))).toBeCloseTo(29.97003, 5);
+  });
+
+  it("keeps the rate of a view with missing frames", () => {
+    const sparse = { video: [0, 1, 2, 4].map((index) => frame(index, index / 30)) };
+    expect(computeWorkspaceVideoFps(sparse)).toBeCloseTo(30, 9);
+    expect(computeWorkspaceVideoSpeed(sparse)).toBe(33);
+  });
+
+  it("returns undefined when the rate is unknowable", () => {
+    expect(computeWorkspaceVideoFps(sequence([0, 0, 0]))).toBeUndefined();
+    expect(computeWorkspaceVideoFps(sequence([0]))).toBeUndefined();
+    expect(computeWorkspaceVideoFps({})).toBeUndefined();
   });
 });
