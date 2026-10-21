@@ -280,14 +280,18 @@ License: CECILL-C
   // draft's entity is still being chosen by the create flow.
   const canReassignEntity = $derived(annotations.selected?.persisted === true);
   // A disabled button with no explanation reads as broken; say which of the two
-  // reasons it is, so the fix ("select something", "save first") is obvious.
-  const reassignEntityTitle = $derived(
+  // reasons it is, so the fix ("select something", "save first") is obvious. The
+  // reason is the tooltip and the description, never the name, which assistive
+  // tech reads as the button's action.
+  const reassignEntityLabel = "Change the entity this annotation belongs to (E)";
+  const reassignEntityRefusal = $derived(
     canReassignEntity
-      ? "Change the entity this annotation belongs to (E)"
+      ? null
       : hasSelection
         ? "Save this annotation before moving it to another entity"
         : "Select an annotation to change its entity",
   );
+  const reassignEntityRefusalId = `image-reassign-refusal-${stableWidgetId}`;
   const widgetPending = $derived(
     new Set(
       manager.pendingMutations
@@ -320,11 +324,16 @@ License: CECILL-C
           beginEntityReassign(annotation, sceneContext, { label: "annotation entity" });
         }}
         disabled={!canReassignEntity}
-        title={reassignEntityTitle}
+        title={reassignEntityRefusal ?? reassignEntityLabel}
+        aria-label={reassignEntityLabel}
+        aria-describedby={reassignEntityRefusal ? reassignEntityRefusalId : undefined}
         class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
       >
         <Replace class="h-3.5 w-3.5" />
       </button>
+      {#if reassignEntityRefusal}
+        <span id={reassignEntityRefusalId} class="sr-only">{reassignEntityRefusal}</span>
+      {/if}
       <button
         type="button"
         onclick={() => {
