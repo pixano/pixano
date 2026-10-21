@@ -15,7 +15,7 @@
 #       the inference is a server already in place, designated by PIXANO_INFERENCE_URL.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
-#       + an inference built locally (CPU variant, without GPU or torch).
+#       + an inference built locally (CPU variant, torch CPU, no GPU required).
 
 services:
   postgres:
@@ -84,7 +84,7 @@ services:
     # error — an incompatible schema, a defect that persists — therefore comes back in a loop,
     # and its message with it at every turn: this is intended, since the worker is to "refuse
     # to start with a clear message", not to "stay down for good". `on-failure:N` never resets its
-    # counter (verified): the N-th incident of a long life left the worker on the ground.
+    # counter (verified): the N-th incident of a long life left the worker down for good.
     # Transient database outages, for their part, are absorbed without restarting.
     # Verified: a `docker compose kill` counts as a requested stop and is not restarted — the
     # demo, which kills the worker and then relaunches it by hand, relies on it; a process
