@@ -318,7 +318,7 @@ class TestRetryLater:
     async def test_the_chunk_goes_back_but_is_not_claimable_yet(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection
     ) -> None:
-        """Replayed within the second against an inference that is restarting, it would use up its attempts."""
+        """Replayed at once against an inference that is restarting, it would use up its attempts."""
         _enqueue(db, 1)
         chunk = (await queue.claim(adb, "worker-a", 1))[0]
 

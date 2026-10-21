@@ -36,12 +36,12 @@ MAX_HEARTBEAT_AGE_S = 30.0
 # inference server this worker shares, and is tuned per deployment.
 DEFAULT_CONCURRENCY = 4
 
-# Duration beyond which a chunk is held to be hung and handed back to the queue. It must exceed
+# Duration beyond which a chunk is considered hung and handed back to the queue. It must exceed
 # the legitimate worst case of a job kind, otherwise we would hand back slow but healthy work.
 # For embeddings, a call that times out is worth `request_timeout_s` × (1 + `max_retries`), that
 # is twenty minutes with the default timeouts — then the chunk is handed back as transient,
 # without looking for a faulty image. Half an hour covers this case and still frees a hung chunk
-# within the morning. A slow server that *answers* 500 on every call can do more (up to seven
+# within the morning. A slow server that *answers* 500 on every call can take longer (up to seven
 # calls to isolate one image out of eight): the limit is then what applies, and that is intended.
 DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 

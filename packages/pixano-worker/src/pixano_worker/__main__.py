@@ -212,7 +212,7 @@ async def serve(
         open=False,
     ) as pool:
         async with pool.connection() as conn:
-            # What this same identity left behind during a brutal shutdown. The lease would
+            # What this same identity left behind during a hard stop. The lease would
             # eventually release them; handing them back right away avoids waiting for it to
             # expire.
             recovery = await queue.release_own(conn, worker_id)

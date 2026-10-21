@@ -165,7 +165,7 @@ WHERE state = 'running' AND lease_until < now() AND attempts - attempts_floor >=
 RETURNING job_id
 """
 
-# A job becomes running when its first chunk is claimed (START_JOBS), not when it finishes: a
+# A job becomes running when its first chunk is claimed (START_JOBS), not when that chunk finishes: a
 # five-minute first chunk showed "pending" for five minutes under a bar that was about to move.
 # This mark is set by a second query, after the tasks are launched, so that the claim itself
 # never joins `jobs` and so that a crash right after leaves the chunks to their threads rather
@@ -185,7 +185,7 @@ WHERE j.id = picked.id
 RETURNING j.id
 """
 
-# The safety net of START_JOBS: if the mark was missed — a crash between the claim and it — the
+# The safety net of START_JOBS: if the mark was missed — a crash between the claim and the mark — the
 # first finished chunk sets it. The previous state is read under the row lock, so that the
 # caller knows whether it is the one that made the transition, and announces it only once.
 ADVANCE_JOB = f"""
