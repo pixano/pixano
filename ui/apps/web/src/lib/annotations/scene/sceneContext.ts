@@ -152,7 +152,8 @@ export interface SceneContextBase {
  * person has begun and not confirmed yet: a polygon's points before Enter,
  * mask strokes, keypoints partly placed, a box being drawn or resized, a shape
  * being dragged. While any flag is raised, the workspace reads the record as
- * not all saved, and Discard has work to drop.
+ * not all saved, and Discard has work to drop. Each raised flag counts as one
+ * unsaved item (`countUnsavedWork`, `workspace/unsavedWork.ts`).
  *
  * Several pieces of one widget can hold work at once — a tool and an editor —
  * so each claims a flag of its own (`SceneContextBase.claimStagedWork`).

@@ -25,6 +25,11 @@ License: CECILL-C
     onSave: () => void;
     /** Throw away every unsaved edit; absent for hosts that do not offer it. */
     onDiscard?: () => void;
+    /**
+     * Whether Discard is refused now: nothing to throw away, or a save is
+     * running — the host's call, as what counts as unsaved is the host's.
+     */
+    discardDisabled?: boolean;
     ariaLabel: string;
     /**
      * Widget-specific controls pinned to the toolbar's right edge, past the
@@ -48,6 +53,7 @@ License: CECILL-C
     saveError = null,
     onSave,
     onDiscard,
+    discardDisabled = false,
     ariaLabel,
     trailingControls,
     controls,
@@ -99,7 +105,7 @@ License: CECILL-C
     <button
       type="button"
       onclick={onDiscard}
-      disabled={pendingCount === 0 || saving}
+      disabled={discardDisabled}
       title="Discard unsaved changes and restore this record's saved annotations"
       class="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
     >

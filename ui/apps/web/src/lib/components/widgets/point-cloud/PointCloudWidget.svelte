@@ -126,18 +126,20 @@ License: CECILL-C
 </script>
 
 <div class="relative flex h-full w-full flex-col bg-card">
-  <!-- Toolbar -->
+  <!-- Toolbar. Its unsaved count is the record's — per annotation, plus each piece
+       of work a tool holds — the number the image widgets show. -->
   <AnnotationToolbar
     tools={TOOLS_3D}
     activeToolId={storage.activeToolId}
     defaultToolId={DEFAULT_TOOL_3D}
     onSelectTool={(id) => (storage.activeToolId = id)}
-    pendingCount={manager.pendingCount}
+    pendingCount={manager.unsavedCount}
     saveDisabled={manager.pendingCount === 0 || manager.saving}
     saving={manager.saving}
     saveError={manager.saveError}
     onSave={() => manager.flushSave()}
     onDiscard={() => manager.discardChanges()}
+    discardDisabled={!manager.hasUnsavedWork || manager.saving}
     ariaLabel="Point cloud tools"
   >
     <!-- Pinned right, away from the tools: it changes what the points look

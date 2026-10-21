@@ -13,6 +13,7 @@ import {
 import { planFittedLayouts, type Viewport } from "./layoutPlanner.js";
 import { MutationQueue } from "./mutationQueue.svelte.js";
 import { RecordLoader } from "./recordLoader.js";
+import { countUnsavedWork } from "./unsavedWork.js";
 import { WorkspaceSession, type StagedWorkHolder } from "./workspaceSession.svelte.js";
 import type {
   AnnotationCollection,
@@ -89,6 +90,23 @@ export class WorkspaceManager {
    * a flag just lowered, or drop one another widget just raised.
    */
   private stagedFlags = new Map<string, StagedWorkHolder>();
+
+  /**
+   * How many items of the open record are unsaved (`countUnsavedWork`): each
+   * annotation with a change queued or on the wire, each draft, an entity form
+   * open on a reassignment, each raised holder of staged work. The one count
+   * every widget toolbar shows, and the one `flushSave` reads — so they never
+   * disagree. Derived once for all of them.
+   */
+  readonly unsavedCount: number = $derived.by(() => {
+    const inFlight = this.mutations.inFlight;
+    return countUnsavedWork({
+      changes: inFlight ? [...this.mutations.pending, inFlight] : this.mutations.pending,
+      annotations: this.session.annotations.items,
+      entityChoiceOpen: this.pendingAnnotation !== null,
+      stagedHolders: this.session.stagedWork.size,
+    });
+  });
 
   constructor(
     registry: WidgetRegistry,
@@ -366,10 +384,16 @@ export class WorkspaceManager {
     this.pendingAnnotation = null;
   }
 
-  /** Flush every queued mutation to the backend. */
-  async flushSave(): Promise<void> {
+  /**
+   * Flush every queued mutation to the backend.
+   *
+   * Resolves true when the save went through and left nothing unsaved. False
+   * when it failed (the error is on `saveError`), or when work is still
+   * unsaved: begun during the save — a change, a draft — or held in a tool.
+   */
+  async flushSave(): Promise<boolean> {
     await this.mutations.flush();
-    if (this.mutations.saveError) return;
+    if (this.mutations.saveError) return false;
     // Entity creates/prunes happen backend-side; refresh the local entity list
     // so the panel and picker reflect them. Skipped when the flush errored, so
     // the failed work stays on screen exactly as the user left it.
@@ -379,6 +403,26 @@ export class WorkspaceManager {
     // it, and a saved annotation should read as a finished outline rather than
     // one still covered in grab points.
     this.session.annotations.select(null);
+    return this.nothingUnsaved();
+  }
+
+  /**
+   * Whether the open record holds work not saved yet — a queued change, a
+   * draft, a draft waiting for its entity, work a tool holds staged. Discard
+   * then has something to throw away.
+   */
+  get hasUnsavedWork(): boolean {
+    return !this.nothingUnsaved();
+  }
+
+  /**
+   * No queued change, no draft in the collection, no draft waiting for its
+   * entity, no edit a widget holds staged. Read from the count the screen
+   * shows, so that a save never reports work left on a record said to hold
+   * nothing unsaved, nor the reverse.
+   */
+  private nothingUnsaved(): boolean {
+    return this.unsavedCount === 0;
   }
 
   // ─── Record loader forwarder ──────────────────────────────────────────────
