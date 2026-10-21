@@ -26,12 +26,11 @@ from ..reader import JobReader
 from ..writer import JobWriter, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 from .inference import (
-    NO_RESPONSE,
-    REQUEST_STATUSES,
-    TRANSIENT_STATUSES,
     InferenceServer,
     blame_the_server_or_the_media,
+    classify,
     refusal_detail,
+    transient_reason,
 )
 
 
@@ -251,15 +250,14 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             return [], []
         try:
             vectors = self._embed(client, [reference for _, reference in candidates], params)
-        except httpx.TransportError as error:
-            raise TransientError(f"the inference does not answer: {error}") from error
-        except PixanoInferenceError as error:
-            if error.status_code == NO_RESPONSE:
-                raise TransientError(f"the inference does not answer: {error}") from error
-            if error.status_code in TRANSIENT_STATUSES:
-                raise TransientError(f"the inference asks to come back later: {error}") from error
-            if error.status_code in REQUEST_STATUSES:
+        except (httpx.TransportError, PixanoInferenceError) as error:
+            failure = classify(error)
+            if failure == "transient":
+                raise TransientError(transient_reason(error)) from error
+            if failure == "request":
                 raise
+            # A medium is only blamed on an answer: what reaches here is the server's refusal.
+            assert isinstance(error, PixanoInferenceError)
             if len(candidates) == 1:
                 return [], [(candidates[0][0], refusal_detail(error))]
             middle = len(candidates) // 2
