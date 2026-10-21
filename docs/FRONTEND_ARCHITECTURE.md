@@ -337,6 +337,17 @@ work. The 2D tools raise theirs from the first point, stroke or press, and lower
 it on commit, Escape, `deactivate` and an undo that empties it (the contract on
 `ToolHandler2D`, `scene/tool.ts`).
 
+A 2D editor holds its flag while a gesture on a stored shape runs, raised as the
+gesture starts and lowered as it ends, never at each pointer move. The bbox
+editor holds it from `transformstart` to `transformend`, keeping the transformer
+on the box it resizes whatever the selection does, and from a box's `dragstart`
+to its `dragend`. The editor stamps the node it holds with its kind's
+attribute — `BBOX_RESIZING_ATTR`, `BBOX_DRAGGING_ATTR` — and the renderer's sync
+leaves a stamped node alone, so a save ending under the gesture neither snaps
+the shape back nor drops its move: the node stays where the gesture has it, and
+the gesture is committed by id when the pointer is let go — only one the editor
+saw begin.
+
 A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
 reports work left: `flushSave` resolves false. Each raised flag counts as one

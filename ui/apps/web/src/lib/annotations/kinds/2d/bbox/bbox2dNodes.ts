@@ -22,3 +22,11 @@ export const BBOX_ID_ATTR = "bboxId";
  * would undo the resize under the pointer.
  */
 export const BBOX_RESIZING_ATTR = "bboxResizing";
+
+/**
+ * Set on a box's node while it is dragged, for the same reason: a drag moves
+ * the node and reaches the collection only as it ends. Put back as stored
+ * meanwhile, the box would jump back under the pointer, and a release with no
+ * move after it would save the box where it was.
+ */
+export const BBOX_DRAGGING_ATTR = "bboxDragging";

@@ -6,7 +6,12 @@ License: CECILL-C
 
 import Konva from "konva";
 
-import { BBOX_ID_ATTR, BBOX_NODE_NAME, BBOX_RESIZING_ATTR } from "./bbox2dNodes.js";
+import {
+  BBOX_DRAGGING_ATTR,
+  BBOX_ID_ATTR,
+  BBOX_NODE_NAME,
+  BBOX_RESIZING_ATTR,
+} from "./bbox2dNodes.js";
 import { cutAtImageEdges, movedInsideImage } from "./bboxImageBounds.js";
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
 import type { AnnotationEditor2D } from "$lib/annotations/scene/renderer.js";
@@ -28,12 +33,13 @@ const MIN_BBOX_PIXELS = 1;
  * box nodes (that is the renderer's job) — it finds them by their stamped id and
  * listens where Konva reports the gestures, so display and input stay decoupled (D4).
  *
- * A resize is work of its own until it ends: the new size sits on the node,
- * not in the collection. So the editor raises its staged-work flag while one
- * runs — the record counts it as one unsaved item, and Discard drops it — and
- * stamps the node so that the renderer's sync leaves it alone. The resize
- * commits onto the box's row, by its id, when it ends. It also keeps hold of
- * the box it began on, whatever the selection does meanwhile.
+ * A resize or a drag is work of its own until it ends: the new size or place
+ * sits on the node, not in the collection. So the editor raises its staged-work
+ * flag while one runs — the record counts it as one unsaved item, and Discard
+ * or a delete pressed mid-gesture drops it — and stamps the node so that the
+ * renderer's sync leaves it alone. The gesture commits onto the box's row, by
+ * its id, when it ends. A resize also keeps hold of the box it began on,
+ * whatever the selection does meanwhile.
  *
  * A box is committed inside the image, which the server requires: dragged past
  * an edge, it stops against it, whole; resized past one, it is cut at it
@@ -43,10 +49,12 @@ class BBoxEditor2D implements AnnotationEditor2D {
   readonly kind = "bbox";
 
   private readonly transformer: Konva.Transformer;
-  /** Raised while a resize runs. */
+  /** Raised while a resize or a drag runs. */
   private readonly staged: StagedWorkFlag | undefined;
   /** The boxes the running resize acts on, taken as it starts; empty between resizes. */
   private resizing: Konva.Node[] = [];
+  /** The boxes being dragged, each from its dragstart to its dragend. */
+  private readonly dragging = new Set<Konva.Node>();
 
   constructor(private readonly ctx: Scene2DContext) {
     this.transformer = new Konva.Transformer({
@@ -65,12 +73,13 @@ class BBoxEditor2D implements AnnotationEditor2D {
     ctx.annotationLayer.add(this.transformer);
     this.staged = ctx.claimStagedWork?.(() => this._abandonGestures());
 
-    // A drag's end bubbles up from the node, so the layer hears it for any bbox
-    // node without the editor owning node creation. A resize's end does not
-    // bubble: Konva fires it on the transformer and on each node it holds, never
-    // on their layer — listened for on the layer, a resize was never saved. The
-    // transformer is the editor's own, so it is heard there. Namespaced so
-    // `destroy()` removes exactly these.
+    // A drag's start and end bubble up from the node, so the layer hears them
+    // for any bbox node without the editor owning node creation. A resize's end
+    // does not bubble: Konva fires it on the transformer and on each node it
+    // holds, never on their layer — listened for on the layer, a resize was
+    // never saved. The transformer is the editor's own, so it is heard there.
+    // Namespaced so `destroy()` removes exactly these.
+    ctx.annotationLayer.on("dragstart.bbox-edit", (e) => this._startDrag(e.target));
     ctx.annotationLayer.on("dragend.bbox-edit", (e) => this._endDrag(e.target));
     this.transformer.on("transformstart.bbox-edit", () => this._startResize());
     this.transformer.on("transformend.bbox-edit", () => this._endResize());
@@ -94,11 +103,12 @@ class BBoxEditor2D implements AnnotationEditor2D {
   }
 
   destroy(): void {
-    this.ctx.annotationLayer.off("dragend.bbox-edit");
+    this.ctx.annotationLayer.off("dragstart.bbox-edit dragend.bbox-edit");
     this.transformer.off("transformstart.bbox-edit transformend.bbox-edit");
     this.transformer.destroy();
-    // A resize cut short with the editor can no longer be confirmed.
+    // A resize or a drag cut short with the editor can no longer be confirmed.
     this._releaseResizing();
+    this._releaseDragging();
     this.staged?.set(false);
   }
 
@@ -130,32 +140,45 @@ class BBoxEditor2D implements AnnotationEditor2D {
     this.syncSelection();
   }
 
+  /** A drag of a box begins: hold the box, and the flag, until the drag ends. */
+  private _startDrag(node: Konva.Node): void {
+    if (this._bboxId(node) === null) return;
+    this.dragging.add(node);
+    node.setAttr(BBOX_DRAGGING_ATTR, true);
+    this._updateStaged();
+  }
+
   /** A drag ends: commit the box where it was let go, inside the image. */
   private _endDrag(node: Konva.Node): void {
-    if (this._bboxId(node) === null) return;
+    // A drag Discard dropped ends here too, as Konva stops it: nothing to commit.
+    if (!this.dragging.delete(node)) return;
+    node.setAttr(BBOX_DRAGGING_ATTR, false);
     this._commitNode(node, movedInsideImage);
+    this._updateStaged();
     // A box dropped past the image's edge is saved against it: draw it so.
     this.ctx.requestRedraw();
   }
 
   /**
-   * Discard: the running resize is dropped. Ended here, it commits nothing,
-   * and its boxes are drawn again as the collection holds them.
+   * Discard: the running resize and drags are dropped. Ended here, they commit
+   * nothing, and their boxes are drawn again as the collection holds them.
    */
   private _abandonGestures(): void {
-    const abandoned = this._releaseResizing();
+    const abandoned = [...this._releaseResizing(), ...this._releaseDragging()];
     this._updateStaged();
-    // Konva ends it as a release would, which reaches `_endResize` with no box held.
+    // Konva ends each as a release would, which reaches `_endResize` or
+    // `_endDrag` with no box held.
     this.transformer.stopTransform();
+    for (const node of abandoned) if (node.isDragging()) node.stopDrag();
     if (abandoned.length > 0) this.ctx.requestRedraw();
   }
 
   /**
-   * Raise the flag while a resize runs, lower it once none does.
-   * Called as a resize starts and ends, never as the pointer moves.
+   * Raise the flag while a resize or a drag runs, lower it once none does.
+   * Called as a gesture starts and ends, never as the pointer moves.
    */
   private _updateStaged(): void {
-    this.staged?.set(this.resizing.length > 0);
+    this.staged?.set(this.resizing.length > 0 || this.dragging.size > 0);
   }
 
   /** Let go of the boxes of the running resize, and return them. */
@@ -163,6 +186,14 @@ class BBoxEditor2D implements AnnotationEditor2D {
     const released = this.resizing;
     this.resizing = [];
     for (const node of released) node.setAttr(BBOX_RESIZING_ATTR, false);
+    return released;
+  }
+
+  /** Let go of the boxes being dragged, and return them. */
+  private _releaseDragging(): Konva.Node[] {
+    const released = [...this.dragging];
+    this.dragging.clear();
+    for (const node of released) node.setAttr(BBOX_DRAGGING_ATTR, false);
     return released;
   }
 

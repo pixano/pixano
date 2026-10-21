@@ -6,7 +6,12 @@ License: CECILL-C
 
 import Konva from "konva";
 
-import { BBOX_ID_ATTR, BBOX_NODE_NAME, BBOX_RESIZING_ATTR } from "./bbox2dNodes.js";
+import {
+  BBOX_DRAGGING_ATTR,
+  BBOX_ID_ATTR,
+  BBOX_NODE_NAME,
+  BBOX_RESIZING_ATTR,
+} from "./bbox2dNodes.js";
 import { createBBoxEditor2D } from "./bboxEditor2D.js";
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
 import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
@@ -61,11 +66,11 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         this.rectByBBoxId.set(bbox.id, newRect);
         rect = newRect;
       } else if (frame) {
-        // A box being resized holds its new size on the node until the editor
-        // commits it as the resize ends: put back as stored now — a save
-        // ending, the selection changing — the resize would be undone under
-        // the pointer.
-        if (!rect.getAttr(BBOX_RESIZING_ATTR)) {
+        // A box being resized or dragged holds its new size or place on the
+        // node until the editor commits it as the gesture ends: put back as
+        // stored now — a save ending, the selection changing — the gesture
+        // would be undone under the pointer.
+        if (!rect.getAttr(BBOX_RESIZING_ATTR) && !rect.getAttr(BBOX_DRAGGING_ATTR)) {
           const pixel = normalizedToPixel(bbox.geometry, frame);
           rect.position({ x: pixel.x, y: pixel.y });
           rect.width(pixel.width);

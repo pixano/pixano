@@ -272,6 +272,17 @@ which both `Scene2DContext` and the widgets' seam satisfy.
      transformer and its nodes only, and a transformer is built without flips
      when the shape cannot hold one (DEBT-1); 3D → a `<Kind>Tool.svelte` overlay on
      `Tool3D.overlay`, plus (if it needs a confirm step) a `createSession` + a `hud`.
+     Whatever holds work until it is confirmed — a 2D tool's shape in progress, an
+     editor's resize or drag — claims a staged-work flag
+     (`claimStagedWork(discard)`), raises it for work that changes something, lowers
+     it on every way out, and drops the work when `discard` is called — by
+     Discard. A 2D editor
+     raises it as a gesture starts (`dragstart`, `transformstart`) and lowers it as
+     it ends, never per pointer move, stamps the node it holds with a
+     `<KIND>_DRAGGING_ATTR` (or `BBOX_RESIZING_ATTR`) that the renderer's sync
+     leaves alone, and commits only a gesture it saw begin, unstamping the node
+     before the commit redraws it; its discard puts the shape back as stored and
+     stops the gesture, whose end then commits nothing.
      An editor commits geometry the server accepts: the box editor keeps a dragged
      box whole inside the image and cuts a resized one at its edges, never below
      the least size a resize leaves a box (`MIN_BBOX_PIXELS`)
@@ -365,6 +376,13 @@ lowered from widget teardowns, where Svelte gives a reactive read the value it
 had before the latest writes, so a change computed from the session's copy there
 could bring a flag back or drop one another widget had just raised.
 
+The 2D box editor raises its flag from `transformstart` to `transformend`: a
+resize is work under way until it ends.
+
+A drag of a stored 2D box is held the same way, since a save ending under it
+could otherwise lose its move: the bbox editor raises its flag from `dragstart`
+to `dragend`.
+
 ## History — the refactor stages
 
 **Phases 0–6 (2026-06-11 design).** 0: mechanical renames (`localBBoxId` →
@@ -423,6 +441,19 @@ check` at baseline error count and `vitest` green:
   the edge that stays to the pointer. Covered by `bboxEditor2D.test.ts`, on the
   real Konva over the real workspace, every handle dragged past its opposite edge.
 
+  A resize still running when a save ends is kept: the editor takes its boxes at
+  `transformstart`, keeps the transformer on them whatever the selection does,
+  stamps their nodes (`BBOX_RESIZING_ATTR`, `bbox2dNodes.ts`) so the renderer's
+  sync leaves their size and place alone, holds a staged-work flag — so the
+  record counts it as unsaved, and Discard stops it — and commits them at
+  `transformend`, by id.
+
+  A drag is held the same way: the editor hears `dragstart` on the layer too,
+  holds the box and stamps its node (`BBOX_DRAGGING_ATTR`) until `dragend`, under
+  the same flag, raised while a resize or a drag runs; it commits only a drag it
+  saw begin, so the `dragend` Konva fires when Discard stops a drag commits
+  nothing.
+
   A box is committed inside the image — `x, y ≥ 0`, `x + w ≤ 1`, `y + h ≤ 1`,
   normalized — since the server refuses a normalized coordinate outside [0, 1]
   (`kinds/2d/bbox/bboxImageBounds.ts`): dragged past an edge, it stops against it,
@@ -454,6 +485,10 @@ check` at baseline error count and `vitest` green:
   commit. A mocked Konva can fire a layer `transformend` the real Konva never
   fires, and pass while resizes go unsaved: an editor test belongs on the real
   Konva.
+
+  The resizes and drags held across a save run there too (`bboxEditor2D.test.ts`),
+  which sends a window `mouseup` after every test: Konva's drags are global, and
+  one a failed test left running would move with the next test's pointer.
 
   `bbox3dRenderer2D` now has node-level tests too
   (`bbox3dRenderer2D.test.ts`): projection math against hand-computed

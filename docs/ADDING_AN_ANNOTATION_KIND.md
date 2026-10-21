@@ -108,6 +108,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   against the edge rather than being saved with no width, which no handle could resize
   again. And a node Konva left with no number for its place or size — a box stored with no
   width, which it cannot scale — commits nothing: the box is drawn again as stored.
+
+  A resize is work of its own until it ends — the new size sits on the node — so the editor
+  holds a staged-work flag while it runs, keeps hold of its nodes whatever the selection
+  does, and marks them (`BBOX_RESIZING_ATTR` in `bbox2dNodes.ts`) so the renderer's sync —
+  a save ending — leaves their size and place alone; its discard stops the resize and
+  redraws the box as stored.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
   A handler that holds work not in the collection yet — points placed, strokes painted, a
