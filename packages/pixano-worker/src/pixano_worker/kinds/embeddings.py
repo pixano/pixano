@@ -148,7 +148,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """
         record_ids: list[str] = payload["record_ids"]
         # Timed per phase — reading the dataset, inference call, then the write in `write` —
-        # because a measurement that dated whole jobs only could not say where the time went when
+        # because a measurement that timed only whole jobs could not say where the time went when
         # a bigger batch turned out to be slower.
         started = time.perf_counter()
         images = self._images_of(reader, record_ids) if record_ids else {}
