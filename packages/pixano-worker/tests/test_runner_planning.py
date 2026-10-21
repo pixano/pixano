@@ -10,10 +10,10 @@ The dataset is a real one, and the planning is `runner.plan_one` itself, with th
 only PostgreSQL's part is scripted: one job waiting to be planned, and what the planning tells the
 queue about it.
 
-The wait for this worker's write lock of a dataset is bounded for a chunk's write, and so is the
-planning itself: a write that never returns holds the lock for good, and must hold up no more than
-its own dataset's writes. A chunk's part of that is here too, through `runner._execute`, with
-PostgreSQL's part scripted the same way.
+Two bounds are tested here, which are not the same wait. The planning has a time limit of its
+own; it never takes the dataset's write lock. A chunk's write waits a bounded time for this
+worker's write lock of its dataset, which a write that never returns holds for good; that test
+goes through `runner._execute`, with PostgreSQL's part scripted the same way.
 """
 
 import asyncio
@@ -38,7 +38,7 @@ from pixano.datasets.dataset_info import DatasetInfo
 from pixano.schemas import BBox, Entity, Image, Record
 
 
-#: Someone else writing a dataset for the length of a block: the `writing` fixture (conftest.py).
+#: Another chunk writing a dataset for the length of a block: the `writing` fixture (conftest.py).
 Writing = Callable[..., AbstractContextManager[threading.Event]]
 
 JOB_ID = "job-1"
