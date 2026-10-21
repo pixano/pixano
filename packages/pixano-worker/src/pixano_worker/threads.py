@@ -142,7 +142,7 @@ class WorkerThreads:
         free them — but they no longer count, and nothing awaits them. A write that never
         returns — storage that stopped answering — frees nothing: its thread keeps that dataset's
         write lock, which lives outside the pool, and only the bound on every wait for it keeps
-        it from holding up more than that dataset's writes.
+        the threads behind it from being stuck as well.
 
         Returns:
             The number of abandoned threads.
