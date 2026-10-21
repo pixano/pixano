@@ -6,6 +6,7 @@
 
 """Tests of the media resolver."""
 
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -135,6 +136,25 @@ class TestResolve:
         assert [by_path.carried_bytes, by_bytes.carried_bytes] == [False, True]
         assert by_path.reason and by_bytes.reason
 
+    @pytest.mark.parametrize(
+        ("uri", "designation"),
+        [
+            ("https://example.com/img.jpg", "url"),
+            ("s3://bucket/img.jpg", "url"),
+            ("/medias/voc/1.jpg", "path"),
+            ("", "bytes"),
+        ],
+    )
+    def test_it_says_how_it_designates_each_medium(self, resolver: MediaResolver, uri: str, designation: str) -> None:
+        """A URL was counted with the paths, as everything not sent
+        as bytes was, although resending bytes cannot diagnose it.
+
+        The bytes exist for the view without a URI only: a view carries one or the other.
+        """
+        resolved = resolver.resolve(_Source({"v1": JPEG} if not uri else {}), "images", _View(uri=uri))
+
+        assert resolved is not None and resolved.designation == designation
+
 
 class TestUnconfigured:
     def test_refuses_to_resolve_and_says_which_variables_are_missing(self) -> None:
@@ -143,3 +163,23 @@ class TestUnconfigured:
 
         with pytest.raises(RuntimeError, match="PIXANO_MEDIA_ROOT"):
             resolver.resolve(_Source(), "images", _View(uri="/anywhere/a.jpg"))
+
+
+class TestLocalPath:
+    """The file a view names, for what the worker reads itself — a medium it resends as bytes."""
+
+    RESOLVER = MediaResolver("/medias", "/srv/inference/medias")
+
+    def test_an_absolute_path_under_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="/medias/voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    def test_a_relative_reference_is_taken_from_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    @pytest.mark.parametrize("uri", ["/medias/../etc/passwd", "../etc/passwd", "/etc/passwd"])
+    def test_nothing_outside_the_root(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    @pytest.mark.parametrize("uri", ["https://host/a.jpg", "s3://bucket/a.jpg", ""])
+    def test_nothing_the_worker_does_not_hold(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None

@@ -119,8 +119,8 @@ class _Reader:
         if view.record_id in self.lost:
             return None
         if self.carried_bytes:
-            return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), carried_bytes=True, reason="bytes")
-        return ResolvedMedia(view.uri, carried_bytes=False, reason="path")
+            return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), designation="bytes", reason="bytes")
+        return ResolvedMedia(view.uri, designation="path", reason="path")
 
 
 @pytest.fixture
