@@ -4,8 +4,8 @@
 # License: CECILL-C
 # =====================================
 
-"""What several suites share: a live PostgreSQL for the tests that need one, and someone else
-writing a dataset while the worker plans or writes."""
+"""What several suites share: a live PostgreSQL for the tests that need one, and another chunk
+writing a dataset while the worker writes it."""
 
 import os
 import threading
@@ -89,23 +89,16 @@ LOCK_HANDOVER_TIMEOUT_S = 10.0
 
 
 @contextmanager
-def _writing(path: Path, dataset_id: str | None = None) -> Iterator[threading.Event]:
-    """Someone writes the dataset at `path`, in another thread, until the block ends or the event
-    it yields is set.
+def _writing(path: Path, dataset_id: str) -> Iterator[threading.Event]:
+    """This worker's chunk of another job writes the dataset at `path`, in another thread, until the
+    block ends or the event it yields is set.
 
-    Without `dataset_id`, another instance holds the dataset's write lock: what the application does
-    for the length of a person's save (`BaseService._service_write`), or another worker inside one
-    of its writes. With it, this worker's chunk of another job in the middle of its write: it holds
-    the runner's write lock for that dataset too, as `runner._execute` does around `write`.
+    It holds the runner's write lock for that dataset, as `runner._execute` does around `write`,
+    and the dataset's own write lock, as a write does.
     """
     holding, done = threading.Event(), threading.Event()
 
     def write() -> None:
-        if dataset_id is None:
-            with Dataset(path).write_lock():
-                holding.set()
-                done.wait(LOCK_HANDOVER_TIMEOUT_S)
-            return
         with runner._write_lock(dataset_id), Dataset(path).write_lock():
             holding.set()
             done.wait(LOCK_HANDOVER_TIMEOUT_S)
@@ -122,5 +115,5 @@ def _writing(path: Path, dataset_id: str | None = None) -> Iterator[threading.Ev
 
 @pytest.fixture
 def writing() -> Callable[..., AbstractContextManager[threading.Event]]:
-    """Someone else writing a dataset for the length of a block (`_writing`)."""
+    """Another chunk writing a dataset for the length of a block (`_writing`)."""
     return _writing
