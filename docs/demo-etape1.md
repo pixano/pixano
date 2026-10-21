@@ -54,6 +54,8 @@ docker compose exec -T postgres psql -U pixano -d pixano -c "TRUNCATE pixano_job
 docker compose restart pixano-worker
 ```
 
+Each preparation gives the datasets new identifiers: reload the browser page after it.
+
 Open <http://localhost:7492> and, in a second window, a terminal at the repository root. The app
 opens on the legacy UI: click the **Switch to new UI** button (two arrows) in its header to reach
 the new one, where the demo takes place.
@@ -80,7 +82,9 @@ the new one, where the demo takes place.
 
 While it runs, click the **Explorer** icon and scroll through the records of **Demo shapes**: their
 thumbnails load and the interface stays responsive. The job runs in `pixano-worker`, never in the
-process serving the pages. Click **Jobs** again to come back to the bar.
+process serving the pages. Scroll, but do not open a record: opening one can write the dataset —
+the application adds the annotation tables it lacks — and a chunk writing at that moment fails.
+Click **Jobs** again to come back to the bar.
 
 ## 2. Cancel it halfway — 1 min
 
