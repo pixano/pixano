@@ -40,7 +40,8 @@ REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 NO_RESPONSE = 0
 
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
-# find out whether the server still answers, not to produce anything.
+# find out whether the server can still process an image known to be good, not to produce
+# anything.
 WITNESS_IMAGE_SIDE = 16
 
 Failure = Literal["transient", "request", "medium"]
@@ -51,6 +52,17 @@ def classify(error: Exception) -> Failure:
 
     A medium is only blamed on an answer, never on silence: a server that does not answer, or
     asks to come back later, makes the call transient.
+
+    Args:
+        error: What the call raised.
+
+    Returns:
+        "transient" when the call may pass later, "request" when no medium would make it pass,
+        "medium" when the server refused what it was sent.
+
+    Raises:
+        Exception: `error` itself, when it is neither a transport error nor an inference error:
+            not a failure of the call to classify.
     """
     if isinstance(error, httpx.TransportError):
         return "transient"
@@ -127,8 +139,8 @@ def blame_the_server_or_the_media(
         call: The kind's call on one medium reference; it raises when the server refuses it.
         reader: Where to read a medium's bytes.
         table: The media's table.
-        refused: The identifiers of the refused media.
-        by_path: The refused media sent by path, by identifier, with their view row.
+        refused: The records whose medium was refused, by identifier.
+        by_path: The view row of each medium sent by path, refused or not, by record identifier.
 
     Raises:
         TransientError: The server refuses the witness image, or does not read its media by path.
@@ -138,7 +150,7 @@ def blame_the_server_or_the_media(
     except (httpx.TransportError, PixanoInferenceError) as error:
         raise TransientError(f"the inference refuses even the witness image: {error}") from error
 
-    first_by_path = next((view_id for view_id in refused if view_id in by_path), None)
+    first_by_path = next((record_id for record_id in refused if record_id in by_path), None)
     if first_by_path is None:
         return
     found = reader.dataset.get_view_binary(table, by_path[first_by_path].id)
