@@ -27,10 +27,10 @@ import numpy as np
 import pytest
 from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
-from pixano_inference.client import SyncPixanoInferenceClient
+from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
 from pixano_worker import runner
 from pixano_worker.kinds import EmbeddingsKind, JobKind, TransientError
-from pixano_worker.kinds.inference import witness_image
+from pixano_worker.kinds.inference import Failure, classify, witness_image
 from pixano_worker.media import MediaResolver
 
 from pixano.datasets import Dataset
@@ -97,15 +97,15 @@ class _Server:
     Attributes:
         reads_paths: False for a server that does not read its media mount: it refuses every
             path it is sent, as the real one does, with a 500.
-        bytes_answer: An exception the transport raises when a medium is sent as bytes: the
-            server stops answering right then.
+        bytes_answer: What the server does when a medium is sent as bytes: an exception the
+            transport raises — it stops answering right then — or an answer it gives instead.
         images: Each image the server was asked about, in order.
     """
 
     def __init__(self, media_root: Path) -> None:
         self.media_root = media_root
         self.reads_paths = True
-        self.bytes_answer: Exception | None = None
+        self.bytes_answer: Exception | httpx.Response | None = None
         self.images: list[str] = []
 
     def handle(self, request: httpx.Request) -> httpx.Response:
@@ -119,6 +119,8 @@ class _Server:
         images = body["image"] if isinstance(body["image"], list) else [body["image"]]
         self.images.extend(images)
         if self.bytes_answer is not None and any(self._is_a_mediums_bytes(image) for image in images):
+            if isinstance(self.bytes_answer, httpx.Response):
+                return self.bytes_answer
             raise self.bytes_answer
         sizes = [self._size(image) for image in images]
         if any(size is None for size in sizes):
@@ -303,6 +305,58 @@ class TestTheWitness:
 
         with pytest.raises(TransientError, match="stopped answering"):
             scene.process(kind, _params(kind, case))
+
+    @pytest.mark.parametrize(
+        ("status", "body"),
+        [
+            (httpx.codes.FORBIDDEN, {"error": {"code": "forbidden", "message": "Invalid API key."}}),
+            (httpx.codes.OK, {"unexpected": "envelope"}),
+        ],
+        ids=["denied", "unreadable"],
+    )
+    def test_an_error_no_medium_causes_on_the_resend_fails_the_chunk(
+        self, scene: _Scene, case: _Kind, status: int, body: dict[str, Any]
+    ) -> None:
+        """Such an error was taken for a refusal of the resent medium, and every sound image of the
+        chunk went to quarantine. It fails the chunk, as it does on the kind's own call."""
+        scene.server.reads_paths = False
+        scene.server.bytes_answer = httpx.Response(status, json=body)
+        kind = case.make(API_KEY)
+
+        with pytest.raises(PixanoInferenceError) as raised:
+            scene.process(kind, _params(kind, case))
+
+        assert classify(raised.value) == "request"
+
+
+class TestClassify:
+    """Whose fault a failed call is, the one rule every inference kind applies."""
+
+    @pytest.mark.parametrize(
+        ("error", "failure"),
+        [
+            (httpx.ConnectError("refused"), "transient"),
+            (PixanoInferenceError(0, "connection_error", "no answer"), "transient"),
+            (PixanoInferenceError(503, "unavailable", "restarting"), "transient"),
+            (PixanoInferenceError(403, "forbidden", "Invalid API key."), "request"),
+            (PixanoInferenceError(500, "internal_error", "Inference error."), "medium"),
+        ],
+        ids=["no-transport", "no-response", "come-back-later", "denied", "refused"],
+    )
+    def test_each_family(self, error: Exception, failure: Failure) -> None:
+        assert classify(error) == failure
+
+    def test_an_answer_this_worker_cannot_read_is_the_requests_fault(self) -> None:
+        """A successful answer that does not match the client's schema — a client and a server of
+        different versions — was a medium's fault: the chunk was split down to each image, then
+        replayed until its attempts ran out. No medium causes it."""
+        error = PixanoInferenceError(httpx.codes.OK, "invalid_response", "not the expected envelope")
+
+        assert classify(error) == "request"
+
+    def test_what_is_not_a_failed_call_is_raised_again(self) -> None:
+        with pytest.raises(ValueError, match="a bug"):
+            classify(ValueError("a bug"))
 
 
 class TestMediaDesignatedByUrl:

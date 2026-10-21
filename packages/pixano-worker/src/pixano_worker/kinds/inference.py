@@ -156,6 +156,8 @@ def blame_the_server_or_the_media(
     Raises:
         TransientError: The server refuses the witness image, does not read its media by path,
             or stops answering while it is asked.
+        PixanoInferenceError: The resent medium meets an error no medium causes (`classify`
+            says "request"): it is fatal to the chunk.
     """
     try:
         call(witness_image())
@@ -173,9 +175,14 @@ def blame_the_server_or_the_media(
     try:
         call(bytes_to_data_uri(content))
     except (httpx.TransportError, PixanoInferenceError) as error:
+        failure = classify(error)
         # A medium is only blamed on an answer: silence now is an outage, not a verdict.
-        if classify(error) == "transient":
+        if failure == "transient":
             raise TransientError(f"the inference stopped answering while it was asked: {error}") from error
+        # Nor on an error no medium causes — a denied access, an answer this worker cannot read: it
+        # fails the chunk, as it does on the kind's own call.
+        if failure == "request":
+            raise
         # Refused as bytes too: the medium really is at fault.
         return
     raise TransientError(
