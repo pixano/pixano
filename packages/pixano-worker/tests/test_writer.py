@@ -230,8 +230,8 @@ class TestAgainstRealLance:
         from pixano.schemas.records import Record
 
         dataset = Dataset.create(
-            tmp_path / "jouet",
-            DatasetInfo(id="jouet", name="Jouet", record=Record, classification=Classification),
+            tmp_path / "toy",
+            DatasetInfo(id="toy", name="Toy", record=Record, classification=Classification),
         )
         dataset.add_data("records", [Record(id=f"task-{n}") for n in range(60)])
         return dataset
@@ -391,7 +391,7 @@ class TestCompaction:
         monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 10)
         monkeypatch.setattr(writer_module, "KEEP_OLD_VERSIONS_FOR", timedelta(0))
         toy = Dataset.create(
-            tmp_path / "jouet", DatasetInfo(id="jouet", name="Jouet", record=Record, classification=Classification)
+            tmp_path / "toy", DatasetInfo(id="toy", name="Toy", record=Record, classification=Classification)
         )
         toy.add_data("records", [Record(id=f"task-{n}") for n in range(40)])
         writer = JobWriter(lambda: toy, "label", "job-1", "other")

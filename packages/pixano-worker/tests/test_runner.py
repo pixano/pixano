@@ -128,14 +128,14 @@ class TestPlanning:
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
     ) -> None:
         """Without this, a job whose kind no worker knows would wait with no explanation."""
-        job = _submit(declared, kind="fantome")
+        job = _submit(declared, kind="ghost")
 
         await runner.plan_one(adb, registry)
 
         state, _, _ = _state(declared, job)
         assert state == "error"
         row = declared.execute(f"SELECT error FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)).fetchone()
-        assert row is not None and row[0]["kind"] == "fantome"
+        assert row is not None and row[0]["kind"] == "ghost"
 
     async def test_invalid_parameters_fail_the_job(
         self, declared: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
@@ -470,11 +470,11 @@ class TestCancellation:
         await runner.plan_one(adb, registry)
         declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now() WHERE id = %s", (job,))
 
-        tours = 0
-        while await runner.run_batch(adb, registry, "worker-test", 4) and tours < 20:
-            tours += 1
+        turns = 0
+        while await runner.run_batch(adb, registry, "worker-test", 4) and turns < 20:
+            turns += 1
 
-        assert tours < 20, "the loop does not terminate"
+        assert turns < 20, "the loop does not terminate"
         row = declared.execute(f"SELECT count(*) FROM {SCHEMA_NAME}.job_chunks WHERE state = 'pending'").fetchone()
         assert row is not None and row[0] == 0
 
