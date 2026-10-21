@@ -233,7 +233,9 @@ which both `Scene2DContext` and the widgets' seam satisfy.
    in `lib/annotations/annotationCollection.svelte.ts`.
 2. Create `lib/annotations/kinds/<2d|3d>/<kind>/` with:
    - `<kind>PayloadBuilder.ts` — local→REST (resource + create/update bodies),
-   - `<kind>SeedLoader.ts` — REST→local (fetch + map the record's rows once),
+   - `<kind>SeedLoader.ts` — REST→local (fetch + map the record's rows once);
+     a failed fetch rejects, never resolves to an empty list (`loadEveryKind`
+     decides what it means),
    - the **renderer** (display): `<kind>Renderer2D.ts` (`AnnotationRenderer2D`,
      read-only ctx) **or** `<Kind>Renderer.svelte` (3D component reading `ctx.collection`),
    - the **editing input**: 2D → `<kind>Editor2D.ts` (`AnnotationEditor2D`) exposed

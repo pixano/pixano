@@ -116,9 +116,9 @@ describe("bboxSeedLoader — view resolution", () => {
     expect(rows[0].entity).toBe(entity);
   });
 
-  it("returns empty when the listing fails", async () => {
+  it("rejects when the listing fails, rather than reading as no rows", async () => {
     const ctx = makeContext([]);
     ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
-    expect(await bboxSeedLoader.load(ctx)).toEqual([]);
+    await expect(bboxSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });

@@ -10,8 +10,11 @@ import type { DatasetLayoutRepository } from "./datasetLayoutRepository.js";
 import { measureGridViewport, type Viewport } from "./layoutPlanner.js";
 import type { RecordWidgetSeed } from "./recordSeed.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
-import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
-import { SEED_LOADERS, type ViewInfo } from "$lib/annotations/seedLoaders.js";
+import {
+  AnnotationCollection,
+  type LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
+import { loadEveryKind, type KindLoad, type ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
@@ -112,9 +115,10 @@ export class RecordLoader {
         entitiesById: new Map(this.session.entities.map((e) => [e.id, e])),
         views: this.currentViews,
       };
-      const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+      const loads = await loadEveryKind(seedContext);
       if (token !== this.loadToken) return;
-      this.session.annotations = new AnnotationCollection(loaded.flat());
+      reportUnread(loads, "refresh");
+      this.session.annotations = new AnnotationCollection(annotationsRead(loads));
     } catch (err) {
       console.error("Failed to reload annotations:", err);
     }
@@ -251,11 +255,13 @@ export class RecordLoader {
     if (token !== this.loadToken) return;
     this.currentViews = views;
     this.viewsRecord = { datasetId, recordId };
-    const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+    const loads = await loadEveryKind(seedContext);
 
     // A newer load() was started while annotations were fetching.
     if (token !== this.loadToken) return;
-    this.session.annotations = new AnnotationCollection(loaded.flat());
+    // A kind that could not be read seeds nothing rather than breaking the whole record.
+    reportUnread(loads, "load");
+    this.session.annotations = new AnnotationCollection(annotationsRead(loads));
 
     // Replay the arrangement the user built on an earlier record of this
     // dataset; views they never arranged fall back to automatic placement.
@@ -292,5 +298,18 @@ export class RecordLoader {
         seed.storage as Record<string, unknown> | undefined,
       );
     }
+  }
+}
+
+/** The annotations of every kind that was read. */
+function annotationsRead(loads: readonly KindLoad[]): LocalAnnotation[] {
+  return loads.flatMap((load) => (load.read ? load.annotations : []));
+}
+
+/** Say which kinds could not be read, on the loader's error channel. */
+function reportUnread(loads: readonly KindLoad[], attempt: "load" | "refresh"): void {
+  for (const load of loads) {
+    if (load.read) continue;
+    console.error(`Could not ${attempt} the ${load.kind} annotations:`, load.failure);
   }
 }

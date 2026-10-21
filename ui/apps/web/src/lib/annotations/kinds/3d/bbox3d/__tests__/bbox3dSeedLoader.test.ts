@@ -79,10 +79,10 @@ describe("bbox3dSeedLoader", () => {
     expect(anns[0].entity).toBeUndefined();
   });
 
-  it("returns empty when the listing fails", async () => {
+  it("rejects when the listing fails, rather than reading as no rows", async () => {
     const ctx = makeContext([]);
     ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
-    expect(await bbox3dSeedLoader.load(ctx)).toEqual([]);
+    await expect(bbox3dSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 
   // This is the one boundary where an unvalidated rotation can enter. Downstream

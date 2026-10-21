@@ -226,7 +226,10 @@ on the whole manager.
 2. In parallel: `getDataset` + `listEntities`.
 3. For each declared view, ask each registered **extension** `addRecordSeed(...)`;
    run the per-kind **`SEED_LOADERS`** to fetch that record's annotation rows and
-   map them into the shared `AnnotationCollection`.
+   map them into the shared `AnnotationCollection`. They run through
+   `loadEveryKind` (`seedLoaders.ts`), which keeps each failure to its kind: a
+   kind whose rows could not be read seeds nothing, is reported on the console,
+   and the other kinds are read.
 4. Create one widget per claimed view, keyed by `viewName`. Placement comes from
    `resolveRecordLayouts`: the dataset's remembered arrangement where the user
    has arranged that view, `layoutPlanner`'s automatic placement otherwise. The
@@ -384,8 +387,9 @@ selectRecordInDataset(ds, rec)
   → RecordLoader.load
       ├─ gateway.getDataset + gateway.listEntities      → session.entities/schema
       ├─ per view: extension.addRecordSeed(...)          → widget seeds
-      ├─ SEED_LOADERS[kind].load(...)  (gateway.listAnnotations(resource, …))
+      ├─ loadEveryKind → SEED_LOADERS[kind].load(...)  (gateway.listAnnotations(resource, …))
       │      → map rows → session.annotations.add(LocalAnnotation, persisted:true)
+      │      → a kind whose list failed: nothing seeded, reported; the others read
       └─ create widgets (layoutPlanner)
   → widgets mount, build Scene2DContext, renderers.sync() draws the seeded boxes
 ```

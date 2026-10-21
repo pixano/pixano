@@ -13,6 +13,7 @@ import type { WidgetSink } from "../recordLoader.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { MASK_RESOURCE } from "$lib/annotations/kinds/2d/mask/maskPayloadBuilder.js";
 import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
@@ -123,6 +124,34 @@ function makeSink() {
 
 const VIEWPORT = { width: 1600, height: 900 };
 
+/** The id of the one view `oneViewExtension` claims. */
+const CLAIMED_VIEW_ID = "img-cam";
+
+/** An image extension claiming every image view as `CLAIMED_VIEW_ID`, so rows are placed. */
+function oneViewExtension(): WidgetExtensionConfig {
+  return {
+    ...makeImageExtension(),
+    addRecordSeed: ({ viewName }) =>
+      Promise.resolve({
+        title: viewName,
+        view: { id: CLAIMED_VIEW_ID, logicalName: viewName, width: 100, height: 100 },
+      }),
+  };
+}
+
+/** A box drawn on `CLAIMED_VIEW_ID`. */
+function bboxOnView(id: string): BBoxRow {
+  return {
+    id,
+    record_id: "rec-1",
+    entity_id: `e-${id}`,
+    view_id: CLAIMED_VIEW_ID,
+    coords: [0.1, 0.1, 0.2, 0.2],
+    format: "xywh",
+    is_normalized: true,
+  };
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("RecordLoader.load", () => {
@@ -182,6 +211,35 @@ describe("RecordLoader.load", () => {
     // The displayed view's row is seeded; the undisplayed one is skipped.
     expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-a"]);
     expect(session.annotations.find("bb-a")).toMatchObject({ viewId: "img-a", persisted: true });
+  });
+
+  it("seeds the kinds it could read when one kind's list fails, and says which", async () => {
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(oneViewExtension()),
+      gateway: {
+        ...makeGateway({ dataset: makeDataset({ cam: { base: "Image" } }) }),
+        listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
+          if (resource === MASK_RESOURCE) return Promise.reject(new Error("masks down"));
+          return Promise.resolve(
+            (resource === BBOX_RESOURCE ? [bboxOnView("bb-1")] : []) as TRow[],
+          );
+        },
+      },
+      session,
+      layoutRepository: makeLayoutRepository(),
+    });
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-1"]);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Could not load the mask annotations:",
+      expect.objectContaining({ message: "masks down" }),
+    );
+    consoleSpy.mockRestore();
   });
 
   it("resets the shared collection at the start of a new load", async () => {
