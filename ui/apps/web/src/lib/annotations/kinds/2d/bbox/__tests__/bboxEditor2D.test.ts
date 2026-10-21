@@ -186,6 +186,31 @@ function expectCoords(actual: unknown, expected: number[]): void {
   );
 }
 
+/**
+ * Expect a box the server takes: every coordinate in [0, 1], the box inside
+ * the image (x + w ≤ 1, y + h ≤ 1), and an edge meant to lie on the image's
+ * left or top border exactly on it — not a hair past it, which the server's
+ * validator refuses.
+ */
+function expectInsideTheImage(coords: unknown, expected: number[]): void {
+  expectCoords(coords, expected);
+  const [x, y, w, h] = coords as number[];
+  for (const value of [x, y, w, h]) {
+    expect(value).toBeGreaterThanOrEqual(0);
+    expect(value).toBeLessThanOrEqual(1);
+  }
+  expect(x + w).toBeLessThanOrEqual(1);
+  expect(y + h).toBeLessThanOrEqual(1);
+  if (expected[0] === 0) expect(x).toBe(0);
+  if (expected[1] === 0) expect(y).toBe(0);
+}
+
+/** The coordinates of the update queued for the record, if any. */
+function queuedCoords(scene: OnCanvas): unknown {
+  const update = scene.manager.pendingMutations.find((m) => m.op === "update");
+  return update?.op === "update" ? update.body.coords : undefined;
+}
+
 describe("bboxEditor2D on the real Konva", () => {
   it("saves a box resized with the transformer's handle", async () => {
     const scene = await openOnCanvas();
@@ -251,6 +276,86 @@ describe("bboxEditor2D on the real Konva", () => {
     dragBy(scene, rectOf(scene, "b1"), 10, 0);
 
     expect(scene.manager.pendingMutations).toHaveLength(0);
+  });
+});
+
+describe("bboxEditor2D, a box taken past the image's edge", () => {
+  // The box is drawn 20 × 20 px at (10, 10); the image spans 0..100 px.
+
+  it("keeps a box dragged past the left and top edges whole, against them", async () => {
+    const scene = await openOnCanvas();
+
+    dragBy(scene, rectOf(scene, "b1"), -25, -15);
+
+    expectInsideTheImage(queuedCoords(scene), [0, 0, 0.2, 0.2]);
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0, 0, 0.2, 0.2]);
+    // Drawn where it is saved, not where the pointer let go of it.
+    expect([rectOf(scene, "b1").x(), rectOf(scene, "b1").y()]).toEqual([0, 0]);
+  });
+
+  it("keeps a box dragged past the right and bottom edges whole, against them", async () => {
+    const scene = await openOnCanvas();
+
+    dragBy(scene, rectOf(scene, "b1"), 85, 95);
+
+    expectInsideTheImage(queuedCoords(scene), [0.8, 0.8, 0.2, 0.2]);
+    expect(rectOf(scene, "b1").x()).toBeCloseTo(80, COORDS_DIGITS);
+  });
+
+  it("cuts a box resized past the left and top edges at them", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+
+    resizeFrom(scene, "top-left", -25, -25);
+
+    // From (-15, -15) to (30, 30) px: what lies past the edges is not the image's.
+    expectInsideTheImage(queuedCoords(scene), [0, 0, 0.3, 0.3]);
+    const rect = rectOf(scene, "b1");
+    expect([rect.x(), rect.y()]).toEqual([0, 0]);
+    expect(rect.width()).toBeCloseTo(30, COORDS_DIGITS);
+  });
+
+  it("cuts a box resized past the right and bottom edges at them", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+
+    resizeFrom(scene, "bottom-right", 90, 90);
+
+    expectInsideTheImage(queuedCoords(scene), [0.1, 0.1, 0.9, 0.9]);
+    expect(rectOf(scene, "b1").width()).toBeCloseTo(90, COORDS_DIGITS);
+  });
+
+  it("sends the server a box it takes, once saved", async () => {
+    const scene = await openOnCanvas();
+
+    dragBy(scene, rectOf(scene, "b1"), -25, -15);
+    await scene.manager.flushSave();
+
+    expect(scene.manager.saveError).toBeNull();
+    const sent = scene.backend.writes.find((w) => w.op === "update");
+    expectInsideTheImage(sent?.op === "update" ? sent.body.coords : undefined, [0, 0, 0.2, 0.2]);
+  });
+});
+
+describe("bboxEditor2D, a box stored with no width", () => {
+  // Saved so before the cut kept the least size, or imported so. Konva scales
+  // a box by dividing by its size, and leaves the node of one with no width
+  // with no number for its place or its size.
+
+  it("commits nothing for a resize, which Konva cannot make, and draws the box as stored", async () => {
+    const stored = [0.5, 0.1, 0, 0.2];
+    const scene = await openOnCanvas({ ...humanBox(REC, "h1"), coords: stored });
+    select(scene, "h1");
+
+    resizeFrom(scene, "middle-right", 20, 0);
+
+    expect(queuedCoords(scene)).toBeUndefined();
+    expectCoords(scene.ctx.collection.find("h1")?.geometry, stored);
+    const rect = rectOf(scene, "h1");
+    expectCoords(
+      [rect.x(), rect.y(), rect.width(), rect.height()],
+      stored.map((value) => value * IMAGE_PIXELS),
+    );
   });
 });
 
