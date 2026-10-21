@@ -139,8 +139,8 @@ def blame_the_server_or_the_media(
     A witness image, generated here, is sent as bytes: refused, the server is not well and the
     chunk is replayed later. Accepted, the media are at fault — unless they had been designated
     by path: the server may not read the storage it was told to mount, and then refuses every
-    path through no fault of any medium. So one of them is resent as the bytes this worker reads
-    from its file; if it passes, the mount is the cause, and the chunk is replayed with the
+    path through no fault of any medium. So the first of them this worker can read is resent as
+    the bytes of its file; if it passes, the mount is the cause, and the chunk is replayed with the
     reason, rather than three hundred healthy images going to quarantine.
 
     The bytes come from the file, not from the dataset: a view designated by path carries no
@@ -164,14 +164,12 @@ def blame_the_server_or_the_media(
     except (httpx.TransportError, PixanoInferenceError) as error:
         raise TransientError(f"the inference refuses even the witness image: {error}") from error
 
-    first_by_path = next((record_id for record_id in refused if record_id in by_path), None)
-    if first_by_path is None:
+    readable = _first_readable(reader, table, refused, by_path)
+    if readable is None:
+        # This worker cannot read any of them either: nothing tells the inference's mount apart
+        # from media that are gone.
         return
-    content = _file_bytes(reader, table, by_path[first_by_path])
-    if content is None:
-        # This worker cannot read it either: nothing tells the inference's mount apart from a
-        # medium that is gone.
-        return
+    first_by_path, content = readable
     try:
         call(bytes_to_data_uri(content))
     except (httpx.TransportError, PixanoInferenceError) as error:
@@ -189,6 +187,23 @@ def blame_the_server_or_the_media(
         f"the inference refuses media by path but accepts the same one as bytes ({first_by_path}): "
         f"{reader.media.path_refusal_diagnostic()}"
     )
+
+
+def _first_readable(
+    reader: JobReader, table: str, refused: list[str], by_path: dict[str, Any]
+) -> tuple[str, bytes] | None:
+    """The first refused medium sent by path whose file this worker reads, with its bytes.
+
+    Not merely the first sent by path: a file this worker cannot read decides nothing, and
+    stopping at it sent every sound medium after it to quarantine.
+    """
+    for record_id in refused:
+        if record_id not in by_path:
+            continue
+        content = _file_bytes(reader, table, by_path[record_id])
+        if content is not None:
+            return record_id, content
+    return None
 
 
 def _file_bytes(reader: JobReader, table: str, view: Any) -> bytes | None:

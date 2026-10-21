@@ -17,6 +17,8 @@ the bytes of a data URI — and answers what the real one answers when it cannot
 import base64
 import io
 import json
+import logging
+import os
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -273,6 +275,39 @@ class TestTheWitness:
 
         assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
         assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
+
+    def test_a_medium_gone_from_the_storage_leaves_the_next_to_be_resent(self, scene: _Scene, case: _Kind) -> None:
+        """Only the first medium sent by path was tried: gone, it stopped the check, and the sound
+        media after it went to quarantine with it although the inference's mount was at fault."""
+        scene.server.reads_paths = False
+        (scene.media_root / "a.png").unlink()
+        kind = case.make(API_KEY)
+
+        with pytest.raises(TransientError, match=f"{INFERENCE_MEDIA_ROOT} — check PIXANO_INFERENCE_MEDIA_ROOT"):
+            scene.process(kind, _params(kind, case))
+
+        assert scene.server.images[-1] == bytes_to_data_uri((scene.media_root / "b.png").read_bytes())
+
+    @pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads any file")
+    def test_files_this_worker_sees_but_cannot_read_decide_nothing(
+        self, scene: _Scene, case: _Kind, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Like files that are gone, they leave the media to quarantine, and the log says why."""
+        files = [scene.media_root / file_name for _, file_name in VIEWS.values()]
+        for file in files:
+            file.chmod(0)
+        kind = case.make(API_KEY)
+
+        try:
+            with caplog.at_level(logging.WARNING, logger="pixano-worker"):
+                result = scene.process(kind, _params(kind, case))
+        finally:
+            for file in files:
+                file.chmod(0o644)
+
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
+        assert "cannot read it to resend it as bytes" in caplog.text
 
     def test_a_link_out_of_the_media_root_is_quarantined_not_replayed(
         self, scene: _Scene, case: _Kind, tmp_path: Path
