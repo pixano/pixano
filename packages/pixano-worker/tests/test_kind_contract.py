@@ -197,6 +197,12 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
         def __init__(self, *_args: Any, **_kwargs: Any) -> None:
             pass
 
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *_exc: Any) -> None:
+            return None
+
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
             vectors = np.full((count, FAKE_DIM), 0.1, dtype=np.float32)

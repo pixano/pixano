@@ -145,22 +145,24 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
         read_s = time.perf_counter() - started
 
-        client = self.server.client(max_retries=params.max_retries)
-        started = time.perf_counter()
-        embedded, refused = self._embed_isolating(client, candidates, params)
-        inference_s = time.perf_counter() - started
-        if refused and not embedded:
-            # The whole batch is refused, image by image. A broken inference refuses everything;
-            # so does an entirely corrupt batch. What tells them apart is not the batch size —
-            # the last chunk of a dataset often has only one image — but the server itself, on an
-            # image known to be good.
-            blame_the_server_or_the_media(
-                lambda reference: self._embed(client, [reference], params),
-                reader,
-                IMAGE_TABLE,
-                [record_id for record_id, _ in refused],
-                by_path,
-            )
+        # Closed with the chunk: a client holds a connection pool, and a worker runs thousands
+        # of chunks.
+        with self.server.client(max_retries=params.max_retries) as client:
+            started = time.perf_counter()
+            embedded, refused = self._embed_isolating(client, candidates, params)
+            inference_s = time.perf_counter() - started
+            if refused and not embedded:
+                # The whole batch is refused, image by image. A broken inference refuses
+                # everything; so does an entirely corrupt batch. What tells them apart is not the
+                # batch size — the last chunk of a dataset often has only one image — but the
+                # server itself, on an image known to be good.
+                blame_the_server_or_the_media(
+                    lambda reference: self._embed(client, [reference], params),
+                    reader,
+                    IMAGE_TABLE,
+                    [record_id for record_id, _ in refused],
+                    by_path,
+                )
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
             for record_id, detail in refused
