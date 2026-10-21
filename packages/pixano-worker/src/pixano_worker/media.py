@@ -135,7 +135,8 @@ class MediaResolver:
         # A root of "/" was stripped to nothing at construction.
         return (
             f"it does not read the media storage under {self.inference_media_root or '/'} — "
-            "check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
+            "check PIXANO_INFERENCE_MEDIA_ROOT on this worker, PIXANO_INFERENCE_MEDIA_ROOTS on the inference, "
+            "and its mount"
         )
 
     def local_path(self, view: Any) -> str | None:
