@@ -124,6 +124,19 @@ class MediaResolver:
 
         return self._inline(source, table_name, view, uri)
 
+    def path_refusal_diagnostic(self) -> str:
+        """What to check when the inference refuses this resolver's paths but accepts the same medium as bytes.
+
+        Said here, beside the path designation, because only the resolver knows where the
+        inference's side of a path comes from. A source of media with another designation will
+        say what to check for its own.
+        """
+        # A root of "/" was stripped to nothing at construction.
+        return (
+            f"it does not read the media storage under {self.inference_media_root or '/'} — "
+            "check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
+        )
+
     def local_path(self, view: Any) -> str | None:
         """The file a view names, as this worker sees it, if it is under the media root.
 

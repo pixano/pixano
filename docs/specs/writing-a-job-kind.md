@@ -73,7 +73,12 @@ A brief hiccup can still be retried in place — the inference client already do
 told you something about its content; a server that did not answer has told you nothing. The
 embeddings kind learnt this on the real stack: during an inference restart, one call went
 through and the next were refused, and "not every image failed" sent seven healthy images to
-quarantine.
+quarantine. When the server refuses every medium of a chunk, the kinds that call the inference
+ask it whether it is at fault through one shared helper (`blame_the_server_or_the_media`, in
+`kinds/inference.py`; backend-processing §8.2). What it can check depends on how each medium
+was designated, which the media resolver says (`ResolvedMedia.designation`: `path`, `url` or
+`bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
+and goes to quarantine with the rest.
 
 ### `outcome(result, payload, task_count) -> Outcome`
 

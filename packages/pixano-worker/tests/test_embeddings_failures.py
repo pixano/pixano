@@ -13,6 +13,7 @@ path, and for the whole batch as soon as a single image in it is bad.
 """
 
 import base64
+import io
 from types import SimpleNamespace
 from typing import Any
 
@@ -21,7 +22,7 @@ import numpy as np
 import pytest
 from pixano_inference.client import PixanoInferenceError
 from pixano_worker.kinds import EmbeddingsKind, TransientError
-from pixano_worker.media import ResolvedMedia
+from pixano_worker.media import MediaResolver, ResolvedMedia
 
 from pixano.inference.media import bytes_to_data_uri
 
@@ -90,7 +91,11 @@ class _Inference:
 
 
 class _Reader:
-    """A dataset where some records have no image, and others a lost image."""
+    """A dataset where some records have no image, and others a lost image.
+
+    As in a real dataset, a view designated by path carries no bytes of its own: only its file
+    can be read, through `open_media`.
+    """
 
     def __init__(
         self,
@@ -101,12 +106,14 @@ class _Reader:
         self.without_image = without_image
         self.lost = lost
         self.carried_bytes = carried_bytes
-        self.dataset = SimpleNamespace(get_data=self._get_data, get_view_binary=self._get_view_binary)
+        self.dataset = SimpleNamespace(get_data=self._get_data)
+        self.media = MediaResolver("/medias", "/medias")
 
     @staticmethod
-    def _get_view_binary(table_name: str, row_id: str) -> tuple[bytes, str]:
-        record_id = row_id.removeprefix("img-")
-        return f"/medias/{record_id}.jpg".encode(), "image/jpeg"
+    def open_media(table_name: str, view: Any) -> Any:
+        """The file a view names, as this worker reads it: here its path, so that the simulated
+        inference recognises an image in both forms."""
+        return io.BytesIO(view.uri.encode())
 
     def _get_data(self, table_name: str, record_ids: list[str]) -> list[Any]:
         return [
