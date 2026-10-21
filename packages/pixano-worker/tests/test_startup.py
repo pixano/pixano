@@ -25,7 +25,7 @@ def steps(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list[str]:
     """Replace each startup step with a trace, and cut the loop short."""
     for name, value in ENV.items():
         monkeypatch.setenv(name, value)
-    monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", str(tmp_path / "battement"))
+    monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", str(tmp_path / "heartbeat"))
 
     order: list[str] = []
     monkeypatch.setattr(entrypoint, "wait_for_database", lambda *a: order.append("database"))

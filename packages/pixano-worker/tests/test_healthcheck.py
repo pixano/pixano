@@ -19,7 +19,7 @@ from pixano_worker.healthcheck import main as probe
 @pytest.fixture
 def heartbeat(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Redirect the heartbeat file to a throwaway location."""
-    path = tmp_path / "battement"
+    path = tmp_path / "heartbeat"
     monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", str(path))
     return path
 

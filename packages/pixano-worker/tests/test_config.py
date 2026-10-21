@@ -22,7 +22,7 @@ REQUIRED_ENV = {
     "PIXANO_INFERENCE_URL": "http://pixano-inference:7463",
     "PIXANO_LIBRARY_DIR": "/data/library",
     "PIXANO_MEDIA_ROOT": "/medias",
-    "PIXANO_INFERENCE_MEDIA_ROOT": "/mnt/partage/medias",
+    "PIXANO_INFERENCE_MEDIA_ROOT": "/mnt/share/media",
 }
 
 
@@ -59,7 +59,7 @@ class TestRedactDsn:
 
     def test_keeps_the_host_readable(self) -> None:
         """The point of the log is to show where we connect: the host must survive."""
-        assert "db.interne:5432" in redact_dsn("postgresql://pixano:s3cret@db.interne:5432/pixano")
+        assert "db.internal:5432" in redact_dsn("postgresql://pixano:s3cret@db.internal:5432/pixano")
 
 
 class TestWorkerConfig:
@@ -72,7 +72,7 @@ class TestWorkerConfig:
         assert config.inference_url == REQUIRED_ENV["PIXANO_INFERENCE_URL"]
         assert config.library_dir == REQUIRED_ENV["PIXANO_LIBRARY_DIR"]
         assert config.media_root == "/medias"
-        assert config.inference_media_root == "/mnt/partage/medias"
+        assert config.inference_media_root == "/mnt/share/media"
 
     @pytest.mark.parametrize("missing", sorted(REQUIRED_ENV))
     def test_rejects_a_missing_variable(self, env: None, monkeypatch: pytest.MonkeyPatch, missing: str) -> None:
@@ -162,7 +162,7 @@ class TestHeartbeatPath:
         assert heartbeat_path() == "/tmp/pixano-worker.heartbeat"
 
     def test_follows_the_environment(self, env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", "/var/run/battement")
+        monkeypatch.setenv("PIXANO_WORKER_HEARTBEAT", "/var/run/heartbeat")
 
-        assert heartbeat_path() == "/var/run/battement"
-        assert WorkerConfig.from_env().heartbeat_path == "/var/run/battement"
+        assert heartbeat_path() == "/var/run/heartbeat"
+        assert WorkerConfig.from_env().heartbeat_path == "/var/run/heartbeat"
