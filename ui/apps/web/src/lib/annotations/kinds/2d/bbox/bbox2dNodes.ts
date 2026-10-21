@@ -13,3 +13,12 @@ License: CECILL-C
  */
 export const BBOX_NODE_NAME = "bbox";
 export const BBOX_ID_ATTR = "bboxId";
+
+/**
+ * Set on a box's node while the editor's transformer resizes it. A resize
+ * lives on the node until it ends, and only then reaches the collection; the
+ * renderer leaves the size and place of a node so marked alone meanwhile, as a
+ * sync putting it back as stored — a save ending, the selection changing —
+ * would undo the resize under the pointer.
+ */
+export const BBOX_RESIZING_ATTR = "bboxResizing";

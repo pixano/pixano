@@ -6,7 +6,7 @@ License: CECILL-C
 
 import Konva from "konva";
 
-import { BBOX_ID_ATTR, BBOX_NODE_NAME } from "./bbox2dNodes.js";
+import { BBOX_ID_ATTR, BBOX_NODE_NAME, BBOX_RESIZING_ATTR } from "./bbox2dNodes.js";
 import { createBBoxEditor2D } from "./bboxEditor2D.js";
 import type { LocalBBox } from "$lib/annotations/annotationCollection.svelte.js";
 import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
@@ -61,16 +61,22 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         this.rectByBBoxId.set(bbox.id, newRect);
         rect = newRect;
       } else if (frame) {
-        const pixel = normalizedToPixel(bbox.geometry, frame);
-        rect.position({ x: pixel.x, y: pixel.y });
-        rect.width(pixel.width);
-        rect.height(pixel.height);
-        // A resize leaves its result on the node as a scale until the editor
-        // bakes it into the size, and a flip as a half turn. The size just set
-        // is the collection's, so a transform left on the node would draw the
-        // box at a size, or a place, the collection does not hold.
-        rect.scale({ x: 1, y: 1 });
-        rect.rotation(0);
+        // A box being resized holds its new size on the node until the editor
+        // commits it as the resize ends: put back as stored now — a save
+        // ending, the selection changing — the resize would be undone under
+        // the pointer.
+        if (!rect.getAttr(BBOX_RESIZING_ATTR)) {
+          const pixel = normalizedToPixel(bbox.geometry, frame);
+          rect.position({ x: pixel.x, y: pixel.y });
+          rect.width(pixel.width);
+          rect.height(pixel.height);
+          // A resize leaves its result on the node as a scale until the editor
+          // bakes it into the size, and a flip as a half turn. The size just set
+          // is the collection's, so a transform left on the node would draw the
+          // box at a size, or a place, the collection does not hold.
+          rect.scale({ x: 1, y: 1 });
+          rect.rotation(0);
+        }
         rect.stroke(bbox.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT);
         rect.dash(bbox.persisted ? [] : [...DRAFT_DASH]);
       }
