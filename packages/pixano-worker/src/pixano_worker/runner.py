@@ -6,7 +6,7 @@
 
 """The worker's execution loop.
 
-Two jobs, in this order on every turn: split the jobs waiting to be split, then consume chunks.
+Two duties, in this order on every turn: split the jobs waiting to be split, then consume chunks.
 Planning goes first because a job that has not been split has no chunk to claim — otherwise a
 lone worker could sleep in front of pending work.
 
@@ -479,7 +479,7 @@ async def _loop(
             await _pause(stop, UNEXPECTED_ERROR_PAUSE_S)
             continue
         if failures:
-            log.info("the loop passes again after %d failed turn(s)", failures)
+            log.info("the loop is running again after %d failed turn(s)", failures)
             failures = 0
         if outages:
             log.info("database reachable again after %d attempt(s)", outages)
@@ -646,7 +646,7 @@ async def _execute(
     except TimeoutError:
         # The thread does not stop: a blocked call cannot be interrupted from the outside. The
         # chunk is handed back, and if the thread eventually completes, its result will be
-        # refused by the guard token — and its write, idempotent, will have doubled nothing. The
+        # refused by the fencing token — and its write, idempotent, will have doubled nothing. The
         # pool counts this thread as stuck; if there are too many, the loop will stop the worker.
         await _retry_later(conn, chunk, {"reason": "time limit exceeded", "timeout_s": timeout_s})
         return
@@ -704,7 +704,7 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
     A database unreachable at refresh time is not an error of the protected work: the keeper
     logs it and retries at the next interval. Letting it propagate made a chunk whose
     computation had succeeded be classed as fatal. If the database stays down, the lease
-    expires and the guard token will refuse the result: that is the intended path.
+    expires and the fencing token will refuse the result: that is the intended path.
 
     Args:
         refresh: Extends the lease; returns False if the lease no longer belongs to this worker.

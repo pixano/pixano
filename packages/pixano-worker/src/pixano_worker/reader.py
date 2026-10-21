@@ -24,7 +24,7 @@ from .writer import DatasetReadSource
 logger = logging.getLogger("pixano-worker")
 
 # How many rows we fetch per request when enumerating a table. Enough to amortise the round
-# trip, few enough that a dataset of several million items does not fit in memory at once.
+# trip, small enough that a dataset of several million items is never held in memory at once.
 PAGE_SIZE = 2_000
 
 

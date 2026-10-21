@@ -9,7 +9,7 @@
 Compaction runs every `COMPACT_EVERY_WRITES` writes, in the chunk that triggers it, under the
 dataset's write lock: the other chunks of the same dataset wait for it to finish. Short on a
 vector table (63 fragments merged in a fraction of a second), it had not been measured on an
-annotation table — the one the pre-annotation kinds fill, and that users annotate at the same time.
+annotation table — the one step 2's kinds will fill, and that users annotate at the same time.
 
 The script fills a classification table by writes of a chunk's size, as a job would, and times
 each `optimize`: this is the time during which the dataset accepts no other write.
