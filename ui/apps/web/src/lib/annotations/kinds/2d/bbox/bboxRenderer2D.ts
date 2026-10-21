@@ -65,6 +65,12 @@ class BBoxRenderer2D implements AnnotationRenderer2D {
         rect.position({ x: pixel.x, y: pixel.y });
         rect.width(pixel.width);
         rect.height(pixel.height);
+        // A resize leaves its result on the node as a scale until the editor
+        // bakes it into the size, and a flip as a half turn. The size just set
+        // is the collection's, so a transform left on the node would draw the
+        // box at a size, or a place, the collection does not hold.
+        rect.scale({ x: 1, y: 1 });
+        rect.rotation(0);
         rect.stroke(bbox.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT);
         rect.dash(bbox.persisted ? [] : [...DRAFT_DASH]);
       }

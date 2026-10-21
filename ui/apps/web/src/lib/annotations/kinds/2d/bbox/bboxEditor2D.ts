@@ -19,7 +19,7 @@ const MIN_BBOX_PIXELS = 1;
  * Editing input for the "bbox" kind: owns the `Konva.Transformer` and commits
  * drag/transform results back through `commitGeometryEdit`. It never creates the
  * box nodes (that is the renderer's job) — it finds them by their stamped id and
- * listens at the **layer** level, so display and input stay decoupled (D4).
+ * listens where Konva reports the gestures, so display and input stay decoupled (D4).
  */
 class BBoxEditor2D implements AnnotationEditor2D {
   readonly kind = "bbox";
@@ -37,10 +37,14 @@ class BBoxEditor2D implements AnnotationEditor2D {
     });
     ctx.annotationLayer.add(this.transformer);
 
-    // Layer-delegated: catches drag/transform of any bbox node without the editor
-    // owning node creation. Namespaced so `destroy()` removes exactly these.
+    // A drag's end bubbles up from the node, so the layer hears it for any bbox
+    // node without the editor owning node creation. A resize's end does not
+    // bubble: Konva fires it on the transformer and on each node it holds, never
+    // on their layer — listened for on the layer, a resize was never saved. The
+    // transformer is the editor's own, so it is heard there. Namespaced so
+    // `destroy()` removes exactly these.
     ctx.annotationLayer.on("dragend.bbox-edit", (e) => this._commitNode(e.target));
-    ctx.annotationLayer.on("transformend.bbox-edit", (e) => this._onTransformEnd(e.target));
+    this.transformer.on("transformend.bbox-edit", () => this._endResize());
   }
 
   /** Attach the transformer to the selected bbox node (or detach if none). */
@@ -58,7 +62,7 @@ class BBoxEditor2D implements AnnotationEditor2D {
 
   destroy(): void {
     this.ctx.annotationLayer.off("dragend.bbox-edit");
-    this.ctx.annotationLayer.off("transformend.bbox-edit");
+    this.transformer.off("transformend.bbox-edit");
     this.transformer.destroy();
   }
 
@@ -70,6 +74,11 @@ class BBoxEditor2D implements AnnotationEditor2D {
   private _bboxId(node: Konva.Node): string | null {
     if (node.name() !== BBOX_NODE_NAME) return null;
     return (node.getAttr(BBOX_ID_ATTR) as string | undefined) ?? null;
+  }
+
+  /** A resize ends: commit the boxes it acted on. */
+  private _endResize(): void {
+    for (const node of this.transformer.nodes()) this._onTransformEnd(node);
   }
 
   /** A transform ends as a scale on the node; bake it into width/height first. */
