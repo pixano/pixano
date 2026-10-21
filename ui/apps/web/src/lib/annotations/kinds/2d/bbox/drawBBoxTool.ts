@@ -16,7 +16,7 @@ import {
   pixelToNormalized,
 } from "$lib/annotations/scene/scene2dGeometry.js";
 import { BBOX_COLOR_DRAFT, DRAFT_DASH } from "$lib/annotations/scene/scene2dStyleConstants.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
 /**
@@ -24,12 +24,19 @@ import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotatio
  * the preview rectangle, up clamps it to the image frame and commits the
  * (entity, bbox) create pair. Hands control back to the select tool when
  * done or cancelled.
+ *
+ * The box being drawn is the record's unsaved work until the pointer is let
+ * go: the handler's staged-work flag is up meanwhile.
  */
 class DrawBBoxHandler implements ToolHandler2D {
   private draftRect: Konva.Rect | null = null;
   private draftOrigin: { x: number; y: number } | null = null;
+  /** Raised while a box is being drawn. */
+  private readonly staged: StagedWorkFlag | undefined;
 
-  constructor(private readonly ctx: Scene2DContext) {}
+  constructor(private readonly ctx: Scene2DContext) {
+    this.staged = ctx.claimStagedWork?.(() => this._destroyDraft());
+  }
 
   onPointerDown(event: Konva.KonvaEventObject<MouseEvent>): void {
     event.cancelBubble = true;
@@ -47,6 +54,7 @@ class DrawBBoxHandler implements ToolHandler2D {
       listening: false,
     });
     this.ctx.annotationLayer.add(this.draftRect);
+    this.staged?.set(true);
     this.ctx.annotationLayer.batchDraw();
   }
 
@@ -143,6 +151,7 @@ class DrawBBoxHandler implements ToolHandler2D {
     }
     this.draftRect = null;
     this.draftOrigin = null;
+    this.staged?.set(false);
   }
 }
 

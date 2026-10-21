@@ -11,8 +11,9 @@ import { SmartSegmentHandler, smartSegmentTool } from "../smartSegmentTool.js";
 import type { SegmentationBackend } from "../smartSegmentTool.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { PendingAnnotation } from "$lib/annotations/types.js";
+import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds prompt markers.
 vi.mock("konva", () => {
@@ -37,7 +38,15 @@ function fakeImage(): Konva.Image {
 
 const SAMPLE_MASK = { size: [400, 200] as [number, number], counts: "a2b1" };
 
-function makeHarness(backend: Partial<SegmentationBackend> = {}) {
+/**
+ * The tool over a fake scene.
+ *
+ * @param backend What the model answers.
+ * @param seam The seam of a record open in the real workspace, for the tests of
+ *   what the tool holds as the record's unsaved work; the scene's own fakes then
+ *   give way to it.
+ */
+function makeHarness(backend: Partial<SegmentationBackend> = {}, seam?: SeamContext) {
   const collection = new AnnotationCollection();
   let pointer: { x: number; y: number } | null = null;
   let pending: PendingAnnotation | null = null;
@@ -79,6 +88,7 @@ function makeHarness(backend: Partial<SegmentationBackend> = {}) {
     beginPendingAnnotation: (p: PendingAnnotation) => (pending = p),
     findEntity: vi.fn(),
     isEntityVisible: () => true,
+    ...seam,
   };
 
   return {
@@ -326,5 +336,66 @@ describe("smart segmentation failure paths", () => {
       expect(h.handler.onKeyDown?.(key(k))).toBe(true);
     }
     expect(h.handler.onKeyDown?.(key("a"))).toBe(false);
+  });
+});
+
+describe("prompts placed are the record's unsaved work", () => {
+  const REC_1 = "rec-1";
+  const PROMPTS = [
+    { x: 50, y: 50 },
+    { x: 60, y: 60 },
+  ];
+
+  /** The tool in an image widget of a record open in the real workspace. */
+  async function onTheRecord(backend: Partial<SegmentationBackend> = {}) {
+    const opened = await openManager({ [REC_1]: {} });
+    const h = makeHarness(backend, widgetSeam(opened.manager));
+    h.handler.activate();
+    return { ...opened, h };
+  }
+
+  it("holds them while they are placed, and lets go of them once Escape drops them", async () => {
+    const { manager, h } = await onTheRecord();
+    clickAt(h, PROMPTS);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    h.handler.onKeyDown(key("Escape"));
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("holds them until the last is undone, the tool is left, or they become a mask", async () => {
+    const { manager, h } = await onTheRecord();
+    clickAt(h, PROMPTS.slice(0, 1));
+    expect(manager.hasUnsavedWork).toBe(true);
+    h.handler.onKeyDown(key("Backspace"));
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    clickAt(h, PROMPTS);
+    h.handler.deactivate();
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    clickAt(h, PROMPTS);
+    h.handler.onKeyDown(key("Enter"));
+    // Held while the model runs: the prompts are still all there is.
+    expect(manager.hasUnsavedWork).toBe(true);
+    await flush();
+    // The mask is a draft now, waiting for its entity; with the form cancelled
+    // nothing is left — the tool holds nothing more.
+    manager.cancelPendingAnnotation();
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("is dropped by Discard: Enter then asks the model nothing", async () => {
+    const { manager, h } = await onTheRecord();
+    clickAt(h, PROMPTS);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.discardChanges();
+    h.handler.onKeyDown(key("Enter"));
+    await flush();
+
+    expect(manager.hasUnsavedWork).toBe(false);
+    expect(h.calls.segment).toEqual([]);
+    expect(manager.annotations.items).toEqual([]);
   });
 });

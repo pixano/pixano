@@ -11,6 +11,7 @@ import { drawKeypointsTool } from "../drawKeypointsTool.js";
 import { DEFAULT_KEYPOINT_TEMPLATE, KEYPOINT_TEMPLATES } from "../keypointsTemplates.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds preview shapes and
 // throws them away. Mock the three node types it constructs.
@@ -278,5 +279,61 @@ describe("drawKeypointsTool keyboard", () => {
       expect(handler.onKeyDown?.(new KeyboardEvent("keydown", { key }))).toBe(true);
     }
     expect(handler.onKeyDown?.(new KeyboardEvent("keydown", { key: "a" }))).toBe(false);
+  });
+});
+
+describe("a skeleton begun is the record's unsaved work", () => {
+  const REC_1 = "rec-1";
+
+  /** The keypoints tool in an image widget of a record open in the real workspace. */
+  async function onTheRecord() {
+    const opened = await openManager({ [REC_1]: {} });
+    const harness = makeHarness();
+    const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
+    const handler = drawKeypointsTool.createHandler(ctx);
+    handler.activate?.();
+    return { ...opened, handler, setPointer: harness.setPointer };
+  }
+
+  const key = (k: string) => new KeyboardEvent("keydown", { key: k });
+
+  it("holds it while points are placed, and lets go of it once Escape drops them", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    placePoints(handler, setPointer, FACE_CLICKS.slice(0, 2));
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    handler.onKeyDown?.(key("Escape"));
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("holds it until the last point is undone, the tool is left, or the skeleton is complete", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    placePoints(handler, setPointer, FACE_CLICKS.slice(0, 1));
+    expect(manager.hasUnsavedWork).toBe(true);
+    handler.onKeyDown?.(key("Backspace"));
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    placePoints(handler, setPointer, FACE_CLICKS.slice(0, 2));
+    handler.deactivate?.();
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    placePoints(handler, setPointer, FACE_CLICKS);
+    // The skeleton is a draft now, waiting for its entity; with the form
+    // cancelled nothing is left — the tool holds nothing more.
+    manager.cancelPendingAnnotation();
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("is dropped by Discard: the next clicks start a new skeleton", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    placePoints(handler, setPointer, FACE_CLICKS.slice(0, 2));
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.discardChanges();
+    expect(manager.hasUnsavedWork).toBe(false);
+    // Two more clicks would have completed the skeleton begun before Discard.
+    placePoints(handler, setPointer, FACE_CLICKS.slice(2));
+
+    expect(manager.annotations.items).toEqual([]);
   });
 });

@@ -13,7 +13,7 @@ import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import { BBOX_COLOR_DRAFT } from "$lib/annotations/scene/scene2dStyleConstants.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 import {
   generateImageMask,
@@ -71,6 +71,10 @@ const httpSegmentationBackend: SegmentationBackend = {
  *
  * Keyboard: `X` toggles include/exclude for the next point, `Backspace` removes
  * the last one, `Enter` runs the model, `Escape` cancels.
+ *
+ * The prompts placed are the record's unsaved work until they become a mask:
+ * the handler's staged-work flag is up while any is placed, the model's run
+ * included.
  */
 export class SmartSegmentHandler implements ToolHandler2D {
   private prompts: PromptPoint[] = [];
@@ -85,11 +89,15 @@ export class SmartSegmentHandler implements ToolHandler2D {
    * touches anything.
    */
   private session = 0;
+  /** Raised while prompts are placed and not turned into a mask. */
+  private readonly staged: StagedWorkFlag | undefined;
 
   constructor(
     private readonly ctx: Scene2DContext,
     private readonly backend: SegmentationBackend = httpSegmentationBackend,
-  ) {}
+  ) {
+    this.staged = ctx.claimStagedWork?.(() => this._reset());
+  }
 
   activate(): void {
     this._reset();
@@ -103,6 +111,7 @@ export class SmartSegmentHandler implements ToolHandler2D {
     const point = this._toImagePixels(frame);
     if (!point) return;
     this.prompts.push({ ...point, positive: this.positive });
+    this.staged?.set(true);
     this.error = null;
     this._refreshOverlay();
   }
@@ -128,6 +137,7 @@ export class SmartSegmentHandler implements ToolHandler2D {
         return true;
       case "Backspace":
         this.prompts.pop();
+        this.staged?.set(this.prompts.length > 0);
         this._refreshOverlay();
         return true;
       default:
@@ -326,6 +336,7 @@ export class SmartSegmentHandler implements ToolHandler2D {
     this.positive = true;
     this.busy = false;
     this.error = null;
+    this.staged?.set(false);
     this.ctx.annotationLayer.batchDraw();
   }
 }

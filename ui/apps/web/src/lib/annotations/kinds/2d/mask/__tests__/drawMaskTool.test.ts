@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { drawMaskTool } from "../drawMaskTool.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds a preview Image and
 // a cursor Circle, and moves them around. Mock both with accessor objects.
@@ -481,5 +482,61 @@ describe("drawMaskTool brush cursor", () => {
 
     handler.deactivate?.();
     expect(lastCursor().destroyed).toBe(true);
+  });
+});
+
+describe("strokes painted are the record's unsaved work", () => {
+  const REC_1 = "rec-1";
+  const STROKE = [
+    { x: 10, y: 10 },
+    { x: 30, y: 30 },
+  ];
+
+  /** The brush in an image widget of a record open in the real workspace. */
+  async function onTheRecord() {
+    const opened = await openManager({ [REC_1]: {} });
+    const harness = makeHarness();
+    const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
+    const handler = drawMaskTool.createHandler(ctx);
+    handler.activate?.();
+    return { ...opened, handler, setPointer: harness.setPointer };
+  }
+
+  const key = (k: string) => new KeyboardEvent("keydown", { key: k });
+
+  it("holds it once a stroke is painted, and lets go of it once Escape drops it", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    paintStroke(handler, setPointer, STROKE);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    handler.onKeyDown?.(key("Escape"));
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("holds it until the tool is left or the mask is committed", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    paintStroke(handler, setPointer, STROKE);
+    expect(manager.hasUnsavedWork).toBe(true);
+    handler.deactivate?.();
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    paintStroke(handler, setPointer, STROKE);
+    handler.onKeyDown?.(key("Enter"));
+    // The mask is a draft now, waiting for its entity; with the form cancelled
+    // nothing is left — the tool holds nothing more.
+    manager.cancelPendingAnnotation();
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("is dropped by Discard: Enter then commits nothing", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    paintStroke(handler, setPointer, STROKE);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.discardChanges();
+    handler.onKeyDown?.(key("Enter"));
+
+    expect(manager.hasUnsavedWork).toBe(false);
+    expect(manager.annotations.items).toEqual([]);
   });
 });

@@ -19,7 +19,7 @@ import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import { BBOX_COLOR_DRAFT } from "$lib/annotations/scene/scene2dStyleConstants.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
 const PREVIEW_STROKE_WIDTH = 2;
@@ -46,16 +46,23 @@ interface NormPoint {
  *
  * Keyboard: `Enter` commits, `N` starts a new sub-path, `Backspace` undoes the
  * last point, `Escape` cancels.
+ *
+ * The points placed are the record's unsaved work until Enter: the handler's
+ * staged-work flag is up while any is placed.
  */
 class DrawMultiPathHandler implements ToolHandler2D {
   /** Completed sub-paths, plus the one being drawn as the last entry. */
   private subPaths: NormPoint[][] = [[]];
   private preview: Konva.Group | null = null;
+  /** Raised while points are placed and not committed. */
+  private readonly staged: StagedWorkFlag | undefined;
 
   constructor(
     private readonly ctx: Scene2DContext,
     private readonly isClosed: boolean,
-  ) {}
+  ) {
+    this.staged = ctx.claimStagedWork?.(() => this._reset());
+  }
 
   activate(): void {
     this._reset();
@@ -68,6 +75,7 @@ class DrawMultiPathHandler implements ToolHandler2D {
     const point = this._toNormalized(frame);
     if (!point) return;
     this._current().push(point);
+    this.staged?.set(true);
     this._refreshPreview();
   }
 
@@ -91,6 +99,7 @@ class DrawMultiPathHandler implements ToolHandler2D {
         return true;
       case "Backspace":
         this._undo();
+        this.staged?.set(this.subPaths.some((points) => points.length > 0));
         this._refreshPreview();
         return true;
       default:
@@ -284,6 +293,7 @@ class DrawMultiPathHandler implements ToolHandler2D {
     this.preview?.destroy();
     this.preview = null;
     this.subPaths = [[]];
+    this.staged?.set(false);
     this.ctx.annotationLayer.batchDraw();
   }
 }

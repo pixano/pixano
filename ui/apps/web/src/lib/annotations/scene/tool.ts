@@ -37,7 +37,16 @@ export function isFormFieldTarget(target: EventTarget | null): boolean {
   return FORM_FIELD_TAGS.has(element.tagName) || element.isContentEditable;
 }
 
-/** Per-activation handler instance created by a 2D tool for one widget. */
+/**
+ * Per-activation handler instance created by a 2D tool for one widget.
+ *
+ * A handler that holds work not in the collection yet — the points of a shape
+ * before Enter, painted strokes, a box being drawn — holds unsaved work of the
+ * record: it claims a staged-work flag once (`Scene2DContext.claimStagedWork`),
+ * raises it as that work begins, and lowers it once the work is committed,
+ * cancelled (Escape) or dropped with the tool (`deactivate`). Its discard
+ * callback drops the work: the record's Discard calls it.
+ */
 export interface ToolHandler2D {
   activate?(): void;
   deactivate?(): void;

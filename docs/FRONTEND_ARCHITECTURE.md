@@ -165,13 +165,24 @@ WorkspaceManager
 
 Representative API: `openRecord` (the way to switch records, or to open the
 same one again: clears the workspace, unsaved changes included, then
-`selectRecordInDataset`), `flushSave`, `queueMutation`,
+`selectRecordInDataset`), `flushSave`, `discardChanges`, `queueMutation`,
 `upsertUpdateMutation`, `deleteAnnotation`, `beginPendingAnnotation` /
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
-`toggleEntityVisible` / `showAllEntities`, `saveDatasetLayout` /
-`restoreOpeningLayout` / `fitLayoutToViewport`. Getters forward to the
-session/queue (`annotations`, `entities`, `pendingCount` — the request on the
-wire included — `pendingMutations` — the queued ones only — `saving`, …).
+`toggleEntityVisible` / `showAllEntities`, `claimStagedWork` /
+`releaseStagedWork` (a flag per holder of work a tool keeps unconfirmed, reached
+through the seam — "Unsaved work and saves" below), `unsavedCount` (how many
+items of the record are unsaved, the one count every unsaved counter shows —
+"Unsaved work and saves" below), `hasUnsavedWork` (that count is not 0),
+`saveDatasetLayout` / `restoreOpeningLayout` / `fitLayoutToViewport`. Getters
+forward to the session/queue (`annotations`, `entities`, `pendingCount` — the
+request on the wire included — `pendingMutations` — the queued ones only —
+`saving`, …).
+
+`flushSave()` resolves to a boolean: true when the save went through **and**
+nothing is left unsaved — `unsavedCount` is 0: no queued change, no request on
+the wire, no draft, no entity form open, no work a tool holds staged. It is
+false when the save failed (the error is on `saveError`), or when work is still
+unsaved — begun during the save, or held in a tool.
 
 **Per-dataset layout preference.** Every record of a dataset declares the same
 views, so the arrangement the user builds on one is replayed on the others
@@ -214,9 +225,20 @@ The record-scoped truth, replaced on every load:
 datasetId · recordId · entities[] · entitySchemaName · entitySchemaFields
 annotations : AnnotationCollection      // the shared model (§5)
 visibleEntityIds : Set<string> | null   // entity-driven visibility (null = all)
+stagedWork : ReadonlyMap<string, StagedWorkHolder>  // raised staged-work flags
 ```
 Held on a tiny shared object so each sub-service depends on this narrow type, not
 on the whole manager.
+
+`stagedWork` shows the raised flags of work no mutation carries yet — a
+polygon's points before Enter, a box being resized, a shape being dragged —
+each with its widget and the callback that drops the work. Each holder raises
+and lowers its own flag through its widget's seam (`claimStagedWork`, "Unsaved
+work and saves" below); while any is raised the record is not all saved, and
+each raised flag counts as one unsaved item (`unsavedCount`). The manager alone
+writes the flags, in a private map it publishes here as a copy — always
+replaced, never mutated — and `clearWorkspace` / `reset()` empty it with the
+widgets.
 
 ### `RecordLoader` (`workspace/recordLoader.ts`)
 `load(datasetId, recordId, viewport)`:
@@ -302,6 +324,44 @@ deleted, a change of mind, Discard, another record — is never sent, since each
 write is looked at again after every await of the flush; a write a gesture
 moved onto a new entity during a save waits for that entity's create, sent
 first, whenever it was queued.
+
+**Staged work.** Work a tool holds outside the queue, waiting for the person to
+confirm it, is unsaved work too: a polygon's or polyline's points before Enter,
+mask strokes, keypoints partly placed, smart segmentation's prompts, a box being
+drawn, a box being resized, a shape being dragged. Each holder claims a flag of
+its own once, through its widget's seam, with the callback that drops its work
+(`SceneContextBase.claimStagedWork(discard)` → `manager.claimStagedWork`,
+stamped with the widget's id and keyed to the holder, so lowering one flag never
+lowers another, in this widget or another), and raises it while it holds the
+work. The 2D tools raise theirs from the first point, stroke or press, and lower
+it on commit, Escape, `deactivate` and an undo that empties it (the contract on
+`ToolHandler2D`, `scene/tool.ts`).
+
+A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
+nothing in it can confirm that work any more. While a flag is raised, a save
+reports work left: `flushSave` resolves false. Each raised flag counts as one
+item of `unsavedCount`, so the counters never read 0 while a tool holds work.
+Discard calls every raised flag's discard — a tool forgets its points, a resize
+or a drag stops and commits nothing — and is offered whenever anything is
+unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`), even with
+nothing queued. The manager keeps the raised flags in a private map and
+publishes a copy on `session.stagedWork`: widgets lower their flags from effect
+teardowns, where Svelte gives a reactive read the value it had before the
+latest writes, so a change computed from the session there could bring a flag
+back or drop one another widget had just raised.
+
+**One unsaved count.** `WorkspaceManager.unsavedCount` is the only count of the
+record's unsaved work, derived once for every widget toolbar and `flushSave`,
+so they never disagree. Its rule is `countUnsavedWork`
+(`workspace/unsavedWork.ts`), over the changes queued and the one on the wire:
+an annotation counts once, whatever they hold for it — an edit, a new entity and
+the update naming it — and so does a draft; a change that names no annotation
+counts on its own; an open entity form counts once — a draft's form is its
+draft, already counted, so only a stored annotation's reassignment adds one; and
+each raised staged-work flag counts once. `hasUnsavedWork` is that count above
+0, and it is what `flushSave` reads. The rule takes a draft no queued change
+names for the draft the open form belongs to, since a draft's create is queued
+once its entity is chosen; nothing on the draft says which form is its.
 
 ### Keyboard
 
@@ -488,6 +548,7 @@ ui/apps/web/src/lib/
 │  ├─ recordLoader.ts                       (dataset,record) → widgets + data
 │  ├─ mutationQueue.svelte.ts               pending writes + flush
 │  ├─ datasetGateway.ts                     I/O seam (interface + http impl)
+│  ├─ unsavedWork.ts                        the one rule of the record's unsaved count
 │  ├─ datasetLayout.ts                      per-dataset layout rules (snapshot/
 │  │                                         resolve/parse) — no storage access
 │  └─ datasetLayoutRepository.ts            layout storage seam (+ localStorage impl)
@@ -499,8 +560,9 @@ ui/apps/web/src/lib/
 │  ├─ seedLoaders.ts                         SEED_LOADERS (REST→local)
 │  ├─ scene/
 │  │  ├─ registry2d.ts / registry3d.ts       TOOLS_*, RENDERER_FACTORIES_*
-│  │  ├─ sceneContext.ts                      SceneContextBase, Scene2DReadContext,
-│  │  │                                       Scene2DContext, Scene3DContext, MutationSink
+│  │  ├─ sceneContext.ts                      SceneContextBase, SeamContext (+ staged
+│  │  │                                       work), Scene2DReadContext, Scene2DContext,
+│  │  │                                       Scene3DContext, MutationSink
 │  │  ├─ toolDefinition.ts                    ToolDefinition (shared 2D/3D metadata)
 │  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts;
 │  │  │                                       isFormFieldTarget (window key guard)
@@ -529,6 +591,7 @@ ui/apps/web/src/lib/
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets |
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |
+| `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too) — with the callback Discard calls; each raised flag counts once in `WorkspaceManager.unsavedCount` |
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
 | `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |

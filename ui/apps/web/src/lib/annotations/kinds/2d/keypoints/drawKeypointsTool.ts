@@ -22,7 +22,7 @@ import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import { BBOX_COLOR_DRAFT } from "$lib/annotations/scene/scene2dStyleConstants.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
 const PREVIEW_VERTEX_RADIUS = 4;
@@ -51,14 +51,21 @@ interface PlacedPoint {
  * Keyboard: `T` cycles templates (only before the first point, since the point
  * count would otherwise change mid-skeleton), `I` marks the next point
  * occluded, `Backspace` undoes the last point, `Escape` cancels.
+ *
+ * The points placed are the record's unsaved work until the skeleton is
+ * complete: the handler's staged-work flag is up while any is placed.
  */
 class DrawKeypointsHandler implements ToolHandler2D {
   private template: KeypointTemplate = DEFAULT_KEYPOINT_TEMPLATE;
   private placed: PlacedPoint[] = [];
   private nextState: KeypointState = "visible";
   private preview: Konva.Group | null = null;
+  /** Raised while points are placed and the skeleton is not complete. */
+  private readonly staged: StagedWorkFlag | undefined;
 
-  constructor(private readonly ctx: Scene2DContext) {}
+  constructor(private readonly ctx: Scene2DContext) {
+    this.staged = ctx.claimStagedWork?.(() => this._reset());
+  }
 
   activate(): void {
     this._reset();
@@ -73,6 +80,7 @@ class DrawKeypointsHandler implements ToolHandler2D {
     if (!point) return;
 
     this.placed.push({ ...point, state: this.nextState });
+    this.staged?.set(true);
     // The occluded flag applies to one point only; placing it resets the mode.
     this.nextState = "visible";
     this._refreshPreview();
@@ -93,6 +101,7 @@ class DrawKeypointsHandler implements ToolHandler2D {
         return true;
       case "Backspace":
         this.placed.pop();
+        this.staged?.set(this.placed.length > 0);
         this._refreshPreview();
         return true;
       case "t":
@@ -260,6 +269,7 @@ class DrawKeypointsHandler implements ToolHandler2D {
     this.preview = null;
     this.placed = [];
     this.nextState = "visible";
+    this.staged?.set(false);
     this.ctx.annotationLayer.batchDraw();
   }
 }
