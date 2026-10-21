@@ -175,9 +175,9 @@ class TestEnsureSchema:
     ) -> None:
         """`IF NOT EXISTS` is not atomic against a concurrent creator.
 
-        Without a retry, the losing worker exited in error and never came back: the compose
-        gives it no restart policy. It would have taken step 4 and its multiple workers to
-        notice.
+        Without a retry, the losing worker exited in error at startup. The compose restarts it
+        (`restart: unless-stopped`), but a deployment without a restart policy would lose it.
+        It would have taken step 4 and its multiple workers to notice.
         """
         outcomes: list[str] = []
 
