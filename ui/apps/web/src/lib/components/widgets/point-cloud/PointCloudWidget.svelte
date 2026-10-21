@@ -54,6 +54,10 @@ License: CECILL-C
     buildContext: { datasetId, recordId, viewId },
     storage,
   });
+  // A tool's session can hold an edit staged for the person to confirm; it goes
+  // with the widget, so the record must stop counting it as unsaved work — a
+  // closed widget can never confirm it.
+  onDestroy(() => seam.releaseStagedWork?.());
 
   let cameraMode = $state<"orbit" | "first-person">("orbit");
 

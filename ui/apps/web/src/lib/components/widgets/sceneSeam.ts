@@ -61,6 +61,10 @@ export function buildSeam(
         if (manager.liveDraft?.sourceWidgetId === opts.widgetId) manager.setLiveDraft(null);
       },
     },
+    // Stamped with this widget's id, so a holder raises and lowers its own flag
+    // only, and closing the widget lets go of this widget's flags only.
+    claimStagedWork: (discard) => manager.claimStagedWork(opts.widgetId, discard),
+    releaseStagedWork: () => manager.releaseStagedWork(opts.widgetId),
     setActiveTool: (id) => {
       opts.storage.activeToolId = id;
     },

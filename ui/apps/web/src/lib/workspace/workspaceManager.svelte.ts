@@ -13,13 +13,13 @@ import {
 import { planFittedLayouts, type Viewport } from "./layoutPlanner.js";
 import { MutationQueue } from "./mutationQueue.svelte.js";
 import { RecordLoader } from "./recordLoader.js";
-import { WorkspaceSession } from "./workspaceSession.svelte.js";
+import { WorkspaceSession, type StagedWorkHolder } from "./workspaceSession.svelte.js";
 import type {
   AnnotationCollection,
   LocalAnnotation,
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
-import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
+import type { LiveAnnotationDraft, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
   PendingEntityChoice,
@@ -78,6 +78,17 @@ export class WorkspaceManager {
   private mutations: MutationQueue;
   private loader: RecordLoader;
   private layoutRepository: DatasetLayoutRepository;
+
+  /** Numbers the staged-work flags claimed, so that each has a key of its own. */
+  private stagedFlagCount = 0;
+  /**
+   * The raised staged-work flags, by key — the record `session.stagedWork`
+   * shows. Kept here, outside reactive state, because flags are lowered from
+   * widget teardowns, where Svelte gives a reactive read the value it had
+   * before the latest writes: a change computed from it there could bring back
+   * a flag just lowered, or drop one another widget just raised.
+   */
+  private stagedFlags = new Map<string, StagedWorkHolder>();
 
   constructor(
     registry: WidgetRegistry,
@@ -223,6 +234,57 @@ export class WorkspaceManager {
     pending?.onCancel();
   }
 
+  // ─── Staged work (work a tool holds until it is confirmed) ────────────────
+  // Reached through each widget's seam (`claimStagedWork`), which stamps the
+  // widget's id. While a flag is raised the record is not all saved, and
+  // Discard drops the work.
+
+  /**
+   * A flag of its own for one holder of staged work in a widget — a tool, an
+   * editor — lowered until the holder raises it. Holders never lower one
+   * another's flags.
+   *
+   * @param widgetId The widget the holder belongs to.
+   * @param discard Drops the holder's work and lowers its flag; `discardChanges`
+   *   calls it on every raised flag.
+   * @returns The holder's flag.
+   */
+  claimStagedWork(widgetId: string, discard: () => void): StagedWorkFlag {
+    const key = `${widgetId}#${++this.stagedFlagCount}`;
+    return {
+      set: (staged) => this.setStagedFlag(key, staged ? { widgetId, discard } : null),
+    };
+  }
+
+  /** Lower every flag of a widget: it is closing, and its holders' work with it. */
+  releaseStagedWork(widgetId: string): void {
+    const keys = [...this.stagedFlags].filter(([, holder]) => holder.widgetId === widgetId);
+    for (const [key] of keys) this.stagedFlags.delete(key);
+    if (keys.length > 0) this.publishStagedWork();
+  }
+
+  /** Raise (a holder given) or lower (null) one flag. */
+  private setStagedFlag(key: string, holder: StagedWorkHolder | null): void {
+    if (holder) this.stagedFlags.set(key, holder);
+    else if (!this.stagedFlags.delete(key)) return;
+    this.publishStagedWork();
+  }
+
+  /** Show the raised flags on the session — a copy, since a Map's set/delete is not tracked. */
+  private publishStagedWork(): void {
+    this.session.stagedWork = new Map(this.stagedFlags);
+  }
+
+  /**
+   * Ask every holder of staged work to drop it, then lower whatever flag is
+   * left: Discard asks for the record as it was last saved.
+   */
+  private dropStagedWork(): void {
+    for (const holder of [...this.stagedFlags.values()]) holder.discard();
+    this.stagedFlags.clear();
+    this.publishStagedWork();
+  }
+
   // ─── Mutation queue forwarders ────────────────────────────────────────────
 
   get pendingMutations(): ResourceMutation[] {
@@ -282,6 +344,7 @@ export class WorkspaceManager {
 
   /**
    * Throw away every unsaved edit and put the record back as it was last saved.
+   * Work a tool holds staged goes too: every holder of a raised flag drops it.
    *
    * The backend *is* that state, so the annotations are refetched rather than
    * rolled back from a snapshot: an optimistic edit has already been applied in
@@ -294,6 +357,7 @@ export class WorkspaceManager {
    */
   async discardChanges(): Promise<void> {
     this.mutations.reset();
+    this.dropStagedWork();
     await this.loader.reloadAnnotations();
     // The annotation that was selected may no longer exist (a discarded
     // create) — and even when it does, the collection it belonged to is gone.
@@ -499,6 +563,9 @@ export class WorkspaceManager {
     this.storageMap.clear();
     this.widgets = [];
     this.mutations.reset();
+    // The widgets holding staged work are gone with them.
+    this.stagedFlags.clear();
+    this.publishStagedWork();
     // The widgets it described are gone, so the arrangement they opened in no
     // longer means anything; the next load writes the new record's.
     this.session.openingLayout = null;

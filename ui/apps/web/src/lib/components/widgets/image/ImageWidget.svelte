@@ -228,6 +228,9 @@ License: CECILL-C
       editors = [];
       for (const renderer of renderers) renderer.destroy();
       renderers = [];
+      // Whatever a tool or an editor of this widget held unconfirmed goes with
+      // it: nothing can confirm it any more, so the record stops counting it.
+      seam.releaseStagedWork?.();
       stage?.destroy();
       stage = null;
       imageLayer = null;
