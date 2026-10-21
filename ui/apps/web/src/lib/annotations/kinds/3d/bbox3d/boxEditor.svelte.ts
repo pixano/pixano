@@ -30,6 +30,7 @@ import {
   threeBoxToLanceXYZWHD,
   threeQuaternionToLanceRotation,
 } from "$lib/annotations/coordinateTransforms";
+import { isFormFieldTarget } from "$lib/annotations/scene/tool.js";
 import type { Rotation3x3 } from "$lib/annotations/types";
 
 type DrawPhase = "idle" | "confirming" | "moving" | "resizing-face" | "rotating";
@@ -604,8 +605,7 @@ export class BoxEditor {
 
     $effect(() => {
       const onKeyDown = (e: KeyboardEvent) => {
-        const t = e.target as HTMLElement | null;
-        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+        if (isFormFieldTarget(e.target)) return;
         if (e.key === "Escape") {
           e.preventDefault();
           this.reset();

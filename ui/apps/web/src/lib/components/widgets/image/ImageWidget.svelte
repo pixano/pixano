@@ -23,7 +23,7 @@ License: CECILL-C
     AnnotationRenderer2D,
   } from "$lib/annotations/scene/renderer.js";
   import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-  import type { ToolHandler2D } from "$lib/annotations/scene/tool.js";
+  import { isFormFieldTarget, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
   import type { ImageWidgetOptions, ImageWidgetStorage } from "$lib/annotations/types.js";
   import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
@@ -140,12 +140,7 @@ License: CECILL-C
   }
 
   function onWindowKeyDown(e: KeyboardEvent) {
-    const target = e.target as HTMLElement | null;
-    if (
-      target &&
-      (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
-    )
-      return;
+    if (isFormFieldTarget(e.target)) return;
     if (activeHandler?.onKeyDown?.(e)) e.preventDefault();
   }
 

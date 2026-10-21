@@ -118,7 +118,8 @@ scene/
   renderer.ts       AnnotationRenderer2D + AnnotationEditor2D (+Factory),
                     AnnotationRenderer3DFactory
   tool.ts           DEFAULT_TOOL_2D/3D, Tool2D/ToolHandler2D,
-                    Tool3D/ToolHandle3D/AnnotationTool3DProps/ToolHudProps
+                    Tool3D/ToolHandle3D/AnnotationTool3DProps/ToolHudProps,
+                    isFormFieldTarget (the guard of every window key listener)
   registry2d.ts     TOOLS_2D, RENDERER_FACTORIES_2D
   registry3d.ts     TOOLS_3D, RENDERER_FACTORIES_3D
   selectTool2D.ts   kind-agnostic select/delete tool
@@ -237,7 +238,8 @@ which both `Scene2DContext` and the widgets' seam satisfy.
      read-only ctx) **or** `<Kind>Renderer.svelte` (3D component reading `ctx.collection`),
    - the **editing input**: 2D → `<kind>Editor2D.ts` (`AnnotationEditor2D`) exposed
      via the factory's `createEditor`; 3D → a `<Kind>Tool.svelte` overlay on
-     `Tool3D.overlay`, plus (if it needs a confirm step) a `createSession` + a `hud`,
+     `Tool3D.overlay`, plus (if it needs a confirm step) a `createSession` + a `hud`.
+     A key listener on `window` asks `isFormFieldTarget` (`scene/tool.ts`) first,
    - the **toolbar tool**: `draw<Kind>Tool.ts` (`Tool2D` with `createHandler`, or a
      `Tool3D` entry).
 3. Register one line each: `PAYLOAD_BUILDERS`, `SEED_LOADERS`, and the per-scene
@@ -331,11 +333,12 @@ check` at baseline error count and `vitest` green:
 | 4 | Generic commit: `commitNewAnnotation` / `commitGeometryEdit` replace four bespoke save sites (D9); unit-tested in `__tests__/commit.test.ts` |
 | 5 | Shared shell: `buildSeam` + `<AnnotationToolbar>` adopted by both widgets |
 
-> **Verification note.** The 3D editor interaction has no automated tests (the
-> suite covers loaders/builders/queue/seeds, not the Threlte scene). Stage 3 moved
-> the editor and its markup verbatim into `BBox3DTool.svelte`; behaviour rests on
-> that move plus manual verification (draw / move / resize / rotate / orbit-lock /
-> save). This overlaps DEBT-3.
+> **Verification note.** The 3D editor's pointer interaction has no automated
+> tests (the suite covers loaders/builders/queue/seeds, not the Threlte scene).
+> Stage 3 moved the editor and its markup verbatim into `BBox3DTool.svelte`;
+> behaviour rests on that move plus manual verification (draw / move / resize /
+> rotate / orbit-lock / save). This overlaps DEBT-3.
+> `boxEditor.svelte.test.ts` runs the real `BoxEditor` for its key guard.
 
 ## Non-goals
 

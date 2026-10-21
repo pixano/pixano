@@ -300,6 +300,14 @@ write is looked at again after every await of the flush; a write a gesture
 moved onto a new entity during a save waits for that entity's create, sent
 first, whenever it was queued.
 
+### Keyboard
+
+**Keys typed in a form field stay there.** Tool shortcuts are heard on `window`.
+Every listener there — the image widget's, the 3D box editor's — asks
+`isFormFieldTarget(event.target)` (`scene/tool.ts`) first: a text field types
+the key, and a select picks an option with it instead of starting a
+reassignment on `E` or deleting the selection on Backspace.
+
 ---
 
 ## 5. The shared annotation model
@@ -489,7 +497,8 @@ ui/apps/web/src/lib/
 │  │  ├─ sceneContext.ts                      SceneContextBase, Scene2DReadContext,
 │  │  │                                       Scene2DContext, Scene3DContext, MutationSink
 │  │  ├─ toolDefinition.ts                    ToolDefinition (shared 2D/3D metadata)
-│  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts
+│  │  ├─ renderer.ts / tool.ts                Renderer/Editor + Tool contracts;
+│  │  │                                       isFormFieldTarget (window key guard)
 │  │  ├─ selectTool2D.ts                      kind-agnostic select/delete tool
 │  │  ├─ flatCoordsEditor2D.ts                shared vertex editor (keypoints, multi-path)
 │  │  ├─ entityLabels2D.ts                    shared label rendering

@@ -17,6 +17,10 @@ for the rules.
   the full context.
 - **Never hand-build mutations.** Use `commitNewAnnotation` / `commitGeometryEdit`
   (`payloadBuilders.ts`) — they own the draft→queue→persist lifecycle for every kind.
+- **Keys typed in a form field belong to it.** A key listener on `window` — a tool's
+  shortcut, an editor's Escape — returns early when `isFormFieldTarget(event.target)`
+  (`scene/tool.ts`): a select picks an option with the keys typed in it, and an `E` or a
+  Backspace there must not reassign or delete the selection, nor Escape drop a 3D edit.
 - **No shared magic strings between files.** If two files agree on a literal (e.g. a
   Konva node `name`), put it in one `<kind>...Nodes.ts` / `Constants.ts` and import it
   (see `bbox2dNodes.ts`).
