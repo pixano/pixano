@@ -63,6 +63,13 @@ def classify(error: Exception) -> Failure:
     raise error
 
 
+def transient_reason(error: Exception) -> str:
+    """What a chunk handed back after a transient failure says: silence, or a request to come back later."""
+    if isinstance(error, PixanoInferenceError) and error.status_code != NO_RESPONSE:
+        return f"the inference asks to come back later: {error}"
+    return f"the inference does not answer: {error}"
+
+
 def refusal_detail(error: PixanoInferenceError) -> dict[str, Any]:
     """What the quarantine records of a medium the server refused."""
     return {"status": error.status_code, "code": error.code, "message": str(error.message)[:500]}
