@@ -239,8 +239,15 @@ which both `Scene2DContext` and the widgets' seam satisfy.
    - the **renderer** (display): `<kind>Renderer2D.ts` (`AnnotationRenderer2D`,
      read-only ctx) **or** `<Kind>Renderer.svelte` (3D component reading `ctx.collection`),
    - the **editing input**: 2D → `<kind>Editor2D.ts` (`AnnotationEditor2D`) exposed
-     via the factory's `createEditor`; 3D → a `<Kind>Tool.svelte` overlay on
+     via the factory's `createEditor`, listening where Konva fires each gesture's
+     end — a drag's end bubbles to the layer, a transformer's resize ends on the
+     transformer and its nodes only, and a transformer is built without flips
+     when the shape cannot hold one (DEBT-1); 3D → a `<Kind>Tool.svelte` overlay on
      `Tool3D.overlay`, plus (if it needs a confirm step) a `createSession` + a `hud`.
+     An editor commits geometry the server accepts: the box editor keeps a dragged
+     box whole inside the image and cuts a resized one at its edges, never below
+     the least size a resize leaves a box (`MIN_BBOX_PIXELS`)
+     (`kinds/2d/bbox/bboxImageBounds.ts`).
      A key listener on `window` asks `isFormFieldTarget` (`scene/tool.ts`) first,
    - the **toolbar tool**: `draw<Kind>Tool.ts` (`Tool2D` with `createHandler`, or a
      `Tool3D` entry).
@@ -249,7 +256,8 @@ which both `Scene2DContext` and the widgets' seam satisfy.
 4. Use `commitNewAnnotation` / `commitGeometryEdit` for the write-path — never
    hand-build mutations in the tool/renderer/widget.
 5. Tests: builder unit tests + a tool-lifecycle test through a fake context (see
-   `scene/__tests__/selectTool2D.test.ts`).
+   `scene/__tests__/selectTool2D.test.ts`); a 2D editor's test on the real Konva
+   (`scene/__tests__/konvaInHappyDom.ts`, as `bboxEditor2D.test.ts` does).
 6. **Nothing else changes** — no widget edits, no scene edits, no queue edits.
 
 ### Adding a new medium (e.g. text)
@@ -355,9 +363,40 @@ check` at baseline error count and `vitest` green:
   `bboxRenderer2D.ts` now receives a read-only `Scene2DReadContext` (no `mutations`,
   no `setActiveTool`), so a renderer physically cannot write to the queue. The
   `Konva.Transformer` + drag/transform → commit moved to `bboxEditor2D.ts`
-  (implements `AnnotationEditor2D`, uses layer-delegated events), wired by the widget
-  from `AnnotationRenderer2DFactory.createEditor`. Display and input are now separate
-  by construction (D4). Covered by `bboxEditor2D.test.ts`.
+  (implements `AnnotationEditor2D`), wired by the widget from
+  `AnnotationRenderer2DFactory.createEditor`. Display and input are now separate
+  by construction (D4).
+
+  The editor hears each gesture where Konva fires its end: a drag's on the layer,
+  where `dragend` bubbles from any box node, and a resize's on its own
+  `Konva.Transformer`, since `transformend` fires on the transformer and the nodes
+  it holds and never reaches their layer. Heard on the layer, a resize would never
+  be saved. The renderer
+  resets a node's scale to 1 and its rotation to 0 on each sync, so a transform a
+  resize left on the node can never draw a size or a place the collection does not
+  hold. The transformer is built with `flipEnabled: false`: a handle dragged past
+  the opposite edge would flip the box, which Konva records as a negative scale or
+  a half turn, and the box saved would part from the box drawn; the box spans from
+  the edge that stays to the pointer. Covered by `bboxEditor2D.test.ts`, on the
+  real Konva over the real workspace, every handle dragged past its opposite edge.
+
+  A box is committed inside the image — `x, y ≥ 0`, `x + w ≤ 1`, `y + h ≤ 1`,
+  normalized — since the server refuses a normalized coordinate outside [0, 1]
+  (`kinds/2d/bbox/bboxImageBounds.ts`): dragged past an edge, it stops against it,
+  whole — the person moved the box, and did not mean to shrink it — and resized
+  past one, it is cut at it. An edge within `IMAGE_EDGE_TOLERANCE` (1e-9,
+  normalized) of the image's edge is put on it: a box let go on the left edge came
+  back from pixels at -8.9e-18, which the server refused, while a pixel of an image
+  even 100 000 px wide is 1e-5. The cut keeps the least size a resize gives a box,
+  one image pixel (`MIN_BBOX_PIXELS`, handed to `cutAtImageEdges` as a share of the
+  frame's width and height): a box lying on an edge of the image, its other handle
+  taken past that same edge, would lie wholly beyond it and be cut to a box of no
+  width — stored so, and never resizable again. It keeps that size against the
+  edge it lies on instead, its free edge moved back inside the image. A box already
+  stored with no width or height, which Konva cannot scale — it divides by that
+  size and leaves the node with no number for a place or a size — commits nothing
+  when resized, and is drawn again as stored. Each gesture's end redraws, so the
+  box is drawn where it is saved.
 
 - **DEBT-2 — ~~3D write-path lives in `PointCloudWidget`~~ → RESOLVED (2026-06-29).**
   Stage 3 introduced `Scene3DContext` + `Tool3D.overlay`, moving the editor and the
@@ -366,8 +405,14 @@ check` at baseline error count and `vitest` green:
   resolved 2026-07-01 (DEBT-5): the confirm UI + save orchestration also left the widget._
 
 - **DEBT-3 — renderer sync tests (partial → mostly resolved for 2D, 2026-07-30).**
-  The 2D *editor* has coverage (`bboxEditor2D.test.ts` fires drag/transform → asserts
-  the commit). `bbox3dRenderer2D` now has node-level tests too
+  The 2D *editor* has coverage: `bboxEditor2D.test.ts` runs on the real Konva
+  browser build (`scene/__tests__/konvaInHappyDom.ts` gives happy-dom a canvas that
+  draws nothing), drives the transformer's anchor and a real drag, and asserts the
+  commit. A mocked Konva can fire a layer `transformend` the real Konva never
+  fires, and pass while resizes go unsaved: an editor test belongs on the real
+  Konva.
+
+  `bbox3dRenderer2D` now has node-level tests too
   (`bbox3dRenderer2D.test.ts`): projection math against hand-computed
   pixels, per-box independence of the shared scratch buffers, create/destroy
   lifecycle, entity-visibility filtering, degraded inputs (no calibration / no loaded

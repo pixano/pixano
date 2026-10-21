@@ -40,6 +40,11 @@ class BBoxEditor2D implements AnnotationEditor2D {
   constructor(private readonly ctx: Scene2DContext) {
     this.transformer = new Konva.Transformer({
       rotateEnabled: false,
+      // A handle dragged past the opposite edge would flip the box, and Konva
+      // records a flip as a negative scale or a half turn, which no box
+      // geometry holds: the box saved and the box drawn parted ways. Without
+      // flips, the box spans from the edge that stays to the pointer.
+      flipEnabled: false,
       anchorStroke: BBOX_COLOR_PERSISTED,
       anchorFill: "#0f172a",
       borderStroke: BBOX_COLOR_PERSISTED,
@@ -111,8 +116,8 @@ class BBoxEditor2D implements AnnotationEditor2D {
     rect.height(Math.max(MIN_BBOX_PIXELS, rect.height() * rect.scaleY()));
     rect.scaleX(1);
     rect.scaleY(1);
-    // The cut keeps the least size the lines above give the box: resized
-    // wholly beyond an edge, it would otherwise be saved with no width or height.
+    // The cut keeps the least size the lines above give the box: cut at an
+    // edge it lies on, it would otherwise be saved with no width or height.
     this._commitNode(rect, (coords, frame) =>
       cutAtImageEdges(coords, {
         width: MIN_BBOX_PIXELS / frame.w,

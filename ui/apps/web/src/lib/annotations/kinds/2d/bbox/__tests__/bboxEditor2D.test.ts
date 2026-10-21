@@ -279,6 +279,47 @@ describe("bboxEditor2D on the real Konva", () => {
   });
 });
 
+describe("bboxEditor2D, a handle dragged past the opposite edge", () => {
+  // The box is drawn at 10..30 px on both axes. Each handle is dragged 10 px
+  // past the opposite edge: the box spans from the edge that stays to the
+  // pointer — 10 px on the axis the handle crossed — never a flipped node,
+  // which Konva records as a negative scale or a half turn that no box holds.
+  const PAST_THE_OPPOSITE_EDGE: [Handle, number, number, number[]][] = [
+    ["top-left", 30, 30, [0.3, 0.3, 0.1, 0.1]],
+    ["top-center", 0, 30, [0.1, 0.3, 0.2, 0.1]],
+    ["top-right", -30, 30, [0, 0.3, 0.1, 0.1]],
+    ["middle-left", 30, 0, [0.3, 0.1, 0.1, 0.2]],
+    ["middle-right", -30, 0, [0, 0.1, 0.1, 0.2]],
+    ["bottom-left", 30, -30, [0.3, 0, 0.1, 0.1]],
+    ["bottom-center", 0, -30, [0.1, 0, 0.2, 0.1]],
+    ["bottom-right", -30, -30, [0, 0, 0.1, 0.1]],
+  ];
+
+  it.each(PAST_THE_OPPOSITE_EDGE)(
+    "%s: saves the box between the edge that stays and the pointer, and draws it there",
+    async (handle, dx, dy, expected) => {
+      const scene = await openOnCanvas();
+      select(scene, "b1");
+
+      resizeFrom(scene, handle, dx, dy);
+
+      expectCoords(scene.ctx.collection.find("b1")?.geometry, expected);
+      // Queued as the server takes it: a handle let go on the image's edge
+      // puts the box's edge on it, not a float's error past it.
+      expectInsideTheImage(queuedCoords(scene), expected);
+      const rect = rectOf(scene, "b1");
+      expect([rect.rotation(), rect.scaleX(), rect.scaleY()]).toEqual([0, 1, 1]);
+      // Drawn where the collection holds it, and still there once the scene syncs.
+      scene.redraw();
+      const drawn = rect.getClientRect({ skipStroke: true });
+      expectCoords(
+        [drawn.x, drawn.y, drawn.width, drawn.height],
+        expected.map((value) => value * IMAGE_PIXELS),
+      );
+    },
+  );
+});
+
 describe("bboxEditor2D, a box taken past the image's edge", () => {
   // The box is drawn 20 × 20 px at (10, 10); the image spans 0..100 px.
 
@@ -334,6 +375,52 @@ describe("bboxEditor2D, a box taken past the image's edge", () => {
     expect(scene.manager.saveError).toBeNull();
     const sent = scene.backend.writes.find((w) => w.op === "update");
     expectInsideTheImage(sent?.op === "update" ? sent.body.coords : undefined, [0, 0, 0.2, 0.2]);
+  });
+});
+
+describe("bboxEditor2D, a box on the image's edge resized past that edge", () => {
+  // A box lying on an edge of the image — as a model's box of an object the
+  // frame cuts often does — whose other handle is dragged past that same edge.
+  // Without flips, Konva spans the box from the edge that stays to the pointer,
+  // wholly outside the image, so the cut would leave nothing of it. It is kept
+  // at the editor's least size instead, 1 px (0.01 of the 100 px image),
+  // against the edge it lay on.
+  const ON_THE_EDGE: [string, number[], Handle, number, number, number[]][] = [
+    ["left", [0, 0.1, 0.2, 0.2], "middle-right", -40, 0, [0, 0.1, 0.01, 0.2]],
+    ["right", [0.8, 0.1, 0.2, 0.2], "middle-left", 40, 0, [0.99, 0.1, 0.01, 0.2]],
+    ["top", [0.1, 0, 0.2, 0.2], "bottom-center", 0, -40, [0.1, 0, 0.2, 0.01]],
+    ["bottom", [0.1, 0.8, 0.2, 0.2], "top-center", 0, 40, [0.1, 0.99, 0.2, 0.01]],
+  ];
+
+  it.each(ON_THE_EDGE)(
+    "%s edge: saves the box at the least size against it, and draws it there",
+    async (_, stored, handle, dx, dy, expected) => {
+      const scene = await openOnCanvas({ ...BOX, coords: stored });
+      select(scene, "b1");
+
+      resizeFrom(scene, handle, dx, dy);
+
+      expectCoords(scene.ctx.collection.find("b1")?.geometry, expected);
+      expectInsideTheImage(queuedCoords(scene), expected);
+      scene.redraw();
+      const drawn = rectOf(scene, "b1").getClientRect({ skipStroke: true });
+      expectCoords(
+        [drawn.x, drawn.y, drawn.width, drawn.height],
+        expected.map((value) => value * IMAGE_PIXELS),
+      );
+    },
+  );
+
+  it("sends the server the box at the least size, once saved", async () => {
+    const scene = await openOnCanvas({ ...humanBox(REC, "h1"), coords: [0, 0.1, 0.2, 0.2] });
+    select(scene, "h1");
+
+    resizeFrom(scene, "middle-right", -40, 0);
+    await scene.manager.flushSave();
+
+    expect(scene.manager.saveError).toBeNull();
+    const sent = scene.backend.writes.find((w) => w.op === "update");
+    expectInsideTheImage(sent?.op === "update" ? sent.body.coords : undefined, [0, 0.1, 0.01, 0.2]);
   });
 });
 

@@ -51,10 +51,12 @@ export interface MinimumBoxSize {
  * A resized box cut at the image's edges: a handle taken past one puts the
  * box's edge on it, since what lies beyond is not the image's.
  *
- * The cut never leaves less than the least size. A box resized wholly beyond
- * an edge of the image would be cut to nothing: a box of no width, which the
- * server stores and no handle can resize again. It keeps the least size
- * instead, against that edge: its free edge is put back inside the image.
+ * The cut never leaves less than the least size. A box lying on an edge of the
+ * image, its other handle taken past that same edge, lies wholly beyond it —
+ * the box spans from the edge that stays to the pointer — and would be cut to
+ * nothing: a box of no width, which the server stores and no handle can resize
+ * again. It keeps the least size instead, against the edge it lies on: its
+ * free edge is put back inside the image.
  *
  * @param coords The box as the resize left it, normalized `[x, y, w, h]`.
  * @param minimum The least width and height the box keeps, normalized.
