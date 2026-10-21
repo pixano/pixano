@@ -6,6 +6,7 @@
 
 """Tests of the media resolver."""
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -187,3 +188,27 @@ class TestLocalPath:
     @pytest.mark.parametrize("uri", ["https://host/a.jpg", "s3://bucket/a.jpg", ""])
     def test_nothing_the_worker_does_not_hold(self, uri: str) -> None:
         assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    def test_nothing_a_link_under_the_root_leads_to_outside_it(self, tmp_path: Path) -> None:
+        """The check was on the path's text, and opening the file follows links: a link under the
+        root to a file outside it was read, and resent to the inference, as a medium."""
+        root, outside = tmp_path / "media", tmp_path / "outside"
+        root.mkdir()
+        outside.mkdir()
+        (outside / "a.jpg").write_bytes(JPEG)
+        (root / "a.jpg").symlink_to(outside / "a.jpg")
+
+        assert MediaResolver(str(root), "/srv/inference/medias").local_path(SimpleNamespace(uri="a.jpg")) is None
+
+    def test_links_that_stay_under_the_root_are_followed(self, tmp_path: Path) -> None:
+        """A root mounted through a link, and a link from one folder of the root to another."""
+        storage = tmp_path / "storage"
+        (storage / "voc").mkdir(parents=True)
+        (storage / "voc" / "a.jpg").write_bytes(JPEG)
+        (storage / "a.jpg").symlink_to(storage / "voc" / "a.jpg")
+        root = tmp_path / "media"
+        root.symlink_to(storage)
+
+        resolver = MediaResolver(str(root), "/srv/inference/medias")
+
+        assert resolver.local_path(SimpleNamespace(uri="a.jpg")) == str(root / "a.jpg")

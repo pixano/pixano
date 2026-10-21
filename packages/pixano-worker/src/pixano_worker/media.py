@@ -18,6 +18,7 @@ cost is measurable and visible in the logs instead of being discovered on a larg
 """
 
 import logging
+import os
 import posixpath
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -142,12 +143,18 @@ class MediaResolver:
 
         For what the worker must read itself rather than send — a medium's bytes, resent when
         the inference refuses its path. A relative reference is taken from the media root.
+
+        The file must be under the root once links are followed, the root's own included: the
+        check is on the real path, since opening the file follows them. On the path's text alone,
+        a link under the root to a file outside it was read, and resent to the inference as a
+        medium.
         """
         uri = (getattr(view, "uri", "") or "").strip()
         if not uri or uri.startswith(REMOTE_SCHEMES) or not self.media_root:
             return None
-        clean = PurePosixPath(posixpath.normpath(posixpath.join(self.media_root, uri)))
-        return str(clean) if clean.is_relative_to(PurePosixPath(self.media_root)) else None
+        clean = posixpath.normpath(posixpath.join(self.media_root, uri))
+        real = PurePosixPath(os.path.realpath(clean))
+        return clean if real.is_relative_to(PurePosixPath(os.path.realpath(self.media_root))) else None
 
     def translate(self, path: str) -> str | None:
         """Go from a path as seen by the worker to a path as seen by the inference.

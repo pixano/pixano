@@ -272,6 +272,27 @@ class TestTheWitness:
         assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
         assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
 
+    def test_a_link_out_of_the_media_root_is_quarantined_not_replayed(
+        self, scene: _Scene, case: _Kind, tmp_path: Path
+    ) -> None:
+        """The containment check read the path's text, and opening the file follows links. A link
+        under the root to a file outside it was resent as bytes, accepted, and the chunk replayed as
+        if the inference's mount were at fault — when the inference only refused a path that leaves
+        its root, as the worker must."""
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        for _, file_name in VIEWS.values():
+            (scene.media_root / file_name).rename(outside / file_name)
+            (scene.media_root / file_name).symlink_to(outside / file_name)
+        # The real inference refuses a path whose file is outside its root; this one, every path.
+        scene.server.reads_paths = False
+        kind = case.make(API_KEY)
+
+        result = scene.process(kind, _params(kind, case))
+
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
+
     def test_an_inference_that_stops_answering_when_asked_again_blames_no_image(
         self, scene: _Scene, case: _Kind
     ) -> None:
