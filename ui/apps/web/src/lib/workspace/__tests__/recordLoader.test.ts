@@ -688,3 +688,59 @@ describe("RecordLoader.reloadAnnotations", () => {
     await second;
   });
 });
+
+describe("RecordLoader.reloadAnnotations when lists fail", () => {
+  it("keeps the stored annotations of a kind it could not read, takes the kinds it read, and says which", async () => {
+    let masksFail = false;
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(oneViewExtension()),
+      gateway: {
+        ...makeGateway({ dataset: makeDataset({ cam: { base: "Image" } }) }),
+        listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
+          if (resource === BBOX_RESOURCE) {
+            return Promise.resolve([bboxOnView(masksFail ? "bb-2" : "bb-1")] as TRow[]);
+          }
+          if (resource !== MASK_RESOURCE) return Promise.resolve([] as TRow[]);
+          if (masksFail) return Promise.reject(new Error("masks down"));
+          return Promise.resolve([
+            {
+              id: "m-1",
+              record_id: "rec-1",
+              entity_id: "e-m-1",
+              view_id: CLAIMED_VIEW_ID,
+              size: [2, 2],
+              counts: "04",
+            },
+          ] as TRow[]);
+        },
+      },
+      session,
+      layoutRepository: makeLayoutRepository(),
+    });
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+    session.annotations.add({
+      id: "m-draft",
+      entityId: "",
+      kind: "mask",
+      viewId: CLAIMED_VIEW_ID,
+      geometry: { size: [2, 2], counts: "04" },
+      persisted: false,
+    });
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    masksFail = true;
+    await loader.reloadAnnotations();
+
+    // The boxes were read, and their rows replace the box shown; the masks
+    // could not be read, and the stored mask stays. The draft mask goes: the
+    // Discard that reads again has dropped its create.
+    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-2", "m-1"]);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Could not refresh the mask annotations:",
+      expect.objectContaining({ message: "masks down" }),
+    );
+    consoleSpy.mockRestore();
+  });
+});

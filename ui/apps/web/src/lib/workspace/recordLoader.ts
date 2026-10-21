@@ -87,13 +87,20 @@ export class RecordLoader {
   }
 
   /**
-   * Refetch the current record's annotations, replacing whatever the collection
-   * holds — the backend is the last-saved state, so this is what "discard my
-   * edits" restores to.
+   * Refetch the current record's annotations, replacing what the collection
+   * holds of every kind it read — the backend is the last-saved state, so this
+   * is what "discard my edits" restores to.
    *
    * Narrower than a full `load()` on purpose: the widgets, their arrangement
    * and their active tools are untouched, so undoing an edit does not feel like
    * reopening the record.
+   *
+   * A kind whose rows could not be read keeps what it shows, and the failure
+   * is reported: one table not answering does not empty that kind on screen.
+   * Only its drafts go, since Discard has dropped their creates. Its stored
+   * annotations stay as shown, an edit Discard dropped included: the
+   * collection keeps no copy of what the dataset stores to put back, and
+   * reopening the record shows it.
    *
    * Nothing is read while the record is still loading: its rows would be
    * placed against the previous record's views, which places none of them.
@@ -118,7 +125,15 @@ export class RecordLoader {
       const loads = await loadEveryKind(seedContext);
       if (token !== this.loadToken) return;
       reportUnread(loads, "refresh");
-      this.session.annotations = new AnnotationCollection(annotationsRead(loads));
+      const kindsRead = new Set(loads.filter((load) => load.read).map((load) => load.kind));
+      // A draft is left out: Discard dropped its create, and nothing would save it.
+      const storedOfKindsUnread = this.session.annotations.items.filter(
+        (annotation) => annotation.persisted && !kindsRead.has(annotation.kind),
+      );
+      this.session.annotations = new AnnotationCollection([
+        ...annotationsRead(loads),
+        ...storedOfKindsUnread,
+      ]);
     } catch (err) {
       console.error("Failed to reload annotations:", err);
     }

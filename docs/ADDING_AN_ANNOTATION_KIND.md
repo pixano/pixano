@@ -67,7 +67,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   empty list reads as a table holding nothing, and a reload would take every
   annotation of the kind off the screen after one failed request. What a failure means
   is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
-  nothing for the kind. `seedLoaders.test.ts`
+  nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
   fails every registered loader in turn, so a loader that swallows its failure fails it.
   → register in `SEED_LOADERS` (`seedLoaders.ts`).
 
