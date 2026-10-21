@@ -6,7 +6,16 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { buildBBox3DCreate, buildBBox3DUpdate, DEFAULT_3D_ROTATION } from "../bbox3dPayloadBuilder";
+import {
+  bbox3dPayloadBuilder,
+  buildBBox3DCreate,
+  buildBBox3DUpdate,
+  DEFAULT_3D_ROTATION,
+} from "../bbox3dPayloadBuilder";
+import type {
+  BBox3DGeometry,
+  LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
 import type { ResourceMutation, Rotation3x3 } from "$lib/annotations/types";
 
 const CTX = {
@@ -80,6 +89,46 @@ describe("buildBBox3DUpdate", () => {
     const ids = { entityId: "e-1", annotationId: "b-1" };
     const createBody = bodyOf(buildBBox3DCreate(CTX, COORDS, ids).mutations[1]);
     const updateBody = buildBBox3DUpdate(CTX, ids.annotationId, ids.entityId, COORDS);
+
+    for (const [key, value] of Object.entries(updateBody)) {
+      expect(createBody).toHaveProperty(key, value);
+    }
+  });
+});
+
+describe("bbox3dPayloadBuilder", () => {
+  const CORNERS: [number, number, number, number, number, number] = [0, 0, 0, 2, 2, 2];
+
+  /** A box stored record-wide (no view) and as corners, as an import may write it. */
+  function storedBox(): LocalAnnotation<BBox3DGeometry> {
+    return {
+      id: "b-1",
+      entityId: "e-1",
+      kind: "bbox3d",
+      viewId: "",
+      geometry: { coords: CORNERS, format: "xyzxyz", rotation: DEFAULT_3D_ROTATION },
+      persisted: true,
+    };
+  }
+
+  it("writes an edit under the view and in the format the box is stored with", () => {
+    // CTX is the editing widget's: its view is not the box's.
+    const body = bbox3dPayloadBuilder.buildUpdate(CTX, storedBox());
+
+    expect(body.view_id).toBe("");
+    expect(body.format).toBe("xyzxyz");
+    expect(body.coords).toEqual(CORNERS);
+  });
+
+  it("keeps a draft's update within its create (D9), the draft carrying its widget's view", () => {
+    const draft: LocalAnnotation<BBox3DGeometry> = {
+      ...storedBox(),
+      viewId: CTX.viewId,
+      geometry: { coords: COORDS, format: "xyzwhd" },
+      persisted: false,
+    };
+    const createBody = bodyOf(bbox3dPayloadBuilder.buildCreate(CTX, draft, "w1")[1]);
+    const updateBody = bbox3dPayloadBuilder.buildUpdate(CTX, draft);
 
     for (const [key, value] of Object.entries(updateBody)) {
       expect(createBody).toHaveProperty(key, value);

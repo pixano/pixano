@@ -49,7 +49,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   the only place that knows the backend `resource` name and body shape.
   **Invariant (D9):** `buildUpdate`'s body must be a superset of `buildCreate`'s geometry
   fields with identical values otherwise, so `commitGeometryEdit` can patch a pending
-  create with it. → register in `PAYLOAD_BUILDERS` (`payloadBuilders.ts`).
+  create with it.
+  **`buildUpdate` follows from the annotation alone.** A field taken from anywhere else
+  rewrites, on every edit, a part of the row the person did not change. A
+  record-scoped kind writes the row's own view and stored format, never the editing
+  widget's (`bbox3dPayloadBuilder.buildUpdate`).
+  → register in `PAYLOAD_BUILDERS` (`payloadBuilders.ts`).
 - `<kind>SeedLoader.ts` — REST rows → `LocalAnnotation[]`, once per record.
   For a view-scoped kind, do **not** hand-roll the fetch/filter/wrap loop: call
   `createViewScopedSeedLoader({ kind, resource, toGeometry })`
@@ -113,7 +118,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 
 - [ ] `AnnotationKind` + `GeometryByKind` updated
 - [ ] `kinds/<2d|3d>/<kind>/` created; `<kind>Types.ts`
-- [ ] payload builder + `PAYLOAD_BUILDERS`
+- [ ] payload builder + `PAYLOAD_BUILDERS`; `buildUpdate` follows from the annotation alone
 - [ ] seed loader + `SEED_LOADERS`
 - [ ] renderer + `RENDERER_FACTORIES_2D|3D`
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
