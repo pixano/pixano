@@ -119,9 +119,10 @@ class MediaResolver:
             translated = self.translate(uri)
             if translated is not None:
                 return ResolvedMedia(translated, designation="path", reason="path under the declared root")
-            # Outside the declared roots, the inference would refuse the path. The bytes are the
-            # only route left, and the log says why we take it.
-            logger.debug("media %s outside %s: sending the bytes", uri, self.media_root)
+            # Outside the declared roots, the inference would refuse the path. The dataset's bytes
+            # are the only route left — a view designated by path has none, so such a medium is
+            # usually not found — and the log says why we look for them.
+            logger.debug("media %s outside %s: looking for its bytes in the dataset", uri, self.media_root)
 
         return self._inline(source, table_name, view, uri)
 
@@ -184,7 +185,7 @@ class MediaResolver:
         found = source.get_view_binary(table_name, view.id)
         if found is None or not found[0]:
             return None
-        reason = "embedded bytes" if not uri else "path outside the root, bytes sent"
+        reason = "embedded bytes" if not uri else "path outside the root, the dataset's bytes sent"
         return ResolvedMedia(bytes_to_data_uri(found[0]), designation="bytes", reason=reason)
 
 
