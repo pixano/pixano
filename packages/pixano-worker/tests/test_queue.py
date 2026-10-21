@@ -6,10 +6,12 @@
 
 """Queue behaviours the schema must make possible.
 
-The schema holds the tables and indexes the runner relies on. These tests exercise the queue's
-queries against the schema alone, without the runner, to check that it really carries them — an
-index the planner does not pick, or a constraint that blocks the normal path, would show up here
-and not in review.
+The schema holds the tables and indexes the runner relies on. These tests run claims against the
+schema alone, without the runner, to check that it really carries them — an index the planner
+does not pick, or a constraint that blocks the normal path, would show up here and not in review.
+They do not run `queue.CLAIM` itself but the simplified copy below: the same `SKIP LOCKED` pick
+on the partial index, without the retry delay (`available_at`) or the columns the runner reads
+back. The real query is exercised by `test_queue_primitives.py`.
 """
 
 import threading
@@ -52,7 +54,7 @@ class TestClaim:
     """The queue's central property: no duplicate, no loss."""
 
     def test_two_workers_share_a_queue_without_overlap(self, db: psycopg.Connection, postgres_url: str) -> None:
-        # One thousand chunks, the size the sharing must hold at (backend-processing §17).
+        # One thousand chunks, the size lot 2 asked this sharing test to run at (backend-processing §17).
         _job_with_chunks(db, 1000)
         claimed: dict[str, list[int]] = {"a": [], "b": []}
         failures: list[str] = []
