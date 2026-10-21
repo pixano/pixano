@@ -21,7 +21,7 @@ import logging
 import posixpath
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from pixano.inference.media import bytes_to_data_uri
 
@@ -31,6 +31,12 @@ logger = logging.getLogger("pixano-worker")
 # What the inference knows how to fetch by itself. Other schemes make no sense to it: a local
 # path is only worth something if it is under a root it has declared.
 REMOTE_SCHEMES = ("http://", "https://", "s3://")
+
+# How a medium is designated to the inference. Each form fails in its own way, so each is
+# diagnosed in its own way when the inference refuses every medium of a chunk: a path can be
+# resent as the bytes this worker reads, a URL cannot be checked like that, and bytes have
+# already travelled.
+Designation = Literal["path", "url", "bytes"]
 
 
 class MediaSource(Protocol):
@@ -47,14 +53,22 @@ class ResolvedMedia:
 
     Attributes:
         value: A path, a URL, or a data URI — the three forms the endpoint accepts.
-        carried_bytes: True if the bytes went through this process. That is the cost we are
-            trying to avoid, hence the one that must be countable.
+        designation: Which of the three `value` is. Said rather than guessed from `value`: what
+            can be checked when the inference refuses a medium depends on it.
         reason: Why this form, so that a log says something useful.
     """
 
     value: str
-    carried_bytes: bool
+    designation: Designation
     reason: str
+
+    @property
+    def carried_bytes(self) -> bool:
+        """True if the bytes went through this process.
+
+        That is the cost we are trying to avoid, hence the one that must be countable.
+        """
+        return self.designation == "bytes"
 
 
 class MediaResolver:
@@ -98,17 +112,29 @@ class MediaResolver:
         uri = (getattr(view, "uri", "") or "").strip()
 
         if uri.startswith(REMOTE_SCHEMES):
-            return ResolvedMedia(uri, carried_bytes=False, reason="URL the inference knows how to read")
+            return ResolvedMedia(uri, designation="url", reason="URL the inference knows how to read")
 
         if uri:
             translated = self.translate(uri)
             if translated is not None:
-                return ResolvedMedia(translated, carried_bytes=False, reason="path under the declared root")
+                return ResolvedMedia(translated, designation="path", reason="path under the declared root")
             # Outside the declared roots, the inference would refuse the path. The bytes are the
             # only route left, and the log says why we take it.
             logger.debug("media %s outside %s: sending the bytes", uri, self.media_root)
 
         return self._inline(source, table_name, view, uri)
+
+    def local_path(self, view: Any) -> str | None:
+        """The file a view names, as this worker sees it, if it is under the media root.
+
+        For what the worker must read itself rather than send — a medium's bytes, resent when
+        the inference refuses its path. A relative reference is taken from the media root.
+        """
+        uri = (getattr(view, "uri", "") or "").strip()
+        if not uri or uri.startswith(REMOTE_SCHEMES) or not self.media_root:
+            return None
+        clean = PurePosixPath(posixpath.normpath(posixpath.join(self.media_root, uri)))
+        return str(clean) if clean.is_relative_to(PurePosixPath(self.media_root)) else None
 
     def translate(self, path: str) -> str | None:
         """Go from a path as seen by the worker to a path as seen by the inference.
@@ -138,7 +164,7 @@ class MediaResolver:
         if found is None or not found[0]:
             return None
         reason = "embedded bytes" if not uri else "path outside the root, bytes sent"
-        return ResolvedMedia(bytes_to_data_uri(found[0]), carried_bytes=True, reason=reason)
+        return ResolvedMedia(bytes_to_data_uri(found[0]), designation="bytes", reason=reason)
 
 
 class _UnconfiguredMedia(MediaResolver):
