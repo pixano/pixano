@@ -45,6 +45,7 @@ class _Inference:
         # Refuse every path, accept bytes: a server that does not read its media mount.
         self.refuses_paths = False
         self.status_for_everything: int | None = None
+        self.code_for_everything = "error"
         self.unreachable = False
         self.transport_error: Exception | None = None
         # Rank of the call from which the server stops answering: the case of a service that
@@ -76,7 +77,7 @@ class _Inference:
         if self.transport_error is not None:
             raise self.transport_error
         if self.status_for_everything is not None:
-            raise PixanoInferenceError(self.status_for_everything, "error", "refused")
+            raise PixanoInferenceError(self.status_for_everything, self.code_for_everything, "refused")
         # A damaged image is damaged as bytes too: what the simulated reader gives as the bytes
         # of an image is its path, so that the simulator recognises it in both forms.
         identities = {_decoded(image) for image in images}
@@ -321,6 +322,16 @@ class TestFatalFailures:
         inference.status_for_everything = status
 
         with pytest.raises(PixanoInferenceError):
+            _run(_Reader())
+
+        assert len(inference.calls) == 1, "no search for a culprit on an error that depends on no image"
+
+    def test_an_answer_the_worker_cannot_read_is_fatal(self, inference: _Inference) -> None:
+        """What the client raises for a successful answer that does not match its schema — a client
+        and a server of different versions: no medium is at fault, so none goes to quarantine."""
+        inference.status_for_everything, inference.code_for_everything = 200, "invalid_response"
+
+        with pytest.raises(PixanoInferenceError, match="invalid_response"):
             _run(_Reader())
 
         assert len(inference.calls) == 1, "no search for a culprit on an error that depends on no image"

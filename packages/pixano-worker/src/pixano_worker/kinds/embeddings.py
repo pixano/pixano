@@ -246,7 +246,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         Raises:
             TransientError: The inference does not answer or asks to come back later.
             PixanoInferenceError: An error that depends on no image — an unknown model, a denied
-                access. It is fatal to the chunk.
+                access, an answer this worker cannot read. It is fatal to the chunk.
         """
         if not candidates:
             return [], []

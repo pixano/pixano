@@ -39,6 +39,11 @@ REQUEST_STATUSES = frozenset({401, 403, 404, 405})
 # through.
 NO_RESPONSE = 0
 
+# The code the client gives a successful answer it cannot read — not JSON, or not the schema it
+# expects. The server and this worker disagree on the contract (two pixano-inference versions,
+# say): no medium is at fault, and every call would fail the same way.
+INVALID_RESPONSE = "invalid_response"
+
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
 # find out whether the server can still process an image known to be good, not to produce
 # anything.
@@ -69,7 +74,7 @@ def classify(error: Exception) -> Failure:
     if isinstance(error, PixanoInferenceError):
         if error.status_code == NO_RESPONSE or error.status_code in TRANSIENT_STATUSES:
             return "transient"
-        if error.status_code in REQUEST_STATUSES:
+        if error.status_code in REQUEST_STATUSES or error.code == INVALID_RESPONSE:
             return "request"
         return "medium"
     raise error
