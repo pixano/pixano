@@ -227,7 +227,7 @@ class TestTransientFailures:
             _run(_Reader())
 
     def test_a_single_refused_image_is_quarantined_when_the_witness_passes(self, inference: _Inference) -> None:
-        """A batch of one corrupt image failed the whole job.
+        """A batch of one corrupt image used to fail the whole job.
 
         The last chunk of a dataset often has only one image, and on a lidar dataset most chunks
         do too. "No image passed" was true there from the first damaged image: the chunk was
