@@ -177,6 +177,8 @@ A failure **without** a response — status 0 from the client, which is how it w
 
 **When every image of a chunk is refused, the inference itself is asked whether it is at fault.** A small generated image is sent as bytes. Refused, the server is unwell and the chunk is transient. Accepted, the images are to blame — unless they were sent by path: the server may be unable to read the media storage it was told to mount, and refuse every path through no fault of the images, so one of them is sent again as bytes; if it passes, the chunk is retried with that reason instead of hundreds of sound images going to quarantine. A first version presumed an outage from two refused images up, which made the decision hang on the size of the batch, and the last chunk of a dataset often holds one image.
 
+**What is resent, and what is not.** The media resolver says how it designated each medium (`ResolvedMedia.designation`: `path`, `url` or `bytes`), and the check follows it. A medium designated by path is resent as the bytes this worker reads from its file (`reader.open_media`), not from the dataset, which holds no bytes for a view designated by path — a view carries a `uri` or `raw_bytes`, never both: resent from the dataset, the check would find nothing and the whole chunk would go to quarantine, on every real dataset, while tests whose doubles return bytes for any view would pass. A file this worker cannot read either decides nothing, and the media go to quarantine; a silence at that second call is an outage, and the chunk is transient. The reason names the inference's media root and the variables to check, as the resolver states it, beside its path designation. **A medium designated by URL is not checked that way**: the bytes this worker could send say nothing of whether the inference reaches the URL's source. Refused with the rest of its chunk, it goes to quarantine; whether to quarantine it or to retry the chunk with a reason is still open, and the code quarantines it. Step 3, which adds sources reached by URL, diagnoses each source in its own way (§20).
+
 ### 8.3 Skipped is not quarantined
 
 A record the calculation does not apply to is counted, not stored. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
@@ -258,7 +260,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 ## 13. Media
 
-**Paths are preferred, bytes are the fallback.** A view stored inside the dataset (`embed`, the default import mode), or a path outside the declared root, is sent as a data URI. This is the only route that serves existing datasets, and the demo runs on it; the plan's invariant — media do not travel through Pixano — is therefore exercised only by datasets imported by path. Accepted in review: nothing changes at step 1, and the cost of bytes over a real network is measured at step 4.
+**Paths are preferred, bytes are the fallback.** A view stored inside the dataset (`embed`, the default import mode) is sent as a data URI. A path outside the declared root was meant to be sent the same way, but the bytes are read from the dataset, which holds none for a view designated by path: such a medium is quarantined as not found (§18). This is the only route that serves existing datasets, and the demo runs on it; the plan's invariant — media do not travel through Pixano — is therefore exercised only by datasets imported by path. Accepted in review: nothing changes at step 1, and the cost of bytes over a real network is measured at step 4.
 
 **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
 
@@ -381,6 +383,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 - **The stream of one job replays its whole history on first connection.** 6 250 events for a job of 50 000 images. Acceptable today; a bound or a `since` parameter is the obvious fix, and it is a choice about what a fresh client sees.
 - **The pool checks each connection before lending it** (`SELECT 1` per borrow). Negligible today; to measure at step 4 if the claim rate ever matters.
 - **A write that never returns holds its dataset until the worker restarts.** A chunk's `write` stuck in storage that stopped answering keeps the worker's write lock of its dataset, which renewing the pool cannot release (§9). Every wait for it is bounded (§12), and no other dataset's write waits on that lock. But the chunks of that dataset are handed back until set aside after their last attempt, and each attempt first runs the chunk's work, its inference included, then waits five minutes in one of the worker's slots. A job with many chunks on that dataset can fill every slot for hours, so the other datasets' chunks are written late — not never — until the worker restarts or those chunks are set aside.
+- **A path outside the declared media root is quarantined, not sent as bytes.** The resolver falls back to the dataset's bytes for it (`MediaResolver._inline`, whose reason still reads "path outside the root, bytes sent"), and a view designated by path holds none: the medium is quarantined as "media not found". The worker does not read such a file itself either, since it reads only under its media root. Read in the code, not reproduced on a dataset; the test of that fallback uses a source that returns bytes for any view.
 
 ## 19. Design before step 2
 
@@ -394,7 +397,15 @@ Questions the review raised and step 1 does not settle. None is a defect; each s
 - **The compaction policy** (§12).
 - **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
 
-## 20. What step 4 opens
+## 20. What steps 3 and 4 open
+
+Step 3 brings several sources of media and datasets, object storage among them; step 4, workers on other machines. The limits below are what each will meet in what step 2 left.
+
+### 20.1 Step 3
+
+- **A medium designated by URL is not diagnosed.** When the inference refuses every medium of a chunk, the media designated by URL go to quarantine with the rest (§8.2), although the inference may only fail to reach the source — a host missing from its allowlist, a presigned URL expired. Each source of media is to say, beside its own designation, what to check when the inference refuses it, and whether the chunk is worth retrying, as the resolver says it for paths (`MediaResolver.path_refusal_diagnostic`): a new source then adds its own case without touching the kinds' shared code.
+
+### 20.2 Step 4
 
 - **Does a remote worker reach PostgreSQL directly, or go through the API?** The opening question of the step: everything below depends on it.
 - **A cap on calls per model** is impossible with today's claim: `job_chunks` carries neither kind nor model, by choice. It needs both denormalised on the chunk and the partial index revisited.

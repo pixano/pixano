@@ -123,8 +123,9 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         images = self._images_of(reader, record_ids) if record_ids else {}
 
         candidates: list[tuple[str, str]] = []
-        # The images sent by path, so that one can be resent as bytes if the server refuses them
-        # all while it still embeds the witness image.
+        # The images designated by path, so that one can be resent as bytes if the server refuses
+        # them all while it still embeds the witness image. Not those designated by URL: the bytes
+        # this worker could send say nothing of whether the inference reaches the URL's source.
         by_path: dict[str, Any] = {}
         quarantined: list[dict[str, Any]] = []
         skipped = 0
@@ -140,7 +141,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 continue
             candidates.append((record_id, resolved.value))
             carried += int(resolved.carried_bytes)
-            if not resolved.carried_bytes:
+            if resolved.designation == "path":
                 by_path[record_id] = image
 
         read_s = time.perf_counter() - started

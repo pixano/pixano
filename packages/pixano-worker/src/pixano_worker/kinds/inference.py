@@ -12,6 +12,7 @@ call they make, not in any of this.
 """
 
 import io
+import logging
 from functools import cache
 from typing import Any, Callable, Literal
 
@@ -24,6 +25,8 @@ from pixano.inference.media import bytes_to_data_uri
 from ..reader import JobReader
 from .base import TransientError
 
+
+log = logging.getLogger("pixano-worker")
 
 # The answers that say "come back later": timeout, too many requests, service unavailable. The
 # client already replays 502, 503 and 504 on its own; what reaches this point has survived its
@@ -136,19 +139,23 @@ def blame_the_server_or_the_media(
     A witness image, generated here, is sent as bytes: refused, the server is not well and the
     chunk is replayed later. Accepted, the media are at fault — unless they had been designated
     by path: the server may not read the storage it was told to mount, and then refuses every
-    path through no fault of any medium. So one of them is resent as bytes; if it passes, the
-    mount is the cause, and the chunk is replayed with the reason, rather than three hundred
-    healthy images going to quarantine.
+    path through no fault of any medium. So one of them is resent as the bytes this worker reads
+    from its file; if it passes, the mount is the cause, and the chunk is replayed with the
+    reason, rather than three hundred healthy images going to quarantine.
+
+    The bytes come from the file, not from the dataset: a view designated by path carries no
+    bytes of its own. Media designated by URL are not resent: refused, they go to quarantine.
 
     Args:
         call: The kind's call on one medium reference; it raises when the server refuses it.
-        reader: Where to read a medium's bytes.
+        reader: Where to read a medium's file, and what to check when the server cannot.
         table: The media's table.
         refused: The records whose medium was refused, by identifier.
         by_path: The view row of each medium sent by path, refused or not, by record identifier.
 
     Raises:
-        TransientError: The server refuses the witness image, or does not read its media by path.
+        TransientError: The server refuses the witness image, does not read its media by path,
+            or stops answering while it is asked.
     """
     try:
         call(witness_image())
@@ -158,15 +165,34 @@ def blame_the_server_or_the_media(
     first_by_path = next((record_id for record_id in refused if record_id in by_path), None)
     if first_by_path is None:
         return
-    found = reader.dataset.get_view_binary(table, by_path[first_by_path].id)
-    if found is None or not found[0]:
+    content = _file_bytes(reader, table, by_path[first_by_path])
+    if content is None:
+        # This worker cannot read it either: nothing tells the inference's mount apart from a
+        # medium that is gone.
         return
     try:
-        call(bytes_to_data_uri(found[0]))
-    except (httpx.TransportError, PixanoInferenceError):
+        call(bytes_to_data_uri(content))
+    except (httpx.TransportError, PixanoInferenceError) as error:
+        # A medium is only blamed on an answer: silence now is an outage, not a verdict.
+        if classify(error) == "transient":
+            raise TransientError(f"the inference stopped answering while it was asked: {error}") from error
         # Refused as bytes too: the medium really is at fault.
         return
     raise TransientError(
         f"the inference refuses media by path but accepts the same one as bytes ({first_by_path}): "
-        "it does not read the media storage — check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
+        f"{reader.media.path_refusal_diagnostic()}"
     )
+
+
+def _file_bytes(reader: JobReader, table: str, view: Any) -> bytes | None:
+    """A medium's bytes as this worker reads them, or None when it cannot."""
+    try:
+        media = reader.open_media(table, view)
+        if media is None:
+            return None
+        with media:
+            return media.read()
+    # A file this worker sees but cannot read decides nothing, like one it does not see.
+    except OSError as error:
+        log.warning("media %s: cannot read it to resend it as bytes (%s)", view.id, error)
+        return None

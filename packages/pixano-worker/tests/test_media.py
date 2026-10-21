@@ -155,6 +155,10 @@ class TestResolve:
 
         assert resolved is not None and resolved.designation == designation
 
+    def test_what_to_check_for_refused_paths_names_the_inferences_root(self, resolver: MediaResolver) -> None:
+        """The inference's side of the mount, not the worker's: the path it was sent is under it."""
+        assert "under /data/media — check PIXANO_INFERENCE_MEDIA_ROOT" in resolver.path_refusal_diagnostic()
+
 
 class TestUnconfigured:
     def test_refuses_to_resolve_and_says_which_variables_are_missing(self) -> None:
