@@ -86,14 +86,15 @@ RECLAIM_INTERVAL_S = 30.0
 #
 # It lives at module level, so renewing the thread pool cannot release it: a write that never
 # returns — storage that stopped answering — holds it until the process ends. Every wait for it
-# is therefore bounded (`_holding_write_lock`), so that such a write holds up the other writes
-# of its dataset only.
+# is therefore bounded (`_holding_write_lock`), so that no chunk waits on it for good. Other
+# datasets' writes never wait on it, but that dataset's chunks still take a worker slot each
+# while they wait (backend-processing §18).
 _write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
 _write_locks_guard = threading.Lock()
 
 # How long a chunk waits for this worker's other writes to its dataset before it is handed back
 # as after a transient failure. Generous: giving up spends one of the chunk's attempts
-# (`queue.MAX_ATTEMPTS`), and the chunk holds up nothing but itself while it waits. Five minutes
+# (`queue.MAX_ATTEMPTS`), and the chunk holds no lock while it waits, only its own slot. Five minutes
 # outlast every write queued ahead of it, and stay far below the chunk's time limit
 # (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write that hangs is handed back, and
 # its thread freed, instead of waiting that whole limit out, five times, and staying stuck on the
