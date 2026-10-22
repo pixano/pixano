@@ -84,6 +84,10 @@
 - The masks, polygons, keypoints and text spans of a sub-entity, its timeline
   row and the pre-annotation review icon take the color of their object instead
   of pink.
+- In the video workspace, a relink that merges a track into another object's
+  tracks saves every box it moves and the track it widens. The boxes of the
+  tracks it absorbs kept naming them once they were deleted, and the next load
+  undid the merge.
 
 ## 0.8.0 (2026-09-23)
 
