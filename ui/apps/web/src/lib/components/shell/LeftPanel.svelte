@@ -111,6 +111,10 @@ License: CECILL-C
   type ExplorerView = "datasets" | "records";
   let explorerView = $state<ExplorerView>("datasets");
   let datasets = $state<DatasetInfo[]>([]);
+  // Why the last fetch of the dataset list failed, or null. Kept apart from `error`,
+  // which takes the whole panel: a refresh that fails must neither hide the list on
+  // screen nor, ending after a dataset was opened, its records.
+  let datasetsError = $state<string | null>(null);
   let records = $state<RecordResponse[]>([]);
   let selectedDataset = $state<DatasetInfo | null>(null);
   let loading = $state(false);
@@ -121,17 +125,28 @@ License: CECILL-C
 
   let hasMoreRecords = $derived(records.length < recordsTotal);
 
-  onMount(async () => {
-    loading = true;
-    error = null;
+  /**
+   * Fetch the dataset list: on mount, and again each time the person comes back
+   * to it. The library changes behind an open page — a dataset imported from the
+   * command line, one removed and imported again under a new id — and the server
+   * reads it afresh on every request. Only the first fetch shows the spinner; a
+   * later one leaves the list on screen until the new one replaces it — or, when it
+   * fails, keeps it there, with a note that it could not be refreshed.
+   */
+  async function loadDatasets() {
+    const firstLoad = datasets.length === 0;
+    if (firstLoad) loading = true;
     try {
       datasets = await listDatasets();
+      datasetsError = null;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to load datasets";
+      datasetsError = e instanceof Error ? e.message : "Failed to load datasets";
     } finally {
-      loading = false;
+      if (firstLoad) loading = false;
     }
-  });
+  }
+
+  onMount(loadDatasets);
 
   async function openDataset(dataset: DatasetInfo) {
     selectedDataset = dataset;
@@ -179,6 +194,7 @@ License: CECILL-C
     recordsTotal = 0;
     selectedDataset = null;
     error = null;
+    void loadDatasets();
   }
 
   async function openRecord(recordId: string) {
@@ -231,8 +247,18 @@ License: CECILL-C
       {:else if explorerView === "datasets"}
         <div class="p-3">
           {#if datasets.length === 0}
-            <p class="text-xs text-muted-foreground">No datasets found.</p>
+            {#if datasetsError}
+              <p class="text-xs text-destructive">{datasetsError}</p>
+            {:else}
+              <p class="text-xs text-muted-foreground">No datasets found.</p>
+            {/if}
           {:else}
+            {#if datasetsError}
+              <p class="mb-2 text-[10px] text-muted-foreground" role="status">
+                The list could not be refreshed ({datasetsError}); it shows the datasets as last
+                fetched.
+              </p>
+            {/if}
             <div class="space-y-1">
               {#each datasets as dataset (dataset.id)}
                 <button
