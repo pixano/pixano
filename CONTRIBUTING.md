@@ -186,6 +186,8 @@ You can also use the command lines we have set up to format and lint all fronten
 
 ```bash
 cd ui/
+pnpm exec prettier --check --ignore-unknown --write apps/pixano
 pnpm format
 pnpm lint
+pnpm -C apps/pixano run check
 ```
