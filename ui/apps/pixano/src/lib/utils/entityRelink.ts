@@ -42,6 +42,7 @@ export const relink = (
   let toRemoveAnnotationIds: string[] = [];
   let deleteEntityFlag = false;
   let deleteTrack = false;
+  let mergeTargetTrack: Tracklet | undefined;
 
   // get overlap target tracks
   const overlapTargetIds: string[] = overlapTargetIdsString.split(OVERLAPIDS_SEPARATOR);
@@ -148,6 +149,7 @@ export const relink = (
       }
       if (deleteTrack && ann.is_type(BaseSchema.Tracklet)) {
         if (overlapTargetIds[0] === ann.id) {
+          mergeTargetTrack = ann as Tracklet;
           // add childs to new target track (the first one), others are fused
           // also add childs from fused tracks
           (ann as Tracklet).ui.childs = [
@@ -212,6 +214,16 @@ export const relink = (
   });
   if (shouldAddTopEntity) {
     saveTo("add", targetEntity);
+  }
+  if (mergeTargetTrack) {
+    // The fused tracks' annotations now hang on the target track, which spans them all. Unsaved,
+    // they kept naming the fused tracks, which are deleted, and the next load undid the merge.
+    tracksToFuse
+      .flatMap((fusedTrack) => (fusedTrack as Tracklet).ui.childs)
+      .forEach((movedChild) => {
+        saveTo("update", movedChild);
+      });
+    saveTo("update", mergeTargetTrack);
   }
   tracksToFuse.forEach((trk) => {
     saveTo("delete", trk);
