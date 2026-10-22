@@ -147,6 +147,29 @@ class TestRecordSearch:
         assert body["items"][0]["id"] == "r07"
         provider.embedding.assert_not_awaited()  # stored vector → no query encoding
 
+    def test_find_similar_reads_a_record_id_holding_a_quote(self):
+        """The record id went into the filter unescaped: a quote in it answered 503."""
+        dataset = _build_dataset(with_embeddings=True)
+        record_id = "o'brien"
+        dataset.add_records(
+            {
+                "records": [Record(id=record_id)],
+                "images": [
+                    Image.from_bytes(
+                        record_id=record_id, logical_name="image", raw_bytes=_png_bytes(99), id="img-o-brien"
+                    )
+                ],
+            }
+        )
+        # Every bit set: no other record's vector, so the record is its own only nearest.
+        dataset.add_record_embeddings([{"record_id": record_id, "vector": [1.0] * DIM}])
+        client = _make_client(dataset, _make_provider())
+
+        resp = client.post(f"{BASE}/records/search", json={"similar_to": record_id, "k": 1})
+
+        assert resp.status_code == 200, resp.text
+        assert [item["id"] for item in resp.json()["items"]] == [record_id]
+
     def test_search_with_filter_prefilter(self):
         provider = _make_provider()
         client = _make_client(_build_dataset(with_embeddings=True), provider)
