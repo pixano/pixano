@@ -79,7 +79,7 @@ A chunk carries a `jsonb` payload the job kind interprets, not a fixed range of 
 
 What the version marker buys is that the failure is loud. `CREATE TABLE IF NOT EXISTS` creates a missing table but never alters an existing one, so a changed schema would otherwise leave a worker running against tables that are no longer its own, breaking later and far from the cause. Instead the worker compares the version recorded in the database with the one the code expects, and on a mismatch refuses to start with the command to run.
 
-**Any change to `schema.sql` must increment `SCHEMA_VERSION`.**
+**Any change to the DDL of `schema.sql` must increment `SCHEMA_VERSION`.** A change to its comments alone does not: it changes nothing in the database.
 
 When this database does hold something irreplaceable, a real runner is added by _baseline_: a first migration containing the schema as it then stands, marked already-applied on existing databases and executed on new ones. That retrofit is cheap, which is what makes deferring it safe.
 
@@ -161,7 +161,7 @@ its own verification that nothing relies on the import's side effect.
 | **Item**      | a corrupt image, a missing file                  | the chunk finishes; the item goes to `job_items` with its reason                                        |
 | **Fatal**     | a miscounting kind, an unknown model             | the chunk fails, and the job with it                                                                    |
 
-**Why a delay.** Handing a chunk straight back would claim it again within the second, against an inference that is still restarting, and burn every attempt before it returns. `available_at` makes a chunk invisible to the claim until then.
+**Why a delay.** Handing a chunk straight back would claim it again a moment later, against an inference that is still restarting, and burn every attempt before it returns. `available_at` makes a chunk invisible to the claim until then.
 
 **Why five attempts.** With that delay, they leave close to four minutes for an inference to come back — a restart with a model reload. Measured on the local stack: a 45-second outage plus the restart used four of the five. A longer outage sets the affected chunks aside and fails the job; a deployment whose inference restarts more slowly should raise the number. Validated in review together with the retry: five attempts are acceptable because a failed job is not a dead end.
 
