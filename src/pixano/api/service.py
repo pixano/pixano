@@ -7,6 +7,7 @@
 """Generic CRUD service for the API."""
 
 import logging
+from dataclasses import dataclass
 from functools import wraps
 from typing import Any
 
@@ -18,6 +19,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.schemas import SchemaGroup, View
+from pixano.utils.python import quote_sql_string
 
 from .models import PaginatedResponse, merge_update_payload, serialize_row
 from .resources import ResourceSpec
@@ -27,6 +29,30 @@ logger = logging.getLogger(__name__)
 
 
 MAX_QUERY_LIMIT = 1000
+
+
+@dataclass(frozen=True, slots=True)
+class _EntityReferences:
+    """The fields through which a row of one schema group may name an entity.
+
+    Attributes:
+        ids: Fields holding one entity id.
+        id_lists: Fields holding a list of entity ids.
+    """
+
+    ids: tuple[str, ...]
+    id_lists: tuple[str, ...] = ()
+
+
+# Every stored row that may name an entity, by schema group. A relation's ends link annotations
+# (`pixano.datasets.utils.integrity`), but the Python API stores one whose end names an entity when
+# its integrity check only warns or is off, so an end naming the entity counts. A table without a
+# field is not asked about it: a message names entities through its list alone.
+_ENTITY_REFERENCES: dict[SchemaGroup, _EntityReferences] = {
+    SchemaGroup.ANNOTATION: _EntityReferences(ids=("entity_id", "subject_id", "object_id"), id_lists=("entity_ids",)),
+    SchemaGroup.ENTITY: _EntityReferences(ids=("parent_id",)),
+    SchemaGroup.ENTITY_DYNAMIC_STATE: _EntityReferences(ids=("entity_id",)),
+}
 
 
 def _service_write(method):
@@ -308,8 +334,8 @@ class BaseService:
         """Update an existing resource row.
 
         When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
-        changes, the previously attached entity is deleted if it has no
-        remaining annotations — the server-side orphan check shared with delete.
+        changes, the previously attached entity is deleted if no stored row names
+        it any more — the check (`_entity_is_named`) shared with delete.
         """
         body_id = data.get("id")
         if body_id is not None and body_id != id:
@@ -350,10 +376,10 @@ class BaseService:
         except ValueError as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
-        # The annotation now points at the new entity, so the old one's count
-        # excludes it: an empty count means the reassignment orphaned it.
+        # The annotation now points at the new entity, so the check no longer finds it naming
+        # the old one: nothing left naming it means the reassignment orphaned it.
         new_entity_id = getattr(updated_rows[0], "entity_id", None)
-        if old_entity_id and old_entity_id != new_entity_id and not self._entity_has_annotations(old_entity_id):
+        if old_entity_id and old_entity_id != new_entity_id and not self._entity_is_named(old_entity_id):
             self._delete_orphan_entity(old_entity_id)
 
         return self._response(updated_rows[0])
@@ -363,10 +389,15 @@ class BaseService:
         """Delete a resource by ID.
 
         When ``prune_orphan_entity`` is set and this resource is an annotation,
-        the parent entity is also deleted if the removed annotation was its last
-        one. The check runs server-side because only the backend sees every
-        annotation referencing the entity (the front-end loads one record at a
-        time). Kind-agnostic: works for any annotation resource.
+        the parent entity is also deleted if no stored row names it once the
+        annotation is gone: no annotation of any table, no child entity and no
+        entity dynamic state (`_entity_is_named`).
+        The check runs server-side because only the backend sees every row naming
+        the entity (the front-end loads one record at a time), and under this
+        request's write lock, so no write naming the entity lands between the
+        check and the delete — on a local dataset only: a dataset on S3 has no
+        lock, and there the check and the delete are two steps another write can
+        come between. Kind-agnostic: works for any annotation resource.
         """
         resolved_table = self.resolve_table()
 
@@ -380,15 +411,20 @@ class BaseService:
         if ids_not_found:
             raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
 
-        # The annotation row is gone now, so an empty count means it was the last.
-        if entity_id and not self._entity_has_annotations(entity_id):
+        # The annotation row is gone now, so nothing left naming the entity means it was the last.
+        if entity_id and not self._entity_is_named(entity_id):
             self._delete_orphan_entity(entity_id)
 
-    def _entity_has_annotations(self, entity_id: str) -> bool:
-        """Whether any annotation in any table still references the entity."""
-        for table in self.dataset.info.groups.get(SchemaGroup.ANNOTATION, []):
-            if self.dataset.open_table(table).count_rows(f"entity_id = '{entity_id}'") > 0:
-                return True
+    def _entity_is_named(self, entity_id: str) -> bool:
+        """Whether any stored row names the entity (`_ENTITY_REFERENCES`)."""
+        literal = quote_sql_string(entity_id)
+        for group, references in _ENTITY_REFERENCES.items():
+            for table in self.dataset.info.groups.get(group, []):
+                columns = self.dataset.info.tables[table].model_fields
+                clauses = [f"{field} = {literal}" for field in references.ids if field in columns]
+                clauses += [f"array_has({field}, {literal})" for field in references.id_lists if field in columns]
+                if clauses and self.dataset.open_table(table).count_rows(" OR ".join(clauses)) > 0:
+                    return True
         return False
 
     def _delete_orphan_entity(self, entity_id: str) -> None:

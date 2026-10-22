@@ -95,11 +95,18 @@ Three ideas hold it together:
   - `list/get/create/update/delete` over the resolved table;
   - FK validation on **create and update** (`validate_entity_exists`) so an
     annotation can't point at a missing entity;
-  - **orphan-entity cascade** (opt-in `?prune_orphan_entity=true`): on delete or on
-    an `entity_id`-changing update, `_entity_has_annotations(id)` scans every
-    `ANNOTATION` table; if none remain, `_delete_orphan_entity(id)` removes the
-    entity from its `ENTITY` table. One mechanism, every kind, server-side (the
-    only place that sees every reference — the frontend loads one record at a time).
+  - **orphan-entity cascade** (opt-in `?prune_orphan_entity=true`): on an
+    annotation's delete, or an update that changes its `entity_id`, the entity it
+    named is removed from its `ENTITY` table (`_delete_orphan_entity`) once no
+    stored row names it
+    (`_entity_is_named`): an annotation of any table, a child entity, an entity
+    dynamic state. One mechanism, every kind, server-side (the only place that
+    sees every reference — the frontend loads one record at a time). The write,
+    the check and the entity's delete hold the request's one write lock, so no
+    write naming the entity lands between the check and the delete: one arriving
+    meanwhile is refused as a busy dataset's 409. An entity that only a child
+    entity, a dynamic state, a message's `entity_ids` or a relation's end still
+    names stays once its last annotation is deleted or moved.
 
 ### REST surface the frontend uses
 | Function | Defined in | HTTP | Notes |
@@ -356,7 +363,8 @@ deleteAnnotation(annotation)            // 2D: via ctx + deleteLocalAnnotation; 
      draft?     mutations.dropForLocalAnnotation(id)            // unsend its creates
   → collection.remove(id)
   → (flush) DELETE …/{resource}/{id}?prune_orphan_entity=true
-        → backend deletes the entity iff it had no other annotation (any kind)
+        → backend deletes the entity iff no stored row names it any more:
+          an annotation of any kind, a child entity, a dynamic state (§2)
 ```
 
 ### F) Reassign an entity (existing box)
@@ -365,7 +373,8 @@ reassignEntity(annotation, choice, ctx)
   → collection.setEntity(id, newEntityId)   (+ queue entityCreate if "new")
   → mutations.upsertUpdate(buildUpdate(...))  // body carries the new entity_id
   → (flush) PUT …?prune_orphan_entity=true
-        → backend validates the new entity exists, then prunes the OLD one if orphaned
+        → backend validates the new entity exists, then prunes the OLD one if no
+          stored row names it any more (§2)
 ```
 
 ---

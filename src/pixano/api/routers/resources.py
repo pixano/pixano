@@ -98,8 +98,9 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
             """Update a resource by id.
 
             When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
-            changes, the previously attached entity is deleted if it is now
-            orphaned. Off by default so plain PUT semantics are unchanged.
+            changes, the previously attached entity is deleted if no stored row
+            names it any more (an annotation of any table, a child entity, a
+            dynamic state). Off by default so plain PUT semantics are unchanged.
             """
             service = BaseService(dataset, resource)
             payload = body.model_dump(exclude_unset=True)  # type: ignore[attr-defined]
@@ -122,8 +123,9 @@ def create_resource_router(resource: ResourceSpec) -> APIRouter:
             """Delete a resource by id.
 
             When ``prune_orphan_entity`` is set and the resource is an annotation,
-            its parent entity is also deleted if this was the entity's last
-            annotation. Off by default so plain DELETE semantics are unchanged.
+            its parent entity is also deleted if no stored row names it any more
+            (an annotation of any table, a child entity, a dynamic state). Off by
+            default so plain DELETE semantics are unchanged.
             """
             service = BaseService(dataset, resource)
             service.delete(id, prune_orphan_entity=prune_orphan_entity)
