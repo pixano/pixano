@@ -68,6 +68,15 @@ there is no migration on purpose (see `docs/specs/backend-processing.md`, §5).
 
 ## 4. The application
 
+A fresh clone has no interface until both frontends are built (Node 23 and pnpm 10.4.1; an
+editable install skips the wheel's build hook):
+
+```sh
+pnpm -C ui install --frozen-lockfile
+NODE_OPTIONS=--max-old-space-size=4096 pnpm -C ui/apps/pixano build
+pnpm -C ui/apps/web build
+```
+
 ```sh
 export PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano
 export PIXANO_MEDIA_ROOT=/srv/pixano/data/media
@@ -94,6 +103,8 @@ uv run --directory packages/pixano-worker python scripts/prepare_demo.py \
 
 Then the demo runs as written, with `kill -9` on the worker's process where it says
 `docker compose kill`, and a restart of the worker where it says `docker compose start`.
+Empty the queue with `psql "$PIXANO_DATABASE_URL" -c 'TRUNCATE pixano_jobs.jobs CASCADE'` and
+restart the worker before each run.
 
 ## Stopping
 
