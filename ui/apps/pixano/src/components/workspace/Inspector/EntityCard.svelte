@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Tooltip } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -32,10 +33,11 @@ License: CECILL-C
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
   import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
+  import { isTracking } from "$lib/stores/trackingStore.svelte";
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
-    colorScale,
     entities,
     highlightedEntity,
     itemMetas,
@@ -53,11 +55,13 @@ License: CECILL-C
     entityHasTracklets,
     IconButton,
     Item,
+    TooltipContent,
     Tracklet,
     WorkspaceType,
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
+  import { toggleEditAnnotation } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
@@ -106,7 +110,7 @@ License: CECILL-C
   const { manifest } = getWorkspaceContext();
   let detailsTab = $state<"attributes" | "annotations">("attributes");
 
-  const color = $derived(colorScale.value[1](entity.id));
+  const color = $derived(annotationColors.value.colorOfEntity(entity.id));
   const entityDisplayControl = $derived.by(() => {
     void entities.value;
     return entity.ui.displayControl;
@@ -364,13 +368,15 @@ License: CECILL-C
 
   const onEditIconClick = (child: Annotation | null = null) => {
     if (child) {
-      handleSetDisplayControl("editing", !child.ui.displayControl.editing, child, false);
-    } else {
-      detailsTab = "attributes";
-      if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
-      handleSetDisplayControl("editing", !entityDisplayControl.editing);
+      // Shape edit mode, the child's track's when it has one (lib/utils/editMode.ts).
+      toggleEditAnnotation(child, { reveal: false });
+      return;
     }
-    if (!entityDisplayControl.editing) selectedTool.value = panTool;
+    detailsTab = "attributes";
+    if (!entityDisplayControl.editing && highlightState !== "self") onColoredDotClick();
+    handleSetDisplayControl("editing", !entityDisplayControl.editing);
+    // Switching tool would cancel a tracking session; attributes do not need the Pan tool.
+    if (!entityDisplayControl.editing && !isTracking.value) selectedTool.value = panTool;
   };
 
   const toggleCardOpen = () => {
@@ -409,98 +415,114 @@ License: CECILL-C
           {@const imgH = thumb.baseImageDimensions.height * imgScale}
           {@const offX = -thumb.coords[0] * thumb.baseImageDimensions.width * imgScale}
           {@const offY = -thumb.coords[1] * thumb.baseImageDimensions.height * imgScale}
-          <button
-            type="button"
-            class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden transition-all duration-200 hover:ring-2 hover:ring-primary/30"
-            style="width: 40px; height: 40px; border: 2px solid {color}; background: hsl(var(--muted) / 0.8);"
-            title="Highlight entity"
-            onclick={onColoredDotClick}
-          >
-            <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
-              <img
-                src="/{thumb.uri}"
-                alt=""
-                class="absolute max-w-none"
-                style="width: {imgW}px; height: {imgH}px; left: {offX}px; top: {offY}px;"
-              />
-            </div>
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex-shrink-0 flex items-center justify-center rounded-lg overflow-hidden transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+              style="width: 40px; height: 40px; border: 2px solid {color}; background: hsl(var(--muted) / 0.8);"
+              onclick={onColoredDotClick}
+            >
+              <div class="relative overflow-hidden" style="width: {fitW}px; height: {fitH}px;">
+                <img
+                  src="/{thumb.uri}"
+                  alt=""
+                  class="absolute max-w-none"
+                  style="width: {imgW}px; height: {imgH}px; left: {offX}px; top: {offY}px;"
+                />
+              </div>
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Highlight entity</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {:else if hasOnlyTextSpans}
           <!-- Typographic fallback thumbnail for text-only entities -->
-          <button
-            type="button"
-            class="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 hover:ring-2 hover:ring-primary/30"
-            style="width: 40px; height: 40px; border: 2px solid {color}; background: color-mix(in srgb, {color} 12%, transparent);"
-            title="Highlight entity (text entity)"
-            onclick={onColoredDotClick}
-          >
-            <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="flex-shrink-0 flex items-center justify-center rounded-lg transition-all duration-200 hover:ring-2 hover:ring-primary/30"
+              style="width: 40px; height: 40px; border: 2px solid {color}; background: color-mix(in srgb, {color} 12%, transparent);"
+              onclick={onColoredDotClick}
+            >
+              <TextT weight="bold" class="h-5 w-5" style="color: {color}" />
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Highlight entity (text entity)</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {:else}
           <!-- Minimal colored dot fallback -->
-          <button
-            type="button"
-            class="rounded-full w-3 h-3 mx-1 mt-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
-            style="background:{color}"
-            title="Highlight entity"
-            onclick={onColoredDotClick}
-          ></button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              class="rounded-full w-3 h-3 mx-1 mt-1 flex-shrink-0 ring-2 ring-card shadow-sm transition-transform hover:scale-125"
+              style="background:{color}"
+              onclick={onColoredDotClick}
+            ></Tooltip.Trigger>
+            <TooltipContent>
+              <p>Highlight entity</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {/if}
 
         <!-- Entity ID + annotation summary pills -->
-        <button
-          type="button"
-          class="min-w-0 text-left flex flex-col gap-1"
-          onclick={onColoredDotClick}
-          title="Highlight entity"
-        >
-          <span
-            class={cn(
-              "block truncate text-[13px] font-semibold leading-tight transition-colors font-mono",
-              {
-                "text-foreground": highlightState !== "none",
-                "text-muted-foreground":
-                  highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
-              },
-            )}
-            title={entity.id}
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            type="button"
+            class="min-w-0 text-left flex flex-col gap-1"
+            onclick={onColoredDotClick}
           >
-            {entity.id}
-          </span>
+            <span
+              class={cn(
+                "block truncate text-[13px] font-semibold leading-tight transition-colors font-mono",
+                {
+                  "text-foreground": highlightState !== "none",
+                  "text-muted-foreground":
+                    highlightState === "none" && selectedTool.value?.type === ToolType.Fusion,
+                },
+              )}
+              title={entity.id}
+            >
+              {entity.id}
+            </span>
 
-          <!-- Annotation type summary pills -->
-          {#if Object.keys(annotationTypeSummary).length > 0}
-            <div class="flex flex-wrap gap-1">
-              {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
-                {@const typedSchema = schema as BaseSchema}
-                {@const meta = ANNOTATION_TYPE_META[schema]}
-                {#if meta}
-                  <span
-                    class={cn(
-                      "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
-                      meta.badgeClass,
-                    )}
-                  >
-                    {#if typedSchema === BaseSchema.BBox}
-                      <Square class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Mask}
-                      <Ghost weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Keypoints}
-                      <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.TextSpan}
-                      <TextT weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.MultiPath}
-                      <LineSegments weight="regular" class="h-2.5 w-2.5" />
-                    {:else if typedSchema === BaseSchema.Tracklet}
-                      <GitCommit weight="regular" class="h-2.5 w-2.5" />
-                    {/if}
-                    {count}
-                  </span>
-                {/if}
-              {/each}
-            </div>
-          {/if}
-        </button>
+            <!-- Annotation type summary pills -->
+            {#if Object.keys(annotationTypeSummary).length > 0}
+              <div class="flex flex-wrap gap-1">
+                {#each Object.entries(annotationTypeSummary) as [schema, count] (schema)}
+                  {@const typedSchema = schema as BaseSchema}
+                  {@const meta = ANNOTATION_TYPE_META[schema]}
+                  {#if meta}
+                    <span
+                      class={cn(
+                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium leading-none",
+                        meta.badgeClass,
+                      )}
+                    >
+                      {#if typedSchema === BaseSchema.BBox}
+                        <Square class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Mask}
+                        <Ghost weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Keypoints}
+                        <img src={keypointsIcon} alt="" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.TextSpan}
+                        <TextT weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.MultiPath}
+                        <LineSegments weight="regular" class="h-2.5 w-2.5" />
+                      {:else if typedSchema === BaseSchema.Tracklet}
+                        <GitCommit weight="regular" class="h-2.5 w-2.5" />
+                      {/if}
+                      {count}
+                    </span>
+                  {/if}
+                {/each}
+              </div>
+            {/if}
+          </Tooltip.Trigger>
+          <TooltipContent>
+            <p>Highlight entity</p>
+          </TooltipContent>
+        </Tooltip.Root>
       </div>
 
       <!-- Right: Action buttons -->

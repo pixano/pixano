@@ -8,8 +8,8 @@ Pixano is an open-source data engine for multi-modal AI development. It provides
 
 Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm + Turbo workspace holding two frontend applications, both bundled into the wheel by `hatch_build.py`:
 
-- `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. This is where current frontend work happens; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
-- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend"), being migrated away from. Do not add features here, with one exception: the new UI has no video medium yet, so video-workspace features (tracking, VOS) still land in the legacy app until it does.
+- `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. It is being split into its own codebase (decided 2026-10-16), so it no longer drives frontend work in this repository; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
+- `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend") and the UI the server serves. Bug fixes **and new features** land here, for every workspace; nothing is held back waiting for the new UI.
 
 There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The documentation website is built with Astro and lives in `docs-astro/`.
 
@@ -118,19 +118,20 @@ PIXANO_TEST_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano_api_
   uv run pytest tests/
 ```
 
-Changing `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means bumping
-`SCHEMA_VERSION` in the same commit. There is no migration engine on purpose: until the
-database holds something irreplaceable, wiping and recreating is the migration strategy, and
-the version marker is what turns a stale schema into a clear refusal at startup instead of a
-failure far from its cause. See [docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
+Any change to the DDL of `packages/pixano-worker/src/pixano_worker/sql/schema.sql` means
+bumping `SCHEMA_VERSION` in the same commit; a change to its comments alone does not. There is
+no migration engine on purpose: until the database holds something irreplaceable, wiping and
+recreating is the migration strategy, and the version marker is what turns a stale schema into
+a clear refusal at startup instead of a failure far from its cause. See
+[docs/specs/backend-processing.md](./docs/specs/backend-processing.md).
 
 For frontend development, start the dev server for the app you are working on:
 
 ```sh
 cd ui
 pnpm install
-pnpm run dev:web      # the new workspace UI (ui/apps/web) — the usual target
-pnpm run dev:pixano   # the legacy app (ui/apps/pixano)
+pnpm run dev:pixano   # the legacy app (ui/apps/pixano) — the usual target
+pnpm run dev:web      # the new workspace UI (ui/apps/web)
 ```
 
 The server (`pixano server run`) serves the legacy app. The new workspace UI is reachable through it

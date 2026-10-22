@@ -11,6 +11,20 @@ License: CECILL-C
   import { Circle, Group, Image as KonvaImage, Layer, Rect, Stage } from "svelte-konva";
 
   import BBox2D from "./BBox2D.svelte";
+  import BoxActionChip from "./BoxActionChip.svelte";
+  import {
+    boxStableKey,
+    chipAnchorPoint,
+    computeBoxHoverCursor,
+    findBoxByStableKey,
+    isEditToggleKey,
+    isFinishEditKey,
+    isInOverlay,
+    isInteractiveBox,
+    pickBoxAtPoint,
+    resolveKeyboardEditTarget,
+    viewNameOfNode,
+  } from "./boxInteraction";
   import BrushCursor from "./BrushCursor.svelte";
   import {
     computeCursorFlushAction,
@@ -23,11 +37,12 @@ License: CECILL-C
   } from "./canvasEventHandlers";
   import { zoomViewTransform } from "./canvasGeometry";
   import { resolveCanvasViewRef } from "./canvasViewRefs";
+  import { createChipHoverIntent } from "./chipHoverIntent";
   import CreateMultiPath from "./CreateMultiPath.svelte";
   import CreateRectangle from "./CreateRectangle.svelte";
   import Crosshair from "./Crosshair.svelte";
   import { CanvasFilterPipeline } from "./filterPipeline";
-  import { INTERACTION_COOLDOWN_MS } from "./konvaConstants";
+  import { INTERACTION_COOLDOWN_MS, PAN_DRAG_DISTANCE_PX } from "./konvaConstants";
   import Mask from "./Mask.svelte";
   import MultiPathShape from "./MultiPathShape.svelte";
   import {
@@ -41,6 +56,7 @@ License: CECILL-C
   import ShowKeypoints from "./ShowKeypoint.svelte";
   import SmartPromptCursor from "./SmartPromptCursor.svelte";
   import { ViewRefManager } from "./viewRefs";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import { createIdleSmartSegmentationUiState } from "$lib/segmentation/smartInferenceStatus";
   import {
     currentSegmentationModels,
@@ -70,6 +86,7 @@ License: CECILL-C
     rectangleTool,
     toggleBrushMode,
   } from "$lib/tools/canvasToolPolicy";
+  import type { BoxAction } from "$lib/types/boxActions";
   import type {
     BBox,
     Mask as DatasetMask,
@@ -133,7 +150,7 @@ License: CECILL-C
     selectedTool: SelectionTool;
     newShape: Shape;
     imagesPerView: LoadedImagesPerView;
-    colorScale: (value: string) => string;
+    colorOf: AnnotationColorFn;
     enableRenderCache?: boolean;
     imageSmoothing?: boolean;
     isPlaybackActive?: boolean;
@@ -152,6 +169,15 @@ License: CECILL-C
     filters?: ImageFilters;
     canvasSize?: number;
     confirmKeys?: string[];
+    // Box edit mode from the canvas (click, hover, E and Enter). Off by default: the
+    // workspace turns it on when edit mode is available (no session in progress).
+    canEditBoxes?: boolean;
+    /** Put a displayed box in edit mode; false when it cannot, so the click only selects. */
+    onEditBox?: (box: BBox) => boolean;
+    /** Leave edit mode, keeping the changes; returns whether something was being edited. */
+    onStopEditingBox?: () => boolean;
+    /** Contextual actions of a box, listed in its chip's "…" menu. */
+    getBoxActions?: (box: BBox) => BoxAction[];
   }
 
   let {
@@ -163,7 +189,7 @@ License: CECILL-C
     selectedTool,
     newShape,
     imagesPerView,
-    colorScale,
+    colorOf,
     enableRenderCache = true,
     imageSmoothing = true,
     isPlaybackActive = false,
@@ -181,6 +207,10 @@ License: CECILL-C
     filters = DEFAULT_FILTERS,
     canvasSize = 0,
     confirmKeys = [],
+    canEditBoxes = false,
+    onEditBox,
+    onStopEditingBox,
+    getBoxActions,
   }: Props = $props();
 
   let isReady = $state(false);
@@ -216,6 +246,10 @@ License: CECILL-C
   let cursor = $state("default");
   let cursorFrameRequested = false;
   let queuedCursorPosition: Konva.Vector2d | null = null;
+  let queuedHoverTarget: Konva.Node | null = null;
+  // Pointer over a box, in that view's image coordinates (see updateHoverPointer).
+  let hoverPointer = $state.raw<{ view: string; x: number; y: number } | null>(null);
+  let lastPointerView: string | undefined = undefined;
 
   // Centralized view-group and image ref management
   const viewRefs = new ViewRefManager(() => stage);
@@ -887,10 +921,24 @@ License: CECILL-C
     crosshairPosition = { x: mousePos.x, y: mousePos.y };
   }
 
+  /**
+   * Remember where the pointer is over a box, in that view's image coordinates. Only box
+   * hit areas and the edited box count, so the image, multipath areas and the Transformer's
+   * handles clear the hover; the box itself is picked from geometry (hoveredBox).
+   */
+  function updateHoverPointer(target: Konva.Node | null) {
+    const name = target?.name();
+    const view = name === "box-hit" || name === "box-edit" ? viewNameOfNode(target) : undefined;
+    const point = view ? getViewLayer(view)?.getRelativePointerPosition() : null;
+    hoverPointer = view && point ? { view, x: point.x, y: point.y } : null;
+    if (view) lastPointerView = view;
+  }
+
   function flushCursorOverlayState() {
     cursorFrameRequested = false;
     const position = queuedCursorPosition;
     if (!position) return;
+    updateHoverPointer(queuedHoverTarget);
 
     const flush = computeCursorFlushAction(selectedTool);
     if (flush.showCrosshair) {
@@ -951,11 +999,12 @@ License: CECILL-C
 
   // ********** MOUSE EVENTS ********** //
 
-  function handleMouseMoveStage() {
+  function handleMouseMoveStage(event?: Konva.KonvaEventObject<MouseEvent>) {
     if (!stage) return;
     const position = stage.getRelativePointerPosition();
     if (!position) return;
     queuedCursorPosition = position;
+    queuedHoverTarget = event?.target ?? null;
     if (!cursorFrameRequested) {
       cursorFrameRequested = true;
       requestAnimationFrame(flushCursorOverlayState);
@@ -963,6 +1012,8 @@ License: CECILL-C
   }
 
   function handleMouseLeaveStage() {
+    hoverPointer = null;
+    queuedHoverTarget = null;
     // Hide crosshair and brush cursor when mouse leaves stage
     crosshairPosition = null;
     brushCursorState = null;
@@ -981,6 +1032,13 @@ License: CECILL-C
       }
     }
     endViewportInteraction();
+  }
+
+  function handleClickOnImageRelease(event: MouseEvent) {
+    if (isSmartInferencePending) return;
+    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
+      clearHighlighting();
+    }
   }
 
   function handlePointerUpOnImage(viewRef: Reference) {
@@ -1015,6 +1073,23 @@ License: CECILL-C
       });
     }
     merge?.(bbox);
+  }
+
+  /**
+   * A left click on a box (its hit area, or the edited box itself): act on the smallest
+   * box under the pointer, so a box nested in a larger one stays reachable. Clicks, unlike
+   * presses, do not fire after a drag, so dragging from a box pans the view.
+   */
+  function handleBoxHitClick(
+    event: Konva.KonvaEventObject<MouseEvent>,
+    viewName: string,
+    clicked: BBox,
+  ) {
+    if (event.evt.button !== 0 || isSmartInferencePending) return;
+    const pointer = getViewLayer(viewName)?.getRelativePointerPosition();
+    const box = (pointer && pickBoxAtPoint(bboxesByView[viewName] ?? [], pointer)) || clicked;
+    if (boxEditingEnabled && onEditBox?.(box)) return;
+    handleSelectBBox(box);
   }
 
   function computeMultiPathBounds(
@@ -1060,11 +1135,8 @@ License: CECILL-C
     const viewLayer = getViewLayer(viewRef.name);
     if (!viewLayer) return;
 
-    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
-      clearHighlighting();
-      return;
-    }
-
+    // With the Pan tool a press only starts a pan: deselecting waits for the click
+    // (handleClickOnImageRelease), which Konva does not fire after a drag.
     if (selectedTool?.type === ToolType.Pan && event.button !== 1) {
       return;
     }
@@ -1398,6 +1470,11 @@ License: CECILL-C
       return;
     }
 
+    if (event.key === "Escape" && chipMenuOpen) {
+      setChipMenuOpen(false);
+      return;
+    }
+
     if (event.key === "Escape") {
       const interactionShape = localDraftShape ?? newShape;
       const shouldKeepPolygonTool =
@@ -1430,6 +1507,45 @@ License: CECILL-C
       localDraftShape = null;
       onNewShapeChange?.({ status: "none", shouldReset: true });
       onSelectedToolChange?.(panTool);
+      return;
+    }
+
+    // E toggles edit mode on the pointed box, else on the focused entity's box. Edit mode
+    // needs the Pan tool, so the Brush tool keeps its own E (brush size).
+    if (boxEditingEnabled && isEditToggleKey(event)) {
+      if (isBoxTransforming) return;
+      const target = resolveKeyboardEditTarget(bboxes, {
+        pointedKey: pointerOnChip ? chipTargetKey : hoveredKey,
+        pointerView: hoverPointer?.view ?? lastPointerView,
+        viewOrder: Object.keys(imagesPerView),
+      });
+      if (!target) return;
+      event.preventDefault();
+      if (target.ui.displayControl.editing) {
+        onStopEditingBox?.();
+      } else if (!onEditBox?.(target)) {
+        handleSelectBBox(target);
+      }
+      return;
+    }
+
+    // Enter finishes edit mode and keeps the changes, like clicking the pencil again.
+    // Dialogs, menus and lists keep their own Enter.
+    if (
+      isFinishEditKey(event) &&
+      canEditBoxes &&
+      selectedTool?.type === ToolType.Pan &&
+      !isInOverlay(event.target as Element | null)
+    ) {
+      // The pencil that started editing may still have the focus: its default action would
+      // press it again and turn edit mode back on, so it is cancelled whenever Enter acts,
+      // including while the key is held. A drag in progress keeps the box editable.
+      if (event.repeat || isBoxTransforming) {
+        event.preventDefault();
+        return;
+      }
+      setChipMenuOpen(false);
+      if (onStopEditingBox?.()) event.preventDefault();
       return;
     }
 
@@ -1557,6 +1673,136 @@ License: CECILL-C
 
   // Whether store-backed annotations should be hidden right now.
   let shouldHideShapes = $derived(shouldHideAnnotationsForToolMode(isDrawingTool, isPeeking));
+
+  // Canvas box edit mode (click, hover, E): with the Pan tool, outside playback, while no
+  // AI request or shape save is pending and shapes are shown.
+  let boxEditingEnabled = $derived(
+    canEditBoxes &&
+      onEditBox !== undefined &&
+      selectedTool?.type === ToolType.Pan &&
+      isReady &&
+      !isPlaybackActive &&
+      !isSmartInferencePending &&
+      newShape.status !== "saving" &&
+      !shouldHideShapes,
+  );
+
+  let hoveredBox = $derived(
+    boxEditingEnabled && hoverPointer
+      ? pickBoxAtPoint(bboxesByView[hoverPointer.view] ?? [], hoverPointer)
+      : undefined,
+  );
+
+  let hoverCursor = $derived(boxEditingEnabled ? computeBoxHoverCursor(hoveredBox) : null);
+
+  // ********** BOX ACTION CHIP ********** //
+  // The chip follows the hovered box (after the hover-intent delays), else stays on the
+  // edited box; while its menu is open it stays on the box it was opened for. Boxes are
+  // keyed by track, so the chip stays put while frames go by.
+
+  let hoveredKey = $derived(hoveredBox ? boxStableKey(hoveredBox) : null);
+  let chipHoverKey = $state<string | null>(null);
+  const chipHoverIntent = createChipHoverIntent((key) => (chipHoverKey = key));
+  let chipMenuOpen = $state(false);
+  let chipFrozenKey = $state<string | null>(null);
+  let pointerOnChip = $state(false);
+  let isBoxTransforming = $state(false);
+
+  let editedBox = $derived.by(() => {
+    if (!boxEditingEnabled) return undefined;
+    const edited = bboxes.filter((box) => box.ui.displayControl.editing && isInteractiveBox(box));
+    return edited.find((box) => box.data.view_name === hoverPointer?.view) ?? edited[0];
+  });
+  let chipTargetKey = $derived(
+    chipMenuOpen ? chipFrozenKey : (chipHoverKey ?? (editedBox ? boxStableKey(editedBox) : null)),
+  );
+  let chipBox = $derived(boxEditingEnabled ? findBoxByStableKey(bboxes, chipTargetKey) : undefined);
+  let chipVisible = $derived(chipBox !== undefined && !isViewportInteracting && !isBoxTransforming);
+  let chipActions = $derived(chipBox && getBoxActions ? getBoxActions(chipBox) : []);
+
+  $effect(() => {
+    const key = hoveredKey;
+    untrack(() => chipHoverIntent.pointerOn(key));
+  });
+  $effect(() => {
+    if (boxEditingEnabled) return;
+    untrack(() => {
+      setChipMenuOpen(false);
+      chipHoverIntent.reset();
+    });
+  });
+  $effect(() => {
+    if (chipMenuOpen && !chipVisible) untrack(() => setChipMenuOpen(false));
+  });
+
+  function setChipMenuOpen(open: boolean) {
+    if (open === chipMenuOpen) return;
+    // Freeze on the current target before flipping the flag: chipTargetKey reads it.
+    chipFrozenKey = open ? chipTargetKey : null;
+    chipMenuOpen = open;
+    if (open) chipHoverIntent.freeze();
+    else chipHoverIntent.unfreeze();
+  }
+
+  function toggleChipEdit() {
+    const box = chipBox;
+    if (!box) return;
+    if (box.ui.displayControl.editing) {
+      onStopEditingBox?.();
+    } else if (!onEditBox?.(box)) {
+      handleSelectBBox(box);
+    }
+  }
+
+  // The chip's anchor is measured from the box's Konva node on every animation frame while
+  // the chip shows (updatePositionStrategy "always"), so it follows zoom, pan and drags,
+  // which Konva applies outside Svelte's reactivity.
+  let anchoredBox: BBox | undefined = undefined;
+  $effect(() => {
+    anchoredBox = chipBox;
+  });
+  let anchorNode: Konva.Node | null = null;
+  let anchorNodeId: string | null = null;
+  function findAnchorNode(boxId: string): Konva.Node | null {
+    if (anchorNodeId === boxId && anchorNode?.getStage()) return anchorNode;
+    anchorNodeId = boxId;
+    // Ids of interpolated boxes contain "::", which a selector string would misread.
+    anchorNode = stage?.findOne((node: Konva.Node) => node.id() === `rect${boxId}`) ?? null;
+    return anchorNode;
+  }
+  const farAwayRect = () => new DOMRect(-100000, -100000, 0, 0);
+  const chipAnchor = {
+    getBoundingClientRect(): DOMRect {
+      const box = anchoredBox;
+      const container = stage?.container();
+      if (!box || !container) return farAwayRect();
+      const host = container.getBoundingClientRect();
+      const node = findAnchorNode(box.id);
+      let rect: { x: number; y: number; width: number; height: number };
+      if (node) {
+        const r = node.getClientRect({ skipStroke: true });
+        rect = { x: host.left + r.x, y: host.top + r.y, width: r.width, height: r.height };
+      } else {
+        const group = getViewLayer(box.data.view_name);
+        if (!group) return farAwayRect();
+        const scale = group.scaleX();
+        const [x, y, width, height] = box.data.coords;
+        rect = {
+          x: host.left + group.x() + x * scale,
+          y: host.top + group.y() + y * scale,
+          width: width * scale,
+          height: height * scale,
+        };
+      }
+      const point = chipAnchorPoint(rect, {
+        x: host.left,
+        y: host.top,
+        width: host.width,
+        height: host.height,
+      });
+      return point ? new DOMRect(point.x, point.y, 0, 0) : farAwayRect();
+    },
+  };
 
   // Unified tool lifecycle: fallback unsupported tools, reset on shape clear, cleanup on tool switch.
   $effect(() => {
@@ -1732,7 +1978,7 @@ License: CECILL-C
         const viewLayer = getViewLayer(name);
         if (viewLayer) {
           viewLayer.draggable(isPan);
-          viewLayer.dragDistance(0);
+          viewLayer.dragDistance(PAN_DRAG_DISTANCE_PX);
         }
       }
     });
@@ -1757,7 +2003,7 @@ License: CECILL-C
     height={stageHeight}
     name="konva"
     id="stage"
-    divWrapperProps={{ style: `cursor: ${cursor}` }}
+    divWrapperProps={{ style: `cursor: ${hoverCursor ?? cursor}` }}
     onmousemove={handleMouseMoveStage}
     onmouseleave={handleMouseLeaveStage}
   >
@@ -1793,7 +2039,7 @@ License: CECILL-C
             {#if !bbox.ui.displayControl.editing}
               <BBox2D
                 {bbox}
-                {colorScale}
+                {colorOf}
                 zoomFactor={zoomFactor[view_name] ?? 1}
                 listening={false}
                 imageWidth={currentImage?.width ?? 0}
@@ -1815,7 +2061,7 @@ License: CECILL-C
               {currentImage}
               masks={visibleMasks}
               previewMask={getPreviewMaskForView(view_name)}
-              {colorScale}
+              {colorOf}
               {selectedTool}
               zoomFactor={zoomFactor[view_name] ?? 1}
               {selectedItemId}
@@ -1831,7 +2077,7 @@ License: CECILL-C
             {#if !multiPath.ui.displayControl.hidden}
               <MultiPathShape
                 {multiPath}
-                {colorScale}
+                {colorOf}
                 imageWidth={currentImage?.width ?? 0}
                 imageHeight={currentImage?.height ?? 0}
                 forceNeutralColor={isPeeking}
@@ -1845,7 +2091,7 @@ License: CECILL-C
           {#if visibleKeypoints.length > 0}
             <Group listening={false}>
               <ShowKeypoints
-                {colorScale}
+                {colorOf}
                 {viewRef}
                 keypoints={visibleKeypoints}
                 zoomFactor={zoomFactor[view_name] ?? 1}
@@ -1873,7 +2119,7 @@ License: CECILL-C
         <Group
           id={`active-${view_name}`}
           bind:this={viewRefs.activeViewRefs[view_name]}
-          dragDistance={0}
+          dragDistance={PAN_DRAG_DISTANCE_PX}
           ondragstart={beginViewportInteraction}
           ondragmove={() => {
             viewRefs.syncLinkedViewGroupsFromActive(view_name);
@@ -1896,6 +2142,8 @@ License: CECILL-C
             onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) =>
               handleClickOnImage(event.evt, viewRef)}
             onpointerup={() => handlePointerUpOnImage(viewRef)}
+            onclick={(event: Konva.KonvaEventObject<MouseEvent>) =>
+              handleClickOnImageRelease(event.evt)}
             ondblclick={() => handleDoubleClickOnImage(view_name)}
           />
 
@@ -1991,61 +2239,78 @@ License: CECILL-C
                 (bbox) => bbox.ui.displayControl.editing,
               )
             : (bboxesByView[view_name] ?? [])}
-          {#if !shouldHideShapes || activeBboxes.length > 0}
+          <!-- svelte-konva adds a node to its parent once, at mount, so these always-mounted
+               groups fix the stacking: hit areas, then multipath hit areas, then the edited
+               box, which stays on top and can be dragged wherever it overlaps others. -->
+          <Group name="box-hits">
+            {#if selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan}
+              {#each activeBboxes as bbox (bbox.id)}
+                {#if !bbox.ui.displayControl.editing && !bbox.ui.displayControl.hidden}
+                  <Rect
+                    name="box-hit"
+                    x={bbox.data.coords[0]}
+                    y={bbox.data.coords[1]}
+                    width={bbox.data.coords[2]}
+                    height={bbox.data.coords[3]}
+                    fill="rgba(0,0,0,0.001)"
+                    strokeEnabled={false}
+                    onclick={(event: Konva.KonvaEventObject<MouseEvent>) =>
+                      handleBoxHitClick(event, view_name, bbox)}
+                  />
+                {/if}
+              {/each}
+            {/if}
+          </Group>
+
+          <Group name="multipath-hits">
+            {#if !shouldHideShapes}
+              {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
+                {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
+                  {@const bounds = computeMultiPathBounds(
+                    multiPath,
+                    currentImage?.width ?? 0,
+                    currentImage?.height ?? 0,
+                  )}
+                  {#if bounds}
+                    <Rect
+                      name="multipath-hit"
+                      x={bounds.x}
+                      y={bounds.y}
+                      width={bounds.width}
+                      height={bounds.height}
+                      fill="rgba(0,0,0,0.001)"
+                      strokeEnabled={false}
+                      onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
+                        event.cancelBubble = true;
+                        handleSelectMultiPath(multiPath);
+                      }}
+                    />
+                  {/if}
+                {/if}
+              {/each}
+            {/if}
+          </Group>
+
+          <Group name="box-editing">
             {#each activeBboxes as bbox (bbox.id)}
-              {#if !bbox.ui.displayControl.editing && (selectedTool?.type === ToolType.Rectangle || selectedTool?.type === ToolType.Pan)}
-                <Rect
-                  x={bbox.data.coords[0]}
-                  y={bbox.data.coords[1]}
-                  width={bbox.data.coords[2]}
-                  height={bbox.data.coords[3]}
-                  fill="rgba(0,0,0,0.001)"
-                  strokeEnabled={false}
-                  onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
-                    event.cancelBubble = true;
-                    handleSelectBBox(bbox);
-                  }}
-                />
-              {:else if bbox.ui.displayControl.editing}
+              {#if bbox.ui.displayControl.editing}
                 <BBox2D
                   {bbox}
-                  {colorScale}
+                  {colorOf}
                   zoomFactor={zoomFactor[view_name] ?? 1}
                   listening={true}
                   imageWidth={currentImage?.width ?? 0}
                   imageHeight={currentImage?.height ?? 0}
                   {merge}
                   {onNewShapeChange}
+                  onSelect={(event: Konva.KonvaEventObject<MouseEvent>) =>
+                    handleBoxHitClick(event, view_name, bbox)}
+                  interiorDraggable={selectedTool?.type === ToolType.Pan}
+                  onInteractionChange={(active: boolean) => (isBoxTransforming = active)}
                 />
               {/if}
             {/each}
-          {/if}
-
-          {#if !shouldHideShapes}
-            {#each multiPathsByView[view_name] ?? [] as multiPath (multiPath.id)}
-              {#if !multiPath.ui.displayControl.hidden && !multiPath.ui.displayControl.editing}
-                {@const bounds = computeMultiPathBounds(
-                  multiPath,
-                  currentImage?.width ?? 0,
-                  currentImage?.height ?? 0,
-                )}
-                {#if bounds}
-                  <Rect
-                    x={bounds.x}
-                    y={bounds.y}
-                    width={bounds.width}
-                    height={bounds.height}
-                    fill="rgba(0,0,0,0.001)"
-                    strokeEnabled={false}
-                    onpointerdown={(event: Konva.KonvaEventObject<PointerEvent>) => {
-                      event.cancelBubble = true;
-                      handleSelectMultiPath(multiPath);
-                    }}
-                  />
-                {/if}
-              {/if}
-            {/each}
-          {/if}
+          </Group>
 
           {#if draftPolygon && "viewRef" in draftPolygon && draftPolygon.viewRef?.name === view_name}
             <CreateMultiPath
@@ -2061,7 +2326,7 @@ License: CECILL-C
 
           {#if !shouldHideShapes}
             <ShowKeypoints
-              {colorScale}
+              {colorOf}
               {viewRef}
               keypoints={(keypointsByView[view_name] ?? []).filter(
                 (kpt) => kpt.ui?.displayControl.editing,
@@ -2098,6 +2363,28 @@ License: CECILL-C
       {/if}
     </Layer>
   </Stage>
+
+  {#if onEditBox}
+    <BoxActionChip
+      open={chipVisible}
+      anchor={chipAnchor}
+      boundary={stageContainer}
+      editing={chipBox?.ui.displayControl.editing ?? false}
+      editTooltip={chipBox?.ui.displayControl.editing ? "Finish editing (Enter)" : "Edit (E)"}
+      actions={chipActions}
+      menuOpen={chipMenuOpen}
+      onToggleEdit={toggleChipEdit}
+      onMenuOpenChange={setChipMenuOpen}
+      onPointerEnter={() => {
+        pointerOnChip = true;
+        chipHoverIntent.enterChip();
+      }}
+      onPointerLeave={() => {
+        pointerOnChip = false;
+        chipHoverIntent.leaveChip();
+      }}
+    />
+  {/if}
 
   {#if isSmartInferencePending}
     <div class="absolute inset-0 z-20 bg-transparent" aria-hidden="true"></div>

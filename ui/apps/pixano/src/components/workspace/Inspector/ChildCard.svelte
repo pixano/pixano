@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Button } from "bits-ui";
+  import { Button, Tooltip } from "bits-ui";
   import {
     CaretRight,
     Eye,
@@ -32,6 +32,7 @@ License: CECILL-C
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
+    editedTrackletId,
     interpolate,
     mediaViews,
     selectedTool,
@@ -48,10 +49,12 @@ License: CECILL-C
     Keypoints,
     Mask,
     TextSpan,
+    TooltipContent,
     Tracklet,
     type DisplayControl,
     type KeypointAnnotation,
   } from "$lib/ui";
+  import { editModeBlockedReason, toggleEditTrack } from "$lib/utils/editMode";
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
   import { cn } from "$lib/utils/styleUtils";
@@ -83,6 +86,7 @@ License: CECILL-C
       displayControlProperty: keyof DisplayControl,
       new_value: boolean,
       child: Annotation | null,
+      other_anns_value?: boolean | null,
     ) => void;
     onEditIconClick: (child: Annotation | null) => void;
   }
@@ -133,8 +137,7 @@ License: CECILL-C
     const raw = child.data.source_metadata;
     if (typeof raw !== "string" || raw === "" || raw === "{}") return null;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const parsed = JSON.parse(raw);
+      const parsed: unknown = JSON.parse(raw);
       if (typeof parsed === "object" && parsed !== null && Object.keys(parsed).length > 0) {
         return parsed as Record<string, unknown>;
       }
@@ -215,6 +218,7 @@ License: CECILL-C
 
   // ─── Tracklet-specific derived data ───────────────────────────────────────
   const trackletData = $derived.by(() => {
+    void annotations.value; // the tracklet's range changes in place (split, glue, dot drag)
     if (!child.is_type(BaseSchema.Tracklet)) return null;
     const data = (child as Tracklet).data;
     return {
@@ -249,6 +253,16 @@ License: CECILL-C
     });
     return result;
   });
+
+  // The per-frame rows edit the whole track: edit mode then follows it from frame to
+  // frame, keyframe or interpolated (lib/utils/editMode.ts).
+  const isTrackEdited = $derived(editedTrackletId.value === child.id);
+
+  // During a tracking session every box edit becomes a keyframe of the track being
+  // drawn, whichever box was moved: existing shapes stay read-only until it ends.
+  const editBlockedReason = $derived(editModeBlockedReason());
+  const shapeEditBlocked = $derived(editBlockedReason !== null);
+  const editTooltip = (label: string) => editBlockedReason ?? label;
 
   const handleRelink = () => {
     relink(child, entity, selectedEntityId, mustMerge, overlapTargetId, manifest);
@@ -327,10 +341,25 @@ License: CECILL-C
         class="flex items-center gap-0.5 opacity-0 group-hover/child:opacity-100 transition-opacity duration-200"
       >
         {#if selectedTool.value?.type !== ToolType.Fusion}
-          {#if !(child.is_type(BaseSchema.TextSpan) || child.is_type(BaseSchema.Tracklet))}
+          {#if child.is_type(BaseSchema.Tracklet)}
             <IconButton
-              tooltipContent="Edit annotation"
+              tooltipContent={editTooltip(
+                isTrackEdited ? "Finish editing the track (Enter)" : "Edit the track",
+              )}
+              selected={isTrackEdited}
+              disabled={shapeEditBlocked && !isTrackEdited}
+              onclick={() => toggleEditTrack(child.id, { reveal: false })}
+              class="h-6 w-6"
+            >
+              <Pencil class="h-3 w-3" />
+            </IconButton>
+          {:else if !child.is_type(BaseSchema.TextSpan)}
+            <IconButton
+              tooltipContent={editTooltip(
+                childEditing ? "Finish editing (Enter)" : "Edit annotation",
+              )}
               selected={childEditing}
+              disabled={shapeEditBlocked}
               onclick={() => onEditIconClick(child)}
               class="h-6 w-6"
             >
@@ -359,19 +388,23 @@ License: CECILL-C
       </div>
 
       <!-- Detail toggle chevron -->
-      <button
-        type="button"
-        class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
-        onclick={() => {
-          showDetails = !showDetails;
-        }}
-        title={showDetails ? "Hide details" : "Show details"}
-      >
-        <CaretRight
-          weight="regular"
-          class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
-        />
-      </button>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          type="button"
+          class="h-6 w-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
+          onclick={() => {
+            showDetails = !showDetails;
+          }}
+        >
+          <CaretRight
+            weight="regular"
+            class={cn("h-3 w-3 transition-transform duration-200", { "rotate-90": showDetails })}
+          />
+        </Tooltip.Trigger>
+        <TooltipContent>
+          <p>{showDetails ? "Hide details" : "Show details"}</p>
+        </TooltipContent>
+      </Tooltip.Root>
     </div>
   </div>
 
@@ -675,34 +708,50 @@ License: CECILL-C
           <span class="block truncate text-[11px] text-foreground/70" title={trackChild.id}>
             {#if interpolated}
               <i class="text-muted-foreground/50">interpolated</i>
-              ({trackChild.id})
             {:else}
               {trackChild.id}
             {/if}
           </span>
         </div>
-        {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}
+        {#if selectedTool.value?.type !== ToolType.Fusion && [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
           <div
             class="flex items-center gap-0.5 opacity-0 group-hover/trackchild:opacity-100 transition-opacity duration-200"
           >
-            {#if [BaseSchema.BBox, BaseSchema.Mask, BaseSchema.Keypoints].includes(trackChild.table_info.base_schema)}
+            {#if interpolated}
               <IconButton
-                tooltipContent="Edit annotation"
-                selected={trackChild.ui.displayControl.editing}
-                onclick={() => onEditIconClick(trackChild)}
+                tooltipContent={editTooltip(
+                  isTrackEdited ? "Finish editing (Enter)" : "Edit interpolated annotation",
+                )}
+                selected={isTrackEdited}
+                disabled={shapeEditBlocked}
+                onclick={() => toggleEditTrack(child.id, { reveal: false })}
+                class="h-6 w-6"
+              >
+                <Pencil class="h-3 w-3" />
+              </IconButton>
+            {:else}
+              <IconButton
+                tooltipContent={editTooltip(
+                  isTrackEdited ? "Finish editing (Enter)" : "Edit annotation",
+                )}
+                selected={isTrackEdited}
+                disabled={shapeEditBlocked}
+                onclick={() => toggleEditTrack(child.id, { reveal: false })}
                 class="h-6 w-6"
               >
                 <Pencil class="h-3 w-3" />
               </IconButton>
             {/if}
-            <IconButton
-              tooltipContent="Delete annotation"
-              redconfirm
-              onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
-              class="h-6 w-6 text-muted-foreground hover:text-destructive"
-            >
-              <Trash weight="regular" class="h-3 w-3" />
-            </IconButton>
+            {#if !interpolated}
+              <IconButton
+                tooltipContent="Delete annotation"
+                redconfirm
+                onclick={() => onDeleteTrackItemClick(child, trackChild.ui.frame_index, trackChild)}
+                class="h-6 w-6 text-muted-foreground hover:text-destructive"
+              >
+                <Trash weight="regular" class="h-3 w-3" />
+              </IconButton>
+            {/if}
           </div>
         {/if}
       </div>

@@ -10,6 +10,7 @@ License: CECILL-C
   import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
   import { groupTextSpansByViewId } from "../textCanvas/groupTextSpansByViewId";
   import TiptapAnnotator from "./TiptapAnnotator.svelte";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import {
     BaseSchema,
     ShapeType,
@@ -22,7 +23,7 @@ License: CECILL-C
   interface Props {
     selectedItemId: string;
     newShape: Shape;
-    colorScale: (value: string) => string;
+    colorOf: AnnotationColorFn;
     textSpans: TextSpan[];
     textViews: TextView[];
     onCreateTemporaryTextSpan?: (textSpan: TextSpan) => void;
@@ -34,7 +35,7 @@ License: CECILL-C
     selectedItemId,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     newShape: _newShape,
-    colorScale,
+    colorOf,
     textSpans,
     textViews,
     onCreateTemporaryTextSpan,
@@ -127,7 +128,7 @@ License: CECILL-C
     {#each textViews as textView (textView.id)}
       <TiptapAnnotator
         {textView}
-        {colorScale}
+        {colorOf}
         textSpans={spansByViewId[textView.id]}
         {onSelectionChange}
         onSpanClick={handleSpanClick}

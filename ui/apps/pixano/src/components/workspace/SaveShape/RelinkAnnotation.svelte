@@ -8,10 +8,16 @@ License: CECILL-C
   // Imports
   import { Command, Popover } from "bits-ui";
   import { CaretUpDown, Check, Plus, TextT } from "phosphor-svelte";
-  import { tick } from "svelte";
+  import { tick, untrack } from "svelte";
 
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
-  import { colorScale, entities, itemMetas, mediaViews } from "$lib/stores/workspaceStores.svelte";
+  import {
+    annotationColors,
+    entities,
+    itemMetas,
+    mediaViews,
+  } from "$lib/stores/workspaceStores.svelte";
+  import { nextRelinkSelection } from "$lib/timeline/timelineCameras";
   import {
     Annotation,
     BaseSchema,
@@ -32,6 +38,8 @@ License: CECILL-C
     baseSchema: BaseSchema;
     viewRef: Reference;
     track?: Annotation | null;
+    /** The object to select first, when the list offers it ("+ Add in this view"). */
+    preselectEntityId?: string | null;
   }
 
   let {
@@ -41,6 +49,7 @@ License: CECILL-C
     baseSchema,
     viewRef,
     track = null,
+    preselectEntityId = null,
   }: Props = $props();
 
   const entityAllowInfo = (
@@ -165,7 +174,7 @@ License: CECILL-C
 
   // ── Visual identity helpers (all reused from EntityCard's proven patterns) ──
 
-  const entityColor = (id: string): string => colorScale.value[1](id);
+  const entityColor = (id: string): string => annotationColors.value.colorOfEntity(id);
 
   const shortId = (id: string): string => (id.length > 6 ? id.slice(-6) : id);
 
@@ -236,10 +245,22 @@ License: CECILL-C
     return null;
   };
 
+  // The list follows the frame. It opens on the preselected object, else on "new"; the
+  // user's choice then stays while the list still offers it.
+  let selectionStarted = false;
   $effect(() => {
-    if (entitiesCombo.length > 0) {
-      selectedEntityId = entitiesCombo[0].id;
-    }
+    const choices = entitiesCombo;
+    const preselect = preselectEntityId;
+    if (choices.length === 0) return;
+    untrack(() => {
+      selectedEntityId = nextRelinkSelection(
+        choices,
+        selectedEntityId,
+        preselect,
+        !selectionStarted,
+      );
+      selectionStarted = true;
+    });
   });
 
   let open = $state(false);

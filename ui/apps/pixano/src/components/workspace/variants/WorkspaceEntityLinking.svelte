@@ -12,9 +12,9 @@ License: CECILL-C
 
   import TextAnnotator from "../textAnnotator/TextAnnotator.svelte";
   import {
+    annotationColors,
     annotations,
     brushSettings,
-    colorScale,
     embeddings,
     filters,
     imageSmoothing,
@@ -41,6 +41,8 @@ License: CECILL-C
     TextSpan,
     type LoadedImagesPerView,
   } from "$lib/ui";
+  import { imageBoxActions } from "$lib/utils/boxActions";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   // Import stores and API functions
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
@@ -172,7 +174,7 @@ License: CECILL-C
     <TextAnnotator
       textViews={textViews.value}
       selectedItemId={selectedItem.item.id}
-      colorScale={colorScale.value[1]}
+      colorOf={annotationColors.value.colorOfAnnotation}
       textSpans={textSpans.value}
       newShape={newShape.value}
       onNewShapeChange={handleTextSpanAreaShapeChange}
@@ -191,7 +193,7 @@ License: CECILL-C
       <Canvas2D
         {imagesPerView}
         selectedItemId={selectedItem.item.id}
-        colorScale={colorScale.value[1]}
+        colorOf={annotationColors.value.colorOfAnnotation}
         bboxes={itemBboxes.value}
         masks={itemMasks.value}
         multiPaths={itemMultiPaths.value}
@@ -205,6 +207,10 @@ License: CECILL-C
         onSelectedToolChange={(tool: SelectionTool) => (selectedTool.value = tool)}
         onNewShapeChange={handleCanvasShapeChange}
         onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
+        canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
+        getBoxActions={imageBoxActions}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

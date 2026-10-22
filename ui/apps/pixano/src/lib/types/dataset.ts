@@ -202,7 +202,7 @@ export interface DatasetSchema {
   };
 }
 
-// ─── DisplayControl, AnnotationThumbnail, TrackTimelineEntry ─────────────────────────────────
+// ─── DisplayControl, AnnotationThumbnail ─────────────────────────────────────────────────────
 
 export interface DisplayControl {
   hidden: boolean;
@@ -226,14 +226,6 @@ export interface AnnotationThumbnail {
   };
   coords: Array<number>;
 }
-
-export type TrackTimelineEntry = {
-  frame_index: number;
-  track_id: string;
-  is_key?: boolean;
-  is_thumbnail?: boolean;
-  hidden?: boolean;
-};
 
 // ─── Item Data Types ───────────────────────────────────────────────────────────
 

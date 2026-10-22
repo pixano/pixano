@@ -5,254 +5,192 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { PushPin, PushPinSlash } from "phosphor-svelte";
+  // One object of the timeline: a sticky header (cameras chevron, select, keyframe count or
+  // camera coverage, edit pencil) and its lane. Pointer work on the lane (ticks,
+  // scrubbing, dragging, the track menu) is delegated to the panel, which hit-tests the lane.
+  import { CaretRight, Pencil } from "phosphor-svelte";
 
-  import TrackletSegment from "./TrackletSegment.svelte";
-  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
-  import {
-    annotations,
-    colorScale,
-    current_itemBBoxes,
-    current_itemKeypoints,
-    highlightedEntity,
-    selectedTool,
-  } from "$lib/stores/workspaceStores.svelte";
-  import { ToolType } from "$lib/tools";
-  import type { TrackTimelineEntry, View } from "$lib/ui";
-  import { BaseSchema, cn, ContextMenu, Entity, IconButton, Tracklet } from "$lib/ui";
-  import { deleteEntity } from "$lib/utils/entityDeletion";
-  import { getTopEntity } from "$lib/utils/entityLookupUtils";
-  import {
-    highlightEntity,
-    highlightTrackletChildren,
-    highlightWithEditing,
-  } from "$lib/utils/highlightOperations";
-  import {
-    addKeyItemToTracklet,
-    findNeighborFrameIndices,
-    splitTracklet,
-  } from "$lib/utils/trackletOperations";
-  import { updateView } from "$lib/utils/videoOperations";
+  import TimelineMissingCamera from "./TimelineMissingCamera.svelte";
+  import TrackMarks from "./TrackMarks.svelte";
+  import { entities } from "$lib/stores/workspaceStores.svelte";
+  import { cameraRowsDomId } from "$lib/timeline/timelineCameras";
+  import { TIMELINE_HEADER_WIDTH } from "$lib/timeline/timelineGeometry";
+  import { MARKS_ENTITY, type LaneGeom } from "$lib/timeline/types";
+  import type { Entity } from "$lib/types/dataset";
+  import { cn } from "$lib/utils/styleUtils";
   import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
-
-  type MView = Record<string, View | View[]>;
 
   interface Props {
     entity: Entity;
-    views: MView;
-    onFrameClick: (imageIndex: number) => void;
-    resetTool: () => void;
-    isPinned?: boolean;
-    isPrimaryFocus?: boolean;
-    onTogglePin?: () => void;
+    /** The lane drawn: every camera merged, or the camera shown alone. */
+    lane: LaneGeom;
+    /** "12 kf", "2/3 views", or "—" for an object a camera shown alone does not see. */
+    meta: string;
+    /** The row's block height, its 4 px gap included. */
+    height: number;
+    laneWidth: number;
+    dotColor: string;
+    selected: boolean;
+    /** Opacity of the row's graphics: dimmed when hidden, out of a fusion, or not in the camera. */
+    graphicsOpacity: number;
+    marksVisible: boolean;
+    /** Expanded into camera sub-rows: only a faint line, its ticks are on the sub-rows. */
+    expanded?: boolean;
+    /** A chevron to expand the row into cameras, a spacer to keep names aligned, or nothing. */
+    leading?: "chevron" | "spacer" | null;
+    onToggleExpanded?: () => void;
+    /** The camera shown alone, when the object has no track in it. */
+    missingView?: string | null;
+    canAddInView?: boolean;
+    addInViewUnavailableReason?: string | null;
+    onAddInView?: () => void;
+    editing: boolean;
+    /** Why the pencil cannot edit on this frame, or null when it can. */
+    editUnavailableReason: string | null;
+    onSelect: () => void;
+    onTogglePencil: () => void;
   }
 
   let {
     entity,
-    views,
-    onFrameClick,
-    resetTool,
-    isPinned = false,
-    isPrimaryFocus = false,
-    onTogglePin,
+    lane,
+    meta,
+    height,
+    laneWidth,
+    dotColor,
+    selected,
+    graphicsOpacity,
+    marksVisible,
+    expanded = false,
+    leading = null,
+    onToggleExpanded,
+    missingView = null,
+    canAddInView = false,
+    addInViewUnavailableReason = null,
+    onAddInView,
+    editing,
+    editUnavailableReason,
+    onSelect,
+    onTogglePencil,
   }: Props = $props();
 
-  let objectTimeTrack: HTMLElement = $state();
-  let displayName: string = $derived.by(() => {
-    const displayFeat = getDefaultDisplayFeat(entity);
-    return displayFeat ? `${displayFeat} (${entity.id})` : entity.id;
+  // Committed changes update the entity in place, which Svelte does not see through the
+  // prop: re-read its label on every commit of the entities. The row is named by its id,
+  // as the object's inspector card is, so the two can be matched.
+  const displayFeat = $derived.by(() => {
+    void entities.value;
+    return getDefaultDisplayFeat(entity);
   });
-
-  let totalWidth = $derived(
-    lastFrameIndex.value !== undefined
-      ? (lastFrameIndex.value / (lastFrameIndex.value + 1)) * 100
-      : 100,
+  const name = $derived(entity.id);
+  const title = $derived(displayFeat ? `${displayFeat} (${entity.id})` : entity.id);
+  const pencilTitle = $derived(
+    editing ? "Finish editing (Enter)" : (editUnavailableReason ?? "Edit this object's box (E)"),
   );
-  let color = $derived(colorScale.value[1](entity.id));
-  let selectedToolType = $derived(selectedTool.value?.type ?? ToolType.Pan);
-
-  let tracklets: Tracklet[] = $derived(
-    (entity.ui.childs ?? []).filter((ann) => ann.is_type(BaseSchema.Tracklet)) as Tracklet[],
-  );
-
-  let highlightState: string = $derived.by(() => {
-    if (selectedToolType === ToolType.Pan) {
-      return highlightedEntity.value === entity.id ? "self" : "all";
-    }
-
-    void annotations.value; // track changes
-    let state = "all";
-    for (const ann of entity.ui.childs ?? []) {
-      if (ann.ui.displayControl.highlighted === "self") {
-        return "self";
-      }
-      if (ann.ui.displayControl.highlighted === "none") {
-        state = "none";
-      }
-    }
-    return state;
-  });
-
-  const moveCursorToPosition = (clientX: number) => {
-    const newPosition = objectTimeTrack.getBoundingClientRect();
-    const newRelativePosition = (clientX - newPosition.left) / newPosition.width;
-    const newFrameIndex = Math.round(newRelativePosition * (lastFrameIndex.value + 1));
-    onFrameClick(newFrameIndex);
-  };
-
-  const onContextMenu = (tracklet: Tracklet | null = null) => {
-    if (tracklet && selectedToolType !== ToolType.Fusion) {
-      highlightTrackletChildren(tracklet);
-    }
-    resetTool();
-  };
-
-  const handleTrackContextMenu = (event: MouseEvent) => {
-    event.preventDefault();
-    onContextMenu();
-  };
-
-  const onEditKeyItemClick = (frameIndex: TrackTimelineEntry["frame_index"], viewname: string) => {
-    onFrameClick(frameIndex);
-    highlightWithEditing(
-      (ann) =>
-        ann.data.view_name === viewname &&
-        ((!ann.is_type(BaseSchema.Tracklet) &&
-          getTopEntity(ann).id === entity.id &&
-          ann.ui.frame_index === frameIndex) ||
-          (ann.is_type(BaseSchema.Tracklet) && ann.data.entity_id === entity.id)),
-    );
-  };
-
-  const onAddKeyItemClick = (tracklet: Tracklet) => {
-    const added = addKeyItemToTracklet(
-      tracklet,
-      entity,
-      views,
-      current_itemBBoxes.value,
-      current_itemKeypoints.value,
-    );
-    if (added) {
-      onEditKeyItemClick(currentFrameIndex.value, tracklet.data.view_name);
-    }
-  };
-
-  const onSplitTrackletClick = (tracklet: Tracklet) => {
-    splitTracklet(tracklet, entity.id);
-  };
-
-  const findNeighborItems = (tracklet: Tracklet, frameIndex: number): [number, number] => {
-    return findNeighborFrameIndices(tracklet, frameIndex, tracklets);
-  };
-
-  const onColoredDotClick = () => {
-    const newFrameIndex = highlightEntity(entity.id, highlightState === "self");
-    if (newFrameIndex != currentFrameIndex.value) {
-      currentFrameIndex.value = newFrameIndex;
-      updateView(currentFrameIndex.value);
-    }
-  };
-
-  const laneHeight = 18;
-  const laneOutline = $derived.by(() => {
-    if (isPrimaryFocus)
-      return "border-primary/30 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.18)]";
-    if (isPinned) return "border-primary/18 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.10)]";
-    return "border-border/30";
-  });
-  const trackBackground = $derived.by(() => {
-    if (highlightState === "self") return `${color}20`;
-    if (highlightState === "none" && selectedToolType === ToolType.Fusion) return `${color}08`;
-    if (isPinned) return `${color}12`;
-    return `${color}0d`;
-  });
 </script>
 
-{#if entity}
-  <section
-    title={displayName}
-    class={cn("group relative transition-all", isPrimaryFocus ? "z-[1]" : "")}
-    style="width: 100%;"
+<div class="flex" style:height="{height}px" data-timeline-slot={entity.id}>
+  <div
+    class="sticky left-0 z-20 shrink-0 bg-card pt-1"
+    style:width="{TIMELINE_HEADER_WIDTH}px"
+    data-timeline-header
   >
     <div
-      id={`video-object-${entity.id}`}
       class={cn(
-        "relative flex gap-5 overflow-hidden rounded-md border bg-background/70",
-        laneOutline,
+        "group flex h-9 items-center gap-1.5 rounded-r-lg pr-1.5",
+        leading ? "pl-1.5" : "pl-3",
+        selected && "bg-timeline-row-selected",
       )}
-      style={`height: ${laneHeight}px; background: ${trackBackground}`}
-      bind:this={objectTimeTrack}
-      role="complementary"
     >
-      <div class="pointer-events-none sticky left-1 z-30 flex h-full items-center">
-        <div
+      {#if leading === "chevron"}
+        <button
+          type="button"
+          class="grid size-6 shrink-0 place-items-center rounded-md text-foreground/65 transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          title={expanded ? "Hide the cameras" : "Show the cameras"}
+          aria-label={`Cameras of ${name}`}
+          aria-expanded={expanded}
+          aria-controls={expanded ? cameraRowsDomId(entity.id) : undefined}
+          onclick={onToggleExpanded}
+        >
+          <CaretRight
+            weight="bold"
+            class={cn(
+              "size-3.5 transition-transform motion-reduce:transition-none",
+              expanded && "rotate-90",
+            )}
+          />
+        </button>
+      {:else if leading === "spacer"}
+        <span class="size-6 shrink-0" aria-hidden="true"></span>
+      {/if}
+      <button
+        type="button"
+        class="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        {title}
+        aria-pressed={selected}
+        onclick={onSelect}
+      >
+        <span
+          class="size-2.5 shrink-0 rounded-full"
+          style:background={dotColor}
+          style:opacity={graphicsOpacity}
+        ></span>
+        <span
           class={cn(
-            "pointer-events-auto flex items-center gap-0.5 rounded-sm border bg-background/72 px-0.5 py-0.5 shadow-sm backdrop-blur-md transition-colors",
-            isPrimaryFocus
-              ? "border-primary/30"
-              : isPinned
-                ? "border-primary/25"
-                : "border-border/30",
+            "min-w-0 flex-1 truncate text-[13px] text-foreground",
+            selected ? "font-semibold" : "font-medium",
           )}
         >
-          <button
-            type="button"
-            class="h-2.5 w-2.5 rounded-full border border-background/90 shadow-sm transition-transform hover:scale-125"
-            style={`background: ${color}`}
-            title={displayName}
-            onclick={onColoredDotClick}
-          ></button>
-          {#if onTogglePin}
-            <div
-              class={cn(
-                "transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
-                isPinned ? "opacity-100" : "opacity-0",
-              )}
-            >
-              <IconButton
-                onclick={onTogglePin}
-                tooltipContent={isPinned ? "Unpin from timeline" : "Pin to timeline"}
-                selected={isPinned}
-                class="h-4 w-4 rounded-sm bg-transparent"
-              >
-                {#if isPinned}
-                  <PushPinSlash class="h-2.5 w-2.5 text-primary" />
-                {:else}
-                  <PushPin class="h-2.5 w-2.5 text-muted-foreground" />
-                {/if}
-              </IconButton>
-            </div>
-          {/if}
-          {#if isPinned}
-            <span class="h-1.5 w-1.5 rounded-full bg-primary/80"></span>
-          {/if}
-        </div>
-      </div>
-      <div
-        class="pointer-events-none absolute inset-y-0 left-0 w-5"
-        style={`background: linear-gradient(90deg, ${color}${isPrimaryFocus ? "30" : isPinned ? "20" : "16"} 0%, transparent 100%)`}
-      ></div>
-      <ContextMenu.Root>
-        <ContextMenu.Trigger class="absolute left-0 h-full w-full" style={`width: ${totalWidth}%`}>
-          <p oncontextmenu={handleTrackContextMenu} class="h-full w-full"></p>
-        </ContextMenu.Trigger>
-      </ContextMenu.Root>
-      {#each tracklets as tracklet (tracklet.id)}
-        <TrackletSegment
-          {tracklet}
-          entityId={entity.id}
-          {views}
-          compact={true}
-          onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
-          {onContextMenu}
-          {onEditKeyItemClick}
-          onSplitTrackClick={() => onSplitTrackletClick(tracklet)}
-          onDeleteTrackClick={() => deleteEntity(entity, tracklet)}
-          {findNeighborItems}
-          {moveCursorToPosition}
-          {resetTool}
-        />
-      {/each}
+          {name}
+        </span>
+      </button>
+      <span class="shrink-0 font-mono text-[11px] tabular-nums text-foreground/65">{meta}</span>
+      <button
+        type="button"
+        class={cn(
+          "size-6 shrink-0 place-items-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          editing
+            ? "grid bg-primary text-primary-foreground"
+            : "hidden text-foreground/65 hover:bg-accent hover:text-foreground group-focus-within:grid group-hover:grid",
+          selected && "grid",
+          !editing && editUnavailableReason && "cursor-default opacity-50 hover:bg-transparent",
+        )}
+        title={pencilTitle}
+        aria-label={editing ? `Finish editing ${name}` : `Edit ${name}`}
+        aria-pressed={editing}
+        aria-disabled={!editing && editUnavailableReason !== null}
+        onclick={() => {
+          if (editing || editUnavailableReason === null) onTogglePencil();
+        }}
+      >
+        <Pencil class="size-3.5" />
+      </button>
     </div>
-  </section>
-{/if}
+  </div>
+  <div
+    class={cn(
+      "relative isolate mt-1 h-9 shrink-0 rounded-md",
+      selected && "bg-timeline-row-selected",
+    )}
+    style:width="{laneWidth}px"
+    data-timeline-lane={entity.id}
+  >
+    <div class="absolute inset-0" style:opacity={graphicsOpacity}>
+      <TrackMarks
+        {lane}
+        geo={MARKS_ENTITY}
+        lineOpacity={expanded ? 0.25 : selected ? 0.9 : 0.5}
+        showTicks={!expanded}
+        visible={marksVisible}
+      />
+    </div>
+    {#if missingView}
+      <TimelineMissingCamera
+        view={missingView}
+        label={name}
+        canAdd={canAddInView}
+        addUnavailableReason={addInViewUnavailableReason}
+        onAdd={() => onAddInView?.()}
+      />
+    {/if}
+  </div>
+</div>

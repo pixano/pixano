@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { Tooltip } from "bits-ui";
   import {
     ArrowLeft,
     CaretLeft,
@@ -20,7 +21,8 @@ License: CECILL-C
   import { navigating } from "$app/state";
   import { currentDatasetStore } from "$lib/stores/appStores.svelte";
   import { saveData } from "$lib/stores/workspaceStores.svelte";
-  import { IconButton } from "$lib/ui";
+  import { IconButton, TooltipContent } from "$lib/ui";
+  import { passiveTriggerProps } from "$lib/utils/tooltipTriggerProps";
 
   interface Props {
     currentItemId: string;
@@ -98,14 +100,18 @@ License: CECILL-C
         >
           <ArrowLeft class="h-4 w-4" />
         </IconButton>
-        <button
-          type="button"
-          onclick={handleReturnToPreviousPage}
-          title="Back to the dataset explorer"
-          class="min-w-0 shrink truncate rounded-md px-1 text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {currentDatasetStore.value?.name}
-        </button>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            type="button"
+            onclick={handleReturnToPreviousPage}
+            class="min-w-0 shrink truncate rounded-md px-1 text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {currentDatasetStore.value?.name}
+          </Tooltip.Trigger>
+          <TooltipContent>
+            <p>Back to explorer</p>
+          </TooltipContent>
+        </Tooltip.Root>
         <span class="shrink-0 text-sm text-muted-foreground/50">·</span>
         <div class="flex shrink-0 items-center gap-1">
           <IconButton
@@ -116,12 +122,21 @@ License: CECILL-C
           >
             <CaretLeft class="h-3.5 w-3.5" />
           </IconButton>
-          <span
-            class="text-sm tabular-nums text-muted-foreground"
-            title={`Record ID: ${currentItemId}`}
-          >
-            {recordLabel}
-          </span>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              {#snippet child({ props })}
+                <span
+                  {...passiveTriggerProps(props)}
+                  class="text-sm tabular-nums text-muted-foreground"
+                >
+                  {recordLabel}
+                </span>
+              {/snippet}
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Record ID: {currentItemId}</p>
+            </TooltipContent>
+          </Tooltip.Root>
           <IconButton
             onclick={() => goToNeighborItem("next")}
             disabled={recordPosition.position === null}
@@ -143,29 +158,42 @@ License: CECILL-C
       <!-- RIGHT: save -->
       <div class="flex items-center justify-end">
         {#if dirtyCount > 0}
-          <button
-            type="button"
-            onclick={handleSave}
-            title={`Save ${dirtyCount} change${dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)`}
-            class="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <FloppyDisk size={14} />
-            Save
-            <span
-              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] tabular-nums"
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              onclick={handleSave}
+              class="inline-flex h-9 items-center gap-2 rounded-xl bg-primary px-3.5 text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              {dirtyCount}
-            </span>
-          </button>
+              <FloppyDisk size={14} />
+              Save
+              <span
+                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-foreground/20 px-1.5 text-[10px] tabular-nums"
+              >
+                {dirtyCount}
+              </span>
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Save {dirtyCount} change{dirtyCount > 1 ? "s" : ""} (Ctrl/⌘ + S)</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {:else}
-          <span
-            role="status"
-            title="No changes to save"
-            class="inline-flex h-9 items-center gap-1.5 px-3.5 text-xs font-medium text-muted-foreground"
-          >
-            <Check size={14} />
-            Saved
-          </span>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              {#snippet child({ props })}
+                <span
+                  {...passiveTriggerProps(props)}
+                  role="status"
+                  class="inline-flex h-9 items-center gap-1.5 px-3.5 text-xs font-medium text-muted-foreground"
+                >
+                  <Check size={14} />
+                  Saved
+                </span>
+              {/snippet}
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>No changes to save</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {/if}
       </div>
     {/if}

@@ -766,6 +766,11 @@ export const splitTrackInTwo = (track2split: Tracklet, prev: number, next: numbe
   saveTo("update", track2split);
   applyPixanoSourceFields(rightTrack);
   saveTo("add", rightTrack);
+  // The moved keyframes now belong to the new track. Save that: on load, annotations are
+  // attached to the track their saved tracklet_id names.
+  for (const ann of rightTrack.ui.childs) {
+    saveTo("update", ann);
+  }
   return rightTrack;
 };
 

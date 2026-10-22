@@ -5,7 +5,8 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Pencil } from "phosphor-svelte";
+  import { Check, Copy, Pencil } from "phosphor-svelte";
+  import { onDestroy } from "svelte";
 
   import RecordStatusControl from "../../layout/RecordStatusControl.svelte";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -21,6 +22,8 @@ License: CECILL-C
   // The Record tab: everything record-level — status, attributes, view metadata.
   // Display adjustments are canvas tools and live in the toolbar (DisplaySettings).
   let isEditing: boolean = $state(false);
+  let copiedKey = $state<string | null>(null);
+  let copiedResetTimer: ReturnType<typeof setTimeout> | undefined;
   const { manifest } = getWorkspaceContext();
 
   const viewData = $derived.by(() => {
@@ -67,6 +70,24 @@ License: CECILL-C
     isEditing = !isEditing;
   };
 
+  const isCopied = (key: string): boolean => copiedKey === key;
+
+  const handleCopy = async (text: string, key: string): Promise<void> => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copiedKey = key;
+      // One timer at a time: a second copy restarts the feedback window instead of
+      // being cut short by the first one.
+      clearTimeout(copiedResetTimer);
+      copiedResetTimer = setTimeout(() => (copiedKey = null), 1500);
+    } catch {
+      // Clipboard API unavailable; leave copied state untouched.
+    }
+  };
+
+  onDestroy(() => clearTimeout(copiedResetTimer));
+
   const handleTextInputChange = (
     value: string | boolean | number | Array<string | number | boolean>,
     propertyName: string,
@@ -82,6 +103,32 @@ License: CECILL-C
 </script>
 
 <div class="flex flex-col gap-6 p-4 text-foreground">
+  <!-- Record ID -->
+  {#if recordId}
+    <section class="flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <h3 class="text-label text-left shrink-0">ID</h3>
+        <span
+          class="min-w-0 flex-1 truncate rounded-lg border border-border/60 bg-background px-3 py-1.5 font-mono text-sm text-foreground"
+          title={recordId}
+        >
+          {recordId}
+        </span>
+        <IconButton
+          onclick={() => handleCopy(recordId, "record")}
+          tooltipContent={isCopied("record") ? "Copied!" : "Copy record ID"}
+          class="h-8 w-8 shrink-0 rounded-lg"
+        >
+          {#if isCopied("record")}
+            <Check class="h-4 w-4" />
+          {:else}
+            <Copy class="h-4 w-4" />
+          {/if}
+        </IconButton>
+      </div>
+    </section>
+  {/if}
+
   <!-- Status -->
   {#if datasetId && recordId}
     <section class="flex flex-col gap-2">
@@ -120,13 +167,39 @@ License: CECILL-C
     <h3 class="text-label text-left">Views</h3>
     {#each viewData.viewMeta as meta (meta.id)}
       <div class="rounded-xl border border-border/60 bg-background p-3">
-        <p class="truncate text-left text-sm font-medium" title="{meta.id} ({meta.view})">
-          {meta.view}
-          <span class="font-mono text-xs text-muted-foreground">{meta.id}</span>
-        </p>
+        <div class="flex items-center gap-1">
+          <p class="truncate text-left text-sm font-medium" title="{meta.id} ({meta.view})">
+            {meta.view}
+            <span class="font-mono text-xs text-muted-foreground">{meta.id}</span>
+          </p>
+          <IconButton
+            onclick={() => handleCopy(meta.id, `${meta.id}:id`)}
+            tooltipContent={isCopied(`${meta.id}:id`) ? "Copied!" : "Copy ID"}
+            class="h-5 w-5 shrink-0 rounded-md"
+          >
+            {#if isCopied(`${meta.id}:id`)}
+              <Check class="h-3 w-3" />
+            {:else}
+              <Copy class="h-3 w-3" />
+            {/if}
+          </IconButton>
+        </div>
         <dl class="mt-2 grid grid-cols-[90px_minmax(0,1fr)] gap-x-3 gap-y-1 text-left text-sm">
           <dt class="text-muted-foreground">URL</dt>
-          <dd class="truncate" title={meta.url}>{meta.url}</dd>
+          <dd class="flex min-w-0 items-center gap-1">
+            <span class="truncate" title={meta.url}>{meta.url}</span>
+            <IconButton
+              onclick={() => handleCopy(meta.url, `${meta.id}:url`)}
+              tooltipContent={isCopied(`${meta.id}:url`) ? "Copied!" : "Copy URL"}
+              class="h-5 w-5 shrink-0 rounded-md"
+            >
+              {#if isCopied(`${meta.id}:url`)}
+                <Check class="h-3 w-3" />
+              {:else}
+                <Copy class="h-3 w-3" />
+              {/if}
+            </IconButton>
+          </dd>
           <dt class="text-muted-foreground">Size</dt>
           <dd class="tabular-nums">{meta.width} × {meta.height}</dd>
           <dt class="text-muted-foreground">Format</dt>

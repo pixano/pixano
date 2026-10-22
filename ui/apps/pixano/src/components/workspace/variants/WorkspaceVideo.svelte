@@ -17,6 +17,7 @@ License: CECILL-C
   } from "./videoMaskSessionLifecycle";
   import { buildCurrentSequenceFrameLocatorsByView } from "./videoSequenceFrameRefs";
   import { navigating } from "$app/state";
+  import { annotationEntityId, type AnnotationColorFn } from "$lib/coloring/colorResolver";
   import { saveMaskShapeToTrackingOutput } from "$lib/segmentation/maskNormalization";
   import {
     createErrorSmartSegmentationUiState,
@@ -27,6 +28,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { timelineAddInViewTarget } from "$lib/stores/timelineInspectorStore.svelte";
   import {
     detectionTrackColorById,
     resetTrackingByDetectionSession,
@@ -54,6 +56,7 @@ License: CECILL-C
     startNewVosSegment,
     startTrackingSession,
     trackingPreviewBBoxes,
+    trackingSession,
     vosAnchorFrameIndex,
     vosSession,
     vosTrackedMasks,
@@ -68,9 +71,9 @@ License: CECILL-C
     videoViewNames,
   } from "$lib/stores/videoStores.svelte";
   import {
+    annotationColors,
     annotations,
     brushSettings,
-    colorScale,
     current_itemBBoxes,
     current_itemKeypoints,
     current_itemMasks,
@@ -100,6 +103,8 @@ License: CECILL-C
     type EditShape,
     type SaveMaskShape,
   } from "$lib/ui";
+  import { videoBoxActions } from "$lib/utils/boxActions";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import {
     tryHighlightSelectionShape,
     updateExistingAnnotation,
@@ -139,6 +144,11 @@ License: CECILL-C
   let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
   let activeVosJob = $state<ActiveTrackingJob | null>(null);
   const isRouteLoading = $derived(navigating.from !== null);
+  // The object armed from the timeline, while the session draws in its camera.
+  const addingInView = $derived.by(() => {
+    const target = timelineAddInViewTarget.value;
+    return target && trackingSession.value.tracker?.viewName === target.viewName ? target : null;
+  });
   const TRACKING_JOB_POLL_MS = 500;
 
   function getSequenceFrameViews(item: WorkspaceViewerItem): Record<string, SequenceFrame[]> {
@@ -581,6 +591,8 @@ License: CECILL-C
       const { viewRef, itemId, imageWidth, imageHeight, attrs } = saveShape;
 
       if (!isTracking.value) {
+        // Drawing a new track ends edit mode: the session owns every box edit from now on.
+        exitEditMode();
         startTrackingSession(viewRef.name, viewRef, itemId, imageWidth, imageHeight);
       }
 
@@ -679,6 +691,8 @@ License: CECILL-C
         current_itemKeypoints.value as any,
       );
       commitNormalizedWorkspaceRuntime(objects, entities.value);
+      // A ghost materialises into a keyframe of the same track, so a track in edit
+      // mode stays editable on this frame without further bookkeeping.
       if (save_data) saveTo(save_data.change_type, save_data.data);
     } else {
       annotations.update((objects) => updateExistingAnnotation(objects, shape));
@@ -687,8 +701,13 @@ License: CECILL-C
   };
 
   $effect(() => {
-    const shape = newShape.value;
-    if (!shape || shape.status !== "editing") return;
+    const editingShape = newShape.value;
+    if (!editingShape || editingShape.status !== "editing") return;
+    // Detach the edit from the store's reactive proxy before it reaches the stores:
+    // its coords array is copied as-is into the annotation (applyEditedShapeData,
+    // cloneForFrame), and the next ghost derivation structuredClones that annotation,
+    // which throws on a proxy and freezes the workspace (GitHub #752).
+    const shape = $state.snapshot(editingShape);
 
     const toolType = selectedTool.value?.type ?? ToolType.Pan;
     untrack(() => {
@@ -741,8 +760,10 @@ License: CECILL-C
   ]);
 
   // Proposed tracks are not entities yet: their preview boxes get their own palette colours.
-  const canvasColorScale = $derived((id: string): string => {
-    return detectionTrackColorById.value.get(id) ?? colorScale.value[1](id);
+  const canvasColorOf = $derived.by((): AnnotationColorFn => {
+    const colorOfAnnotation = annotationColors.value.colorOfAnnotation;
+    const detectionColors = detectionTrackColorById.value;
+    return (target) => detectionColors.get(annotationEntityId(target)) ?? colorOfAnnotation(target);
   });
 
   // ─── Tracking: keyboard handler ───────────────────────────────────────────
@@ -925,7 +946,7 @@ License: CECILL-C
         confirmKeys={["t", "T"]}
         selectedItemId={selectedItem.item.id}
         imagesPerView={imagesPerView.value}
-        colorScale={canvasColorScale}
+        colorOf={canvasColorOf}
         bboxes={mergedBBoxes}
         masks={current_itemMasks.value}
         multiPaths={current_itemMultiPaths.value}
@@ -957,6 +978,10 @@ License: CECILL-C
           void handleSmartSegmentationRequest(requestId, request);
         }}
         {merge}
+        canEditBoxes={editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
+        getBoxActions={videoBoxActions}
       />
       {#if playbackState.value.isBuffering}
         <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -970,10 +995,34 @@ License: CECILL-C
           Proposed tracks — keep or discard them in the inspector, then accept
         </div>
       {/if}
+      {#if timelineAddInViewTarget.value && !isTracking.value && selectedTool.value?.type === ToolType.Rectangle}
+        <div
+          class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
+        >
+          Draw a box in <span class="font-semibold">{timelineAddInViewTarget.value.viewName}</span>
+          to add
+          <span class="font-semibold">{timelineAddInViewTarget.value.entityId}</span>
+          ·
+          <kbd
+            class="rounded border border-primary/40 bg-primary/15 px-1 font-mono text-[10px] font-semibold"
+          >
+            Esc
+          </kbd>
+          cancels
+        </div>
+      {/if}
       {#if isTracking.value}
         <div
           class="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-warning/30 bg-warning/10 px-3 py-1.5 text-xs text-foreground shadow-elevation-1 backdrop-blur-md pointer-events-none select-none"
         >
+          {#if addingInView}
+            <span>
+              Adding <span class="font-semibold">{addingInView.entityId}</span>
+              in
+              <span class="font-semibold">{addingInView.viewName}</span>
+              —
+            </span>
+          {/if}
           {#if hasPendingKeyframe.value}
             Drag to adjust, <kbd
               class="rounded border border-warning/40 bg-warning/15 px-1 font-mono text-[10px] font-semibold"

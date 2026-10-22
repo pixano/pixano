@@ -6,37 +6,56 @@ License: CECILL-C
 
 <script lang="ts">
   import type Konva from "konva";
+  import { onDestroy } from "svelte";
   import { Group, Rect, Transformer } from "svelte-konva";
 
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
   import { clampRectToImage, getRectNormalizedCoords } from "./canvasGeometry";
   import LabelTag from "./LabelTag.svelte";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import type { BBox } from "$lib/types/dataset";
   import { ShapeType, type Shape } from "$lib/types/shapeTypes";
 
   interface Props {
     bbox: BBox;
-    colorScale: (id: string) => string;
+    colorOf: AnnotationColorFn;
     zoomFactor: number;
     listening: boolean;
     imageWidth?: number;
     imageHeight?: number;
     merge?: (ann: { id: string }) => void;
     onNewShapeChange?: (shape: Shape) => void;
+    /** A click on the box itself (not its handles or label), when the canvas handles it. */
+    onSelect?: (event: Konva.KonvaEventObject<MouseEvent>) => void;
+    /** While edited, the interior grabs the pointer too, so the box drags from anywhere. */
+    interiorDraggable?: boolean;
+    /** The box starts (true) or stops (false) being dragged or resized. */
+    onInteractionChange?: (active: boolean) => void;
     forceNeutralColor?: boolean;
   }
 
   let {
     bbox,
-    colorScale,
+    colorOf,
     zoomFactor,
     listening,
     imageWidth = 0,
     imageHeight = 0,
     merge,
     onNewShapeChange,
+    onSelect,
+    interiorDraggable = false,
+    onInteractionChange,
     forceNeutralColor = false,
   }: Props = $props();
+
+  let interacting = false;
+  function setInteracting(active: boolean) {
+    if (interacting === active) return;
+    interacting = active;
+    onInteractionChange?.(active);
+  }
+  onDestroy(() => setInteracting(false));
 
   let rectComponent: { node: Konva.Rect } | undefined = $state();
   let trComponent: { node: Konva.Transformer } | undefined = $state();
@@ -52,11 +71,7 @@ License: CECILL-C
   let color = $derived.by(() => {
     if (forceNeutralColor || bbox.ui.displayControl.highlighted === "none")
       return peekPresentation.neutralColor;
-    return colorScale(
-      (bbox.ui.top_entities ?? []).length > 0
-        ? (bbox.ui.top_entities ?? [])[0].id
-        : bbox.data.entity_id,
-    );
+    return colorOf(bbox);
   });
   let opacity = $derived(peekPresentation.opacity);
 
@@ -72,7 +87,12 @@ License: CECILL-C
     }
   });
 
-  function handleClick() {
+  function handleClick(event: Konva.KonvaEventObject<MouseEvent>) {
+    if (onSelect) {
+      // Clicks on the Transformer's handles or on the label bubble here too: ignore them.
+      if (event.target === rectComponent?.node) onSelect(event);
+      return;
+    }
     if (bbox.ui.displayControl.highlighted !== "self") {
       onNewShapeChange?.({
         status: "editing",
@@ -121,6 +141,7 @@ License: CECILL-C
   }
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
+    setInteracting(false);
     emitCoords(e.target as Konva.Rect);
   }
 
@@ -136,6 +157,7 @@ License: CECILL-C
   }
 
   function handleTransformEnd(e: Konva.KonvaEventObject<Event>) {
+    setInteracting(false);
     emitCoords(e.target as Konva.Rect);
   }
 </script>
@@ -143,18 +165,23 @@ License: CECILL-C
 <Group {listening} onclick={handleClick}>
   <Rect
     bind:this={rectComponent}
+    name="box-edit"
     id={`rect${bbox.id}`}
     x={bbox.data.coords[0]}
     y={bbox.data.coords[1]}
     width={bbox.data.coords[2]}
     height={bbox.data.coords[3]}
     stroke={color}
+    fill="rgba(0,0,0,0.001)"
+    fillEnabled={editing && interiorDraggable}
     strokeScaleEnabled={false}
     perfectDrawEnabled={false}
     shadowForStrokeEnabled={false}
     {opacity}
     visible={!bbox.ui.displayControl.hidden}
     draggable={editing}
+    ondragstart={() => setInteracting(true)}
+    ontransformstart={() => setInteracting(true)}
     ondragmove={handleDragMove}
     ondragend={handleDragEnd}
     ontransform={handleTransform}

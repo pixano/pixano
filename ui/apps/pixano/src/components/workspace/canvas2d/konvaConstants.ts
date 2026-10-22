@@ -20,4 +20,7 @@ export const BRUSH_MASK_COLOR = "rgba(255, 0, 80, 0.5)";
 // Interaction thresholds
 export const EDGE_SNAP_PX = 8;
 export const INTERACTION_COOLDOWN_MS = 120;
+// Pointer travel before a press on the canvas becomes a pan (Konva's default). Shorter
+// travel stays a click, so a slightly shaky click still selects or deselects.
+export const PAN_DRAG_DISTANCE_PX = 3;
 export const FILTER_DEBOUNCE_MS = 50;

@@ -4,7 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { entitiesById, mediaViews, tracks } from "./annotationDerivedStores.svelte";
+import {
+  entitiesById,
+  mediaViews,
+  trackletIdByChildId,
+  tracks,
+} from "./annotationDerivedStores.svelte";
 import {
   collectExactFrameAnnotations,
   collectFrameAnnotations,
@@ -13,9 +18,11 @@ import {
   getKeypointsInterpolationIdentity,
 } from "./frameAnnotationSelectors";
 import { reactiveDerived } from "./reactiveStore.svelte";
+import { markTrackEditing } from "./trackEditing";
 import { currentFrameIndex } from "./videoStores.svelte";
 import {
   annotations,
+  editedTrackletId,
   highlightedEntity,
   interpolate,
   selectedTool,
@@ -106,7 +113,8 @@ export const current_itemBBoxes = reactiveDerived(() => {
     entitiesById: eById,
   });
 
-  return results;
+  // The edited track's shape is editable on every frame, keyframe or ghost.
+  return markTrackEditing(results, editedTrackletId.value, trackletIdByChildId.value);
 });
 
 export const current_itemKeypoints = reactiveDerived(() => {
@@ -128,7 +136,7 @@ export const current_itemKeypoints = reactiveDerived(() => {
     entitiesById: entitiesById.value,
   });
 
-  return results;
+  return markTrackEditing(results, editedTrackletId.value, trackletIdByChildId.value);
 });
 
 export const current_itemMasks = reactiveDerived(() => {

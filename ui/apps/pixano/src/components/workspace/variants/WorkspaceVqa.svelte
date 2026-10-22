@@ -45,8 +45,8 @@ License: CECILL-C
     updateMessageContent,
   } from "$lib/stores/workspaceMutations";
   import {
+    annotationColors,
     brushSettings,
-    colorScale,
     embeddings,
     filters,
     imageSmoothing,
@@ -77,6 +77,8 @@ License: CECILL-C
     ResizeHandle,
     type LoadedImagesPerView,
   } from "$lib/ui";
+  import { imageBoxActions } from "$lib/utils/boxActions";
+  import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
 
@@ -484,7 +486,7 @@ License: CECILL-C
       <Canvas2D
         {imagesPerView}
         selectedItemId={selectedItem.item.id}
-        colorScale={colorScale.value[1]}
+        colorOf={annotationColors.value.colorOfAnnotation}
         bboxes={itemBboxes.value}
         masks={itemMasks.value}
         multiPaths={itemMultiPaths.value}
@@ -504,6 +506,10 @@ License: CECILL-C
         onAIRequest={(requestId, request) => {
           void handleSmartSegmentationRequest(requestId, request);
         }}
+        canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
+        onEditBox={(box) => enterEditMode(box)}
+        onStopEditingBox={exitEditMode}
+        getBoxActions={imageBoxActions}
       />
     {:else}
       <div class="w-full h-full bg-canvas"></div>

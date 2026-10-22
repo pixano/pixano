@@ -197,7 +197,11 @@ Annotations are per-view: a bounding box on the thermal image is separate from o
 
 ### Multi-view video mode
 
-In video mode, the timeline synchronizes all views. When you play or step through frames, all views update together. The Video Inspector shows tracks across all views — tracklet bars are stacked by view on each track row.
+In video mode, the timeline synchronizes all views. When you play or step through frames, all views update together. Each entity has one timeline row for all views: its line covers the frames where any camera sees it, its ticks are the keyframes of every view, and its header says how many cameras see it (`2/3 views`). Dragging a keyframe that several views share moves it in each of them.
+
+Open a row's chevron to see one row per camera, with that camera's keyframes. Click a camera row to make it the active camera: the keyframe buttons, `J`/`K` and the row's pencil then follow that camera, and dragging a tick on a camera row moves the keyframe in that camera only. To work on one camera at a time, pick it in the player bar; **All views** shows them all again. Objects that camera does not see stay listed, dimmed, as *Not annotated*.
+
+When a camera does not see an object yet, **Add in this view** on its row selects the object and the box tool: draw the box in that camera, and the save form proposes the object.
 
 <Callout type="tip" title="Annotation across views">
 You can annotate objects in both the RGB and thermal views. Create a bounding box in the thermal view, then switch to the RGB view and add another annotation for the same entity. Pixano links them through the shared entity reference.

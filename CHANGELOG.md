@@ -12,6 +12,42 @@
   track (its class in the dataset's label field when it has one), one tracklet
   per run, one box every N frames with the model's score as confidence. A run
   covers at most 600 frames.
+- **Edit a box from the canvas.** With the Pan tool, click a box to edit it, or
+  point at it and press `E`; press `Enter`, or click the pencil again, to finish.
+  Hovering a box shows a chip with that pencil and a "…" menu to add or remove a
+  keyframe, split the track after the current frame, or delete the track or the
+  box. In a video, edit mode follows the track from frame to frame, so a track
+  can be corrected with the arrow keys; the first change on an interpolated frame
+  creates the keyframe. Each object's timeline row has the same pencil. The image,
+  VQA and entity-linking workspaces edit boxes the same way.
+- **Video player.** Loop playback, a button and the `Home` key to go back to the
+  first frame, and copy buttons for the record ID in the Record tab.
+- **Video timeline.** Every tracked object has a row: a thin line where it is
+  present, a tick on each keyframe and taller ticks where its tracks start and
+  end, with the keyframe under the playhead drawn white. Hover a tick for its
+  frame and time, click it to select the object and jump to it, and drag it to
+  retime the keyframe between its neighbours (a track's first or last keyframe
+  drags its start or end; `Esc` cancels). Right-click a track to edit, add or
+  remove a keyframe there, split, glue, relink or delete it. Rows keep their
+  order while you work; **Hide track** in the Entities tab takes an object's row
+  off the timeline. The keyframe buttons and `J`/`K` jump between the selected
+  object's keyframes. The ruler starts at frame 0 with three tick levels, time
+  and frame labels, the frame rate and the frame count, and the current frame in
+  a badge. In a multi-camera record, an object's row says how many cameras see
+  it (`2/3 views`) and opens into one row per camera; clicking a camera row
+  makes it the active camera, which the keyframe buttons, `J`/`K`, the pencil
+  and a dragged tick follow. The player bar shows every camera or one alone, and
+  **Add in this view** on a camera without the object picks the box tool for it
+  there and proposes the object in the save form.
+- **Color annotations by an attribute.** A "Color by" menu in the Entities tab
+  colors boxes, polygons, masks, keypoints, text spans and tracks by an entity
+  attribute (a category, a yes/no flag) or an annotation attribute (a box's
+  confidence) instead of one color per object, in the image, video, VQA and
+  entity-linking workspaces. A legend lists the record's values; click a swatch
+  to choose another color. Text and yes/no values keep their color from one
+  record to the next, numbers follow a blue-to-yellow ramp, and annotations
+  without a value are light gray. The choice and the colors are kept per
+  dataset, in this browser.
 
 ### Changed
 
@@ -26,6 +62,28 @@
   tracking request no longer needs `objects_ids`; `classes` and `box_threshold`
   select what a prompt-free model follows. A job result Pixano cannot read is a
   502 instead of an empty result.
+
+### Fixed
+
+- Video workspace: moving a box after clicking its pencil in the inspector no
+  longer freezes frame navigation. An interpolated box or keypoints shape keeps
+  the same id instead of getting a new one each time it is shown, and "Add a
+  point" puts the new keyframe on the current frame. During a tracking session,
+  where any box edit becomes a keyframe of the track being drawn, the box pencils
+  are disabled.
+- The timeline's track menu (right-click a track) opens again. Split cuts right
+  after the frame it names and keeps every box, and Split and Glue save the
+  keyframes they move, which used to return to the old track on reload.
+- Video timeline: a dragged keyframe keeps its new frame after a reload and
+  takes every annotation of its frame along, and can no longer pass a
+  neighbouring keyframe. The tracks of an object seen by several cameras no
+  longer overlap in its row, and a sub-entity's track no longer shows in its
+  parent's row. Clicking the timeline during a tracking session no longer
+  cancels it. The current time no longer depends on the time zone, and comes
+  from the exact frame rate.
+- The masks, polygons, keypoints and text spans of a sub-entity, its timeline
+  row and the pre-annotation review icon take the color of their object instead
+  of pink.
 
 ## 0.8.0 (2026-09-23)
 

@@ -5,14 +5,16 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { Popover } from "bits-ui";
+  import { Popover, Tooltip } from "bits-ui";
   import { Eye, EyeClosed, FunnelSimple, MagnifyingGlass, Question, X } from "phosphor-svelte";
   import type { Snippet } from "svelte";
 
+  import ColorByControl from "./ColorByControl.svelte";
+  import ColorByLegend from "./ColorByLegend.svelte";
   import OptionsAndFilters from "./OptionsAndFilters.svelte";
   import { GROUND_TRUTH, OTHER } from "$lib/constants/workspaceConstants";
   import { annotations } from "$lib/stores/workspaceStores.svelte";
-  import { IconButton, type Entity } from "$lib/ui";
+  import { IconButton, TooltipContent, type Entity } from "$lib/ui";
   import { toggleAnnotationDisplayControl } from "$lib/utils/displayControl";
 
   interface Props {
@@ -119,6 +121,8 @@ License: CECILL-C
       </span>
     </div>
 
+    <ColorByControl />
+
     <div class="flex items-center gap-2">
       <div class="relative flex-1">
         <MagnifyingGlass
@@ -132,15 +136,19 @@ License: CECILL-C
           class="h-9 w-full rounded-lg border border-border/60 bg-background/80 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40"
         />
         {#if searchQuery.length > 0}
-          <button
-            type="button"
-            onclick={clearSearch}
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Clear search"
-            title="Clear search"
-          >
-            <X class="h-3.5 w-3.5" />
-          </button>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              onclick={clearSearch}
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear search"
+            >
+              <X class="h-3.5 w-3.5" />
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Clear search</p>
+            </TooltipContent>
+          </Tooltip.Root>
         {/if}
       </div>
 
@@ -186,20 +194,24 @@ License: CECILL-C
         </Popover.Content>
       </Popover.Root>
 
-      <button
-        type="button"
-        onclick={() => (showFilters = !showFilters)}
-        class={`h-8 shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 transition-colors ${
-          showFilters
-            ? "border-primary/40 bg-primary/10 text-primary"
-            : "border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-accent"
-        }`}
-        title={showFilters ? "Hide advanced rule builder" : "Show advanced rule builder"}
-        aria-label={showFilters ? "Hide advanced rule builder" : "Show advanced rule builder"}
-      >
-        <FunnelSimple class="h-4 w-4" />
-        <span class="text-[11px] font-semibold tracking-wide">Rules</span>
-      </button>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          type="button"
+          onclick={() => (showFilters = !showFilters)}
+          class={`h-8 shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2 transition-colors ${
+            showFilters
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-accent"
+          }`}
+          aria-label={showFilters ? "Hide advanced rule builder" : "Show advanced rule builder"}
+        >
+          <FunnelSimple class="h-4 w-4" />
+          <span class="text-[11px] font-semibold tracking-wide">Rules</span>
+        </Tooltip.Trigger>
+        <TooltipContent>
+          <p>{showFilters ? "Hide advanced rule builder" : "Show advanced rule builder"}</p>
+        </TooltipContent>
+      </Tooltip.Root>
     </div>
 
     {#if showFilters}
@@ -230,6 +242,7 @@ License: CECILL-C
 
   <div class="relative z-0 flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1.5 py-2">
     <div class="flex flex-col gap-1.5 px-0.5">
+      <ColorByLegend />
       {@render children?.()}
     </div>
   </div>

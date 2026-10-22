@@ -11,6 +11,9 @@ License: CECILL-C
   import { Image as KonvaImage } from "svelte-konva";
 
   import { resolveNeutralPeekPresentation } from "./canvasEventHandlers";
+  import { buildMaskFingerprint } from "./maskFingerprint";
+  import { UNLINKED_COLOR } from "$lib/coloring/colorByPalette";
+  import type { AnnotationColorFn } from "$lib/coloring/colorResolver";
   import { ToolType, type SelectionTool } from "$lib/tools";
   import type { Mask as DatasetMask, Reference } from "$lib/types/dataset";
   import type { Point2D } from "$lib/types/geometry";
@@ -36,7 +39,7 @@ License: CECILL-C
     currentImage: HTMLImageElement | ImageBitmap;
     masks?: DatasetMask[];
     previewMask?: SaveMaskShape | null;
-    colorScale: (value: string) => string;
+    colorOf: AnnotationColorFn;
     selectedTool: SelectionTool;
     zoomFactor: number;
     selectedItemId?: string;
@@ -49,7 +52,7 @@ License: CECILL-C
     currentImage,
     masks = [],
     previewMask = null,
-    colorScale,
+    colorOf,
     selectedTool,
     zoomFactor,
     selectedItemId = "",
@@ -195,31 +198,18 @@ License: CECILL-C
   }
 
   let effectiveRadius = $derived(brushSettings.brushRadius / (zoomFactor || 1));
-  let maskFingerprint = $derived.by(() => {
-    let fp = `${currentImage.width}x${currentImage.height}|neutral:${forceNeutralColor}|`;
-    for (const mask of masks) {
-      const source =
-        mask.ui.bitmapUrl ??
-        resolveMaskBitmapSource({ data: mask.data, metadata: mask.data.inference_metadata }) ??
-        "";
-      const bounds =
-        mask.ui.bounds ??
-        resolveMaskBounds({ data: mask.data, metadata: mask.data.inference_metadata });
-      const colorId =
-        mask.ui.top_entities && mask.ui.top_entities.length > 0
-          ? mask.ui.top_entities[0].id
-          : mask.data.entity_id;
-      const hasCanvas = mask.ui.bitmapCanvas ? "C" : "";
-      fp += `${mask.id}:${hasCanvas}${source}:${bounds?.x ?? 0},${bounds?.y ?? 0},${bounds?.width ?? 0},${bounds?.height ?? 0}:${colorId}:${mask.ui.displayControl.hidden}:${mask.ui.displayControl.highlighted};`;
-    }
-    if (previewMask?.rle) {
-      const previewCounts = Array.isArray(previewMask.rle.counts)
-        ? previewMask.rle.counts.length
-        : previewMask.rle.counts;
-      fp += `preview:${previewMask.viewRef.id}:${previewCounts}:${previewMask.maskBounds?.x ?? 0},${previewMask.maskBounds?.y ?? 0},${previewMask.maskBounds?.width ?? 0},${previewMask.maskBounds?.height ?? 0};`;
-    }
-    return fp;
-  });
+  // Resolved here, where reads are tracked: the redraw runs in an animation frame.
+  let maskColorById = $derived(new Map(masks.map((mask) => [mask.id, colorOf(mask)])));
+  let maskFingerprint = $derived(
+    buildMaskFingerprint({
+      imageWidth: currentImage.width,
+      imageHeight: currentImage.height,
+      forceNeutral: forceNeutralColor,
+      masks,
+      colorById: maskColorById,
+      preview: previewMask,
+    }),
+  );
 
   function drawPreviewMask(preview: SaveMaskShape | null): OffscreenCanvas | null {
     if (!preview?.rle) return null;
@@ -304,7 +294,7 @@ License: CECILL-C
     masksToRender: DatasetMask[],
     preview: SaveMaskShape | null,
     image: HTMLImageElement | ImageBitmap,
-    colorScaleFn: (id: string) => string,
+    colorById: ReadonlyMap<string, string>,
     cycle: number,
     forceNeutral: boolean,
   ): Promise<void> {
@@ -329,10 +319,6 @@ License: CECILL-C
           height: image.height,
         };
 
-      const colorId =
-        mask.ui.top_entities && mask.ui.top_entities.length > 0
-          ? mask.ui.top_entities[0].id
-          : mask.data.entity_id;
       const isNeutralMask = forceNeutral || mask.ui.displayControl.highlighted === "none";
       const neutralPresentation = resolveNeutralPeekPresentation({
         isPeeking: forceNeutral,
@@ -340,7 +326,9 @@ License: CECILL-C
         baseOpacity: mask.ui.opacity ?? 1,
         shapeKind: "mask",
       });
-      const color = isNeutralMask ? neutralPresentation.neutralColor : colorScaleFn(colorId);
+      const color = isNeutralMask
+        ? neutralPresentation.neutralColor
+        : (colorById.get(mask.id) ?? UNLINKED_COLOR);
       const overlayAlpha = isNeutralMask ? (neutralPresentation.maskOverlayAlpha ?? 0.2) : 0.5;
 
       // Prioritize OffscreenCanvas (from RLE decode) -- avoids async Image loading
@@ -455,14 +443,15 @@ License: CECILL-C
     const currentMasks = masks;
     const currentPreview = previewMask;
     const img = currentImage;
-    const scale = colorScale;
+    // The fingerprint holds the colors: reading the map itself would redraw on every rebuild.
+    const colors = untrack(() => maskColorById);
     const neutral = forceNeutralColor;
     const cycle = ++renderCycle;
 
     const rafId = requestAnimationFrame(() => {
       if (cycle !== renderCycle) return;
       untrack(() => {
-        void redrawBaseLayerWith(infra, currentMasks, currentPreview, img, scale, cycle, neutral);
+        void redrawBaseLayerWith(infra, currentMasks, currentPreview, img, colors, cycle, neutral);
       });
     });
 

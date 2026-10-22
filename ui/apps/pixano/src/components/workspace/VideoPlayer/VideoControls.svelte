@@ -5,10 +5,29 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  import { CircleNotch, Pause, Play, SkipBack, SkipForward } from "phosphor-svelte";
+  import {
+    CaretLeft,
+    CaretRight,
+    CircleNotch,
+    Pause,
+    Play,
+    Repeat,
+    SkipBack,
+    SkipBackCircle,
+    SkipForward,
+  } from "phosphor-svelte";
 
+  import {
+    timelineNavLane,
+    timelineNavScopeView,
+    timelineSelectedRowId,
+  } from "$lib/stores/timelineInspectorStore.svelte";
   import { currentFrameIndex, lastFrameIndex, playbackState } from "$lib/stores/videoStores.svelte";
-  import { IconButton } from "$lib/ui";
+  import { annotationColors, newShape } from "$lib/stores/workspaceStores.svelte";
+  import { nextKeyframe, previousKeyframe } from "$lib/timeline/laneQueries";
+  import { keyframeNavDirection, SAVE_FORM_REASON } from "$lib/timeline/timelineInteraction";
+  import { IconButton, Tooltip, TooltipContent } from "$lib/ui";
+  import { cn } from "$lib/utils/styleUtils";
   import {
     ensureFrameAvailable,
     getReadyAheadFrames,
@@ -17,6 +36,7 @@ License: CECILL-C
     updateViewAndWait,
     waitForReadyAheadFrames,
   } from "$lib/utils/videoOperations";
+  import { homeShortcutIsTaken, resolveNextPlaybackFrame } from "$lib/utils/videoPlayback";
 
   interface Props {
     resetHighlight: () => void;
@@ -185,11 +205,16 @@ License: CECILL-C
         const max = lastFrameIndex.value;
         if (max === undefined) return;
 
-        if (currentFrameIndex.value >= max) {
+        const step = resolveNextPlaybackFrame(
+          currentFrameIndex.value,
+          max,
+          playbackState.value.loop,
+        );
+        if (step.action === "stop") {
           stopPlayback(true);
           return;
         }
-        const rendered = await goToFrame(currentFrameIndex.value + 1);
+        const rendered = await goToFrame(step.frame);
         if (!rendered) {
           stopPlayback(true);
           return;
@@ -234,9 +259,67 @@ License: CECILL-C
       cancelBuffering();
     } else {
       const max = lastFrameIndex.value;
-      if (max !== undefined && currentFrameIndex.value >= max) return;
+      const atEnd = max !== undefined && currentFrameIndex.value >= max;
+      if (atEnd && !playbackState.value.loop) return;
+      if (atEnd) {
+        // Looping from the last frame: show frame 0 before the interval starts.
+        void goToFrame(0).then((rendered) => {
+          if (rendered) playVideo();
+        });
+        return;
+      }
       playVideo();
     }
+  };
+
+  const onFirstFrameClick = () => {
+    resetHighlight();
+    if (playbackState.value.intervalId) {
+      stopPlayback(true);
+    } else {
+      if (!playbackState.value.isLoaded) return;
+      cancelBuffering();
+    }
+    void goToFrame(0);
+  };
+
+  const toggleLoop = () => {
+    playbackState.update((old) => ({ ...old, loop: !old.loop }));
+  };
+
+  // Keyframe navigation follows the selected timeline row. It is off while the save form is
+  // open: the form saves its shape on the frame shown when it is confirmed.
+  const navLane = $derived(timelineNavLane.value);
+  const navColor = $derived(
+    timelineSelectedRowId.value
+      ? annotationColors.value.colorOfEntity(timelineSelectedRowId.value)
+      : null,
+  );
+  const saving = $derived(newShape.value.status === "saving");
+  const previousTarget = $derived(
+    navLane ? previousKeyframe(navLane.frames, currentFrameIndex.value) : null,
+  );
+  const nextTarget = $derived(
+    navLane ? nextKeyframe(navLane.frames, currentFrameIndex.value) : null,
+  );
+  const keyframeTooltip = (direction: -1 | 1): string => {
+    if (!navLane) return "Select an object to jump between its keyframes";
+    if (saving) return SAVE_FORM_REASON;
+    const camera = timelineNavScopeView.value;
+    if (navLane.frames.length === 0 && camera !== null) return `Not annotated in ${camera}`;
+    if (direction < 0)
+      return previousTarget === null ? "No earlier keyframe" : "Previous keyframe (J)";
+    return nextTarget === null ? "No later keyframe" : "Next keyframe (K)";
+  };
+
+  const KEYFRAME_DIRECTIONS = [-1, 1] as const;
+
+  const jumpToKeyframe = (direction: -1 | 1) => {
+    const target = direction < 0 ? previousTarget : nextTarget;
+    if (target === null || saving || !playbackState.value.isLoaded) return;
+    if (playbackState.value.intervalId) stopPlayback(true);
+    cancelBuffering();
+    void goToFrame(target);
   };
 
   function shortcutHandler(event: KeyboardEvent) {
@@ -247,6 +330,13 @@ License: CECILL-C
       activeElement?.getAttribute("contenteditable") === "true"
     ) {
       return; // Ignore shortcut when typing text
+    }
+
+    const keyframeDirection = keyframeNavDirection(event);
+    if (keyframeDirection !== null) {
+      event.preventDefault();
+      jumpToKeyframe(keyframeDirection);
+      return;
     }
 
     switch (event.code) {
@@ -264,6 +354,11 @@ License: CECILL-C
       case "KeyA":
         if (event.shiftKey) break;
         onPlayStepBackClick();
+        break;
+      case "Home":
+        if (homeShortcutIsTaken(event)) break;
+        event.preventDefault();
+        onFirstFrameClick();
         break;
     }
   }
@@ -301,5 +396,54 @@ License: CECILL-C
   >
     <SkipForward weight="fill" class="h-4 w-4" />
   </IconButton>
+  <IconButton
+    tooltipContent="Go to first frame (Home)"
+    onclick={onFirstFrameClick}
+    class="h-7 w-7 rounded-lg text-primary"
+  >
+    <SkipBackCircle weight="fill" class="h-4 w-4" />
+  </IconButton>
+  <IconButton
+    tooltipContent="Loop playback"
+    onclick={toggleLoop}
+    class={cn(
+      "h-7 w-7 rounded-lg",
+      playbackState.value.loop
+        ? "bg-primary/20 text-primary hover:bg-primary/30"
+        : "text-foreground hover:bg-accent",
+    )}
+  >
+    <Repeat weight={playbackState.value.loop ? "fill" : "regular"} class="h-4 w-4" />
+  </IconButton>
+  <span class="mx-1 h-5 w-px shrink-0 bg-border" aria-hidden="true"></span>
+  {#each KEYFRAME_DIRECTIONS as direction (direction)}
+    {@const unavailable = (direction < 0 ? previousTarget : nextTarget) === null || saving}
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        type="button"
+        aria-label={direction < 0 ? "Previous keyframe" : "Next keyframe"}
+        aria-keyshortcuts={direction < 0 ? "J" : "K"}
+        aria-disabled={unavailable}
+        onclick={() => jumpToKeyframe(direction)}
+        class={cn(
+          "inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-muted/50 px-2 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          unavailable && "cursor-default opacity-50 hover:bg-muted/50",
+          direction > 0 && "flex-row-reverse",
+        )}
+      >
+        {#if direction < 0}
+          <CaretLeft weight="bold" class="h-3.5 w-3.5" />
+        {:else}
+          <CaretRight weight="bold" class="h-3.5 w-3.5" />
+        {/if}
+        <span
+          class="h-3.5 w-[3px] rounded-[1px]"
+          style:background={navColor ?? "hsl(var(--muted-foreground))"}
+          aria-hidden="true"
+        ></span>
+      </Tooltip.Trigger>
+      <TooltipContent><p>{keyframeTooltip(direction)}</p></TooltipContent>
+    </Tooltip.Root>
+  {/each}
 </div>
 <svelte:window onkeydown={shortcutHandler} />

@@ -21,6 +21,8 @@ License: CECILL-C
     title: "General",
     shortcuts: [
       { keys: ["Esc"], action: "Switch to Pan tool" },
+      { keys: ["E"], action: "Edit the pointed box, or the selected object's box" },
+      { keys: ["Enter"], action: "Finish editing the box" },
       { keys: ["Delete", "Backspace"], action: "Delete selected point" },
       { keys: ["Ctrl+S", "⌘+S"], action: "Save all annotations" },
       { keys: ["Alt (hold)"], action: "Peek at existing annotations" },
@@ -81,6 +83,9 @@ License: CECILL-C
       { keys: ["Space"], action: "Play / Pause" },
       { keys: ["\u2192", "D"], action: "Next frame" },
       { keys: ["\u2190", "A"], action: "Previous frame" },
+      { keys: ["Home"], action: "Go to first frame" },
+      { keys: ["K"], action: "Next keyframe of the selected object" },
+      { keys: ["J"], action: "Previous keyframe of the selected object" },
     ],
   };
 

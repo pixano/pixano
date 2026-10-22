@@ -4,14 +4,24 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { nanoid } from "nanoid";
-
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
   NOT_ANNOTATION_ITEM_OPACITY,
 } from "$lib/constants/workspaceConstants";
 import { BBox } from "$lib/types/dataset";
 import type { KeypointAnnotation } from "$lib/types/shapeTypes";
+
+/**
+ * Deterministic id of the ghost interpolated from the annotation `startId` at
+ * `frameIndex`.
+ *
+ * Stable across renders, so the UI does not churn a fresh id on every pass, and
+ * unique because only one start annotation interpolates into a given frame. The
+ * form is ghost-only: materialising a ghost mints a fresh id (editKeyItemInTracklet),
+ * so a ghost derived later at the same frame never matches a stored annotation.
+ */
+export const interpolatedAnnotationId = (startId: string, frameIndex: number): string =>
+  `${startId}::${frameIndex}`;
 
 export const boxLinearInterpolation = (
   boxes: BBox[], //bboxes of the tracklet
@@ -46,15 +56,14 @@ export const boxLinearInterpolation = (
   const { ui, ...noUIfieldsBBox } = structuredClone(startBox);
   const interpolatedBox = new BBox(noUIfieldsBBox);
   interpolatedBox.ui = ui;
-  interpolatedBox.id = nanoid(10);
+  interpolatedBox.id = interpolatedAnnotationId(startBox.id, imageIndex);
   interpolatedBox.ui.frame_index = imageIndex;
+  // A ghost shows the start keyframe's highlight. Whether it is editable is decided per
+  // frame from the track in edit mode (markTrackEditing), not from the start keyframe.
   interpolatedBox.ui.displayControl = {
     hidden: startBox.ui.displayControl.hidden,
     editing: false,
-    //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-    highlighted: startBox.ui.displayControl.editing
-      ? "none"
-      : startBox.ui.displayControl.highlighted,
+    highlighted: startBox.ui.displayControl.highlighted,
   };
   interpolatedBox.data.frame_id = view_id;
   //we also need to adapt opacity & strokeFactor accordingly
@@ -102,15 +111,13 @@ export const keypointsLinearInterpolation = (
     });
     // make a new KeypointAnnotation with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
-    interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
+    interpolatedKpt.id = interpolatedAnnotationId(startKpt.id, imageIndex);
     interpolatedKpt.ui.frame_index = imageIndex;
+    // Same rule as boxes: the highlight follows the start keyframe, editing the track.
     interpolatedKpt.ui.displayControl = {
       hidden: startKpt.ui.displayControl.hidden,
       editing: false,
-      //if editing, we highlight only current frame object, else we keep hihlighted status of startRef
-      highlighted: startKpt.ui.displayControl.editing
-        ? "none"
-        : startKpt.ui.displayControl.highlighted,
+      highlighted: startKpt.ui.displayControl.highlighted,
     };
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts

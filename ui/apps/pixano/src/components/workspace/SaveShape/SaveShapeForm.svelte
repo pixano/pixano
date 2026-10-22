@@ -19,6 +19,7 @@ License: CECILL-C
     pixanoInferenceToValidateTrackingMasks,
     selectedVideoSegmentationModel,
   } from "$lib/stores/inferenceStores.svelte";
+  import { timelineAddInViewTarget } from "$lib/stores/timelineInspectorStore.svelte";
   import {
     cancelTrackingSession,
     trackingSession,
@@ -27,6 +28,7 @@ License: CECILL-C
   import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
+    clearTrackEditing,
     entities,
     itemMetas,
     newShape,
@@ -76,6 +78,14 @@ License: CECILL-C
   let objectProperties: EntityProperties = $state({});
   let selectedEntityId: string = $state("");
   const { manifest } = getWorkspaceContext();
+
+  // An object armed from the timeline ("+ Add in this view") is preselected for a shape drawn
+  // in its camera.
+  const preselectEntityId = $derived.by(() => {
+    const target = timelineAddInViewTarget.value;
+    if (!target || newShape.value.status !== "saving") return null;
+    return newShape.value.viewRef?.name === target.viewName ? target.entityId : null;
+  });
 
   function buildShapeResetState(reason: "save-confirmed" | "save-cancelled") {
     if (newShape.value.status !== "saving") {
@@ -480,9 +490,15 @@ License: CECILL-C
     const nextEntities = entities.value.includes(entity)
       ? entities.value
       : [...entities.value, entity];
+    // A new shape ends edit mode. Display controls are replaced, never written in place:
+    // loaded annotations share one initial display control object.
+    clearTrackEditing();
     const objectsWithoutHighlighted: Annotation[] = annotations.value.map((object) => {
-      object.ui.displayControl.highlighted = "none";
-      object.ui.displayControl = { ...object.ui.displayControl, editing: false };
+      object.ui.displayControl = {
+        ...object.ui.displayControl,
+        highlighted: "none",
+        editing: false,
+      };
       return object;
     });
     const normalized = commitNormalizedWorkspaceRuntime(
@@ -590,6 +606,7 @@ License: CECILL-C
       bind:selectedEntityId
       baseSchema={mapShapeType2BaseSchema[newShape.value.type]}
       viewRef={newShape.value.viewRef}
+      {preselectEntityId}
     />
     <div class="flex flex-col gap-1.5">
       <span class="text-label text-left">Attributes</span>

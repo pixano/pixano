@@ -15,10 +15,12 @@ License: CECILL-C
   import LoadModelModal from "./LoadModelModal.svelte";
   import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
-  import { playbackState } from "$lib/stores/videoStores.svelte";
+  import { configureColorBy } from "$lib/stores/colorByStore.svelte";
+  import { DEFAULT_VIDEO_SPEED_MS, playbackState, videoFps } from "$lib/stores/videoStores.svelte";
   import {
     annotations,
     canSave,
+    clearTrackEditing,
     entities,
     itemMetas,
     modelsUiStore,
@@ -101,6 +103,8 @@ License: CECILL-C
   // --- Data loading ---
 
   const loadData = () => {
+    // Another item: nothing of the previous one stays in edit mode.
+    clearTrackEditing();
     workspaceSaveQueue.reset();
     isSaving = false;
     saveErrorMessage = "";
@@ -108,13 +112,14 @@ License: CECILL-C
 
     const result = buildWorkspaceRuntimeData(workspaceData, featureValues);
 
-    if (result.videoSpeed !== undefined) {
-      playbackState.update((old) => ({ ...old, videoSpeed: result.videoSpeed }));
-    }
+    // A record without frame timestamps plays at the default rate, not at the last one's.
+    playbackState.update((old) => ({
+      ...old,
+      videoSpeed: result.videoSpeed ?? DEFAULT_VIDEO_SPEED_MS,
+    }));
+    videoFps.value = result.videoFps ?? null;
 
-    // Set entities first so colorScale effect processes them before annotations
     entities.value = result.entities;
-
     annotations.value = result.annotations;
 
     itemMetas.value = {
@@ -138,6 +143,8 @@ License: CECILL-C
       if (currentShape?.status !== "none") {
         newShape.value = { ...currentShape, status: "none" };
       }
+      // Colors first, so the record's shapes are drawn once, in the dataset's color mode.
+      configureColorBy(workspaceData.ui.datasetId, workspaceManifest);
       loadData();
     });
   });
