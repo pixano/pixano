@@ -6,11 +6,7 @@ License: CECILL-C
 
 /** Actions offered by the action chip of a box on the canvas ("…" menu). */
 export type BoxActionId =
-  | "add-keyframe"
-  | "remove-keyframe"
-  | "split-track"
-  | "delete-track"
-  | "delete-box";
+  "add-keyframe" | "remove-keyframe" | "split-track" | "delete-track" | "delete-box";
 
 export interface BoxAction {
   id: BoxActionId;

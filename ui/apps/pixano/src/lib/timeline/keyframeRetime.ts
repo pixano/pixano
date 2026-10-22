@@ -47,8 +47,7 @@ export interface RetimeTrackPlan {
 
 /** A move: the new range of every moved track, or why it is refused. */
 export type RetimePlan =
-  | { ok: true; target: number; tracks: RetimeTrackPlan[] }
-  | { ok: false; reason: RetimeRejection };
+  { ok: true; target: number; tracks: RetimeTrackPlan[] } | { ok: false; reason: RetimeRejection };
 
 /** A keyframe to move, and the tracks around it. */
 export interface RetimeInput {
