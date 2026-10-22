@@ -84,6 +84,9 @@
 - The masks, polygons, keypoints and text spans of a sub-entity, its timeline
   row and the pre-annotation review icon take the color of their object instead
   of pink.
+- The legacy app finds the bounds of a mask whose first pixel is painted, as a
+  SAM mask can be: pycocotools then starts its counts with an empty run. Such a
+  mask got inverted bounds, and a wrong box around it.
 
 ## 0.8.0 (2026-09-23)
 

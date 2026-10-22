@@ -111,7 +111,12 @@ export function rleCountsToBounds(counts: number[], size: [number, number]): Mas
   let pixel = 0; // 0 background, 1 foreground
 
   for (const run of counts) {
-    if (run <= 0) continue;
+    if (run <= 0) {
+      // An empty run still hands over to the other value, as in rleToBitmapCanvas:
+      // pycocotools starts the counts with one when the first pixel is painted.
+      pixel = 1 - pixel;
+      continue;
+    }
 
     if (pixel === 1) {
       const endIdx = idx + run - 1;
