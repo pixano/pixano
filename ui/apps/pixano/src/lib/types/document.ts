@@ -66,12 +66,7 @@ export interface EntityNode extends DocumentNode {
 
 /** Edge types in the document graph. */
 export type RelationType =
-  | "entity_ref"
-  | "view_ref"
-  | "item_ref"
-  | "source_ref"
-  | "parent_ref"
-  | "track_child";
+  "entity_ref" | "view_ref" | "item_ref" | "source_ref" | "parent_ref" | "track_child";
 
 /** A directed edge between two nodes. */
 export interface Relation {

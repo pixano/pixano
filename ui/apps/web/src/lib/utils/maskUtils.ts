@@ -102,8 +102,7 @@ export function canvasAlphaToRle(canvas: HTMLCanvasElement | OffscreenCanvas): {
   size: [number, number];
 } {
   const ctx = (canvas as HTMLCanvasElement).getContext("2d") as
-    | CanvasRenderingContext2D
-    | OffscreenCanvasRenderingContext2D;
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
   const { width, height } = canvas;
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;

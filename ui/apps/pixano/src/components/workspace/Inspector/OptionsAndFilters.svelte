@@ -111,10 +111,10 @@ License: CECILL-C
     if (candidateTables.length === 0) {
       return {
         tableColumns: [] as string[],
-        fieldColumns: {} as Record<string, FieldCol[]>,
+        fieldColumns: {},
         isVideo: nextIsVideo,
         disableFilter: true,
-        defaultFilter: undefined as EntityFilter | undefined,
+        defaultFilter: undefined,
       };
     }
 
@@ -152,7 +152,7 @@ License: CECILL-C
         fieldColumns: nextFieldColumns,
         isVideo: nextIsVideo,
         disableFilter: true,
-        defaultFilter: undefined as EntityFilter | undefined,
+        defaultFilter: undefined,
       };
     }
 

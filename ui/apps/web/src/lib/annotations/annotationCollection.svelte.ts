@@ -16,12 +16,7 @@ import type { CoordsNorm, Rotation3x3 } from "./types.js";
  * docs/ARCHITECTURE_TOOLING.md "Adding a new annotation kind".
  */
 export type AnnotationKind =
-  | "bbox"
-  | "bbox3d"
-  | "mask"
-  | "keypoints"
-  | "multi_path"
-  | "classification";
+  "bbox" | "bbox3d" | "mask" | "keypoints" | "multi_path" | "classification";
 
 /**
  * Kinds that apply to the whole record rather than a single view (e.g. a 3D

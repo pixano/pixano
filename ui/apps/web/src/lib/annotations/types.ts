@@ -107,8 +107,7 @@ export interface PointCloudWidgetStorage {
  * a new one with the given (schema-derived) feature fields.
  */
 export type PendingEntityChoice =
-  | { mode: "existing"; entityId: string }
-  | { mode: "new"; entityFields: Record<string, unknown> };
+  { mode: "existing"; entityId: string } | { mode: "new"; entityFields: Record<string, unknown> };
 
 /**
  * A box that has been drawn but not yet committed: it waits for the user to

@@ -16,7 +16,7 @@ import type { WorkspaceManifest } from "$lib/workspace/manifest";
 
 // Hoisted with the mocks: vi.mock factories run before the module's own top level.
 const { session, kept, mocks } = vi.hoisted(() => ({
-  session: { value: {} as Record<string, unknown> },
+  session: { value: {} },
   kept: { value: [] as DetectionTrack[] },
   mocks: { saveTo: vi.fn(), commit: vi.fn(), reset: vi.fn() },
 }));

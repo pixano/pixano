@@ -83,7 +83,7 @@ export function createSvelteTable<TData extends RowData>(
 
   const mergedState = lazyMergeState(
     () => internalState as unknown as Record<string | symbol, unknown>,
-    () => (options.state ?? {}) as Record<string | symbol, unknown>,
+    () => options.state ?? {},
   );
 
   const applyOptions = () => {

@@ -75,7 +75,7 @@ License: CECILL-C
 
   const handleCanvasShapeChange = (shape: Shape) => {
     if (shape.status === "creating") return;
-    newShape.value = shape as import("$lib/ui").Shape;
+    newShape.value = shape;
   };
 
   const handleTextSpanAreaShapeChange = (shape: import("$lib/ui").Shape) => {

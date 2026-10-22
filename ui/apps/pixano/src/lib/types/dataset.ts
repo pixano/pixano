@@ -398,7 +398,7 @@ export abstract class Annotation extends BaseData<AnnotationData> {
     for (const [k, vs] of Object.entries(objs)) {
       newObj[k] = [];
       for (const v of vs) {
-        const typedAnnotation = createTypedAnnotation(v as unknown as Annotation);
+        const typedAnnotation = createTypedAnnotation(v);
         if (typedAnnotation) {
           newObj[k].push(typedAnnotation);
         }

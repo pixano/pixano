@@ -57,10 +57,7 @@ type ClearSessionRequest = {
 };
 
 type WorkerRequest =
-  | InitSessionRequest
-  | FetchChunkRequest
-  | DecodeFrameRequest
-  | ClearSessionRequest;
+  InitSessionRequest | FetchChunkRequest | DecodeFrameRequest | ClearSessionRequest;
 
 type FetchChunkFrameResult = {
   frameIndex: number;

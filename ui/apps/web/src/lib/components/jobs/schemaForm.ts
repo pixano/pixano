@@ -8,13 +8,7 @@ import type { JsonSchema } from "$lib/api/jobs";
 
 /** What a field renders as. `unsupported` is shown, never hidden. */
 export type FieldKind =
-  | "string"
-  | "number"
-  | "integer"
-  | "boolean"
-  | "enum"
-  | "array"
-  | "unsupported";
+  "string" | "number" | "integer" | "boolean" | "enum" | "array" | "unsupported";
 
 const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
 

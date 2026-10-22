@@ -5,8 +5,6 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
-  /* eslint-disable svelte/no-at-html-tags */
-
   import { Button } from "bits-ui";
   import {
     CaretRight,
@@ -142,7 +140,7 @@ License: CECILL-C
       }
     } catch {
       // If not valid JSON, show as-is
-      return { value: raw } as Record<string, unknown>;
+      return { value: raw };
     }
     return null;
   });
@@ -659,9 +657,6 @@ License: CECILL-C
   <div class="ml-3 pl-3 border-l-2 border-border/30 space-y-0.5 mt-0.5">
     <!-- NOTE: trackChild may be a clone (from interpolation), not a real Annotation, so we can't use is_type -->
     {#each currentTrackChilds as { trackChild, interpolated }}
-      {@const displayName = interpolated
-        ? `<i class="text-muted-foreground/50">interpolated</i> (${trackChild.id})`
-        : trackChild.id}
       <div
         class="flex items-center justify-between w-full overflow-hidden py-0.5 px-1 rounded hover:bg-muted/30 transition-colors group/trackchild"
       >
@@ -678,7 +673,12 @@ License: CECILL-C
             {/if}
           </div>
           <span class="block truncate text-[11px] text-foreground/70" title={trackChild.id}>
-            {@html displayName}
+            {#if interpolated}
+              <i class="text-muted-foreground/50">interpolated</i>
+              ({trackChild.id})
+            {:else}
+              {trackChild.id}
+            {/if}
           </span>
         </div>
         {#if selectedTool.value?.type !== ToolType.Fusion && !interpolated}

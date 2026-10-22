@@ -13,7 +13,7 @@ import { ShapeType, type SaveMaskShape } from "$lib/types/shapeTypes";
 
 const { embeddingsMock } = vi.hoisted(() => ({
   embeddingsMock: {
-    value: {} as Record<string, unknown>,
+    value: {},
     update(updater: (current: Record<string, unknown>) => Record<string, unknown>) {
       this.value = updater(this.value);
     },

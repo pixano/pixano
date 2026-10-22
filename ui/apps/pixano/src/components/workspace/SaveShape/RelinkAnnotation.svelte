@@ -102,9 +102,9 @@ License: CECILL-C
         (ann) => ann.data.frame_id === viewRef.id && baseSchema === ann.table_info.base_schema,
       );
       numSameKindInSameView = sameKindInSameView_anns ? sameKindInSameView_anns.length : 0;
-      //WARNING : if we allow relinking of a tracklet child (not allowed now)
-      //$curentFrameIndex will not be reliable !
-      //anyway, we should find a more reliable frame index
+      // WARNING : if we allow relinking of a tracklet child (not allowed now)
+      // $curentFrameIndex will not be reliable !
+      // anyway, we should find a more reliable frame index
       const overlap_tracks = entityTracks?.filter(
         (ann) =>
           (ann as Tracklet).data.view_name === viewRef.name &&

@@ -220,10 +220,7 @@ export type CreateRectangleShape = {
 };
 
 export type CreateShape =
-  | CreatePolygonShape
-  | CreatePolylineShape
-  | CreateRectangleShape
-  | CreateKeypointShape;
+  CreatePolygonShape | CreatePolylineShape | CreateRectangleShape | CreateKeypointShape;
 
 // ─── Edit Shape Types ──────────────────────────────────────────────────────────
 

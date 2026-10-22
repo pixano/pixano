@@ -41,16 +41,14 @@ export const bbox3dSeedLoader: AnnotationSeedLoader = {
       .listAnnotations<BBox3DRow>(ctx.datasetId, BBOX3D_RESOURCE, { recordId: ctx.recordId })
       .catch(() => [] as BBox3DRow[]);
 
-    return rows.map(
-      (row): LocalBBox3DAnnotation => ({
-        id: row.id,
-        entityId: row.entity_id,
-        kind: "bbox3d",
-        viewId: row.view_id ?? "",
-        geometry: { coords: row.coords, format: row.format, rotation: toRotation3x3(row.rotation) },
-        persisted: true,
-        entity: row.entity_id ? ctx.entitiesById.get(row.entity_id) : undefined,
-      }),
-    );
+    return rows.map((row): LocalBBox3DAnnotation => ({
+      id: row.id,
+      entityId: row.entity_id,
+      kind: "bbox3d",
+      viewId: row.view_id ?? "",
+      geometry: { coords: row.coords, format: row.format, rotation: toRotation3x3(row.rotation) },
+      persisted: true,
+      entity: row.entity_id ? ctx.entitiesById.get(row.entity_id) : undefined,
+    }));
   },
 };

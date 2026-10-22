@@ -56,6 +56,15 @@ export function ordinalColorScale(range: Iterable<string>) {
   return (id: string) => colorById.get(id) ?? defaultPalette[0];
 }
 
+export function isScalarValue(value: unknown): value is string | number | boolean | bigint {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  );
+}
+
 export function isValidURL(urlString: string) {
   try {
     return Boolean(new URL(urlString));
@@ -128,8 +137,8 @@ export const removeFieldFromValue = <T extends object, K extends keyof T>(
   field: K,
 ): Omit<T, K> => {
   const rest = { ...value } as T & Record<PropertyKey, unknown>;
-  delete rest[field as PropertyKey];
-  return rest as Omit<T, K>;
+  delete rest[field];
+  return rest;
 };
 
 export function isLuminanceHigh(backgroundColor: string): boolean {
