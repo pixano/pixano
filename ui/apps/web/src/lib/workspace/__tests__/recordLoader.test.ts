@@ -515,3 +515,118 @@ describe("RecordLoader.reloadEntities", () => {
     expect(session.entities.map((e) => e.id)).toEqual(["e-B"]);
   });
 });
+
+describe("RecordLoader.reloadAnnotations", () => {
+  it("reloads against the views of the record loaded last, whatever order loads end in", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    let releaseFirstSeed!: () => void;
+    const firstSeedHeld = new Promise<void>((resolve) => (releaseFirstSeed = resolve));
+    let firstSeedAsked = false;
+    const ext: WidgetExtensionConfig = {
+      ...makeImageExtension(),
+      addRecordSeed: async ({ recordId, viewName }) => {
+        // The first record's views resolve only after the second record loaded.
+        if (recordId === "rec-1") {
+          firstSeedAsked = true;
+          await firstSeedHeld;
+        }
+        return {
+          title: viewName,
+          view: { id: `img-${recordId}`, logicalName: viewName, width: 100, height: 100 },
+        };
+      },
+    };
+    const gateway = makeGateway({
+      dataset,
+      bboxes: [
+        {
+          id: "bb-2",
+          record_id: "rec-2",
+          entity_id: "e-2",
+          view_id: "img-rec-2",
+          coords: [0.1, 0.1, 0.2, 0.2],
+          format: "xywh",
+          is_normalized: true,
+        } as BBoxRow,
+      ],
+    });
+    let listings = 0;
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(ext),
+      gateway: {
+        ...gateway,
+        listAnnotations: <TRow>(datasetId: string, resource: string) => {
+          listings++;
+          return gateway.listAnnotations<TRow>(datasetId, resource, {});
+        },
+      },
+      session,
+      layoutRepository: makeLayoutRepository(),
+    });
+
+    const first = loader.load("ds-1", "rec-1", VIEWPORT);
+    await vi.waitFor(() => expect(firstSeedAsked).toBe(true));
+    await loader.load("ds-1", "rec-2", VIEWPORT);
+    releaseFirstSeed();
+    await first;
+    listings = 0;
+
+    await loader.reloadAnnotations();
+
+    // Record 2 is open and its views are known: the reload reads it, and places
+    // its rows against them.
+    expect(listings).toBeGreaterThan(0);
+    expect(session.annotations.find("bb-2")).toBeDefined();
+  });
+
+  it("reads nothing while the open record's views are still being read", async () => {
+    const dataset = makeDataset({ cam: { base: "Image" } });
+    let releaseSecondSeed!: () => void;
+    const secondSeedHeld = new Promise<void>((resolve) => (releaseSecondSeed = resolve));
+    let secondSeedAsked = false;
+    const ext: WidgetExtensionConfig = {
+      ...makeImageExtension(),
+      addRecordSeed: async ({ recordId, viewName }) => {
+        // The second record's views resolve only after the reload was asked.
+        if (recordId === "rec-2") {
+          secondSeedAsked = true;
+          await secondSeedHeld;
+        }
+        return {
+          title: viewName,
+          view: { id: `img-${recordId}`, logicalName: viewName, width: 100, height: 100 },
+        };
+      },
+    };
+    const gateway = makeGateway({ dataset });
+    let listings = 0;
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(ext),
+      gateway: {
+        ...gateway,
+        listAnnotations: <TRow>(datasetId: string, resource: string) => {
+          listings++;
+          return gateway.listAnnotations<TRow>(datasetId, resource, {});
+        },
+      },
+      session: new WorkspaceSession(),
+      layoutRepository: makeLayoutRepository(),
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+    const second = loader.load("ds-1", "rec-2", VIEWPORT);
+    await vi.waitFor(() => expect(secondSeedAsked).toBe(true));
+    listings = 0;
+
+    await loader.reloadAnnotations();
+
+    // Record 2 is open but the views known are still record 1's: the reload
+    // reads nothing rather than place record 2's rows against them.
+    expect(listings).toBe(0);
+    releaseSecondSeed();
+    await second;
+  });
+});
