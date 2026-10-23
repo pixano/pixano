@@ -96,8 +96,6 @@ License: CECILL-C
   } from "$lib/types/dataset";
   import {
     ShapeType,
-    type CreatePolygonShape,
-    type CreatePolylineShape,
     type CreateRectangleShape,
     type ImageFilters,
     type KeypointAnnotation,
@@ -356,7 +354,7 @@ License: CECILL-C
         current: preview.current,
         hoveredEdge: preview.hoveredEdge ?? null,
         outputMode: selectedTool?.type === ToolType.Polygon ? selectedTool.outputMode : "polygon",
-      } as CreatePolygonShape;
+      };
       if (bboxEditable) {
         clearRectangleTransformer();
       }
@@ -374,7 +372,7 @@ License: CECILL-C
         points: toPolygonPoints(preview.points),
         current: preview.current,
         hoveredEdge: preview.hoveredEdge ?? null,
-      } as CreatePolylineShape;
+      };
       if (bboxEditable) {
         clearRectangleTransformer();
       }

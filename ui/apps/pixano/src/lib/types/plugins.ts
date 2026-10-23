@@ -19,12 +19,7 @@ export type { Unsubscribe };
 
 /** Fine-grained capabilities that plugins can request. */
 export type Capability =
-  | "document:read"
-  | "document:write"
-  | "ai:invoke"
-  | "storage:read"
-  | "ui:panel"
-  | "ui:tool";
+  "document:read" | "document:write" | "ai:invoke" | "storage:read" | "ui:panel" | "ui:tool";
 
 // --------------- Plugin Manifest ---------------
 

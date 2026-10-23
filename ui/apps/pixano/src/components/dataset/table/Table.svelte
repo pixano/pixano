@@ -29,6 +29,7 @@ License: CECILL-C
   import { TableCell } from "./TableCell";
   import type { TableData, TableRow } from "$lib/types/dataset";
   import { formatColumnLabel } from "$lib/utils/columns";
+  import { isScalarValue } from "$lib/utils/coreUtils";
 
   interface Props {
     // Exports
@@ -54,7 +55,10 @@ License: CECILL-C
           return cellRenderer(info.getValue() as never);
         }
         const val = info.getValue();
-        return val == null ? "" : String(val as string | number | boolean);
+        if (val === null || val === undefined) return "";
+        if (typeof val === "object") return JSON.stringify(val);
+        if (!isScalarValue(val)) return "";
+        return String(val);
       },
       enableSorting: col.type !== "image" && col.type !== "video" && col.type !== "list",
     }));

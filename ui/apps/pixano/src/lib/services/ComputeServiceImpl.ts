@@ -141,7 +141,7 @@ export class ComputeServiceImpl implements ComputeService {
     }
 
     const job = new ComputeJobImpl(descriptor);
-    this.jobs.set(descriptor.id, job as ComputeJob);
+    this.jobs.set(descriptor.id, job);
 
     // Auto-cleanup completed jobs
     void job.result

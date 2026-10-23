@@ -114,7 +114,7 @@ function compactPalette(palette: AttributePalette): AttributePalette | undefined
     parts.push(["colors", palette.colors]);
   if (palette.ramp && (palette.ramp.low || palette.ramp.high)) parts.push(["ramp", palette.ramp]);
   if (palette.seen) parts.push(["seen", palette.seen]);
-  return parts.length > 0 ? (Object.fromEntries(parts) as AttributePalette) : undefined;
+  return parts.length > 0 ? Object.fromEntries(parts) : undefined;
 }
 
 function decodePalette(value: unknown): AttributePalette | undefined {

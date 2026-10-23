@@ -12,20 +12,28 @@
     "format_check": "prettier --check --ignore-unknown ."
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.2.0",
-    "@eslint/js": "^9.20.0",
-    "@ianvs/prettier-plugin-sort-imports": "^4.4.1",
-    "@typescript-eslint/eslint-plugin": "^8.24.0",
-    "@typescript-eslint/parser": "^8.24.1",
-    "eslint": "^9.20.1",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-svelte": "^3.22.0",
-    "globals": "^16.0.0",
-    "prettier": "^3.2.5",
-    "prettier-plugin-svelte": "^3.3.2",
-    "svelte-eslint-parser": "^1.8.0",
-    "turbo": "^2.8.20",
-    "typescript-eslint": "^8.24.1"
+    "@eslint/eslintrc": "^3.3.7",
+    "@eslint/js": "^9.39.5",
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-svelte": "^3.23.1",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.10",
+    "prettier-plugin-svelte": "^3.5.2",
+    "svelte-eslint-parser": "^1.9.0",
+    "turbo": "^2.11.8",
+    "typescript-eslint": "^8.71.2"
   },
-  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af"
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ],
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
 }

@@ -250,6 +250,6 @@ export async function getViewEmbeddings(
         vector: Array.isArray(data.vector) ? (data.vector as number[]) : [],
         shape: Array.isArray(data.shape) ? (data.shape as number[]) : [],
       },
-    } as ViewEmbedding;
+    };
   });
 }

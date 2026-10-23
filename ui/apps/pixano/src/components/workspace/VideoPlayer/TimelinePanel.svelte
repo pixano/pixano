@@ -212,9 +212,10 @@ License: CECILL-C
     buildTimelineLayout([
       // Keys with the unit separator never equal an object id.
       ...(sessionState ? [{ key: "\u001fsession", kind: "session" } satisfies SlotInput] : []),
-      ...detectionLanes.map(
-        (lane): SlotInput => ({ key: `\u001fdetection\u001f${lane.trackId}`, kind: "detection" }),
-      ),
+      ...detectionLanes.map((lane): SlotInput => ({
+        key: `\u001fdetection\u001f${lane.trackId}`,
+        kind: "detection",
+      })),
       ...rowIds.flatMap((id): SlotInput[] => [
         { key: id, kind: "entity" },
         ...(isExpanded(id)

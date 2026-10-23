@@ -4,6 +4,8 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { isScalarValue } from "$lib/utils/coreUtils";
+
 export { buildTopEntityIdByEntityId } from "$lib/utils/entityHierarchy";
 
 export type SearchableEntity = {
@@ -50,16 +52,20 @@ export const DEFAULT_IGNORED_ENTITY_DATA_KEYS: ReadonlySet<string> = new Set([
   "parent_id",
 ]);
 
-export function normalizeSearchText(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  const str =
-    typeof value === "object" ? JSON.stringify(value) : String(value as string | number | boolean);
-  return str
+function foldSearchText(text: string): string {
+  return text
     .normalize("NFKD")
     .replace(DIACRITICS_REGEX, "")
     .toLowerCase()
     .replace(WHITESPACE_REGEX, " ")
     .trim();
+}
+
+export function normalizeSearchText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") return foldSearchText(JSON.stringify(value));
+  if (!isScalarValue(value)) return "";
+  return foldSearchText(String(value));
 }
 
 export function tokenizeSearchQuery(query: string): string[] {
@@ -72,17 +78,8 @@ export function normalizeSearchFieldName(fieldName: string): string {
   return normalizeSearchText(fieldName).replace(WHITESPACE_REGEX, "");
 }
 
-function isScalarSearchValue(value: unknown): value is string | number | boolean | bigint {
-  return (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint"
-  );
-}
-
 function collectValueTerms(value: unknown, terms: string[], depth: number): void {
-  if (isScalarSearchValue(value)) {
+  if (isScalarValue(value)) {
     terms.push(String(value));
     return;
   }
@@ -276,7 +273,7 @@ function collectFieldValues(
   value: unknown,
   depth: number,
 ): void {
-  if (isScalarSearchValue(value)) {
+  if (isScalarValue(value)) {
     appendFieldValue(fieldValues, fieldName, value);
     return;
   }

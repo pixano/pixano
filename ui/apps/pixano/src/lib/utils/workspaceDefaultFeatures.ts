@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Entity, ItemFeature } from "$lib/types/dataset";
+import { isScalarValue } from "$lib/utils/coreUtils";
 
 // TextSpan features to display in table of TextSpan section, in this order
 export const DISPLAY_MENTION_FEATURES = ["role", "concept", "mention"];
@@ -21,7 +22,12 @@ export const resolveEntityLabelField = (fieldNames: Iterable<string>): string | 
 export const getDefaultDisplayFeat = (entity: Entity): string | null => {
   for (const default_feature of DEFAULT_FEATURES) {
     if (default_feature in entity.data) {
-      return String(entity.data[default_feature] as string | number);
+      const value = entity.data[default_feature];
+      if (typeof value === "object" && value !== null) {
+        return JSON.stringify(value);
+      }
+      if (!isScalarValue(value)) return null;
+      return String(value);
     }
   }
   return null;

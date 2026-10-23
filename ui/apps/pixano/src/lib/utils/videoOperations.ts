@@ -58,7 +58,6 @@ type FrameWorkerRequestPayload =
       mimeType?: string;
     }
   | { type: "clearSession" };
-type FrameWorkerRequest = FrameWorkerRequestPayload & { requestId: number };
 
 type ChunkFrameResult = {
   frameIndex: number;
@@ -165,7 +164,7 @@ function requestWorker(payload: FrameWorkerRequestPayload): Promise<FrameWorkerS
   }
 
   const requestId = ++workerRequestCounter;
-  const message = { ...payload, requestId } as FrameWorkerRequest;
+  const message = { ...payload, requestId };
 
   return new Promise<FrameWorkerSuccessResponse>((resolve, reject) => {
     workerPendingRequests.set(requestId, { resolve, reject });

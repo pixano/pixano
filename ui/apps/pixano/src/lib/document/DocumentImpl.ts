@@ -158,7 +158,7 @@ export class DocumentImpl implements Document {
             newNodes.set(patch.nodeId, {
               ...existing,
               data: { ...existing.data, ...patch.changes },
-            } as DocumentNode);
+            });
           }
           break;
         }

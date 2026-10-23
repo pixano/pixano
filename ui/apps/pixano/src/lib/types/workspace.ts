@@ -84,11 +84,7 @@ export type CollectionFeature = CollectionInput & {
 };
 
 export type Feature =
-  | CheckboxFeature
-  | TextFeature
-  | NumberFeature
-  | ListFeature
-  | CollectionFeature;
+  CheckboxFeature | TextFeature | NumberFeature | ListFeature | CollectionFeature;
 
 export interface InteractiveSegmentationEmbeddingCache {
   image_embedding: NDArrayPayload;
@@ -108,12 +104,7 @@ export type Embeddings = Record<string, EmbeddingValue>;
 
 export type ModelSelection = {
   currentModalOpen:
-    | "selectModel"
-    | "selectEmbeddingsTable"
-    | "noModel"
-    | "noEmbeddings"
-    | "loading"
-    | "none";
+    "selectModel" | "selectEmbeddingsTable" | "noModel" | "noEmbeddings" | "loading" | "none";
   selectedModelName: string;
   selectedTableName: string;
   yetToLoadEmbedding: boolean;

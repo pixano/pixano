@@ -35,5 +35,5 @@ export const editorSelectionToTextSpan = (
     spans_end: [span_start + selectedText.length],
     mention: selectedText,
     view_name: viewName,
-  } as TextSpanTypeWithViewName;
+  };
 };

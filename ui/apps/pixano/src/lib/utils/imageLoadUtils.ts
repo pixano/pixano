@@ -5,10 +5,16 @@ License: CECILL-C
 -------------------------------------*/
 
 import { Image as ImageJS } from "image-js";
+import type { BitDepth } from "image-js";
 
 import { filters, itemMetas } from "$lib/stores/workspaceStores.svelte";
 import { Image, isImage, type LoadedImagesPerView } from "$lib/types/dataset";
 import { toClientAssetUrl } from "$lib/utils/coreUtils";
+
+// image-js types `Image.bitDepth` with the `BitDepth` enum but never exports it at
+// runtime, so only the type is imported and the members are spelled out here.
+const BIT_DEPTH_BINARY: BitDepth = 1;
+const BIT_DEPTH_UINT8: BitDepth = 8;
 
 export const equalizeHistogram = (imageData: ImageData) => {
   const { width, height, data } = imageData;
@@ -59,7 +65,7 @@ export const equalizeHistogram = (imageData: ImageData) => {
  * Mutates the image in place.
  */
 export const normalize16BitImage = (image: ImageJS, min: number, max: number): void => {
-  image.bitDepth = 8;
+  image.bitDepth = BIT_DEPTH_UINT8;
   image.maxValue = 255;
 
   const nPixels: number = image.size;
@@ -126,8 +132,9 @@ export async function loadImagesFromViews(
 
     const imageUrl = toClientAssetUrl(imageObject.data.url);
     const img: ImageJS = await ImageJS.load(imageUrl);
-    const bitDepth = img.bitDepth as number;
-    const format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
+    const bitDepth = img.bitDepth;
+    const format =
+      bitDepth === BIT_DEPTH_BINARY ? "1bit" : bitDepth === BIT_DEPTH_UINT8 ? "8bit" : "16bit";
     const color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
     itemMetas.update((metas) => (metas ? { ...metas, format, color } : metas));
 

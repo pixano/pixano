@@ -21,7 +21,7 @@ export const updateDisplayControl = <T extends DisplayControllable>(
   const currentDisplayControl = {
     ...initDisplayControl,
     ...(object.ui.displayControl ?? {}),
-  } as DisplayControl;
+  };
 
   const hasChange = Object.entries(updates).some(
     ([key, value]) => currentDisplayControl[key as keyof DisplayControl] !== value,
@@ -31,7 +31,7 @@ export const updateDisplayControl = <T extends DisplayControllable>(
   object.ui.displayControl = {
     ...currentDisplayControl,
     ...updates,
-  } as DisplayControl;
+  };
 
   return object;
 };
@@ -43,5 +43,5 @@ export const toggleAnnotationDisplayControl = (
 ): Annotation => {
   return updateDisplayControl(object, {
     [displayControlProperty]: value,
-  } as Partial<DisplayControl>);
+  });
 };

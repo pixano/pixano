@@ -10,8 +10,9 @@ License: CECILL-C
   import { nanoid } from "nanoid";
 
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { TEMPORARY_TEXT_SPAN_ID } from "../textCanvas/constants";
   import RelinkAnnotation from "./RelinkAnnotation.svelte";
-  import { mapShapeType2BaseSchema, temporayTextSpanId } from "$lib/constants/workspaceConstants";
+  import { mapShapeType2BaseSchema } from "$lib/constants/workspaceConstants";
   import { cloneMaskUiForPersistence } from "$lib/segmentation/maskNormalization";
   import { buildPersistedVosMasks } from "$lib/segmentation/vosPersistence";
   import {
@@ -67,8 +68,8 @@ License: CECILL-C
 
   let { currentTab = $bindable() }: Props = $props();
   let isFormValid: boolean = $state(false);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  let formInputs: CreateEntityInputs = $state([]);
+
+  let formInputs: CreateEntityInputs = $state<CreateEntityInputs>([]);
   const defaultButtonClass =
     "inline-flex items-center justify-center rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-5 py-2 shadow-sm";
   const cancelButtonClass =
@@ -294,7 +295,7 @@ License: CECILL-C
             tr_mask.table_info = newAnnotation.table_info;
             const tr_frame_idx = getFrameIndex(tr_mask.data.view_name, tr_mask.data.frame_id);
             if (newAnnotation.is_type(BaseSchema.Mask)) {
-              tr_mask.ui = cloneMaskUiForPersistence(newAnnotation.ui as Mask["ui"], tr_frame_idx);
+              tr_mask.ui = cloneMaskUiForPersistence(newAnnotation.ui, tr_frame_idx);
             } else {
               tr_mask.ui = {
                 datasetItemType: newAnnotation.ui.datasetItemType,
@@ -531,8 +532,8 @@ License: CECILL-C
   };
 
   function removeTemporaryTextSpan() {
-    if (annotations.value.find((ann) => ann.id === temporayTextSpanId)) {
-      annotations.update((anns) => anns.filter((ann) => ann.id !== temporayTextSpanId));
+    if (annotations.value.find((ann) => ann.id === TEMPORARY_TEXT_SPAN_ID)) {
+      annotations.update((anns) => anns.filter((ann) => ann.id !== TEMPORARY_TEXT_SPAN_ID));
     }
   }
   function handleCancel() {

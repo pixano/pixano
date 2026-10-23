@@ -71,8 +71,7 @@ export default [
       sourceType: "script",
 
       parserOptions: {
-        tsconfigRootDir: "/home/jdenize/Documents/pixano/ui",
-        project: ["./**/tsconfig.json"],
+        tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: [".svelte"],
       },
     },

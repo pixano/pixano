@@ -19,8 +19,7 @@ License: CECILL-C
     points: PolygonVertex[][];
     onPointClick?: ((pointIndex: number, shapeIndex: number, viewRef: Reference) => void) | null;
     onPointDragMove?:
-      | ((id: number, shapeIndex: number, event: Konva.KonvaEventObject<DragEvent>) => void)
-      | null;
+      ((id: number, shapeIndex: number, event: Konva.KonvaEventObject<DragEvent>) => void) | null;
     onPointDragEnd?: (() => void) | null;
   }
 

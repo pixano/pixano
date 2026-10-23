@@ -204,9 +204,7 @@ export function resolveNeutralPeekPresentation(
 }
 
 export type InteractiveToolResetAction =
-  | "none"
-  | "preserve-local-preview"
-  | "reset-local-interactive-tool";
+  "none" | "preserve-local-preview" | "reset-local-interactive-tool";
 
 /**
  * Determines how Canvas2D should handle local interactive-tool cleanup for a one-shot reset state.

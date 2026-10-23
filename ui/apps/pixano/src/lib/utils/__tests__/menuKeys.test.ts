@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, type Mock } from "vitest";
 
 import {
   BUTTON_TRIGGER_KEYS,
@@ -20,15 +20,19 @@ const key = (value: string, modifiers: { ctrlKey?: boolean; metaKey?: boolean } 
   ...modifiers,
 });
 
+// Replacing the event methods with mocks keeps them properties rather than
+// methods, which is what lets the assertions reference them unbound.
+type MockKeydownEvent = Omit<KeyboardEvent, "preventDefault" | "stopPropagation"> & {
+  preventDefault: Mock;
+  stopPropagation: Mock;
+};
+
 function keydown(value: string, modifiers: { ctrlKey?: boolean; metaKey?: boolean } = {}) {
   return {
     ...key(value, modifiers),
     stopPropagation: vi.fn(),
     preventDefault: vi.fn(),
-  } as unknown as KeyboardEvent & {
-    stopPropagation: ReturnType<typeof vi.fn>;
-    preventDefault: ReturnType<typeof vi.fn>;
-  };
+  } as unknown as MockKeydownEvent;
 }
 
 describe("menuKeyAction", () => {

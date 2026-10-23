@@ -147,7 +147,7 @@ export function toMessageTransportPayload(message: Message): MessageTransportPay
     conversation_id: (message.data.conversation_id as string) ?? "",
     number: message.data.number ?? 0,
     user: message.data.user ?? "",
-    type: (message.data.type as string) ?? MessageTypeEnum.QUESTION,
+    type: message.data.type ?? MessageTypeEnum.QUESTION,
     content: message.data.content ?? "",
     choices: message.data.type === MessageTypeEnum.QUESTION ? (message.data.choices ?? []) : [],
   };

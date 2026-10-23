@@ -29,7 +29,7 @@ License: CECILL-C
   let addButton = $state<HTMLButtonElement | null>(null);
   let expandedRows = $state<AttrRow[]>([]);
   // The installed ESLint parser predates this Svelte rune; svelte-check verifies its string type.
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+
   const editorId = $props.id();
   const rowErrors = $derived(
     rows.map((row) => {

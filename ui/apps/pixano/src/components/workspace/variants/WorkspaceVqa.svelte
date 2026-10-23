@@ -126,7 +126,7 @@ License: CECILL-C
       smartSegmentationUiState.value = createIdleSmartSegmentationUiState();
     }
 
-    newShape.value = shape as import("$lib/ui").Shape;
+    newShape.value = shape;
   };
 
   function clearSmartPreview(viewName?: string): void {

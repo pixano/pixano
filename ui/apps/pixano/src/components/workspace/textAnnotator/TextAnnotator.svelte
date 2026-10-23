@@ -17,7 +17,6 @@ License: CECILL-C
     TextSpan,
     TextView,
     type Shape,
-    type TextSpanAttributes,
     type TextSpanTypeWithViewName,
   } from "$lib/ui";
 
@@ -101,7 +100,7 @@ License: CECILL-C
       imageHeight: 0,
       status: "saving",
       type: ShapeType.textSpan,
-      attrs: textSpanAttrs as TextSpanAttributes,
+      attrs: textSpanAttrs,
     });
   };
 </script>
