@@ -13,23 +13,25 @@ a transient failure from a definitive one, and writing a result that replaying d
 duplicate.
 """
 
-import io
 import logging
 import time
-from functools import cache
 from typing import Any, Iterable
 
 import httpx
-from PIL import Image
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
 from pixano_inference.schemas import EmbeddingRequest
 from pydantic import Field
 
-from pixano.inference.media import bytes_to_data_uri
-
 from ..reader import JobReader
 from ..writer import JobWriter, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .inference import (
+    InferenceServer,
+    blame_the_server_or_the_media,
+    classify,
+    refusal_detail,
+    transient_reason,
+)
 
 
 log = logging.getLogger("pixano-worker")
@@ -37,38 +39,6 @@ log = logging.getLogger("pixano-worker")
 # The image views table, and the records table. These are Pixano's canonical names.
 IMAGE_TABLE = "images"
 RECORD_TABLE = "records"
-
-# The answers that say "come back later": timeout, too many requests, service unavailable. The
-# client already replays 502, 503 and 504 on its own; what reaches this point has survived its
-# retries and belongs to the queue.
-TRANSIENT_STATUSES = frozenset({408, 429, 502, 503, 504})
-
-# The answers that say "this request will never pass", whatever its content: no permission, no
-# route, no model. Splitting the batch would change nothing.
-REQUEST_STATUSES = frozenset({401, 403, 404, 405})
-
-# Side of the witness image: the smallest the server accepts without arguing. It only serves to
-# find out whether the server can still embed anything, not to produce a vector.
-WITNESS_IMAGE_SIDE = 16
-
-# The status the client gives an error when the server answered nothing at all — connection
-# refused, timeout. It wraps it in a PixanoInferenceError rather than letting the httpx error
-# through.
-NO_RESPONSE = 0
-
-
-@cache
-def witness_image() -> str:
-    """A generated image, as bytes, that the server must be able to embed.
-
-    When a whole batch is refused image by image, it tells an inference outage from a batch that
-    is really corrupt: the "two refused images count as an outage" threshold it replaces made the
-    decision depend on the batch size, and the last chunk of a dataset often has only one image.
-    """
-    image = Image.new("RGB", (WITNESS_IMAGE_SIDE, WITNESS_IMAGE_SIDE), (128, 128, 128))
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return bytes_to_data_uri(buffer.getvalue())
 
 
 class EmbeddingsParams(JobParams):
@@ -107,8 +77,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
     def __init__(self, inference_url: str = "", api_key: str = "") -> None:
         """Bind this kind to the inference server the worker knows."""
-        self.inference_url = inference_url.rstrip("/")
-        self.api_key = api_key
+        self.server = InferenceServer(inference_url, api_key)
 
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
         """Split the dataset's records into batches.
@@ -176,9 +145,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
         read_s = time.perf_counter() - started
 
-        client = SyncPixanoInferenceClient(
-            self.inference_url, api_key=self.api_key or None, max_retries=params.max_retries
-        )
+        client = self.server.client(max_retries=params.max_retries)
         started = time.perf_counter()
         embedded, refused = self._embed_isolating(client, candidates, params)
         inference_s = time.perf_counter() - started
@@ -187,7 +154,13 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             # so does an entirely corrupt batch. What tells them apart is not the batch size —
             # the last chunk of a dataset often has only one image — but the server itself, on an
             # image known to be good.
-            self._blame_the_server_or_the_images(client, reader, refused, by_path, params)
+            blame_the_server_or_the_media(
+                lambda reference: self._embed(client, [reference], params),
+                reader,
+                IMAGE_TABLE,
+                [record_id for record_id, _ in refused],
+                by_path,
+            )
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
             for record_id, detail in refused
@@ -234,48 +207,6 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             result.get("carried_bytes", 0),
         )
 
-    def _blame_the_server_or_the_images(
-        self,
-        client: SyncPixanoInferenceClient,
-        reader: JobReader,
-        refused: list[tuple[str, dict[str, Any]]],
-        by_path: dict[str, Any],
-        params: EmbeddingsParams,
-    ) -> None:
-        """Decide, on an entirely refused batch, whether the server or the images are to blame.
-
-        A witness image, generated here, is sent as bytes: refused, the server is not well and
-        the chunk is replayed later. Accepted, the images are at fault — unless they had been
-        designated by path: the server may not read the storage it was told to mount, and then
-        refuses every path through no fault of any image. So one of them is resent as bytes; if
-        it passes, the mount is the cause, and the chunk is replayed with the reason, rather than
-        three hundred healthy images going to quarantine.
-
-        Raises:
-            TransientError: The server refuses the witness image, or does not read its media by
-                path.
-        """
-        try:
-            self._embed(client, [witness_image()], params)
-        except (httpx.TransportError, PixanoInferenceError) as error:
-            raise TransientError(f"the inference refuses even the witness image: {error}") from error
-
-        first_by_path = next((record_id for record_id, _ in refused if record_id in by_path), None)
-        if first_by_path is None:
-            return
-        found = reader.dataset.get_view_binary(IMAGE_TABLE, by_path[first_by_path].id)
-        if found is None or not found[0]:
-            return
-        try:
-            self._embed(client, [bytes_to_data_uri(found[0])], params)
-        except (httpx.TransportError, PixanoInferenceError):
-            # Refused as bytes too: the image really is at fault.
-            return
-        raise TransientError(
-            f"the inference refuses images by path but accepts the same one as bytes ({first_by_path}): "
-            "it does not read the media storage — check PIXANO_INFERENCE_MEDIA_ROOT and its mount"
-        )
-
     @staticmethod
     def _images_of(reader: JobReader, record_ids: list[str]) -> dict[str, Any]:
         """The image view of each record in the batch, when it exists.
@@ -319,18 +250,16 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             return [], []
         try:
             vectors = self._embed(client, [reference for _, reference in candidates], params)
-        except httpx.TransportError as error:
-            raise TransientError(f"the inference does not answer: {error}") from error
-        except PixanoInferenceError as error:
-            if error.status_code == NO_RESPONSE:
-                raise TransientError(f"the inference does not answer: {error}") from error
-            if error.status_code in TRANSIENT_STATUSES:
-                raise TransientError(f"the inference asks to come back later: {error}") from error
-            if error.status_code in REQUEST_STATUSES:
+        except (httpx.TransportError, PixanoInferenceError) as error:
+            failure = classify(error)
+            if failure == "transient":
+                raise TransientError(transient_reason(error)) from error
+            if failure == "request":
                 raise
+            # A medium is only blamed on an answer: what reaches here is the server's refusal.
+            assert isinstance(error, PixanoInferenceError)
             if len(candidates) == 1:
-                detail = {"status": error.status_code, "code": error.code, "message": str(error.message)[:500]}
-                return [], [(candidates[0][0], detail)]
+                return [], [(candidates[0][0], refusal_detail(error))]
             middle = len(candidates) // 2
             left_ok, left_ko = self._embed_isolating(client, candidates[:middle], params)
             right_ok, right_ko = self._embed_isolating(client, candidates[middle:], params)
