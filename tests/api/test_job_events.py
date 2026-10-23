@@ -67,10 +67,10 @@ class TestRendering:
 
         assert rendered.startswith("id: 42\n")
         assert "event: progress\n" in rendered
-        assert rendered.endswith("\n\n"), "un message SSE se termine par une ligne vide"
+        assert rendered.endswith("\n\n"), "an SSE message ends with a blank line"
 
     def test_the_body_names_its_job(self) -> None:
-        """Le flux global mélange les jobs : sans cet identifiant il serait illisible."""
+        """The global stream mixes jobs: without this identifier it would be unreadable."""
         rendered = JobEvent(id=1, job_id="abc", type="state", payload={"state": "done"}).to_sse()
 
         body = json.loads(rendered.split("data: ", 1)[1])
@@ -109,7 +109,7 @@ class TestCatchUp:
 
 class TestBroker:
     def test_no_configured_queue_makes_it_inert(self) -> None:
-        """Une application sans file ne doit pas planter au démarrage, juste ne rien diffuser."""
+        """An application without a queue must not crash at startup, only broadcast nothing."""
         assert EventBroker(None).enabled is False
 
     def test_delivers_an_event_to_a_matching_stream(self, url: str) -> None:
@@ -120,7 +120,7 @@ class TestBroker:
             broker.start()
             try:
                 async with broker.subscribe(job_id=job) as subscriber:
-                    await asyncio.sleep(1.0)  # laisser l'écoute s'établir
+                    await asyncio.sleep(1.0)  # let the listener settle
                     _emit(url, job, "progress", {"done_tasks": 30, "total_tasks": 100})
                     return await asyncio.wait_for(subscriber.queue.get(), timeout=5)
             finally:
@@ -131,7 +131,7 @@ class TestBroker:
         assert event.payload["done_tasks"] == 30
 
     def test_ignores_another_job(self, url: str) -> None:
-        """Deux flux ouverts sur deux jobs ne doivent pas se contaminer."""
+        """Two streams open on two jobs must not leak into each other."""
         watched, _ = _job_with_events(url, 0)
         other, _ = _job_with_events(url, 0)
 
@@ -150,10 +150,10 @@ class TestBroker:
             finally:
                 await broker.stop()
 
-        assert asyncio.run(scenario()), "un événement d'un autre job a fuité dans le flux"
+        assert asyncio.run(scenario()), "an event of another job leaked into the stream"
 
     def test_a_filtered_stream_only_hears_state_changes(self, url: str) -> None:
-        """C'est ce qui évite de noyer la liste des jobs sous la progression."""
+        """This is what keeps the list of jobs from drowning in progress events."""
         job, _ = _job_with_events(url, 0)
 
         async def scenario() -> JobEvent:
@@ -353,7 +353,7 @@ class TestJobIdentifierOnTheStream:
 
 
 class TestTypeFilter:
-    """Le client dit ce qu'il veut entendre — le serveur refuse ce qu'il ne comprend pas."""
+    """The client says what it wants to hear; the server refuses what it does not understand."""
 
     def test_no_filter_means_everything(self) -> None:
         assert _requested_types(None) is None
@@ -368,10 +368,10 @@ class TestTypeFilter:
         assert _requested_types("") is None
 
     def test_an_unknown_type_is_refused_rather_than_ignored(self) -> None:
-        """Ignorer `stat` produirait un flux muet, et le silence est le pire des diagnostics."""
+        """Ignoring `stat` would give a silent stream, and silence is the worst of diagnostics."""
         with pytest.raises(HTTPException) as raised:
             _requested_types("stat")
 
         assert raised.value.status_code == 422
         assert "stat" in raised.value.detail
-        assert "progress" in raised.value.detail, "le message doit nommer les valeurs acceptées"
+        assert "progress" in raised.value.detail, "the message must name the accepted values"

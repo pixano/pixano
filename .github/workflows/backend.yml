@@ -85,8 +85,8 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     services:
-      # L'application est cliente de la file de jobs : ses tests de mise en file ont besoin
-      # d'un vrai PostgreSQL, sans quoi ils sauteraient en silence.
+      # The application is a client of the job queue: its enqueueing tests need a real
+      # PostgreSQL, or they would be skipped silently.
       postgres:
         image: postgres:16
         env:
@@ -118,8 +118,8 @@ jobs:
           sudo apt-get install -y ffmpeg
           uv sync --group test
 
-      # Le worker possède le schéma : l'application ne le crée jamais, pas même en test.
-      # Cette étape reproduit l'ordre réel — le worker installe, l'application consomme.
+      # The worker owns the schema: the application never creates it, not even in tests. This
+      # step reproduces the real order: the worker installs, the application consumes.
       - name: Install the job schema with pixano-worker
         env:
           PIXANO_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
@@ -145,7 +145,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Le paquet exige Python 3.11 ; la matrice ci-dessus descend à 3.10.
+        # The package requires Python 3.11; the matrix above goes down to 3.10.
         python-version: ["3.11", "3.12", "3.13"]
     services:
       postgres:
@@ -174,8 +174,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Test with pytest
-        # Variable dédiée : les tests ne doivent jamais pouvoir viser la base d'un
-        # déploiement, fût-il local.
+        # A dedicated variable: the tests must never be able to reach a deployment's
+        # database, even a local one.
         env:
           PIXANO_TEST_DATABASE_URL: postgresql://pixano:pixano@localhost:5432/pixano_test
         run: uv run --directory packages/pixano-worker pytest -v

@@ -4,12 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-"""Le registre des types de jobs, et sa déclaration en base.
+"""The registry of job kinds, and its declaration in the database.
 
-Le registre est local au worker ; l'application n'a aucun moyen de l'importer. C'est pourquoi
-chaque worker publie ce qu'il sait faire dans `job_kinds` au démarrage : cette table est le
-seul pont entre les deux, et elle porte la seule vérité qui vaille — ce que du code
-réellement déployé sait exécuter.
+The registry is local to the worker; the application has no way to import it. This is why
+every worker publishes what it can do in `job_kinds` at startup: that table is the only
+bridge between the two, and it carries the only truth that counts — what code actually
+deployed knows how to run.
 """
 
 import psycopg
@@ -30,38 +30,38 @@ SET params_schema = EXCLUDED.params_schema,
 
 
 class Registry:
-    """Les types de jobs que ce worker sait exécuter."""
+    """The job kinds this worker knows how to run."""
 
     def __init__(self) -> None:
-        """Créer un registre vide."""
+        """Create an empty registry."""
         self._kinds: dict[str, JobKind] = {}
 
     def register(self, kind: JobKind) -> None:
-        """Ajouter un type au registre.
+        """Add a kind to the registry.
 
         Raises:
-            ValueError: Un type porte déjà ce nom.
+            ValueError: A kind already bears this name.
         """
         if kind.name in self._kinds:
-            raise ValueError(f"le type de job '{kind.name}' est déjà enregistré")
+            raise ValueError(f"the job kind '{kind.name}' is already registered")
         self._kinds[kind.name] = kind
 
     def get(self, name: str) -> JobKind | None:
-        """Le type portant ce nom, ou None."""
+        """The kind bearing this name, or None."""
         return self._kinds.get(name)
 
     def names(self) -> list[str]:
-        """Les noms enregistrés, triés."""
+        """The registered names, sorted."""
         return sorted(self._kinds)
 
     def declare(self, conn: psycopg.Connection, worker_id: str) -> int:
-        """Publier ce registre en base, pour que l'application puisse valider.
+        """Publish this registry in the database, so that the application can validate.
 
-        La déclaration écrase la précédente : un worker redéployé avec des paramètres
-        modifiés met le schéma à jour sans intervention.
+        The declaration overwrites the previous one: a worker redeployed with modified
+        parameters updates the schema without intervention.
 
         Returns:
-            Le nombre de types déclarés.
+            The number of kinds declared.
         """
         with conn.transaction():
             for kind in self._kinds.values():

@@ -19,12 +19,12 @@
 **/compose*
 **/node_modules
 **/npm-debug.log
-# Bibliothèques de datasets et médias : plusieurs Go qui n'entrent dans aucune image, mais
-# que le démon reçoit à chaque build tant qu'ils sont dans le contexte.
+# Dataset libraries and media: several GB that go into no image, but that the daemon receives
+# on every build as long as they are in the context.
 data/
 my_data/
-# Les artefacts de build du frontend : l'image de l'application les reconstruit, celle du
-# worker n'en a aucun usage.
+# The frontend's build artifacts: the application's image rebuilds them, and the worker's has
+# no use for them.
 src/pixano/api/dist/
 src/pixano/api/legacy_dist/
 **/obj

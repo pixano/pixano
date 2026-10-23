@@ -79,9 +79,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Le contexte est la racine : le worker dépend de la source de pixano par chemin, et un
-      # contexte réduit au paquet ne la voit pas. C'est précisément ce qui avait cassé l'image
-      # sans que rien ne le signale, faute d'un build en intégration continue.
+      # The context is the repository root: the worker depends on pixano's source by path, and
+      # a context limited to the package does not see it. That is exactly what had broken the
+      # image without anything reporting it, for want of a build in continuous integration.
       - name: Build the worker image
         uses: docker/build-push-action@v6
         with:
@@ -90,9 +90,9 @@ jobs:
           load: true
           tags: pixano/pixano-worker:test
 
-      # Charger le registre exerce toute la chaîne d'imports, y compris les bibliothèques
-      # système qu'opencv réclame en arrivant par pixano.schemas. Une image qui démarre mais
-      # ne sait charger aucun type de job est cassée sans le dire.
+      # Loading the registry exercises the whole import chain, including the system libraries
+      # opencv needs once pixano.schemas pulls it in. An image that starts but cannot load any
+      # job kind is broken without saying so.
       - name: The job kinds load
         run: |
           docker run --rm pixano/pixano-worker:test python -c "
@@ -102,8 +102,8 @@ jobs:
           assert names, 'no job kind could be loaded'
           "
 
-      # Sans configuration, le worker doit refuser de démarrer en le disant — pas boucler ni
-      # se connecter au hasard.
+      # Without configuration, the worker must refuse to start and say so, rather than loop or
+      # connect anywhere at random.
       - name: An unconfigured worker refuses to start
         run: |
           set +e
@@ -121,8 +121,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # Les fichiers compose interpolent des variables et en exigent certaines : une faute s'y
-      # voit au premier `up`, c'est-à-dire trop tard.
+      # The compose files interpolate variables and require some of them: a mistake there
+      # shows at the first `up`, that is, too late.
       - name: The compose files resolve
         run: |
           cp .env.example .env

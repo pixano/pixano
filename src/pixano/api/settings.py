@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     aws_region: str | None = None
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
-    # Le nom du champ donnerait DATABASE_URL ; l'alias impose la même variable que celle du
-    # worker, pour qu'une seule valeur configure les deux composants.
+    # The field's name alone would read DATABASE_URL; the alias makes it read the worker's
+    # variable, so that a single value configures both components.
     database_url: str | None = Field(default=None, validation_alias="PIXANO_DATABASE_URL")
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
