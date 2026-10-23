@@ -13,6 +13,7 @@ path, and for the whole batch as soon as a single image in it is bad.
 """
 
 import base64
+import io
 from types import SimpleNamespace
 from typing import Any
 
@@ -21,7 +22,7 @@ import numpy as np
 import pytest
 from pixano_inference.client import PixanoInferenceError
 from pixano_worker.kinds import EmbeddingsKind, TransientError
-from pixano_worker.media import ResolvedMedia
+from pixano_worker.media import MediaResolver, ResolvedMedia
 
 from pixano.inference.media import bytes_to_data_uri
 
@@ -45,15 +46,24 @@ class _Inference:
         # Refuse every path, accept bytes: a server that does not read its media mount.
         self.refuses_paths = False
         self.status_for_everything: int | None = None
+        self.code_for_everything = "error"
         self.unreachable = False
         self.transport_error: Exception | None = None
         # Rank of the call from which the server stops answering: the case of a service that
         # goes down, or flaps while restarting, in the middle of the search for a faulty image.
         self.unreachable_from_call: int | None = None
         self.calls: list[list[str]] = []
+        self.opened = self.closed = 0
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
+        self.opened += 1
         return self
+
+    def __enter__(self) -> "_Inference":
+        return self
+
+    def __exit__(self, *_exc: Any) -> None:
+        self.closed += 1
 
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
@@ -68,7 +78,7 @@ class _Inference:
         if self.transport_error is not None:
             raise self.transport_error
         if self.status_for_everything is not None:
-            raise PixanoInferenceError(self.status_for_everything, "error", "refused")
+            raise PixanoInferenceError(self.status_for_everything, self.code_for_everything, "refused")
         # A damaged image is damaged as bytes too: what the simulated reader gives as the bytes
         # of an image is its path, so that the simulator recognises it in both forms.
         identities = {_decoded(image) for image in images}
@@ -81,7 +91,11 @@ class _Inference:
 
 
 class _Reader:
-    """A dataset where some records have no image, and others a lost image."""
+    """A dataset where some records have no image, and others a lost image.
+
+    As in a real dataset, a view designated by path carries no bytes of its own: only its file
+    can be read, through `open_media`.
+    """
 
     def __init__(
         self,
@@ -92,12 +106,14 @@ class _Reader:
         self.without_image = without_image
         self.lost = lost
         self.carried_bytes = carried_bytes
-        self.dataset = SimpleNamespace(get_data=self._get_data, get_view_binary=self._get_view_binary)
+        self.dataset = SimpleNamespace(get_data=self._get_data)
+        self.media = MediaResolver("/medias", "/medias")
 
     @staticmethod
-    def _get_view_binary(table_name: str, row_id: str) -> tuple[bytes, str]:
-        record_id = row_id.removeprefix("img-")
-        return f"/medias/{record_id}.jpg".encode(), "image/jpeg"
+    def open_media(table_name: str, view: Any) -> Any:
+        """The file a view names, as this worker reads it: here its path, so that the simulated
+        inference recognises an image in both forms."""
+        return io.BytesIO(view.uri.encode())
 
     def _get_data(self, table_name: str, record_ids: list[str]) -> list[Any]:
         return [
@@ -110,8 +126,8 @@ class _Reader:
         if view.record_id in self.lost:
             return None
         if self.carried_bytes:
-            return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), carried_bytes=True, reason="bytes")
-        return ResolvedMedia(view.uri, carried_bytes=False, reason="path")
+            return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), designation="bytes", reason="bytes")
+        return ResolvedMedia(view.uri, designation="path", reason="path")
 
 
 @pytest.fixture
@@ -155,6 +171,12 @@ class TestItemFailures:
 
         assert outcome.produced == 6
         assert sorted(item.item_id for item in outcome.quarantined) == ["r0", "r7"]
+
+    def test_the_client_is_closed_with_the_chunk(self, inference: _Inference) -> None:
+        """A client holds a connection pool, and one was left per chunk."""
+        _run(_Reader())
+
+        assert inference.opened == inference.closed == 1
 
     def test_a_healthy_batch_costs_a_single_call(self, inference: _Inference) -> None:
         """The search for the culprit costs nothing on the day there is none."""
@@ -307,6 +329,16 @@ class TestFatalFailures:
         inference.status_for_everything = status
 
         with pytest.raises(PixanoInferenceError):
+            _run(_Reader())
+
+        assert len(inference.calls) == 1, "no search for a culprit on an error that depends on no image"
+
+    def test_an_answer_the_worker_cannot_read_is_fatal(self, inference: _Inference) -> None:
+        """What the client raises for a successful answer that does not match its schema — a client
+        and a server of different versions: no medium is at fault, so none goes to quarantine."""
+        inference.status_for_everything, inference.code_for_everything = 200, "invalid_response"
+
+        with pytest.raises(PixanoInferenceError, match="invalid_response"):
             _run(_Reader())
 
         assert len(inference.calls) == 1, "no search for a culprit on an error that depends on no image"

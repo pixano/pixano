@@ -123,8 +123,9 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         images = self._images_of(reader, record_ids) if record_ids else {}
 
         candidates: list[tuple[str, str]] = []
-        # The images sent by path, so that one can be resent as bytes if the server refuses them
-        # all while it still embeds the witness image.
+        # The images designated by path, so that one can be resent as bytes if the server refuses
+        # them all while it still embeds the witness image. Not those designated by URL: the bytes
+        # this worker could send say nothing of whether the inference reaches the URL's source.
         by_path: dict[str, Any] = {}
         quarantined: list[dict[str, Any]] = []
         skipped = 0
@@ -140,27 +141,29 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
                 continue
             candidates.append((record_id, resolved.value))
             carried += int(resolved.carried_bytes)
-            if not resolved.carried_bytes:
+            if resolved.designation == "path":
                 by_path[record_id] = image
 
         read_s = time.perf_counter() - started
 
-        client = self.server.client(max_retries=params.max_retries)
-        started = time.perf_counter()
-        embedded, refused = self._embed_isolating(client, candidates, params)
-        inference_s = time.perf_counter() - started
-        if refused and not embedded:
-            # The whole batch is refused, image by image. A broken inference refuses everything;
-            # so does an entirely corrupt batch. What tells them apart is not the batch size —
-            # the last chunk of a dataset often has only one image — but the server itself, on an
-            # image known to be good.
-            blame_the_server_or_the_media(
-                lambda reference: self._embed(client, [reference], params),
-                reader,
-                IMAGE_TABLE,
-                [record_id for record_id, _ in refused],
-                by_path,
-            )
+        # Closed with the chunk: a client holds a connection pool, and a worker runs thousands
+        # of chunks.
+        with self.server.client(max_retries=params.max_retries) as client:
+            started = time.perf_counter()
+            embedded, refused = self._embed_isolating(client, candidates, params)
+            inference_s = time.perf_counter() - started
+            if refused and not embedded:
+                # The whole batch is refused, image by image. A broken inference refuses
+                # everything; so does an entirely corrupt batch. What tells them apart is not the
+                # batch size — the last chunk of a dataset often has only one image — but the
+                # server itself, on an image known to be good.
+                blame_the_server_or_the_media(
+                    lambda reference: self._embed(client, [reference], params),
+                    reader,
+                    IMAGE_TABLE,
+                    [record_id for record_id, _ in refused],
+                    by_path,
+                )
         quarantined.extend(
             {"item_id": record_id, "reason": "refused by the inference server", "detail": detail}
             for record_id, detail in refused
@@ -244,7 +247,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         Raises:
             TransientError: The inference does not answer or asks to come back later.
             PixanoInferenceError: An error that depends on no image — an unknown model, a denied
-                access. It is fatal to the chunk.
+                access, an answer this worker cannot read. It is fatal to the chunk.
         """
         if not candidates:
             return [], []

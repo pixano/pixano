@@ -6,6 +6,8 @@
 
 """Tests of the media resolver."""
 
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -135,6 +137,33 @@ class TestResolve:
         assert [by_path.carried_bytes, by_bytes.carried_bytes] == [False, True]
         assert by_path.reason and by_bytes.reason
 
+    @pytest.mark.parametrize(
+        ("uri", "designation"),
+        [
+            ("https://example.com/img.jpg", "url"),
+            ("s3://bucket/img.jpg", "url"),
+            ("/medias/voc/1.jpg", "path"),
+            ("", "bytes"),
+        ],
+    )
+    def test_it_says_how_it_designates_each_medium(self, resolver: MediaResolver, uri: str, designation: str) -> None:
+        """A URL was counted with the paths, as everything not sent
+        as bytes was, although resending bytes cannot diagnose it.
+
+        The bytes exist for the view without a URI only: a view carries one or the other.
+        """
+        resolved = resolver.resolve(_Source({"v1": JPEG} if not uri else {}), "images", _View(uri=uri))
+
+        assert resolved is not None and resolved.designation == designation
+
+    def test_what_to_check_for_refused_paths_names_the_inferences_root(self, resolver: MediaResolver) -> None:
+        """The inference's side of the mount, not the worker's: the path it was sent is under it. Both
+        variables are named, the worker's and the inference's own, since either can be wrong."""
+        diagnostic = resolver.path_refusal_diagnostic()
+
+        assert "under /data/media — check PIXANO_INFERENCE_MEDIA_ROOT on this worker" in diagnostic
+        assert "PIXANO_INFERENCE_MEDIA_ROOTS on the inference" in diagnostic
+
 
 class TestUnconfigured:
     def test_refuses_to_resolve_and_says_which_variables_are_missing(self) -> None:
@@ -143,3 +172,47 @@ class TestUnconfigured:
 
         with pytest.raises(RuntimeError, match="PIXANO_MEDIA_ROOT"):
             resolver.resolve(_Source(), "images", _View(uri="/anywhere/a.jpg"))
+
+
+class TestLocalPath:
+    """The file a view names, for what the worker reads itself — a medium it resends as bytes."""
+
+    RESOLVER = MediaResolver("/medias", "/srv/inference/medias")
+
+    def test_an_absolute_path_under_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="/medias/voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    def test_a_relative_reference_is_taken_from_the_root(self) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri="voc/a.jpg")) == "/medias/voc/a.jpg"
+
+    @pytest.mark.parametrize("uri", ["/medias/../etc/passwd", "../etc/passwd", "/etc/passwd"])
+    def test_nothing_outside_the_root(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    @pytest.mark.parametrize("uri", ["https://host/a.jpg", "s3://bucket/a.jpg", ""])
+    def test_nothing_the_worker_does_not_hold(self, uri: str) -> None:
+        assert self.RESOLVER.local_path(SimpleNamespace(uri=uri)) is None
+
+    def test_nothing_a_link_under_the_root_leads_to_outside_it(self, tmp_path: Path) -> None:
+        """The check was on the path's text, and opening the file follows links: a link under the
+        root to a file outside it was read, and resent to the inference, as a medium."""
+        root, outside = tmp_path / "media", tmp_path / "outside"
+        root.mkdir()
+        outside.mkdir()
+        (outside / "a.jpg").write_bytes(JPEG)
+        (root / "a.jpg").symlink_to(outside / "a.jpg")
+
+        assert MediaResolver(str(root), "/srv/inference/medias").local_path(SimpleNamespace(uri="a.jpg")) is None
+
+    def test_links_that_stay_under_the_root_are_followed(self, tmp_path: Path) -> None:
+        """A root mounted through a link, and a link from one folder of the root to another."""
+        storage = tmp_path / "storage"
+        (storage / "voc").mkdir(parents=True)
+        (storage / "voc" / "a.jpg").write_bytes(JPEG)
+        (storage / "a.jpg").symlink_to(storage / "voc" / "a.jpg")
+        root = tmp_path / "media"
+        root.symlink_to(storage)
+
+        resolver = MediaResolver(str(root), "/srv/inference/medias")
+
+        assert resolver.local_path(SimpleNamespace(uri="a.jpg")) == str(root / "a.jpg")
