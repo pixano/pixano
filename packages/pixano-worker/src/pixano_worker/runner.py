@@ -24,9 +24,9 @@ import logging
 import threading
 import traceback
 from collections import OrderedDict, defaultdict
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from collections.abc import Set as AbstractSet
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -42,7 +42,7 @@ from .kinds import Chunk, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import SCHEMA_NAME
-from .threads import WorkerThreads
+from .threads import TimeLimitExceeded, WorkerThreads
 from .writer import JobWriter
 
 
@@ -83,8 +83,33 @@ RECLAIM_INTERVAL_S = 30.0
 # Writes to a same dataset go one at a time. Several chunks of a dataset run at the same time,
 # and LanceDB is not made for concurrent writes on a same table. The lock is a thread lock:
 # `write` runs in a thread.
+#
+# It lives at module level, so renewing the thread pool cannot release it: a write that never
+# returns — storage that stopped answering — holds it until the process ends. Every wait for it
+# is therefore bounded (`_holding_write_lock`), so that no chunk waits on it for good. Other
+# datasets' writes never wait on it, but that dataset's chunks still take a worker slot each
+# while they wait (backend-processing §18).
 _write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
 _write_locks_guard = threading.Lock()
+
+# How long a chunk waits for this worker's other writes to its dataset before it is handed back
+# as after a transient failure. Generous: giving up spends one of the chunk's attempts
+# (`queue.MAX_ATTEMPTS`), and the chunk holds no lock while it waits, only its own slot. Five minutes
+# outlast every write queued ahead of it, and stay far below the chunk's time limit
+# (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write that hangs is handed back, and
+# its thread freed, instead of waiting that whole limit out, five times, and staying stuck on the
+# lock for good.
+CHUNK_WRITE_LOCK_WAIT_S = 300.0
+
+# How long the loop waits for each step of a planning — the preparation, then the split — before
+# it fails the job. Planning prepares the dataset, then reads the identifiers it splits. Not
+# measured: a ceiling rather than an estimate, set far above that work, so that only a planning
+# stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it,
+# and the loop's turn, which it holds, is given back.
+PLANNING_TIMEOUT_S = 600.0
+
+# What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
+PLANNING_TIMED_OUT = "planning exceeded its time limit"
 
 
 @lru_cache(maxsize=1)
@@ -96,6 +121,32 @@ def default_threads() -> WorkerThreads:
 def _write_lock(dataset_id: str) -> threading.Lock:
     with _write_locks_guard:
         return _write_locks[dataset_id]
+
+
+@contextmanager
+def _holding_write_lock(dataset_id: str, wait_s: float, busy: Callable[[str], Exception]) -> Iterator[None]:
+    """Hold this worker's write lock of a dataset, waiting for it at most `wait_s`.
+
+    Args:
+        dataset_id: The dataset to write.
+        wait_s: How long to wait for the lock.
+        busy: Builds the exception raised when the lock is not free in time: what a dataset kept
+            busy means is the caller's to say — a chunk handed back.
+
+    Raises:
+        Exception: The one `busy` builds, when another write of this worker on the dataset held
+            the lock beyond `wait_s` — a long one, or one that hangs.
+    """
+    lock = _write_lock(dataset_id)
+    if not lock.acquire(timeout=wait_s):
+        raise busy(
+            f"this worker's write lock of dataset '{dataset_id}' was not free within {wait_s:g} s: "
+            "another of its writes there is long, or hangs"
+        )
+    try:
+        yield
+    finally:
+        lock.release()
 
 
 # The job stays in `planning` while it is split: it is the lease that reserves it, not a state
@@ -208,8 +259,16 @@ async def plan_one(
             # Preparation precedes the split, under the same lease: a planner that dies between
             # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
             # is why `prepare` must be idempotent.
-            await pool.run(lambda: kind.prepare(writer, params))
-            chunks = await pool.run(lambda: list(kind.plan(reader, params)))
+            await pool.run(lambda: kind.prepare(writer, params), PLANNING_TIMEOUT_S)
+            chunks = await pool.run(lambda: list(kind.plan(reader, params)), PLANNING_TIMEOUT_S)
+    except TimeLimitExceeded:
+        # This is the planning's own work that does not end: its reads or its `prepare`, on storage
+        # that stopped answering, or a kind's bug. Planned again, it would hold the loop's turn for
+        # the whole limit each time, with no bound on the number of tries (backend-processing §10),
+        # and leave one more thread stuck each time. Failing says it once.
+        await _fail_job(conn, job_id, {"reason": PLANNING_TIMED_OUT, "timeout_s": PLANNING_TIMEOUT_S})
+        log.error("job %s: planning still running after %ss, the job fails", job_id, PLANNING_TIMEOUT_S)
+        return job_id
     except Exception as error:
         await _fail_job(conn, job_id, {"reason": "planning failed", "detail": str(error)})
         log.exception("job %s: planning failed", job_id)
@@ -631,7 +690,10 @@ async def _execute(
                 f"the outcome of kind '{kind_name}' covers {outcome.total} task(s), "
                 f"the chunk counts {chunk.task_count}"
             )
-        with _write_lock(dataset_id):
+        # A write of this worker that keeps the dataset past the wait says nothing about this
+        # chunk: handed back as transient, it is written once that write is over — or set aside
+        # after its last attempt, if that write hangs for good.
+        with _holding_write_lock(dataset_id, CHUNK_WRITE_LOCK_WAIT_S, busy=TransientError):
             kind.write(
                 _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
                 result,

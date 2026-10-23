@@ -4,14 +4,21 @@
 # License: CECILL-C
 # =====================================
 
-"""Access to a live PostgreSQL for the tests that need one."""
+"""What several suites share: a live PostgreSQL for the tests that need one, and another chunk
+writing a dataset while the worker writes it."""
 
 import os
-from collections.abc import AsyncIterator, Iterator
+import threading
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
+from pathlib import Path
 
 import psycopg
 import pytest
+from pixano_worker import runner
 from pixano_worker.schema import SCHEMA_NAME, ensure_schema
+
+from pixano.datasets import Dataset
 
 
 # A dedicated variable, and deliberately so: a developer running the worker has
@@ -74,3 +81,39 @@ async def adb(db: psycopg.Connection, postgres_url: str) -> AsyncIterator[psycop
     """
     async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as conn:
         yield conn
+
+
+# How long a test waits for the thread that writes a dataset to take its lock, or to let it go:
+# far beyond what either takes, so that only a hang reaches it.
+LOCK_HANDOVER_TIMEOUT_S = 10.0
+
+
+@contextmanager
+def _writing(path: Path, dataset_id: str) -> Iterator[threading.Event]:
+    """This worker's chunk of another job writes the dataset at `path`, in another thread, until the
+    block ends or the event it yields is set.
+
+    It holds the runner's write lock for that dataset, as `runner._execute` does around `write`,
+    and the dataset's own write lock, as a write does.
+    """
+    holding, done = threading.Event(), threading.Event()
+
+    def write() -> None:
+        with runner._write_lock(dataset_id), Dataset(path).write_lock():
+            holding.set()
+            done.wait(LOCK_HANDOVER_TIMEOUT_S)
+
+    writer = threading.Thread(target=write, name="someone-writing")
+    writer.start()
+    assert holding.wait(LOCK_HANDOVER_TIMEOUT_S), "the other writer never took the lock"
+    try:
+        yield done
+    finally:
+        done.set()
+        writer.join(LOCK_HANDOVER_TIMEOUT_S)
+
+
+@pytest.fixture
+def writing() -> Callable[..., AbstractContextManager[threading.Event]]:
+    """Another chunk writing a dataset for the length of a block (`_writing`)."""
+    return _writing
