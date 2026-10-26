@@ -18,6 +18,7 @@ import {
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
+import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
   openManager,
   viewIdOf,
@@ -127,7 +128,9 @@ async function openOnCanvas(...others: Row[]) {
     editor.syncSelection();
   }
   redraw();
-  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets };
+  // The tool the image widget hands its keys to.
+  const selectTool = selectTool2D.createHandler(ctx);
+  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets, selectTool };
 }
 
 type OnCanvas = Awaited<ReturnType<typeof openOnCanvas>>;
@@ -332,4 +335,32 @@ describe("keypoints on the shared flatCoordsEditor2D, a drag still running when 
     grabbed.release();
     expect(scene.manager.pendingMutations).toEqual([]);
   });
+});
+
+describe("keypoints on the shared flatCoordsEditor2D, Backspace pressed while a drag runs", () => {
+  it.each([
+    ["a point", (scene: OnCanvas) => vertexOf(scene, "k1", 0)],
+    ["the whole skeleton", (scene: OnCanvas) => groupOf(scene, "k1")],
+  ])(
+    "dragging %s of a person's skeleton: deleted as stored, and nothing left unsaved once saved",
+    async (_, nodeOf) => {
+      const scene = await openOnCanvas();
+      select(scene, "k1");
+      const grabbed = grab(scene, nodeOf(scene));
+      grabbed.moveTo(10, 0);
+
+      expect(scene.selectTool.onKeyDown!(new KeyboardEvent("keydown", { key: "Backspace" }))).toBe(
+        true,
+      );
+      grabbed.moveTo(20, 0);
+      grabbed.release();
+
+      expect(scene.manager.annotations.find("k1")).toBeUndefined();
+      expect(scene.flagSets.at(-1)).toBe(false);
+      await scene.manager.flushSave();
+      // The delete alone reached the server, and the record is all saved.
+      expect(scene.backend.writes.map((w) => w.op)).toEqual(["delete"]);
+      expect(scene.manager.hasUnsavedWork).toBe(false);
+    },
+  );
 });

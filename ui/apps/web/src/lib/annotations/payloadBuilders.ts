@@ -173,13 +173,24 @@ export function buildDeleteMutations(
  * Kind-agnostic local delete: queues the backend deletes for a persisted
  * annotation, or drops the not-yet-flushed creates for a draft, then removes
  * it from the collection. Used by select tools and widget delete buttons.
+ *
+ * @param annotation The annotation the gesture acts on.
+ * @param collection The store it lives in.
+ * @param mutations The sink the delete is queued on.
+ * @param widgetId Who acts, for the unsaved counters.
+ * @param cancelGesture Cancels a gesture still under way where the delete was
+ *   pressed — a resize, a drag — putting its shape back as stored and letting
+ *   its staged work go. Called first: the delete then applies to the row as
+ *   stored, and nothing half done is committed after it.
  */
 export function deleteLocalAnnotation(
   annotation: LocalAnnotation,
   collection: AnnotationStore,
   mutations: MutationSink,
   widgetId: string,
+  cancelGesture?: () => void,
 ): void {
+  cancelGesture?.();
   if (annotation.persisted) {
     for (const m of buildDeleteMutations(annotation, widgetId)) mutations.queue(m);
   } else {
