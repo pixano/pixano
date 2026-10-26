@@ -340,9 +340,14 @@ it on commit, Escape, `deactivate` and an undo that empties it (the contract on
 A 2D editor holds its flag while a gesture on a stored shape runs, raised as the
 gesture starts and lowered as it ends, never at each pointer move. The bbox
 editor holds it from `transformstart` to `transformend`, keeping the transformer
-on the box it resizes whatever the selection does, and from a box's `dragstart`
-to its `dragend`. The editor stamps the node it holds with its kind's
-attribute — `BBOX_RESIZING_ATTR`, `BBOX_DRAGGING_ATTR` — and the renderer's sync
+on the box it resizes whatever the selection does. The bbox, mask, multi-path
+and keypoints editors hold it from a shape's `dragstart` to its `dragend`, the
+whole shape or one of its points — for multi-path and keypoints, the shared
+`scene/flatCoordsEditor2D.ts`, which holds the drag for every kind on it, each
+naming only its attribute in its spec. The editor stamps the node it holds (the
+path's or the skeleton's group when a point is dragged) with its kind's
+attribute — `BBOX_RESIZING_ATTR`, `BBOX_DRAGGING_ATTR`, `MASK_DRAGGING_ATTR`,
+`MULTI_PATH_DRAGGING_ATTR`, `KEYPOINTS_DRAGGING_ATTR` — and the renderer's sync
 leaves a stamped node alone, so a save ending under the gesture neither snaps
 the shape back nor drops its move: the node stays where the gesture has it, and
 the gesture is committed by id when the pointer is let go — only one the editor

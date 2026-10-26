@@ -18,6 +18,7 @@ import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 const ID_ATTR = "theId";
 const INDEX_ATTR = "theIndex";
 const VERTEX_NAME = "vertex";
+const DRAGGING_ATTR = "theDragging";
 
 /**
  * Exercised through the real `multi_path` kind rather than a stand-in geometry,
@@ -29,6 +30,7 @@ const spec: FlatCoordsEditorSpec<MultiPathGeometry> = {
   idAttr: ID_ATTR,
   vertexName: VERTEX_NAME,
   vertexIndexAttr: INDEX_ATTR,
+  draggingAttr: DRAGGING_ATTR,
   readCoords: (g) => g.coords,
   withCoords: (g, coords) => ({ ...g, coords }),
 };
@@ -37,9 +39,11 @@ const spec: FlatCoordsEditorSpec<MultiPathGeometry> = {
 function fakeGroup(id: string, x = 0, y = 0) {
   let gx = x;
   let gy = y;
+  const attrs: Record<string, unknown> = { [ID_ATTR]: id };
   return {
     name: () => "group",
-    getAttr: (k: string) => (k === ID_ATTR ? id : undefined),
+    getAttr: (k: string) => attrs[k],
+    setAttr: (k: string, v: unknown) => (attrs[k] = v),
     getParent: () => null,
     x: (v?: number) => (v !== undefined ? (gx = v) : gx),
     y: (v?: number) => (v !== undefined ? (gy = v) : gy),
@@ -106,7 +110,11 @@ function seed(collection: AnnotationCollection, persisted = true) {
 
 describe("flatCoordsEditor2D", () => {
   let harness: ReturnType<typeof makeHarness>;
-  const drag = (target: unknown) => harness.handlers["dragend.multi_path-edit"]({ target });
+  /** A whole drag of `target`: the editor commits only a drag whose start it saw. */
+  const drag = (target: unknown) => {
+    harness.handlers["dragstart.multi_path-edit"]({ target });
+    harness.handlers["dragend.multi_path-edit"]({ target });
+  };
 
   beforeEach(() => {
     harness = makeHarness();
@@ -202,9 +210,35 @@ describe("flatCoordsEditor2D", () => {
     expect(harness.upsertUpdate).not.toHaveBeenCalled();
   });
 
+  it("commits nothing for a drag whose start it did not see", () => {
+    seed(harness.collection);
+
+    harness.handlers["dragend.multi_path-edit"]({ target: fakeVertex(fakeGroup("a1"), 1, 50, 60) });
+
+    expect(harness.collection.find("a1")?.geometry).toMatchObject({
+      coords: [0.1, 0.1, 0.2, 0.2],
+    });
+    expect(harness.upsertUpdate).not.toHaveBeenCalled();
+  });
+
+  it("marks the group while it is dragged, by a vertex, and unmarks it before committing", () => {
+    seed(harness.collection);
+    const group = fakeGroup("a1");
+    const vertex = fakeVertex(group, 1, 50, 60);
+    let markedAtCommit: unknown;
+    harness.upsertUpdate.mockImplementation(() => (markedAtCommit = group.getAttr(DRAGGING_ATTR)));
+
+    harness.handlers["dragstart.multi_path-edit"]({ target: vertex });
+    expect(group.getAttr(DRAGGING_ATTR)).toBe(true);
+    harness.handlers["dragend.multi_path-edit"]({ target: vertex });
+
+    expect(markedAtCommit).toBe(false);
+    expect(group.getAttr(DRAGGING_ATTR)).toBe(false);
+  });
+
   it("stops listening once destroyed", () => {
     const editor = createFlatCoordsEditor2D(harness.ctx, spec);
     editor.destroy();
-    expect(harness.off).toHaveBeenCalledWith("dragend.multi_path-edit");
+    expect(harness.off).toHaveBeenCalledWith("dragstart.multi_path-edit dragend.multi_path-edit");
   });
 });

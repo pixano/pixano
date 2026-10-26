@@ -124,7 +124,8 @@ scene/
   registry2d.ts     TOOLS_2D, RENDERER_FACTORIES_2D
   registry3d.ts     TOOLS_3D, RENDERER_FACTORIES_3D
   selectTool2D.ts   kind-agnostic select/delete tool
-  flatCoordsEditor2D.ts  shared vertex editor reused by keypoints and multi-path
+  flatCoordsEditor2D.ts  shared vertex editor reused by keypoints and multi-path,
+                         holding their drags too
   entityLabels2D.ts      shared entity-label rendering
   scene2dGeometry.ts     Konva pixel↔normalized math
   scene2dStyleConstants.ts  shared 2D draw styling
@@ -282,7 +283,9 @@ which both `Scene2DContext` and the widgets' seam satisfy.
      `<KIND>_DRAGGING_ATTR` (or `BBOX_RESIZING_ATTR`) that the renderer's sync
      leaves alone, and commits only a gesture it saw begin, unstamping the node
      before the commit redraws it; its discard puts the shape back as stored and
-     stops the gesture, whose end then commits nothing.
+     stops the gesture, whose end then commits nothing. A kind editing through the
+     shared `flatCoordsEditor2D` writes none of this: the shared editor holds the
+     drag, and the kind's spec only names its dragging attribute (`draggingAttr`).
      An editor commits geometry the server accepts: the box editor keeps a dragged
      box whole inside the image and cuts a resized one at its edges, never below
      the least size a resize leaves a box (`MIN_BBOX_PIXELS`)
@@ -379,9 +382,9 @@ could bring a flag back or drop one another widget had just raised.
 The 2D box editor raises its flag from `transformstart` to `transformend`: a
 resize is work under way until it ends.
 
-A drag of a stored 2D box is held the same way, since a save ending under it
-could otherwise lose its move: the bbox editor raises its flag from `dragstart`
-to `dragend`.
+A drag of a stored 2D shape is held the same way, since a save ending under it
+could otherwise lose its move: the bbox, mask, multi-path and keypoints editors
+raise their flag from `dragstart` to `dragend`.
 
 ## History — the refactor stages
 
@@ -486,9 +489,12 @@ check` at baseline error count and `vitest` green:
   fires, and pass while resizes go unsaved: an editor test belongs on the real
   Konva.
 
-  The resizes and drags held across a save run there too (`bboxEditor2D.test.ts`),
-  which sends a window `mouseup` after every test: Konva's drags are global, and
-  one a failed test left running would move with the next test's pointer.
+  The drags held across a save run there too, one file per kind
+  (`bboxEditor2D.test.ts`, `maskDrag.test.ts`, `multiPathDrag.test.ts`,
+  `keypointsDrag.test.ts` — the last two through the shared `flatCoordsEditor2D`,
+  as their kinds wire it). Each file sends a window `mouseup` after every test:
+  Konva's drags are global, and one a failed test left running would move with the
+  next test's pointer.
 
   `bbox3dRenderer2D` now has node-level tests too
   (`bbox3dRenderer2D.test.ts`): projection math against hand-computed

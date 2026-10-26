@@ -42,5 +42,13 @@ export const KEYPOINTS_ID_ATTR = "pixanoKeypointsId";
  */
 export const KEYPOINTS_VERTEX_INDEX_ATTR = "pixanoKeypointIndex";
 
+/**
+ * Set on a skeleton's group while the skeleton is dragged, whole or by one
+ * point. A drag moves the nodes and reaches the collection only as it ends; the
+ * renderer leaves a group so marked alone meanwhile, as rebuilding it — a save
+ * ending, the selection changing — would cut the drag short under the pointer.
+ */
+export const KEYPOINTS_DRAGGING_ATTR = "pixanoKeypointsDragging";
+
 /** Tool id of the skeleton placer, referenced by the toolbar and by tests. */
 export const DRAW_KEYPOINTS_TOOL_ID = "draw-keypoints";
