@@ -143,6 +143,7 @@ interface SceneContextBase {
   requestRedraw(): void;
   claimStagedWork?(discard: () => void): StagedWorkFlag; // one holder's flag: set(staged)
   releaseStagedWork?(): void; // the widget closes: lower its holders' flags
+  discardStagedWork?(): void; // a delete mid-gesture: the widget's holders drop their work
 }
 ```
 
@@ -167,9 +168,11 @@ duplication of seam wiring:
   raised, the record is not all saved, and each raised flag counts as one
   unsaved item; the record's Discard calls each raised flag's `discard`;
   `releaseStagedWork()` lowers the widget's flags as it closes, since nothing in
-  it can confirm that work any more. **This is the single entry point a new
-  medium reuses** — it never re-implements collection wiring or mutation
-  plumbing.
+  it can confirm that work any more; `discardStagedWork()` is the widget's share
+  of Discard — each of its raised holders' `discard`, then its flags lowered,
+  another widget's work kept — which a delete pressed during a resize or a drag
+  calls first. **This is the single entry point a new medium reuses** — it never
+  re-implements collection wiring or mutation plumbing.
 
 The toolbar is shared too: `components/widgets/AnnotationToolbar.svelte` (tool
 buttons + pending/save/discard) with a `controls` snippet for widget-specific
@@ -277,7 +280,8 @@ which both `Scene2DContext` and the widgets' seam satisfy.
      editor's resize or drag — claims a staged-work flag
      (`claimStagedWork(discard)`), raises it for work that changes something, lowers
      it on every way out, and drops the work when `discard` is called — by
-     Discard. A 2D editor
+     Discard, and by a delete pressed in the middle of a gesture, before it
+     deletes. A 2D editor
      raises it as a gesture starts (`dragstart`, `transformstart`) and lowers it as
      it ends, never per pointer move, stamps the node it holds with a
      `<KIND>_DRAGGING_ATTR` (or `BBOX_RESIZING_ATTR`) that the renderer's sync
@@ -386,6 +390,15 @@ A drag of a stored 2D shape is held the same way, since a save ending under it
 could otherwise lose its move: the bbox, mask, multi-path and keypoints editors
 raise their flag from `dragstart` to `dragend`.
 
+The same seam serves a delete: Delete/Backspace, and the image widget's trash
+button while the select tool is active, call the widget's `discardStagedWork`
+before they delete. Pressed during a resize or a drag, a delete would otherwise
+let the gesture go on over a shape no longer there: a resized box's node, gone
+with the delete, would make Konva throw at the next move; and a vertex drag,
+whose end no longer reaches the editor once the shape's group is gone, would
+leave its flag raised for good. One path, Discard's, so no kind knows a delete
+can interrupt its gesture.
+
 ## History — the refactor stages
 
 **Phases 0–6 (2026-06-11 design).** 0: mechanical renames (`localBBoxId` →
@@ -475,6 +488,10 @@ check` at baseline error count and `vitest` green:
   when resized, and is drawn again as stored. Each gesture's end redraws, so the
   box is drawn where it is saved.
 
+  A Delete pressed during a resize or a drag lets go of it first, through the
+  editor's discard (`SceneContextBase.discardStagedWork`): the delete applies to
+  the box as stored, and Konva throws nothing after.
+
 - **DEBT-2 — ~~3D write-path lives in `PointCloudWidget`~~ → RESOLVED (2026-06-29).**
   Stage 3 introduced `Scene3DContext` + `Tool3D.overlay`, moving the editor and the
   bbox3d write-path into the kind module (`BBox3DTool.svelte` +
@@ -495,6 +512,9 @@ check` at baseline error count and `vitest` green:
   as their kinds wire it). Each file sends a window `mouseup` after every test:
   Konva's drags are global, and one a failed test left running would move with the
   next test's pointer.
+
+  A Delete pressed in the middle of each kind's gestures runs there too, through
+  the real select tool's `onKeyDown`.
 
   `bbox3dRenderer2D` now has node-level tests too
   (`bbox3dRenderer2D.test.ts`): projection math against hand-computed
