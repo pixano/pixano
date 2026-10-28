@@ -80,6 +80,13 @@ export interface RecordReadGateway {
   ): Promise<TRow[]>;
 }
 
+/**
+ * The writes `MutationQueue.flush` sends. A write that fails rejects. One the
+ * server refused — a 4xx answer — rejects with an `ApiError` carrying that
+ * status (`isRefusal` in `$lib/api/apiClient`): it stored nothing. Any other
+ * failure — a network error, a lost answer, a 5xx — may come after the write
+ * was stored.
+ */
 export interface MutationGateway {
   createEntity(datasetId: string, body: Record<string, unknown>): Promise<Record<string, unknown>>;
 

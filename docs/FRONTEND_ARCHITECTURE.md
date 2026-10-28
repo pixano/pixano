@@ -115,10 +115,11 @@ Three ideas hold it together:
 | `listEntities` | `api/annotations.ts` | `GET …/entities?record_id=` | record-scoped entity rows |
 | `listAnnotations<TRow>` | `api/annotations.ts` | `GET …/{resource}?record_id=` | **kind-generic** — the caller passes the `resource` its payload builder owns, so a new kind adds no method here |
 | `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `api/workspace.ts` | `GET …/{view}` | media + calibration |
-| `createEntity` / `deleteEntity` | `api/annotations.ts` | `POST/DELETE …/entities` | |
+| `createEntity` | `api/annotations.ts` | `POST …/entities` | |
+| `deleteEntity` | `api/annotations.ts` | `DELETE …/entities/{id}` | a 404 counts as done, any other failure throws an `ApiError` with its status |
 | `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
 | `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
-| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | |
+| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | a 404 counts as done, any other failure throws an `ApiError` with its status |
 
 Note `listAnnotations`' `view_name` query parameter actually filters the `view_id`
 column for annotations (legacy server-side naming — see `service.list` in
@@ -136,6 +137,12 @@ to `api/annotations.ts`.
 Why it exists: the `MutationQueue` and `RecordLoader` depend on this **interface**,
 not on `fetch`. Tests pass an in-memory fake; nothing else changes. The frontend
 never calls `fetch` outside `api/`.
+
+The writes (`MutationGateway`, the half the queue sees) keep one contract on
+failure: a write the server refused — a 4xx — rejects with an `ApiError`
+carrying that status (`isRefusal`, `api/apiClient.ts`), a delete as any other,
+and stored nothing; any other failure — a network error, a lost answer, a 5xx —
+may come after the write was stored.
 
 ---
 
@@ -156,12 +163,15 @@ WorkspaceManager
  └─ pendingAnnotation                     // box awaiting its entity choice
 ```
 
-Representative API: `selectRecordInDataset`, `flushSave`, `queueMutation`,
+Representative API: `openRecord` (the way to switch records, or to open the
+same one again: clears the workspace, unsaved changes included, then
+`selectRecordInDataset`), `flushSave`, `queueMutation`,
 `upsertUpdateMutation`, `deleteAnnotation`, `beginPendingAnnotation` /
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
 `toggleEntityVisible` / `showAllEntities`, `saveDatasetLayout` /
 `restoreOpeningLayout` / `fitLayoutToViewport`. Getters forward to the
-session/queue (`annotations`, `entities`, `pendingCount`, `saving`, …).
+session/queue (`annotations`, `entities`, `pendingCount` — the request on the
+wire included — `pendingMutations` — the queued ones only — `saving`, …).
 
 **Per-dataset layout preference.** Every record of a dataset declares the same
 views, so the arrangement the user builds on one is replayed on the others
@@ -228,18 +238,67 @@ the panel/picker reflect created/pruned entities.
 
 ### `MutationQueue` (`workspace/mutationQueue.svelte.ts`)
 Owns the list of pending writes and the flush lifecycle. Implements **`MutationSink`**:
-`queue`, `upsertUpdate` (replace a pending update for the same resource+id),
+`queue`, `upsertUpdate` (replace the last queued update for the same
+resource+id, taking the newer gesture's `widgetId` with its body),
 `patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`.
-Plus reactive `pending`, `count`, `saving`, `saveError`.
+Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`.
+
+**A request on the wire is out of reach.** A mutation leaves `pending` as its
+request leaves and is `inFlight` until the backend answers; `count` includes it.
+Nothing queued meanwhile can be written into a body the server already has —
+which would drop that work unsent once the request returned:
+
+- an edit on that row is queued after it, as an update of its own;
+- `patchPendingCreate` on a create already on the wire queues an update of the
+  row it makes (the local annotation id doubles as the row id); should that
+  create fail, it comes back ahead of the update, and a later patch goes into
+  the update, sent last;
+- `dropForLocalAnnotation` on a create already on the wire queues a delete of
+  that row, so a draft dropped during its save does not stay in the dataset. That
+  create is _abandoned_: should it fail, it is not tried again. Should the server
+  refuse it (a 4xx), it made nothing: the delete is dropped, and no failure is
+  reported. Should it fail any other way — a network error, a lost answer, a
+  5xx — it may have made the row: the delete stays queued, and the failure is
+  reported. A delete answered 404 counts as done (`api/annotations.ts`), so that
+  delete costs nothing when the row was never made. Only a reset of the queue
+  (Discard, another record) before that delete is sent leaves the row there.
+
+A failed request goes back to the head of the queue, and `upsertUpdate`
+replacing the last queued update keeps the gestures in their order behind it:
+an edit made after a failed save is the one sent last.
+`reset()` (another record opened, Discard) bumps a generation: a request still in
+flight then neither comes back into the new queue nor reports its error there.
 
 `flush()`:
 1. `sortMutations(pending)` by **`mutationPriority`**: `entityCreate(0) <
    annotationCreate(1) < annotationDelete(2) < entityDelete(3)` — entities are
    created before the annotations that reference them, and deleted after them.
-2. POST/PUT/DELETE each via the gateway; drop it from `pending` on success.
+2. POST/PUT/DELETE each via the gateway, through `sendIfStillQueued`. Every
+   request is awaited, and a gesture made meanwhile may drop a write this flush
+   is about to send (a draft deleted, a change of mind), rewrite it to name a
+   new entity whose create was queued after the flush began, or reset the queue
+   (Discard, another record). So each write is looked at again after every
+   await: one no longer queued, or whose queue was reset, is not sent; one
+   naming an entity whose create is still queued — by its `entity_id` as it
+   reads now — waits for that create to be sent, and is looked at again, until
+   no such create is left. No write names an entity that does not exist yet,
+   and none dropped while the flush ran is sent.
 3. On a successful **create** of an annotation, flip its local `persisted = true`
    via the **`LocalAnnotationLocator`** (`findLocalAnnotation(id)` → the session's
    collection). Drafts thus become "saved" without a per-widget lookup.
+
+A flush that finds the queue empty clears `saveError`: what failed is no longer
+queued (a draft whose create failed, then deleted), so nothing is left to report.
+
+### Unsaved work and saves
+
+**A save never loses work begun during it.** The queue never writes into a
+request already on the wire, and a failed request returns to the head of the
+queue (§4, `MutationQueue`). A write dropped while a save runs — a draft
+deleted, a change of mind, Discard, another record — is never sent, since each
+write is looked at again after every await of the flush; a write a gesture
+moved onto a new entity during a save waits for that entity's create, sent
+first, whenever it was queued.
 
 ---
 
@@ -351,8 +410,16 @@ tool drags an existing box
 flushSave()
   → MutationQueue.flush()
        sort: entityCreate < annCreate < annDelete < entityDelete
-       for each: gateway.create/update/delete…
-       on annotation create success: locator → annotation.persisted = true
+       for each, sendIfStillQueued — looked at again after every await:
+            dropped meanwhile, or the queue reset? → not sent
+            names an entity whose create is still queued?
+                 → send that create first, then look again
+            out of pending, inFlight; gateway.create/update/delete…
+       on success: annotation create → persisted = true
+       on failure:
+            abandoned create? → not retried; its delete dropped on a 4xx,
+                                kept otherwise
+            any other write → back to the head of the queue
   → reloadEntities()  (token-guarded refetch → session.entities fresh)
 ```
 
@@ -443,7 +510,7 @@ ui/apps/web/src/lib/
 
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
-| `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue |
+| `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue; a refused write rejects with an `ApiError` carrying its 4xx status |
 | `DatasetLayoutRepository` | `workspace/datasetLayoutRepository.ts` | `localStorageDatasetLayoutRepository`; consumed by loader + manager |
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets |

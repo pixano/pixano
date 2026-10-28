@@ -16,7 +16,7 @@ import {
   updateAnnotation,
 } from "../annotations";
 import type { BBox3DRow, BBoxRow } from "../annotations";
-import { ApiError } from "../apiClient";
+import { ApiError, isRefusal } from "../apiClient";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -254,7 +254,7 @@ describe("deleteAnnotation", () => {
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
     expect(url).toBe(`/datasets/${DS}/bboxes/b1?prune_orphan_entity=true`);
-    expect((init as RequestInit).method).toBe("DELETE");
+    expect(init.method).toBe("DELETE");
   });
 
   it("does not throw on 404 (already deleted)", async () => {
@@ -269,6 +269,16 @@ describe("deleteAnnotation", () => {
     await expect(deleteAnnotation(DS, "bboxes", "b1")).rejects.toThrow(
       "deleteAnnotation(bboxes) failed with 500",
     );
+  });
+
+  it("throws a refusal as an ApiError with its status and reason, as every other write does", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(errResponse(409, "Conflict"));
+
+    const failure = await deleteAnnotation(DS, "bboxes", "b1").catch((err: unknown) => err);
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure).toMatchObject({ status: 409, body: JSON.stringify({ detail: "Conflict" }) });
+    expect(isRefusal(failure)).toBe(true);
   });
 });
 
@@ -295,5 +305,17 @@ describe("deleteEntity", () => {
       new Response(null, { status: 403, statusText: "Forbidden" }),
     );
     await expect(deleteEntity(DS, "e1")).rejects.toThrow("deleteEntity failed with 403");
+  });
+
+  it("throws a refusal as an ApiError with its status, which a 5xx is not", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(errResponse(409, "Conflict"));
+    const refused = await deleteEntity(DS, "e1").catch((err: unknown) => err);
+    vi.mocked(fetch).mockResolvedValueOnce(errResponse(502, "Bad Gateway"));
+    const lost = await deleteEntity(DS, "e1").catch((err: unknown) => err);
+
+    expect(refused).toMatchObject({ status: 409 });
+    expect(isRefusal(refused)).toBe(true);
+    expect(lost).toMatchObject({ status: 502 });
+    expect(isRefusal(lost)).toBe(false);
   });
 });

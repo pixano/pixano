@@ -28,8 +28,7 @@ const mockRegistry = {
 
 const mockManager = {
   addWidget: vi.fn(),
-  clearWorkspace: vi.fn(),
-  selectRecordInDataset: vi.fn().mockResolvedValue(undefined),
+  openRecord: vi.fn().mockResolvedValue(undefined),
 } as unknown as WorkspaceManager;
 
 const mockDataset = new DatasetInfo({
@@ -74,7 +73,7 @@ describe("LeftPanel — explorer section", () => {
   beforeEach(() => {
     mockedListDatasets.mockResolvedValue([]);
     mockedListRecords.mockResolvedValue(mockRecordsPage);
-    vi.mocked(mockManager.selectRecordInDataset).mockResolvedValue(undefined);
+    vi.mocked(mockManager.openRecord).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -404,7 +403,7 @@ describe("LeftPanel — explorer section", () => {
     });
   });
 
-  it("clicking a record calls manager.selectRecordInDataset with correct ids", async () => {
+  it("clicking a record calls manager.openRecord with correct ids", async () => {
     mockedListDatasets.mockResolvedValue([mockDataset]);
     renderPanel();
 
@@ -415,7 +414,7 @@ describe("LeftPanel — explorer section", () => {
     fireEvent.click(screen.getByRole("button", { name: "rec-1 train" }));
 
     await waitFor(() =>
-      expect(mockManager.selectRecordInDataset).toHaveBeenCalledWith(
+      expect(mockManager.openRecord).toHaveBeenCalledWith(
         "ds-1",
         "rec-1",
         // Viewport is measured from the (jsdom) DOM. We don't care about
