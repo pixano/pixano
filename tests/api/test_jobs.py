@@ -13,7 +13,7 @@ import pytest
 from psycopg.types.json import Jsonb
 
 from pixano.api import jobs
-from pixano.api.jobs import SCHEMA_NAME
+from pixano.api.jobs import SCHEMA_NAME, enqueue
 
 
 TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
@@ -66,6 +66,30 @@ class TestConnect:
     def test_an_unreachable_database_is_refused_clearly(self) -> None:
         with pytest.raises(jobs.QueueUnavailableError, match="unreachable"):
             jobs.connect("postgresql://nobody@127.0.0.1:1/none?connect_timeout=1")
+
+    @pytest.mark.parametrize(
+        ("url", "timeout_given"),
+        [
+            ("postgresql://pixano@db.example/pixano", {"connect_timeout": enqueue.CONNECT_TIMEOUT_S}),
+            ("postgresql://pixano@db.example/pixano?connect_timeout=30", {}),
+        ],
+    )
+    def test_a_database_that_never_answers_is_given_up_on_soon(
+        self, monkeypatch: pytest.MonkeyPatch, url: str, timeout_given: dict[str, int]
+    ) -> None:
+        """psycopg waits 130 s for a host that drops packets, a server thread held all along: a
+        request gives up sooner, unless the URL sets its own timeout."""
+        given: dict[str, object] = {}
+
+        def no_answer(conninfo: str, **kwargs: object) -> psycopg.Connection:
+            given.update(kwargs)
+            raise psycopg.OperationalError("connection timeout expired")
+
+        monkeypatch.setattr(psycopg, "connect", no_answer)
+
+        with pytest.raises(jobs.QueueUnavailableError, match="unreachable"):
+            jobs.connect(url)
+        assert given == timeout_given
 
 
 class TestAvailableKinds:

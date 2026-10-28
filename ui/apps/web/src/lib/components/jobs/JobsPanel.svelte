@@ -9,6 +9,7 @@ License: CECILL-C
 
   import JobOutcome from "./JobOutcome.svelte";
   import JobProgress from "./JobProgress.svelte";
+  import JobsUnavailable from "./JobsUnavailable.svelte";
   import SubmitJobForm from "./SubmitJobForm.svelte";
   import type { JobTarget } from "$lib/api/jobs";
   import {
@@ -33,9 +34,29 @@ License: CECILL-C
   }
 </script>
 
-<div class="flex h-full flex-col overflow-hidden">
-  {#if jobsStore.runnable}
-    <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
+<div class="flex h-full min-h-0 flex-col overflow-hidden">
+  {#if jobsStore.unavailable !== null}
+    <!--
+      In place of the form and the list: without a job queue, Run could only fail and there is
+      no list to read. Which piece is missing, and what to do, is what lets someone fix it. The
+      notice scrolls on its own: in a short panel, a long reason would push Check again out of
+      reach.
+    -->
+    <div class="min-h-0 overflow-y-auto">
+      <JobsUnavailable
+        reason={jobsStore.unavailable}
+        checking={jobsStore.loading}
+        onCheckAgain={() => void jobsStore.start()}
+      />
+    </div>
+  {:else if jobsStore.runnable}
+    <!--
+      The form scrolls on its own, within a share of the panel: a kind with many parameters
+      used to push the Run button out of sight and leave the job list no room at all.
+    -->
+    <div class="max-h-[60%] shrink-0 overflow-y-auto border-b border-border">
+      <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
+    </div>
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
       No worker is running, so nothing can be launched. Start pixano-worker and reopen this panel.
@@ -48,49 +69,51 @@ License: CECILL-C
     </p>
   {/if}
 
-  <div class="flex-1 overflow-y-auto">
-    {#if jobsStore.loading}
-      <p class="p-3 text-xs text-muted-foreground">Loading…</p>
-    {:else if jobsStore.jobs.length === 0}
-      <p class="p-3 text-xs text-muted-foreground">No job has been run yet.</p>
-    {:else}
-      <ul class="flex flex-col">
-        {#each jobsStore.jobs as job (job.id)}
-          <li class="flex flex-col gap-2 border-b border-border p-3">
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-sm font-medium">{job.kind}</span>
-              <span class="shrink-0 text-xs text-muted-foreground">{stateLabelOf(job)}</span>
-            </div>
-            <JobProgress {job} />
-            <JobOutcome
-              summary={outcomeOf(job)}
-              failure={failureOf(job)}
-              quarantined={job.quarantined}
-              items={jobsStore.quarantines[job.id]}
-              onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
-            />
-            {#if canCancel(job)}
-              <button
-                type="button"
-                class="self-start rounded border border-input px-2 py-1 text-xs hover:bg-muted"
-                onclick={() => jobsStore.cancel(job.id)}
-              >
-                Cancel
-              </button>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-    {/if}
-  </div>
+  {#if jobsStore.unavailable === null}
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      {#if jobsStore.loading}
+        <p class="p-3 text-xs text-muted-foreground">Loading…</p>
+      {:else if jobsStore.jobs.length === 0}
+        <p class="p-3 text-xs text-muted-foreground">No job has been run yet.</p>
+      {:else}
+        <ul class="flex flex-col">
+          {#each jobsStore.jobs as job (job.id)}
+            <li class="flex flex-col gap-2 border-b border-border p-3">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="truncate text-sm font-medium">{job.kind}</span>
+                <span class="shrink-0 text-xs text-muted-foreground">{stateLabelOf(job)}</span>
+              </div>
+              <JobProgress {job} />
+              <JobOutcome
+                summary={outcomeOf(job)}
+                failure={failureOf(job)}
+                quarantined={job.quarantined}
+                items={jobsStore.quarantines[job.id]}
+                onShowQuarantine={() => jobsStore.loadQuarantine(job.id)}
+              />
+              {#if canCancel(job)}
+                <button
+                  type="button"
+                  class="self-start rounded border border-input px-2 py-1 text-xs hover:bg-muted"
+                  onclick={() => jobsStore.cancel(job.id)}
+                >
+                  Cancel
+                </button>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
 
-  {#if !jobsStore.live && !jobsStore.loading}
-    <!--
-      Worth saying, because the numbers on screen stop moving without any other sign. The
-      stream retries on its own, so this is a passing state, not an error to act on.
-    -->
-    <p class="border-t border-border p-2 text-xs text-muted-foreground">
-      Reconnecting to the event stream…
-    </p>
+    {#if !jobsStore.live && !jobsStore.loading}
+      <!--
+        Worth saying, because the numbers on screen stop moving without any other sign. The
+        stream retries on its own, so this is a passing state, not an error to act on.
+      -->
+      <p class="border-t border-border p-2 text-xs text-muted-foreground">
+        Reconnecting to the event stream…
+      </p>
+    {/if}
   {/if}
 </div>

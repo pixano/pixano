@@ -23,12 +23,19 @@ from typing import Any, Sequence
 
 import jsonschema
 import psycopg
+from psycopg.conninfo import conninfo_to_dict
 from psycopg.types.json import Jsonb
 
 from . import queries
 
 
 DEFAULT_LISTED_JOBS = 50
+
+CONNECT_TIMEOUT_S = 5
+"""How long a request waits for the queue's database before answering that it is unreachable,
+unless the database URL sets its own `connect_timeout`. psycopg's own default is 130 s: a database
+host that drops packets — a firewall, a VPN gone down — then holds a server thread, and the jobs
+panel's "Checking…", that long on every request."""
 
 
 class QueueUnavailableError(RuntimeError):
@@ -106,7 +113,8 @@ def connect(database_url: str | None) -> psycopg.Connection:
     if not database_url:
         raise QueueUnavailableError("no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker")
     try:
-        return psycopg.connect(database_url)
+        timeout = {} if "connect_timeout" in conninfo_to_dict(database_url) else {"connect_timeout": CONNECT_TIMEOUT_S}
+        return psycopg.connect(database_url, **timeout)
     except psycopg.Error as error:
         raise QueueUnavailableError(f"the job queue is unreachable: {error}") from error
 

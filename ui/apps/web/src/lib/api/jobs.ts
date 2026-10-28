@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { JSON_HEADERS, requestJson } from "./apiClient";
+import { ApiError, JSON_HEADERS, requestJson } from "./apiClient";
 
 /** A processing job, as the backend reports it. */
 export type Job = {
@@ -74,6 +74,38 @@ export type SubmitJobRequest = {
   dataset_id: string;
   params: Record<string, unknown>;
 };
+
+/**
+ * The status every jobs endpoint answers when the installation has no job queue to offer: no
+ * PostgreSQL database configured, one where pixano-worker has never installed the queue, or one
+ * the server cannot reach.
+ */
+const QUEUE_UNAVAILABLE_STATUS = 503;
+
+/**
+ * Why this installation cannot run jobs, in the server's words — or null when `error` is about
+ * something else.
+ *
+ * The words are the answer's `detail`, which names what is missing and what to do. A 503 that
+ * carries none, such as a proxy's in front of a server that is down, is not about the queue.
+ */
+export function queueUnavailableReason(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== QUEUE_UNAVAILABLE_STATUS) return null;
+  return detailOf(error.body);
+}
+
+/** The `detail` a FastAPI error body carries, when it is a sentence. */
+function detailOf(body: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const detail = (parsed as { detail?: unknown }).detail;
+  return typeof detail === "string" && detail ? detail : null;
+}
 
 export function listJobs(limit = 50): Promise<Job[]> {
   return requestJson<Job[]>(`/jobs?limit=${limit}`, {}, "listJobs");

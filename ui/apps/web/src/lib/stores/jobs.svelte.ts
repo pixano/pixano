@@ -11,6 +11,7 @@ import {
   listJobQuarantine,
   listJobs,
   openJobStream,
+  queueUnavailableReason,
   submitJob,
   type Job,
   type JobEvent,
@@ -32,6 +33,15 @@ class JobsStore {
   loading = $state(false);
   /** What went wrong last, for the panel to show. Null when all is well. */
   error = $state<string | null>(null);
+  /**
+   * Why this installation cannot run jobs, in the server's words — or null while it can.
+   *
+   * Set when the server answers that it has no job queue: no PostgreSQL database configured,
+   * pixano-worker never started on it, or the database out of reach. That lasts until someone
+   * sets it up, so the panel says it in place of a form whose Run could only fail. Cleared by
+   * the next start that finds the queue.
+   */
+  unavailable = $state<string | null>(null);
   /** True once the stream is carrying events. */
   live = $state(false);
   /** The quarantine of each job someone asked to see, by job identifier. */
@@ -42,28 +52,45 @@ class JobsStore {
   #missedEvents = false;
   /** The reload in progress, shared by everyone who asks for one meanwhile. */
   #refreshing: Promise<void> | null = null;
+  /**
+   * The `start()` a panel is still open for: set as it begins, cleared by `stop()`. A panel
+   * closed while its lists loaded — Escape right after opening — has already called `stop()`,
+   * which found no stream to close. Without this, the lists landing after it would open a stream
+   * for a panel that is gone, holding one of the few connections a browser allows per host.
+   */
+  #opening: symbol | null = null;
 
-  /** Load the list and the runnable kinds, then follow along. */
+  /** Load the list and the runnable kinds, then follow along — unless stopped meanwhile. */
   async start(): Promise<void> {
+    const opening = Symbol("jobs panel opening");
+    this.#opening = opening;
     this.loading = true;
     try {
       const [jobs, kinds] = await Promise.all([listJobs(), listJobKinds()]);
+      // A start superseded meanwhile leaves the lists to the one that replaced it: its own
+      // answers, landing last, would put back lists older than that one's.
+      if (this.#opening !== opening && this.#opening !== null) return;
       this.jobs = jobs;
       this.kinds = kinds;
       this.error = null;
+      this.unavailable = null;
     } catch (cause) {
-      this.error = describe(cause);
+      if (this.#opening !== opening && this.#opening !== null) return;
+      this.#fail(cause);
     } finally {
-      this.loading = false;
+      // The start that replaced this one owns the spinner until its own lists land.
+      if (this.#opening === opening || this.#opening === null) this.loading = false;
     }
+    // Stopped while the lists loaded, or superseded by a later start that follows in its place.
+    // Without a queue, there is nothing to follow.
+    if (this.#opening !== opening || this.unavailable !== null) return;
     this.#follow();
   }
 
-  /** Stop following. Safe to call twice. */
+  /** Stop following, including a `start()` still loading. Safe to call twice. */
   stop(): void {
-    this.#stream?.close();
-    this.#stream = null;
-    this.live = false;
+    this.#opening = null;
+    this.#unfollow();
   }
 
   /** Whether anything can be launched at all — no worker means no kinds. */
@@ -78,7 +105,7 @@ class JobsStore {
       this.error = null;
       return true;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
       return false;
     }
   }
@@ -89,7 +116,7 @@ class JobsStore {
       this.quarantines[jobId] = await listJobQuarantine(jobId);
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
   }
 
@@ -98,8 +125,27 @@ class JobsStore {
       this.#merge(await cancelJob(jobId));
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
+  }
+
+  /**
+   * Record what went wrong.
+   *
+   * A missing queue is not one error among others: it holds until someone sets the queue up. The
+   * kinds and jobs read before it went missing can no longer be run or followed, so they go.
+   */
+  #fail(cause: unknown): void {
+    const reason = queueUnavailableReason(cause);
+    if (reason === null) {
+      this.error = describe(cause);
+      return;
+    }
+    this.unavailable = reason;
+    this.error = null;
+    this.kinds = [];
+    this.jobs = [];
+    this.#unfollow();
   }
 
   #follow(): void {
@@ -110,7 +156,7 @@ class JobsStore {
     stream.onopen = () => {
       this.live = true;
       // A job that finished during the outage would otherwise read "running" until the panel is
-      // reopened: the global stream has no catch-up. Found in the step 1 code review.
+      // reopened: the global stream has no catch-up.
       if (this.#missedEvents) {
         this.#missedEvents = false;
         void this.refresh();
@@ -124,6 +170,13 @@ class JobsStore {
     };
     stream.addEventListener("state", (event) => this.#apply(event));
     stream.addEventListener("progress", (event) => this.#apply(event));
+  }
+
+  /** Close the stream, if one is open. */
+  #unfollow(): void {
+    this.#stream?.close();
+    this.#stream = null;
+    this.live = false;
   }
 
   #apply(message: MessageEvent): void {
@@ -179,7 +232,7 @@ class JobsStore {
       this.jobs = await listJobs();
       this.error = null;
     } catch (cause) {
-      this.error = describe(cause);
+      this.#fail(cause);
     }
   }
 }
@@ -211,7 +264,11 @@ export function stateLabelOf(job: Job): string {
 export function failureOf(job: Job): string | null {
   if (job.state !== "error") return null;
   const reason = job.error?.reason;
-  return typeof reason === "string" && reason ? reason : "failed for an unknown reason";
+  const detail = job.error?.detail;
+  if (typeof reason !== "string" || !reason) return "failed for an unknown reason";
+  // The reason says which step failed, the detail says why — a job refused at planning reads
+  // "planning failed" and nothing more without it.
+  return typeof detail === "string" && detail ? `${reason}: ${detail}` : reason;
 }
 
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */
