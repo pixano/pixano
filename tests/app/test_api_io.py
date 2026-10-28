@@ -241,7 +241,12 @@ class TestIoRoutes:
         final = _wait_done(client, started.json()["job_id"])
         assert final["status"] == "done", final["error"]
         assert (data_dir / "library" / "uploaded_ds").is_dir()
-        assert not source.exists()  # eager GC: the staged upload is disposable after import
+        # Eager GC: the staged upload is disposable after import. The job thread
+        # removes it just after recording "done", so wait for it rather than race it.
+        deadline = time.monotonic() + 10.0
+        while source.exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not source.exists()
 
     def test_upload_import_without_dataset_name_is_rejected(self, client_and_dirs):
         """A staged upload's folder name is an opaque id — never a dataset name."""
