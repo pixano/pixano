@@ -4,23 +4,30 @@
 # License: CECILL-C
 # =====================================
 
-"""The three contracts that make up a job kind.
+"""The contracts that make up a job kind, and its optional hooks.
 
 A job kind is a plugin: it brings its parameters, knows how to split its work, knows how to
 process a batch and knows how to write what it produced. The engine — claiming, lease,
 resumption, progress, cancellation — knows nothing about its content.
 
-The three contracts:
+The three contracts every kind fulfils:
 
 - **`Params`**, a pydantic model. Its JSON schema is published in the database so that the
   application refuses invalid parameters at submission, rather than queueing a job that would
   fail at execution.
-- **`plan`**, which splits the work into chunks. It runs in the worker, not in the
-  application: splitting by video or by image is the kind's own logic, and the kind's code
+- **`plan(reader, params)`**, which splits the work into chunks. It runs in the worker, not in
+  the application: splitting by video or by image is the kind's own logic, and the kind's code
   runs on one side only.
-- **`process`** then **`write`**, which process a chunk and write its result. Separated
-  because they fail differently — an inference call is transient and gets replayed, a write
-  must never be partial.
+- **`process(reader, payload, params)`** then **`write(writer, result, payload, params)`**,
+  which process a chunk and write its result. Separated because they fail differently — an
+  inference call is transient and gets replayed, a write must never be partial.
+
+The hooks a kind overrides when the default does not fit it:
+
+- **`prepare(writer, params)`** puts the dataset in shape once per job, before `plan` — a table
+  emptied before it is refilled. Does nothing by default.
+- **`outcome(result, payload, task_count)`** says what each task of a chunk became: produced,
+  skipped or quarantined. Every task produced by default.
 
 Failures fall into three families, and the engine handles each differently:
 

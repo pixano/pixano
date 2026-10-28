@@ -27,10 +27,12 @@ is what lets a misspelled parameter be refused at submission. Without it, `thres
 validation and is silently ignored — the user gets a job running on defaults with no
 indication why.
 
-### `plan(dataset_id, params) -> Iterable[Chunk]`
+### `plan(reader, params) -> Iterable[Chunk]`
 
 Splits the work. It runs in the worker, not in the application: dividing by video, by image or
-by selection is the kind's business, and kind code only ever runs on that side.
+by selection is the kind's business, and kind code only ever runs on that side. The reader is
+how it reads the dataset without opening one; a
+kind whose work fits in its parameters ignores it.
 
 Two requirements the suite checks. **Every chunk carries at least one task**, or it consumes a
 turn without advancing anything. And **planning twice describes the same work**: a job
@@ -52,11 +54,12 @@ before refilling it. Three rules, the first two checked by the suite:
 - **No `finalize` in return** until a kind needs one: what should happen at the end of a job
   is designed then, not by symmetry.
 
-### `process(payload, params)` then `write(writer, result, payload, params)`
+### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 
 Separate because they fail differently: an inference call can be retried, a write must never
 be half done. Both run in a thread — the contract stays synchronous, and the worker's event
-loop keeps the database, the lease and the time limit for itself.
+loop keeps the database, the lease and the time limit for itself. `process` receives a reader,
+as `plan` does: a chunk carries what designates its work, never the data itself.
 
 **How a failure is reported decides what the engine does with it.** Three families:
 
@@ -156,11 +159,14 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
-    registry.register(MyKind())      # ← the only engine file a new kind touches
+    registry.register(MyKind(inference_url, api_key))  # ← the only engine file a new kind touches
     return registry
 ```
 
-A real kind goes outside the `demo_kinds` block. That block exists because the demonstration
+A kind that calls the inference takes its address and key from the registry, as the embeddings
+kind does, rather than reading the environment: a kind should not know about the deployment. A
+kind that calls nothing, as `fake` and `label`, takes no argument. A real kind goes outside the
+`demo_kinds` block. That block exists because the demonstration
 kinds write wherever they are told and have no place in a shared deployment; the local compose
 enables them with `PIXANO_WORKER_DEMO_KINDS`.
 
