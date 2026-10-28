@@ -18,8 +18,28 @@ const LABEL_TEXT_COLOR = "#0f172a";
 /** Gap between a label's underside and the shape it names. */
 const LABEL_GAP = 1;
 
-/** Attribute holding the text a label was built from, so a stale one is spotted. */
+/** Attributes holding what a label was built from, so a stale one is spotted. */
 const LABEL_TEXT_ATTR = "pixanoLabelText";
+const LABEL_FILL_ATTR = "pixanoLabelFill";
+
+/** What one annotation's label says, and on which colour. */
+interface LabelLook {
+  text: string;
+  fill: string;
+}
+
+/**
+ * An annotation names its entity on the saved/unsaved colour. `null` when
+ * there is nothing to say.
+ */
+function labelLookOf(annotation: LocalAnnotation): LabelLook | null {
+  const entityText = pickEntityLabel(annotation.entity);
+  if (!entityText) return null;
+  return {
+    text: entityText,
+    fill: annotation.persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT,
+  };
+}
 
 /** One annotation's label: what to write, and where to hang it. */
 export interface EntityLabelEntry {
@@ -37,10 +57,11 @@ export interface EntityLabelEntry {
  * Shared rather than re-implemented per kind because the interesting parts are
  * not the drawing:
  *
- * - **Reconciliation.** An annotation can be moved to another entity, so a
- *   label built once and never revisited goes on naming the entity the shape
- *   left behind — invisible until a page reload. Each label carries the text it
- *   was built from and is rebuilt when that changes.
+ * - **Reconciliation.** An annotation can be moved to another entity, or
+ *   saved, so a label built once and never revisited goes on naming the
+ *   entity the shape left behind, or on wearing a draft's colour — invisible
+ *   until a page reload. Each label carries the text and colour it was built
+ *   from and is rebuilt when either changes.
  * - **Not every annotation gets one.** An entity with no usable label yields no
  *   node at all, rather than an empty chip.
  * - **Pruning.** Labels for annotations that disappeared are destroyed, or they
@@ -55,25 +76,29 @@ export class EntityLabels2D {
   constructor(private readonly layer: Konva.Layer) {}
 
   /**
-   * Reconcile the whole set in one pass: create what is new, re-text what
-   * changed entity, reposition everything, destroy what is gone.
+   * Reconcile the whole set in one pass: create what is new, rebuild what
+   * changed entity or colour, reposition everything, destroy what is gone.
    */
   sync(entries: readonly EntityLabelEntry[]): void {
     const seen = new Set<string>();
 
     for (const entry of entries) {
-      const text = pickEntityLabel(entry.annotation.entity);
-      if (!text) continue;
+      const look = labelLookOf(entry.annotation);
+      if (!look) continue;
       seen.add(entry.id);
 
       let label = this.labelById.get(entry.id);
-      if (label && label.getAttr(LABEL_TEXT_ATTR) !== text) {
+      if (
+        label &&
+        (label.getAttr(LABEL_TEXT_ATTR) !== look.text ||
+          label.getAttr(LABEL_FILL_ATTR) !== look.fill)
+      ) {
         label.destroy();
         this.labelById.delete(entry.id);
         label = undefined;
       }
       if (!label) {
-        label = this._make(text, entry.annotation.persisted);
+        label = this._make(look);
         this.layer.add(label);
         this.labelById.set(entry.id, label);
       }
@@ -106,20 +131,21 @@ export class EntityLabels2D {
     label.position({ x: anchor.x, y: anchor.y - label.height() - LABEL_GAP });
   }
 
-  private _make(text: string, persisted: boolean): Konva.Label {
+  private _make(look: LabelLook): Konva.Label {
     const label = new Konva.Label({ listening: false });
     // Stamped so `sync()` can tell whether the label still matches its entity
-    // without reaching into the Konva.Text child to read it back.
-    label.setAttr(LABEL_TEXT_ATTR, text);
+    // and colour without reaching into the Konva children to read them back.
+    label.setAttr(LABEL_TEXT_ATTR, look.text);
+    label.setAttr(LABEL_FILL_ATTR, look.fill);
     label.add(
       new Konva.Tag({
-        fill: persisted ? BBOX_COLOR_PERSISTED : BBOX_COLOR_DRAFT,
+        fill: look.fill,
         cornerRadius: LABEL_CORNER_RADIUS,
       }),
     );
     label.add(
       new Konva.Text({
-        text,
+        text: look.text,
         fontSize: LABEL_FONT_SIZE,
         fontFamily: "system-ui, sans-serif",
         fill: LABEL_TEXT_COLOR,
