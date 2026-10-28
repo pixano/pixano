@@ -97,6 +97,8 @@
 - The masks, polygons, keypoints and text spans of a sub-entity, its timeline
   row and the pre-annotation review icon take the color of their object instead
   of pink.
+- A `PUT` on a resource whose body carries another row's `id` is refused
+  with 400. It wrote the merged row over that other row, and answered 200.
 
 ## 0.8.0 (2026-09-23)
 
