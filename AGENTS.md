@@ -180,6 +180,7 @@ When committing changes:
 - DCO sign-off: All commits MUST use the `-s` flag (otherwise CI will reject them)
 - Do NOT add `Co-Authored-By` trailers (or any other co-author lines) to commit messages.
 - Pre-commit hooks: Run before committing (see [Pre-commit Hooks](#pre-commit-hooks))
+- Changelog: a change users see adds a fragment to `changelog.d/` (`PIX-<n>.fixed.md`, `.added.md`…; see `RELEASING.md`). Never edit `CHANGELOG.md` directly: the release builds it.
 
 ```bash
 # Commit with required DCO sign-off

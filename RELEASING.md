@@ -74,8 +74,8 @@ A job added to a workflow must also be added to the `needs` list of that workflo
 
 ## Changelog and release notes
 
-- `CHANGELOG.md` starts with an `## Unreleased` section. Each pull request that changes what users see adds a line to it, under "Added", "Changed", "Deprecated", "Removed", or "Fixed".
-- At release, that heading becomes `## X.Y.Z (YYYY-MM-DD)`, and a new empty `## Unreleased` section is added when `main` is reopened.
+- Each pull request that changes what users see adds a fragment to `changelog.d/`, not a line to `CHANGELOG.md`: one Markdown file holding its entry, named `PIX-<n>.<type>.md` after its Linear issue, where `<type>` is `added`, `changed`, `deprecated`, `removed` or `fixed`. A change without an issue uses `+<short-name>.<type>.md`. Two pull requests never edit the same file, so their changelog entries never conflict. `changelog.d/README.md` has an example.
+- At release, `uvx towncrier build --version X.Y.Z --yes` gathers the fragments into a `## X.Y.Z (YYYY-MM-DD)` section at the top of `CHANGELOG.md`, sorted under "Added", "Changed", "Deprecated", "Removed" and "Fixed", and deletes them. Add `--draft` to see the section without writing anything.
 - For a minor version, `docs/releases/X.Y.Z.md` holds a short summary for users: highlights, compatibility changes, known limitations. It becomes the body of the GitHub release. `docs/releases/0.8.0.md` is the example.
 - For a patch version, the changelog section is the release body.
 
@@ -96,7 +96,7 @@ Replace `X.Y.0` with the version being released.
 
 - The latest runs on `main` are green: `gh run list --branch main --limit 10`.
 - No open issue is marked as blocking the release.
-- The `## Unreleased` section of `CHANGELOG.md` matches what was merged since the previous release: `git log --oneline v<previous>..origin/main`.
+- The fragments in `changelog.d/` match what was merged since the previous release (`uvx towncrier build --draft --version X.Y.0` against `git log --oneline v<previous>..origin/main`).
 - The wheel needs no manual check: on every pull request, the `Wheel` job of `Backend` builds it, installs it in a clean environment, and starts it.
 
 - The application has been checked by hand, with every feature flag at its default, on a **copy** of a real data directory (opening a dataset can migrate it):
@@ -115,7 +115,7 @@ echo "X.Y.0" > VERSION
 
 In the same branch:
 
-- rename `## Unreleased` to `## X.Y.0 (YYYY-MM-DD)` in `CHANGELOG.md`;
+- gather the changelog: `uvx towncrier build --version X.Y.0 --yes`;
 - add `docs/releases/X.Y.0.md`.
 
 Commit with `git commit -s -m "chore: release X.Y.0"` and open the pull request into `main`. The `Version` workflow pushes a commit to the branch that aligns the backend and frontend versions. Merge once the checks pass.
@@ -144,7 +144,7 @@ Follow it with `gh run watch`.
 
 ### 5. Reopen `main`
 
-Open a pull request that sets `VERSION` to the next development version (`X.(Y+1).0.dev0`) and adds an empty `## Unreleased` section at the top of `CHANGELOG.md`. Merge it before any other pull request.
+Open a pull request that sets `VERSION` to the next development version (`X.(Y+1).0.dev0`). Merge it before any other pull request.
 
 ## Releasing a patch version
 
@@ -168,7 +168,7 @@ Replace `X.Y.Z` with the version being released; `X.Y` is the latest minor.
    gh pr create --base release/X.Y
    ```
 
-4. **Prepare the release** in a second pull request into the release branch: set `VERSION` to `X.Y.Z` and add a `## X.Y.Z (YYYY-MM-DD)` section to `CHANGELOG.md`. The `Version` workflow aligns the backend and frontend versions.
+4. **Prepare the release** in a second pull request into the release branch: set `VERSION` to `X.Y.Z` and run `uvx towncrier build --version X.Y.Z --yes`, which turns the fragments the backports brought into a `## X.Y.Z (YYYY-MM-DD)` section of `CHANGELOG.md`. The `Version` workflow aligns the backend and frontend versions.
 
 5. **Publish** from the release branch, with the changelog section as the body:
 
@@ -178,7 +178,7 @@ Replace `X.Y.Z` with the version being released; `X.Y` is the latest minor.
 
 6. **Verify** as for a minor version.
 
-7. **Copy the changelog section** for `X.Y.Z` into `CHANGELOG.md` on `main`, below `## Unreleased`.
+7. **Copy the changelog section** for `X.Y.Z` into `CHANGELOG.md` on `main`, below the `<!-- towncrier release notes start -->` line, and delete from `changelog.d/` on `main` the fragments it holds, so that the next minor does not list those fixes again.
 
 When the next minor is released, `release/X.Y` receives no further patch. Its tags remain.
 
@@ -196,7 +196,7 @@ A release candidate is optional. Use one when a minor is large enough to need a 
    PyPI treats it as a pre-release, so `pip` installs it only with `--pre`, and the Docker image is pushed without moving `stable`.
 
 3. Fixes follow the patch procedure: `main` first, then a cherry-pick.
-4. When the candidate is good, set the version to `X.Y.0` on the release branch, publish `vX.Y.0` from it, and copy the changelog section to `main`.
+4. When the candidate is good, set the version to `X.Y.0` on the release branch, publish `vX.Y.0` from it, and copy the changelog section to `main` as in step 7 of the patch procedure.
 
 ## If a release is broken
 
@@ -208,7 +208,7 @@ A release candidate is optional. Use one when a minor is large enough to need a 
 
 This section lists what the repository still lacks relative to the process above. Remove each item when it is done, and the section when it is empty.
 
-- **Changelog of the work in progress.** `main` carries the work that was developed on `dev/v0.9`, but `## Unreleased` in `CHANGELOG.md` has no entry for it.
+- **Changelog of the work in progress.** `main` carries the work that was developed on `dev/v0.9`, but `changelog.d/` has no fragment for it.
 - **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows predate this document: they trigger on `releases/**` and do not report the five checks, so both have to be fixed on that branch first. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
 - **Slow and end-to-end tests.** Tests marked `slow`, `hub`, and `e2e` never run in CI, and no test drives the UI in a browser. A scheduled run on `main` is needed, and the manual checks of step 1 should shrink as it grows.
 - **Worker package.** `packages/pixano-worker` has its own version and no publication step in `Publish`. Whether it is released together with Pixano is still to be decided.
