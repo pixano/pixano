@@ -32,6 +32,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.io.jobs import JobStore
 from pixano.inference.provider import InferenceProvider
 from pixano.inference.types import EmbeddingInput
+from pixano.utils.python import to_sql_list
 
 
 router = APIRouter(prefix="/datasets/{dataset_id}", tags=["Explorer"])
@@ -187,7 +188,9 @@ def get_record_neighbors(
 
 
 def _stored_record_vector(dataset: Dataset, record_id: str) -> list[float] | None:
-    rows = dataset.get_data(dataset._RECORD_EMBEDDING_TABLE, where=f"record_id = '{record_id}'", limit=1)  # noqa: SLF001
+    rows = dataset.get_data(  # noqa: SLF001
+        dataset._RECORD_EMBEDDING_TABLE, where=f"record_id IN {to_sql_list(record_id)}", limit=1
+    )
     if not rows:
         return None
     return list(rows[0].vector)
