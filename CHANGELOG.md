@@ -105,6 +105,9 @@
   tracks saves every box it moves and the track it widens. The boxes of the
   tracks it absorbs kept naming them once they were deleted, and the next load
   undid the merge.
+- The legacy app finds the bounds of a mask whose first pixel is painted, as a
+  SAM mask can be: pycocotools then starts its counts with an empty run. Such a
+  mask got inverted bounds, and a wrong box around it.
 
 ## 0.8.0 (2026-09-23)
 
