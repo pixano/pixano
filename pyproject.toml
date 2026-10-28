@@ -113,6 +113,41 @@ exclude = [
 [tool.hatch.version]
 path = "src/pixano/__version__.py"
 
+[tool.towncrier]
+# Each pull request that changes what users see adds one fragment to changelog.d/ instead of
+# editing CHANGELOG.md, so two pull requests never edit the same lines. The release gathers them
+# with `uvx towncrier build --version X.Y.Z` (RELEASING.md).
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+title_format = "## {version} ({project_date})"
+issue_format = "[{issue}](https://linear.app/pixano/issue/{issue})"
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
