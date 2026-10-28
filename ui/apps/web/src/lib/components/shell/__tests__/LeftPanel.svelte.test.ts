@@ -42,6 +42,18 @@ const mockDataset = new DatasetInfo({
   num_items: 5000,
 });
 
+// A dataset imported from the command line while the page is open: the server
+// lists it from its next request on.
+const importedMeanwhile = new DatasetInfo({
+  id: "ds-2",
+  name: "Imported meanwhile",
+  description: "",
+  size: "",
+  preview: "",
+  workspace: "image",
+  num_items: 30,
+});
+
 const mockRecordsPage = {
   items: [
     { id: "rec-1", split: "train" },
@@ -291,6 +303,105 @@ describe("LeftPanel — explorer section", () => {
       expect(screen.getByRole("button", { name: /COCO 2017/ })).toBeInTheDocument(),
     );
     expect(screen.queryByRole("button", { name: "Back to datasets" })).not.toBeInTheDocument();
+  });
+
+  it("back button fetches the dataset list again, so a dataset added since shows", async () => {
+    // The first answer once, then the later ones: nothing queued is left for the next test.
+    mockedListDatasets.mockResolvedValue([mockDataset, importedMeanwhile]);
+    mockedListDatasets.mockResolvedValueOnce([mockDataset]);
+    renderPanel();
+
+    await waitFor(() => screen.getByRole("button", { name: /COCO 2017/ }));
+    expect(screen.queryByRole("button", { name: /Imported meanwhile/ })).toBeNull();
+    await fireEvent.click(screen.getByRole("button", { name: /COCO 2017/ }));
+
+    await waitFor(() => screen.getByRole("button", { name: "Back to datasets" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Back to datasets" }));
+
+    await waitFor(() => screen.getByRole("button", { name: /Imported meanwhile/ }));
+    expect(mockedListDatasets).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the dataset list on screen while it is fetched again", async () => {
+    let resolveRefresh: (value: DatasetInfo[]) => void = () => {};
+    mockedListDatasets.mockReturnValue(
+      new Promise<DatasetInfo[]>((resolve) => {
+        resolveRefresh = resolve;
+      }),
+    );
+    mockedListDatasets.mockResolvedValueOnce([mockDataset]);
+    renderPanel();
+
+    await waitFor(() => screen.getByRole("button", { name: /COCO 2017/ }));
+    await fireEvent.click(screen.getByRole("button", { name: /COCO 2017/ }));
+    await waitFor(() => screen.getByRole("button", { name: "Back to datasets" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Back to datasets" }));
+
+    await waitFor(() => expect(mockedListDatasets).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("button", { name: /COCO 2017/ })).not.toBeNull();
+    expect(screen.queryByText("Loading…")).toBeNull();
+
+    resolveRefresh([mockDataset, importedMeanwhile]);
+    await waitFor(() => screen.getByRole("button", { name: /Imported meanwhile/ }));
+  });
+
+  describe("when GET /datasets fails", () => {
+    // The real listDatasets, over a stubbed fetch: mocking listDatasets itself would skip
+    // the path a failed answer really takes.
+    const listedResponse = () =>
+      new Response(
+        JSON.stringify([
+          {
+            id: "ds-1",
+            name: "COCO 2017",
+            description: "",
+            size: "",
+            preview: "",
+            workspace: "image",
+            storage_mode: "embedded",
+            num_records: 5000,
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    // What the dev proxy answers while the app restarts.
+    const restartingResponse = () => new Response("", { status: 502, statusText: "Bad Gateway" });
+
+    beforeEach(async () => {
+      const actual = await vi.importActual<typeof import("$lib/api/datasets")>("$lib/api/datasets");
+      mockedListDatasets.mockImplementation(actual.listDatasets);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("keeps the list on screen, with a note, when fetching it again fails", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(listedResponse())
+        .mockResolvedValue(restartingResponse());
+      vi.stubGlobal("fetch", fetchMock);
+      renderPanel();
+
+      await waitFor(() => screen.getByRole("button", { name: /COCO 2017/ }));
+      await fireEvent.click(screen.getByRole("button", { name: /COCO 2017/ }));
+      await waitFor(() => screen.getByRole("button", { name: "Back to datasets" }));
+      await fireEvent.click(screen.getByRole("button", { name: "Back to datasets" }));
+
+      await waitFor(() => screen.getByText(/could not be refreshed/));
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole("button", { name: /COCO 2017/ })).not.toBeNull();
+      expect(screen.queryByText("No datasets found.")).toBeNull();
+    });
+
+    it("says the first fetch failed, rather than that there is no dataset", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(restartingResponse()));
+      renderPanel();
+
+      await waitFor(() => screen.getByText(/502 Bad Gateway/));
+      expect(screen.queryByText("No datasets found.")).toBeNull();
+    });
   });
 
   it("clicking a record calls manager.selectRecordInDataset with correct ids", async () => {
