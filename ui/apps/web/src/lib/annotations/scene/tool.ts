@@ -20,6 +20,23 @@ export type { ToolDefinition } from "./toolDefinition.js";
 export const DEFAULT_TOOL_2D = "select";
 export const DEFAULT_TOOL_3D = "navigate";
 
+/** The form fields whose keys are their own: typed into, or used to pick an option. */
+const FORM_FIELD_TAGS: ReadonlySet<string> = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+
+/**
+ * Whether a key pressed with focus on `target` belongs to that form field
+ * rather than to the canvas tools. A text field types it; a select picks an
+ * option with it, and would otherwise start an entity reassignment on `E`. Tool
+ * shortcuts are heard on `window`, so every widget and kind listening there
+ * asks this one question before acting, and no field is exempted in one
+ * place and forgotten in another.
+ */
+export function isFormFieldTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  if (!element || typeof element.tagName !== "string") return false;
+  return FORM_FIELD_TAGS.has(element.tagName) || element.isContentEditable;
+}
+
 /** Per-activation handler instance created by a 2D tool for one widget. */
 export interface ToolHandler2D {
   activate?(): void;
