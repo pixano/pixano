@@ -30,8 +30,10 @@ export const DEFAULT_3D_ROTATION: Rotation3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 type CoordsLance = [number, number, number, number, number, number];
 
 /**
- * Update body for a 3D box. Coordinates are in Lance/backend space (xyzwhd);
- * rotation is a row-major 3×3 matrix, identity when the box is axis-aligned.
+ * Update body for a 3D box. Coordinates are in Lance/backend space, in
+ * `format` — xyzwhd, what the editor writes, unless the box is stored as
+ * corners; rotation is a row-major 3×3 matrix, identity when the box is
+ * axis-aligned.
  *
  * INVARIANT (D9): `buildCreate`'s body must be a superset of this one with
  * identical values outside the geometry, so `commitGeometryEdit` can patch a
@@ -43,6 +45,7 @@ export function buildBBox3DUpdate(
   entityId: string,
   coordsLance: CoordsLance,
   rotation?: Rotation3x3,
+  format: BBox3DGeometry["format"] = "xyzwhd",
 ): Record<string, unknown> {
   return {
     id: bboxId,
@@ -50,7 +53,7 @@ export function buildBBox3DUpdate(
     entity_id: entityId,
     view_id: ctx.viewId,
     coords: Array.from(coordsLance),
-    format: "xyzwhd",
+    format,
     rotation: rotation ?? DEFAULT_3D_ROTATION,
     is_normalized: false,
     confidence: 1,
@@ -62,13 +65,16 @@ export function buildBBox3DUpdate(
 export function buildBBox3DCreate(
   ctx: BuildContext,
   coordsLance: CoordsLance,
-  opts: BuildAnnotationOpts & { rotation?: Rotation3x3 } = {},
+  opts: BuildAnnotationOpts & {
+    rotation?: Rotation3x3;
+    format?: BBox3DGeometry["format"];
+  } = {},
 ): BuildAnnotationResult {
   const entityId = opts.entityId ?? generateShortId();
   const annotationId = opts.annotationId ?? generateShortId();
 
   const body: Record<string, unknown> = {
-    ...buildBBox3DUpdate(ctx, annotationId, entityId, coordsLance, opts.rotation),
+    ...buildBBox3DUpdate(ctx, annotationId, entityId, coordsLance, opts.rotation, opts.format),
     ...singleFrameLinkage(ctx),
   };
 
@@ -81,8 +87,7 @@ export function buildBBox3DCreate(
 
 /**
  * Payload knowledge for 3D boxes. The local annotation id doubles as the
- * backend row id (see bboxPayloadBuilder); editor output is always xyzwhd,
- * which is what the backend update model expects.
+ * backend row id (see bboxPayloadBuilder); editor output is always xyzwhd.
  */
 export const bbox3dPayloadBuilder = {
   kind: "bbox3d" as const,
@@ -100,21 +105,32 @@ export const bbox3dPayloadBuilder = {
       entityId: annotation.entityId,
       annotationId: annotation.id,
       rotation: annotation.geometry.rotation,
+      format: annotation.geometry.format,
       entityFields: entity.entityFields,
       linkExisting: entity.linkExisting,
     }).mutations;
   },
 
+  /**
+   * The box as it stands, under the view and in the format it is stored with.
+   * A 3D box belongs to the record, not to a sensor: any 3D widget of the
+   * record edits it, so the editing widget's view is not the box's — and a box
+   * imported as corners stays in corners until the editor moves it. Written
+   * from the widget instead, an edit that changed nothing else would still
+   * change the row. A box drawn here carries the view of the widget that drew
+   * it, the one its create was built with.
+   */
   buildUpdate(
     ctx: BuildContext,
     annotation: LocalAnnotation<BBox3DGeometry>,
   ): Record<string, unknown> {
     return buildBBox3DUpdate(
-      ctx,
+      { ...ctx, viewId: annotation.viewId },
       annotation.id,
       annotation.entityId,
       annotation.geometry.coords,
       annotation.geometry.rotation,
+      annotation.geometry.format,
     );
   },
 };
