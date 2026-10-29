@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { cleanup, render, screen } from "@testing-library/svelte";
+import { cleanup, render, screen, within } from "@testing-library/svelte";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,8 @@ import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js
 
 // The image widget as a person meets it: rendered on the real Konva, next to
 // the right panel, over the real manager and queue — only HTTP is faked. What
-// is checked is where a key the person types in a form goes.
+// is checked is what the person sees and presses: the entity button's words,
+// and where a key typed in a form goes.
 vi.mock("konva", async () => ({
   default: (await vi.importActual<{ default: unknown }>("konva/lib/index.js")).default,
 }));
@@ -27,6 +28,9 @@ installSilentCanvas();
 const REC = "rec-1";
 
 const ENTITIES = [entityOf(REC, "ent-h1", { category: "tree" })];
+
+const REASSIGN_TITLE = "Change the entity this annotation belongs to (E)";
+const REASSIGN_NOTHING_SELECTED_TITLE = "Select an annotation to change its entity";
 
 afterEach(() => cleanup());
 
@@ -45,10 +49,37 @@ async function openImageWidget() {
   return opened;
 }
 
+function toolbar(): HTMLElement {
+  return screen.getByRole("toolbar", { name: "Image annotation tools" });
+}
+
+/** What assistive tech reads after a button's name: the text its `aria-describedby` points at. */
+function descriptionOf(element: HTMLElement): string | null {
+  const id = element.getAttribute("aria-describedby");
+  return id ? (document.getElementById(id)?.textContent ?? null) : null;
+}
+
 function select(manager: WorkspaceManager, id: string): void {
   manager.annotations.select(id);
   flushSync();
 }
+
+describe("ImageWidget toolbar", () => {
+  it("names the entity button by what it does, and says what it waits for", async () => {
+    const { manager } = await openImageWidget();
+    const reassign = () =>
+      within(toolbar()).getByRole<HTMLButtonElement>("button", { name: REASSIGN_TITLE });
+
+    expect(reassign().disabled).toBe(true);
+    expect(reassign().title).toBe(REASSIGN_NOTHING_SELECTED_TITLE);
+    expect(descriptionOf(reassign())).toBe(REASSIGN_NOTHING_SELECTED_TITLE);
+
+    select(manager, "h1");
+    expect(reassign().disabled).toBe(false);
+    expect(reassign().title).toBe(REASSIGN_TITLE);
+    expect(descriptionOf(reassign())).toBeNull();
+  });
+});
 
 describe("ImageWidget keyboard", () => {
   /** A key pressed with focus on `target`, travelling up to the window as a real one does. */
