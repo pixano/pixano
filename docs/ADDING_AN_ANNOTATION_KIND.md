@@ -59,10 +59,16 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   For a view-scoped kind, do **not** hand-roll the fetch/filter/wrap loop: call
   `createViewScopedSeedLoader({ kind, resource, toGeometry })`
   (`viewScopedSeedLoader.ts`) and supply only `toGeometry(row, view)`, returning
-  `null` to drop a malformed row. The fetch, the failure policy and the
+  `null` to drop a malformed row. The fetch, the view filter and the
   `LocalAnnotation` envelope are shared so they cannot drift per kind.
   A record-scoped kind (`bbox3d`) implements `AnnotationSeedLoader` directly,
   since it deliberately keeps rows whose view is not displayed.
+  **A failed fetch rejects**, in either case: never catch it into an empty list. An
+  empty list reads as a table holding nothing, and a reload would take every
+  annotation of the kind off the screen after one failed request. What a failure means
+  is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
+  nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
+  fails every registered loader in turn, so a loader that swallows its failure fails it.
   → register in `SEED_LOADERS` (`seedLoaders.ts`).
 
 ## Step 3 — the DISPLAY + INPUT halves
@@ -119,7 +125,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] `AnnotationKind` + `GeometryByKind` updated
 - [ ] `kinds/<2d|3d>/<kind>/` created; `<kind>Types.ts`
 - [ ] payload builder + `PAYLOAD_BUILDERS`; `buildUpdate` follows from the annotation alone
-- [ ] seed loader + `SEED_LOADERS`
+- [ ] seed loader + `SEED_LOADERS`, rejecting on a failed fetch
 - [ ] renderer + `RENDERER_FACTORIES_2D|3D`
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
 - [ ] tool + `TOOLS_2D|3D`

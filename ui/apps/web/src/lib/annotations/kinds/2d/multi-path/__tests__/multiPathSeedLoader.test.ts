@@ -122,9 +122,9 @@ describe("multiPathSeedLoader", () => {
     expect(rows[0].entity).toBe(entity);
   });
 
-  it("returns empty when the listing fails", async () => {
+  it("rejects when the listing fails, rather than reading as no rows", async () => {
     const ctx = makeContext([]);
     ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
-    expect(await multiPathSeedLoader.load(ctx)).toEqual([]);
+    await expect(multiPathSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });

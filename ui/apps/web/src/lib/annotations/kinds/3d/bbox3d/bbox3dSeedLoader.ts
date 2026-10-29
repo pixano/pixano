@@ -32,14 +32,17 @@ function toRotation3x3(rotation: number[] | undefined): Rotation3x3 | undefined 
  * regardless of which views are displayed (a 3D box lives in the scene, not
  * in one sensor — `RECORD_SCOPED_KINDS` makes it visible everywhere,
  * including 2D projections).
+ *
+ * A failed fetch rejects, as `AnnotationSeedLoader` asks: an empty list would
+ * read as a record holding no 3D box.
  */
 export const bbox3dSeedLoader: AnnotationSeedLoader = {
   kind: "bbox3d",
 
   async load(ctx: SeedLoadContext) {
-    const rows = await ctx.gateway
-      .listAnnotations<BBox3DRow>(ctx.datasetId, BBOX3D_RESOURCE, { recordId: ctx.recordId })
-      .catch(() => [] as BBox3DRow[]);
+    const rows = await ctx.gateway.listAnnotations<BBox3DRow>(ctx.datasetId, BBOX3D_RESOURCE, {
+      recordId: ctx.recordId,
+    });
 
     return rows.map((row): LocalBBox3DAnnotation => ({
       id: row.id,

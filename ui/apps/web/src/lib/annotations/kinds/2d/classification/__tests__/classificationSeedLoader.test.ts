@@ -102,9 +102,9 @@ describe("classificationSeedLoader", () => {
     expect(rows[0].entity).toBe(entity);
   });
 
-  it("returns empty when the listing fails", async () => {
+  it("rejects when the listing fails, rather than reading as no rows", async () => {
     const ctx = makeContext([]);
     ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
-    expect(await classificationSeedLoader.load(ctx)).toEqual([]);
+    await expect(classificationSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });

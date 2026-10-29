@@ -56,8 +56,12 @@ export interface SeedLoadContext {
 /**
  * The missing half of the payload-builder symmetry: builders map local→REST,
  * seed loaders map REST→local. One per kind, next to the kind's builder.
- * `RecordLoader` runs every registered loader once per record and merges the
- * results into the shared collection — extensions never fetch annotations.
+ * `RecordLoader` runs every registered loader once per record (`loadEveryKind`)
+ * and merges the results into the shared collection — extensions never fetch
+ * annotations.
+ *
+ * `load` rejects when the kind's rows could not be read, and never resolves to
+ * an empty list then: what a failed read means is the caller's to decide.
  */
 export interface AnnotationSeedLoader {
   kind: AnnotationKind;
@@ -73,3 +77,32 @@ export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
   multiPathSeedLoader,
   classificationSeedLoader,
 ];
+
+/**
+ * What one kind's seed loader got: the annotations it built from the record's
+ * rows, or the failure that kept it from reading them.
+ *
+ * "Read nothing" and "could not read" stay apart. The first says the record
+ * holds no annotation of the kind; the second says nothing about what it
+ * holds, and a reload that took one for the other took every annotation of
+ * the kind off the screen after one failed request.
+ */
+export type KindLoad =
+  | { kind: AnnotationKind; read: true; annotations: LocalAnnotation[] }
+  | { kind: AnnotationKind; read: false; failure: unknown };
+
+/**
+ * Run every registered seed loader once against the record, each failure kept
+ * to its own kind: a table that does not answer leaves the others read.
+ */
+export function loadEveryKind(ctx: SeedLoadContext): Promise<KindLoad[]> {
+  return Promise.all(SEED_LOADERS.map((loader) => loadKind(loader, ctx)));
+}
+
+async function loadKind(loader: AnnotationSeedLoader, ctx: SeedLoadContext): Promise<KindLoad> {
+  try {
+    return { kind: loader.kind, read: true, annotations: await loader.load(ctx) };
+  } catch (failure) {
+    return { kind: loader.kind, read: false, failure };
+  }
+}

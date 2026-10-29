@@ -10,8 +10,11 @@ import type { DatasetLayoutRepository } from "./datasetLayoutRepository.js";
 import { measureGridViewport, type Viewport } from "./layoutPlanner.js";
 import type { RecordWidgetSeed } from "./recordSeed.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
-import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
-import { SEED_LOADERS, type ViewInfo } from "$lib/annotations/seedLoaders.js";
+import {
+  AnnotationCollection,
+  type LocalAnnotation,
+} from "$lib/annotations/annotationCollection.svelte.js";
+import { loadEveryKind, type KindLoad, type ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { WidgetInstance } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
@@ -84,13 +87,20 @@ export class RecordLoader {
   }
 
   /**
-   * Refetch the current record's annotations, replacing whatever the collection
-   * holds — the backend is the last-saved state, so this is what "discard my
-   * edits" restores to.
+   * Refetch the current record's annotations, replacing what the collection
+   * holds of every kind it read — the backend is the last-saved state, so this
+   * is what "discard my edits" restores to.
    *
    * Narrower than a full `load()` on purpose: the widgets, their arrangement
    * and their active tools are untouched, so undoing an edit does not feel like
    * reopening the record.
+   *
+   * A kind whose rows could not be read keeps what it shows, and the failure
+   * is reported: one table not answering does not empty that kind on screen.
+   * Only its drafts go, since Discard has dropped their creates. Its stored
+   * annotations stay as shown, an edit Discard dropped included: the
+   * collection keeps no copy of what the dataset stores to put back, and
+   * reopening the record shows it.
    *
    * Nothing is read while the record is still loading: its rows would be
    * placed against the previous record's views, which places none of them.
@@ -112,9 +122,18 @@ export class RecordLoader {
         entitiesById: new Map(this.session.entities.map((e) => [e.id, e])),
         views: this.currentViews,
       };
-      const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+      const loads = await loadEveryKind(seedContext);
       if (token !== this.loadToken) return;
-      this.session.annotations = new AnnotationCollection(loaded.flat());
+      reportUnread(loads, "refresh");
+      const kindsRead = new Set(loads.filter((load) => load.read).map((load) => load.kind));
+      // A draft is left out: Discard dropped its create, and nothing would save it.
+      const storedOfKindsUnread = this.session.annotations.items.filter(
+        (annotation) => annotation.persisted && !kindsRead.has(annotation.kind),
+      );
+      this.session.annotations = new AnnotationCollection([
+        ...annotationsRead(loads),
+        ...storedOfKindsUnread,
+      ]);
     } catch (err) {
       console.error("Failed to reload annotations:", err);
     }
@@ -251,11 +270,13 @@ export class RecordLoader {
     if (token !== this.loadToken) return;
     this.currentViews = views;
     this.viewsRecord = { datasetId, recordId };
-    const loaded = await Promise.all(SEED_LOADERS.map((loader) => loader.load(seedContext)));
+    const loads = await loadEveryKind(seedContext);
 
     // A newer load() was started while annotations were fetching.
     if (token !== this.loadToken) return;
-    this.session.annotations = new AnnotationCollection(loaded.flat());
+    // A kind that could not be read seeds nothing rather than breaking the whole record.
+    reportUnread(loads, "load");
+    this.session.annotations = new AnnotationCollection(annotationsRead(loads));
 
     // Replay the arrangement the user built on an earlier record of this
     // dataset; views they never arranged fall back to automatic placement.
@@ -292,5 +313,18 @@ export class RecordLoader {
         seed.storage as Record<string, unknown> | undefined,
       );
     }
+  }
+}
+
+/** The annotations of every kind that was read. */
+function annotationsRead(loads: readonly KindLoad[]): LocalAnnotation[] {
+  return loads.flatMap((load) => (load.read ? load.annotations : []));
+}
+
+/** Say which kinds could not be read, on the loader's error channel. */
+function reportUnread(loads: readonly KindLoad[], attempt: "load" | "refresh"): void {
+  for (const load of loads) {
+    if (load.read) continue;
+    console.error(`Could not ${attempt} the ${load.kind} annotations:`, load.failure);
   }
 }

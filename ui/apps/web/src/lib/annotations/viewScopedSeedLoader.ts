@@ -29,9 +29,13 @@ export interface ViewScopedRow {
  *
  * A kind supplies only what is genuinely its own — the resource to read and how
  * one row becomes geometry. Everything else is a decision that must not differ
- * between kinds: the envelope's field mapping, the view filter, and the failure
- * policy (a failed fetch seeds nothing rather than breaking the whole record).
- * Keeping them here means they cannot drift apart one copy at a time.
+ * between kinds: the envelope's field mapping and the view filter. Keeping them
+ * here means they cannot drift apart one copy at a time.
+ *
+ * A failed fetch rejects, as every seed loader's does, since an empty list
+ * would read as a table holding nothing. What it means is the caller's to
+ * decide (`RecordLoader`, through `loadEveryKind`): a record opening seeds
+ * nothing for the kind, a reload keeps what the kind shows.
  *
  * Lives in its own module rather than in `seedLoaders.ts` on purpose: the
  * registry there imports every kind, so a kind importing a *value* back from it
@@ -53,9 +57,9 @@ export function createViewScopedSeedLoader<
     kind: spec.kind,
 
     async load(ctx: SeedLoadContext) {
-      const rows = await ctx.gateway
-        .listAnnotations<TRow>(ctx.datasetId, spec.resource, { recordId: ctx.recordId })
-        .catch(() => [] as TRow[]);
+      const rows = await ctx.gateway.listAnnotations<TRow>(ctx.datasetId, spec.resource, {
+        recordId: ctx.recordId,
+      });
 
       const annotations: LocalAnnotation[] = [];
       for (const row of rows) {
