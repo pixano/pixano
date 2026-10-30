@@ -412,7 +412,8 @@ drawBBoxTool (pointer down→move→up)
 
 ### C) Edit geometry
 ```
-tool drags an existing box
+tool drags an existing box → commitGeometryEdit(ctx, id, newGeometry)
+                              // the box editor keeps the box inside the image first
   → collection.setGeometry(id, newGeometry)            // optimistic, shared
   → mutations.upsertUpdate(buildUpdate(...))            // one pending update per box
 ```

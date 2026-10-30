@@ -49,6 +49,8 @@ vi.mock("konva", () => {
     }
     stroke() {}
     dash() {}
+    scale() {}
+    rotation() {}
     x() {
       return 0;
     }

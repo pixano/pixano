@@ -81,8 +81,25 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   from a `<kind>Nodes.ts` module.
 - `<kind>Editor2D.ts` (editable only) — implement `AnnotationEditor2D` (`kind`,
   `syncSelection()`, `destroy()`). Takes the full `Scene2DContext`. Owns the interaction
-  widget (e.g. `Konva.Transformer`), listens at the **layer** level for the gesture end,
-  and commits via `commitGeometryEdit`. Expose it from the renderer factory's `createEditor`.
+  widget (e.g. `Konva.Transformer`), listens for each gesture's end **where Konva fires
+  it**, and commits via `commitGeometryEdit`: a drag's end (`dragend`) bubbles, so the
+  layer hears it for every node the editor did not create; a resize's end
+  (`transformend`) fires on the transformer and the nodes it holds only, never on the
+  layer, so listen on the editor's own transformer (`bboxEditor2D.ts`). A renderer that
+  sets a node's size resets its scale and rotation, which a resize leaves behind. A
+  transformer whose shape cannot hold a flip is built with `flipEnabled: false`: Konva
+  records a handle dragged past the opposite edge as a negative scale or a half turn, and
+  the shape saved then differs from the shape drawn. Expose it from the renderer factory's
+  `createEditor`.
+
+  Commit geometry the server accepts: the box editor keeps a dragged box whole inside the
+  image and cuts a resized one at its edges, putting on the image's edge a box edge within
+  `IMAGE_EDGE_TOLERANCE` of it (`bboxImageBounds.ts`), since the server refuses a
+  normalized coordinate outside [0, 1]. The cut keeps the least size the editor gives a box
+  (`MIN_BBOX_PIXELS`): a box resized wholly past the edge it lies on keeps that size
+  against the edge rather than being saved with no width, which no handle could resize
+  again. And a node Konva left with no number for its place or size — a box stored with no
+  width, which it cannot scale — commits nothing: the box is drawn again as stored.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
 
@@ -109,8 +126,11 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 
 - Payload builder unit tests (bodies, ids, flags).
 - The write path is covered generically by `commit.test.ts`; add kind-specific tests for
-  your editor/session logic through a fake context (see `bboxEditor2D.test.ts`,
-  `bbox3dSession.test.ts`) — assert a gesture/confirm commits the right geometry.
+  your editor/session logic — assert a gesture/confirm commits the right geometry.
+  - Run a 2D editor on the real Konva over the real workspace, as `bboxEditor2D.test.ts`
+    does (`scene/__tests__/konvaInHappyDom.ts` gives happy-dom a canvas; `openManager` and
+    `widgetSeam` come from `workspace/__tests__/workspaceHarness.ts`): a mocked Konva
+    answers whatever the mock says, and can pass while a resize goes unsaved.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
 
 ## Step 5 — verify
