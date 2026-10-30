@@ -189,6 +189,17 @@ class NeighborsResponse(ResponseModel):
     total: int
 
 
+class ConditionalDeleteResponse(ResponseModel):
+    """What a delete asked only on a condition did.
+
+    Attributes:
+        deleted: Whether the row was deleted. False: the condition did not hold, and nothing
+            changed.
+    """
+
+    deleted: bool
+
+
 EntityCreate = _create_transport_model(
     "EntityCreate",
     Entity,
@@ -534,6 +545,7 @@ __all__ = [
     "ClassificationCreate",
     "ClassificationResponse",
     "ClassificationUpdate",
+    "ConditionalDeleteResponse",
     "DatasetInfoResponse",
     "DatasetResponse",
     "EmbeddingCreate",
