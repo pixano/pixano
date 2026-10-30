@@ -12,15 +12,15 @@
 #
 #   docker compose -f docker-compose.yml -f docker-compose.inference.yml up
 #
-# The variant built is the CPU variant (torch CPU) with the CLIP embeddings plugin: it
-# serves real embeddings without a GPU, fast enough for a demonstration. For real capacity,
-# switch the build args to GPU (see below) and mount your own model list in place of
-# docker/inference/models.cpu.py.
+# The variant built is the CPU variant (torch CPU) with the CLIP embeddings and YOLO
+# detection plugins: it serves real embeddings and real boxes without a GPU, fast enough for
+# a demonstration. For real capacity, switch the build args to GPU (see below) and mount your
+# own model list in place of docker/inference/models.cpu.py.
 #
 # The image is the one pixano-inference's own Dockerfile produces, from an UNMODIFIED
 # checkout of it (PIXANO_INFERENCE_REPO) at v0.7.1, the release Pixano's client requires. Its
-# build args choose the plugins: MODEL_PACKAGES installs the CLIP package of that tree.
-# Nothing of ours is added to the image.
+# build args choose the plugins: MODEL_PACKAGES installs the CLIP package of that tree,
+# EXTRA_PACKAGES its YOLO example. Nothing of ours is added to the image.
 
 services:
   pixano-inference:
@@ -31,10 +31,18 @@ services:
         # CPU variant: torch CPU. GPU variant: remove this line (the Dockerfile's default is a
         # CUDA build).
         TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
-        # The plugin docker/inference/models.cpu.py serves, in place of the Dockerfile's
-        # default set (SAM, Grounding DINO, a VLM). Without it, the server refuses the whole
-        # model list ("Unknown model_class 'OpenClipEmbeddingModel'").
+        # The CLIP plugin docker/inference/models.cpu.py serves, in place of the Dockerfile's
+        # default set (SAM, Grounding DINO, a VLM). Without one of the plugins that list names,
+        # the server refuses the whole list ("Unknown model_class 'YOLOModel'"), every model
+        # included.
         MODEL_PACKAGES: "pixano-inference-clip"
+        # The YOLO detector, an example plugin of the same tree, given by its path in the build
+        # context. The plugin leaves Ultralytics unpinned; the version pinned here is the one
+        # this image was verified with, so that a rebuild serves the same detector.
+        # Ultralytics is AGPL-3.0: serving it over a network carries source-disclosure
+        # obligations (AGPL section 13). It is here to make a demonstration run on a laptop;
+        # a deployment picks its own detector, and nothing in Pixano names this one.
+        EXTRA_PACKAGES: "./examples/yolo ultralytics==8.4.160"
     ports:
       - "127.0.0.1:${PIXANO_INFERENCE_PORT:-7463}:7463"
     environment:
@@ -46,6 +54,9 @@ services:
       # PIXANO_INFERENCE_MEDIA_ROOT on the worker side: pixels never go through Pixano.
       PIXANO_INFERENCE_MEDIA_ROOTS: ${PIXANO_INFERENCE_MEDIA_ROOT:-/medias}
       HF_TOKEN: ${HF_TOKEN:-}
+      # Ultralytics keeps its settings in the home directory by default; the volume keeps
+      # them, next to the weights, across restarts.
+      YOLO_CONFIG_DIR: /data/ultralytics
     volumes:
       - pixano-inference-weights:/data
       - ./docker/inference/models.cpu.py:/config/models.py:ro

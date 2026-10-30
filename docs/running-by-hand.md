@@ -26,25 +26,41 @@ export PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano
 ## 2. The inference server
 
 A checkout of [pixano-inference](https://github.com/pixano/pixano-inference), its CLIP
-embedding plugin, and a model list. The list the demo uses on CPU is in this repository:
+embedding and YOLO detection plugins, and a model list. The list the demo uses on CPU is in
+this repository:
 
 ```sh
 git clone https://github.com/pixano/pixano-inference.git ../pixano-inference
 cd ../pixano-inference
 git checkout v0.7.1   # the release Pixano's client requires
 uv sync
-# The CLIP plugin, from the checkout, into the checkout's environment, named, since `uv pip`
-# would otherwise take an activated one.
-uv pip install --python .venv/bin/python ./packages/pixano-inference-clip
+# The CLIP plugin and the YOLO example, from the checkout; Ultralytics at the version the
+# compose pins. Into the checkout's environment, named, since `uv pip` would otherwise take an
+# activated one.
+uv pip install --python .venv/bin/python \
+  ./packages/pixano-inference-clip ./examples/yolo "ultralytics==8.4.160"
 cd -
 
 PIXANO_INFERENCE_MEDIA_ROOTS=/srv/pixano/data/media \
+PIXANO_INFERENCE_WEIGHTS_DIR=/srv/pixano/inference-weights \
   uv run --directory ../pixano-inference pixano-inference \
   --host 127.0.0.1 --port 7463 --config "$PWD/docker/inference/models.cpu.py"
 ```
 
-`PIXANO_INFERENCE_MEDIA_ROOTS` is the directory under which the server accepts image paths.
-Wait for `http://127.0.0.1:7463/health` to answer; the first start downloads the model.
+`PIXANO_INFERENCE_MEDIA_ROOTS` is the directory under which the server accepts image paths;
+`PIXANO_INFERENCE_WEIGHTS_DIR` a writable directory where YOLO keeps its weights. Wait for
+`http://127.0.0.1:7463/health` to answer; the first start downloads the models. CLIP comes
+from huggingface.co and is cached under `HF_HOME`, `~/.cache/huggingface` unless set, not in
+`PIXANO_INFERENCE_WEIGHTS_DIR`.
+
+The YOLO plugin runs Ultralytics, which is AGPL-3.0: a demonstration choice. Serve any other
+detection model instead — nothing in Pixano names this one.
+
+**The machine.** Each model runs one replica, for which Ray reserves CPUs out of those it
+finds on the machine: two for CLIP, two for YOLO — four in all. With fewer, the server refuses
+to start, every model included; `--no-strict-startup` starts it anyway, with the models that
+fit. The reservation is a count, not a pinning: the worker, the application and PostgreSQL
+still run beside it on the same CPUs.
 
 ## 3. The worker
 
