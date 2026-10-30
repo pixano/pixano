@@ -9,6 +9,8 @@ behaves correctly on real data.
 **Always test on a COPY of a library, never the original.** Opening a dataset with 0.8.0
 code performs a one-time additive migration (stamps `spec_version: 2` in `info.json` and,
 for datasets with a `videos` table, backfills the `from_timestamp`/`to_timestamp` columns).
+The current code stamps `spec_version: 3` and also gives every entity annotation table an
+empty `review_status` column.
 It is tested — including under concurrent opens — but a copy keeps working data untouched
 and lets you diff the directory afterwards.
 
@@ -26,7 +28,7 @@ The stack so far is additive plumbing: behavior must be identical to `arch/data-
 
 - [ ] Server starts; `GET /health` returns `{"status":"ok"}`.
 - [ ] `GET /datasets` lists every dataset from the copy with correct `num_records`;
-      payloads now include `spec_version: 2`.
+      payloads now include `spec_version: 3` (`2` with 0.8.0 code).
 - [ ] Browse a dataset in the UI: records grid, image display, existing annotations render.
 - [ ] Create + save an annotation (bbox on an image); reload; it persisted.
 - [ ] `info.json` in the copy gained only `spec_version` (diff against the original).
