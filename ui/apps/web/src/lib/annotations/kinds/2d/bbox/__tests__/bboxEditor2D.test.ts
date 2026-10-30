@@ -7,12 +7,13 @@ License: CECILL-C
 import Konva from "konva";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { BBOX_DRAGGING_ATTR } from "../bbox2dNodes.js";
 import { BBOX_RESOURCE } from "../bboxPayloadBuilder.js";
 import { bboxRenderer2DFactory } from "../bboxRenderer2D.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
-import { commitNewAnnotation } from "$lib/annotations/payloadBuilders.js";
+import { commitGeometryEdit, commitNewAnnotation } from "$lib/annotations/payloadBuilders.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import {
   humanBox,
   openManager,
@@ -39,6 +40,8 @@ const COORDS_DIGITS = 6;
 
 /** A person's box at [0.1, 0.1, 0.2, 0.2]: drawn 20 × 20 px at (10, 10). */
 const BOX = humanBox(REC, "b1");
+/** Another of the person's boxes, at [0.6, 0.6, 0.2, 0.2]: clear of the first. */
+const OTHER_BOX: Row = { ...humanBox(REC, "b2"), coords: [0.6, 0.6, 0.2, 0.2] };
 
 afterEach(() => {
   // Konva's drags are global: one a failed test left running would move with
@@ -52,9 +55,10 @@ afterEach(() => {
  * widget wires.
  *
  * @param box The box the record holds: a person's unless told otherwise.
+ * @param others More boxes the record holds.
  */
-async function openOnCanvas(box: Row = BOX) {
-  const opened = await openManager({ [REC]: { [BBOX_RESOURCE]: [box] } });
+async function openOnCanvas(box: Row = BOX, ...others: Row[]) {
+  const opened = await openManager({ [REC]: { [BBOX_RESOURCE]: [box, ...others] } });
   const container = document.createElement("div");
   document.body.appendChild(container);
   const stage = new Konva.Stage({ container, width: STAGE_PIXELS, height: STAGE_PIXELS });
@@ -69,8 +73,21 @@ async function openOnCanvas(box: Row = BOX) {
   });
   layer.add(image);
   const seam = widgetSeam(opened.manager);
+  /** Every value the editor set its staged-work flag to, in order. */
+  const flagSets: boolean[] = [];
   const ctx: Scene2DContext = {
     ...seam,
+    // The widget's own flag, with each value it is set to written down.
+    claimStagedWork: (discard) => {
+      const flag = seam.claimStagedWork!(discard);
+      const recorded: StagedWorkFlag = {
+        set: (staged) => {
+          flagSets.push(staged);
+          flag.set(staged);
+        },
+      };
+      return recorded;
+    },
     stage,
     annotationLayer: layer,
     getKonvaImage: () => image,
@@ -85,7 +102,7 @@ async function openOnCanvas(box: Row = BOX) {
     editor.syncSelection();
   }
   redraw();
-  return { ...opened, ctx, stage, layer, renderer, editor, redraw };
+  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets };
 }
 
 type OnCanvas = Awaited<ReturnType<typeof openOnCanvas>>;
@@ -211,6 +228,14 @@ function queuedCoords(scene: OnCanvas): unknown {
   return update?.op === "update" ? update.body.coords : undefined;
 }
 
+/**
+ * A person's edit of `OTHER_BOX`, queued as the editor commits a gesture's end:
+ * something for the next save to send.
+ */
+function editOtherBox(scene: OnCanvas): void {
+  commitGeometryEdit(scene.ctx, OTHER_BOX.id, [0.7, 0.6, 0.2, 0.2]);
+}
+
 describe("bboxEditor2D on the real Konva", () => {
   it("saves a box resized with the transformer's handle", async () => {
     const scene = await openOnCanvas();
@@ -266,6 +291,8 @@ describe("bboxEditor2D on the real Konva", () => {
     dragBy(scene, other, 10, 10);
 
     expect(scene.manager.pendingMutations).toHaveLength(0);
+    // Nor is it work the editor holds.
+    expect(scene.flagSets).toEqual([]);
   });
 
   it("stops listening once destroyed", async () => {
@@ -318,6 +345,142 @@ describe("bboxEditor2D, a handle dragged past the opposite edge", () => {
       );
     },
   );
+});
+
+describe("bboxEditor2D, a resize still running when a save ends", () => {
+  it("is not put back by the save: it is saved once the handle is let go", async () => {
+    const scene = await openOnCanvas(BOX, OTHER_BOX);
+    // Something for the save to send.
+    editOtherBox(scene);
+    select(scene, "b1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    // The resize is the record's unsaved work until it ends.
+    expect(scene.manager.hasUnsavedWork).toBe(true);
+    expect(await scene.manager.flushSave()).toBe(false);
+    // A save ends by clearing the selection, and the widget syncs its scene then.
+    scene.redraw();
+    grabbed.moveTo(20, 20);
+    grabbed.release();
+
+    // 20 × 20 px grown to 40 × 40 px, as when no save ran.
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.1, 0.1, 0.4, 0.4]);
+    const update = scene.manager.pendingMutations.find((m) => m.op === "update");
+    expectCoords(update?.op === "update" ? update.body.coords : undefined, [0.1, 0.1, 0.4, 0.4]);
+    const rect = rectOf(scene, "b1");
+    expect([rect.scaleX(), rect.scaleY()]).toEqual([1, 1]);
+    expect(rect.width()).toBeCloseTo(40, COORDS_DIGITS);
+    // The save left nothing selected: the handles go once the resize is over.
+    expect(scene.layer.findOne<Konva.Transformer>("Transformer")?.nodes()).toEqual([]);
+  });
+
+  it("is saved as it stood when the handle is let go right as the save ends", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    await scene.manager.flushSave();
+    scene.redraw();
+    // Let go where it was: no later move puts the new size back on the box.
+    grabbed.release();
+
+    // 20 × 20 px grown to 30 × 30 px.
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.1, 0.1, 0.3, 0.3]);
+    expect(rectOf(scene, "b1").width()).toBeCloseTo(30, COORDS_DIGITS);
+  });
+
+  it("is dropped by Discard, and the box goes back as stored", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    await scene.manager.discardChanges();
+    grabbed.moveTo(20, 20);
+    grabbed.release();
+
+    expect(scene.manager.hasUnsavedWork).toBe(false);
+    expect(scene.manager.pendingMutations).toEqual([]);
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.1, 0.1, 0.2, 0.2]);
+    const rect = rectOf(scene, "b1");
+    expect([rect.scaleX(), rect.scaleY()]).toEqual([1, 1]);
+    expect([rect.width(), rect.height()]).toEqual([20, 20]);
+  });
+});
+
+describe("bboxEditor2D, a drag still running when a save ends", () => {
+  // The box is drawn 20 × 20 px at (10, 10); each drag below moves it right.
+
+  it("holds the box as unsaved work from dragstart to dragend, raising the flag once", async () => {
+    const scene = await openOnCanvas();
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+
+    grabbed.moveTo(10, 0);
+    grabbed.moveTo(20, 0);
+
+    // Raised as the drag began, not again at each of the pointer's moves.
+    expect(scene.flagSets).toEqual([true]);
+    expect(scene.manager.hasUnsavedWork).toBe(true);
+    expect(rectOf(scene, "b1").getAttr(BBOX_DRAGGING_ATTR)).toBe(true);
+    grabbed.release();
+
+    expect(scene.flagSets).toEqual([true, false]);
+    expect(rectOf(scene, "b1").getAttr(BBOX_DRAGGING_ATTR)).toBe(false);
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.3, 0.1, 0.2, 0.2]);
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
+  });
+
+  it("is not put back by the save: it is saved once let go", async () => {
+    const scene = await openOnCanvas(BOX, OTHER_BOX);
+    // Something for the save to send.
+    editOtherBox(scene);
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+
+    expect(await scene.manager.flushSave()).toBe(false);
+    // A save ends by clearing the selection, and the widget syncs its scene then.
+    scene.redraw();
+    expect(rectOf(scene, "b1").x()).toBeCloseTo(20, COORDS_DIGITS);
+    grabbed.moveTo(20, 0);
+    grabbed.release();
+
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.3, 0.1, 0.2, 0.2]);
+    const update = scene.manager.pendingMutations.find((m) => m.op === "update");
+    expectCoords(update?.op === "update" ? update.body.coords : undefined, [0.3, 0.1, 0.2, 0.2]);
+  });
+
+  it("is saved where it stood when let go right as the save ends", async () => {
+    const scene = await openOnCanvas(BOX, OTHER_BOX);
+    editOtherBox(scene);
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+
+    await scene.manager.flushSave();
+    scene.redraw();
+    // Let go where it was: no later move puts the box back where it was dragged.
+    grabbed.release();
+
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.2, 0.1, 0.2, 0.2]);
+    expect(rectOf(scene, "b1").x()).toBeCloseTo(20, COORDS_DIGITS);
+  });
+
+  it("is dropped by Discard, and the box goes back as stored", async () => {
+    const scene = await openOnCanvas();
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+
+    await scene.manager.discardChanges();
+    grabbed.moveTo(20, 0);
+    grabbed.release();
+
+    expect(scene.manager.hasUnsavedWork).toBe(false);
+    expect(scene.manager.pendingMutations).toEqual([]);
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.1, 0.1, 0.2, 0.2]);
+    const rect = rectOf(scene, "b1");
+    expect([rect.x(), rect.y()]).toEqual([10, 10]);
+  });
 });
 
 describe("bboxEditor2D, a box taken past the image's edge", () => {
