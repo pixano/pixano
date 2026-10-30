@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from threading import Event
 
+import pytest
+
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.locking import dataset_mutation_lock, mutation_token
 from pixano.schemas import BBox, Entity, Image, Record, Video
@@ -248,3 +250,123 @@ class TestSpecVersion3Migration:
         )
 
         assert {box.id: box.review_status for box in dataset.get_data("bboxes")} == {"box1": "", "box2": "pending"}
+
+    def test_upserts_survive_an_index_rebuilt_after_migration(self, tmp_path: Path):
+        """The migrated column sits at the end of the Lance schema.
+
+        The pydantic schema declares ``review_status`` after ``view_id``; once the ``id`` index
+        covers fragments written in pydantic order, ``merge_insert`` failed with "fragment id
+        does not exist". Seen on a dataset imported at version 2 (imports build the index),
+        opened, edited, then compacted — which the worker's writer does every 64 writes.
+        """
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+        dataset = Dataset(dataset_path)
+        dataset.create_scalar_indexes()
+
+        def edit(box_id: str, size: float) -> None:
+            box = dataset.get_data("bboxes", ids=[box_id])[0]
+            box.coords = [0, 0, size, size]
+            dataset.update_data("bboxes", [box], raise_or_warn="none")
+
+        edit("box1", 0.5)
+        dataset.update_data(
+            "bboxes",
+            [
+                BBox(
+                    id="box2", record_id="rec1", view_id="img1", coords=[0, 0, 1, 1], format="xyxy", is_normalized=True
+                )
+            ],
+            raise_or_warn="none",
+        )
+        dataset.open_table("bboxes").optimize()
+        edit("box1", 0.6)
+        edit("box2", 0.7)
+
+        sizes = {box.id: box.coords[2] for box in dataset.get_data("bboxes")}
+        assert sizes == pytest.approx({"box1": 0.6, "box2": 0.7})
+
+
+def _open_with_a_failed_migration(path: Path, monkeypatch: pytest.MonkeyPatch) -> Dataset:
+    """Open a version 2 dataset whose migration fails, as the opener then leaves it.
+
+    The migration fails in the field when its lock wait runs out or ``add_columns`` raises; the
+    opener logs it and keeps the dataset readable at the old layout.
+    """
+
+    def interrupted(dataset: Dataset) -> None:
+        raise RuntimeError("migration interrupted")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Dataset, "_migrate_storage", interrupted)
+        dataset = Dataset(path)
+    assert dataset.info.spec_version == 2
+    assert "review_status" not in dataset.open_table("bboxes").schema.names
+    return dataset
+
+
+def _accepted_box() -> BBox:
+    """The box the dataset holds, with a review status and new coordinates that show whether it was written."""
+    return BBox(
+        id="box1",
+        record_id="rec1",
+        view_id="img1",
+        coords=[0, 0, 0.5, 0.5],
+        format="xyxy",
+        is_normalized=True,
+        source_type="model",
+        review_status="accepted",
+    )
+
+
+class TestWritesNamingAColumnTheTableLacks:
+    """A write is refused, not trimmed, when the table lacks a column.
+
+    The opener keeps a dataset whose migration failed readable on the promise that writes
+    surface the missing column. Rebuilding the rows against the table's schema would drop it
+    instead: a review status sent would be answered as stored, and lost.
+    """
+
+    def test_update_data_refuses_a_status_the_table_cannot_store(self, tmp_path: Path, monkeypatch):
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+        dataset = _open_with_a_failed_migration(dataset_path, monkeypatch)
+
+        with pytest.raises(ValueError, match="Field 'review_status' not found in target schema"):
+            dataset.update_data("bboxes", [_accepted_box()])
+
+        assert dataset.get_data("bboxes", ids=["box1"])[0].coords == [0, 0, 1, 1]
+
+    def test_an_upsert_refuses_a_status_the_table_cannot_store(self, tmp_path: Path, monkeypatch):
+        """The import engine's upsert path, `merge_records`, shares the reordering."""
+        dataset_path = tmp_path / "bbox_ds"
+        _make_bbox_dataset(dataset_path)
+        _downgrade_to_spec_version_2(dataset_path)
+        dataset = _open_with_a_failed_migration(dataset_path, monkeypatch)
+
+        with pytest.raises(ValueError, match="Field 'review_status' not found in target schema"):
+            dataset.merge_records({"bboxes": [_accepted_box()]})
+
+        assert dataset.get_data("bboxes", ids=["box1"])[0].coords == [0, 0, 1, 1]
+
+    def test_an_upsert_leaves_a_column_its_rows_lack_as_stored(self, tmp_path: Path):
+        """A handle that read the entities before another process gave their table a column does not erase it."""
+        dataset_path = tmp_path / "entity_ds"
+        stale = Dataset.create(dataset_path, DatasetInfo(name="entity_ds", record=Record, entity=Entity))
+        stale.add_records(
+            {
+                "records": Record(id="rec1"),
+                "entities": [Entity(id="ent0", record_id="rec1"), Entity(id="ent1", record_id="rec1")],
+            }
+        )
+        Dataset(dataset_path).open_table("entities").add_columns({"category": "'car'"})
+
+        stale.merge_records({"entities": [Entity(id="ent1", record_id="rec1", parent_id="ent0")]})
+
+        stored = Dataset(dataset_path).open_table("entities").to_arrow().to_pylist()
+        assert {(row["id"], row["parent_id"], row["category"]) for row in stored} == {
+            ("ent0", "", "car"),
+            ("ent1", "ent0", "car"),
+        }
