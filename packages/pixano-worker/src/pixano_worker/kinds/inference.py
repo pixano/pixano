@@ -6,9 +6,10 @@
 
 """What every job kind that calls pixano-inference needs, whatever it asks of it.
 
-Knowing whether a failed call is the server's fault or the medium's, and — when every medium of
-a chunk is refused — asking the server itself with an image known to be good. Kinds differ in the
-call they make, not in any of this.
+Knowing which checkpoint answered, for the provenance of a job's rows, whether a failed call is
+the server's fault or the medium's, and — when every medium of a chunk is refused — asking the
+server itself with an image known to be good. Kinds differ in the call they make, not in any of
+this.
 """
 
 import io
@@ -23,6 +24,7 @@ from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceCli
 from pixano.inference.media import bytes_to_data_uri
 
 from ..reader import JobReader
+from ..writer import ModelIdentity
 from .base import TransientError
 
 
@@ -46,6 +48,10 @@ NO_RESPONSE = 0
 # expects. The server and this worker disagree on the contract (two pixano-inference versions,
 # say): no medium is at fault, and every call would fail the same way.
 INVALID_RESPONSE = "invalid_response"
+
+# How long a question about the server — which checkpoint a model loaded — may take. The answer
+# only completes a provenance: a slow server must not hold a chunk for the client's default minute.
+QUERY_TIMEOUT_S = 5.0
 
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
 # find out whether the server can still process an image known to be good, not to produce
@@ -121,10 +127,40 @@ class InferenceServer:
         """
         self.url = url.rstrip("/")
         self.api_key = api_key
+        self._checkpoints: dict[str, str] = {}
 
-    def client(self, max_retries: int) -> SyncPixanoInferenceClient:
+    def client(self, max_retries: int, timeout: float | None = None) -> SyncPixanoInferenceClient:
         """A client for one chunk's calls."""
-        return SyncPixanoInferenceClient(self.url, api_key=self.api_key or None, max_retries=max_retries)
+        if timeout is None:
+            return SyncPixanoInferenceClient(self.url, api_key=self.api_key or None, max_retries=max_retries)
+        return SyncPixanoInferenceClient(
+            self.url, api_key=self.api_key or None, max_retries=max_retries, timeout=timeout
+        )
+
+    def model_identity(self, model: str) -> ModelIdentity:
+        """The model's name, and the checkpoint the server loaded under it.
+
+        The server declares no version as such; the checkpoint path is what identifies which
+        weights answered. Asked once per model per process, and only a successful answer is
+        remembered: a server that could not be asked is asked again on the next chunk rather
+        than leaving every later row without a version.
+        """
+        if model not in self._checkpoints:
+            checkpoint = self._checkpoint_of(model)
+            if checkpoint is None:
+                return ModelIdentity(model)
+            self._checkpoints[model] = checkpoint
+        return ModelIdentity(model, self._checkpoints[model])
+
+    def _checkpoint_of(self, model: str) -> str | None:
+        try:
+            with self.client(max_retries=0, timeout=QUERY_TIMEOUT_S) as client:
+                for info in client.list_models():
+                    if info.name == model:
+                        return info.model_path or None
+        except Exception as error:  # noqa: BLE001 — a provenance that cannot be completed must not fail the chunk
+            log.warning("model '%s': cannot ask the inference for its checkpoint (%s)", model, error)
+        return None
 
 
 def blame_the_server_or_the_media(

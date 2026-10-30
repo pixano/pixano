@@ -256,7 +256,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured (`scripts/measure_compaction.py`) on a classification table filled by chunk-sized writes: 0.12 s median at 10 000 rows, 0.30 s at 30 000 with a 0.9 s maximum, growing with the table. Acceptable for step 1; the policy — every N writes, at the end of a job, or owned by a writer role — is settled before step 2's kinds write into tables users annotate (§19).
 
-**Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name` and the job identifier in `source_metadata`. Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Self-contained provenance — model, version, parameters in the row — is step 2 (§19). Embeddings rows carry none: the model lives in the dataset's sidecar. Lot 9 asked for full provenance; accepted as a gap, designed with the rest.
+**Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name`, and in `source_metadata` a self-contained provenance: the job identifier, the kind, the model and its version when the kind runs one, and the job's parameters minus the engine's (§19). Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Embeddings rows carry none: the model lives in the dataset's sidecar.
 
 ## 13. Media
 
@@ -391,7 +391,7 @@ Questions the review raised and step 1 does not settle. None is a defect; each s
 
 - **Chunks.** They have no dependency and no internal progress, and their time limit is a deployment setting. Video tracking by segments needs an order between segments, per-video atomicity, progress in frames, and a limit that follows the work (§9). The one piece of engine design step 2 must do first.
 - **Embeddings.** The grain — one vector per record or per view — is a product decision before it is a worker decision: search is record-grained today. The advice on record: store per view, return records by their best view; video needs sampling. With it: the sidecar, one table per model, the fate of the application's in-process path (§18), `replace_existing_embeddings` (§12), and the rule for choosing a view, not to be built if the grain makes it moot.
-- **Self-contained provenance** (§12).
+- **Provenance** lives in `source_metadata`, set by the writer: `job_id`, `kind`, `model`, `model_version`, `params`. Dedicated columns when a filter by model becomes a need.
 - **Exact `replace` by key** (§12).
 - **`review_status`.**
 - **The compaction policy** (§12).

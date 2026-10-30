@@ -23,7 +23,7 @@ from pixano_inference.schemas import EmbeddingRequest
 from pydantic import Field
 
 from ..reader import JobReader
-from ..writer import JobWriter, check_embedding_space
+from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
 from .inference import (
     InferenceServer,
@@ -78,6 +78,17 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def __init__(self, inference_url: str = "", api_key: str = "") -> None:
         """Bind this kind to the inference server the worker knows."""
         self.server = InferenceServer(inference_url, api_key)
+
+    #: How the engine runs the job, not what it computes: absent from the provenance.
+    params_not_in_provenance = JobKind.params_not_in_provenance | {"request_timeout_s", "max_retries"}
+
+    def model_identity(self, params: EmbeddingsParams) -> ModelIdentity:
+        """The model's name, and the checkpoint the server loaded under it.
+
+        Embedding rows carry no provenance today — the model lives in the dataset's sidecar as
+        long as one table holds one model — so this completes the job's own provenance only.
+        """
+        return self.server.model_identity(params.model)
 
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
         """Split the dataset's records into batches.
