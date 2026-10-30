@@ -65,6 +65,7 @@ export function buildSeam(
     // only, and closing the widget lets go of this widget's flags only.
     claimStagedWork: (discard) => manager.claimStagedWork(opts.widgetId, discard),
     releaseStagedWork: () => manager.releaseStagedWork(opts.widgetId),
+    discardStagedWork: () => manager.discardStagedWork(opts.widgetId),
     setActiveTool: (id) => {
       opts.storage.activeToolId = id;
     },
