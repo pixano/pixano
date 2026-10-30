@@ -42,6 +42,7 @@ from pixano.schemas import (
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    is_entity_annotation,
     is_image,
     is_sequence_frame,
     is_video,
@@ -175,7 +176,7 @@ class Dataset:
                 with dataset_mutation_lock(self.path, timeout=5):
                     with self.write_lock():
                         if self.info.spec_version < self._CURRENT_SPEC_VERSION:
-                            self._migrate_storage_to_spec_version_2()
+                            self._migrate_storage()
             except Exception as exc:
                 # A read-only dataset stays readable at the old layout; writes will
                 # surface the missing columns explicitly.
@@ -230,23 +231,48 @@ class Dataset:
     # Storage-layout migrations
     # ------------------------------------------------------------------
 
-    _CURRENT_SPEC_VERSION: int = 2
+    _CURRENT_SPEC_VERSION: int = 3
 
     @dataset_write
-    def _migrate_storage_to_spec_version_2(self) -> None:
-        """Backfill the ``Video`` time-window columns introduced in spec version 2.
+    def _migrate_storage(self) -> None:
+        """Bring an older on-disk layout up to the current spec version.
+
+        Each version adds columns that its schemas expect, backfilled with the value the
+        schema defaults to: version 2 the ``Video`` time window, version 3 the
+        ``review_status`` of entity annotations. Every step is idempotent, so a dataset opened
+        at version 1 goes through both.
 
         Local openers serialize the upgrade and refresh the metadata before
         calling this method. External ``add_columns`` races converge by
         re-reading the table schema. The ``info.json`` rewrite is atomic and
         idempotent (all writers produce identical content).
         """
-        window_columns = {"from_timestamp": "0.0", "to_timestamp": "-1.0"}
+        if self.info.spec_version < 2:
+            self._backfill_columns(is_video, {"from_timestamp": "0.0", "to_timestamp": "-1.0"})
+        if self.info.spec_version < 3:
+            self._backfill_columns(is_entity_annotation, {"review_status": "''"})
+
+        # Patch the raw JSON rather than re-serializing self.info: from_json drops
+        # views it cannot deserialize, and a re-serialization would persist that loss.
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
+        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
+        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
+        tmp_file.replace(self._info_file)
+        self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
+        """Add the columns missing from every table whose schema ``applies_to`` selects.
+
+        Args:
+            applies_to: Which table schemas get the columns.
+            columns: Column name to the SQL expression of its backfilled value.
+        """
         for table_name, schema_cls in self.info.tables.items():
-            if not is_video(schema_cls):
+            if not applies_to(schema_cls):
                 continue
             table = self.open_table(table_name)
-            missing = {column: expr for column, expr in window_columns.items() if column not in table.schema.names}
+            missing = {column: expr for column, expr in columns.items() if column not in table.schema.names}
             if not missing:
                 continue
             try:
@@ -260,15 +286,6 @@ class Dataset:
                     raise
             finally:
                 self._table_handles.pop(table_name, None)
-
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
-        self.info.spec_version = self._CURRENT_SPEC_VERSION
 
     # ------------------------------------------------------------------
     # Factory
@@ -1339,16 +1356,50 @@ class Dataset:
             if table_name in row_payloads:
                 rows = row_payloads[table_name]
                 self._stamp_upsert_timestamps(table, rows)
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(rows)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, rows)
+                )
                 counts[table_name] = len(rows)
             else:
                 arrow_table = self._with_timestamp_columns(table, arrow_payloads[table_name])
-                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(arrow_table)
+                table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+                    self._in_table_order(table, arrow_table)
+                )
                 counts[table_name] = arrow_table.num_rows
 
         if SchemaGroup.RECORD.value in counts:
             self._num_rows_cache = None
         return counts
+
+    @staticmethod
+    def _in_table_order(table: LanceTable, data: list[LanceModel] | pa.Table) -> list[LanceModel] | pa.Table:
+        """Give an upsert its columns in the order the table stores them.
+
+        A column added by a storage migration lands at the end of the Lance schema, while the
+        pydantic schema may declare it in the middle — ``review_status`` sits after
+        ``view_id``. Lance's ``merge_insert`` does not match columns by name once the ``id``
+        index covers fragments written in the other order: the upsert then fails, or corrupts
+        the match ("fragment id does not exist", "ambiguous merge insert"). Rows whose schema
+        already matches the table are passed through untouched.
+
+        Only data holding exactly the table's columns is reordered. Rebuilding rows against
+        the table's schema would drop every field the table lacks and null every column the
+        rows lack: on a dataset whose migration failed, a write carrying a review status would
+        be answered as stored and lose it. Any other set of columns reaches Lance as it came,
+        which refuses a column the table does not store and leaves alone a column the rows do
+        not carry.
+        """
+        names = table.schema.names
+        if isinstance(data, pa.Table):
+            if data.schema.names == names or set(data.schema.names) != set(names):
+                return data
+            return data.select(names)
+        if not data:
+            return data
+        fields = list(type(data[0]).model_fields)
+        if fields == names or set(fields) != set(names):
+            return data
+        return pa.Table.from_pylist([row.model_dump() for row in data], schema=table.schema)
 
     def _stamp_upsert_timestamps(self, table: LanceTable, rows: list[LanceModel]) -> None:
         """Stamp ``updated_at`` and preserve stored ``created_at`` for existing rows."""
@@ -1604,7 +1655,9 @@ class Dataset:
                 d.updated_at = datetime.now()
             if d.id not in ids_found and hasattr(d, "created_at"):
                 d.created_at = d.updated_at if hasattr(d, "updated_at") else datetime.now()
-        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(
+            self._in_table_order(table, data)
+        )
 
         if not return_separately:
             return data

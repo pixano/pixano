@@ -31,6 +31,24 @@ class AnnotationSourceKind(Enum):
     OTHER = "other"
 
 
+class ReviewStatus(Enum):
+    """Where an annotation produced by a model stands with its human reviewer.
+
+    A human annotation carries no status (the empty string): there is nothing to review. A
+    model's output arrives ``pending``. It becomes ``accepted`` when a person accepts it, as it
+    is or by saving an edit of it; the row keeps ``source_type = model``, the model's provenance
+    and its score. A person who rejects it deletes it: no row is left, so no status says so. A
+    rerun replaces ``pending`` rows only: accepted rows are frozen for that kind.
+
+    Attributes:
+        PENDING: Produced by a model, not yet reviewed.
+        ACCEPTED: Accepted by a person, as it came or with their edit.
+    """
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+
+
 class EntityAnnotation(RecordComponent):
     """Entity annotation.
 
@@ -40,6 +58,8 @@ class EntityAnnotation(RecordComponent):
         source_name: Name of the annotation source.
         source_metadata: Metadata of the annotation source (JSON string).
         view_id: ID of the view from which the annotation is derived.
+        review_status: Review status of a model's output (pending, accepted); empty for an
+            annotation that was never a model's.
     """
 
     entity_id: str = ""
@@ -47,6 +67,24 @@ class EntityAnnotation(RecordComponent):
     source_name: str = ""
     source_metadata: str = json.dumps({})
     view_id: str = ""
+    review_status: str = ""
+
+    @field_validator("review_status", mode="before")
+    @classmethod
+    def _validate_review_status_before(cls, v: Any) -> Any:
+        if isinstance(v, ReviewStatus):
+            return v.value
+        return v
+
+    @field_validator("review_status")
+    @classmethod
+    def _validate_review_status(cls, v: str) -> str:
+        if v == "":
+            return v
+        valid = [k.value for k in ReviewStatus]
+        if v not in valid:
+            raise ValueError(f"review_status '{v}' is not valid. Must be one of {valid} or empty.")
+        return v
 
     @field_validator("source_type", mode="before")
     @classmethod
