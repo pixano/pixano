@@ -6,7 +6,14 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
-import { fieldKind, initialValue, initialValues, missingRequired, toParams } from "../schemaForm";
+import {
+  fieldKind,
+  initialValue,
+  initialValues,
+  missingRequired,
+  toggleChoice,
+  toParams,
+} from "../schemaForm";
 import type { JsonSchema } from "$lib/api/jobs";
 
 // The shape pydantic actually publishes for a job kind, trimmed to what matters here.
@@ -149,5 +156,40 @@ describe("lists of scalars", () => {
 
   it("starts empty even when the default is an empty list", () => {
     expect(initialValue({ type: "array", items: { type: "string" }, default: [] })).toBe("");
+  });
+});
+
+describe("multiple choices", () => {
+  // The media types a job covers.
+  const media: JsonSchema = {
+    type: "array",
+    items: { type: "string", enum: ["image", "video", "point_cloud", "text"] },
+    default: ["image"],
+  };
+
+  it("renders a list drawn from a fixed set as choices", () => {
+    expect(fieldKind(media)).toBe("choices");
+  });
+
+  it("starts on the declared default", () => {
+    expect(initialValue(media)).toEqual(["image"]);
+  });
+
+  it("ticks and unticks in the declared order", () => {
+    const ticked = toggleChoice(media, ["point_cloud"], "image");
+    expect(ticked).toEqual(["image", "point_cloud"]);
+    expect(toggleChoice(media, ticked, "image")).toEqual(["point_cloud"]);
+  });
+
+  it("names an empty selection the schema wants non-empty as missing", () => {
+    // Sent empty, the job was refused with a bare 422.
+    const schema: JsonSchema = { properties: { media: { ...media, minItems: 1 } } };
+    expect(missingRequired(schema, { media: [] })).toEqual(["media"]);
+    expect(missingRequired(schema, { media: ["image"] })).toEqual([]);
+  });
+
+  it("sends an empty selection rather than letting the default run", () => {
+    const schema: JsonSchema = { properties: { media } };
+    expect(toParams(schema, { media: [] })).toEqual({ media: [] });
   });
 });
