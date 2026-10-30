@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 from pixano_inference.client import PixanoInferenceError
 from pixano_worker.kinds import EmbeddingsKind, TransientError
+from pixano_worker.kinds.inference import QUERY_TIMEOUT_S
 from pixano_worker.media import MediaResolver, ResolvedMedia
 
 from pixano.inference.media import bytes_to_data_uri
@@ -64,6 +65,11 @@ class _Inference:
 
     def __exit__(self, *_exc: Any) -> None:
         self.closed += 1
+
+    def list_models(self) -> list[Any]:
+        if self.unreachable:
+            raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
+        return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
 
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
@@ -369,3 +375,53 @@ class TestModelOfTheExistingTable:
 
         with pytest.raises(ValueError, match="dinov2"):
             list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+
+
+class TestModelIdentity:
+    """What the provenance of every vector says about the model that produced it."""
+
+    def test_names_the_model_and_the_checkpoint_the_server_loaded(self, inference: _Inference) -> None:
+        identity = KIND.model_identity(PARAMS)
+
+        assert (identity.name, identity.version) == ("clip", "MobileCLIP2-S2")
+
+    def test_a_server_that_cannot_be_asked_still_gives_the_name(self, inference: _Inference) -> None:
+        """A provenance that cannot be completed must not fail the chunk."""
+        inference.unreachable = True
+        kind = EmbeddingsKind("http://inference", "")
+
+        identity = kind.model_identity(PARAMS)
+
+        assert (identity.name, identity.version) == ("clip", None)
+
+    def test_a_failed_query_is_asked_again_rather_than_remembered(self, inference: _Inference) -> None:
+        """One unreachable moment must not leave every later row of the process without a version."""
+        kind = EmbeddingsKind("http://inference", "")
+        inference.unreachable = True
+        kind.model_identity(PARAMS)
+        inference.unreachable = False
+
+        assert kind.model_identity(PARAMS).version == "MobileCLIP2-S2"
+
+    def test_the_question_is_bounded_and_its_client_closed(
+        self, inference: _Inference, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A slow server must not hold a chunk for the client's default minute, nor leak its pool."""
+        asked: list[dict[str, Any]] = []
+
+        def client(*args: Any, **kwargs: Any) -> _Inference:
+            asked.append(kwargs)
+            return inference.client(*args, **kwargs)
+
+        monkeypatch.setattr("pixano_worker.kinds.inference.SyncPixanoInferenceClient", client)
+        kind = EmbeddingsKind("http://inference", "")
+
+        kind.model_identity(PARAMS)
+
+        assert asked == [{"api_key": None, "max_retries": 0, "timeout": QUERY_TIMEOUT_S}]
+        assert inference.closed == 1
+
+    def test_engine_parameters_stay_out_of_the_provenance(self) -> None:
+        recorded = KIND.provenance_params(KIND.validate_params({"model": "clip", "chunk_size": 3}))
+
+        assert recorded == {"model": "clip", "normalize": True}

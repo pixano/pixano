@@ -48,6 +48,8 @@ class LabelKind(JobKind[LabelParams]):
 
     name = "label"
     params_model = LabelParams
+    #: The selection would copy every labelled identifier into every row it produced.
+    params_not_in_provenance = JobKind.params_not_in_provenance | {"record_ids"}
     # A label put by a rule is not a model prediction.
     source_type = "other"
 

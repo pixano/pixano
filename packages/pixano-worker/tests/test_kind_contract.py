@@ -213,6 +213,9 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
         def __exit__(self, *_exc: Any) -> None:
             return None
 
+        def list_models(self) -> list[Any]:
+            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
             vectors = np.full((count, FAKE_DIM), 0.1, dtype=np.float32)
@@ -268,6 +271,15 @@ class TestProvenance:
             assert metadata["kind"] == kind.name
             assert metadata["job_id"] == "job-1"
             assert set(metadata["params"]) == set(_params(kind).model_dump()) - kind.params_not_in_provenance
+
+    def test_a_kind_that_runs_a_model_names_it(self, kind: JobKind) -> None:
+        params = _params(kind)
+        identity = kind.model_identity(params)
+        if identity is None:
+            assert kind.source_type != "model", "a kind producing model output must say which model"
+            return
+
+        assert identity.name == getattr(params, "model", identity.name)
 
 
 class TestPreparation:
@@ -397,6 +409,15 @@ class TestRegistry:
 
 class TestProvenanceParameters:
     """What the provenance records of a job's parameters."""
+
+    def test_a_selection_is_not_copied_into_every_row(self) -> None:
+        """Ten thousand ids made 260 kB of metadata on each labelled row."""
+        from pixano_worker.kinds import LabelKind
+
+        kind = LabelKind()
+        params = kind.validate_params({"record_ids": [f"r{n}" for n in range(10_000)], "label": "cat"})
+
+        assert "record_ids" not in kind.provenance_params(params)
 
     def test_a_parameter_json_cannot_hold_is_recorded_as_json(self) -> None:
         """A path, an enum or a date must not fail the chunk at write time."""
