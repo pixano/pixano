@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import type { QuarantinedItem } from "$lib/api/jobs";
+  import { recordOf } from "$lib/stores/jobs.svelte";
 
   type Props = {
     /** The outcome in words, or null while the job runs. */
@@ -36,6 +37,11 @@ License: CECILL-C
             -->
             <li class="flex flex-col text-xs">
               <span class="truncate font-mono" title={item.item_id}>{item.item_id}</span>
+              {#if recordOf(item)}
+                <span class="truncate text-muted-foreground" title={recordOf(item)}>
+                  record {recordOf(item)}
+                </span>
+              {/if}
               <span class="text-muted-foreground">{item.reason}</span>
             </li>
           {/each}
