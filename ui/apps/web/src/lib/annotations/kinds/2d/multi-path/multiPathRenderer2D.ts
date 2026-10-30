@@ -8,6 +8,7 @@ import Konva from "konva";
 
 import { toPixelSubPaths } from "./multiPathGeometry.js";
 import {
+  MULTI_PATH_DRAGGING_ATTR,
   MULTI_PATH_ID_ATTR,
   MULTI_PATH_NODE_NAME,
   MULTI_PATH_VERTEX_INDEX_ATTR,
@@ -86,6 +87,10 @@ class MultiPathRenderer2D implements AnnotationRenderer2D {
    * a path is a handful of shapes.
    */
   private _syncOne(path: LocalMultiPath, frame: PixelFrame | null): boolean {
+    // A path being dragged holds its move on its nodes until the editor commits
+    // it as the drag ends: rebuilt now, the drag would be cut short under the
+    // pointer, and saved half-way. The redraw as the drag ends catches up.
+    if (this.groupById.get(path.id)?.getAttr(MULTI_PATH_DRAGGING_ATTR)) return true;
     if (!frame) return false;
     const subPaths = toPixelSubPaths(path.geometry, frame);
     if (subPaths.length === 0) return false;
@@ -213,6 +218,7 @@ export const multiPathRenderer2DFactory: AnnotationRenderer2DFactory = {
       idAttr: MULTI_PATH_ID_ATTR,
       vertexName: MULTI_PATH_VERTEX_NAME,
       vertexIndexAttr: MULTI_PATH_VERTEX_INDEX_ATTR,
+      draggingAttr: MULTI_PATH_DRAGGING_ATTR,
       readCoords: (geometry) => geometry.coords,
       // `numPoints` and `isClosed` survive an edit untouched: dragging moves
       // points, it never splits a ring or opens a closed one.

@@ -48,6 +48,14 @@ export const MULTI_PATH_ID_ATTR = "pixanoMultiPathId";
  */
 export const MULTI_PATH_VERTEX_INDEX_ATTR = "pixanoMultiPathIndex";
 
+/**
+ * Set on a path's group while the path is dragged, whole or by one vertex. A
+ * drag moves the nodes and reaches the collection only as it ends; the renderer
+ * leaves a group so marked alone meanwhile, as rebuilding it — a save ending,
+ * the selection changing — would cut the drag short under the pointer.
+ */
+export const MULTI_PATH_DRAGGING_ATTR = "pixanoMultiPathDragging";
+
 /** Tool ids, referenced by the toolbar and by tests. */
 export const DRAW_POLYGON_TOOL_ID = "draw-polygon";
 export const DRAW_POLYLINE_TOOL_ID = "draw-polyline";

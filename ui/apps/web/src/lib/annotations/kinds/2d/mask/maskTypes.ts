@@ -31,6 +31,15 @@ export const MASK_NODE_NAME = "pixano-mask";
 /** Attribute carrying the local annotation id on a mask node. */
 export const MASK_ID_ATTR = "pixanoMaskId";
 
+/**
+ * Set on a mask's node while it is dragged. A drag moves the node and reaches
+ * the collection only as it ends; the renderer leaves a node so marked alone
+ * meanwhile, as a sync placing it back on the image — a save ending, the
+ * selection changing — would undo the drag under the pointer, and a release
+ * with no move after it would save the mask where it was.
+ */
+export const MASK_DRAGGING_ATTR = "pixanoMaskDragging";
+
 /** Tool id of the brush, referenced by the toolbar and by tests. */
 export const DRAW_MASK_TOOL_ID = "draw-mask";
 

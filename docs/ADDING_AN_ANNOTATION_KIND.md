@@ -114,6 +114,25 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   does, and marks them (`BBOX_RESIZING_ATTR` in `bbox2dNodes.ts`) so the renderer's sync —
   a save ending — leaves their size and place alone; its discard stops the resize and
   redraws the box as stored.
+
+  A drag is held the same way, whatever the shape: the editor listens for `dragstart` as
+  well as `dragend` on the layer, raises its flag at the start and lowers it at the end —
+  once per drag, never per pointer move — and stamps the dragged node, or the group of the
+  shape whose point is dragged, with a `<KIND>_DRAGGING_ATTR` from the kind's own
+  `<kind>Types.ts` / `<kind>Nodes.ts` (`BBOX_DRAGGING_ATTR`, `MASK_DRAGGING_ATTR`,
+  `MULTI_PATH_DRAGGING_ATTR`, `KEYPOINTS_DRAGGING_ATTR`). The renderer's sync leaves a
+  stamped node alone: it neither moves it back nor rebuilds it. The editor commits only a
+  drag whose start it saw, and unstamps the node first, so the commit's redraw draws the
+  shape where it was let go; its discard lets go of the drag, stops it (`stopDrag`: the
+  `dragend` that follows finds nothing held and commits nothing) and redraws the shape as
+  stored (`bboxEditor2D.ts`, `maskEditor2D.ts`). A kind whose geometry is a flat list of
+  points edits through the shared `scene/flatCoordsEditor2D.ts`, which holds the drag
+  itself — the flag, the stamp on the shape's group, the commit of a drag it saw begin, the
+  discard — so the kind writes no editor: its factory's `createEditor` returns
+  `createFlatCoordsEditor2D(ctx, spec)`, the spec naming the kind's node labels and its
+  dragging attribute (`draggingAttr: MULTI_PATH_DRAGGING_ATTR`, declared in its own
+  `<kind>Types.ts`), and its renderer leaves a group so stamped alone
+  (`multiPathRenderer2D.ts`, `keypointsRenderer2D.ts`).
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
   A handler that holds work not in the collection yet — points placed, strokes painted, a
@@ -151,6 +170,11 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     does (`scene/__tests__/konvaInHappyDom.ts` gives happy-dom a canvas; `openManager` and
     `widgetSeam` come from `workspace/__tests__/workspaceHarness.ts`): a mocked Konva
     answers whatever the mock says, and can pass while a resize goes unsaved.
+  - An editable 2D kind drags a shape across a save there (`multiPathDrag.test.ts`): the
+    flag is raised once for the drag, the save leaves the shape where it is dragged, the
+    release saves it, and Discard drops the drag. Send a window `mouseup` after each test:
+    Konva's drags are global, and one a failed test left running moves with the next
+    test's pointer.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the

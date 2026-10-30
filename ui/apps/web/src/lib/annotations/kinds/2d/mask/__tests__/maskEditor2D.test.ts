@@ -20,9 +20,11 @@ vi.mock("../maskRaster.js", () => ({ translateMask }));
 const GEOMETRY: MaskGeometry = { size: [200, 400], counts: "abc" };
 
 function fakeNode(opts: { id?: string; x?: number; y?: number; name?: string }) {
+  const attrs: Record<string, unknown> = { [MASK_ID_ATTR]: opts.id ?? "a1" };
   return {
     name: () => opts.name ?? MASK_NODE_NAME,
-    getAttr: (k: string) => (k === MASK_ID_ATTR ? (opts.id ?? "a1") : undefined),
+    getAttr: (k: string) => attrs[k],
+    setAttr: (k: string, v: unknown) => (attrs[k] = v),
     x: () => opts.x ?? 0,
     y: () => opts.y ?? 0,
   };
@@ -60,7 +62,12 @@ function makeHarness() {
 
 describe("maskEditor2D", () => {
   let harness: ReturnType<typeof makeHarness>;
-  const drag = (target: unknown) => harness.handlers["dragend.mask-edit"]({ target });
+  // A drag starts before it ends, as Konva fires them: the editor commits only
+  // a drag it saw begin.
+  const drag = (target: unknown) => {
+    harness.handlers["dragstart.mask-edit"]({ target });
+    harness.handlers["dragend.mask-edit"]({ target });
+  };
 
   beforeEach(() => {
     translateMask.mockReset();
@@ -128,6 +135,6 @@ describe("maskEditor2D", () => {
   it("stops listening once destroyed", () => {
     createMaskEditor2D(harness.ctx).destroy();
 
-    expect(harness.off).toHaveBeenCalledWith("dragend.mask-edit");
+    expect(harness.off).toHaveBeenCalledWith("dragstart.mask-edit dragend.mask-edit");
   });
 });

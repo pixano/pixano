@@ -8,6 +8,7 @@ import Konva from "konva";
 
 import { keypointTemplateFor } from "./keypointsTemplates.js";
 import {
+  KEYPOINTS_DRAGGING_ATTR,
   KEYPOINTS_EDGE_NAME,
   KEYPOINTS_ID_ATTR,
   KEYPOINTS_VERTEX_INDEX_ATTR,
@@ -93,6 +94,11 @@ class KeypointsRenderer2D implements AnnotationRenderer2D {
    * a handful of shapes, unlike a mask raster where re-decoding is the cost.
    */
   private _syncOne(skeleton: LocalKeypoints, frame: PixelFrame | null): boolean {
+    // A skeleton being dragged holds its move on its nodes until the editor
+    // commits it as the drag ends: rebuilt now, the drag would be cut short
+    // under the pointer, and saved half-way. The redraw as the drag ends
+    // catches up.
+    if (this.nodesById.get(skeleton.id)?.group.getAttr(KEYPOINTS_DRAGGING_ATTR)) return true;
     if (!frame) return false;
     const points = this._toPixels(skeleton.geometry, frame);
     if (points.length === 0) return false;
@@ -232,6 +238,7 @@ export const keypointsRenderer2DFactory: AnnotationRenderer2DFactory = {
       idAttr: KEYPOINTS_ID_ATTR,
       vertexName: KEYPOINTS_VERTEX_NAME,
       vertexIndexAttr: KEYPOINTS_VERTEX_INDEX_ATTR,
+      draggingAttr: KEYPOINTS_DRAGGING_ATTR,
       readCoords: (geometry) => geometry.coords,
       // `templateId` and `states` are untouched: moving a point changes where
       // it is, never which skeleton it belongs to or whether it is visible.

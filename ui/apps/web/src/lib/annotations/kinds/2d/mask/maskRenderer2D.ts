@@ -8,7 +8,7 @@ import Konva from "konva";
 
 import { createMaskEditor2D } from "./maskEditor2D.js";
 import { decodeMask, maskBounds, tintMask, type MaskCanvas } from "./maskRaster.js";
-import { MASK_ID_ATTR, MASK_NODE_NAME } from "./maskTypes.js";
+import { MASK_DRAGGING_ATTR, MASK_ID_ATTR, MASK_NODE_NAME } from "./maskTypes.js";
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
 import { EntityLabels2D, type EntityLabelEntry } from "$lib/annotations/scene/entityLabels2D.js";
 import type {
@@ -102,6 +102,11 @@ class MaskRenderer2D implements AnnotationRenderer2D {
         ? MASK_OPACITY + SELECTED_OPACITY_BOOST
         : MASK_OPACITY;
     const cached = this.cacheByMaskId.get(mask.id);
+
+    // A mask being dragged holds its new place on the node until the editor
+    // commits it as the drag ends: placed back now, the drag would be undone
+    // under the pointer. The next sync after the drag catches up.
+    if (cached?.node.getAttr(MASK_DRAGGING_ATTR)) return true;
 
     if (cached) {
       // Only the geometry, the colour and the selected state justify
