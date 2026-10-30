@@ -98,7 +98,7 @@ Three ideas hold it together:
   - **orphan-entity cascade** (opt-in `?prune_orphan_entity=true`): on an
     annotation's delete, or an update that changes its `entity_id`, the entity it
     named is removed from its `ENTITY` table (`_delete_orphan_entity`) once no
-    stored row names it
+    stored row names it — the conditional delete's check below
     (`_entity_is_named`): an annotation of any table, a child entity, an entity
     dynamic state. One mechanism, every kind, server-side (the only place that
     sees every reference — the frontend loads one record at a time). The write,
@@ -107,6 +107,19 @@ Three ideas hold it together:
     meanwhile is refused as a busy dataset's 409. An entity that only a child
     entity, a dynamic state, a message's `entity_ids` or a relation's end still
     names stays once its last annotation is deleted or moved.
+  - **conditional entity delete** (`?only_if_unnamed=true`, on every `ENTITY`
+    resource — `_add_entity_delete_route`): `delete_if_unnamed(id)` deletes the
+    entity only when no stored row names it — an annotation of any table, by
+    `entity_id`, `entity_ids` or a relation's `subject_id` / `object_id`; an
+    entity, by `parent_id`; an entity dynamic state, by `entity_id`
+    (`_entity_is_named` over `_ENTITY_REFERENCES`, each table asked only about
+    the columns it has). It answers 200 `{"deleted": true | false}`
+    (`ConditionalDeleteResponse`) — false: something names it, nothing changed
+    — and 404 when there is no such entity. The check and the delete hold one
+    dataset write lock, so no write naming the entity lands between them: one
+    arriving meanwhile is refused as a busy dataset's 409. Without the
+    parameter, an entity's `DELETE` is unchanged: deleted whatever names it,
+    answered 204.
 
 ### REST surface the frontend uses
 | Function | Defined in | HTTP | Notes |
