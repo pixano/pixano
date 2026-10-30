@@ -31,8 +31,11 @@ embedding plugin, and a model list. The list the demo uses on CPU is in this rep
 ```sh
 git clone https://github.com/pixano/pixano-inference.git ../pixano-inference
 cd ../pixano-inference
+git checkout v0.7.1   # the release Pixano's client requires
 uv sync
-uv pip install ./packages/pixano-inference-clip
+# The CLIP plugin, from the checkout, into the checkout's environment, named, since `uv pip`
+# would otherwise take an activated one.
+uv pip install --python .venv/bin/python ./packages/pixano-inference-clip
 cd -
 
 PIXANO_INFERENCE_MEDIA_ROOTS=/srv/pixano/data/media \

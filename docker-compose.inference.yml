@@ -17,39 +17,24 @@
 # switch the build args to GPU (see below) and mount your own model list in place of
 # docker/inference/models.cpu.py.
 #
-# The image is built in two stages, from an UNMODIFIED clone of pixano-inference
-# (PIXANO_INFERENCE_REPO): first the image its own Dockerfile produces, then a layer
-# defined here, dockerfiles/Dockerfile.inference-clip, which installs the CLIP plugin in it.
-# The plugin is in their repository, but their Dockerfile has no switch to install it;
-# to be proposed to them, and this layer will disappear with it.
-#
-# The "no framework" variant (empty TORCH_INDEX_URL) does not start: Ray Serve imports
-# jinja2 in its haproxy module without declaring it in ray[serve], and it is torch that
-# brings it in incidentally. To be reported to the pixano-inference repository.
+# The image is the one pixano-inference's own Dockerfile produces, from an UNMODIFIED
+# checkout of it (PIXANO_INFERENCE_REPO) at v0.7.1, the release Pixano's client requires. Its
+# build args choose the plugins: MODEL_PACKAGES installs the CLIP package of that tree.
+# Nothing of ours is added to the image.
 
 services:
-  # Never runs: this service only exists so that its build serves as the base for that of
-  # pixano-inference. Zero instances, rather than a profile: a service set aside by a
-  # profile no longer exists for the others, and so cannot serve as their context.
-  pixano-inference-base:
-    scale: 0
+  pixano-inference:
     build:
       context: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
       dockerfile: Dockerfile
       args:
-        # CPU variant: torch CPU, no SAM2.
-        # GPU variant: remove these three lines (the Dockerfile's defaults are GPU+SAM).
+        # CPU variant: torch CPU. GPU variant: remove this line (the Dockerfile's default is a
+        # CUDA build).
         TORCH_INDEX_URL: "https://download.pytorch.org/whl/cpu"
-        PIXANO_EXTRAS: ""
-        INSTALL_SAM: "false"
-
-  pixano-inference:
-    build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.inference-clip
-      additional_contexts:
-        inference-base: "service:pixano-inference-base"
-        inference-src: ${PIXANO_INFERENCE_REPO:-../pixano-inference}
+        # The plugin docker/inference/models.cpu.py serves, in place of the Dockerfile's
+        # default set (SAM, Grounding DINO, a VLM). Without it, the server refuses the whole
+        # model list ("Unknown model_class 'OpenClipEmbeddingModel'").
+        MODEL_PACKAGES: "pixano-inference-clip"
     ports:
       - "127.0.0.1:${PIXANO_INFERENCE_PORT:-7463}:7463"
     environment:
@@ -78,7 +63,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 120s
-    # GPU variant: uncomment and set the build args back to the Dockerfile's defaults.
+    # GPU variant: uncomment, and remove the TORCH_INDEX_URL build arg above.
     # deploy:
     #   resources:
     #     reservations:
