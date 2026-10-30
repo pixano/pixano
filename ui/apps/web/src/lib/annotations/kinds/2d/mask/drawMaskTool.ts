@@ -14,7 +14,7 @@ import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import { commitDraftWithEntity } from "$lib/annotations/payloadBuilders.js";
 import { getPixelFrame, type PixelFrame } from "$lib/annotations/scene/scene2dGeometry.js";
 import { BBOX_COLOR_DRAFT } from "$lib/annotations/scene/scene2dStyleConstants.js";
-import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { DEFAULT_TOOL_2D, type Tool2D, type ToolHandler2D } from "$lib/annotations/scene/tool.js";
 
 /** Brush width in *display* pixels, so the stroke feels the same at any zoom. */
@@ -66,6 +66,9 @@ function primaryButtonReleased(event?: Konva.KonvaEventObject<MouseEvent>): bool
  * `Escape` cancels. These live on the handler rather than in a settings panel so
  * the tool is usable before the panel exists (the legacy UI's `BrushSettings`
  * is the eventual home for radius, lazy-radius and friction).
+ *
+ * What is painted is the record's unsaved work until Enter: the handler's
+ * staged-work flag is up from the first stroke.
  */
 class DrawMaskHandler implements ToolHandler2D {
   private canvas: MaskCanvas | null = null;
@@ -76,8 +79,12 @@ class DrawMaskHandler implements ToolHandler2D {
   private dirty = false;
   private erasing = false;
   private radius = DEFAULT_BRUSH_RADIUS;
+  /** Raised while strokes are painted and not committed. */
+  private readonly staged: StagedWorkFlag | undefined;
 
-  constructor(private readonly ctx: Scene2DContext) {}
+  constructor(private readonly ctx: Scene2DContext) {
+    this.staged = ctx.claimStagedWork?.(() => this._reset());
+  }
 
   activate(): void {
     this._reset();
@@ -95,6 +102,8 @@ class DrawMaskHandler implements ToolHandler2D {
     const point = this._toGrid(frame);
     if (!point) return;
     this._paintSegment(point, point, frame);
+    // Raised as a stroke starts, not as it extends: once per stroke.
+    if (this.dirty) this.staged?.set(true);
     this.lastPoint = point;
     this._refreshPreview(frame);
     // Keep the outline on top of the stroke it just laid down.
@@ -324,6 +333,7 @@ class DrawMaskHandler implements ToolHandler2D {
     this.lastPoint = null;
     this.painting = false;
     this.dirty = false;
+    this.staged?.set(false);
   }
 }
 

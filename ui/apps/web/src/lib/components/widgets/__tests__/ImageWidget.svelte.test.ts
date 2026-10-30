@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { cleanup, render, screen, within } from "@testing-library/svelte";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/svelte";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,8 +17,8 @@ import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js
 
 // The image widget as a person meets it: rendered on the real Konva, next to
 // the right panel, over the real manager and queue — only HTTP is faked. What
-// is checked is what the person sees and presses: the entity button's words,
-// and where a key typed in a form goes.
+// is checked is what the person sees and presses: the toolbar's count and
+// Discard, the entity button's words, and where a key typed in a form goes.
 vi.mock("konva", async () => ({
   default: (await vi.importActual<{ default: unknown }>("konva/lib/index.js")).default,
 }));
@@ -29,6 +29,7 @@ const REC = "rec-1";
 
 const ENTITIES = [entityOf(REC, "ent-h1", { category: "tree" })];
 
+const DISCARD_TITLE = "Discard unsaved changes and restore this record's saved annotations";
 const REASSIGN_TITLE = "Change the entity this annotation belongs to (E)";
 const REASSIGN_NOTHING_SELECTED_TITLE = "Select an annotation to change its entity";
 
@@ -41,12 +42,12 @@ async function openImageWidget() {
     { entities: ENTITIES },
   );
   const widget = opened.manager.widgets[0];
-  render(ImageWidget, {
+  const { unmount } = render(ImageWidget, {
     props: { widgetId: widget.id, options: widget.options, data: {} },
     context: new Map([["workspaceManager", opened.manager]]),
   });
   render(RightPanel, { props: { manager: opened.manager } });
-  return opened;
+  return { ...opened, widgetId: widget.id, unmount };
 }
 
 function toolbar(): HTMLElement {
@@ -78,6 +79,58 @@ describe("ImageWidget toolbar", () => {
     expect(reassign().disabled).toBe(false);
     expect(reassign().title).toBe(REASSIGN_TITLE);
     expect(descriptionOf(reassign())).toBeNull();
+  });
+
+  it("counts work a tool holds with nothing queued, offers Discard for it, and Discard drops it", async () => {
+    const { manager, widgetId } = await openImageWidget();
+    const discard = within(toolbar()).getByTitle<HTMLButtonElement>(DISCARD_TITLE);
+    let dropped = 0;
+    // What a tool of this widget raises while a shape is begun and not committed.
+    const shapeBegun = manager.claimStagedWork(widgetId, () => {
+      dropped += 1;
+      shapeBegun.set(false);
+    });
+
+    shapeBegun.set(true);
+    flushSync();
+    expect(manager.pendingCount).toBe(0);
+    // Unsaved: the toolbar says so.
+    expect(within(toolbar()).getByText("1 unsaved")).toBeTruthy();
+    expect(discard.disabled).toBe(false);
+    await fireEvent.click(discard);
+
+    await waitFor(() => expect(discard.disabled).toBe(true));
+    expect(within(toolbar()).queryByText(/unsaved/)).toBeNull();
+    expect(dropped).toBe(1);
+  });
+
+  it("lets go of the work its tools held once it closes", async () => {
+    const { manager, widgetId, unmount } = await openImageWidget();
+    // A holder of this widget that does not lower its own flag as it closes.
+    manager.claimStagedWork(widgetId, () => {}).set(true);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    unmount();
+
+    // Nothing can confirm that work any more: the record is all saved again.
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("keeps another widget's flag raised meanwhile when it lets go of its own as it closes", async () => {
+    const { manager, widgetId } = await openImageWidget();
+    const otherWidget = manager.claimStagedWork("point-cloud-widget", () => {});
+    // The widget's release from an effect's teardown, as when it closes.
+    const closing = $effect.root(() => {
+      $effect(() => () => manager.releaseStagedWork(widgetId));
+    });
+    flushSync();
+
+    // Raised just before this widget lets go, in the same turn: a teardown
+    // reads reactive state as it was before that write.
+    otherWidget.set(true);
+    closing();
+
+    expect(manager.hasUnsavedWork).toBe(true);
   });
 });
 

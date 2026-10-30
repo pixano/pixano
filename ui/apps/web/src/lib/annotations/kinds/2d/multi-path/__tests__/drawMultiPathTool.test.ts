@@ -11,6 +11,7 @@ import { drawPolygonTool, drawPolylineTool } from "../drawMultiPathTool.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { LocalMultiPath } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
+import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds preview shapes and
 // throws them away.
@@ -321,5 +322,59 @@ describe("multi-path keyboard", () => {
       expect(handler.onKeyDown?.(key(k))).toBe(true);
     }
     expect(handler.onKeyDown?.(key("a"))).toBe(false);
+  });
+});
+
+describe("a shape begun is the record's unsaved work", () => {
+  const REC_1 = "rec-1";
+
+  /** The polygon tool in an image widget of a record open in the real workspace. */
+  async function onTheRecord() {
+    const opened = await openManager({ [REC_1]: {} });
+    const harness = makeHarness();
+    const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
+    const handler = drawPolygonTool.createHandler(ctx);
+    handler.activate?.();
+    return { ...opened, handler, setPointer: harness.setPointer };
+  }
+
+  it("holds it while points are placed, and lets go of it once Escape drops them", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    click(handler, setPointer, TRIANGLE);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    handler.onKeyDown?.(key("Escape"));
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("holds it until the last point is undone, the tool is left, or the shape is committed", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    click(handler, setPointer, TRIANGLE.slice(0, 1));
+    expect(manager.hasUnsavedWork).toBe(true);
+    handler.onKeyDown?.(key("Backspace"));
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    click(handler, setPointer, TRIANGLE);
+    handler.deactivate?.();
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    click(handler, setPointer, TRIANGLE);
+    handler.onKeyDown?.(key("Enter"));
+    // The shape is a draft now, waiting for its entity; with the form cancelled
+    // nothing is left — the tool holds nothing more.
+    manager.cancelPendingAnnotation();
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("is dropped by Discard: Enter then commits nothing", async () => {
+    const { manager, handler, setPointer } = await onTheRecord();
+    click(handler, setPointer, TRIANGLE);
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.discardChanges();
+    handler.onKeyDown?.(key("Enter"));
+
+    expect(manager.hasUnsavedWork).toBe(false);
+    expect(manager.annotations.items).toEqual([]);
   });
 });

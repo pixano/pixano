@@ -228,6 +228,9 @@ License: CECILL-C
       editors = [];
       for (const renderer of renderers) renderer.destroy();
       renderers = [];
+      // Whatever a tool or an editor of this widget held unconfirmed goes with
+      // it: nothing can confirm it any more, so the record stops counting it.
+      seam.releaseStagedWork?.();
       stage?.destroy();
       stage = null;
       imageLayer = null;
@@ -292,27 +295,25 @@ License: CECILL-C
         : "Select an annotation to change its entity",
   );
   const reassignEntityRefusalId = `image-reassign-refusal-${stableWidgetId}`;
-  const widgetPending = $derived(
-    new Set(
-      manager.pendingMutations
-        .filter((m) => m.widgetId === stableWidgetId && m.localAnnotationId)
-        .map((m) => m.localAnnotationId as string),
-    ).size,
-  );
 </script>
 
 <div class="flex h-full flex-col bg-card">
+  <!-- The unsaved count and Discard cover the whole record, as Save and Discard do:
+       an edit made in another widget is this record's unsaved work as much as a box
+       moved here. The workspace's one count: per annotation, plus each piece of work
+       a tool holds. -->
   <AnnotationToolbar
     tools={TOOLS_2D}
     activeToolId={storage.activeToolId}
     defaultToolId={DEFAULT_TOOL_2D}
     onSelectTool={(id) => (storage.activeToolId = id)}
-    pendingCount={widgetPending}
+    pendingCount={manager.unsavedCount}
     saveDisabled={manager.pendingCount === 0 || manager.saving}
     saving={manager.saving}
     saveError={manager.saveError}
     onSave={() => manager.flushSave()}
     onDiscard={() => manager.discardChanges()}
+    discardDisabled={!manager.hasUnsavedWork || manager.saving}
     ariaLabel="Image annotation tools"
   >
     {#snippet controls()}

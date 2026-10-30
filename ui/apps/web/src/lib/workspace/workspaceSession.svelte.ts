@@ -10,6 +10,13 @@ import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
 
+/** A raised flag of staged work: the widget holding the work, and how to drop it. */
+export interface StagedWorkHolder {
+  readonly widgetId: string;
+  /** Drops the work and lowers the flag (`SceneContextBase.claimStagedWork`). */
+  readonly discard: () => void;
+}
+
 /**
  * Reactive "what record is currently loaded?" state, shared by the
  * sub-services of the workspace.
@@ -49,6 +56,18 @@ export class WorkspaceSession {
    */
   liveDraft = $state<LiveAnnotationDraft | null>(null);
   /**
+   * The raised flags of work no mutation carries yet — work begun in a tool
+   * and waiting for the person to confirm it, such as a polygon before Enter —
+   * keyed by flag. Raised and lowered by each holder through its widget's seam
+   * (`SceneContextBase.claimStagedWork`); while any is raised, the record is
+   * not all saved.
+   *
+   * What the workspace shows of the manager's own record of the flags
+   * (`WorkspaceManager`), which alone is written to: always replaced, never
+   * mutated, since Svelte 5 does not track a Map's set/delete.
+   */
+  stagedWork = $state<ReadonlyMap<string, StagedWorkHolder>>(new Map());
+  /**
    * The arrangement this record opened with, so "Reset layout" can undo the
    * moves made since. Written by `RecordLoader` at the end of each load.
    */
@@ -64,6 +83,7 @@ export class WorkspaceSession {
     this.annotations = new AnnotationCollection();
     this.visibleEntityIds = null;
     this.liveDraft = null;
+    this.stagedWork = new Map();
     this.openingLayout = null;
   }
 }

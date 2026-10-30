@@ -125,6 +125,45 @@ export interface SceneContextBase {
   findEntity(entityId: string): Record<string, unknown> | undefined;
   /** Whether an entity's persisted annotations should currently be shown. */
   isEntityVisible(entityId: string): boolean;
+  /**
+   * A flag of its own for one piece of this widget holding work outside the
+   * mutation queue (see `StagedWorkFlag`): a tool, an editor. Lowered
+   * until the holder raises it; claim it once, when the holder is built.
+   * Stamped with the widget's id, like the live draft, and keyed to the holder:
+   * lowering it never lowers another holder's flag, in this widget or another.
+   * `buildSeam` always provides it; optional for a context built for one piece
+   * that stages nothing.
+   *
+   * @param discard Drops the work the holder keeps and lowers its flag. The
+   *   record's Discard calls it on every raised flag: the person asked for the
+   *   record as it was last saved, work held in a tool included.
+   * @returns The holder's flag.
+   */
+  claimStagedWork?(discard: () => void): StagedWorkFlag;
+  /**
+   * Lower every flag this widget's holders raised: the widget is closing, and
+   * nothing in it can confirm that work any more. Another widget's flags stay.
+   */
+  releaseStagedWork?(): void;
+}
+
+/**
+ * One holder's flag for work it keeps outside the mutation queue — work the
+ * person has begun and not confirmed yet: a polygon's points before Enter,
+ * mask strokes, keypoints partly placed, a box being drawn or resized, a shape
+ * being dragged. While any flag is raised, the workspace reads the record as
+ * not all saved, and Discard has work to drop. Each raised flag counts as one
+ * unsaved item (`countUnsavedWork`, `workspace/unsavedWork.ts`).
+ *
+ * Several pieces of one widget can hold work at once — a tool and an editor —
+ * so each claims a flag of its own (`SceneContextBase.claimStagedWork`).
+ */
+export interface StagedWorkFlag {
+  /**
+   * Raise the flag while the holder keeps work that changes something; lower
+   * it once that work is queued or abandoned. Choosing a tool stages nothing.
+   */
+  set(staged: boolean): void;
 }
 
 /**

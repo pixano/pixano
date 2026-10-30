@@ -14,6 +14,7 @@ import {
 } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
+import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only constructs a Rect and
 // reads/writes its geometry. Mock it with a plain accessor object.
@@ -223,5 +224,59 @@ describe("drawBBoxTool", () => {
     drag(handler, harness.setPointer, { x: 10, y: 10 }, { x: 50, y: 50 });
     const g = harness.collection.byKind("bbox")[0].geometry satisfies BBoxGeometry;
     expect(g).toHaveLength(4);
+  });
+});
+
+describe("drawBBoxTool, a box being drawn is the record's unsaved work", () => {
+  const REC_1 = "rec-1";
+
+  /** The box tool in an image widget of a record open in the real workspace. */
+  async function onTheRecord() {
+    const opened = await openManager({ [REC_1]: {} });
+    const harness = makeHarness();
+    const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
+    const handler = drawBBoxTool.createHandler(ctx);
+    /** Press at `from` and pull to `to`, the pointer still held. */
+    const pull = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+      harness.setPointer(from);
+      handler.onPointerDown!(pointerEvent());
+      harness.setPointer(to);
+      handler.onPointerMove!(pointerEvent());
+    };
+    return { ...opened, handler, pull };
+  }
+
+  it("holds it while the pointer is held, and lets go of it once the pointer is let go", async () => {
+    const { manager, handler, pull } = await onTheRecord();
+    // Too small to make a box: once let go, nothing is left.
+    pull({ x: 10, y: 10 }, { x: 10, y: 10 });
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    handler.onPointerUp!(pointerEvent());
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("holds it until Escape or the tool is left", async () => {
+    const { manager, handler, pull } = await onTheRecord();
+    pull({ x: 10, y: 10 }, { x: 50, y: 50 });
+    expect(manager.hasUnsavedWork).toBe(true);
+    handler.onKeyDown!(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(manager.hasUnsavedWork).toBe(false);
+
+    pull({ x: 10, y: 10 }, { x: 50, y: 50 });
+    handler.deactivate!();
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
+  it("is dropped by Discard: letting go then makes no box", async () => {
+    const { manager, handler, pull } = await onTheRecord();
+    pull({ x: 10, y: 10 }, { x: 50, y: 50 });
+    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.discardChanges();
+    handler.onPointerUp!(pointerEvent());
+
+    expect(manager.hasUnsavedWork).toBe(false);
+    expect(manager.annotations.items).toEqual([]);
   });
 });

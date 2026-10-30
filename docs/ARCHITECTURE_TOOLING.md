@@ -112,8 +112,9 @@ select tool. (It was renamed from `tools/` in the 2026-06-29 refactor; it is not
 ```
 scene/
   sceneContext.ts   SceneContextBase, MutationSink, LiveAnnotationDraft,
-                    LiveDraftSource / LiveDraftChannel, Scene2DReadContext,
-                    Scene2DContext, Scene3DContext
+                    LiveDraftSource / LiveDraftChannel, StagedWorkFlag,
+                    SeamContext, Scene2DReadContext, Scene2DContext,
+                    Scene3DContext
   toolDefinition.ts ToolDefinition — the metadata 2D and 3D tools share (D3)
   renderer.ts       AnnotationRenderer2D + AnnotationEditor2D (+Factory),
                     AnnotationRenderer3DFactory
@@ -139,6 +140,8 @@ interface SceneContextBase {
   mutations: MutationSink;
   setActiveTool(id: string): void;
   requestRedraw(): void;
+  claimStagedWork?(discard: () => void): StagedWorkFlag; // one holder's flag: set(staged)
+  releaseStagedWork?(): void; // the widget closes: lower its holders' flags
 }
 ```
 
@@ -153,12 +156,31 @@ duplication of seam wiring:
 
 - `buildMutationSink(manager)` → the `MutationSink` forwarding to the queue.
 - `buildSeam(manager, { widgetId, buildContext, storage, requestRedraw? })` →
-  the full `SceneContextBase`. **This is the single entry point a new medium
-  reuses** — it never re-implements collection wiring or mutation plumbing.
+  a `SeamContext`: the full `SceneContextBase`, plus what a gesture owner
+  writes, stamped with the widget's id so a widget can only clear its own — the
+  `liveDraft` channel (a gesture's preview, see the live projection note) and
+  the staged-work flags. Each piece holding work unconfirmed — a 2D tool's
+  points before Enter, the box editor's resize, a 2D editor's drag — claims a
+  flag of its own once (`claimStagedWork(discard)`), keyed to it: lowering it
+  never lowers another holder's, in this widget or another. While any is
+  raised, the record is not all saved, and each raised flag counts as one
+  unsaved item; the record's Discard calls each raised flag's `discard`;
+  `releaseStagedWork()` lowers the widget's flags as it closes, since nothing in
+  it can confirm that work any more. **This is the single entry point a new
+  medium reuses** — it never re-implements collection wiring or mutation
+  plumbing.
 
 The toolbar is shared too: `components/widgets/AnnotationToolbar.svelte` (tool
-buttons + pending/save) with a `controls` snippet for widget-specific buttons
-(delete for image, camera-mode for point cloud).
+buttons + pending/save/discard) with a `controls` snippet for widget-specific
+buttons (delete for image, camera-mode for point cloud). Both widgets give it the
+record-wide unsaved count (`manager.unsavedCount`), since Save and Discard act
+on the whole record. It has one definition, `countUnsavedWork`
+(`workspace/unsavedWork.ts`): each annotation with a change
+queued or on the wire, each draft, each change naming no annotation, an entity
+form open on a reassignment, and each raised staged-work flag count one. Discard is enabled by the host
+(`discardDisabled`, which both pass as `!manager.hasUnsavedWork || manager.saving`),
+which is that count above 0; Save by the queue (`manager.pendingCount`), since
+work a tool holds is confirmed in its tool before a save can carry it.
 
 ### 3. Tool registries (per scene type)
 
@@ -179,6 +201,12 @@ interface ToolHandle3D { activeDragging: boolean; editingId: string | null }
 
 - **2D:** the widget swaps the active `ToolHandler2D` on tool change and routes
   Konva pointer events to it. "Select/edit" is itself a tool (`selectTool2D`).
+  A handler holding work not in the collection yet — a polygon's points before
+  Enter, mask strokes, keypoints partly placed, a box being drawn, smart
+  segmentation's prompts — claims a staged-work flag in its constructor, raises it
+  as the work begins and lowers it on commit, Escape, `deactivate` and an undo
+  that empties it; its discard is its reset (the contract on `ToolHandler2D`,
+  `scene/tool.ts`).
 - **3D:** an editing tool carries three kind-owned pieces the host wires
   generically — `overlay` (in-canvas editor + gizmos; the editor lives here because
   its `$effect`s need a component scope), `createSession` (a per-widget session
@@ -321,6 +349,21 @@ needed a real seam addition, not just a renderer:
 The lesson for the next kind: **cross-widget *live* feedback is a seam feature, not a
 renderer feature.** A renderer alone can mirror committed state; it cannot see a
 gesture happening in another medium.
+
+A second seam feature exists for the same reason: work a tool holds before the
+person confirms it is in no mutation, so the workspace cannot tell on its own
+that the record holds unsaved work — the count would read 0 over it, and
+Discard would leave it in place. So each holder claims a flag of its own through
+the seam (`claimStagedWork(discard)`), with the callback that drops its work. A
+2D tool raises its flag from the first point, stroke or press, and is given its
+reset. A widget lowers its holders' flags as it closes (`releaseStagedWork`),
+and `manager.discardChanges` calls every raised flag's discard. Each raised flag
+counts as one item of `manager.unsavedCount`, the count every toolbar shows, so
+the count never reads 0 while a tool holds work. The manager keeps the raised
+flags in a private map and publishes a copy on `session.stagedWork`: flags are
+lowered from widget teardowns, where Svelte gives a reactive read the value it
+had before the latest writes, so a change computed from the session's copy there
+could bring a flag back or drop one another widget had just raised.
 
 ## History — the refactor stages
 

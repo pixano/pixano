@@ -17,6 +17,14 @@ for the rules.
   the full context.
 - **Never hand-build mutations.** Use `commitNewAnnotation` / `commitGeometryEdit`
   (`payloadBuilders.ts`) — they own the draft→queue→persist lifecycle for every kind.
+- **Work a tool holds is the record's unsaved work.** A shape begun and not committed —
+  points before Enter, a box being drawn — is in no mutation. Its holder claims a
+  staged-work flag of its own, once (`ctx.claimStagedWork(discard)`), raises it while it
+  holds the work and lowers it on every way out; `discard` drops the work, and the record's
+  Discard calls it. Each raised flag counts as one item of the record's unsaved count.
+  Without the flag, the count reads 0 over the work, and Discard leaves it in place.
+  - A box being resized is such work too, held by its editor.
+  - So is a shape being dragged, held by its editor.
 - **Keys typed in a form field belong to it.** A key listener on `window` — a tool's
   shortcut, an editor's Escape — returns early when `isFormFieldTarget(event.target)`
   (`scene/tool.ts`): a select picks an option with the keys typed in it, and an `E` or a
@@ -102,6 +110,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   width, which it cannot scale — commits nothing: the box is drawn again as stored.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
+  A handler that holds work not in the collection yet — points placed, strokes painted, a
+  box being drawn — claims a staged-work flag in its constructor
+  (`ctx.claimStagedWork?.(() => this._reset())`), raises it as that work begins, and lowers
+  it on commit, Escape, `deactivate`, and an undo that removes the last point. Its discard
+  callback is its reset. The contract is written on `ToolHandler2D` (`scene/tool.ts`);
+  `drawMultiPathTool.ts` is the example.
 
 → register the factory in `RENDERER_FACTORIES_2D` and the tool in `TOOLS_2D` (`registry2d.ts`).
 
@@ -132,6 +146,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     `widgetSeam` come from `workspace/__tests__/workspaceHarness.ts`): a mocked Konva
     answers whatever the mock says, and can pass while a resize goes unsaved.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
+  A tool that holds work runs once in an image widget of a record open in the real
+  workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the
+  record holds unsaved work while the work is held, the flag goes down on commit, Escape
+  and deactivate, and Discard leaves nothing to commit.
 
 ## Step 5 — verify
 
@@ -148,6 +166,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] seed loader + `SEED_LOADERS`, rejecting on a failed fetch
 - [ ] renderer + `RENDERER_FACTORIES_2D|3D`
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
+- [ ] every holder of unconfirmed work (2D tool handler, editor gesture) claims a staged-work flag, lowers it on every way out, and drops its work on discard; window key listeners ask `isFormFieldTarget`
 - [ ] tool + `TOOLS_2D|3D`
 - [ ] write path uses `commitNewAnnotation` / `commitGeometryEdit` only
 - [ ] shared literals extracted (no cross-file magic strings)
