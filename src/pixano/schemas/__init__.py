@@ -5,6 +5,7 @@
 # =====================================
 
 from .annotations import (
+    NOT_REVIEWED_STATUSES,
     AnnotationSourceKind,
     BBox,
     BBox3D,
@@ -49,6 +50,8 @@ from .annotations import (
     is_relation,
     is_text_span,
     is_tracklet,
+    review_status_of,
+    stored_statuses,
 )
 from .embeddings import (
     Embedding,
@@ -105,6 +108,7 @@ from .views import (
 
 __all__ = [
     "AnnotationSourceKind",
+    "NOT_REVIEWED_STATUSES",
     "ReviewStatus",
     "EntityAnnotation",
     "EntityGroupAnnotation",
@@ -201,6 +205,8 @@ __all__ = [
     "is_video",
     "is_view_embedding",
     "CANONICAL_SCHEMA_MAP",
+    "review_status_of",
     "schema_to_group",
+    "stored_statuses",
     "supported_dataset_info_slots",
 ]

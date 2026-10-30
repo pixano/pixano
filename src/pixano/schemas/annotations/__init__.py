@@ -15,12 +15,14 @@ from .message import Message, QuestionType, create_message, is_message
 from .multi_path import MultiPath, create_multi_path, is_multi_path
 from .per_frame_annotation import PerFrameAnnotation, is_per_frame_annotation
 from .relation import Relation, create_relation, is_relation
+from .review import NOT_REVIEWED_STATUSES, review_status_of, stored_statuses
 from .text_span import TextSpan, create_text_span, is_text_span
 from .tracklet import Tracklet, is_tracklet
 
 
 __all__ = [
     "AnnotationSourceKind",
+    "NOT_REVIEWED_STATUSES",
     "ReviewStatus",
     "EntityAnnotation",
     "EntityGroupAnnotation",
@@ -51,6 +53,8 @@ __all__ = [
     "is_message",
     "is_multi_path",
     "is_relation",
+    "review_status_of",
+    "stored_statuses",
     "is_text_span",
     "is_tracklet",
     "create_bbox",
