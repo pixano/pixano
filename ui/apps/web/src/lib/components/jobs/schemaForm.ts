@@ -169,3 +169,13 @@ export function toggleChoice(schema: JsonSchema, value: unknown, choice: unknown
   const order = schema.items?.enum ?? [];
   return order.filter((item) => next.includes(item));
 }
+
+/**
+ * What the user must confirm before the job runs: the texts of the parameters that destroy
+ * something, for those set. A parameter declares it with `x-pixano-confirm` in its schema.
+ */
+export function confirmationsFor(schema: JsonSchema, values: Record<string, unknown>): string[] {
+  return Object.entries(schema.properties ?? {})
+    .filter(([name, field]) => field["x-pixano-confirm"] && Boolean(values[name]))
+    .map(([, field]) => field["x-pixano-confirm"] as string);
+}

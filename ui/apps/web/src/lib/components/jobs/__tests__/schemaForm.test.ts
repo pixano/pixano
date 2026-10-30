@@ -7,6 +7,7 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import {
+  confirmationsFor,
   fieldKind,
   initialValue,
   initialValues,
@@ -191,5 +192,28 @@ describe("multiple choices", () => {
   it("sends an empty selection rather than letting the default run", () => {
     const schema: JsonSchema = { properties: { media } };
     expect(toParams(schema, { media: [] })).toEqual({ media: [] });
+  });
+});
+
+describe("confirmationsFor", () => {
+  const schema: JsonSchema = {
+    properties: {
+      model: { type: "string" },
+      replace_existing_embeddings: {
+        type: "boolean",
+        default: false,
+        "x-pixano-confirm": "This deletes every vector already computed.",
+      },
+    },
+  };
+
+  it("asks nothing while the destructive parameter is off", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: false })).toEqual([]);
+  });
+
+  it("gives the parameter's text once it is set", () => {
+    expect(confirmationsFor(schema, { replace_existing_embeddings: true })).toEqual([
+      "This deletes every vector already computed.",
+    ]);
   });
 });
