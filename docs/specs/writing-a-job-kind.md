@@ -40,6 +40,19 @@ replanned after an outage must not describe something different from what was pa
 
 A chunk's payload is opaque to the engine, and must be a JSON object.
 
+### `model_identity(params)` and `provenance_params(params)` — provenance
+
+Every row a kind writes through `writer.provenance()` says by itself how it was produced:
+`source_name` is the kind, `source_metadata` carries the job identifier (an opaque run
+label), the kind, the model and its version when the kind runs one, and the parameters.
+The writer fills it; the kind only answers two questions. `model_identity(params)` returns
+the model's name and whatever the inference exposes beyond it — the checkpoint it loaded —
+or `None` for a kind that runs no model; it runs in the job's thread, so asking the server is
+allowed, but a provenance that cannot be completed must not fail the chunk. The parameters
+recorded are all of them but the engine's: `chunk_size` by default, plus whatever the kind
+lists in `params_not_in_provenance` (a request timeout, a retry count) — and a selection of
+items, such as the label kind's `record_ids`, which would copy every identifier into every row.
+
 ### `prepare(writer, params)` — optional
 
 Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
@@ -129,7 +142,7 @@ remember to:
 | ----------------- | -------------------------------------------------------------------- |
 | `source_type`     | what the kind declares — `model`, `human`, `ground_truth` or `other` |
 | `source_name`     | the kind's name                                                      |
-| `source_metadata` | the job identifier, as JSON                                          |
+| `source_metadata` | the job, kind, model and parameters, as JSON (see above)             |
 
 `source_type` is the schemas' vocabulary, not ours: writing `job` is refused at write time, and
 rightly so. What matters to a reviewer is whether an annotation came from a model, not which

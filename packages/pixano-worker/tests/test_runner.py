@@ -20,6 +20,7 @@ from pixano_worker import queue, runner
 from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from pixano_worker.threads import WorkerThreads
+from pixano_worker.writer import ModelIdentity
 from psycopg_pool import AsyncConnectionPool
 
 
@@ -251,6 +252,52 @@ class TestPreparation:
 
         assert _state(db, job)[0] == "done"
         assert kind.prepared == [job]
+
+
+class TestTheWriterCarriesTheProvenance:
+    """The writers the runner hands a kind, at planning and for each chunk, record the job."""
+
+    class _RunsAModel(FakeKind):
+        """The fake kind, naming a model, and keeping the provenance each writer it is given offers."""
+
+        name = "runs-a-model"
+        seen: list[dict] = []
+
+        def model_identity(self, params):
+            return ModelIdentity("yolo", "yolov8n.pt")
+
+        def prepare(self, writer, params):
+            self.seen.append(json.loads(writer.provenance()["source_metadata"]))
+
+        def write(self, writer, result, payload, params):
+            self.seen.append(json.loads(writer.provenance()["source_metadata"]))
+
+    async def test_the_job_its_model_and_its_parameters_but_the_engines(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection
+    ) -> None:
+        kind = self._RunsAModel()
+        kind.seen = []
+        registry = Registry()
+        registry.register(kind)
+        registry.declare(db, "worker-test")
+        params = {"task_count": 20, "chunk_size": 10, "seconds_per_task": 0.0}
+        job = _submit(db, params=params, kind=kind.name)
+
+        await runner.plan_one(adb, registry)
+        while await runner.run_batch(adb, registry, "worker-test", 8):
+            pass
+
+        assert _state(db, job)[0] == "done"
+        recorded = kind.validate_params(params).model_dump(mode="json")
+        del recorded["chunk_size"]
+        expected = {
+            "job_id": job,
+            "kind": kind.name,
+            "model": "yolo",
+            "model_version": "yolov8n.pt",
+            "params": recorded,
+        }
+        assert kind.seen == [expected] * 3, "one writer to prepare, then one per chunk"
 
 
 class TestInterruptedPlanning:

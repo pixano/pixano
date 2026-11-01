@@ -28,6 +28,10 @@ The hooks a kind overrides when the default does not fit it:
   emptied before it is refilled. Does nothing by default.
 - **`outcome(result, payload, task_count)`** says what each task of a chunk became: produced,
   skipped or quarantined. Every task produced by default.
+- **`model_identity(params)`** names the model the job runs, for the provenance of its rows.
+  None by default, for a kind that runs no model.
+- **`provenance_params(params)`** chooses the parameters the provenance records: by default,
+  all of them but those `params_not_in_provenance` lists — the chunk size, and what a kind adds.
 
 Failures fall into three families, and the engine handles each differently:
 
@@ -51,7 +55,7 @@ from typing import Any, Generic, Iterable, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..reader import JobReader
-from ..writer import JobWriter
+from ..writer import JobWriter, ModelIdentity
 
 
 class JobParams(BaseModel):
@@ -133,10 +137,35 @@ class JobKind(ABC, Generic[ParamsT]):
     name: str
     params_model: type[ParamsT]
 
+    #: Parameters left out of the provenance written with each row: those that say how the
+    #: engine runs the job rather than what it computes — the chunk size every kind has, a
+    #: request timeout — and a selection of items, which would copy thousands of identifiers
+    #: into every row it produced. A kind extends the set with its own.
+    params_not_in_provenance: frozenset[str] = frozenset({"chunk_size"})
+
     #: What this kind produces, in the provenance vocabulary of the Pixano schemas. Most kinds
     #: run a model; a kind that does not run one must say so, so that its output is not taken
     #: for a prediction.
     source_type: str = "model"
+
+    def model_identity(self, params: ParamsT) -> ModelIdentity | None:
+        """The model this job runs, for the provenance of every row it writes.
+
+        None by default — a kind that runs no model. A kind that does returns at least the
+        model's name; the version is whatever the inference exposes beyond the name. Called
+        once per chunk, in the job's thread, so asking the server is allowed; but a provenance
+        that cannot be completed must not fail the chunk — return the name alone.
+        """
+        return None
+
+    def provenance_params(self, params: ParamsT) -> dict[str, Any]:
+        """The parameters the provenance records: all of them but the engine's.
+
+        Dumped in JSON mode: a parameter typed as a path, an enum or a date must not make the
+        provenance fail to serialise at write time, which would fail the chunk.
+        """
+        dumped = params.model_dump(mode="json")
+        return {key: value for key, value in dumped.items() if key not in self.params_not_in_provenance}
 
     def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
         """Put the dataset in shape before the job is split.

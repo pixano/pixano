@@ -16,6 +16,7 @@ from the contract.
 """
 
 import hashlib
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -166,7 +167,16 @@ def _reader() -> JobReader:
 
 
 def _writer(kind: JobKind, target: _Target, job_id: str) -> JobWriter:
-    return JobWriter(lambda: target, kind.name, job_id, kind.source_type)
+    """A writer as the runner builds it, carrying the job's provenance."""
+    params = _params(kind)
+    return JobWriter(
+        lambda: target,
+        kind.name,
+        job_id,
+        kind.source_type,
+        params=kind.provenance_params(params),
+        model=kind.model_identity(params),
+    )
 
 
 def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1) -> None:
@@ -203,6 +213,9 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
         def __exit__(self, *_exc: Any) -> None:
             return None
 
+        def list_models(self) -> list[Any]:
+            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
             vectors = np.full((count, FAKE_DIM), 0.1, dtype=np.float32)
@@ -238,6 +251,35 @@ class TestDeclaration:
 
     def test_its_parameter_example_is_valid(self, kind: JobKind) -> None:
         assert isinstance(_params(kind), JobParams)
+
+
+class TestProvenance:
+    """Every row a kind writes must say, by itself, how it was produced."""
+
+    def test_every_written_row_carries_the_kind_and_its_parameters(self, kind: JobKind) -> None:
+        target = _Target()
+        _execute(kind, target, "job-1")
+        # Embedding rows carry no provenance fields: the model lives in the dataset's sidecar
+        # as long as one table holds one model (backend-processing §12).
+        with_provenance = [row for row in target.rows.values() if hasattr(row, "source_metadata")]
+        if not with_provenance:
+            pytest.skip(f"'{kind.name}' writes no row that carries provenance with its example")
+
+        for row in with_provenance:
+            metadata = json.loads(row.source_metadata)
+            assert row.source_name == kind.name
+            assert metadata["kind"] == kind.name
+            assert metadata["job_id"] == "job-1"
+            assert set(metadata["params"]) == set(_params(kind).model_dump()) - kind.params_not_in_provenance
+
+    def test_a_kind_that_runs_a_model_names_it(self, kind: JobKind) -> None:
+        params = _params(kind)
+        identity = kind.model_identity(params)
+        if identity is None:
+            assert kind.source_type != "model", "a kind producing model output must say which model"
+            return
+
+        assert identity.name == getattr(params, "model", identity.name)
 
 
 class TestPreparation:
@@ -363,3 +405,31 @@ class TestRegistry:
 
         with pytest.raises(ValueError, match="already registered"):
             registry.register(FakeKind())
+
+
+class TestProvenanceParameters:
+    """What the provenance records of a job's parameters."""
+
+    def test_a_selection_is_not_copied_into_every_row(self) -> None:
+        """Ten thousand ids made 260 kB of metadata on each labelled row."""
+        from pixano_worker.kinds import LabelKind
+
+        kind = LabelKind()
+        params = kind.validate_params({"record_ids": [f"r{n}" for n in range(10_000)], "label": "cat"})
+
+        assert "record_ids" not in kind.provenance_params(params)
+
+    def test_a_parameter_json_cannot_hold_is_recorded_as_json(self) -> None:
+        """A path, an enum or a date must not fail the chunk at write time."""
+        from datetime import date
+        from pathlib import Path
+
+        from pixano_worker.kinds import FakeKind, JobParams
+
+        class _Params(JobParams):
+            where: Path
+            since: date
+
+        recorded = FakeKind.provenance_params(FakeKind(), _Params(where=Path("/a"), since=date(2026, 1, 2)))
+
+        assert json.dumps(recorded) == '{"where": "/a", "since": "2026-01-02"}'

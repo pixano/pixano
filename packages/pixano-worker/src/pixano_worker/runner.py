@@ -38,7 +38,7 @@ from psycopg_pool import AsyncConnectionPool
 from pixano.datasets import Dataset
 
 from . import queue
-from .kinds import Chunk, Outcome, Registry, TransientError
+from .kinds import Chunk, JobKind, JobParams, Outcome, Registry, TransientError
 from .media import MediaResolver
 from .reader import JobReader
 from .schema import SCHEMA_NAME
@@ -102,7 +102,8 @@ _write_locks_guard = threading.Lock()
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
 # How long the loop waits for each step of a planning — the preparation, then the split — before
-# it fails the job. Planning prepares the dataset, then reads the identifiers it splits. Not
+# it fails the job. Planning asks the kind which model it runs — a question to the inference
+# bounded by its own timeout —, prepares the dataset, then reads the identifiers it splits. Not
 # measured: a ceiling rather than an estimate, set far above that work, so that only a planning
 # stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it,
 # and the loop's turn, which it holds, is given back.
@@ -253,13 +254,16 @@ async def plan_one(
     try:
         params = kind.validate_params(raw_params)
         reader = _reader_for(library, dataset_id, media, fresh=True)
-        writer = _writer_for(library, dataset_id, kind_name, job_id, kind.source_type)
         async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
             # Preparation precedes the split, under the same lease: a planner that dies between
             # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
-            # is why `prepare` must be idempotent.
-            await pool.run(lambda: kind.prepare(writer, params), PLANNING_TIMEOUT_S)
+            # is why `prepare` must be idempotent. The writer is built in the preparation's
+            # thread, not on the loop: naming the model may ask the inference.
+            await pool.run(
+                lambda: kind.prepare(_writer_for(library, dataset_id, kind, job_id, params), params),
+                PLANNING_TIMEOUT_S,
+            )
             chunks = await pool.run(lambda: list(kind.plan(reader, params)), PLANNING_TIMEOUT_S)
     except TimeLimitExceeded:
         # This is the planning's own work that does not end: its reads or its `prepare`, on storage
@@ -386,11 +390,13 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
     return JobReader(open_dataset, media or MediaResolver.unconfigured())
 
 
-def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, source_type: str) -> JobWriter:
-    """Bind a writer to a job's dataset.
+def _writer_for(library: Path | None, dataset_id: str, kind: JobKind, job_id: str, params: JobParams) -> JobWriter:
+    """Bind a writer to a job's dataset, carrying the job's provenance.
 
     Opening is deferred to first use: a kind that writes nothing must not fail for lack of a
-    dataset, and the absence of a library only shows if someone writes.
+    dataset, and the absence of a library only shows if someone writes. The writer records the
+    job's parameters and asks the kind which model it runs — a call that may reach the
+    inference server, so this runs in the job's thread, never on the loop.
     """
 
     def open_dataset() -> Dataset:
@@ -403,7 +409,16 @@ def _writer_for(library: Path | None, dataset_id: str, kind: str, job_id: str, s
             raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _reopen_dataset(library, dataset_id)
 
-    return JobWriter(open_dataset, kind, job_id, source_type, reopen_dataset, dataset_id)
+    return JobWriter(
+        open_dataset,
+        kind.name,
+        job_id,
+        kind.source_type,
+        reopen_dataset,
+        dataset_id,
+        params=kind.provenance_params(params),
+        model=kind.model_identity(params),
+    )
 
 
 async def work(
@@ -690,16 +705,13 @@ async def _execute(
                 f"the outcome of kind '{kind_name}' covers {outcome.total} task(s), "
                 f"the chunk counts {chunk.task_count}"
             )
+        # Built before taking the lock: naming the model may ask the inference, which is no write.
+        writer = _writer_for(library, dataset_id, kind, chunk.job_id, params)
         # A write of this worker that keeps the dataset past the wait says nothing about this
         # chunk: handed back as transient, it is written once that write is over — or set aside
         # after its last attempt, if that write hangs for good.
         with _holding_write_lock(dataset_id, CHUNK_WRITE_LOCK_WAIT_S, busy=TransientError):
-            kind.write(
-                _writer_for(library, dataset_id, kind_name, chunk.job_id, kind.source_type),
-                result,
-                chunk.payload,
-                params,
-            )
+            kind.write(writer, result, chunk.payload, params)
         return outcome
 
     try:
