@@ -120,6 +120,25 @@ describe("Staged work — each holder's own flag", () => {
     expect(await manager.flushSave()).toBe(true);
   });
 
+  it("a widget's staged work can be dropped alone, another widget's kept", async () => {
+    const { manager } = await onTheRecord();
+    const dropped: string[] = [];
+    const pointCloud = widgetSeam(manager, "point-cloud-widget").claimStagedWork!(() =>
+      dropped.push("point cloud"),
+    );
+    // A holder that drops its work but forgets its flag: it is lowered anyway.
+    const resize = widgetSeam(manager).claimStagedWork!(() => dropped.push("resize"));
+    pointCloud.set(true);
+    resize.set(true);
+
+    manager.discardStagedWork("image-widget");
+
+    expect(dropped).toEqual(["resize"]);
+    expect(manager.unsavedCount).toBe(1);
+    pointCloud.set(false);
+    expect(manager.hasUnsavedWork).toBe(false);
+  });
+
   it("lets go of every flag once another record is opened", async () => {
     const { manager } = await openManager({ [REC_1]: {}, [REC_2]: {} });
     widgetSeam(manager, "point-cloud-widget").claimStagedWork!(() => {}).set(true);

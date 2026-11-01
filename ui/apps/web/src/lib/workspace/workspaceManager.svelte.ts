@@ -281,6 +281,20 @@ export class WorkspaceManager {
     if (keys.length > 0) this.publishStagedWork();
   }
 
+  /**
+   * Ask every holder of staged work in a widget to drop it, then lower
+   * whatever flag of the widget is left — that widget's share of what Discard
+   * does for the record. For a gesture that must not let work under way in the
+   * widget go on: a delete pressed during a resize or a drag cancels it first
+   * (`deleteLocalAnnotation`'s `cancelGesture`). Another widget's work stays.
+   */
+  discardStagedWork(widgetId: string): void {
+    const held = [...this.stagedFlags].filter(([, holder]) => holder.widgetId === widgetId);
+    for (const [, holder] of held) holder.discard();
+    for (const [key] of held) this.stagedFlags.delete(key);
+    if (held.length > 0) this.publishStagedWork();
+  }
+
   /** Raise (a holder given) or lower (null) one flag. */
   private setStagedFlag(key: string, holder: StagedWorkHolder | null): void {
     if (holder) this.stagedFlags.set(key, holder);

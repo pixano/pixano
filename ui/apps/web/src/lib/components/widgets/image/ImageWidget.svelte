@@ -340,7 +340,19 @@ License: CECILL-C
         onclick={() => {
           const annotation = annotations.selected;
           if (!annotation || !sceneContext) return;
-          deleteLocalAnnotation(annotation, annotations, sceneContext.mutations, stableWidgetId);
+          // A resize or a drag of a shape can only be under way with the select tool
+          // active: it is let go of first, as the Delete key does, or the shape it
+          // leaves half done would be committed over the delete. A draw tool's
+          // points belong to a shape not drawn yet, and stay.
+          const cancelGesture =
+            storage.activeToolId === DEFAULT_TOOL_2D ? () => seam.discardStagedWork?.() : undefined;
+          deleteLocalAnnotation(
+            annotation,
+            annotations,
+            sceneContext.mutations,
+            stableWidgetId,
+            cancelGesture,
+          );
           syncRenderers();
         }}
         disabled={!hasSelection}

@@ -18,7 +18,8 @@ import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js
 // The image widget as a person meets it: rendered on the real Konva, next to
 // the right panel, over the real manager and queue — only HTTP is faked. What
 // is checked is what the person sees and presses: the toolbar's count and
-// Discard, the entity button's words, and where a key typed in a form goes.
+// Discard, the entity button's words, what the trash button lets go of, and
+// where a key typed in a form goes.
 vi.mock("konva", async () => ({
   default: (await vi.importActual<{ default: unknown }>("konva/lib/index.js")).default,
 }));
@@ -30,6 +31,7 @@ const REC = "rec-1";
 const ENTITIES = [entityOf(REC, "ent-h1", { category: "tree" })];
 
 const DISCARD_TITLE = "Discard unsaved changes and restore this record's saved annotations";
+const DELETE_TITLE = "Delete selected (Del)";
 const REASSIGN_TITLE = "Change the entity this annotation belongs to (E)";
 const REASSIGN_NOTHING_SELECTED_TITLE = "Select an annotation to change its entity";
 
@@ -79,6 +81,40 @@ describe("ImageWidget toolbar", () => {
     expect(reassign().disabled).toBe(false);
     expect(reassign().title).toBe(REASSIGN_TITLE);
     expect(descriptionOf(reassign())).toBeNull();
+  });
+
+  it("lets go of a resize or a drag under way before it deletes, as the Delete key does", async () => {
+    const { manager, widgetId } = await openImageWidget();
+    // What an editor of this widget raises while a box is resized or dragged.
+    let dropped = 0;
+    const gesture = manager.claimStagedWork(widgetId, () => {
+      dropped += 1;
+      gesture.set(false);
+    });
+    gesture.set(true);
+    select(manager, "h1");
+
+    await fireEvent.click(within(toolbar()).getByTitle(DELETE_TITLE));
+
+    expect(dropped).toBe(1);
+    expect(manager.annotations.find("h1")).toBeUndefined();
+    expect(manager.unsavedCount).toBe(1);
+  });
+
+  it("leaves alone the points a draw tool holds: they are no gesture on the selection", async () => {
+    const { manager, widgetId } = await openImageWidget();
+    await fireEvent.click(within(toolbar()).getByTitle("Draw polygon (P)"));
+    // What the polygon tool raises once a point is placed.
+    let dropped = 0;
+    manager.claimStagedWork(widgetId, () => (dropped += 1)).set(true);
+    select(manager, "h1");
+
+    await fireEvent.click(within(toolbar()).getByTitle(DELETE_TITLE));
+
+    expect(dropped).toBe(0);
+    expect(manager.annotations.find("h1")).toBeUndefined();
+    // The delete, and the points still held.
+    expect(manager.unsavedCount).toBe(2);
   });
 
   it("counts work a tool holds with nothing queued, offers Discard for it, and Discard drops it", async () => {

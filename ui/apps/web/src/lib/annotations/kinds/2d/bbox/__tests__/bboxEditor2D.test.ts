@@ -14,6 +14,7 @@ import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.
 import { commitGeometryEdit, commitNewAnnotation } from "$lib/annotations/payloadBuilders.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
+import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
   humanBox,
   openManager,
@@ -52,7 +53,7 @@ afterEach(() => {
 
 /**
  * The record open on a real stage, with the bbox renderer and editor the image
- * widget wires.
+ * widget wires, and the select tool the widget hands its keys to.
  *
  * @param box The box the record holds: a person's unless told otherwise.
  * @param others More boxes the record holds.
@@ -102,7 +103,8 @@ async function openOnCanvas(box: Row = BOX, ...others: Row[]) {
     editor.syncSelection();
   }
   redraw();
-  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets };
+  const selectTool = selectTool2D.createHandler(ctx);
+  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets, selectTool };
 }
 
 type OnCanvas = Awaited<ReturnType<typeof openOnCanvas>>;
@@ -606,6 +608,62 @@ describe("bboxEditor2D, a box stored with no width", () => {
       [rect.x(), rect.y(), rect.width(), rect.height()],
       stored.map((value) => value * IMAGE_PIXELS),
     );
+  });
+});
+
+describe("bboxEditor2D, Delete pressed while a gesture runs", () => {
+  // The key reaches the select tool while the mouse still holds the box: the
+  // gesture is let go of first, so the delete applies to the box as stored, and
+  // the release that follows commits nothing over it.
+
+  /** Delete pressed on the canvas, as the image widget hands it to the select tool. */
+  function pressDelete(scene: OnCanvas): void {
+    expect(scene.selectTool.onKeyDown!(new KeyboardEvent("keydown", { key: "Delete" }))).toBe(true);
+  }
+
+  /** The bodies of the updates queued, in order. */
+  const queuedBodies = (scene: OnCanvas) =>
+    scene.manager.pendingMutations.map((m) => (m.op === "update" ? m.body : m.op));
+
+  /** The gesture's flag: raised once as it began, lowered since. */
+  function expectFlagLowered(scene: OnCanvas): void {
+    expect(scene.flagSets.filter((staged) => staged)).toEqual([true]);
+    expect(scene.flagSets.at(-1)).toBe(false);
+  }
+
+  it("deletes a person's box being resized, and Konva throws nothing after", async () => {
+    const scene = await openOnCanvas(humanBox(REC, "h1"));
+    select(scene, "h1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    pressDelete(scene);
+    expect(() => grabbed.moveTo(20, 20)).not.toThrow();
+    grabbed.release();
+
+    expect(scene.manager.annotations.find("h1")).toBeUndefined();
+    expect(queuedBodies(scene)).toEqual(["delete"]);
+    expectFlagLowered(scene);
+    expect(scene.manager.unsavedCount).toBe(1);
+  });
+
+  it("deletes a person's box being dragged, and nothing is left unsaved once saved", async () => {
+    const scene = await openOnCanvas(humanBox(REC, "h1"));
+    select(scene, "h1");
+    const grabbed = grab(scene, rectOf(scene, "h1"));
+    grabbed.moveTo(10, 0);
+
+    pressDelete(scene);
+    grabbed.moveTo(20, 0);
+    grabbed.release();
+
+    expect(scene.manager.annotations.find("h1")).toBeUndefined();
+    expect(queuedBodies(scene)).toEqual(["delete"]);
+    expectFlagLowered(scene);
+    expect(scene.manager.unsavedCount).toBe(1);
+    await scene.manager.flushSave();
+    expect(scene.backend.writes.map((w) => w.op)).toEqual(["delete"]);
+    expect(scene.manager.hasUnsavedWork).toBe(false);
   });
 });
 

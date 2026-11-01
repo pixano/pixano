@@ -19,6 +19,7 @@ import {
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
+import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
   openManager,
   viewIdOf,
@@ -75,7 +76,7 @@ afterEach(() => {
 
 /**
  * The record open on a real stage, with the multi-path renderer and editor the
- * image widget wires.
+ * image widget wires, and the select tool the widget hands its keys to.
  *
  * @param path The path the record holds: a person's triangle unless told otherwise.
  * @param others More paths the record holds.
@@ -125,7 +126,8 @@ async function openOnCanvas(path: Row = humanPath("p1"), ...others: Row[]) {
     editor.syncSelection();
   }
   redraw();
-  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets };
+  const selectTool = selectTool2D.createHandler(ctx);
+  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets, selectTool };
 }
 
 type OnCanvas = Awaited<ReturnType<typeof openOnCanvas>>;
@@ -350,4 +352,42 @@ describe("multi_path on the shared flatCoordsEditor2D, a drag still running when
     grabbed.release();
     expect(scene.manager.pendingMutations).toEqual([]);
   });
+});
+
+describe("multi_path on the shared flatCoordsEditor2D, Delete pressed while a drag runs", () => {
+  // The key reaches the select tool while the mouse still holds the path: the
+  // drag is let go of first, so the delete applies to the path as stored — and
+  // the drag's end, which no longer reaches the editor once the path's group is
+  // gone, leaves no flag raised behind it.
+
+  const DRAGGED: [string, (scene: OnCanvas) => Konva.Node][] = [
+    ["a vertex", (scene) => vertexOf(scene, "p1", 0)],
+    ["the whole path", (scene) => groupOf(scene, "p1")],
+  ];
+
+  /** Grab `nodeOf`, move it, press Delete as the image widget hands it to the select tool, and let go. */
+  function deleteWhileDragging(scene: OnCanvas, nodeOf: (scene: OnCanvas) => Konva.Node): void {
+    select(scene, "p1");
+    const grabbed = grab(scene, nodeOf(scene));
+    grabbed.moveTo(10, 0);
+    expect(scene.selectTool.onKeyDown!(new KeyboardEvent("keydown", { key: "Delete" }))).toBe(true);
+    grabbed.moveTo(20, 0);
+    grabbed.release();
+  }
+
+  it.each(DRAGGED)(
+    "dragging %s of a person's path: deleted, and nothing left unsaved once saved",
+    async (_, nodeOf) => {
+      const scene = await openOnCanvas(humanPath("p1"));
+
+      deleteWhileDragging(scene, nodeOf);
+
+      expect(scene.manager.annotations.find("p1")).toBeUndefined();
+      expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
+      expect(scene.flagSets.at(-1)).toBe(false);
+      expect(scene.manager.unsavedCount).toBe(1);
+      await scene.manager.flushSave();
+      expect(scene.manager.hasUnsavedWork).toBe(false);
+    },
+  );
 });

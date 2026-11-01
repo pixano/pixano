@@ -25,6 +25,7 @@ for the rules.
   Without the flag, the count reads 0 over the work, and Discard leaves it in place.
   - A box being resized is such work too, held by its editor.
   - So is a shape being dragged, held by its editor.
+  - A delete pressed in the middle of a gesture calls `discard` too, before it deletes.
 - **Keys typed in a form field belong to it.** A key listener on `window` — a tool's
   shortcut, an editor's Escape — returns early when `isFormFieldTarget(event.target)`
   (`scene/tool.ts`): a select picks an option with the keys typed in it, and an `E` or a
@@ -133,6 +134,11 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   dragging attribute (`draggingAttr: MULTI_PATH_DRAGGING_ATTR`, declared in its own
   `<kind>Types.ts`), and its renderer leaves a group so stamped alone
   (`multiPathRenderer2D.ts`, `keypointsRenderer2D.ts`).
+
+  The editor's discard is also what a delete pressed during the gesture runs first — the
+  select tool's Delete/Backspace and the image widget's trash button call the widget's
+  `discardStagedWork` — so the delete applies to the shape as stored, and the gesture's
+  end commits nothing over it; the kind writes nothing more for it.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
   A handler that holds work not in the collection yet — points placed, strokes painted, a
@@ -175,6 +181,8 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     release saves it, and Discard drops the drag. Send a window `mouseup` after each test:
     Konva's drags are global, and one a failed test left running moves with the next
     test's pointer.
+  - It also presses Delete during each of its gestures, through the real select tool's
+    `onKeyDown`: the shape is deleted as stored, and no flag stays raised once saved.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the

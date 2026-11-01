@@ -170,9 +170,11 @@ same one again: clears the workspace, unsaved changes included, then
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
 `toggleEntityVisible` / `showAllEntities`, `claimStagedWork` /
 `releaseStagedWork` (a flag per holder of work a tool keeps unconfirmed, reached
-through the seam — "Unsaved work and saves" below), `unsavedCount` (how many
-items of the record are unsaved, the one count every unsaved counter shows —
-"Unsaved work and saves" below), `hasUnsavedWork` (that count is not 0),
+through the seam — "Unsaved work and saves" below), `discardStagedWork(widgetId)`
+(one widget's share of Discard, which a delete pressed mid-gesture calls first —
+flow E), `unsavedCount` (how many items of the record are unsaved, the one count
+every unsaved counter shows — "Unsaved work and saves" below), `hasUnsavedWork`
+(that count is not 0),
 `saveDatasetLayout` / `restoreOpeningLayout` / `fitLayoutToViewport`. Getters
 forward to the session/queue (`annotations`, `entities`, `pendingCount` — the
 request on the wire included — `pendingMutations` — the queued ones only —
@@ -353,6 +355,9 @@ the shape back nor drops its move: the node stays where the gesture has it, and
 the gesture is committed by id when the pointer is let go — only one the editor
 saw begin.
 
+A delete pressed during the gesture cancels it first (flow E), so the delete
+applies to the shape as stored.
+
 A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
 reports work left: `flushSave` resolves false. Each raised flag counts as one
@@ -515,6 +520,10 @@ flushSave()
 ### E) Delete (+ backend orphan cascade)
 ```
 deleteAnnotation(annotation)            // 2D: via ctx + deleteLocalAnnotation; 3D: manager
+  → 2D: cancelGesture()                 // deleteLocalAnnotation's: a resize or a
+       // drag under way in the widget lets go first: seam.discardStagedWork →
+       // each raised holder's discard — the shape back as stored, the gesture
+       // stopped, nothing committed — so what follows applies to the row as stored
   → persisted?  mutations.queue({op:"delete", resource, id})   // annotation only
      draft?     mutations.dropForLocalAnnotation(id)            // unsend its creates
   → collection.remove(id)
@@ -522,6 +531,18 @@ deleteAnnotation(annotation)            // 2D: via ctx + deleteLocalAnnotation; 
         → backend deletes the entity iff no stored row names it any more:
           an annotation of any kind, a child entity, a dynamic state (§2)
 ```
+
+A delete pressed while the mouse still holds a resize or a drag would otherwise
+let the gesture go on over a shape no longer there — Konva throwing at the next
+move of a resized box, a point's drag leaving its flag raised for good. So the
+gesture is cancelled first, through the one path Discard takes for a widget
+(`SceneContextBase.discardStagedWork` → `WorkspaceManager.discardStagedWork`):
+every holder of that widget whose flag is raised runs its discard, then the
+widget's flags are lowered; another widget's work stays. No kind knows a delete
+can interrupt its gesture. The select tool passes it on Delete/Backspace; the
+image widget's trash button passes it only while the select tool is active —
+the only tool under which a resize or a drag runs — since a draw tool's staged
+work is a shape not drawn yet.
 
 ### F) Reassign an entity (existing box)
 ```
@@ -607,7 +628,7 @@ ui/apps/web/src/lib/
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets |
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |
-| `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too) — with the callback Discard calls; each raised flag counts once in `WorkspaceManager.unsavedCount` |
+| `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too) — with the callback Discard calls, and a delete pressed mid-gesture calls first for its widget; each raised flag counts once in `WorkspaceManager.unsavedCount` |
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
 | `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |

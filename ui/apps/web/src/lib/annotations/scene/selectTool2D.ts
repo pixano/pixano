@@ -46,7 +46,16 @@ class SelectHandler2D implements ToolHandler2D {
     if (event.key === "Delete" || event.key === "Backspace") {
       const annotation = this.ctx.collection.selected;
       if (!annotation) return false;
-      deleteLocalAnnotation(annotation, this.ctx.collection, this.ctx.mutations, this.ctx.widgetId);
+      // The key reaches this tool while the mouse may still hold a resize or a
+      // drag: that gesture is let go of first, or its half-done shape would be
+      // committed over the delete as the mouse is released.
+      deleteLocalAnnotation(
+        annotation,
+        this.ctx.collection,
+        this.ctx.mutations,
+        this.ctx.widgetId,
+        () => this.ctx.discardStagedWork?.(),
+      );
       this.ctx.requestRedraw();
       return true;
     }

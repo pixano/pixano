@@ -13,6 +13,7 @@ import { MASK_DRAGGING_ATTR, MASK_ID_ATTR, type MaskGeometry } from "../maskType
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
+import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import { rleToString } from "$lib/utils/maskUtils.js";
 import {
   openManager,
@@ -140,7 +141,9 @@ async function openOnCanvas(...others: Row[]) {
     editor.syncSelection();
   }
   redraw();
-  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets };
+  // The tool the image widget hands its keys to.
+  const selectTool = selectTool2D.createHandler(ctx);
+  return { ...opened, ctx, stage, layer, renderer, editor, redraw, flagSets, selectTool };
 }
 
 type OnCanvas = Awaited<ReturnType<typeof openOnCanvas>>;
@@ -300,5 +303,25 @@ describe("maskEditor2D on the real Konva, a drag still running when a save ends"
     expect(nodeOf(scene, "m1").getAttr(MASK_DRAGGING_ATTR)).toBe(false);
     grabbed.release();
     expect(scene.manager.pendingMutations).toEqual([]);
+  });
+});
+
+describe("maskEditor2D on the real Konva, Delete pressed while a drag runs", () => {
+  it("deletes a person's mask being dragged: the half-done move is dropped", async () => {
+    const scene = await openOnCanvas();
+    scene.ctx.collection.select("m1");
+    scene.redraw();
+    const grabbed = grab(scene, nodeOf(scene, "m1"));
+    grabbed.moveTo(3 * PIXELS_PER_CELL, 0);
+
+    expect(scene.selectTool.onKeyDown!(new KeyboardEvent("keydown", { key: "Delete" }))).toBe(true);
+    grabbed.moveTo(5 * PIXELS_PER_CELL, 0);
+    grabbed.release();
+
+    expect(scene.manager.annotations.find("m1")).toBeUndefined();
+    expect(translateMask).not.toHaveBeenCalled();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
+    expect(scene.flagSets.at(-1)).toBe(false);
+    expect(scene.manager.unsavedCount).toBe(1);
   });
 });
