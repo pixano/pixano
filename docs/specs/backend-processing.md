@@ -366,11 +366,10 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 | Multi-user columns (job ownership, quotas)  | step 6                       | Wiping is free until then, so guessing the shape now has no premium                                                                                                                                                                      |
 | Event retention                             | step 6                       | Same reason                                                                                                                                                                                                                              |
 | Containers running as an unprivileged user  | before any shared deployment | Acceptable while everything is local; it stops being acceptable when the worker writes to shared storage                                                                                                                                 |
-| `review_status` on produced annotations     | step 2                       | The schemas do not have the field; it is the first schema work of the pre-annotation kinds                                                                                                                                               |
 | A Retry button in the panel                 | when the panel needs it      | The endpoint is generic; the button is interface work                                                                                                                                                                                    |
 | A connection pool in the API                | when measured                | One connection per request is negligible with one user                                                                                                                                                                                   |
 
-**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test now runs on 1 000 chunks, as lot 2 asked. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance, `review_status` is not delivered, and deletes are not scoped by (job, item) (§12).
+**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test now runs on 1 000 chunks, as lot 2 asked. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance, and deletes are not scoped by (job, item) (§12). `review_status`, deferred at step 1, was delivered in step 2 (§19).
 
 ## 18. Known defects
 
@@ -385,15 +384,15 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 - **A write that never returns holds its dataset until the worker restarts.** A chunk's `write` stuck in storage that stopped answering keeps the worker's write lock of its dataset, which renewing the pool cannot release (§9). Every wait for it is bounded (§12), and no other dataset's write waits on that lock. But the chunks of that dataset are handed back until set aside after their last attempt, and each attempt first runs the chunk's work, its inference included, then waits five minutes in one of the worker's slots. A job with many chunks on that dataset can fill every slot for hours, so the other datasets' chunks are written late — not never — until the worker restarts or those chunks are set aside.
 - **A path outside the declared media root is quarantined, not sent as bytes.** The resolver falls back to the dataset's bytes for it (`MediaResolver._inline`), and a view designated by path holds none: the medium is quarantined as "media not found". The worker does not read such a file itself either, since it reads only under its media root. Read in the code, not reproduced on a dataset; the test of that fallback uses a source that returns bytes for any view.
 
-## 19. Design before step 2
+## 19. Decided for step 2
 
-Questions the review raised and step 1 does not settle. None is a defect; each shapes the first kinds of step 2.
+Questions raised by step 1's review, and the rules step 2 settles for them; each rule is stated here once the code that applies it lands.
 
 - **Chunks.** They have no dependency and no internal progress, and their time limit is a deployment setting. Video tracking by segments needs an order between segments, per-video atomicity, progress in frames, and a limit that follows the work (§9). The one piece of engine design step 2 must do first.
 - **Embeddings.** The grain — one vector per record or per view — is a product decision before it is a worker decision: search is record-grained today. The advice on record: store per view, return records by their best view; video needs sampling. With it: the sidecar, one table per model, the fate of the application's in-process path (§18), `replace_existing_embeddings` (§12), and the rule for choosing a view, not to be built if the grain makes it moot.
 - **Self-contained provenance** (§12).
 - **Exact `replace` by key** (§12).
-- **`review_status`.**
+- **`review_status`** takes `pending` and `accepted`, on every entity annotation schema (dataset spec version 3; an older dataset gains the column, empty, when opened); empty for a human annotation. A model's row stored with no status — re-imported from JSONL, whose grammar carries none, or stored by the legacy smart tracking — reads as `pending`, from one definition, `pixano.schemas.NOT_REVIEWED_STATUSES` (`pending` and the empty status), read through `review_status_of` and `stored_statuses`.
 - **The compaction policy** (§12).
 - **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
 
@@ -414,6 +413,7 @@ Step 3 brings several sources of media and datasets, object storage among them; 
 - **The lease derives from the docker probe** (`LEASE_TTL = max(120, 4 × MAX_HEARTBEAT_AGE_S)`), and the file probe means nothing off Docker.
 - **The per-chunk lease** refreshes one row per chunk in flight; worth revisiting if workers number in the dozens (§6).
 - **The cost of bytes over a network** (§13).
+- **A dataset's layout is migrated whenever it is opened** — by the library listing, the command line, the API or the worker —, and a migration that fails leaves the dataset open at its old layout. With the application and workers on different builds, migrating is to become an explicit action, or the writer role's, and how a migration derives the values it backfills — literals today, repeating the schemas' defaults — is decided with it.
 
 ## 21. Open questions
 

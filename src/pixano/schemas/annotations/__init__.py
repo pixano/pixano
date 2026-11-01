@@ -8,19 +8,22 @@ from .bbox import BBox, BBox3D, create_bbox, create_bbox3d, is_bbox, is_bbox3d
 from .classification import Classification, create_classification, is_classification
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
 from .conversation import Conversation, create_conversation, is_conversation
-from .entity_annotation import AnnotationSourceKind, EntityAnnotation, is_entity_annotation
+from .entity_annotation import AnnotationSourceKind, EntityAnnotation, ReviewStatus, is_entity_annotation
 from .entity_group_annotation import EntityGroupAnnotation, is_entity_group_annotation
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
 from .message import Message, QuestionType, create_message, is_message
 from .multi_path import MultiPath, create_multi_path, is_multi_path
 from .per_frame_annotation import PerFrameAnnotation, is_per_frame_annotation
 from .relation import Relation, create_relation, is_relation
+from .review import NOT_REVIEWED_STATUSES, review_status_of, stored_statuses
 from .text_span import TextSpan, create_text_span, is_text_span
 from .tracklet import Tracklet, is_tracklet
 
 
 __all__ = [
     "AnnotationSourceKind",
+    "NOT_REVIEWED_STATUSES",
+    "ReviewStatus",
     "EntityAnnotation",
     "EntityGroupAnnotation",
     "PerFrameAnnotation",
@@ -50,6 +53,8 @@ __all__ = [
     "is_message",
     "is_multi_path",
     "is_relation",
+    "review_status_of",
+    "stored_statuses",
     "is_text_span",
     "is_tracklet",
     "create_bbox",

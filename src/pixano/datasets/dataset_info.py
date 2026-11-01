@@ -120,7 +120,7 @@ class DatasetInfo(BaseModel):
     bookmarks: list[str] = Field(default_factory=list)
     workspace: WorkspaceType = WorkspaceType.UNDEFINED
     storage_mode: Literal["filesystem", "embedded", "mixed"] = "filesystem"
-    spec_version: int = 2
+    spec_version: int = 3
     record: type[Record] | None = None
     entity: type[Entity] | None = None
     entity_dynamic_state: type[EntityDynamicState] | None = None
