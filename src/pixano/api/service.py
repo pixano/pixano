@@ -335,7 +335,8 @@ class BaseService:
 
         When ``prune_orphan_entity`` is set and an annotation's ``entity_id``
         changes, the previously attached entity is deleted if no stored row names
-        it any more — the check (`_entity_is_named`) shared with delete.
+        it any more — the check of the conditional delete (`_entity_is_named`),
+        shared with delete.
         """
         body_id = data.get("id")
         if body_id is not None and body_id != id:
@@ -391,7 +392,7 @@ class BaseService:
         When ``prune_orphan_entity`` is set and this resource is an annotation,
         the parent entity is also deleted if no stored row names it once the
         annotation is gone: no annotation of any table, no child entity and no
-        entity dynamic state (`_entity_is_named`).
+        entity dynamic state (`_entity_is_named`, the conditional delete's check).
         The check runs server-side because only the backend sees every row naming
         the entity (the front-end loads one record at a time), and under this
         request's write lock, so no write naming the entity lands between the
@@ -414,6 +415,34 @@ class BaseService:
         # The annotation row is gone now, so nothing left naming the entity means it was the last.
         if entity_id and not self._entity_is_named(entity_id):
             self._delete_orphan_entity(entity_id)
+
+    @_service_write
+    def delete_if_unnamed(self, id: str) -> bool:
+        """Delete an entity unless a stored row names it.
+
+        For a client that sees one record at a time, such as the annotation interface: a write it
+        lost the answer to may have been stored, so it cannot tell whether an entity it created is
+        still named, and only the server sees every table. The check and the delete hold one write lock, so no
+        write naming the entity lands between them — on a local dataset only: a dataset on S3
+        has no lock, and another write can land between the two there.
+
+        Args:
+            id: The entity's id.
+
+        Returns:
+            Whether the entity was deleted. False: an annotation of any table, a child entity or
+            an entity dynamic state names it, and nothing changed.
+
+        Raises:
+            HTTPException: 404 when the entity does not exist.
+        """
+        resolved_table = self.resolve_table()
+        if self.dataset.get_data(resolved_table, ids=id) is None:
+            raise HTTPException(status_code=404, detail=f"Resource '{id}' not found in '{resolved_table}'.")
+        if self._entity_is_named(id):
+            return False
+        self.dataset.delete_data(resolved_table, [id])
+        return True
 
     def _entity_is_named(self, entity_id: str) -> bool:
         """Whether any stored row names the entity (`_ENTITY_REFERENCES`)."""
