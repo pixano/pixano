@@ -412,7 +412,7 @@ reassignment on `E` or deleting the selection on Backspace.
 ### `LocalAnnotation<G>` (`annotations/annotationCollection.svelte.ts`)
 The one in-memory shape for **every** kind — pure data, no methods:
 ```ts
-{ id, entityId, kind, viewId, geometry: G, persisted, entity? }
+{ id, entityId, kind, viewId, geometry: G, persisted, entity?, review? }
 ```
 - `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask" | "keypoints" |
   "multi_path" | "classification"`).
@@ -421,6 +421,11 @@ The one in-memory shape for **every** kind — pure data, no methods:
   is declared in its own `kinds/<2d|3d>/<kind>/<kind>Types.ts`).
 - `persisted=false` ⇒ a **draft** (drawn but not yet POSTed). `entity` is a snapshot
   of the parent entity's fields so labels render without a refetch.
+- `review` (`AnnotationReview`, `annotations/reviewStatus.ts`) is the row's
+  provenance and review status — status, source type and name, model and version
+  from `source_metadata`, score. Read once, leniently, by the shared envelope
+  every seed loader builds through (`persistedAnnotation`, §8); absent on a draft,
+  which is a person's work with nothing to review.
 
 ### `AnnotationCollection` — the record-scoped source of truth
 `$state` list + `selectedId`, with `find/byKind/add/remove/select/setGeometry/
@@ -482,7 +487,8 @@ selectRecordInDataset(ds, rec)
       ├─ gateway.getDataset + gateway.listEntities      → session.entities/schema
       ├─ per view: extension.addRecordSeed(...)          → widget seeds
       ├─ loadEveryKind → SEED_LOADERS[kind].load(...)  (gateway.listAnnotations(resource, …))
-      │      → map rows → session.annotations.add(LocalAnnotation, persisted:true)
+      │      → each row → persistedAnnotation(row, {kind, viewId, geometry})
+      │      → session.annotations: LocalAnnotation {persisted:true, review}
       │      → a kind whose list failed: nothing seeded, reported; the others read
       └─ create widgets (layoutPlanner)
   → widgets mount, build Scene2DContext, renderers.sync() draws the seeded boxes
@@ -569,7 +575,53 @@ reassignEntity(annotation, choice, ctx)
 
 ---
 
-## 8. Reactivity & rendering notes
+## 8. Reviewing a model's annotations
+
+A model's annotation arrives `pending`, and `accepted` is where a person's review
+leaves it; a person's annotation carries no status (`ReviewStatus`,
+`src/pixano/schemas/annotations/entity_annotation.py`;
+`docs/specs/backend-processing.md` §19). The server owns that vocabulary; the
+interface reads it on every annotation it loads, and shows it on the canvas.
+Nothing in it is kind-specific: a kind's annotations carry their review state as
+soon as its seed loader builds through the shared envelope, and no kind name
+appears in the modules below.
+
+**What is reviewable.** `isReviewable(a)`: persisted, `review.sourceType ===
+"model"`, and a known status. A model's row stored with no status — re-imported
+from JSONL, or a legacy smart-tracking mask — reads as `pending`, as the server
+reads it (`review_status_of`, `src/pixano/schemas/annotations/review.py`). A
+person's annotation and a draft are not reviewable.
+
+**The pieces, split to keep the import graph acyclic.**
+
+- `annotations/reviewStatus.ts` — the status vocabulary (`REVIEW_STATUS`),
+  `AnnotationReview`, `reviewOf(row, scoreFields)` (lenient: never throws; the
+  score is read from the columns the kind declares — the first holding a number,
+  or a list's first valid number — and the declaration is kept on
+  `AnnotationReview.scoreFields`), `isReviewable`. Type-only imports, so seed
+  loaders and the label renderer can use it without the registry cycle
+  `viewScopedSeedLoader.ts` describes. No display text, and no column of any
+  kind: each kind's seed loader declares its score columns (`scoreFields`:
+  `["confidence"]` for bbox and bbox3d, `["confidences"]` for classification,
+  none for the others), the score fields of its backend schema.
+- `annotations/persistedAnnotation.ts` —
+  `persistedAnnotation(row, {kind, viewId, geometry, scoreFields}, ctx)`, the
+  one `LocalAnnotation` envelope, `review` included. Both
+  `createViewScopedSeedLoader` and the record-scoped `bbox3dSeedLoader` use it,
+  so no loader can forget the review.
+
+**On the canvas.** The shared `EntityLabels2D` writes "entity · status" on a
+model's annotation, on a colour per status — pending or accepted
+(`REVIEW_TAG_COLOR_*` in `scene2dStyleConstants.ts`) —, even when the entity has
+no text to show, and rebuilds a label when its text or its colour changes —
+which also recolours a draft's label once it is saved. A person's annotation and
+a draft keep their saved and unsaved colours. Kinds drawn with those labels show
+the status on the canvas (bbox, mask, keypoints, multi-path); classification and
+bbox3d — in 3D and projected — show no status.
+
+---
+
+## 9. Reactivity & rendering notes
 
 - Stateful domain classes live in `.svelte.ts` files so the runes compiler picks
   up `$state`/`$derived`/`$effect` (`AnnotationCollection`, `MutationQueue`,
@@ -587,7 +639,7 @@ reassignEntity(annotation, choice, ctx)
 
 ---
 
-## 9. Where everything lives (file map)
+## 10. Where everything lives (file map)
 
 ```
 ui/apps/web/src/lib/
@@ -608,6 +660,8 @@ ui/apps/web/src/lib/
 │  ├─ buildPayloads.ts                       local→REST bodies + entity-create + sort
 │  ├─ payloadBuilders.ts                     PAYLOAD_BUILDERS + delete/commit/reassign helpers
 │  ├─ seedLoaders.ts                         SEED_LOADERS (REST→local)
+│  ├─ persistedAnnotation.ts                 the LocalAnnotation envelope of a stored row
+│  ├─ reviewStatus.ts                        review vocabulary + pure rules (type-only imports)
 │  ├─ scene/
 │  │  ├─ registry2d.ts / registry3d.ts       TOOLS_*, RENDERER_FACTORIES_*
 │  │  ├─ sceneContext.ts                      SceneContextBase, SeamContext (+ staged
@@ -632,7 +686,7 @@ ui/apps/web/src/lib/
 
 ---
 
-## 10. Contracts cheat-sheet
+## 11. Contracts cheat-sheet
 
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
@@ -643,7 +697,7 @@ ui/apps/web/src/lib/
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |
 | `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too) — with the callback Discard calls, and a delete pressed mid-gesture calls first for its widget; each raised flag counts once in `WorkspaceManager.unsavedCount` |
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
-| `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders |
+| `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders, each building its annotations through `persistedAnnotation` |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |
 | `LocalAnnotationLocator` | queue ctor | `(id) => session.annotations.find(id)` (persisted flip) |
 

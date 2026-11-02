@@ -91,6 +91,7 @@ interface LocalAnnotation<G = unknown> {
   geometry: G;              // per-kind shape, typed in the kind's module
   persisted: boolean;       // false = draft (create still queued)
   entity?: Record<string, unknown>;
+  review?: AnnotationReview; // provenance + review status (seed envelope); none on a draft
 }
 ```
 
@@ -259,15 +260,27 @@ draft/edit lifecycle so no tool, renderer or widget reaches into payload interna
 Both take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
 which both `Scene2DContext` and the widgets' seam satisfy.
 
+On the read side, every seed loader wraps a stored row in the same envelope,
+`persistedAnnotation(row, { kind, viewId, geometry, scoreFields }, ctx)`
+(`lib/annotations/persistedAnnotation.ts`): identity, entity snapshot, and the
+review state. `scoreFields` is the kind's own declaration of the columns holding
+a model's score, the score fields of its backend schema; the review reads the
+score from them, so no shared module names a column (`bboxSeedLoader.ts`:
+`["confidence"]`). A loader that hand-built its `LocalAnnotation` would load a
+model's rows as if a person had drawn them — no status, none on its label — and
+nothing would fail.
+
 ### Adding a new annotation kind (the recipe)
 
 1. Add the kind literal to `AnnotationKind` and its geometry to `GeometryByKind`
    in `lib/annotations/annotationCollection.svelte.ts`.
 2. Create `lib/annotations/kinds/<2d|3d>/<kind>/` with:
    - `<kind>PayloadBuilder.ts` — local→REST (resource + create/update bodies),
-   - `<kind>SeedLoader.ts` — REST→local (fetch + map the record's rows once);
-     a failed fetch rejects, never resolves to an empty list (`loadEveryKind`
-     decides what it means),
+   - `<kind>SeedLoader.ts` — REST→local (fetch + map the record's rows once,
+     each through `persistedAnnotation` — `createViewScopedSeedLoader` does it
+     for a view-scoped kind), declaring the kind's score columns as
+     `scoreFields` when its backend schema has a score; a failed fetch rejects,
+     never resolves to an empty list (`loadEveryKind` decides what it means),
    - the **renderer** (display): `<kind>Renderer2D.ts` (`AnnotationRenderer2D`,
      read-only ctx) **or** `<Kind>Renderer.svelte` (3D component reading `ctx.collection`),
    - the **editing input**: 2D → `<kind>Editor2D.ts` (`AnnotationEditor2D`) exposed
@@ -303,8 +316,14 @@ which both `Scene2DContext` and the widgets' seam satisfy.
    hand-build mutations in the tool/renderer/widget.
 5. Tests: builder unit tests + a tool-lifecycle test through a fake context (see
    `scene/__tests__/selectTool2D.test.ts`); a 2D editor's test on the real Konva
-   (`scene/__tests__/konvaInHappyDom.ts`, as `bboxEditor2D.test.ts` does).
+   (`scene/__tests__/konvaInHappyDom.ts`, as `bboxEditor2D.test.ts` does). Plus
+   the kind's model-row fixture in `GEOMETRY_COLUMNS`
+   (`workspace/__tests__/recordLoader.test.ts`), the envelope test every seed
+   loader runs through: the map is typed over `AnnotationKind`, so a kind
+   without its fixture adds a `pnpm run check` error in that file, and the test
+   fails for it at run time.
 6. **Nothing else changes** — no widget edits, no scene edits, no queue edits.
+   The one shared file a kind extends is the test fixture of step 5.
 
 ### Adding a new medium (e.g. text)
 

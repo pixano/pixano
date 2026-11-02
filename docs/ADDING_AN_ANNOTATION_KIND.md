@@ -17,6 +17,10 @@ for the rules.
   the full context.
 - **Never hand-build mutations.** Use `commitNewAnnotation` / `commitGeometryEdit`
   (`payloadBuilders.ts`) — they own the draft→queue→persist lifecycle for every kind.
+- **Never hand-build the `LocalAnnotation` envelope.** A seed loader wraps each row
+  with `persistedAnnotation` (`persistedAnnotation.ts`), which reads its provenance
+  and review status. A hand-built one loads a model's rows as a person's: no status,
+  and none on its label.
 - **Work a tool holds is the record's unsaved work.** A shape begun and not committed —
   points before Enter, a box being drawn — is in no mutation. Its holder claims a
   staged-work flag of its own, once (`ctx.claimStagedWork(discard)`), raises it while it
@@ -66,19 +70,31 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   → register in `PAYLOAD_BUILDERS` (`payloadBuilders.ts`).
 - `<kind>SeedLoader.ts` — REST rows → `LocalAnnotation[]`, once per record.
   For a view-scoped kind, do **not** hand-roll the fetch/filter/wrap loop: call
-  `createViewScopedSeedLoader({ kind, resource, toGeometry })`
+  `createViewScopedSeedLoader({ kind, resource, toGeometry, scoreFields })`
   (`viewScopedSeedLoader.ts`) and supply only `toGeometry(row, view)`, returning
   `null` to drop a malformed row. The fetch, the view filter and the
   `LocalAnnotation` envelope are shared so they cannot drift per kind.
   A record-scoped kind (`bbox3d`) implements `AnnotationSeedLoader` directly,
-  since it deliberately keeps rows whose view is not displayed.
+  since it deliberately keeps rows whose view is not displayed — but it still
+  builds each annotation with
+  `persistedAnnotation(row, { kind, viewId, geometry, scoreFields }, ctx)`,
+  as `bbox3dSeedLoader.ts` does, so its rows carry their review state.
   **A failed fetch rejects**, in either case: never catch it into an empty list. An
   empty list reads as a table holding nothing, and a reload would take every
   annotation of the kind off the screen after one failed request. What a failure means
   is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
   nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
   fails every registered loader in turn, so a loader that swallows its failure fails it.
-  → register in `SEED_LOADERS` (`seedLoaders.ts`).
+  **`scoreFields`** names the columns of the kind's rows that hold a model's score — the
+  score fields of its backend schema —, kept as a constant in the kind's folder
+  (`BBOX_SCORE_FIELDS = ["confidence"]` in `bboxSeedLoader.ts`; `["confidences"]` for a
+  classification). The review reads the score from them — the first column holding a
+  number, or a list's first valid number. Omit it for a kind with no score (mask,
+  keypoints, multi-path). No shared module names a score column, so a kind with a score
+  touches its own folder only.
+  Type the row as extending `EntityAnnotationColumns` (`api/annotations.ts`; the
+  view-scoped `ViewScopedRow` already does), which declares the provenance and
+  review columns. → register in `SEED_LOADERS` (`seedLoaders.ts`).
 
 ## Step 3 — the DISPLAY + INPUT halves
 
@@ -188,6 +204,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the
   record holds unsaved work while the work is held, the flag goes down on commit, Escape
   and deactivate, and Discard leaves nothing to commit.
+- A model-row fixture for the kind in `GEOMETRY_COLUMNS`
+  (`workspace/__tests__/recordLoader.test.ts`): the envelope test runs every
+  registered seed loader on a model's row and checks the annotation keeps its
+  review state. The map is typed over `AnnotationKind`, so a kind without its
+  fixture adds a `pnpm run check` error in that file, and the test itself fails for
+  it at run time.
 
 ## Step 5 — verify
 
@@ -201,7 +223,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] `AnnotationKind` + `GeometryByKind` updated
 - [ ] `kinds/<2d|3d>/<kind>/` created; `<kind>Types.ts`
 - [ ] payload builder + `PAYLOAD_BUILDERS`; `buildUpdate` follows from the annotation alone
-- [ ] seed loader + `SEED_LOADERS`, rejecting on a failed fetch
+- [ ] seed loader + `SEED_LOADERS`, built on `persistedAnnotation`, with its `scoreFields` if the schema has a score, rejecting on a failed fetch; fixture in `recordLoader.test.ts`
 - [ ] renderer + `RENDERER_FACTORIES_2D|3D`
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
 - [ ] every holder of unconfirmed work (2D tool handler, editor gesture) claims a staged-work flag, lowers it on every way out, and drops its work on discard; window key listeners ask `isFormFieldTarget`

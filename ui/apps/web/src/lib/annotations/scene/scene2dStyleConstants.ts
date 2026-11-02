@@ -30,6 +30,15 @@ export const BBOX_COLOR_DRAFT = "#f59e0b";
 export const DRAFT_DASH: readonly number[] = Object.freeze([6, 4]);
 
 /**
+ * Label tag fills for a model's annotation, one per review status, so the
+ * canvas says where each one stands with its reviewer. Light tones, because the
+ * label text on them is dark; none of them is the draft amber, which already
+ * means "not saved".
+ */
+export const REVIEW_TAG_COLOR_PENDING = "#c4b5fd";
+export const REVIEW_TAG_COLOR_ACCEPTED = "#86efac";
+
+/**
  * Radius of a vertex handle's *clickable* area, in stage pixels.
  *
  * Deliberately far larger than the dot drawn on screen. A handle is rendered

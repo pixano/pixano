@@ -7,9 +7,15 @@ License: CECILL-C
 import Konva from "konva";
 
 import type { LocalAnnotation } from "../annotationCollection.svelte.js";
+import { isReviewable, REVIEW_STATUS, type ReviewStatus } from "../reviewStatus.js";
 import { pickEntityLabel } from "../types.js";
 import type { PixelPoint } from "./scene2dGeometry.js";
-import { BBOX_COLOR_DRAFT, BBOX_COLOR_PERSISTED } from "./scene2dStyleConstants.js";
+import {
+  BBOX_COLOR_DRAFT,
+  BBOX_COLOR_PERSISTED,
+  REVIEW_TAG_COLOR_ACCEPTED,
+  REVIEW_TAG_COLOR_PENDING,
+} from "./scene2dStyleConstants.js";
 
 const LABEL_FONT_SIZE = 12;
 const LABEL_PADDING = 3;
@@ -22,6 +28,28 @@ const LABEL_GAP = 1;
 const LABEL_TEXT_ATTR = "pixanoLabelText";
 const LABEL_FILL_ATTR = "pixanoLabelFill";
 
+/** Between the entity's name and the review status, on one label. */
+const LABEL_STATUS_SEPARATOR = " · ";
+
+/** How a review status reads on the canvas. */
+function statusCaption(status: ReviewStatus): string {
+  switch (status) {
+    case REVIEW_STATUS.PENDING:
+      return "pending";
+    case REVIEW_STATUS.ACCEPTED:
+      return "accepted";
+  }
+}
+
+function statusTagColor(status: ReviewStatus): string {
+  switch (status) {
+    case REVIEW_STATUS.PENDING:
+      return REVIEW_TAG_COLOR_PENDING;
+    case REVIEW_STATUS.ACCEPTED:
+      return REVIEW_TAG_COLOR_ACCEPTED;
+  }
+}
+
 /** What one annotation's label says, and on which colour. */
 interface LabelLook {
   text: string;
@@ -29,11 +57,21 @@ interface LabelLook {
 }
 
 /**
- * An annotation names its entity on the saved/unsaved colour. `null` when
- * there is nothing to say.
+ * A model's annotation names its review status next to its entity, on the
+ * status colour, so a reviewer reads both on the canvas. Any other annotation
+ * names its entity on the saved/unsaved colour. `null` when there is nothing
+ * to say.
  */
 function labelLookOf(annotation: LocalAnnotation): LabelLook | null {
   const entityText = pickEntityLabel(annotation.entity);
+  if (isReviewable(annotation)) {
+    const status = annotation.review.status;
+    const caption = statusCaption(status);
+    return {
+      text: entityText ? `${entityText}${LABEL_STATUS_SEPARATOR}${caption}` : caption,
+      fill: statusTagColor(status),
+    };
+  }
   if (!entityText) return null;
   return {
     text: entityText,
@@ -57,13 +95,17 @@ export interface EntityLabelEntry {
  * Shared rather than re-implemented per kind because the interesting parts are
  * not the drawing:
  *
- * - **Reconciliation.** An annotation can be moved to another entity, or
- *   saved, so a label built once and never revisited goes on naming the
- *   entity the shape left behind, or on wearing a draft's colour — invisible
- *   until a page reload. Each label carries the text and colour it was built
- *   from and is rebuilt when either changes.
+ * - **Reconciliation.** An annotation can be moved to another entity, saved,
+ *   or read again at another review status, so a label built once and never
+ *   revisited goes on naming the entity the shape left behind, or on wearing a
+ *   draft's colour or a status it no longer has — invisible until a page
+ *   reload. Each label carries the text and colour it was built from and is
+ *   rebuilt when either changes.
+ * - **Review status.** A model's annotation shows where it stands with its
+ *   reviewer — on its label, so every kind that draws one shows it without a
+ *   line of its own.
  * - **Not every annotation gets one.** An entity with no usable label yields no
- *   node at all, rather than an empty chip.
+ *   node at all, rather than an empty chip — unless a status is there to show.
  * - **Pruning.** Labels for annotations that disappeared are destroyed, or they
  *   accumulate over a session.
  *
@@ -77,7 +119,7 @@ export class EntityLabels2D {
 
   /**
    * Reconcile the whole set in one pass: create what is new, rebuild what
-   * changed entity or colour, reposition everything, destroy what is gone.
+   * changed entity or status, reposition everything, destroy what is gone.
    */
   sync(entries: readonly EntityLabelEntry[]): void {
     const seen = new Set<string>();
@@ -134,7 +176,7 @@ export class EntityLabels2D {
   private _make(look: LabelLook): Konva.Label {
     const label = new Konva.Label({ listening: false });
     // Stamped so `sync()` can tell whether the label still matches its entity
-    // and colour without reaching into the Konva children to read them back.
+    // and status without reaching into the Konva children to read them back.
     label.setAttr(LABEL_TEXT_ATTR, look.text);
     label.setAttr(LABEL_FILL_ATTR, look.fill);
     label.add(
