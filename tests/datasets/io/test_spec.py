@@ -7,8 +7,9 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from pixano.datasets.io import ImportSpec, SpecValidationError, workspace_preset
+from pixano.datasets.io import ExportSpec, ImportSpec, SpecValidationError, workspace_preset
 from pixano.datasets.io.spec import MelEntity
 from pixano.datasets.workspaces import WorkspaceType
 
@@ -89,6 +90,29 @@ class TestImportSpec:
         base = ImportSpec()
         other = ImportSpec.model_validate({"mode": "add"})
         assert base.fingerprint() != other.fingerprint()
+
+
+class TestExportSpec:
+    def test_no_review_selection_by_default(self):
+        assert ExportSpec(format="pixano_jsonl", destination="out").review_statuses == []
+
+    def test_review_selection_reads_in_declaration_order_without_repeats(self):
+        spec = ExportSpec.model_validate(
+            {"format": "coco", "destination": "out", "review_statuses": ["accepted", "pending", "accepted"]}
+        )
+
+        assert spec.model_dump(mode="json")["review_statuses"] == ["pending", "accepted"]
+
+    @pytest.mark.parametrize("status", ["bogus", "", "Accepted", "corrected", "rejected"])
+    def test_review_selection_takes_review_statuses_only(self, status: str):
+        with pytest.raises(ValidationError):
+            ExportSpec.model_validate({"format": "coco", "destination": "out", "review_statuses": [status]})
+
+    def test_review_selection_is_not_a_format_option(self):
+        with pytest.raises(ValidationError, match="not a format option"):
+            ExportSpec.model_validate(
+                {"format": "coco", "destination": "out", "options": {"review_statuses": ["accepted"]}}
+            )
 
 
 class TestWorkspacePresets:
