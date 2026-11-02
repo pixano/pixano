@@ -118,12 +118,20 @@ export interface GeometryByKind {
  * Contract / substitutability note: an `AnnotationStore` represents the set of
  * annotations *relevant to its holder*. For the record-scoped collection that
  * is every annotation; for `ViewScopedAnnotations` it is one view's
- * annotations plus record-scoped kinds. Reads — `items`/`find`/`byKind`/`count`
- * AND `selected`/`selectedId` — are scoped to that relevant set: a selection
- * pointing at an annotation this view can't show reads as no selection, so each
- * widget only reports `hasSelection` (and lets its delete act) on something it
- * actually displays. Writes pass through to the shared record, so a holder
- * should only `add`/`setGeometry`/`select` annotations its own view can see.
+ * annotations plus record-scoped kinds. Every read — `items`/`find`/`byKind`/
+ * `count` AND `selected`/`selectedId` — is scoped to that relevant set: a
+ * selection pointing at an annotation this view can't show reads as no
+ * selection, so each widget only reports `hasSelection` (and lets its delete
+ * act) on something it actually displays. Writes pass through to the shared
+ * record, so a holder should only `add`/`setGeometry`/`select` annotations its
+ * own view can see.
+ *
+ * A holder may also filter what it *displays* (`ViewScopedAnnotations`'
+ * display predicate): the display reads — `items`/`byKind`/`count`/`selected`/
+ * `selectedId` — honour it, `find` never does. `find` is the lifecycle's
+ * lookup (commit an edit, flip `persisted`, a HUD saving the box it holds), and
+ * a row hidden from view is still a row: an edit already under way on it must
+ * still reach the queue.
  */
 export interface AnnotationStore {
   readonly items: LocalAnnotation[];
@@ -275,19 +283,32 @@ export class AnnotationCollection implements AnnotationStore {
  *
  * Takes a getter rather than an instance because the session replaces the
  * collection on each record load.
+ *
+ * `isShown` is the display filter on top of the view rule; it shows everything
+ * unless given. It applies to what the widget displays and lets the user act
+ * on (`items`, `byKind`, `count`, `selected`, `selectedId`) and never to
+ * `find`, so the annotation lifecycle (commit, save, a HUD's edit) still
+ * reaches a row the filter hides (see `AnnotationStore`).
  */
 export class ViewScopedAnnotations implements AnnotationStore {
   constructor(
     private readonly getParent: () => AnnotationCollection,
     private readonly viewId: string,
+    private readonly isShown: (annotation: LocalAnnotation) => boolean = () => true,
   ) {}
 
-  private _visible(annotation: LocalAnnotation): boolean {
+  /** The view rule: this view's annotations plus every record-scoped one. */
+  private _inView(annotation: LocalAnnotation): boolean {
     return annotation.viewId === this.viewId || RECORD_SCOPED_KINDS.has(annotation.kind);
   }
 
+  /** What the widget displays: the view rule, then the display filter. */
+  private _displayed(annotation: LocalAnnotation): boolean {
+    return this._inView(annotation) && this.isShown(annotation);
+  }
+
   get items(): LocalAnnotation[] {
-    return this.getParent().items.filter((a) => this._visible(a));
+    return this.getParent().items.filter((a) => this._displayed(a));
   }
 
   // Selection is shared across widgets, but each view only "owns" a selection
@@ -299,7 +320,7 @@ export class ViewScopedAnnotations implements AnnotationStore {
 
   get selected(): LocalAnnotation | undefined {
     const annotation = this.getParent().selected;
-    return annotation && this._visible(annotation) ? annotation : undefined;
+    return annotation && this._displayed(annotation) ? annotation : undefined;
   }
 
   get count(): number {
@@ -308,7 +329,7 @@ export class ViewScopedAnnotations implements AnnotationStore {
 
   find(id: string): LocalAnnotation | undefined {
     const annotation = this.getParent().find(id);
-    return annotation && this._visible(annotation) ? annotation : undefined;
+    return annotation && this._inView(annotation) ? annotation : undefined;
   }
 
   byKind<K extends AnnotationKind>(kind: K): LocalAnnotation<GeometryByKind[K]>[] {

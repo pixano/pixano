@@ -207,6 +207,30 @@ describe("ViewScopedAnnotations", () => {
     expect(view1.selected).toBeUndefined();
   });
 
+  it("applies the display filter to what it displays, never to find", () => {
+    const shown = makeBBox("shown", true);
+    const hidden = makeBBox("hidden", true);
+    const shared = new AnnotationCollection([shown, hidden]);
+    const view = new ViewScopedAnnotations(
+      () => shared,
+      "view-1",
+      (a) => a.id !== "hidden",
+    );
+
+    expect(view.items.map((a) => a.id)).toEqual(["shown"]);
+    expect(view.byKind("bbox").map((a) => a.id)).toEqual(["shown"]);
+    expect(view.count).toBe(1);
+    // The lifecycle still reaches a hidden row: an edit under way on it is saved.
+    expect(view.find("hidden")?.id).toBe("hidden");
+
+    // A selection on a hidden row reads as no selection, so no delete acts on it.
+    shared.select("hidden");
+    expect(view.selected).toBeUndefined();
+    expect(view.selectedId).toBeNull();
+    shared.select("shown");
+    expect(view.selectedId).toBe("shown");
+  });
+
   it("follows the parent getter when the session replaces the collection", () => {
     let current = new AnnotationCollection([makeBBox("a")]);
     const view = new ViewScopedAnnotations(() => current, "view-1");
