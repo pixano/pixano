@@ -127,8 +127,9 @@ Three ideas hold it together:
     of scores follows the labels it scores when a person changes them); the one
     decision (`review_status`) is `accepted`, and any other value but an echo or
     `pending` is answered 400; a person's row takes no status. Rejecting a
-    model's row is its delete. One rule set, every kind — see
-    `docs/specs/backend-processing.md` §19.
+    model's row is its delete. A person's edit of an entity — its class, say —
+    accepts the model's pending annotations that name it, whatever their kind.
+    One rule set, every kind — see `docs/specs/backend-processing.md` §19.
   - a `PUT` whose body names another row (an `id` other than the path's) is
     answered 400 before anything else, for every resource.
 

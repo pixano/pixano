@@ -26,6 +26,7 @@ from pixano.schemas import (
     model_score_alignment,
     model_score_fields,
 )
+from pixano.schemas.entities import ENTITY_SYSTEM_FIELDS
 from pixano.utils.python import quote_sql_string
 
 from . import review
@@ -351,6 +352,10 @@ class BaseService:
         changes, the previously attached entity is deleted if no stored row names
         it any more — the check of the conditional delete (`_entity_is_named`),
         shared with delete.
+
+        A person's edit of what an entity says (a field other than its links and timestamps)
+        accepts the model's pending annotations that name it (`review.acceptances_of_entity_edit`).
+        They are stored after the entity, each table's in one write.
         """
         body_id = data.get("id")
         if body_id is not None and body_id != id:
@@ -389,8 +394,19 @@ class BaseService:
             if new_entity_id and new_entity_id != getattr(existing, "entity_id", None):
                 self.validate_entity_exists(new_entity_id)
 
+        acceptances: dict[str, list[LanceModel]] = {}
+        if self.resource.schema_group == SchemaGroup.ENTITY and _describes_differently(existing, row):
+            acceptances = review.acceptances_of_entity_edit(self.dataset, id)
+
         try:
             updated_rows = self.dataset.update_data(resolved_table, [row])
+            # LanceDB has no transaction across tables: the entity is stored first, then each
+            # table's acceptances in one write. An acceptance changes the status alone, so it cannot
+            # break a reference: the per-row reference checks are skipped. They cost lookups per row
+            # and per reference, seconds for a tracked object, and a reference some other edit left
+            # dangling on one of the rows would fail the whole request after the entity was stored.
+            for table_name, accepted in acceptances.items():
+                self.dataset.update_data(table_name, accepted, raise_or_warn="none")
         except DatasetIntegrityError as err:
             raise HTTPException(status_code=400, detail=f"Integrity error: {err}")
         except ValueError as err:
@@ -632,3 +648,12 @@ def _changes_content(existing: LanceModel, edit: dict[str, Any]) -> bool:
         return True
     ignored = {*_model_owned_fields(schema), *_SERVER_STAMPS, _STATUS_FIELD}
     return edited.model_dump(exclude=ignored) != existing.model_dump(exclude=ignored)
+
+
+def _describes_differently(existing: LanceModel, edited: LanceModel) -> bool:
+    """Whether an entity's edit changes what the entity says, such as its class.
+
+    Its links (record, parent) and the server's timestamps are not what it says: re-parenting an
+    object is no edit of what a model found.
+    """
+    return edited.model_dump(exclude=ENTITY_SYSTEM_FIELDS) != existing.model_dump(exclude=ENTITY_SYSTEM_FIELDS)
