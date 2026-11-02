@@ -292,7 +292,11 @@ Owns the list of pending writes and the flush lifecycle. Implements **`MutationS
 `queue`, `upsertUpdate` (replace the last queued update for the same
 resource+id, taking the newer gesture's `widgetId` with its body),
 `patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`.
-Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`.
+Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`. Each time
+a body is written into the queue — queued, or rewritten by a later gesture — the
+**`LocalAnnotationLocator`**'s `recordQueued(mutation)` is told, so the manager
+keeps the content that body carries (`AnnotationCollection.contentOf`) until it
+leaves.
 
 **A request on the wire is out of reach.** A mutation leaves `pending` as its
 request leaves and is `inFlight` until the backend answers; `count` includes it.
@@ -333,9 +337,12 @@ flight then neither comes back into the new queue nor reports its error there.
    naming an entity whose create is still queued — by its `entity_id` as it
    reads now — waits for that create to be sent, and is looked at again, until
    no such create is left. No write names an entity that does not exist yet,
-   and none dropped while the flush ran is sent.
+   and none dropped while the flush ran is sent. As each request leaves, the
+   locator's `recordWrite(mutation)` records what the dataset will hold once it
+   lands (§5, `AnnotationCollection.recordWrite`): the content the body carried
+   when it was queued; a failure undoes that record.
 3. On a successful **create** of an annotation, flip its local `persisted = true`
-   via the **`LocalAnnotationLocator`** (`findLocalAnnotation(id)` → the session's
+   via the locator's `findLocalAnnotation(id)` (→ the session's
    collection). Drafts thus become "saved" without a per-widget lookup.
 
 A flush that finds the queue empty clears `saveError`: what failed is no longer
@@ -445,9 +452,19 @@ The one in-memory shape for **every** kind — pure data, no methods:
 
 ### `AnnotationCollection` — the record-scoped source of truth
 `$state` list + `selectedId`, with `find/byKind/add/remove/select/setGeometry/
-setEntity`. **Owned by `WorkspaceSession`, one instance per record load, shared by
-every widget.** Optimistic edits mutate `geometry` in place; the `MutationQueue` is
-the ledger of what still has to reach the backend.
+setEntity/contentOf/recordWrite`. **Owned by `WorkspaceSession`, one instance per
+record load, shared by every widget.** Optimistic edits mutate `geometry` in place;
+the `MutationQueue` is the ledger of what still has to reach the backend.
+
+`recordWrite(id, {content?})` is called by the queue as a write of the annotation
+leaves (through the locator). It records as `persistedContent` the content that
+write carries — taken by `contentOf` when its body was written into the queue
+(`recordQueued`, §4), not the annotation's content as it leaves: a write retried
+after a failure leaves with newer edits queued behind it, which it does not
+carry. A write that carries no content leaves `persistedContent` as it was.
+Recorded as the write leaves rather than when it lands, so that work begun while
+it is on the wire is measured against what the dataset will hold once it lands.
+It returns the undo the queue runs if the request fails.
 
 ### `ViewScopedAnnotations` — the per-widget facade
 Implements the same **`AnnotationStore`** interface but scopes reads to *one view*:
@@ -543,9 +560,9 @@ flushSave()
             dropped meanwhile, or the queue reset? → not sent
             names an entity whose create is still queued?
                  → send that create first, then look again
-            out of pending, inFlight; gateway.create/update/delete…
+            out of pending, inFlight; recordWrite; gateway.create/update/delete…
        on success: annotation create → persisted = true
-       on failure:
+       on failure: undo recordWrite
             abandoned create? → not retried; its delete dropped on a 4xx,
                                 kept otherwise
             any other write → back to the head of the queue
@@ -715,7 +732,7 @@ ui/apps/web/src/lib/
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
 | `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders, each building its annotations through `persistedAnnotation` |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |
-| `LocalAnnotationLocator` | queue ctor | `(id) => session.annotations.find(id)` (persisted flip) |
+| `LocalAnnotationLocator` | queue ctor | `findLocalAnnotation: (id) => session.annotations.find(id)` (persisted flip) + `recordQueued` (the content a body carries, kept as it is queued) + `recordWrite` (what a write stores, undone on failure) |
 
 These interfaces are the joints: depend on them, not on `WorkspaceManager`, and a
 new kind / a fake gateway / a new scene type slots in without touching the rest.

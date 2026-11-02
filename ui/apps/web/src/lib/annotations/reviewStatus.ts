@@ -31,6 +31,12 @@ export const REVIEW_STATUSES: readonly ReviewStatus[] = [
   REVIEW_STATUS.ACCEPTED,
 ];
 
+/**
+ * The column holding a row's review status: the only key of an update body
+ * that changes the status and nothing else.
+ */
+export const REVIEW_STATUS_FIELD = "review_status";
+
 /** The `source_type` of a row a model produced — the only rows that are reviewed. */
 export const MODEL_SOURCE_TYPE = "model";
 
@@ -181,4 +187,12 @@ export function isReviewable(annotation: LocalAnnotation): annotation is Reviewa
     review.sourceType === MODEL_SOURCE_TYPE &&
     isReviewStatus(review.status)
   );
+}
+
+/**
+ * Whether an update body changes the row's content — its geometry, its entity
+ * — rather than carrying its status alone.
+ */
+export function carriesContent(body: Readonly<Record<string, unknown>>): boolean {
+  return Object.keys(body).some((key) => key !== REVIEW_STATUS_FIELD);
 }

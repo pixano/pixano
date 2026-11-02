@@ -18,8 +18,10 @@ import { WorkspaceSession, type StagedWorkHolder } from "./workspaceSession.svel
 import type {
   AnnotationCollection,
   LocalAnnotation,
+  PersistedContent,
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+import { carriesContent } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
@@ -27,6 +29,7 @@ import type {
   ResourceMutation,
 } from "$lib/annotations/types.js";
 import type { EntityRow } from "$lib/api/annotations.js";
+import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 import type { WidgetInstance, WidgetLayout, WorkspacePreset } from "$lib/extensions/types.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
@@ -80,6 +83,12 @@ export class WorkspaceManager {
   private loader: RecordLoader;
   private layoutRepository: DatasetLayoutRepository;
 
+  /**
+   * What each queued body carries of its annotation's content, taken as the
+   * body was written into the queue: the body leaves later, when the
+   * annotation may have been edited again (`recordWrite`).
+   */
+  private carriedContent = new WeakMap<ResourceMutation, PersistedContent>();
   /** Numbers the staged-work flags claimed, so that each has a key of its own. */
   private stagedFlagCount = 0;
   /**
@@ -121,6 +130,8 @@ export class WorkspaceManager {
     // the session's shared collection, no per-widget storage lookup needed.
     this.mutations = new MutationQueue(gateway, this.session, {
       findLocalAnnotation: (localAnnotationId) => this.session.annotations.find(localAnnotationId),
+      recordQueued: (mutation) => this.recordQueued(mutation),
+      recordWrite: (mutation) => this.recordWrite(mutation),
     });
 
     this.loader = new RecordLoader({
@@ -437,6 +448,36 @@ export class WorkspaceManager {
    */
   private nothingUnsaved(): boolean {
     return this.unsavedCount === 0;
+  }
+
+  /**
+   * Keep, as a body is written into the queue, the content it carries: the
+   * annotation's content now, for a create or an update that changes content.
+   * An update carrying the status alone carries none, nor does an entity's
+   * write or a delete.
+   */
+  private recordQueued(mutation: ResourceMutation): void {
+    const id = mutation.localAnnotationId;
+    if (mutation.op === "delete" || mutation.resource === ENTITY_RESOURCE || !id) return;
+    const carries = mutation.op === "create" || carriesContent(mutation.body);
+    const content = carries ? this.session.annotations.contentOf(id) : undefined;
+    if (content) this.carriedContent.set(mutation, content);
+    else this.carriedContent.delete(mutation);
+  }
+
+  /**
+   * Record, as a write of an annotation leaves, what the dataset holds once it
+   * lands (`AnnotationCollection.recordWrite`): the content its body carries,
+   * as kept when it was queued (`recordQueued`). An entity's write or a delete
+   * leaves no annotation content to record.
+   */
+  private recordWrite(mutation: ResourceMutation): (() => void) | undefined {
+    if (mutation.op === "delete" || mutation.resource === ENTITY_RESOURCE) return undefined;
+    const id = mutation.localAnnotationId;
+    if (!id) return undefined;
+    return this.session.annotations.recordWrite(id, {
+      content: this.carriedContent.get(mutation),
+    });
   }
 
   // ─── Record loader forwarder ──────────────────────────────────────────────

@@ -21,6 +21,19 @@ import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
  */
 export interface LocalAnnotationLocator {
   findLocalAnnotation(localAnnotationId: string): { persisted: boolean } | undefined;
+  /**
+   * Told each time a body is written into the queue — a mutation queued, or a
+   * queued body rewritten by a later gesture — with the mutation as the queue
+   * holds it. The body leaves later, when its annotation may have been edited
+   * again, so the owner of the annotations keeps here what this body carries.
+   */
+  recordQueued?(mutation: ResourceMutation): void;
+  /**
+   * Told as each mutation leaves for the backend, so the owner of the
+   * annotations can record what the dataset holds once it lands. Returns how to
+   * undo that record if the write fails.
+   */
+  recordWrite?(mutation: ResourceMutation): (() => void) | undefined;
 }
 
 /**
@@ -93,6 +106,7 @@ export class MutationQueue {
     if (existing && existing.op === "update") {
       existing.body = mutation.body;
       existing.widgetId = mutation.widgetId;
+      this.locator.recordQueued?.(existing);
     } else {
       this.append(mutation);
     }
@@ -126,6 +140,7 @@ export class MutationQueue {
     );
     if (pending && pending.op === "create" && !queuedUpdate) {
       Object.assign(pending.body, patch);
+      this.locator.recordQueued?.(pending);
       return;
     }
     // On the wire, or back in the queue with an update of its row behind it.
@@ -295,12 +310,14 @@ export class MutationQueue {
     return this.pending.find((m) => createdEntityId(m) === entityId);
   }
 
-  /** Append to the queue; returns the mutation as the queue holds it. */
+  /** Append to the queue, telling the locator; returns the mutation as the queue holds it. */
   private append(mutation: ResourceMutation): ResourceMutation {
     this.pending.push(mutation);
     // Read back rather than returned as given: the queue holds its own
     // reactive copy, the object `flush` sends and identifies by reference.
-    return this.pending[this.pending.length - 1];
+    const held = this.pending[this.pending.length - 1];
+    this.locator.recordQueued?.(held);
+    return held;
   }
 
   /**
@@ -317,10 +334,12 @@ export class MutationQueue {
   ): Promise<void> {
     this.pending = this.pending.filter((m) => m !== mutation);
     this.inFlight = mutation;
+    const undoRecord = this.locator.recordWrite?.(mutation);
     try {
       await this.run(datasetId, mutation);
     } catch (err) {
       this.inFlight = null;
+      undoRecord?.();
       this.failed(mutation, err, generation);
       return;
     }

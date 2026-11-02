@@ -191,6 +191,50 @@ export class AnnotationCollection implements AnnotationStore {
       annotation.entity = entity;
     }
   }
+
+  /**
+   * The annotation's content as it is now, as a detached copy: what a body
+   * queued for it now carries. A copy, because the collection's objects are
+   * reactive proxies that a later edit may change in place. Undefined when the
+   * annotation is not here.
+   */
+  contentOf(id: string): PersistedContent | undefined {
+    const annotation = this.find(id);
+    if (!annotation) return undefined;
+    const content: PersistedContent = {
+      geometry: annotation.geometry,
+      entityId: annotation.entityId,
+      entity: annotation.entity,
+    };
+    return $state.snapshot(content);
+  }
+
+  /**
+   * Record, as a write of this annotation leaves for the backend, what the
+   * dataset holds once it lands: the content the write carries.
+   *
+   * That content is the one taken when the body was queued (`contentOf`), not
+   * the annotation's content now: a write retried after a failure leaves with
+   * newer edits queued behind it, which it does not carry. A write that carries
+   * no content leaves the content recorded as it was.
+   *
+   * Recorded when the write leaves rather than when it lands, so that work
+   * begun while it is in flight is measured against what the dataset will hold
+   * once it lands. Returns how to put the previous record back if the write
+   * fails; nothing when the annotation is not in this collection.
+   *
+   * @param id The annotation the write is about.
+   * @param write `content`: what the write carries, if any.
+   */
+  recordWrite(id: string, write: { content?: PersistedContent }): (() => void) | undefined {
+    const annotation = this.find(id);
+    if (!annotation) return undefined;
+    const previousContent = annotation.persistedContent;
+    if (write.content) annotation.persistedContent = write.content;
+    return () => {
+      annotation.persistedContent = previousContent;
+    };
+  }
 }
 
 /**
