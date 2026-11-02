@@ -118,12 +118,18 @@ class PixanoJsonlExporter:
             "format": "pixano_jsonl",
             "media": {"mode": "uri" if self.media == "uris" else "embed"},
         }
+        # Recorded under `options` so the exported dataset.yaml stays a VALID
+        # import spec (ImportSpec forbids unknown top-level keys); the keys are
+        # inert on import and document how the export was produced.
+        export_options: dict[str, Any] = {}
         include_fields = self.options.get("include_record_fields")
         if include_fields:
-            # Recorded under `options` so the exported dataset.yaml stays a VALID
-            # import spec (ImportSpec forbids unknown top-level keys); the key is
-            # inert on import and documents how the export was produced.
-            spec_payload["options"] = {"include_record_fields": list(include_fields)}
+            export_options["include_record_fields"] = list(include_fields)
+        if self.reader.review_statuses:
+            # The reader applies the selection, so it is the one to say what it was.
+            export_options["review_statuses"] = list(self.reader.review_statuses)
+        if export_options:
+            spec_payload["options"] = export_options
         try:
             schema = SchemaSpec.from_dataset_info(dataset.info)
             spec_payload["schema"] = schema.model_dump(exclude_defaults=True, exclude_none=True)

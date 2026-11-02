@@ -16,6 +16,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence
 
+from pydantic import ValidationError
+
 from pixano.datasets.dataset_info import DatasetInfo
 
 
@@ -28,7 +30,7 @@ from .importer import DatasetImporter, SourceRef
 from .plan import AnalyzeLimits, ImportPlan
 from .progress import ProgressSink
 from .registry import FORMATS
-from .spec import ImportSpec
+from .spec import ExportSpec, ImportSpec
 
 
 def _resolve_importer(source: SourceRef, spec: ImportSpec, importer: DatasetImporter | None) -> DatasetImporter:
@@ -148,25 +150,61 @@ def export_dataset(
     format: str = "pixano_jsonl",
     media: str = "files",
     options: dict[str, Any] | None = None,
+    review_statuses: Sequence[str] = (),
 ) -> Path:
     """Export a dataset to a data format (spec §10).
 
     ``pixano_jsonl`` emits exactly the import grammar with explicit ids, so
     import → export → import is id-equal. Other formats arrive with their
     exporters (plan P3).
+
+    Args:
+        dataset: The dataset, or its directory.
+        destination: Destination directory.
+        format: ``pixano_jsonl`` or ``coco``.
+        media: ``files`` dumps embedded bytes beside the output; ``uris`` writes stored URIs.
+        options: Format options (``include_record_fields`` for ``pixano_jsonl``).
+        review_statuses: The review statuses of the model annotations to export; see
+            :class:`ExportSpec`. Empty exports every annotation.
+
+    Returns:
+        The destination directory.
+
+    Raises:
+        SpecValidationError: An argument is invalid, or the format cannot export.
     """
     from pixano.datasets.dataset import Dataset
 
+    from .reader import RecordBundleReader
+
     if media not in ("files", "uris"):
         raise SpecValidationError("media must be 'files' or 'uris'.")
+    # The CLI, the REST API and Python callers all describe an export through the same ExportSpec
+    # (spec §3); validating here covers the three.
+    try:
+        spec = ExportSpec.model_validate(
+            {
+                "format": format,
+                "destination": str(destination),
+                "media": media,
+                "options": options or {},
+                "review_statuses": review_statuses,
+            }
+        )
+    except ValidationError as error:
+        raise SpecValidationError(f"Invalid export spec: {error}") from None
 
     resolved = dataset if isinstance(dataset, Dataset) else Dataset(Path(dataset))
-    if format == "pixano_jsonl":
+    # One reader applies the review selection, so every format exports the same rows.
+    reader = RecordBundleReader(review_statuses=[status.value for status in spec.review_statuses])
+    if spec.format == "pixano_jsonl":
         from .formats.pixano_jsonl.exporter import PixanoJsonlExporter
 
-        return PixanoJsonlExporter(media=media, options=options).export(resolved, Path(destination))  # type: ignore[arg-type]
-    if format == "coco":
+        return PixanoJsonlExporter(media=spec.media, reader=reader, options=spec.options).export(
+            resolved, Path(destination)
+        )
+    if spec.format == "coco":
         from .formats.coco.exporter import CocoExporter
 
-        return CocoExporter(media=media).export(resolved, Path(destination))  # type: ignore[arg-type]
+        return CocoExporter(media=spec.media, reader=reader).export(resolved, Path(destination))
     raise SpecValidationError(f"Export format '{format}' is not available; use 'pixano_jsonl' or 'coco'.")
