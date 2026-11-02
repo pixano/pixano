@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from typing import ClassVar
+
 from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
@@ -21,6 +23,8 @@ class Classification(EntityAnnotation):
 
     labels: list[str]
     confidences: list[float]
+
+    MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ("confidences",)
 
     @model_validator(mode="after")
     def _validate_fields(self):

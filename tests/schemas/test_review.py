@@ -4,11 +4,37 @@
 # License: CECILL-C
 # =====================================
 
-"""The review status a model's annotation carries, and how a stored status reads."""
+"""The review status a model's annotation carries, how a stored status reads, and which fields
+hold the model's score."""
 
 import pytest
 
-from pixano.schemas import NOT_REVIEWED_STATUSES, BBox, ReviewStatus, review_status_of, stored_statuses
+from pixano import schemas
+from pixano.schemas import (
+    NOT_REVIEWED_STATUSES,
+    BBox,
+    BBox3D,
+    Classification,
+    CompressedRLE,
+    Entity,
+    KeyPoints,
+    KeyPoints3D,
+    ReviewStatus,
+    Tracklet,
+    is_entity_annotation,
+    model_score_fields,
+    review_status_of,
+    stored_statuses,
+)
+
+
+# What a model's score is called on the schemas that carry one. A field whose name holds one of
+# these words, on an entity annotation, must be declared in MODEL_SCORE_FIELDS.
+SCORE_WORDS = ("confidence", "score")
+
+
+def _annotation_schemas() -> list[type]:
+    return [value for value in vars(schemas).values() if isinstance(value, type) and is_entity_annotation(value)]
 
 
 def _box(**fields) -> BBox:
@@ -52,3 +78,35 @@ class TestReviewStatus:
         some status."""
         with pytest.raises(ValueError, match=status):
             _box(source_type="model", review_status=status)
+
+
+class TestModelScore:
+    @pytest.mark.parametrize(
+        "schema, fields",
+        [(BBox, ("confidence",)), (BBox3D, ("confidence",)), (Classification, ("confidences",))],
+    )
+    def test_each_schema_declares_its_own(self, schema: type, fields: tuple[str, ...]):
+        assert model_score_fields(schema) == fields
+
+    def test_a_subclass_keeps_its_parent_declaration(self):
+        class LabelledBox(BBox):
+            label: str = ""
+
+        assert model_score_fields(LabelledBox) == ("confidence",)
+
+    @pytest.mark.parametrize("schema", [CompressedRLE, KeyPoints, KeyPoints3D, Tracklet, Entity])
+    def test_a_schema_without_a_score_declares_none(self, schema: type):
+        assert model_score_fields(schema) == ()
+
+    def test_no_score_field_is_left_undeclared(self):
+        """A score left out would be erased by a person's edit, and taken for an edit."""
+        annotation_schemas = _annotation_schemas()
+        undeclared = {
+            (schema.__name__, name)
+            for schema in annotation_schemas
+            for name in schema.model_fields
+            if any(word in name for word in SCORE_WORDS) and name not in model_score_fields(schema)
+        }
+
+        assert annotation_schemas
+        assert undeclared == set()

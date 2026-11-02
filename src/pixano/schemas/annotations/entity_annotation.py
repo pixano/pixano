@@ -6,7 +6,7 @@
 
 import json
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import field_validator
 
@@ -68,6 +68,11 @@ class EntityAnnotation(RecordComponent):
     source_metadata: str = json.dumps({})
     view_id: str = ""
     review_status: str = ""
+
+    #: The fields holding the score a model gave the row, declared by each schema that has one.
+    #: Only the model writes them: a person's edit of a model's row does not change the model's
+    #: scores, and they are not part of the content an edit changes (`review.model_score_fields`).
+    MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ()
 
     @field_validator("review_status", mode="before")
     @classmethod
