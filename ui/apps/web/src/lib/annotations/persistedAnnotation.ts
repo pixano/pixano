@@ -29,10 +29,11 @@ export interface PersistedAnnotationFields<K extends AnnotationKind> {
   geometry: GeometryByKind[K];
   /**
    * The columns of the kind's rows that hold a model's score, in the order they
-   * are read — the score fields of the kind's backend schema. The kind states
-   * them here, next to its row mapping, so no shared module knows a kind's
-   * columns: the review reads the score from them. Omitted by a kind with no
-   * score.
+   * are read — as the kind's backend schema declares them (`MODEL_SCORE_FIELDS`
+   * in src/pixano/schemas). The kind states them here, next to its row mapping,
+   * so no shared module knows a kind's columns: the review reads the score from
+   * them, and the edit rule leaves them out of what an edit changes.
+   * Omitted by a kind with no score.
    */
   scoreFields?: readonly string[];
 }

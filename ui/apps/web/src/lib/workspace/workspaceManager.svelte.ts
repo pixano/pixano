@@ -468,7 +468,8 @@ export class WorkspaceManager {
   /**
    * Record, as a write of an annotation leaves, what the dataset holds once it
    * lands (`AnnotationCollection.recordWrite`): the content its body carries,
-   * as kept when it was queued (`recordQueued`). An entity's write or a delete
+   * as kept when it was queued (`recordQueued`), and the status an update
+   * stores. An entity's write or a delete
    * leaves no annotation content to record.
    */
   private recordWrite(mutation: ResourceMutation): (() => void) | undefined {
@@ -477,6 +478,7 @@ export class WorkspaceManager {
     if (!id) return undefined;
     return this.session.annotations.recordWrite(id, {
       content: this.carriedContent.get(mutation),
+      updateBody: mutation.op === "update" ? mutation.body : undefined,
     });
   }
 

@@ -63,8 +63,11 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   **Invariant (D9):** `buildUpdate`'s body must be a superset of `buildCreate`'s geometry
   fields with identical values otherwise, so `commitGeometryEdit` can patch a pending
   create with it.
-  **`buildUpdate` follows from the annotation alone.** A field taken from anywhere else
-  rewrites, on every edit, a part of the row the person did not change. A
+  **`buildUpdate` follows from the annotation alone.** The shared edit rule builds the
+  body twice — from the edited annotation and from its `persistedContent` — and queues
+  nothing when they agree (numbers within a float32 round trip, a model's score fields
+  aside). A field taken from anywhere else makes a save that changed nothing look like
+  an edit, which the server stores as a person's edit, accepting a model's row. A
   record-scoped kind writes the row's own view and stored format, never the editing
   widget's (`bbox3dPayloadBuilder.buildUpdate`).
   → register in `PAYLOAD_BUILDERS` (`payloadBuilders.ts`).
@@ -85,13 +88,14 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
   nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
   fails every registered loader in turn, so a loader that swallows its failure fails it.
-  **`scoreFields`** names the columns of the kind's rows that hold a model's score — the
-  score fields of its backend schema —, kept as a constant in the kind's folder
-  (`BBOX_SCORE_FIELDS = ["confidence"]` in `bboxSeedLoader.ts`; `["confidences"]` for a
-  classification). The review reads the score from them — the first column holding a
-  number, or a list's first valid number. Omit it for a kind with no score (mask,
-  keypoints, multi-path). No shared module names a score column, so a kind with a score
-  touches its own folder only.
+  **`scoreFields`** names the columns of the kind's rows that hold a model's score: the
+  ones its backend schema declares in `MODEL_SCORE_FIELDS` (`src/pixano/schemas`), kept as
+  a constant in the kind's folder (`BBOX_SCORE_FIELDS = ["confidence"]` in
+  `bboxSeedLoader.ts`; `["confidences"]` for a classification). The review reads the
+  score from them — the first column holding a number, or a list's first valid number —
+  and the edit rule leaves them out of what an edit changes. Omit it for a kind with no
+  score (mask, keypoints, multi-path). No shared module names a score column, so a kind
+  with a score touches its own folder only.
   Type the row as extending `EntityAnnotationColumns` (`api/annotations.ts`; the
   view-scoped `ViewScopedRow` already does), which declares the provenance and
   review columns. → register in `SEED_LOADERS` (`seedLoaders.ts`).

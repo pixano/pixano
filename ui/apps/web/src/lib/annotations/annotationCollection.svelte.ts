@@ -8,7 +8,11 @@ import type { ClassificationGeometry } from "./kinds/2d/classification/classific
 import type { KeypointsGeometry } from "./kinds/2d/keypoints/keypointsTypes.js";
 import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
-import type { AnnotationReview } from "./reviewStatus.js";
+import {
+  storedStatusAfterWrite,
+  type AnnotationReview,
+  type ReviewStatus,
+} from "./reviewStatus.js";
 import type { CoordsNorm, Rotation3x3 } from "./types.js";
 
 /**
@@ -211,7 +215,10 @@ export class AnnotationCollection implements AnnotationStore {
 
   /**
    * Record, as a write of this annotation leaves for the backend, what the
-   * dataset holds once it lands: the content the write carries.
+   * dataset holds once it lands: the content the write carries, and, for an
+   * update, the status the server stores for that body
+   * (`storedStatusAfterWrite`). So an edit of a model's row reads accepted as
+   * its write leaves, without waiting for anything to be read back.
    *
    * That content is the one taken when the body was queued (`contentOf`), not
    * the annotation's content now: a write retried after a failure leaves with
@@ -220,19 +227,42 @@ export class AnnotationCollection implements AnnotationStore {
    *
    * Recorded when the write leaves rather than when it lands, so that work
    * begun while it is in flight is measured against what the dataset will hold
-   * once it lands. Returns how to put the previous record back if the write
-   * fails; nothing when the annotation is not in this collection.
+   * once it lands: an edit taken back to the content on the wire sends nothing
+   * (the content compared is `persistedContent`), and a row whose edit is on
+   * the wire already reads accepted. Returns how to put the previous record
+   * back if the write fails — the status included, unless something has moved
+   * it since; nothing when the annotation is not in this collection.
    *
    * @param id The annotation the write is about.
-   * @param write `content`: what the write carries, if any.
+   * @param write `content`: what the write carries, if any; `updateBody`: the
+   *   body of an update (a create moves no status).
    */
-  recordWrite(id: string, write: { content?: PersistedContent }): (() => void) | undefined {
+  recordWrite(
+    id: string,
+    write: { content?: PersistedContent; updateBody?: Readonly<Record<string, unknown>> },
+  ): (() => void) | undefined {
     const annotation = this.find(id);
     if (!annotation) return undefined;
     const previousContent = annotation.persistedContent;
+    const previousStatus = annotation.review?.status;
+    let statusMovedTo: ReviewStatus | "" | undefined;
+
     if (write.content) annotation.persistedContent = write.content;
+    const review = annotation.review;
+    if (review && write.updateBody) {
+      const stored = storedStatusAfterWrite(review, write.updateBody);
+      if (review.status !== stored) {
+        review.status = stored;
+        statusMovedTo = stored;
+      }
+    }
+
     return () => {
       annotation.persistedContent = previousContent;
+      const current = annotation.review;
+      // Put back only a status nothing has moved since the write left.
+      const untouched = statusMovedTo !== undefined && current?.status === statusMovedTo;
+      if (current && untouched && previousStatus !== undefined) current.status = previousStatus;
     };
   }
 }
