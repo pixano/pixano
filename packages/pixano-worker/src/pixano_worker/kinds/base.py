@@ -52,7 +52,7 @@ the job would mint new rows at every submission instead of replacing the previou
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Iterable, TypeVar
+from typing import Any, Generic, Iterable, Iterator, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -145,10 +145,34 @@ class JobKind(ABC, Generic[ParamsT]):
     #: into every row it produced. A kind extends the set with its own.
     params_not_in_provenance: frozenset[str] = frozenset({"chunk_size"})
 
+    #: The media types this kind knows how to send to the inference. A job that chooses
+    #: another is refused whole at planning — see `refuse_unsupported_media`. Empty for a kind
+    #: that reads no media.
+    supported_media: frozenset[str] = frozenset()
+
     #: What this kind produces, in the provenance vocabulary of the Pixano schemas. Most kinds
     #: run a model; a kind that does not run one must say so, so that its output is not taken
     #: for a prediction.
     source_type: str = "model"
+
+    def refuse_unsupported_media(self, chosen: Iterable[str]) -> None:
+        """Refuse the whole job when the user chose a media type this kind cannot process.
+
+        Whole, not partly: a job that silently ran on the images and skipped the point clouds
+        would look finished while doing less than asked. The user either serves what the
+        missing type needs, or narrows the selection — a decision the job must not take for
+        them.
+
+        Raises:
+            ValueError: A chosen media type is not supported, named in the message.
+        """
+        unsupported = sorted(set(chosen) - self.supported_media)
+        if unsupported:
+            raise ValueError(
+                f"the '{self.name}' job cannot process {', '.join(unsupported)}: it handles "
+                f"{', '.join(sorted(self.supported_media)) or 'no media'}. Run it on those media only, "
+                "or serve a model that processes the others."
+            )
 
     def model_identity(self, params: ParamsT) -> ModelIdentity | None:
         """The model this job runs, for the provenance of every row it writes.
@@ -269,3 +293,22 @@ class JobKind(ABC, Generic[ParamsT]):
     def validate_params(self, raw: dict[str, Any]) -> ParamsT:
         """Re-read the parameters stored in the database."""
         return self.params_model.model_validate(raw)
+
+
+def media_chunks(reader: "JobReader", media: Iterable[str], chunk_size: int) -> Iterator[Chunk]:
+    """Batches of media of the chosen types, one table per chunk.
+
+    A task is a medium: the cost of a chunk is its number of inference calls, one per medium,
+    so batches of media stay alike where batches of records held six images or none. A chunk
+    never mixes tables, hence media types, since two types do not go to the same model.
+    """
+    for media_type in dict.fromkeys(media):
+        for table in reader.media_tables(media_type):
+            batch: list[str] = []
+            for view_id in reader.ids(table):
+                batch.append(view_id)
+                if len(batch) == chunk_size:
+                    yield Chunk(payload={"table": table, "view_ids": batch}, task_count=len(batch))
+                    batch = []
+            if batch:
+                yield Chunk(payload={"table": table, "view_ids": batch}, task_count=len(batch))

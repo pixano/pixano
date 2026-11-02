@@ -165,7 +165,10 @@ class _Source:
         record_ids: list[str] | None = None,
     ) -> list[Any]:
         if table_name == "images":
-            return [_Row(f"img-{i}", record_id=i, uri=f"/medias/{i}.jpg") for i in record_ids or []]
+            if ids is None:
+                end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+                ids = [f"img-{n}" for n in range(skip, end)]
+            return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 

@@ -181,7 +181,7 @@ A failure **without** a response — status 0 from the client, which is how it w
 
 ### 8.3 Skipped is not quarantined
 
-A record the calculation does not apply to is counted, not stored. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
+A task the calculation does not apply to is counted, not stored — the embeddings kind plans existing media only and skips nothing, but a kind that plans by record still may. Otherwise a lidar dataset would fill the quarantine with 26 362 rows that are not errors. A kind's outcome is `produced + skipped + quarantined`, and must total the chunk's `task_count`; a kind that miscounts is a fatal failure.
 
 ### 8.4 What a job says when it ends
 
@@ -248,7 +248,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 ## 12. Writes into LanceDB
 
-**Identifiers are derived from the work** — the kind, the model, the key and the rank — so a replayed chunk replaces its rows instead of adding to them, and another model's rows for the same key are left alone. An identifier is a prefix shared by everything a key produced, then the rank: a replay finds every row of a previous run by prefix and deletes exactly those beyond what it wrote. A first version probed 32 ranks ahead, and a detection that shrank by more left ghost rows; the replacement is now exact, scoped by (kind, model, key) — not by (job, item): the job is the wrong scope, since a rerun must replace the previous run's rows. The embeddings table keeps the identifiers it was first written with, a digest of (kind, record): one vector per record, replaced by its record, so a rerun overwrites the vectors already there.
+**Identifiers are derived from the work** — the kind, the model, the key and the rank — so a replayed chunk replaces its rows instead of adding to them, and another model's rows for the same key are left alone. An identifier is a prefix shared by everything a key produced, then the rank: a replay finds every row of a previous run by prefix and deletes exactly those beyond what it wrote. A first version probed 32 ranks ahead, and a detection that shrank by more left ghost rows; the replacement is now exact, scoped by (kind, model, key) — not by (job, item): the job is the wrong scope, since a rerun must replace the previous run's rows. An embedding's identifier is a digest of the kind and its medium, without the model, since the table holds one (below): a rerun overwrites a medium's vector. Vectors written one per record, under the identifiers of an earlier version, are not overwritten: they stay beside the per-medium ones.
 
 **Writes to one dataset are serialised** inside a worker, under one lock per dataset: a chunk's `write`, and a job's `prepare` at planning. Processing still overlaps. Outside that lock, a `prepare` that writes, planned while another job's chunk wrote the same dataset, would meet the dataset's own lock, which never waits, and fail — or fail that chunk, for good. Across processes — another worker, the application's saves — nothing serialises them, and the dataset's lock refuses whichever comes second: a person's save then gets a 409, a chunk fails (§8.1), a planning is postponed (§10). Serialising them across processes is step 4's.
 
@@ -268,7 +268,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **A media path is normalised before the root check.** `/medias/../etc/passwd` passed it.
 
-**One image per record.** The embeddings kind embeds the first image view LanceDB returns for a record; on nuScenes, a record has several cameras and one is embedded. Written in the kind; not fixed, because the right fix depends on the grain of embeddings — per record or per view — which is a product decision (§19).
+**One embedding per medium, media types chosen by the user.** A record may hold several media — a nuScenes record has six camera images and a point cloud. A job's parameters name the media types it covers (`image`, `video`, `point_cloud`, `text`, from `pixano.schemas.media_type_of`, where a video frame belongs to its video); a kind declares the types it can send to the inference, and a job choosing another is refused whole at planning, the types named — the user serves what they need or narrows the selection. A task is a medium: a chunk's cost is its number of inference calls, so batches of media stay alike where batches of records held six images or none, and a chunk never mixes tables. The payload is `{table, view_ids}`; a chunk queued by an earlier version, by record, fails saying so. A quarantined item is a medium, its record in the detail.
 
 ## 14. Chunk size, measured
 
