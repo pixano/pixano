@@ -92,15 +92,18 @@ interface LocalAnnotation<G = unknown> {
   persisted: boolean;       // false = draft (create still queued)
   entity?: Record<string, unknown>;
   review?: AnnotationReview; // provenance + review status (seed envelope); none on a draft
+  persistedContent?: PersistedContent<G>; // what the dataset holds: {geometry, entityId, entity}
 }
 ```
 
 Optimistic edits mutate `geometry` in place; the pending mutation queue is the
-ledger of unsaved changes. A single **record-scoped** `AnnotationCollection`
-(`.svelte.ts` runes class) lives on `WorkspaceSession.annotations` — one instance
-per loaded record, shared by every widget viewing it (so moving a 3D box updates
-its 2D projection live, and two widgets never diverge). Image widgets see the
-record through a `ViewScopedAnnotations` facade that filters to their view plus
+ledger of unsaved changes, and `persistedContent` — a detached copy, set by the
+seed envelope — is what the content was before them.
+
+A single **record-scoped** `AnnotationCollection` (`.svelte.ts` runes class)
+lives on `WorkspaceSession.annotations` — one instance per loaded record, shared
+by every widget viewing it (so moving a 3D box updates its 2D projection live,
+and two widgets never diverge). Image widgets see the record through a `ViewScopedAnnotations` facade that filters to their view plus
 `RECORD_SCOPED_KINDS` (e.g. `bbox3d`); writes pass through to the one collection.
 
 ### 2. The `scene/` contracts (shared seam)

@@ -56,6 +56,21 @@ export interface LocalAnnotation<G = unknown> {
    * nothing to review — so draft tools never have to fill it.
    */
   review?: AnnotationReview;
+  /**
+   * What the dataset holds for this annotation's content, as last read or
+   * written — the content an unsaved edit started from. Kept apart from
+   * `geometry`/`entityId`/`entity`, which an edit overwrites in place, so that
+   * an edit that puts the content back as stored is seen to change nothing.
+   * Absent on a draft no write has carried yet.
+   */
+  persistedContent?: PersistedContent<G>;
+}
+
+/** The part of an annotation a person's edit changes, as the dataset holds it. */
+export interface PersistedContent<G = unknown> {
+  geometry: G;
+  entityId: string;
+  entity?: Record<string, unknown>;
 }
 
 /** Normalized xywh in [0, 1] — same convention as the backend BBox rows. */

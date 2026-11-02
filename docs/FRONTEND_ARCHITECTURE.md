@@ -423,7 +423,8 @@ reassignment on `E` or deleting the selection on Backspace.
 ### `LocalAnnotation<G>` (`annotations/annotationCollection.svelte.ts`)
 The one in-memory shape for **every** kind — pure data, no methods:
 ```ts
-{ id, entityId, kind, viewId, geometry: G, persisted, entity?, review? }
+{ id, entityId, kind, viewId, geometry: G, persisted, entity?, review?,
+  persistedContent? }
 ```
 - `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask" | "keypoints" |
   "multi_path" | "classification"`).
@@ -437,6 +438,10 @@ The one in-memory shape for **every** kind — pure data, no methods:
   from `source_metadata`, score. Read once, leniently, by the shared envelope
   every seed loader builds through (`persistedAnnotation`, §8); absent on a draft,
   which is a person's work with nothing to review.
+- `persistedContent` is a detached copy of what the dataset holds of the
+  content — `{geometry, entityId, entity}` — set by the envelope. An edit
+  overwrites `geometry`/`entityId`/`entity` in place; this copy is what the
+  content was before it. Absent on a draft no write has carried yet.
 
 ### `AnnotationCollection` — the record-scoped source of truth
 `$state` list + `selectedId`, with `find/byKind/add/remove/select/setGeometry/
@@ -617,7 +622,7 @@ person's annotation and a draft are not reviewable.
   none for the others), the score fields of its backend schema.
 - `annotations/persistedAnnotation.ts` —
   `persistedAnnotation(row, {kind, viewId, geometry, scoreFields}, ctx)`, the
-  one `LocalAnnotation` envelope, `review` included. Both
+  one `LocalAnnotation` envelope, `review` and `persistedContent` included. Both
   `createViewScopedSeedLoader` and the record-scoped `bbox3dSeedLoader` use it,
   so no loader can forget the review.
 
