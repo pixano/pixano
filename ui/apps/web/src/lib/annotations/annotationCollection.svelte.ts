@@ -8,6 +8,7 @@ import type { ClassificationGeometry } from "./kinds/2d/classification/classific
 import type { KeypointsGeometry } from "./kinds/2d/keypoints/keypointsTypes.js";
 import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
+import type { AnnotationReview } from "./reviewStatus.js";
 import type { CoordsNorm, Rotation3x3 } from "./types.js";
 
 /**
@@ -49,6 +50,12 @@ export interface LocalAnnotation<G = unknown> {
    * annotations so UIs can display labels without an extra fetch.
    */
   entity?: Record<string, unknown>;
+  /**
+   * Provenance and review status, read from the row by the shared seed
+   * envelope (`persistedAnnotation`). Absent on a draft — a person's work, with
+   * nothing to review — so draft tools never have to fill it.
+   */
+  review?: AnnotationReview;
 }
 
 /** Normalized xywh in [0, 1] — same convention as the backend BBox rows. */

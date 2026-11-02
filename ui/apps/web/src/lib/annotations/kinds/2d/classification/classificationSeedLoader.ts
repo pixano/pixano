@@ -35,6 +35,13 @@ function toGeometry(row: ClassificationRow): ClassificationGeometry | null {
 }
 
 /**
+ * The column of a classification's row that holds a model's scores, one per
+ * label, as the backend's `Classification` schema declares it: the review shows
+ * the first label's score.
+ */
+const CLASSIFICATION_SCORE_FIELDS: readonly string[] = ["confidences"];
+
+/**
  * REST→local mapping for classifications. There is no geometry to convert — a
  * classification annotates the whole view, so its payload is the label list and
  * nothing else.
@@ -46,4 +53,5 @@ export const classificationSeedLoader = createViewScopedSeedLoader<
   kind: "classification",
   resource: CLASSIFICATION_RESOURCE,
   toGeometry,
+  scoreFields: CLASSIFICATION_SCORE_FIELDS,
 });

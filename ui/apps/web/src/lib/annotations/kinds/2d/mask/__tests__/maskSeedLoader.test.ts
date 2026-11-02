@@ -110,3 +110,18 @@ describe("maskSeedLoader", () => {
     await expect(maskSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });
+
+describe("maskSeedLoader — no score", () => {
+  it("reads none, whatever a row carries: the mask's schema declares no score column", async () => {
+    const row = {
+      ...makeRow(),
+      source_type: "model",
+      review_status: "pending",
+      confidence: 0.5,
+    } as MaskRow;
+    const [mask] = await maskSeedLoader.load(makeContext([row]));
+
+    expect(mask.review?.confidence).toBeUndefined();
+    expect(mask.review?.scoreFields).toEqual([]);
+  });
+});

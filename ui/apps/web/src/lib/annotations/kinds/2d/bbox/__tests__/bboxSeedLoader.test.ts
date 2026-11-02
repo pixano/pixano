@@ -122,3 +122,13 @@ describe("bboxSeedLoader — view resolution", () => {
     await expect(bboxSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });
+
+describe("bboxSeedLoader — a model's score", () => {
+  it("is read from the column the box's schema declares", async () => {
+    const [box] = await bboxSeedLoader.load(
+      makeContext([makeRow({ source_type: "model", review_status: "pending", confidence: 0.87 })]),
+    );
+
+    expect(box.review).toMatchObject({ confidence: 0.87, scoreFields: ["confidence"] });
+  });
+});

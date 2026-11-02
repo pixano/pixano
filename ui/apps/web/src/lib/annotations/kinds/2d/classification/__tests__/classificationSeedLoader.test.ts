@@ -108,3 +108,19 @@ describe("classificationSeedLoader", () => {
     await expect(classificationSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
 });
+
+describe("classificationSeedLoader — a model's scores", () => {
+  it("are read from the per-label column the schema declares: the first label's is shown", async () => {
+    const row = {
+      ...makeRow({ labels: ["cat", "dog"], confidences: [0.6, 0.3] }),
+      source_type: "model",
+      review_status: "pending",
+    };
+    const [classification] = await classificationSeedLoader.load(makeContext([row]));
+
+    expect(classification.review).toMatchObject({
+      confidence: 0.6,
+      scoreFields: ["confidences"],
+    });
+  });
+});

@@ -9,15 +9,15 @@ import type {
   GeometryByKind,
   LocalAnnotation,
 } from "./annotationCollection.svelte.js";
+import { persistedAnnotation, type PersistedRow } from "./persistedAnnotation.js";
 import type { AnnotationSeedLoader, SeedLoadContext, ViewInfo } from "./seedLoaders.js";
 
 /**
  * The columns every view-scoped annotation row carries, whatever its kind:
- * an identity, its parent entity, and the view it was drawn in.
+ * an identity, its parent entity, its provenance and review status, and the
+ * view it was drawn in.
  */
-export interface ViewScopedRow {
-  id: string;
-  entity_id: string;
+export interface ViewScopedRow extends PersistedRow {
   view_id: string;
 }
 
@@ -39,7 +39,8 @@ export interface ViewScopedRow {
  *
  * Lives in its own module rather than in `seedLoaders.ts` on purpose: the
  * registry there imports every kind, so a kind importing a *value* back from it
- * would close a runtime import cycle. This module only imports types.
+ * would close a runtime import cycle. This module imports only types and the
+ * envelope (`persistedAnnotation.ts`), which imports no registry either.
  *
  * Record-scoped kinds (`bbox3d`) do not use this: they keep every row
  * regardless of the displayed views, which is the one rule this helper encodes.
@@ -52,6 +53,8 @@ export function createViewScopedSeedLoader<
   resource: string;
   /** Returns `null` to drop a row the kind considers malformed. */
   toGeometry: (row: TRow, view: ViewInfo) => GeometryByKind[K] | null;
+  /** The columns of the kind's rows holding a model's score (`PersistedAnnotationFields`). */
+  scoreFields?: readonly string[];
 }): AnnotationSeedLoader {
   return {
     kind: spec.kind,
@@ -68,15 +71,13 @@ export function createViewScopedSeedLoader<
         const geometry = spec.toGeometry(row, view);
         if (geometry === null) continue;
 
-        annotations.push({
-          id: row.id,
-          entityId: row.entity_id,
-          kind: spec.kind,
-          viewId: view.id,
-          geometry,
-          persisted: true,
-          entity: ctx.entitiesById.get(row.entity_id),
-        });
+        annotations.push(
+          persistedAnnotation(
+            row,
+            { kind: spec.kind, viewId: view.id, geometry, scoreFields: spec.scoreFields },
+            ctx,
+          ),
+        );
       }
       return annotations;
     },
