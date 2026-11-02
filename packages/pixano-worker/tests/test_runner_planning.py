@@ -233,9 +233,12 @@ def threads() -> WorkerThreads:
 
 async def _until_free(threads: WorkerThreads) -> None:
     """Wait for the threads a test left behind to finish what they were running."""
-    async with asyncio.timeout(HUNG_AFTER_S):
+
+    async def drained() -> None:
         while threads.stuck:
             await asyncio.sleep(SHORT_WAIT_S)
+
+    await asyncio.wait_for(drained(), HUNG_AFTER_S)
 
 
 def _planning(kind: FakeKind) -> tuple[Registry, _JobsTable]:
