@@ -6,6 +6,7 @@ License: CECILL-C
 
 import type { DatasetLayout } from "./datasetLayout.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
+import type { ReviewFilterKey } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft } from "$lib/annotations/scene/sceneContext.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import type { FieldInfo } from "$lib/types/dataset.js";
@@ -49,6 +50,18 @@ export class WorkspaceSession {
    */
   visibleEntityIds = $state<Set<string> | null>(null);
   /**
+   * The review filter keys switched off: annotations under these keys are not
+   * displayed (drafts always are). None is, by default.
+   *
+   * A reviewer's preference rather than a property of the record, so neither a
+   * record load nor `reset()` touches it: the next record opens with the filter
+   * the reviewer was working with.
+   *
+   * Always replaced, never mutated: Svelte 5 does not track a Set's add/delete,
+   * so a change assigns a new one — hence the read-only type.
+   */
+  hiddenReviewStatuses = $state<ReadonlySet<ReviewFilterKey>>(new Set());
+  /**
    * In-progress geometry the active editing gesture broadcasts on every pointer
    * move, so widgets in other mediums can preview it live (e.g. re-projecting a
    * 3D box onto images while it is dragged). Committed truth stays in
@@ -64,7 +77,8 @@ export class WorkspaceSession {
    *
    * What the workspace shows of the manager's own record of the flags
    * (`WorkspaceManager`), which alone is written to: always replaced, never
-   * mutated, since Svelte 5 does not track a Map's set/delete.
+   * mutated, since Svelte 5 does not track a Map's set/delete — like
+   * `hiddenReviewStatuses`.
    */
   stagedWork = $state<ReadonlyMap<string, StagedWorkHolder>>(new Map());
   /**

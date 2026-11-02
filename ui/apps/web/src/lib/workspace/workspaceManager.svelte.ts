@@ -21,7 +21,7 @@ import type {
   PersistedContent,
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
-import { carriesContent } from "$lib/annotations/reviewStatus.js";
+import { carriesContent, isShownByReviewFilter } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
@@ -236,6 +236,17 @@ export class WorkspaceManager {
     if (selected && selected.persisted && !this.isEntityVisible(selected.entityId)) {
       this.session.annotations.select(null);
     }
+  }
+
+  // ─── Review status filter ─────────────────────────────────────────────────
+  // Unlike the entity filter above, this one is applied for the renderers:
+  // every widget's view-scoped collection takes it as its display predicate
+  // (`buildSeam`), so a kind added later is filtered without a line of its own.
+  // Display-only all the same — `find`, drafts and save are never filtered.
+
+  /** Whether the review status filter lets this annotation show (drafts always do). */
+  isShownByReview(annotation: LocalAnnotation): boolean {
+    return isShownByReviewFilter(annotation, this.session.hiddenReviewStatuses);
   }
 
   // ─── Pending annotation (entity assignment) ───────────────────────────────

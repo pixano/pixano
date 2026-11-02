@@ -105,8 +105,25 @@ one that does.
 A single **record-scoped** `AnnotationCollection` (`.svelte.ts` runes class)
 lives on `WorkspaceSession.annotations` — one instance per loaded record, shared
 by every widget viewing it (so moving a 3D box updates its 2D projection live,
-and two widgets never diverge). Image widgets see the record through a `ViewScopedAnnotations` facade that filters to their view plus
+and two widgets never diverge). Every widget — image and
+point cloud alike, through `buildSeam` — sees the record through a
+`ViewScopedAnnotations` facade that filters to its view plus
 `RECORD_SCOPED_KINDS` (e.g. `bbox3d`); writes pass through to the one collection.
+
+**The `ViewScopedAnnotations` contract.** Two filters, applied differently:
+
+- the **view rule** (this view's annotations, plus every record-scoped one)
+  applies to every read, `find` included;
+- a **display predicate**, given at construction — the review status filter,
+  which `buildSeam` passes as `manager.isShownByReview` — applies to the
+  **display reads** only: `items`, `byKind`, `count`, `selected`/`selectedId`.
+  **Never to `find`**, which is the lifecycle's lookup: committing an edit,
+  flipping `persisted`, a HUD saving the box it holds. A row hidden from view is
+  still a row, and work already under way on it must still reach the queue.
+  Drafts always pass the predicate, and save is never filtered.
+
+So renderers and tools stay unaware of the review: they read what the facade lets
+through, and a kind added later is filtered without a line of its own.
 
 ### 2. The `scene/` contracts (shared seam)
 
@@ -178,7 +195,8 @@ duplication of seam wiring:
   of Discard — each of its raised holders' `discard`, then its flags lowered,
   another widget's work kept — which a delete pressed during a resize or a drag
   calls first. **This is the single entry point a new medium reuses** — it never
-  re-implements collection wiring or mutation plumbing.
+  re-implements collection wiring or mutation plumbing. Its collection is a
+  `ViewScopedAnnotations` carrying the review display predicate (§1).
 
 The toolbar is shared too: `components/widgets/AnnotationToolbar.svelte` (tool
 buttons + pending/save/discard) with a `controls` snippet for widget-specific
