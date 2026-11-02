@@ -71,6 +71,18 @@ before refilling it. Three rules, the first two checked by the suite:
 - **No `finalize` in return** until a kind needs one: what should happen at the end of a job
   is designed then, not by symmetry.
 
+It runs under the worker's write lock of the dataset, as a chunk's `write` does: the worker's
+chunks of other jobs may be writing the same dataset meanwhile, in other threads, and the
+dataset's own lock never waits. Another process writing the dataset — a person's save, another
+worker, an import — still makes that lock raise `DatasetBusyError`. Let it through: the runner
+then leaves the job in `planning` and plans it again a moment later, `prepare` included
+(backend-processing §10), whereas any other error fails the job. The runner's own lock is
+waited for ten seconds at most (`PLANNING_WRITE_LOCK_WAIT_S`): past them — a long write of this
+worker on the dataset, or one that hangs — the job is postponed the same way. And the whole
+planning, `plan` then `prepare`, has ten minutes (`PLANNING_TIMEOUT_S`): past them the job
+fails, and a `prepare` that had not started never starts. So a `prepare` must stay far below
+that, on the largest dataset it will meet.
+
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 
 Separate because they fail differently: an inference call can be retried, a write must never

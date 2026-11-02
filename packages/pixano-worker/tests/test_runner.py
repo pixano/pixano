@@ -23,6 +23,8 @@ from pixano_worker.threads import WorkerThreads
 from pixano_worker.writer import ModelIdentity
 from psycopg_pool import AsyncConnectionPool
 
+from pixano.datasets.utils.errors import DatasetBusyError
+
 
 FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
 
@@ -277,6 +279,39 @@ class TestPreparation:
 
         assert _state(db, job)[0] == "done"
         assert kind.prepared == [job]
+
+    async def test_a_dataset_busy_at_planning_leaves_the_job_to_be_planned_again(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        """Someone else writing the dataset says nothing about the job. It stays
+        in planning, without an error, and no planner takes it up before the retry delay; then it is
+        planned, and prepared again. Without PostgreSQL, on a real dataset: test_runner_planning.py."""
+        registry, kind = kind_registry
+        busy = [DatasetBusyError("Dataset is being modified; retry when the current operation finishes.")]
+        prepare = kind.prepare
+
+        def prepare_meeting_a_busy_dataset_once(writer, params):
+            prepare(writer, params)
+            if busy:
+                raise busy.pop()
+
+        kind.prepare = prepare_meeting_a_busy_dataset_once  # type: ignore[method-assign]
+        job = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+
+        assert await runner.plan_one(adb, registry) == job
+
+        row = db.execute(
+            f"SELECT state, error, planning_until - now() FROM {SCHEMA_NAME}.jobs WHERE id = %s", (job,)
+        ).fetchone()
+        assert row is not None and row[:2] == ("planning", None)
+        assert timedelta(0) < row[2] <= runner.PLANNING_RETRY_DELAY
+        assert await runner.plan_one(adb, registry) is None, "planned again before the delay"
+
+        db.execute(f"UPDATE {SCHEMA_NAME}.jobs SET planning_until = now() - interval '1 second' WHERE id = %s", (job,))
+        assert await runner.plan_one(adb, registry) == job
+
+        assert _state(db, job) == ("pending", 0, 40)
+        assert kind.prepared == [job, job]
 
 
 class TestTheWriterCarriesTheProvenance:

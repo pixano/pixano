@@ -178,6 +178,15 @@ class JobKind(ABC, Generic[ParamsT]):
         default, and it is what most kinds do: a kind only overrides this for a reset that its
         chunks cannot each do on their own — emptying a table before filling it, for example.
 
+        The runner calls it under its per-dataset write lock, as it does a chunk's `write`, so a
+        worker's planning never collides with its own chunks. A dataset another process is
+        writing (a person's save, another worker) postpones the planning instead of failing
+        the job: `prepare` runs again a moment later, hence the first rule below. So does a
+        write of this worker that keeps the lock beyond the runner's bounded wait for it. The
+        whole planning, `plan` then `prepare`, has a time limit, past which the job fails and
+        a `prepare` not started yet never starts: keep it far shorter, on the largest dataset
+        the kind will meet (backend-processing §10).
+
         Three rules, the first two checked by the contract suite:
 
         - **Idempotent.** Called twice, the dataset is in the same state as after once: a
