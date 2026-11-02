@@ -7,9 +7,19 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import { MASK_RESOURCE } from "../maskPayloadBuilder";
+import { maskBounds } from "../maskRaster";
 import { maskSeedLoader, type MaskRow } from "../maskSeedLoader";
+import type { MaskGeometry } from "../maskTypes";
+import {
+  CORNER,
+  IMAGE_SIZE,
+  paintedArea,
+  TRIANGLE,
+  type PycocotoolsMask,
+} from "./pycocotoolsMasks";
 import type { SeedLoadContext, ViewInfo } from "$lib/annotations/seedLoaders.js";
 import type { EntityRow } from "$lib/api/annotations.js";
+import { rleFrString } from "$lib/utils/maskUtils";
 
 const CAM_FRONT: ViewInfo = {
   id: "CAM_FRONT_0_0",
@@ -18,10 +28,14 @@ const CAM_FRONT: ViewInfo = {
   height: 900,
 };
 
-function makeContext(rows: MaskRow[], entities: EntityRow[] = []): SeedLoadContext {
+function makeContext(
+  rows: MaskRow[],
+  entities: EntityRow[] = [],
+  view: ViewInfo = CAM_FRONT,
+): SeedLoadContext {
   const views = new Map<string, ViewInfo>();
-  views.set(CAM_FRONT.id, CAM_FRONT);
-  views.set(CAM_FRONT.logicalName, CAM_FRONT);
+  views.set(view.id, view);
+  views.set(view.logicalName, view);
   return {
     datasetId: "ds",
     recordId: "rec_0",
@@ -109,6 +123,50 @@ describe("maskSeedLoader", () => {
     ctx.gateway = { ...ctx.gateway, listAnnotations: () => Promise.reject(new Error("boom")) };
     await expect(maskSeedLoader.load(ctx)).rejects.toThrow("boom");
   });
+});
+
+describe("maskSeedLoader — a mask a segmentation job wrote", () => {
+  /** The image the job segmented, as wide and as tall as the masks' grid. */
+  const SEGMENTED: ViewInfo = {
+    id: "image_0",
+    logicalName: "image",
+    width: IMAGE_SIZE[1],
+    height: IMAGE_SIZE[0],
+  };
+
+  /** The row `GET /masks` serves for a mask the worker wrote, pending review. */
+  function jobRow(mask: PycocotoolsMask): MaskRow {
+    return {
+      ...makeRow({ view_id: SEGMENTED.id, size: [...mask.size], counts: mask.counts }),
+      source_type: "model",
+      source_name: "segmentation",
+      review_status: "pending",
+    } as MaskRow;
+  }
+
+  /** Where the renderer finds the paint, to hang the mask's label on: read off the runs. */
+  function paintOf(geometry: MaskGeometry) {
+    const runs = rleFrString(geometry.counts);
+    return { bounds: maskBounds(runs, geometry.size), area: paintedArea(runs) };
+  }
+
+  it.each([
+    ["inside the image", TRIANGLE],
+    ["cut by the image's top-left corner, its counts starting with an empty run", CORNER],
+  ])(
+    "finds pycocotools' paint on a non-square image, column by column: a mask %s",
+    async (_case, mask) => {
+      const [loaded] = await maskSeedLoader.load(makeContext([jobRow(mask)], [], SEGMENTED));
+
+      // Kept as served: `[height, width]`, the string pycocotools wrote.
+      expect(loaded.geometry).toEqual({ size: IMAGE_SIZE, counts: mask.counts });
+      expect(loaded.review?.status).toBe("pending");
+      expect(paintOf(loaded.geometry as MaskGeometry)).toEqual({
+        bounds: mask.bounds,
+        area: mask.area,
+      });
+    },
+  );
 });
 
 describe("maskSeedLoader — no score", () => {
