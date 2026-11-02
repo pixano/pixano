@@ -8,6 +8,7 @@
 
 import hashlib
 import json
+import re
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -32,6 +33,15 @@ class _FakeRow:
         self.payload = payload
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The two reads the writer makes: by identifiers, or by the prefix filter of a cleanup."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
+    assert prefix is not None, f"unexpected filter in a test double: {where!r}"
+    return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+
+
 class _FakeDataset:
     """An in-memory dataset, which behaves like LanceDB on the only two operations the writer
     uses: upsert by identifier and deletion by identifiers."""
@@ -51,9 +61,8 @@ class _FakeDataset:
         for row_id in ids:
             table.pop(row_id, None)
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        table = self.tables.get(table_name, {})
-        return [table[row_id] for row_id in ids if row_id in table]
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        return _matching(self.tables.get(table_name, {}), ids, where)
 
     def open_table(self, table_name: str) -> Any:
         self.compactions.append(table_name)
@@ -185,6 +194,39 @@ class TestReplay:
 
         assert len(dataset.tables["toy"]) == 2
 
+    def test_a_result_that_shrinks_by_more_than_a_window_leaves_nothing_behind(self, dataset: _FakeDataset) -> None:
+        """The cleanup probed 32 ranks; a hundred boxes going to twenty kept 48."""
+        _writer(dataset).replace("toy", "item-1", [_FakeRow(str(n)) for n in range(100)])
+
+        _writer(dataset).replace("toy", "item-1", [_FakeRow(str(n)) for n in range(20)])
+
+        assert len(dataset.tables["toy"]) == 20
+
+    def test_another_model_adds_and_the_same_model_replaces(self, dataset: _FakeDataset) -> None:
+        """The replacement is scoped by (kind, model, key)."""
+        yolo = JobWriter(lambda: dataset, "detection", "job-1", model=ModelIdentity("yolo"))
+        detr = JobWriter(lambda: dataset, "detection", "job-2", model=ModelIdentity("detr"))
+        yolo.replace("toy", "item-1", [_FakeRow(str(n)) for n in range(5)])
+        detr.replace("toy", "item-1", [_FakeRow(str(n)) for n in range(3)])
+        assert len(dataset.tables["toy"]) == 8, "two models, two sets of rows"
+
+        JobWriter(lambda: dataset, "detection", "job-3", model=ModelIdentity("yolo")).replace(
+            "toy", "item-1", [_FakeRow("0"), _FakeRow("1")]
+        )
+
+        assert len(dataset.tables["toy"]) == 5, "yolo replaced its five by two, detr's three are untouched"
+
+    def test_a_row_without_a_rank_under_the_prefix_is_left_alone(self, dataset: _FakeDataset) -> None:
+        """Written by hand under a derived prefix: skipped, never a failure of every attempt."""
+        writer = JobWriter(lambda: dataset, "fake", "j")
+        stray_id = writer.ids_for("item-1", 1)[0].rsplit("-", 1)[0] + "-by-hand"
+        dataset.tables.setdefault("toy", {})[stray_id] = _FakeRow("stray")
+        dataset.tables["toy"][stray_id].id = stray_id
+
+        writer.replace("toy", "item-1", [_FakeRow("a")])
+
+        assert stray_id in dataset.tables["toy"]
+
     def test_an_empty_result_clears_the_key(self, dataset: _FakeDataset) -> None:
         _writer(dataset).replace("toy", "item-1", [_FakeRow("a"), _FakeRow("b")])
 
@@ -290,6 +332,25 @@ class TestAgainstRealLance:
 
         assert self._fingerprint(toy) == first
 
+    def test_a_shrinking_output_is_cleaned_exactly_by_the_real_store(self, toy) -> None:
+        """The prefix filter must be one LanceDB understands: `id LIKE 'prefix-%'`."""
+        from pixano.schemas.annotations.classification import Classification
+
+        writer = JobWriter(lambda: toy, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        def boxes(count: int) -> list[Classification]:
+            return [
+                Classification(id="", record_id="task-0", labels=["x"], confidences=[1.0], **writer.provenance())
+                for _ in range(count)
+            ]
+
+        writer.replace("classifications", "task-0", boxes(100))
+        assert len(toy.get_data("classifications", limit=None)) == 100
+
+        writer.replace("classifications", "task-0", boxes(20))
+
+        assert len(toy.get_data("classifications", limit=None)) == 20
+
     def test_resubmitting_does_not_duplicate(self, toy) -> None:
         self._run(toy, "job-1", 60)
         first = self._fingerprint(toy)
@@ -370,7 +431,21 @@ class TestRecordEmbeddings:
         with pytest.raises(ValueError, match="dinov2"):
             writer.write_record_embeddings(["r2"], [[0.3, 0.4]], model="dinov2")
 
-        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "r1", 0)]
+        assert [row.record_id for row in dataset.tables["embeddings"].values()] == ["r1"]
+
+    def test_a_rerun_overwrites_the_vectors_already_in_the_table(self, dataset: _FakeDataset) -> None:
+        """A vector keeps the identifier the table was first written with — a digest of the kind
+        and the record, with no rank after it — unlike the annotation rows: under a new format, a
+        rerun would add a second vector beside each one already there."""
+        written_before = hashlib.blake2b("embeddings\x00r1\x000".encode(), digest_size=16).hexdigest()[:22]
+        dataset.create_record_embedding_table(dim=2, model_id="clip")
+        dataset.tables["embeddings"][written_before] = _Vector(written_before, "r1", [0.1, 0.2])
+
+        JobWriter(lambda: dataset, "embeddings", "job-2").write_record_embeddings(["r1"], [[0.5, 0.6]], model="clip")
+
+        assert {row_id: row.vector for row_id, row in dataset.tables["embeddings"].items()} == {
+            written_before: [0.5, 0.6]
+        }
 
     def test_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")

@@ -28,19 +28,20 @@ import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Iterable, Protocol, Sequence
+from typing import Any, Callable, Protocol, Sequence
 
 
 logger = logging.getLogger("pixano-worker")
 
-# Length of derived identifiers. Long enough that a collision is out of reach, short enough to
-# stay readable in a table.
-_ID_LENGTH = 22
+# Length of the digest that opens a derived identifier. Long enough that a collision is out of
+# reach, short enough to stay readable in a table; the rank follows it, so that everything a
+# key produced shares one prefix and can be found — and cleaned — exactly.
+_ID_PREFIX_LENGTH = 16
 
-# Number of ranks probed beyond the current output when cleaning up. An output that shrinks
-# does so by a few rows, not by a hundred; beyond that, leftovers remain, which is better than
-# sweeping the table on every write.
-_LEFTOVER_PROBE = 32
+# Length of a record embedding's identifier, a digest without a rank: the format the embeddings
+# table was first written with, kept so that a rerun overwrites those vectors (see
+# `_record_embedding_id`).
+_RECORD_EMBEDDING_ID_LENGTH = 22
 
 # Every write creates a version of the Lance table; a job of 50,000 images in chunks of 8
 # creates 6,250 of them, and nothing reclaimed them — 101 versions measured after two jobs on
@@ -133,8 +134,8 @@ class DatasetWriteTarget(Protocol):
         """Delete rows by identifier."""
         ...
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        """Read the rows carrying these identifiers."""
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        """Read the rows carrying these identifiers, or those matching a filter."""
         ...
 
     def has_record_embeddings(self) -> bool:
@@ -186,24 +187,60 @@ def check_embedding_space(space: dict[str, Any] | None, model: str, dim: int | N
         )
 
 
-def derive_id(kind: str, key: str, index: int = 0) -> str:
+def derive_prefix(kind: str, key: str, model: str | None = None) -> str:
+    """The prefix every output of (kind, model, key) shares."""
+    digest = hashlib.blake2b(f"{kind}\x00{model or ''}\x00{key}".encode(), digest_size=16).hexdigest()
+    return digest[:_ID_PREFIX_LENGTH]
+
+
+def derive_id(kind: str, key: str, index: int = 0, model: str | None = None) -> str:
     """Build a stable identifier for an output.
 
-    Identity comes from the **work** — which processing, on what, which output — and not from
-    the execution that produced it. This is what makes a rerun job replace its results instead
-    of duplicating them: an identifier that carried the job would produce new rows on every
-    submission.
+    Identity comes from the **work** — which processing, with which model, on what, which
+    output — and not from the execution that produced it. This is what makes a rerun job
+    replace its results instead of duplicating them: an identifier that carried the job would
+    produce new rows on every submission. The model is part of it because another model's
+    outputs add to a kind's rather than replace them: two models, two sets of
+    rows for the same key.
+
+    The identifier is a prefix shared by everything the key produced, then the rank: this is
+    what lets a replay find every row of a previous run by prefix, and delete exactly those
+    beyond what it wrote — a bounded probe used to miss an output that shrank by more than
+    its window.
 
     Args:
         kind: The job kind, so that two processings do not step on each other.
         key: What the output is about — an item's identifier, generally.
         index: The rank of the output when there are several for the same key.
+        model: The model that produced it, when the kind runs one.
 
     Returns:
         A deterministic identifier.
     """
-    digest = hashlib.blake2b(f"{kind}\x00{key}\x00{index}".encode(), digest_size=16).hexdigest()
-    return digest[:_ID_LENGTH]
+    return f"{derive_prefix(kind, key, model)}-{index}"
+
+
+def _rank_of(row_id: str) -> int | None:
+    """The rank a derived identifier carries after its prefix; None for an id that has none.
+
+    The prefix is hexadecimal and fixed-length, so only a row written by hand under a derived
+    identifier could lack a rank. It is left alone rather than failing every attempt of the
+    chunk.
+    """
+    rank = row_id.rsplit("-", 1)[-1]
+    return int(rank) if rank.isdigit() else None
+
+
+def _record_embedding_id(kind: str, record_id: str) -> str:
+    """The identifier of a record's vector, in the format the embeddings table was first written with.
+
+    A digest of (kind, record, first rank), without the model and without a rank after a
+    prefix: a record has one vector, and the table holds one model, so a vector is replaced by
+    its record alone. Keeping that format lets a rerun overwrite the vectors already in a
+    dataset, rather than add a second set beside them under new identifiers.
+    """
+    digest = hashlib.blake2b(f"{kind}\x00{record_id}\x00{0}".encode(), digest_size=16).hexdigest()
+    return digest[:_RECORD_EMBEDDING_ID_LENGTH]
 
 
 class JobWriter:
@@ -293,16 +330,25 @@ class JobWriter:
 
     def ids_for(self, key: str, count: int) -> list[str]:
         """The identifiers a key will occupy for `count` outputs."""
-        return [derive_id(self.kind, key, index) for index in range(count)]
+        return [derive_id(self.kind, key, index, self._model_name) for index in range(count)]
+
+    @property
+    def _model_name(self) -> str | None:
+        return self.model.name if self.model is not None else None
 
     def replace(self, table_name: str, key: str, rows: Sequence[Any]) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
-        Two operations, and both are necessary: the rows are upserted on their derived
-        identifier, then **the surplus rows of a previous run are deleted**. Without that second
-        step, a replay that produced fewer outputs than before — a model that detects two
+        Three steps. What a previous run wrote for this (kind, model, key) is read by the
+        prefix its identifiers share. The new rows take the ranks in order and are upserted;
+        then **the rows of the previous run that no new row replaced are deleted**. Without that
+        last step, a replay that produced fewer outputs than before — a model that detects two
         objects where it used to see five — would leave three orphan rows that nothing would
         ever clean up.
+
+        The replacement is exact: scoped by (kind, model, key), which is what the prefix
+        encodes, so another model's rows for the same key are left alone, and no output
+        shrinks past what is cleaned.
 
         Args:
             table_name: The target table.
@@ -312,6 +358,13 @@ class JobWriter:
         Returns:
             The identifiers written.
         """
+        prefix = derive_prefix(self.kind, key, self._model_name)
+        previous = [
+            row
+            for row in self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
+            if _rank_of(row.id) is not None
+        ]
+
         written = self.ids_for(key, len(rows))
         for row, row_id in zip(rows, written):
             row.id = row_id
@@ -320,7 +373,11 @@ class JobWriter:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
 
-        self._drop_leftovers(table_name, key, kept=len(rows))
+        replaced = set(written)
+        stale = [row.id for row in previous if row.id not in replaced]
+        if stale:
+            self.dataset.delete_data(table_name, stale)
+            logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
         return written
 
     def _count_write(self, table_name: str) -> None:
@@ -346,28 +403,6 @@ class JobWriter:
             self.dataset.open_table(table_name).optimize(cleanup_older_than=KEEP_OLD_VERSIONS_FOR)
         except Exception as error:
             logger.warning("job %s: cannot compact %s (%s)", self.job_id, table_name, error)
-
-    def _drop_leftovers(self, table_name: str, key: str, kept: int) -> None:
-        """Erase what a previous run had written beyond `kept`.
-
-        Since identifiers are derived from a sequence of indices, the survivors of a shorter
-        replay are exactly the next ranks. We probe a bounded number of them: beyond that, an
-        output that shrank by more than `_LEFTOVER_PROBE` rows would leave leftovers, which is
-        preferable to sweeping the table on every write.
-        """
-        candidates = [derive_id(self.kind, key, index) for index in range(kept, kept + _LEFTOVER_PROBE)]
-        existing = self._existing(table_name, candidates)
-        if existing:
-            self.dataset.delete_data(table_name, existing)
-            logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(existing), key)
-
-    def _existing(self, table_name: str, ids: Iterable[str]) -> list[str]:
-        """Among these identifiers, those actually in the table."""
-        wanted = list(ids)
-        if not wanted:
-            return []
-        found = self.dataset.get_data(table_name, ids=wanted)
-        return [row.id for row in found]
 
     # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"
@@ -408,7 +443,7 @@ class JobWriter:
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
-            schema(id=derive_id(self.kind, record_id, 0), record_id=record_id, vector=list(vector))
+            schema(id=_record_embedding_id(self.kind, record_id), record_id=record_id, vector=list(vector))
             for record_id, vector in zip(record_ids, vectors)
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)

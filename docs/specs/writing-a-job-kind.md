@@ -121,10 +121,12 @@ expired can be taken over mid-flight. **Replaying must produce the same content,
 duplicates.**
 
 `writer.replace(table, key, rows)` is how. It derives each row's identifier from the _work_ —
-the kind, the key, the rank — never from the job, so a resubmission replaces instead of
-minting new rows. Then it deletes what a previous run left beyond the current output, which is
-the step plain replacement misses: a model that detected five objects and now sees two would
-otherwise strand three rows nothing would ever clean up.
+the kind, the model, the key, the rank — never from the job, so a resubmission replaces instead
+of minting new rows, and another model's rows for the same key are left alone. Then it deletes
+exactly what a previous run of the same model left beyond the current output, found by the
+prefix the key's identifiers share. That is the step plain replacement misses: a model that
+detected five objects and now sees two would otherwise strand three rows nothing would ever
+clean up.
 
 **Choose the key carefully.** It should be the smallest thing the output is about — usually a
 record id. The `label` kind uses one key per record, so re-labelling one record does not depend

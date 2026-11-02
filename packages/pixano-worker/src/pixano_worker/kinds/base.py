@@ -45,8 +45,10 @@ Failures fall into three families, and the engine handles each differently:
 
 `write` must be **idempotent**. Results go to LanceDB while progress goes to PostgreSQL: the
 two writes cannot share a transaction, so a worker that dies between the two will redo the
-chunk. An identifier derived from the job and the chunk's rank is enough to make the replay
-harmless.
+chunk. The writer makes the replay harmless by deriving each row's identifier from the work —
+the kind, the model, the key, the rank — and never from the job: an identifier that carried
+the job would mint new rows at every submission instead of replacing the previous run's
+(`JobWriter.replace`).
 """
 
 from abc import ABC, abstractmethod
