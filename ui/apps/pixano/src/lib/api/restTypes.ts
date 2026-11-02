@@ -73,6 +73,8 @@ export interface SearchCapabilitiesResponse {
   detail?: string | null;
   embedded_rows?: number;
   total_records?: number;
+  /** Embeddings belong to media: completeness is embedded_rows out of total_media. */
+  total_media?: number;
 }
 
 export interface FilterSchemaResponse {

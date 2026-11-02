@@ -94,7 +94,7 @@ License: CECILL-C
     ["missing_table", "empty", "dim_mismatch", "corrupt"].includes(embeddingsStatus),
   );
   const embeddedRows = $derived(filterSchema.search?.embedded_rows ?? 0);
-  const totalRecords = $derived(filterSchema.search?.total_records ?? 0);
+  const totalMedia = $derived(filterSchema.search?.total_media ?? 0);
   const embeddingModelId = $derived(filterSchema.search?.models?.[0] ?? "");
   // The search bar is semantic-only; exact matching is the filters' job.
   const searchReady = $derived(embeddingsStatus === "ready" || embeddingsStatus === "partial");
@@ -290,7 +290,7 @@ License: CECILL-C
                   : "inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}
               >
                 {#if embeddingsStatus === "partial"}
-                  {embeddedRows.toLocaleString()}/{totalRecords.toLocaleString()}
+                  {embeddedRows.toLocaleString()}/{totalMedia.toLocaleString()}
                   <CaretDown size={10} />
                 {:else}
                   <ArrowsClockwise size={14} />
@@ -310,7 +310,7 @@ License: CECILL-C
                       </p>
                     {/if}
                     <p class="text-xs text-muted-foreground tabular-nums">
-                      {embeddedRows.toLocaleString()} of {totalRecords.toLocaleString()} records embedded
+                      {embeddedRows.toLocaleString()} of {totalMedia.toLocaleString()} media embedded
                     </p>
                     {#if embeddingsDetail}
                       <p class="text-xs text-warning">{embeddingsDetail}</p>

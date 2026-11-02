@@ -47,6 +47,7 @@ from pixano.schemas import (
     is_sequence_frame,
     is_video,
     is_view_embedding,
+    media_type_of,
     validate_canonical_table_map,
 )
 from pixano.utils.python import to_sql_list, unique_list
@@ -1733,16 +1734,26 @@ class Dataset:
         return dict(self._record_embedding_space) if self._record_embedding_space is not None else None
 
     def record_embedding_health(self) -> dict[str, Any]:
-        """Cheap health check of the record-embedding storage.
+        """Health check of the record-embedding storage.
 
         The sidecar alone advertises semantic search; the physical LanceDB table is only
         touched at query time, so a crashed job or external deletion can leave the feature
-        advertised but broken. This inspects metadata only (no vector scan).
+        advertised but broken. This reads no vector, but it is not metadata only: it reads the
+        `view_id` of every row of the embeddings table to count the media embedded, and counts
+        the rows of each image table. Its cost grows with the number of vectors, and it runs
+        before every semantic search and every request for the explorer's filter schema;
+        keeping it cheap is an open question (`docs/OPEN_QUESTIONS.md`).
+
+        An embedding belongs to a medium, so completeness is counted in media: ``partial``
+        means some still image has no vector. Counting records instead said "complete" for a
+        record with one camera embedded out of six, and "partial" forever on a dataset whose
+        records hold no image at all, such as nuScenes' lidar sweeps.
 
         Returns:
-            ``{"status", "model_id", "dim", "rows", "records", "detail"}`` where status is one
-            of ``absent`` (no sidecar), ``missing_table``, ``empty``, ``dim_mismatch``,
-            ``corrupt``, ``partial`` (fewer vectors than records) or ``ready``.
+            ``{"status", "model_id", "dim", "rows", "records", "media", "embedded_media",
+            "detail"}`` where status is one of ``absent`` (no sidecar), ``missing_table``,
+            ``empty``, ``dim_mismatch``, ``corrupt``, ``partial`` (fewer media embedded than
+            media) or ``ready``.
         """
         space = self._record_embedding_space
         base: dict[str, Any] = {
@@ -1751,6 +1762,8 @@ class Dataset:
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
+            "media": self._still_image_count(),
+            "embedded_media": 0,
             "detail": None,
         }
         if space is None:
@@ -1781,13 +1794,37 @@ class Dataset:
                 "status": "dim_mismatch",
                 "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
             }
-        if rows < base["records"]:
+        # Counted in distinct media rather than rows: a table can hold rows that name no medium
+        # (written per record before embeddings were per medium) or two rows for one medium
+        # (the application's in-process path next to the worker's), and neither makes a medium
+        # embedded.
+        try:
+            view_ids = table.search().select(["view_id"]).limit(rows).to_arrow().column("view_id").to_pylist()
+        except Exception as exc:  # noqa: BLE001
+            return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be read: {exc}"}
+        base["embedded_media"] = len({view_id for view_id in view_ids if view_id})
+        if base["embedded_media"] < base["media"]:
             return {
                 **base,
                 "status": "partial",
-                "detail": f"{rows} of {base['records']} records embedded.",
+                "detail": f"{base['embedded_media']} of {base['media']} media embedded.",
             }
         return {**base, "status": "ready"}
+
+    def _still_image_count(self) -> int:
+        """How many still images the dataset holds — the media an embedding job covers today.
+
+        Video frames are images to the schemas but belong to their video, which no embedding
+        job covers yet.
+        """
+        total = 0
+        for table_name, schema in self.info.tables.items():
+            if media_type_of(schema) == "image":
+                try:
+                    total += self.open_table(table_name).count_rows()
+                except Exception:  # noqa: BLE001 - a health check must degrade, not raise
+                    continue
+        return total
 
     @dataset_write
     def drop_record_embeddings(self) -> None:

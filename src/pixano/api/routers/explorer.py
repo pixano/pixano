@@ -136,8 +136,9 @@ def get_filter_schema(
             models=models,
             status=str(health["status"]),
             detail=health["detail"],
-            embedded_rows=int(health["rows"]),
+            embedded_rows=int(health["embedded_media"]),
             total_records=int(health["records"]),
+            total_media=int(health["media"]),
         ),
     )
 
