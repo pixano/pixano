@@ -101,12 +101,12 @@ _write_locks_guard = threading.Lock()
 # lock for good.
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
-# How long the loop waits for each step of a planning — the preparation, then the split — before
-# it fails the job. Planning asks the kind which model it runs — a question to the inference
-# bounded by its own timeout —, prepares the dataset, then reads the identifiers it splits. Not
-# measured: a ceiling rather than an estimate, set far above that work, so that only a planning
-# stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it,
-# and the loop's turn, which it holds, is given back.
+# How long the loop waits for a planning — the split, then the preparation — before it fails the
+# job. Planning reads the identifiers it splits, asks the kind which model it runs — a question
+# to the inference bounded by its own timeout —, and prepares the dataset. Not measured: a ceiling
+# rather than an estimate, set far above that work, so that only a planning stuck in its reads or
+# in `prepare` — storage that stopped answering, a kind's bug — reaches it, and the loop's turn,
+# which it holds, is given back.
 PLANNING_TIMEOUT_S = 600.0
 
 # What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
@@ -253,18 +253,12 @@ async def plan_one(
 
     try:
         params = kind.validate_params(raw_params)
-        reader = _reader_for(library, dataset_id, media, fresh=True)
         async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
-            # Preparation precedes the split, under the same lease: a planner that dies between
-            # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
-            # is why `prepare` must be idempotent. The writer is built in the preparation's
-            # thread, not on the loop: naming the model may ask the inference.
-            await pool.run(
-                lambda: kind.prepare(_writer_for(library, dataset_id, kind, job_id, params), params),
+            chunks = await pool.run(
+                lambda: _plan_and_prepare(kind, library, dataset_id, media, job_id, params),
                 PLANNING_TIMEOUT_S,
             )
-            chunks = await pool.run(lambda: list(kind.plan(reader, params)), PLANNING_TIMEOUT_S)
     except TimeLimitExceeded:
         # This is the planning's own work that does not end: its reads or its `prepare`, on storage
         # that stopped answering, or a kind's bug. Planned again, it would hold the loop's turn for
@@ -298,6 +292,41 @@ async def plan_one(
     else:
         log.info("job %s: split abandoned, the job is no longer in planning", job_id)
     return job_id
+
+
+def _plan_and_prepare(
+    kind: JobKind,
+    library: Path | None,
+    dataset_id: str,
+    media: MediaResolver | None,
+    job_id: str,
+    params: JobParams,
+) -> list[Chunk]:
+    """Split a job on its dataset reopened, then prepare the dataset: the planning's own work.
+
+    The split first, then the preparation: everything that can refuse the job — a model the
+    dataset's embeddings were not computed with, a dataset with nothing to do — refuses it before
+    `prepare` has destroyed anything. The other order would let a `prepare` empty a table for a job
+    its plan then refuses. A planner that dies after `prepare` leaves no chunk, and the next one
+    redoes both — that is why `prepare` must be idempotent.
+
+    Runs in a thread: planning reads the dataset, and the writer asks the inference for its model.
+
+    Args:
+        kind: The job's kind.
+        library: The dataset library; None if none is configured.
+        dataset_id: The job's dataset.
+        media: The media resolver.
+        job_id: The job, for the writer's provenance.
+        params: The job's validated parameters.
+
+    Returns:
+        The chunks, empty when the job has nothing to do — then nothing was prepared.
+    """
+    chunks = list(kind.plan(_reader_for(library, dataset_id, media, fresh=True), params))
+    if chunks:
+        kind.prepare(_writer_for(library, dataset_id, kind, job_id, params), params)
+    return chunks
 
 
 async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk]) -> bool:

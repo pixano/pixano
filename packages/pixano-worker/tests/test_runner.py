@@ -221,7 +221,7 @@ class TestPreparation:
         registry.declare(db, "worker-test")
         return registry, kind
 
-    async def test_prepare_runs_before_the_plan_and_never_with_a_chunk(
+    async def test_prepare_runs_once_at_planning_and_never_with_a_chunk(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
     ) -> None:
         registry, kind = kind_registry
@@ -235,6 +235,31 @@ class TestPreparation:
 
         assert _state(db, job)[0] == "done"
         assert kind.prepared == [job], "no chunk prepares"
+
+    async def test_a_refused_plan_destroys_nothing(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry
+    ) -> None:
+        """`prepare` ran before the plan: a job the plan then refused had already had its dataset
+        prepared, for nothing.
+
+        A kind whose plan refuses — a model the dataset's vectors do not come from, say — or plans
+        nothing must never have its `prepare` run.
+        """
+        registry, kind = kind_registry
+
+        def refusing_plan(reader, params):
+            raise ValueError("the dataset's embeddings were computed with another model")
+
+        kind.plan = refusing_plan  # type: ignore[method-assign]
+        refused = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+        await runner.plan_one(adb, registry)
+
+        kind.plan = lambda reader, params: iter(())  # type: ignore[method-assign]
+        empty = _submit(db, params={"task_count": 40, "chunk_size": 10, "seconds_per_task": 0.0}, kind=kind.name)
+        await runner.plan_one(adb, registry)
+
+        assert (_state(db, refused)[0], _state(db, empty)[0]) == ("error", "error")
+        assert kind.prepared == []
 
     async def test_a_retried_job_with_chunks_is_not_prepared_again(
         self, db: psycopg.Connection, adb: psycopg.AsyncConnection, kind_registry

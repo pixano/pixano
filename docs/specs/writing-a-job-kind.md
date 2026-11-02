@@ -55,8 +55,12 @@ items, such as the label kind's `record_ids`, which would copy every identifier 
 
 ### `prepare(writer, params)` — optional
 
-Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
-never for a job retried with its chunks. The default does nothing, and most kinds keep it: it
+Runs once per job, under the planning lease, **after** `plan` has produced work and before
+the chunks are recorded; never when the plan was refused or empty, never for a replayed chunk,
+and never for a job retried with its chunks. After, so that everything that can refuse the
+job — a model the dataset's embeddings were not computed with, say — refuses it before
+anything is destroyed. So `plan` must not rely on what `prepare` will do. The default does
+nothing, and most kinds keep it: it
 exists for a state the chunks cannot each restore on their own, such as emptying a table
 before refilling it. Three rules, the first two checked by the suite:
 
