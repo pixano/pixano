@@ -6,7 +6,8 @@
 
 import json
 from enum import Enum
-from typing import Any, ClassVar
+from types import MappingProxyType
+from typing import Any, ClassVar, Mapping
 
 from pydantic import field_validator
 
@@ -73,6 +74,10 @@ class EntityAnnotation(RecordComponent):
     #: Only the model writes them: a person's edit of a model's row does not change the model's
     #: scores, and they are not part of the content an edit changes (`review.model_score_fields`).
     MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ()
+    #: The field each list of scores above scores, position by position, when there is one: a
+    #: classification's ``confidences[i]`` scores its ``labels[i]``. A person's edit of that field
+    #: moves the model's scores with the values they score (`review.model_score_alignment`).
+    MODEL_SCORE_ALIGNMENT: ClassVar[Mapping[str, str]] = MappingProxyType({})
 
     @field_validator("review_status", mode="before")
     @classmethod

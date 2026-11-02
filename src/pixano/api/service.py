@@ -18,7 +18,14 @@ from pydantic import BaseModel
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetIntegrityError
-from pixano.schemas import ReviewStatus, SchemaGroup, View, is_entity_annotation, model_score_fields
+from pixano.schemas import (
+    ReviewStatus,
+    SchemaGroup,
+    View,
+    is_entity_annotation,
+    model_score_alignment,
+    model_score_fields,
+)
 from pixano.utils.python import quote_sql_string
 
 from . import review
@@ -501,8 +508,60 @@ def _model_owned_fields(schema: type) -> tuple[str, ...]:
 
 
 def _keeping_what_the_model_owns(existing: LanceModel, data: dict[str, Any]) -> dict[str, Any]:
-    """A person's update of a model's row, without what only the model writes."""
-    return _without(data, _model_owned_fields(type(existing)))
+    """A person's update of a model's row, without what only the model writes.
+
+    The model's scores follow what they score: realigned when the update changes it.
+    """
+    return {**_without(data, _model_owned_fields(type(existing))), **_model_scores_realigned(existing, data)}
+
+
+def _model_scores_realigned(existing: LanceModel, data: dict[str, Any]) -> dict[str, list[Any]]:
+    """The model's scores of a row, moved with the values they score when an update changes them.
+
+    A list of scores can score another list field, position by position
+    (`pixano.schemas.model_score_alignment`). Kept as stored while that field changes, the scores
+    would score other values, or no longer match their number and fail the schema's validation.
+    So each value the model gave keeps the model's score, and a value the person adds takes the
+    score the client sent at its position. The client must send its scores aligned with the
+    field, as the schema requires of any row.
+
+    Args:
+        existing: The model's row as stored.
+        data: The update the client sent.
+
+    Returns:
+        The realigned scores, by score field. A score whose scored field the update leaves as
+        stored is absent: the model's scores stay as they are.
+
+    Raises:
+        review.ReviewRuleError: The update adds a value to the scored field without a score for
+            it, aligned with the field.
+    """
+    realigned: dict[str, list[Any]] = {}
+    for score_field, scored_field in model_score_alignment(type(existing)).items():
+        edited = data.get(scored_field)
+        stored = list(getattr(existing, scored_field))
+        if not isinstance(edited, list) or edited == stored:
+            # Left as stored, or not a list, which the schema's validation refuses.
+            continue
+        sent = data.get(score_field)
+        sent_aligned: list[Any] | None = sent if isinstance(sent, list) and len(sent) == len(edited) else None
+        # A value the model gave twice keeps both scores, in the model's order.
+        unclaimed = list(zip(stored, getattr(existing, score_field)))
+        scores = []
+        for position, value in enumerate(edited):
+            given = next((index for index, (scored, _) in enumerate(unclaimed) if scored == value), None)
+            if given is not None:
+                scores.append(unclaimed.pop(given)[1])
+            elif sent_aligned is not None:
+                scores.append(sent_aligned[position])
+            else:
+                raise review.ReviewRuleError(
+                    f"'{scored_field}' gains a value the model did not give, {value!r}: send "
+                    f"'{score_field}' with one score per value of '{scored_field}', in its order."
+                )
+        realigned[score_field] = scores
+    return realigned
 
 
 def _as_human_edit_of(existing: LanceModel, data: dict[str, Any]) -> dict[str, Any]:
@@ -510,7 +569,9 @@ def _as_human_edit_of(existing: LanceModel, data: dict[str, Any]) -> dict[str, A
 
     A model's row keeps what the model owns. The interface sends its own source ("Pixano",
     "other") and a confidence of 1 with every edit. Without this rule, the edit would erase
-    which model produced the row and with what score.
+    which model produced the row and with what score. A score follows what it scores: a
+    relabelled classification keeps the model's score of each label the model gave
+    (`_model_scores_realigned`).
 
     The review status follows the step 2 rules, whatever the kind of annotation (see `review`):
 

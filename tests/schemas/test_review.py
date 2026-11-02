@@ -7,6 +7,8 @@
 """The review status a model's annotation carries, how a stored status reads, and which fields
 hold the model's score."""
 
+import typing
+
 import pytest
 
 from pixano import schemas
@@ -22,6 +24,7 @@ from pixano.schemas import (
     ReviewStatus,
     Tracklet,
     is_entity_annotation,
+    model_score_alignment,
     model_score_fields,
     review_status_of,
     stored_statuses,
@@ -35,6 +38,10 @@ SCORE_WORDS = ("confidence", "score")
 
 def _annotation_schemas() -> list[type]:
     return [value for value in vars(schemas).values() if isinstance(value, type) and is_entity_annotation(value)]
+
+
+def _is_list_field(schema: type, name: str) -> bool:
+    return typing.get_origin(schema.model_fields[name].annotation) is list
 
 
 def _box(**fields) -> BBox:
@@ -110,3 +117,36 @@ class TestModelScore:
 
         assert annotation_schemas
         assert undeclared == set()
+
+
+class TestModelScoreAlignment:
+    def test_a_classification_scores_its_labels(self):
+        assert model_score_alignment(Classification) == {"confidences": "labels"}
+
+    @pytest.mark.parametrize("schema", [BBox, BBox3D, CompressedRLE, Tracklet, Entity])
+    def test_a_schema_without_a_list_of_scores_aligns_none(self, schema: type):
+        assert model_score_alignment(schema) == {}
+
+    def test_every_list_of_scores_says_what_it_scores(self):
+        """Left unsaid, a person's relabel would keep the model's scores where they stood, scoring
+        other labels, or a different number of them: the row would fail validation with a 400."""
+        unaligned = {
+            (schema.__name__, name)
+            for schema in _annotation_schemas()
+            for name in model_score_fields(schema)
+            if _is_list_field(schema, name) and name not in model_score_alignment(schema)
+        }
+
+        assert unaligned == set()
+
+    def test_an_aligned_score_is_a_declared_score_and_scores_a_list(self):
+        misdeclared = {
+            (schema.__name__, score, scored)
+            for schema in _annotation_schemas()
+            for score, scored in model_score_alignment(schema).items()
+            if score not in model_score_fields(schema)
+            or scored not in schema.model_fields
+            or not _is_list_field(schema, scored)
+        }
+
+        assert misdeclared == set()

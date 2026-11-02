@@ -123,7 +123,8 @@ Three ideas hold it together:
   - **review rules** on every entity annotation's update and create
     (`api/review.py`): a person's saved edit of a model's row accepts it and
     keeps the model's provenance and score (each schema declares its own score
-    fields — a box's `confidence`, a classification's `confidences`); the one
+    fields — a box's `confidence`, a classification's `confidences` — and a list
+    of scores follows the labels it scores when a person changes them); the one
     decision (`review_status`) is `accepted`, and any other value but an echo or
     `pending` is answered 400; a person's row takes no status. Rejecting a
     model's row is its delete. One rule set, every kind — see

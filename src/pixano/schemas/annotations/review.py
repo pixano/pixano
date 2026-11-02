@@ -25,6 +25,7 @@ both read as ``pending``.
 """
 
 _SCORE_DECLARATION = "MODEL_SCORE_FIELDS"
+_ALIGNMENT_DECLARATION = "MODEL_SCORE_ALIGNMENT"
 
 
 def review_status_of(stored: str) -> ReviewStatus:
@@ -59,7 +60,8 @@ def model_score_fields(cls: type) -> tuple[str, ...]:
 
     Each schema declares its own in ``MODEL_SCORE_FIELDS``: ``confidence`` for a box, ``confidences``
     for a classification. A person's edit of a model's row does not change them, and changing them
-    is not an edit.
+    is not an edit. A list of scores only moves with the values it scores
+    (`model_score_alignment`).
 
     Args:
         cls: An annotation schema.
@@ -70,8 +72,28 @@ def model_score_fields(cls: type) -> tuple[str, ...]:
     return tuple(getattr(cls, _SCORE_DECLARATION, ()))
 
 
+def model_score_alignment(cls: type) -> dict[str, str]:
+    """The field each list of model scores of a schema scores, position by position.
+
+    Each schema declares it in ``MODEL_SCORE_ALIGNMENT``, next to its ``MODEL_SCORE_FIELDS``: a
+    classification's ``confidences[i]`` scores its ``labels[i]``. A model's score follows what it
+    scores. When a person's edit changes the scored field, each value the model gave keeps the
+    model's score, and a value the person adds takes the score the client sent with it. Kept as
+    stored, the scores would score other values, or no longer match their number.
+
+    Args:
+        cls: An annotation schema.
+
+    Returns:
+        Each aligned score field, with the field it scores. Empty when no score is aligned with
+        another field, as a box's single ``confidence``.
+    """
+    return dict(getattr(cls, _ALIGNMENT_DECLARATION, {}))
+
+
 __all__ = [
     "NOT_REVIEWED_STATUSES",
+    "model_score_alignment",
     "model_score_fields",
     "review_status_of",
     "stored_statuses",

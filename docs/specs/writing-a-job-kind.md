@@ -177,8 +177,12 @@ leaves no row behind. What it means for a kind:
 - **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
   provenance: write the model's own score there, never a placeholder. Each schema names its
   score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a
-  classification. A new schema with a score declares it there; a guard test
-  (`tests/schemas/test_review.py`) fails on a score-like field left undeclared.
+  classification. A new schema with a score declares it there. A list of scores that scores
+  another field position by position — one score per label — also says so in
+  `MODEL_SCORE_ALIGNMENT` (`{"confidences": "labels"}` on a classification): when a person
+  changes the labels, each label the model gave keeps the model's score and a label the person
+  adds takes the score sent with it. A guard test (`tests/schemas/test_review.py`) fails on a
+  score-like field left undeclared, and on a list of scores that declares nothing it scores.
 
 ---
 

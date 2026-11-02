@@ -4,7 +4,8 @@
 # License: CECILL-C
 # =====================================
 
-from typing import ClassVar
+from types import MappingProxyType
+from typing import ClassVar, Mapping
 
 from pydantic import model_validator
 
@@ -25,6 +26,8 @@ class Classification(EntityAnnotation):
     confidences: list[float]
 
     MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ("confidences",)
+    # One score per label: a relabelled model classification keeps the model's score of each label it gave.
+    MODEL_SCORE_ALIGNMENT: ClassVar[Mapping[str, str]] = MappingProxyType({"confidences": "labels"})
 
     @model_validator(mode="after")
     def _validate_fields(self):
