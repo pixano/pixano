@@ -9,10 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from pixano.datasets import Dataset
+from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.io import ImportSpec, export_dataset, ffprobe_available, import_dataset
 from pixano.datasets.io.formats.pixano_jsonl import PixanoJsonlImporter
 from pixano.datasets.io.reader import RecordBundleReader
+from pixano.datasets.workspaces import WorkspaceType
+from pixano.schemas import BBox, Entity, EntityDynamicState, Image, Record, Relation, Tracklet
+from tests.datasets.io._review_fixture import KEPT_RELATIONS, KEPT_STATES, build_review_dataset
 from tests.datasets.io.formats.test_jsonl_importer import EXPECTED_COUNTS, NEEDS_FFPROBE, SPECS, materialize_corpus
 
 
@@ -184,7 +187,116 @@ class TestGoldenRoundTrips:
         assert rec.status == "validated"
 
 
+REVIEWED = ["accepted"]
+
+
+def _tracked_object_with_a_relation(path: Path, tracklet_source: str) -> Dataset:
+    """An object whose only box is pending, with its tracklet and dynamic state, and a person's
+    relation from their own box to the object's tracklet."""
+    dataset = Dataset.create(
+        path,
+        DatasetInfo(
+            name="relation_ds",
+            workspace=WorkspaceType.IMAGE,
+            record=Record,
+            entity=Entity,
+            entity_dynamic_state=EntityDynamicState,
+            bbox=BBox,
+            tracklet=Tracklet,
+            relation=Relation,
+            views={"image": Image},
+        ),
+    )
+
+    def box(box_id: str, entity_id: str, source_type: str, review_status: str = "") -> BBox:
+        return BBox(
+            id=box_id,
+            record_id="rec",
+            view_id="img",
+            entity_id=entity_id,
+            coords=[0.1, 0.1, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            source_type=source_type,
+            review_status=review_status,
+        )
+
+    dataset.add_records(
+        {
+            "records": [Record(id="rec", split="train")],
+            "images": [Image(id="img", record_id="rec", logical_name="image", uri="img.jpg", width=8, height=8)],
+            "entities": [Entity(id="e_obj", record_id="rec"), Entity(id="e_person", record_id="rec")],
+            "entity_dynamic_states": [
+                EntityDynamicState(id="s_obj", record_id="rec", entity_id="e_obj", view_id="img")
+            ],
+            "bboxes": [box("b_obj", "e_obj", "model", "pending"), box("b_person", "e_person", "human")],
+            "tracklets": [
+                Tracklet(
+                    id="t_obj",
+                    record_id="rec",
+                    view_id="img",
+                    entity_id="e_obj",
+                    start_timestep=0,
+                    end_timestep=1,
+                    source_type=tracklet_source,
+                )
+            ],
+            "relations": [
+                Relation(
+                    id="r_follows",
+                    record_id="rec",
+                    view_id="img",
+                    predicate="follows",
+                    subject_id="b_person",
+                    object_id="t_obj",
+                    source_type="human",
+                )
+            ],
+        }
+    )
+    return dataset
+
+
 class TestReaderGuarantees:
+    def test_review_selection_adds_no_query(self, tmp_path: Path):
+        dataset = build_review_dataset(tmp_path / "review_ds")
+
+        unfiltered: list[str] = []
+        filtered: list[str] = []
+        list(RecordBundleReader(query_counter=unfiltered.append).iter_bundles(dataset))
+        list(RecordBundleReader(query_counter=filtered.append, review_statuses=REVIEWED).iter_bundles(dataset))
+
+        assert filtered == unfiltered
+
+    def test_review_selection_keeps_relations_and_drops_states_with_their_entity(self, tmp_path: Path):
+        # Neither exporter writes relations; the reader still hands every consumer the same selection.
+        dataset = build_review_dataset(tmp_path / "review_ds")
+
+        (bundle,) = RecordBundleReader(review_statuses=REVIEWED).iter_bundles(dataset)
+
+        assert {row.id for row in bundle.components["relations"]} == KEPT_RELATIONS
+        assert {row.id for row in bundle.components["entity_dynamic_states"]} == KEPT_STATES
+
+    @pytest.mark.parametrize("source_type", ["model", "human"])
+    def test_a_kept_relation_naming_a_tracklet_keeps_its_entity(self, tmp_path: Path, source_type: str):
+        """A relation links annotations, a tracklet among them (`utils/integrity.py`): it protects
+        the entity of what it names. Naming the object's pending box kept the object, its tracklet
+        and its states; naming its tracklet kept none of them."""
+        dataset = _tracked_object_with_a_relation(tmp_path / "relation_ds", source_type)
+
+        (bundle,) = RecordBundleReader(review_statuses=REVIEWED).iter_bundles(dataset)
+
+        assert {row.id for row in bundle.components["entities"]} == {"e_obj", "e_person"}
+        assert [row.id for row in bundle.components["tracklets"]] == ["t_obj"]
+        assert [row.id for row in bundle.components["entity_dynamic_states"]] == ["s_obj"]
+        assert [row.id for row in bundle.components["relations"]] == ["r_follows"]
+        assert [row.id for row in bundle.components["bboxes"]] == ["b_person"]
+
+    @pytest.mark.parametrize("status", ["bogus", "", "corrected", "rejected"])
+    def test_reader_refuses_an_unknown_status(self, status: str):
+        with pytest.raises(ValueError):
+            RecordBundleReader(review_statuses=[status])
+
     def test_no_per_record_queries(self, tmp_path: Path):
         source = materialize_corpus("multiview", tmp_path / "src")
         dataset = _import(source, tmp_path / "data", "multiview")
