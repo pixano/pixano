@@ -182,6 +182,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
 
         return {
             "record_ids": [record_id for record_id, _ in embedded],
+            "view_ids": [images[record_id].id for record_id, _ in embedded],
             "vectors": [vector for _, vector in embedded],
             "skipped": skipped,
             "quarantined": quarantined,
@@ -200,15 +201,17 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def write(
         self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: EmbeddingsParams
     ) -> None:
-        """Write one vector per record, replacing the previous one.
+        """Write each vector under the image it was computed from, replacing the previous one.
 
-        The key is the record: recomputing a dataset's embeddings replaces the vectors instead
+        The key is the medium: recomputing a dataset's embeddings replaces the vectors instead
         of stacking a second series.
         """
         vectors = result["vectors"]
         started = time.perf_counter()
         if vectors:
-            writer.write_record_embeddings(record_ids=result["record_ids"], vectors=vectors, model=params.model)
+            writer.write_media_embeddings(
+                record_ids=result["record_ids"], view_ids=result["view_ids"], vectors=vectors, model=params.model
+            )
         phases = result.get("phases_s", {})
         # One line per chunk, with the job: this is what scripts/measure_throughput.py adds up.
         log.info(
