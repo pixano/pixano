@@ -39,6 +39,13 @@ const SHARED_EXCLUDED_FIELDS = new Set([
   "source_id",
   "timestamp",
   "inference_metadata",
+  // This app has no review interface: the review status it read is never a decision of its
+  // user. Sent back, the server would read it as one and refuse it: the second edit of a model's
+  // row stored with no status would ask to empty the status its first edit accepted it with, and
+  // a split of a model's tracklet, whose clone is a person's row, would carry a status. Left out
+  // here, it is left out of every serializer built on the shared payload: entities, tracklets and
+  // annotations alike.
+  "review_status",
 ]);
 
 function withoutUndefined<T extends Record<string, unknown>>(payload: T): T {
