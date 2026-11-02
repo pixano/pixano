@@ -12,7 +12,12 @@ decides something from a row's status or score reads it through these definition
 writing its own copy of the answer, so that no two layers read the same row differently.
 """
 
-from .entity_annotation import ReviewStatus
+from typing import Callable
+
+from .entity_annotation import ReviewStatus, is_entity_annotation
+from .relation import is_relation
+from .text_span import is_text_span
+from .tracklet import is_tracklet
 
 
 NOT_REVIEWED_STATUSES: tuple[str, ...] = (ReviewStatus.PENDING.value, "")
@@ -55,6 +60,29 @@ def stored_statuses(status: ReviewStatus) -> tuple[str, ...]:
     return NOT_REVIEWED_STATUSES if status is ReviewStatus.PENDING else (status.value,)
 
 
+# The kinds of entity annotation that no person can review yet. A tracklet is structure: the span
+# of an object across frames, reviewed through the per-frame annotations it groups. No interface
+# can show a relation or a text span for review yet. A model's row of such a kind would stay
+# pending forever, and an export by status would drop it although nobody could have accepted it.
+# Remove a kind from this list when an interface can review it.
+_NOT_REVIEWABLE: tuple[Callable[[type], bool], ...] = (is_tracklet, is_relation, is_text_span)
+
+
+def is_reviewable_annotation(cls: type) -> bool:
+    """Whether a person can review a model's rows of this schema.
+
+    The export by review status filters only these. Every other row is outside the review: an
+    export keeps it whatever its status.
+
+    Args:
+        cls: An annotation schema.
+
+    Returns:
+        True for an entity annotation of a kind an interface can review.
+    """
+    return is_entity_annotation(cls) and not any(is_kind(cls) for is_kind in _NOT_REVIEWABLE)
+
+
 def model_score_fields(cls: type) -> tuple[str, ...]:
     """The fields of a schema that hold the score its model gave a row.
 
@@ -93,6 +121,7 @@ def model_score_alignment(cls: type) -> dict[str, str]:
 
 __all__ = [
     "NOT_REVIEWED_STATUSES",
+    "is_reviewable_annotation",
     "model_score_alignment",
     "model_score_fields",
     "review_status_of",

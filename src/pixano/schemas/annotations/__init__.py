@@ -17,6 +17,7 @@ from .per_frame_annotation import PerFrameAnnotation, is_per_frame_annotation
 from .relation import Relation, create_relation, is_relation
 from .review import (
     NOT_REVIEWED_STATUSES,
+    is_reviewable_annotation,
     model_score_alignment,
     model_score_fields,
     review_status_of,
@@ -59,6 +60,7 @@ __all__ = [
     "is_message",
     "is_multi_path",
     "is_relation",
+    "is_reviewable_annotation",
     "model_score_alignment",
     "model_score_fields",
     "review_status_of",
