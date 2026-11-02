@@ -82,10 +82,12 @@ from .table_names import (
 )
 from .timeseries import TimeSeries, create_timeseries_schema
 from .views import (
+    MEDIA_TYPES,
     PDF,
     CalibratedImage,
     CalibratedPointCloud,
     Image,
+    MediaType,
     PointCloud,
     PointCloudFrame,
     SequenceFrame,
@@ -106,6 +108,7 @@ from .views import (
     is_text,
     is_video,
     is_view,
+    media_type_of,
 )
 
 
@@ -203,6 +206,9 @@ __all__ = [
     "is_relation",
     "is_reviewable_annotation",
     "is_sequence_frame",
+    "MEDIA_TYPES",
+    "MediaType",
+    "media_type_of",
     "is_text",
     "is_tracklet",
     "is_view",
