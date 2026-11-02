@@ -349,8 +349,8 @@ class ExportSpec(BaseModel):
     @field_validator("review_statuses")
     @classmethod
     def _in_declaration_order(cls, statuses: list[ReviewStatus]) -> list[ReviewStatus]:
-        # One order whatever the caller's, without repeats: the selection is recorded in the
-        # exported dataset.yaml, where two equal selections must read the same.
+        # One order whatever the caller's, without repeats: the selection is recorded in the job
+        # spec and in the exported dataset.yaml, where two equal selections must read the same.
         return [status for status in ReviewStatus if status in statuses]
 
     @field_validator("options")

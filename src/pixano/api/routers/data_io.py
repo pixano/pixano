@@ -23,14 +23,15 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from s3path import S3Path
 
 from pixano.api.settings import Settings, get_settings
-from pixano.datasets.io import FORMATS, ImportSpec, PixanoDataError, analyze
+from pixano.datasets.io import FORMATS, ExportSpec, ImportSpec, PixanoDataError, analyze
 from pixano.datasets.io.errors import JobStateError, SpecValidationError
 from pixano.datasets.io.jobs import JobRecord, JobRunner, JobStore
 from pixano.datasets.io.media import VIDEO_EXTENSIONS
+from pixano.schemas import ReviewStatus
 from pixano.utils import to_snake_case
 
 
@@ -109,6 +110,11 @@ class ExportRequestIO(BaseModel):
     format: str = "pixano_jsonl"
     media: Literal["files", "uris"] = "files"
     options: dict[str, Any] = Field(default_factory=dict)
+    review_statuses: list[ReviewStatus] = Field(
+        default_factory=list,
+        description="Review statuses of the model annotations to export; annotations no model "
+        "produced are always exported. Empty exports every annotation.",
+    )
 
 
 class JobResponse(BaseModel):
@@ -280,10 +286,22 @@ def start_import(request: ImportRequestIO, settings: Annotated[Settings, Depends
 def start_export(request: ExportRequestIO, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
     """Queue an export job (202)."""
     store, runner = _runner(settings)
+    try:
+        # The same ExportSpec the CLI and the Python API build (spec §3).
+        spec = ExportSpec.model_validate(request.model_dump(exclude={"dataset"}))
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from None
     dataset_dir = settings.library_dir / to_snake_case(request.dataset)  # type: ignore[operator]
     if not dataset_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Dataset '{request.dataset}' not found in the library.")
-    job = runner.submit_export(str(dataset_dir), request.destination, request.format, request.media, request.options)
+    job = runner.submit_export(
+        str(dataset_dir),
+        spec.destination,
+        spec.format,
+        spec.media,
+        spec.options,
+        review_statuses=[status.value for status in spec.review_statuses],
+    )
     return _job_response(job)
 
 
