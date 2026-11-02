@@ -30,8 +30,17 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, Protocol, Sequence
 
+from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus
+
 
 logger = logging.getLogger("pixano-worker")
+
+# The provenance vocabulary of the Pixano schemas that means "a model produced this", and the
+# review status such a row arrives with. Read from the schemas, as is which stored statuses mean
+# "not reviewed yet" (`NOT_REVIEWED_STATUSES`): the application reviews what the writer writes,
+# and both must read a row the same way.
+MODEL_SOURCE = AnnotationSourceKind.MODEL.value
+PENDING_REVIEW = ReviewStatus.PENDING.value
 
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
@@ -52,9 +61,9 @@ _RECORD_EMBEDDING_ID_LENGTH = 22
 # Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured
 # (scripts/measure_compaction.py) on a classification table filled in batches of eight:
 # 0.12 s median at 10,000 rows, 0.30 s at 30,000, with a maximum of 0.9 s — and it grows with
-# the table. Acceptable for step 1; the policy — every N chunks, at the end of the job, or
-# handed to a writer role — is decided before step 2's kinds write into tables that users are
-# annotating at the same time.
+# the table. Decided for step 2 (backend-processing §19): the policy stays as it is until a
+# compaction outlasts a chunk, and then moves out of the write lock; to measure at 500,000
+# rows once a kind produces that volume.
 COMPACT_EVERY_WRITES = 64
 # One hour: longer than any read from a Pixano client holds a version — an explorer page, an
 # export — so that no reader sees the version it is reading disappear. Shorter would risk
@@ -231,6 +240,15 @@ def _rank_of(row_id: str) -> int | None:
     return int(rank) if rank.isdigit() else None
 
 
+def is_reviewed(row: Any) -> bool:
+    """Whether a person accepted this row: then a rerun must leave it alone.
+
+    Read as the application reads it (`pixano.schemas.NOT_REVIEWED_STATUSES`): a model's row
+    without a status, re-imported from JSONL, was never reviewed.
+    """
+    return getattr(row, "review_status", "") not in NOT_REVIEWED_STATUSES
+
+
 def _record_embedding_id(kind: str, record_id: str) -> str:
     """The identifier of a record's vector, in the format the embeddings table was first written with.
 
@@ -322,11 +340,16 @@ class JobWriter:
                 metadata["model_version"] = self.model.version
         if self.params is not None:
             metadata["params"] = self.params
-        return {
+        provenance = {
             "source_type": self.source_type,
             "source_name": self.kind,
             "source_metadata": json.dumps(metadata, sort_keys=True),
         }
+        if self.source_type == MODEL_SOURCE:
+            # A model's output arrives to be reviewed; a human's has nothing to review, and a
+            # demonstration kind's is neither.
+            provenance["review_status"] = PENDING_REVIEW
+        return provenance
 
     def ids_for(self, key: str, count: int) -> list[str]:
         """The identifiers a key will occupy for `count` outputs."""
@@ -340,8 +363,10 @@ class JobWriter:
         """Write a key's outputs, fully replacing the previous ones.
 
         Three steps. What a previous run wrote for this (kind, model, key) is read by the
-        prefix its identifiers share. The new rows take the ranks in order and are upserted;
-        then **the rows of the previous run that no new row replaced are deleted**. Without that
+        prefix its identifiers share. **Rows a person accepted are frozen**: they keep their rank
+        and are not touched — a rerun replaces what is still pending, never what someone
+        accepted. The new rows take the free ranks, in order, and are upserted; then **the
+        pending rows of the previous run that no new row replaced are deleted**. Without that
         last step, a replay that produced fewer outputs than before — a model that detects two
         objects where it used to see five — would leave three orphan rows that nothing would
         ever clean up.
@@ -364,17 +389,23 @@ class JobWriter:
             for row in self.dataset.get_data(table_name, where=f"id LIKE '{prefix}-%'")
             if _rank_of(row.id) is not None
         ]
+        frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
 
-        written = self.ids_for(key, len(rows))
-        for row, row_id in zip(rows, written):
-            row.id = row_id
+        written: list[str] = []
+        rank = 0
+        for row in rows:
+            while rank in frozen:
+                rank += 1
+            row.id = f"{prefix}-{rank}"
+            written.append(row.id)
+            rank += 1
 
         if rows:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
 
         replaced = set(written)
-        stale = [row.id for row in previous if row.id not in replaced]
+        stale = [row.id for row in previous if row.id not in replaced and _rank_of(row.id) not in frozen]
         if stale:
             self.dataset.delete_data(table_name, stale)
             logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)

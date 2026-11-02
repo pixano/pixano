@@ -276,6 +276,11 @@ class TestProvenance:
             "params": {"model": "yolo", "threshold": 0.4},
         }
 
+    def test_only_a_model_output_is_to_be_reviewed(self, dataset: _FakeDataset) -> None:
+        """A demonstration kind's rows, like a human's, carry no review status."""
+        assert JobWriter(lambda: dataset, "detection", "j", "model").provenance()["review_status"] == "pending"
+        assert "review_status" not in JobWriter(lambda: dataset, "label", "j", "other").provenance()
+
     def test_says_nothing_about_a_model_it_does_not_know(self, dataset: _FakeDataset) -> None:
         """A kind without a model, or a server that gives no version: the keys are absent, not null."""
         without_version = JobWriter(lambda: dataset, "k", "j", model=ModelIdentity("clip")).provenance()
@@ -350,6 +355,96 @@ class TestAgainstRealLance:
         writer.replace("classifications", "task-0", boxes(20))
 
         assert len(toy.get_data("classifications", limit=None)) == 20
+
+    def test_a_model_output_arrives_pending_and_an_accepted_row_survives_a_rerun(self, toy) -> None:
+        """A rerun replaces what is still pending, never what a person accepted."""
+        from pixano.schemas.annotations.classification import Classification
+
+        writer = JobWriter(lambda: toy, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        def boxes(labels: list[str]) -> list[Classification]:
+            return [
+                Classification(id="", record_id="task-0", labels=[label], confidences=[1.0], **writer.provenance())
+                for label in labels
+            ]
+
+        first = writer.replace("classifications", "task-0", boxes(["cat", "dog", "cow"]))
+        assert {row.review_status for row in toy.get_data("classifications", limit=None)} == {"pending"}
+
+        # A person accepts the second box; the two others stay pending.
+        accepted = toy.get_data("classifications", ids=[first[1]])[0]
+        accepted.review_status = "accepted"
+        toy.update_data("classifications", [accepted])
+
+        writer.replace("classifications", "task-0", boxes(["horse"]))
+
+        rows = {row.labels[0]: row.review_status for row in toy.get_data("classifications", limit=None)}
+        assert rows == {"dog": "accepted", "horse": "pending"}
+
+    @staticmethod
+    def _review(toy, row_id: str, status: str) -> None:
+        row = toy.get_data("classifications", ids=[row_id])[0]
+        row.review_status = status
+        toy.update_data("classifications", [row])
+
+    def _detections(self, toy):
+        from pixano.schemas.annotations.classification import Classification
+
+        writer = JobWriter(lambda: toy, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        def run(labels: list[str]) -> list[str]:
+            rows = [
+                Classification(id="", record_id="task-0", labels=[label], confidences=[1.0], **writer.provenance())
+                for label in labels
+            ]
+            return writer.replace("classifications", "task-0", rows)
+
+        return run
+
+    def _statuses(self, toy) -> dict[str, tuple[str, str]]:
+        return {row.id: (row.labels[0], row.review_status) for row in toy.get_data("classifications", limit=None)}
+
+    def test_an_accepted_row_is_frozen(self, toy) -> None:
+        run = self._detections(toy)
+        first = run(["cat", "dog"])
+        self._review(toy, first[0], "accepted")
+
+        run([])
+
+        assert self._statuses(toy) == {first[0]: ("cat", "accepted")}
+
+    def test_a_model_row_stored_without_a_status_is_replaced(self, toy) -> None:
+        """Re-imported from JSONL, whose grammar carries no status: nobody reviewed it, as the
+        application reads it (`NOT_REVIEWED_STATUSES`), so a rerun replaces it like a pending one."""
+        run = self._detections(toy)
+        first = run(["cat", "dog"])
+        self._review(toy, first[0], "")
+
+        written = run(["cow"])
+
+        assert self._statuses(toy) == {written[0]: ("cow", "pending")}
+
+    def test_new_rows_skip_the_ranks_accepted_rows_hold(self, toy) -> None:
+        """A frozen rank 0 and more new rows than frozen ones: the new rows go around it."""
+        run = self._detections(toy)
+        first = run(["cat"])
+        self._review(toy, first[0], "accepted")
+
+        written = run(["a", "b", "c"])
+
+        assert first[0] not in written
+        assert sorted(label for label, _ in self._statuses(toy).values()) == ["a", "b", "c", "cat"]
+
+    def test_rerunning_with_frozen_rows_is_idempotent(self, toy) -> None:
+        run = self._detections(toy)
+        first = run(["cat", "dog", "cow"])
+        self._review(toy, first[1], "accepted")
+        run(["x", "y"])
+        once = self._statuses(toy)
+
+        run(["x", "y"])
+
+        assert self._statuses(toy) == once
 
     def test_resubmitting_does_not_duplicate(self, toy) -> None:
         self._run(toy, "job-1", 60)
