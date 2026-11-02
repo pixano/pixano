@@ -59,6 +59,12 @@ two SAM 2.1 checkpoints (about 340 MB for SAM) come from huggingface.co and are 
 The YOLO plugin runs Ultralytics, which is AGPL-3.0: a demonstration choice. Serve any other
 detection model instead — nothing in Pixano names this one.
 
+The list serves no tracking model, so tracking by detection, in the legacy video workspace, has
+none to run. The YOLO plugin brings one, `YOLOByteTrackModel` (pixano-inference's
+`examples/yolo/config_tracking.py` shows its entry): add it to a copy of the list, with two more
+CPUs than the eight below, or run the application against another inference server that serves
+one. The application talks to one pixano-inference server at a time.
+
 **The machine.** Each model runs one replica, for which Ray reserves CPUs out of those it
 finds on the machine: two for CLIP, two for YOLO, two for each SAM 2.1 model — eight in all.
 With fewer, the server refuses to start, every model included; `--no-strict-startup` starts it
