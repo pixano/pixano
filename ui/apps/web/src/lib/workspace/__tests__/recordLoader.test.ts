@@ -12,9 +12,13 @@ import { RecordLoader } from "../recordLoader.js";
 import type { WidgetSink } from "../recordLoader.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
+import { humanBox, modelBox, modelMask, openManager, REC, statusOf } from "./workspaceHarness.js";
+import type { AnnotationKind } from "$lib/annotations/annotationCollection.svelte.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { MASK_RESOURCE } from "$lib/annotations/kinds/2d/mask/maskPayloadBuilder.js";
 import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
+import { payloadBuilderFor } from "$lib/annotations/payloadBuilders.js";
+import { SEED_LOADERS } from "$lib/annotations/seedLoaders.js";
 import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
@@ -742,5 +746,103 @@ describe("RecordLoader.reloadAnnotations when lists fail", () => {
       expect.objectContaining({ message: "masks down" }),
     );
     consoleSpy.mockRestore();
+  });
+});
+
+// ─── The persisted envelope ──────────────────────────────────────────────────
+
+/**
+ * A well-formed row's own columns, per kind. Typed over every `AnnotationKind`
+ * so a kind added without its fixture does not compile — and the test below
+ * fails at run time for a seed loader whose kind is missing here.
+ */
+const GEOMETRY_COLUMNS: Record<AnnotationKind, Record<string, unknown>> = {
+  bbox: { coords: [0.1, 0.1, 0.2, 0.2], format: "xywh", is_normalized: true },
+  bbox3d: {
+    coords: [0, 0, 0, 1, 1, 1],
+    format: "xyzwhd",
+    rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    is_normalized: false,
+  },
+  mask: { size: [2, 2], counts: "04" },
+  keypoints: { template_id: "t", coords: [0.1, 0.1], states: ["visible"] },
+  multi_path: { coords: [0.1, 0.1, 0.2, 0.1, 0.2, 0.2], num_points: [3], is_closed: true },
+  classification: { labels: ["cat"], confidences: [0.9] },
+};
+
+/** The provenance columns the worker writes on a model's row. */
+const MODEL_COLUMNS = {
+  source_type: "model",
+  source_name: "detection",
+  source_metadata: JSON.stringify({
+    job_id: "j",
+    kind: "detection",
+    model: "yolo",
+    model_version: "v8",
+  }),
+  review_status: "accepted",
+  confidence: 0.5,
+};
+
+describe("RecordLoader — the persisted envelope", () => {
+  it("gives every registered kind's annotations their review state", async () => {
+    const rowsByResource = new Map<string, unknown[]>();
+    for (const seedLoader of SEED_LOADERS) {
+      const columns = GEOMETRY_COLUMNS[seedLoader.kind];
+      expect(columns, `add a model row fixture for kind "${seedLoader.kind}"`).toBeDefined();
+      rowsByResource.set(payloadBuilderFor(seedLoader.kind).resource, [
+        {
+          id: `model-${seedLoader.kind}`,
+          record_id: "rec-1",
+          entity_id: `ent-${seedLoader.kind}`,
+          view_id: CLAIMED_VIEW_ID,
+          ...MODEL_COLUMNS,
+          ...columns,
+        },
+      ]);
+    }
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(oneViewExtension()),
+      gateway: {
+        ...makeGateway({ dataset: makeDataset({ cam: { base: "Image" } }) }),
+        listAnnotations: <TRow>(_datasetId: string, resource: string) =>
+          Promise.resolve((rowsByResource.get(resource) ?? []) as TRow[]),
+      },
+      session,
+      layoutRepository: makeLayoutRepository(),
+    });
+
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+
+    for (const seedLoader of SEED_LOADERS) {
+      const annotation = session.annotations.find(`model-${seedLoader.kind}`);
+      expect(annotation, `kind "${seedLoader.kind}" was not seeded`).toBeDefined();
+      // The score is the kind's own (the columns its loader declares), so only
+      // what every kind shares is checked here.
+      expect(annotation!.review, `kind "${seedLoader.kind}" lost its review`).toMatchObject({
+        status: "accepted",
+        sourceType: "model",
+        sourceName: "detection",
+        model: "yolo",
+        modelVersion: "v8",
+      });
+      expect(Array.isArray(annotation!.review?.scoreFields)).toBe(true);
+    }
+  });
+
+  it("tells a model's box and mask from a person's box, on a record the workspace opens", async () => {
+    const { manager } = await openManager({
+      [REC]: {
+        [BBOX_RESOURCE]: [modelBox(REC, "b-model"), humanBox(REC, "b-human")],
+        [MASK_RESOURCE]: [modelMask(REC, "m-model", "accepted")],
+      },
+    });
+
+    expect(statusOf(manager, "b-model")).toBe("pending");
+    expect(statusOf(manager, "m-model")).toBe("accepted");
+    expect(statusOf(manager, "b-human")).toBe("");
+    expect(manager.annotations.find("b-human")?.review?.sourceType).toBe("other");
   });
 });
