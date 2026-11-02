@@ -6,9 +6,9 @@
 
 """One record whose annotations carry every review state, for the export-by-review-status tests.
 
-Shared by the JSONL and COCO tests so both check the same rows. Each entity is named after the
-case it covers; the comments say what a selection of ``{accepted}`` must do with it. A model's
-row is pending or accepted: a rejected one is deleted, so no row says so.
+Shared by the JSONL, COCO and CLI tests so all three check the same rows. Each entity is named
+after the case it covers; the comments say what a selection of ``{accepted}`` must do with it. A
+model's row is pending or accepted: a rejected one is deleted, so no row says so.
 """
 
 from pathlib import Path
