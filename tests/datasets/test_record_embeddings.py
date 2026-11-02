@@ -191,6 +191,20 @@ class TestMultiMediaRecords:
         )
         return dataset
 
+    def test_k_records_are_found_although_each_has_six_vectors(self, six_cameras: Dataset):
+        """Asking for k vectors and grouping by record returned about k / 6 records."""
+        records, distances = six_cameras.search_records(_bit_vector(1), k=6)
+
+        assert len({record.id for record in records}) == 6
+        assert distances == sorted(distances)
+
+    def test_similar_to_a_record_uses_its_closest_medium(self, six_cameras: Dataset):
+        own_vectors = [_bit_vector(3 * 6 + c + 1) for c in range(6)]
+
+        records, distances = six_cameras.search_records(own_vectors, k=1)
+
+        assert (records[0].id, distances[0]) == ("r3", pytest.approx(0.0, abs=1e-6))
+
     def test_rows_that_name_no_medium_do_not_make_it_ready(self, six_cameras: Dataset):
         """Rows written per record, before, inflated the count to "ready"."""
         six_cameras.drop_record_embeddings()
@@ -203,6 +217,24 @@ class TestMultiMediaRecords:
         health = six_cameras.record_embedding_health()
 
         assert (health["status"], health["embedded_media"], health["media"]) == ("partial", 6, 60)
+
+    def test_a_prefilter_smaller_than_k_does_not_widen_to_the_whole_table(self, six_cameras: Dataset):
+        """With fewer than k records to find, the search widened up to the table."""
+        searches: list[int] = []
+        table = six_cameras.open_table(six_cameras._RECORD_EMBEDDING_TABLE)
+        real_search = table.search
+
+        def counting_search(*args, **kwargs):
+            searches.append(1)
+            return real_search(*args, **kwargs)
+
+        table.search = counting_search  # type: ignore[method-assign]
+        six_cameras._table_handles[six_cameras._RECORD_EMBEDDING_TABLE] = table
+
+        records, _ = six_cameras.search_records(_bit_vector(1), k=50, record_id_filter=["r1", "r2"])
+
+        assert {record.id for record in records} == {"r1", "r2"}
+        assert len(searches) == 1
 
     def test_health_counts_media_not_records(self, six_cameras: Dataset):
         health = six_cameras.record_embedding_health()
