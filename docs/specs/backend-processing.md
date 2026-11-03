@@ -244,7 +244,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 ## 12. Writes into LanceDB
 
-**Identifiers are derived from the work**, so a replayed chunk replaces its rows instead of adding to them. `replace` also removes leftovers — rows a previous run wrote under the following ranks — but probes only 32 ranks ahead. A detection that shrinks by more would leave ghost boxes. Decided in review: exact replacement by key, of scope (kind, record), to land with the first detection kind. It also closes a gap with lot 6, which asked for a delete scoped by (job, item): the job is the wrong scope, since a second job must replace the first one's rows.
+**Identifiers are derived from the work** — the kind, the model, the key and the rank — so a replayed chunk replaces its rows instead of adding to them, and another model's rows for the same key are left alone. An identifier is a prefix shared by everything a key produced, then the rank: a replay finds every row of a previous run by prefix and deletes exactly those beyond what it wrote. A first version probed 32 ranks ahead, and a detection that shrank by more left ghost rows; the replacement is now exact, scoped by (kind, model, key) — not by (job, item): the job is the wrong scope, since a rerun must replace the previous run's rows. The embeddings table keeps the identifiers it was first written with, a digest of (kind, record): one vector per record, replaced by its record, so a rerun overwrites the vectors already there.
 
 **Writes to one dataset are serialised** inside a worker; processing still overlaps. Across workers, nothing serialises them: step 4.
 
@@ -254,7 +254,7 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **The writer rereads a dataset before creating its embeddings table**, since creating overwrites: with two workers, the second's cached dataset would have erased the first's vectors. Two simultaneous creations remain for the writer role of step 4.
 
-**Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured (`scripts/measure_compaction.py`) on a classification table filled by chunk-sized writes: 0.12 s median at 10 000 rows, 0.30 s at 30 000 with a 0.9 s maximum, growing with the table. Acceptable for step 1; the policy — every N writes, at the end of a job, or owned by a writer role — is settled before step 2's kinds write into tables users annotate (§19).
+**Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured (`scripts/measure_compaction.py`) on a classification table filled by chunk-sized writes: 0.12 s median at 10 000 rows, 0.30 s at 30 000 with a 0.9 s maximum, growing with the table. Acceptable for step 1; the policy — every N writes, at the end of a job, or owned by a writer role — was settled for step 2: it stays as it is until a compaction outlasts a chunk, then moves out of the write lock (§19).
 
 **Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name`, and in `source_metadata` a self-contained provenance: the job identifier, the kind, the model and its version when the kind runs one, and the job's parameters minus the engine's (§19). Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Embeddings rows carry none: the model lives in the dataset's sidecar.
 
@@ -369,7 +369,7 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 | A Retry button in the panel                 | when the panel needs it      | The endpoint is generic; the button is interface work                                                                                                                                                                                    |
 | A connection pool in the API                | when measured                | One connection per request is negligible with one user                                                                                                                                                                                   |
 
-**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test now runs on 1 000 chunks, as lot 2 asked. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance, and deletes are not scoped by (job, item) (§12). `review_status`, deferred at step 1, was delivered in step 2 (§19).
+**Deviations from the lots, accepted in review.** No versioned migrations (§5). The application records a request and the worker inserts the chunks, rather than both in the API's transaction (§3). The sharing test now runs on 1 000 chunks, as lot 2 asked. The call semaphore of lot 9 is the engine's concurrency. Bytes travel for embedded datasets (§13). Embeddings carry no per-row provenance (§12). `review_status` and exact deletes by (kind, model, key), deferred at step 1, were delivered in step 2 (§19).
 
 ## 18. Known defects
 
@@ -389,13 +389,14 @@ Local stack, CPU inference, concurrency 4. Robustness is verified on the running
 
 Questions raised by step 1's review, and the rules step 2 settles for them; each rule is stated here once the code that applies it lands.
 
-- **Chunks.** They have no dependency and no internal progress, and their time limit is a deployment setting. Video tracking by segments needs an order between segments, per-video atomicity, progress in frames, and a limit that follows the work (§9). The one piece of engine design step 2 must do first.
 - **Embeddings.** The grain — one vector per record or per view — is a product decision before it is a worker decision: search is record-grained today. The advice on record: store per view, return records by their best view; video needs sampling. With it: the sidecar, one table per model, the fate of the application's in-process path (§18), `replace_existing_embeddings` (§12), and the rule for choosing a view, not to be built if the grain makes it moot.
 - **Provenance** lives in `source_metadata`, set by the writer: `job_id`, `kind`, `model`, `model_version`, `params`. Dedicated columns when a filter by model becomes a need.
-- **Exact `replace` by key** (§12).
-- **`review_status`** takes `pending` and `accepted`, on every entity annotation schema (dataset spec version 3; an older dataset gains the column, empty, when opened); empty for a human annotation. A model's row stored with no status — re-imported from JSONL, whose grammar carries none, or stored by the legacy smart tracking — reads as `pending`, from one definition, `pixano.schemas.NOT_REVIEWED_STATUSES` (`pending` and the empty status), read through `review_status_of` and `stored_statuses`.
-- **The compaction policy** (§12).
-- **Partial writes.** Statistics as sortable columns on existing tables have no operation in the writer, which writes whole rows.
+- **For annotations, another model adds; the same model replaces its own rows.** The replacement key is (kind, model, key) — the key a kind writes under, usually a record —, and `replace` is exact by that key (§12). Both halves are decided (2026-10-20): a rerun of the same model replaces its own pending rows, and another model's rows add beside them. Cleaning duplicates across models may be a workflow later. An embeddings table, by contrast, holds one model (§12).
+- **A rerun only replaces rows still `pending`.** Rows a person accepted are frozen for that kind: they keep their rank, and the rerun's rows take the ranks left free.
+- **`review_status`** takes `pending` and `accepted`, on every entity annotation schema (dataset spec version 3; an older dataset gains the column, empty, when opened); empty for a human annotation, `pending` set by the writer for a model's. A model's row stored with no status — re-imported from JSONL, whose grammar carries none, or stored by the legacy smart tracking — reads as `pending`, from one definition, `pixano.schemas.NOT_REVIEWED_STATUSES` (`pending` and the empty status), read through `review_status_of` and `stored_statuses`, and by the worker's writer, where `is_reviewed` lets a rerun replace such a row.
+- **Compaction** stays as it is until a compaction outlasts a chunk; then it moves out of the write lock. Measure at 500 k rows once a kind produces that volume.
+- **Chunks are unchanged.** Video tracking is on hold; when it comes, a chunk is a video, with an internal progress and a weight per chunk deciding its time limit.
+- Deferred to a second version of the step: NER, statistics and partial writes, vector indexing, clustering, video.
 
 ## 20. What steps 3 and 4 open
 

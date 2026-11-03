@@ -53,6 +53,11 @@ recorded are all of them but the engine's: `chunk_size` by default, plus whateve
 lists in `params_not_in_provenance` (a request timeout, a retry count) — and a selection of
 items, such as the label kind's `record_ids`, which would copy every identifier into every row.
 
+A kind whose `source_type` is `model` also gets `review_status = "pending"` in its
+provenance: its rows arrive to be reviewed. A human's annotation, or a demonstration kind's,
+carries no status. And `replace` honours the review: rows a person accepted keep their rank
+and are never touched by a rerun, which replaces the pending rows only.
+
 ### `prepare(writer, params)` — optional
 
 Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
@@ -121,10 +126,12 @@ expired can be taken over mid-flight. **Replaying must produce the same content,
 duplicates.**
 
 `writer.replace(table, key, rows)` is how. It derives each row's identifier from the _work_ —
-the kind, the key, the rank — never from the job, so a resubmission replaces instead of
-minting new rows. Then it deletes what a previous run left beyond the current output, which is
-the step plain replacement misses: a model that detected five objects and now sees two would
-otherwise strand three rows nothing would ever clean up.
+the kind, the model, the key, the rank — never from the job, so a resubmission replaces instead
+of minting new rows, and another model's rows for the same key are left alone. Then it deletes
+exactly what a previous run of the same model left beyond the current output, found by the
+prefix the key's identifiers share. That is the step plain replacement misses: a model that
+detected five objects and now sees two would otherwise strand three rows nothing would ever
+clean up.
 
 **Choose the key carefully.** It should be the smallest thing the output is about — usually a
 record id. The `label` kind uses one key per record, so re-labelling one record does not depend
@@ -151,14 +158,19 @@ both declare `other`.
 
 ---
 
-## 4. Review status — not yet
+## 4. Review status
 
-The plan has every pre-annotation arriving in an "to review" state, with a queue to accept,
-correct or reject. **The schemas carry no such field today**, so nothing here can set one. It
-is a schema addition, and it belongs with the pre-annotation kinds that need it rather than
-with the engine.
+Every entity annotation schema carries `review_status`: `pending` or `accepted` on a model's
+row, empty on any other. A kind never sets it. The writer marks a `model` kind's rows `pending`
+(§1), and a row a person accepts is stored `accepted`, keeping the model's provenance and score
+([backend-processing §19](./backend-processing.md)). What it means for a kind:
 
-Until then, provenance is what tells a reviewer an annotation came from a job.
+- **Accepted rows are frozen.** `replace` leaves a row a person accepted where it is, rank
+  included, and replaces the pending rows only. A model's row with no status —
+  re-imported from JSONL — counts as pending: the writer reads it from the definition the
+  application reads too, `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status
+  either, and is never taken for a pending one: `replace` reaches only the identifiers the kind
+  derived itself.
 
 ---
 

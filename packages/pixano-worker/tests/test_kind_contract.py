@@ -17,6 +17,7 @@ from the contract.
 
 import hashlib
 import json
+import re
 from types import SimpleNamespace
 from typing import Any
 
@@ -73,8 +74,13 @@ class _Target:
         for row_id in ids:
             self.rows.pop(row_id, None)
 
-    def get_data(self, table_name: str, ids: list[str]) -> list[Any]:
-        return [self.rows[i] for i in ids if i in self.rows]
+    def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
+        """By identifiers, or by the prefix filter of a cleanup."""
+        if ids is not None:
+            return [self.rows[i] for i in ids if i in self.rows]
+        prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
+        assert prefix is not None, f"unexpected filter in a test double: {where!r}"
+        return [row for row_id, row in self.rows.items() if row_id.startswith(prefix.group(1))]
 
     def open_table(self, table_name: str) -> Any:
         self.compactions.append(table_name)
