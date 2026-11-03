@@ -12,7 +12,11 @@ import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
-import type { ReviewStatus } from "$lib/annotations/reviewStatus.js";
+import {
+  MODEL_SOURCE_TYPE,
+  REVIEW_STATUS,
+  type ReviewStatus,
+} from "$lib/annotations/reviewStatus.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import { ApiError } from "$lib/api/apiClient.js";
@@ -27,9 +31,10 @@ import { DatasetInfo, type Dataset } from "$lib/types/dataset";
  * A recording stand-in for the backend that the workspace suites run the real
  * workspace against: the real manager, queue, loader, seed loaders and commit
  * helpers, with only the HTTP edge replaced. The rows it serves are the ones a
- * test states; what the server would store after a write is, when a test needs
- * it, written by that test in `onWrite`, or by `serveLikeTheApi`, which stores
- * each write as the server does.
+ * test states; it applies no review rule of its own — what the server would
+ * store after a write is, when a test needs it, written by that test in
+ * `onWrite`, or by `serveLikeTheApi`, which stores each write as the server
+ * does.
  */
 
 export const DATASET_ID = "ds-1";
@@ -211,6 +216,52 @@ export function refusal(detail: string): ApiError {
 }
 
 /**
+ * The fields only a model writes on its row — its provenance and its score —
+ * which a person's edit never changes (`_model_owned_fields` in service.py; the
+ * score fields are each schema's `MODEL_SCORE_FIELDS`: a box's `confidence`, a
+ * classification's `confidences`). The interface sends its own with every edit.
+ */
+const MODEL_OWNED_FIELDS = [
+  "source_type",
+  "source_name",
+  "source_metadata",
+  "confidence",
+  "confidences",
+] as const;
+
+/** Whether two stored values are the same, as JSON carries them. */
+const sameStored = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * The update a model's row takes from a person's body, as service.py's
+ * `_as_human_edit_of` reads it: what the model owns is kept as stored; a
+ * status is an Accept unless it is the row's own or `pending`; a body that
+ * changes the content stores the row accepted too; the empty status and any
+ * other value are refused.
+ */
+function asHumanEditOf(row: Row, body: Record<string, unknown>): Record<string, unknown> {
+  const { review_status: requested, ...rest } = body;
+  const edit = Object.fromEntries(
+    Object.entries(rest).filter(
+      ([key]) => !(MODEL_OWNED_FIELDS as readonly string[]).includes(key),
+    ),
+  );
+  // An echo of the row's status, or `pending`, which only the worker sets, is no decision.
+  const echo =
+    requested === undefined ||
+    requested === null ||
+    requested === row.review_status ||
+    requested === REVIEW_STATUS.PENDING;
+  if (!echo && requested === "") throw refusal("A model's annotation keeps a review status");
+  if (!echo && requested !== REVIEW_STATUS.ACCEPTED) {
+    throw refusal(`review_status ${JSON.stringify(requested)} is not valid`);
+  }
+  const changesContent = Object.entries(edit).some(([key, value]) => !sameStored(row[key], value));
+  if (!echo || changesContent) edit.review_status = REVIEW_STATUS.ACCEPTED;
+  return edit;
+}
+
+/**
  * Make the fake backend store each write as the server does
  * (src/pixano/api/service.py), for tests about what the dataset ends up
  * holding. The annotation writes are the record's:
@@ -218,7 +269,9 @@ export function refusal(detail: string): ApiError {
  * - an entity create is stored once, whatever the retries (its id is the client's);
  * - an annotation create or update naming an entity that does not exist is
  *   refused ("Foreign key violation"), as the server's reference check does;
- * - an update stores the body as sent;
+ * - an update of a model's row keeps its provenance and score, and stores the
+ *   row accepted when it asks for it or changes its content (`asHumanEditOf`);
+ *   a person's row takes the body as sent;
  * - an update of a row that is not there is refused with a 404;
  * - an annotation update or delete that lets go of an entity prunes it when no
  *   annotation names it any more (`?prune_orphan_entity=true`);
@@ -266,7 +319,8 @@ export function serveLikeTheApi(backend: FakeBackend, recordId: string): void {
       throw new ApiError("Request refused", HTTP_NOT_FOUND, `Resource '${write.id}' not found`);
     }
     const previousEntity = row.entity_id;
-    const edit = write.body;
+    const isModelRow = row.source_type === MODEL_SOURCE_TYPE;
+    const edit = isModelRow ? asHumanEditOf(row, write.body) : write.body;
     if (edit.entity_id !== undefined && edit.entity_id !== previousEntity) {
       checkReference(edit.entity_id);
     }

@@ -785,7 +785,7 @@ const MODEL_COLUMNS = {
 };
 
 describe("RecordLoader — the persisted envelope", () => {
-  it("gives every registered kind's annotations their review state", async () => {
+  it("gives every registered kind's annotations their review state and stored content", async () => {
     const rowsByResource = new Map<string, unknown[]>();
     for (const seedLoader of SEED_LOADERS) {
       const columns = GEOMETRY_COLUMNS[seedLoader.kind];
@@ -829,6 +829,15 @@ describe("RecordLoader — the persisted envelope", () => {
         modelVersion: "v8",
       });
       expect(Array.isArray(annotation!.review?.scoreFields)).toBe(true);
+      // What the dataset holds, the content an edit is compared with.
+      expect(
+        annotation!.persistedContent,
+        `kind "${seedLoader.kind}" lost its stored content`,
+      ).toEqual({
+        geometry: annotation!.geometry,
+        entityId: `ent-${seedLoader.kind}`,
+        entity: undefined,
+      });
     }
   });
 

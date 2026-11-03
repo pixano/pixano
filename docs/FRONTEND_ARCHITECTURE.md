@@ -293,7 +293,11 @@ Owns the list of pending writes and the flush lifecycle. Implements **`MutationS
 `queue`, `upsertUpdate` (replace the last queued update for the same
 resource+id, taking the newer gesture's `widgetId` with its body),
 `patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`.
-Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`.
+Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`. Each time
+a body is written into the queue — queued, or rewritten by a later gesture — the
+**`LocalAnnotationLocator`**'s `recordQueued(mutation)` is told, so the manager
+keeps the content that body carries (`AnnotationCollection.contentOf`) until it
+leaves.
 
 **A request on the wire is out of reach.** A mutation leaves `pending` as its
 request leaves and is `inFlight` until the backend answers; `count` includes it.
@@ -334,9 +338,12 @@ flight then neither comes back into the new queue nor reports its error there.
    naming an entity whose create is still queued — by its `entity_id` as it
    reads now — waits for that create to be sent, and is looked at again, until
    no such create is left. No write names an entity that does not exist yet,
-   and none dropped while the flush ran is sent.
+   and none dropped while the flush ran is sent. As each request leaves, the
+   locator's `recordWrite(mutation)` records what the dataset will hold once it
+   lands (§5, `AnnotationCollection.recordWrite`): the content the body carried
+   when it was queued; a failure undoes that record.
 3. On a successful **create** of an annotation, flip its local `persisted = true`
-   via the **`LocalAnnotationLocator`** (`findLocalAnnotation(id)` → the session's
+   via the locator's `findLocalAnnotation(id)` (→ the session's
    collection). Drafts thus become "saved" without a per-widget lookup.
 
 A flush that finds the queue empty clears `saveError`: what failed is no longer
@@ -424,7 +431,8 @@ reassignment on `E` or deleting the selection on Backspace.
 ### `LocalAnnotation<G>` (`annotations/annotationCollection.svelte.ts`)
 The one in-memory shape for **every** kind — pure data, no methods:
 ```ts
-{ id, entityId, kind, viewId, geometry: G, persisted, entity?, review? }
+{ id, entityId, kind, viewId, geometry: G, persisted, entity?, review?,
+  persistedContent? }
 ```
 - `kind ∈ AnnotationKind` (`"bbox" | "bbox3d" | "mask" | "keypoints" |
   "multi_path" | "classification"`).
@@ -438,12 +446,33 @@ The one in-memory shape for **every** kind — pure data, no methods:
   from `source_metadata`, score. Read once, leniently, by the shared envelope
   every seed loader builds through (`persistedAnnotation`, §8); absent on a draft,
   which is a person's work with nothing to review.
+- `persistedContent` is a detached copy of what the dataset holds of the
+  content — `{geometry, entityId, entity}` — set by the envelope. An edit
+  overwrites `geometry`/`entityId`/`entity` in place; this copy is what the
+  content was before it. Absent on a draft no write has carried yet.
 
 ### `AnnotationCollection` — the record-scoped source of truth
 `$state` list + `selectedId`, with `find/byKind/add/remove/select/setGeometry/
-setEntity`. **Owned by `WorkspaceSession`, one instance per record load, shared by
-every widget.** Optimistic edits mutate `geometry` in place; the `MutationQueue` is
-the ledger of what still has to reach the backend.
+setEntity/contentOf/recordWrite`. **Owned by `WorkspaceSession`, one instance per
+record load, shared by every widget.** Optimistic edits mutate `geometry` in place;
+the `MutationQueue` is the ledger of what still has to reach the backend.
+
+`recordWrite(id, {content?})` is called by the queue as a write of the annotation
+leaves (through the locator). It records as `persistedContent` the content that
+write carries — taken by `contentOf` when its body was written into the queue
+(`recordQueued`, §4), not the annotation's content as it leaves: a write retried
+after a failure leaves with newer edits queued behind it, which it does not
+carry. For an update it moves the status to the one the server will store for
+that body (`storedStatusAfterWrite`, the mirror of the server's rules:
+`accepted` asked stores `accepted`, and so does content on a model's row; an
+echo or `pending` stores nothing new), so an edited model's row reads
+`accepted` as its write leaves, with no read of the record. A write that
+carries no content — the status alone (`carriesContent`) — leaves
+`persistedContent` as it was. Recorded as the write leaves rather than when it
+lands, so that work begun while it is on the wire is measured against what the
+dataset will hold once it lands: an edit taken back to the content on the wire
+sends nothing. It returns the undo the queue runs if the request fails, the
+status included when nothing has moved it since.
 
 ### `ViewScopedAnnotations` — the per-widget facade
 Implements the same **`AnnotationStore`** interface but scopes reads to *one view*:
@@ -527,8 +556,27 @@ drawBBoxTool (pointer down→move→up)
 tool drags an existing box → commitGeometryEdit(ctx, id, newGeometry)
                               // the box editor keeps the box inside the image first
   → collection.setGeometry(id, newGeometry)            // optimistic, shared
-  → mutations.upsertUpdate(buildUpdate(...))            // one pending update per box
+  → draft?      mutations.patchPendingCreate(...)       // its create carries the edit
+  → persisted?  queueContentEdit                        // shared with flow F
+       body = buildUpdate(annotation)                   // the status shown is left
+                                                        //   alone: an edit stays in
+                                                        //   review until saved (§8)
+       body says what persistedContent says?           // a drag undone by hand
+            → nothing queued; a content edit queued earlier for the row is
+              dropped
+       otherwise
+            → mutations.upsertUpdate(body)              // one pending update per box
 ```
+
+"Says the same" is judged the way the server judges a change: the body the
+kind's `buildUpdate` makes from the edited annotation against the one it makes
+from `persistedContent`, the model's score columns ignored on a model's row
+(the ones its kind's seed loader declares, `review.scoreFields`, which the
+interface sends as 1), and numbers equal within
+a float32 round trip (`FLOAT32_ROUND_TRIP_TOLERANCE`, 2⁻²⁰ relative), the
+precision the dataset stores coordinates in. Kind-agnostic: only the kind's own
+`buildUpdate` is used — which is why it must build the body from the annotation
+alone, a record-scoped kind keeping the row's own view and format (bbox3d).
 
 ### D) Save (persist to backend)
 ```
@@ -539,9 +587,9 @@ flushSave()
             dropped meanwhile, or the queue reset? → not sent
             names an entity whose create is still queued?
                  → send that create first, then look again
-            out of pending, inFlight; gateway.create/update/delete…
+            out of pending, inFlight; recordWrite; gateway.create/update/delete…
        on success: annotation create → persisted = true
-       on failure:
+       on failure: undo recordWrite
             abandoned create? → not retried; its delete dropped on a 4xx,
                                 kept otherwise
             any other write → back to the head of the queue
@@ -579,7 +627,8 @@ work is a shape not drawn yet.
 ```
 reassignEntity(annotation, choice, ctx)
   → collection.setEntity(id, newEntityId)   (+ queue entityCreate if "new")
-  → mutations.upsertUpdate(buildUpdate(...))  // body carries the new entity_id
+  → queueContentEdit (flow C)                // body carries the new entity_id;
+                                             // the entity it already had → nothing
   → (flush) PUT …?prune_orphan_entity=true
         → backend validates the new entity exists, then prunes the OLD one if no
           stored row names it any more (§2)
@@ -610,17 +659,30 @@ person's annotation and a draft are not reviewable.
   `AnnotationReview`, `reviewOf(row, scoreFields)` (lenient: never throws; the
   score is read from the columns the kind declares — the first holding a number,
   or a list's first valid number — and the declaration is kept on
-  `AnnotationReview.scoreFields`), `isReviewable`. Type-only imports, so seed
+  `AnnotationReview.scoreFields`), `isReviewable`, `storedStatusAfterWrite`
+  (what a write stores), `carriesContent` (whether an update body changes
+  content rather than carrying the status alone). Type-only imports, so seed
   loaders and the label renderer can use it without the registry cycle
   `viewScopedSeedLoader.ts` describes. No display text, and no column of any
   kind: each kind's seed loader declares its score columns (`scoreFields`:
   `["confidence"]` for bbox and bbox3d, `["confidences"]` for classification,
-  none for the others), the score fields of its backend schema.
+  none for the others), as its backend schema does in `MODEL_SCORE_FIELDS`.
 - `annotations/persistedAnnotation.ts` —
   `persistedAnnotation(row, {kind, viewId, geometry, scoreFields}, ctx)`, the
-  one `LocalAnnotation` envelope, `review` included. Both
+  one `LocalAnnotation` envelope, `review` and `persistedContent` included. Both
   `createViewScopedSeedLoader` and the record-scoped `bbox3dSeedLoader` use it,
   so no loader can forget the review.
+
+**An edit stays in review until it is saved.** A content edit of a model's row —
+a drag, a resize, a reassignment, a box moved under the 3D HUD — leaves the row
+shown `pending`: unsaved, it is the reviewer's work in progress. The
+workspace's Save — the toolbar's — sends it, the server stores the row
+`accepted`, keeping the model's provenance and score, and the row reads
+accepted as the write leaves (`recordWrite`, §5). An edit that puts the content
+back as stored is no edit: nothing is queued (flow C). The 3D HUD's "Save"
+button stages, it does not save: it confirms the move into the record's unsaved
+work (`BBox3DSession.save` → `commitGeometryEdit`), so the box still reads
+pending after it, until the workspace's Save.
 
 **On the canvas.** The shared `EntityLabels2D` writes "entity · status" on a
 model's annotation, on a colour per status — pending or accepted
@@ -711,7 +773,7 @@ ui/apps/web/src/lib/
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
 | `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders, each building its annotations through `persistedAnnotation` |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |
-| `LocalAnnotationLocator` | queue ctor | `(id) => session.annotations.find(id)` (persisted flip) |
+| `LocalAnnotationLocator` | queue ctor | `findLocalAnnotation: (id) => session.annotations.find(id)` (persisted flip) + `recordQueued` (the content a body carries, kept as it is queued) + `recordWrite` (what a write stores, undone on failure) |
 
 These interfaces are the joints: depend on them, not on `WorkspaceManager`, and a
 new kind / a fake gateway / a new scene type slots in without touching the rest.

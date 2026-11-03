@@ -17,6 +17,7 @@ import { keypointsPayloadBuilder } from "./kinds/2d/keypoints/keypointsPayloadBu
 import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
 import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
+import { carriesContent, MODEL_SOURCE_TYPE } from "./reviewStatus.js";
 import type { MutationSink } from "./scene/sceneContext.js";
 import type { PendingAnnotation, PendingEntityChoice, ResourceMutation } from "./types.js";
 
@@ -122,35 +123,179 @@ export function commitNewAnnotation<G>(
 
 /**
  * Commit a geometry edit to an existing local annotation: write it into the
- * collection, then either queue an update (persisted) or patch its still-pending
- * create (draft). Kind-agnostic — the body comes from the kind's `buildUpdate`,
- * which is a superset of the create body's geometry fields, so patching a
- * pending create with it only changes the geometry.
+ * collection, then either queue an update (persisted, `queueContentEdit`) or
+ * patch its still-pending create (draft). Kind-agnostic — the body comes from
+ * the kind's `buildUpdate`, which is a superset of the create body's geometry
+ * fields, so patching a pending create with it only changes the geometry.
  */
 export function commitGeometryEdit<G>(ctx: CommitContext, annotationId: string, geometry: G): void {
   const annotation = ctx.collection.find(annotationId);
   if (!annotation) return;
   ctx.collection.setGeometry(annotationId, geometry);
 
+  if (annotation.persisted) {
+    queueContentEdit(ctx, annotation);
+    return;
+  }
+  const builder = payloadBuilderFor(annotation.kind);
+  // INVARIANT (D9): the create body must be a superset of `buildUpdate`'s
+  // fields, with identical values for everything except geometry. Then merging
+  // this body into the queued create changes only the geometry. A future kind
+  // whose buildUpdate diverges from buildCreate on a shared field would break
+  // this — keep them aligned (covered by commit.test.ts).
+  ctx.mutations.patchPendingCreate(
+    annotation.id,
+    builder.resource,
+    builder.buildUpdate(ctx.buildContext, annotation),
+  );
+}
+
+/** What queueing an edit of a stored annotation's content needs. */
+interface ContentEditContext {
+  readonly mutations: Pick<MutationSink, "pending" | "upsertUpdate" | "dropForLocalAnnotation">;
+  readonly buildContext: BuildContext;
+  readonly widgetId: string;
+}
+
+/**
+ * Queue what an edit of a stored annotation's content calls for — its geometry
+ * or its entity, already written to the collection. One place for every edit
+ * gesture, of every kind.
+ *
+ * An edit of a model's row leaves the status it shows alone: unsaved, the row
+ * stays in review — pending — until the edit is saved, which the server stores
+ * accepted (the row then reads so as its write leaves,
+ * `AnnotationCollection.recordWrite`).
+ *
+ * - **Content back as stored** — a drag undone by hand, the entity it already
+ *   had picked again — is not an edit: nothing of it is sent, since the server
+ *   would store nothing. A content edit queued earlier for the row is dropped
+ *   (with an entity a reassignment queued for it).
+ * - **Any other edit** replaces the content the row's queued update carried.
+ */
+function queueContentEdit(ctx: ContentEditContext, annotation: LocalAnnotation): void {
   const builder = payloadBuilderFor(annotation.kind);
   const body = builder.buildUpdate(ctx.buildContext, annotation);
-  if (annotation.persisted) {
-    ctx.mutations.upsertUpdate({
-      op: "update",
-      resource: builder.resource,
-      id: annotation.id,
-      body,
-      widgetId: ctx.widgetId,
-      localAnnotationId: annotation.id,
-    });
-  } else {
-    // INVARIANT (D9): the create body must be a superset of `buildUpdate`'s
-    // fields, with identical values for everything except geometry. Then merging
-    // this body into the queued create changes only the geometry. A future kind
-    // whose buildUpdate diverges from buildCreate on a shared field would break
-    // this — keep them aligned (covered by commit.test.ts).
-    ctx.mutations.patchPendingCreate(annotation.id, builder.resource, body);
+  if (leavesContentAsStored(ctx.buildContext, annotation, body)) {
+    if (queuedContentEdit(ctx.mutations.pending, builder.resource, annotation.id) !== undefined) {
+      ctx.mutations.dropForLocalAnnotation(annotation.id);
+    }
+    return;
   }
+  ctx.mutations.upsertUpdate({
+    op: "update",
+    resource: builder.resource,
+    id: annotation.id,
+    body,
+    widgetId: ctx.widgetId,
+    localAnnotationId: annotation.id,
+  });
+}
+
+/**
+ * The body of the update queued for this row when it carries an edit of the
+ * row's content — geometry, entity — rather than the status alone; undefined
+ * otherwise. The latest queued update is the one read, the one `upsertUpdate`
+ * replaces: after a failed request, a row may hold that one and a newer one
+ * queued while it was on the wire.
+ */
+function queuedContentEdit(
+  pending: readonly ResourceMutation[],
+  resource: string,
+  annotationId: string,
+): Readonly<Record<string, unknown>> | undefined {
+  const queued = pending.findLast(
+    (m) => m.op === "update" && m.resource === resource && m.id === annotationId,
+  );
+  return queued?.op === "update" && carriesContent(queued.body) ? queued.body : undefined;
+}
+
+/**
+ * How far apart two numbers of an update body may be and still be one value,
+ * relative to their size (and absolute below 1): eight units in the last place
+ * of a float32, the precision the dataset stores coordinates in. A value read
+ * back from storage, or converted by the client and back — a 3D box's rotation
+ * goes through a quaternion — lands within a unit or two of where it was; no
+ * edit made by hand is anywhere near this small.
+ */
+const FLOAT32_ROUND_TRIP_TOLERANCE = 2 ** -20;
+
+/**
+ * Whether an update body for the annotation, as edited, carries what the
+ * dataset holds already — then the edit changes nothing the server would see.
+ *
+ * Compared as the server compares it: the body the kind builds from the
+ * annotation, against the body it builds from the stored content, minus a
+ * model's score (which no edit of a model's row changes — the columns the
+ * kind's loader declared, `AnnotationReview.scoreFields`), with floats as close
+ * as storage keeps them. Kind-agnostic: only the kind's own `buildUpdate` and
+ * declaration are used. Unknown — nothing stored to compare with — reads as a
+ * change.
+ */
+function leavesContentAsStored(
+  buildContext: BuildContext,
+  annotation: LocalAnnotation,
+  body: Readonly<Record<string, unknown>>,
+): boolean {
+  const stored = annotation.persistedContent;
+  if (!stored) return false;
+  const storedBody = payloadBuilderFor(annotation.kind).buildUpdate(buildContext, {
+    ...annotation,
+    geometry: stored.geometry,
+    entityId: stored.entityId,
+    entity: stored.entity,
+  });
+  const review = annotation.review;
+  const isModelRow = review?.sourceType === MODEL_SOURCE_TYPE;
+  const ignored = new Set(isModelRow ? (review?.scoreFields ?? []) : []);
+  const keys = new Set([...Object.keys(body), ...Object.keys(storedBody)]);
+  return [...keys].every((key) => ignored.has(key) || sameValue(body[key], storedBody[key]));
+}
+
+/**
+ * Deep equality over plain data, numbers within `FLOAT32_ROUND_TRIP_TOLERANCE`:
+ * what the dataset keeps as one value. Shared, so that whatever compares
+ * content with what storage gives back reads "unchanged" as this rule does.
+ */
+export function sameValue(a: unknown, b: unknown): boolean {
+  if (typeof a === "number" && typeof b === "number") {
+    if (Number.isNaN(a) || Number.isNaN(b)) return Number.isNaN(a) && Number.isNaN(b);
+    const scale = Math.max(1, Math.abs(a), Math.abs(b));
+    return Math.abs(a - b) <= FLOAT32_ROUND_TRIP_TOLERANCE * scale;
+  }
+  const aList = asList(a);
+  const bList = asList(b);
+  if (aList || bList) {
+    return (
+      aList !== undefined &&
+      bList !== undefined &&
+      aList.length === bList.length &&
+      aList.every((item, index) => sameValue(item, bList[index]))
+    );
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    // A key holding `undefined` is a key JSON does not send.
+    const keys = new Set(
+      [...Object.keys(a), ...Object.keys(b)].filter(
+        (key) => a[key] !== undefined || b[key] !== undefined,
+      ),
+    );
+    return [...keys].every((key) => sameValue(a[key], b[key]));
+  }
+  return a === b;
+}
+
+/** An array or a typed array as a list of its items; undefined for anything else. */
+function asList(value: unknown): readonly unknown[] | undefined {
+  if (Array.isArray(value)) return value as readonly unknown[];
+  if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+    return Array.from(value as unknown as ArrayLike<unknown>);
+  }
+  return undefined;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -254,7 +399,10 @@ export function commitDraftWithEntity(
  */
 export interface ReassignEntityContext {
   readonly collection: AnnotationStore;
-  readonly mutations: Pick<MutationSink, "queue" | "upsertUpdate" | "dropPendingEntityCreate">;
+  readonly mutations: Pick<
+    MutationSink,
+    "pending" | "queue" | "upsertUpdate" | "dropForLocalAnnotation" | "dropPendingEntityCreate"
+  >;
   readonly buildContext: BuildContext;
   readonly widgetId: string;
   findEntity(entityId: string): Record<string, unknown> | undefined;
@@ -275,7 +423,6 @@ export function reassignEntity(
   ctx: ReassignEntityContext,
 ): void {
   if (!annotation.persisted) return;
-  const builder = payloadBuilderFor(annotation.kind);
 
   // Whatever this choice turns out to be, it supersedes the previous one: any
   // entity still queued for this annotation is now unreachable, since
@@ -305,14 +452,7 @@ export function reassignEntity(
   const updated = ctx.collection.find(annotation.id);
   if (!updated) return;
 
-  ctx.mutations.upsertUpdate({
-    op: "update",
-    resource: builder.resource,
-    id: annotation.id,
-    body: builder.buildUpdate(ctx.buildContext, updated),
-    widgetId: ctx.widgetId,
-    localAnnotationId: annotation.id,
-  });
+  queueContentEdit(ctx, updated);
   ctx.requestRedraw?.();
 }
 

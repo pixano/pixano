@@ -29,17 +29,20 @@ export interface PersistedAnnotationFields<K extends AnnotationKind> {
   geometry: GeometryByKind[K];
   /**
    * The columns of the kind's rows that hold a model's score, in the order they
-   * are read — the score fields of the kind's backend schema. The kind states
-   * them here, next to its row mapping, so no shared module knows a kind's
-   * columns: the review reads the score from them. Omitted by a kind with no
-   * score.
+   * are read — as the kind's backend schema declares them (`MODEL_SCORE_FIELDS`
+   * in src/pixano/schemas). The kind states them here, next to its row mapping,
+   * so no shared module knows a kind's columns: the review reads the score from
+   * them, and the edit rule leaves them out of what an edit changes.
+   * Omitted by a kind with no score.
    */
   scoreFields?: readonly string[];
 }
 
 /**
  * Wrap a stored row in the `LocalAnnotation` envelope: its identity, its
- * entity's label snapshot, and its provenance and review status.
+ * entity's label snapshot, its provenance and review status, and what the
+ * dataset holds of its content (`persistedContent`) — kept as a copy, apart
+ * from the geometry an edit changes.
  *
  * Every seed loader goes through this one function — the view-scoped helper
  * and the loaders that keep rows record-wide alike — so a field the envelope
@@ -55,6 +58,7 @@ export function persistedAnnotation<K extends AnnotationKind>(
   fields: PersistedAnnotationFields<K>,
   ctx: Pick<SeedLoadContext, "entitiesById">,
 ): LocalAnnotation<GeometryByKind[K]> {
+  const entity = row.entity_id ? ctx.entitiesById.get(row.entity_id) : undefined;
   return {
     id: row.id,
     entityId: row.entity_id,
@@ -62,7 +66,12 @@ export function persistedAnnotation<K extends AnnotationKind>(
     viewId: fields.viewId,
     geometry: fields.geometry,
     persisted: true,
-    entity: row.entity_id ? ctx.entitiesById.get(row.entity_id) : undefined,
+    entity,
     review: reviewOf(row, fields.scoreFields ?? []),
+    persistedContent: {
+      geometry: structuredClone(fields.geometry),
+      entityId: row.entity_id,
+      entity,
+    },
   };
 }

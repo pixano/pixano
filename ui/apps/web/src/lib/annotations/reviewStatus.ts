@@ -31,6 +31,12 @@ export const REVIEW_STATUSES: readonly ReviewStatus[] = [
   REVIEW_STATUS.ACCEPTED,
 ];
 
+/**
+ * The column holding a row's review status: the only key of an update body
+ * that changes the status and nothing else.
+ */
+export const REVIEW_STATUS_FIELD = "review_status";
+
 /** The `source_type` of a row a model produced — the only rows that are reviewed. */
 export const MODEL_SOURCE_TYPE = "model";
 
@@ -41,7 +47,11 @@ export const MODEL_SOURCE_TYPE = "model";
  * next time the record is read.
  */
 export interface AnnotationReview {
-  /** A model row's status. Empty on a row no model produced. */
+  /**
+   * A model row's status: what the dataset holds, or will hold once the write
+   * of the row on its way lands (`AnnotationCollection.recordWrite`). An
+   * unsaved edit leaves it as stored. Empty on a row no model produced.
+   */
   status: ReviewStatus | "";
   sourceType: string;
   sourceName: string;
@@ -52,7 +62,10 @@ export interface AnnotationReview {
   confidence?: number;
   /**
    * The columns of the row that hold the model's score, as the kind's seed
-   * loader declares them (`persistedAnnotation`). Empty, or absent on a review
+   * loader declares them (`persistedAnnotation`). Only the model writes them:
+   * the server keeps them through a person's edit of a model's row and does not
+   * take a change to them for an edit, so the interface ignores them too
+   * when it asks whether an edit changes anything. Empty, or absent on a review
    * built by hand, for a kind with no score.
    */
   scoreFields?: readonly string[];
@@ -181,4 +194,38 @@ export function isReviewable(annotation: LocalAnnotation): annotation is Reviewa
     review.sourceType === MODEL_SOURCE_TYPE &&
     isReviewStatus(review.status)
   );
+}
+
+/**
+ * The status the dataset holds for a model's row once a write of it with this
+ * body has landed — what the server's rules store (`_as_human_edit_of` in
+ * src/pixano/api/service.py):
+ *
+ * - a body asking for `accepted` stores `accepted`;
+ * - a change to the row's content stores `accepted` too: a person who saves an
+ *   edit of a model's row chooses to keep it. The interface queues no edit
+ *   that leaves the content as stored, so a body carrying content is a change;
+ * - anything else — an echo, `pending`, which only the worker sets — leaves the
+ *   status as it was.
+ *
+ * A row no model produced has no status to move.
+ *
+ * @param review The row's review state, its status the one the dataset holds.
+ * @param body The body of the update.
+ */
+export function storedStatusAfterWrite(
+  review: AnnotationReview,
+  body: Readonly<Record<string, unknown>>,
+): ReviewStatus | "" {
+  if (review.sourceType !== MODEL_SOURCE_TYPE) return review.status;
+  const accepts = body[REVIEW_STATUS_FIELD] === REVIEW_STATUS.ACCEPTED;
+  return accepts || carriesContent(body) ? REVIEW_STATUS.ACCEPTED : review.status;
+}
+
+/**
+ * Whether an update body changes the row's content — its geometry, its entity
+ * — rather than carrying its status alone.
+ */
+export function carriesContent(body: Readonly<Record<string, unknown>>): boolean {
+  return Object.keys(body).some((key) => key !== REVIEW_STATUS_FIELD);
 }

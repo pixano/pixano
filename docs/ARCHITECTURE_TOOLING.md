@@ -92,15 +92,20 @@ interface LocalAnnotation<G = unknown> {
   persisted: boolean;       // false = draft (create still queued)
   entity?: Record<string, unknown>;
   review?: AnnotationReview; // provenance + review status (seed envelope); none on a draft
+  persistedContent?: PersistedContent<G>; // what the dataset holds: {geometry, entityId, entity}
 }
 ```
 
 Optimistic edits mutate `geometry` in place; the pending mutation queue is the
-ledger of unsaved changes. A single **record-scoped** `AnnotationCollection`
-(`.svelte.ts` runes class) lives on `WorkspaceSession.annotations` — one instance
-per loaded record, shared by every widget viewing it (so moving a 3D box updates
-its 2D projection live, and two widgets never diverge). Image widgets see the
-record through a `ViewScopedAnnotations` facade that filters to their view plus
+ledger of unsaved changes, and `persistedContent` — a detached copy, set by the
+seed envelope and moved only by a write (`AnnotationCollection.recordWrite`) — is
+what the content was before them: what tells an edit that changes nothing from
+one that does.
+
+A single **record-scoped** `AnnotationCollection` (`.svelte.ts` runes class)
+lives on `WorkspaceSession.annotations` — one instance per loaded record, shared
+by every widget viewing it (so moving a 3D box updates its 2D projection live,
+and two widgets never diverge). Image widgets see the record through a `ViewScopedAnnotations` facade that filters to their view plus
 `RECORD_SCOPED_KINDS` (e.g. `bbox3d`); writes pass through to the one collection.
 
 ### 2. The `scene/` contracts (shared seam)
@@ -256,6 +261,16 @@ draft/edit lifecycle so no tool, renderer or widget reaches into payload interna
   to the collection and queue its creates.
 - `commitGeometryEdit(ctx, annotationId, geometry)` — write the edit, then queue an
   `update` (persisted) or patch the pending create (draft) using `buildUpdate` (D9).
+  A persisted edit goes through the same rule as an entity reassignment
+  (`reassignEntity`): when the body `buildUpdate` makes from the edited
+  annotation says what the one it makes from `persistedContent` says — a model's
+  score fields aside (the columns its kind declares, `review.scoreFields`),
+  numbers within a float32 round trip — the edit changes nothing and nothing is
+  queued; otherwise the update replaces the content the row had queued, and a
+  model's row stays shown as it is stored — pending until the workspace's Save,
+  which the server stores `accepted`. The rule reads nothing of the kind but its
+  `buildUpdate`, so that body must follow from the annotation alone
+  (`ADDING_AN_ANNOTATION_KIND.md`, the payload builder).
 
 Both take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
 which both `Scene2DContext` and the widgets' seam satisfy.
@@ -264,8 +279,9 @@ On the read side, every seed loader wraps a stored row in the same envelope,
 `persistedAnnotation(row, { kind, viewId, geometry, scoreFields }, ctx)`
 (`lib/annotations/persistedAnnotation.ts`): identity, entity snapshot, and the
 review state. `scoreFields` is the kind's own declaration of the columns holding
-a model's score, the score fields of its backend schema; the review reads the
-score from them, so no shared module names a column (`bboxSeedLoader.ts`:
+a model's score, as its backend schema declares them (`MODEL_SCORE_FIELDS`); the
+review reads the score from them, and the edit rule leaves them out of what an
+edit changes, so no shared module names a column (`bboxSeedLoader.ts`:
 `["confidence"]`). A loader that hand-built its `LocalAnnotation` would load a
 model's rows as if a person had drawn them — no status, none on its label — and
 nothing would fail.
