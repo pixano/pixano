@@ -26,19 +26,21 @@ export PIXANO_DATABASE_URL=postgresql://pixano:changeme@127.0.0.1:5432/pixano
 ## 2. The inference server
 
 A checkout of [pixano-inference](https://github.com/pixano/pixano-inference), its CLIP
-embedding and YOLO detection plugins, and a model list. The list the demo uses on CPU is in
-this repository:
+embedding, YOLO detection and SAM 2.1 segmentation plugins, and a model list. The list the
+demo uses on CPU is in this repository:
 
 ```sh
 git clone https://github.com/pixano/pixano-inference.git ../pixano-inference
 cd ../pixano-inference
 git checkout v0.7.1   # the release Pixano's client requires
 uv sync
-# The CLIP plugin and the YOLO example, from the checkout; Ultralytics at the version the
-# compose pins. Into the checkout's environment, named, since `uv pip` would otherwise take an
-# activated one.
+# The SAM 2.1 and CLIP plugins and the YOLO example, from the checkout; the sam-2 library, from
+# GitHub at the commit their Dockerfile pins; Ultralytics at the version the compose pins. Into
+# the checkout's environment, named, since `uv pip` would otherwise take an activated one.
 uv pip install --python .venv/bin/python \
-  ./packages/pixano-inference-clip ./examples/yolo "ultralytics==8.4.160"
+  ./packages/pixano-inference-sam ./packages/pixano-inference-clip ./examples/yolo \
+  "sam-2 @ git+https://github.com/facebookresearch/sam2.git@2b90b9f5ceec907a1c18123530e92e794ad901a4" \
+  "ultralytics==8.4.160"
 cd -
 
 PIXANO_INFERENCE_MEDIA_ROOTS=/srv/pixano/data/media \
@@ -49,18 +51,31 @@ PIXANO_INFERENCE_WEIGHTS_DIR=/srv/pixano/inference-weights \
 
 `PIXANO_INFERENCE_MEDIA_ROOTS` is the directory under which the server accepts image paths;
 `PIXANO_INFERENCE_WEIGHTS_DIR` a writable directory where YOLO keeps its weights. Wait for
-`http://127.0.0.1:7463/health` to answer; the first start downloads the models. CLIP comes
-from huggingface.co and is cached under `HF_HOME`, `~/.cache/huggingface` unless set, not in
-`PIXANO_INFERENCE_WEIGHTS_DIR`.
+`http://127.0.0.1:7463/health` to answer; the first start downloads the models. CLIP and the
+two SAM 2.1 checkpoints (about 340 MB for SAM) come from huggingface.co and are cached under
+`HF_HOME`, `~/.cache/huggingface` unless set, not in `PIXANO_INFERENCE_WEIGHTS_DIR`. Set
+`HF_HOME` to keep them next to YOLO's, as the container does.
 
 The YOLO plugin runs Ultralytics, which is AGPL-3.0: a demonstration choice. Serve any other
 detection model instead — nothing in Pixano names this one.
 
+The list serves no tracking model, so tracking by detection, in the legacy video workspace, has
+none to run. The YOLO plugin brings one, `YOLOByteTrackModel` (pixano-inference's
+`examples/yolo/config_tracking.py` shows its entry): add it to a copy of the list, with two more
+CPUs than the eight below, or run the application against another inference server that serves
+one. The application talks to one pixano-inference server at a time.
+
 **The machine.** Each model runs one replica, for which Ray reserves CPUs out of those it
-finds on the machine: two for CLIP, two for YOLO — four in all. With fewer, the server refuses
-to start, every model included; `--no-strict-startup` starts it anyway, with the models that
-fit. The reservation is a count, not a pinning: the worker, the application and PostgreSQL
-still run beside it on the same CPUs.
+finds on the machine: two for CLIP, two for YOLO, two for each SAM 2.1 model — eight in all.
+With fewer, the server refuses to start, every model included; `--no-strict-startup` starts it
+anyway, with the models that fit: they are placed in list order, the SAM models last, so on six
+or seven CPUs `sam2.1-small` is the one left out. The reservation is a count, not a pinning:
+the worker, the application and PostgreSQL still run beside it on the same CPUs. Each SAM
+replica holds about 1.5 GiB of memory, 2 GiB at peak, and takes 1.0 to 1.2 s per image on its
+two CPUs, measured by hand on an 8-core M1 Pro; the same call takes about 6 s inside the
+compose's Linux container on that machine, and 7 to 8 s there through the server (measured on
+2026-10-09: 7 s for tiny, 7.8 s for small). Each replica answers one call at a time, for every
+client of the server, the interactive smart-segment tool included.
 
 ## 3. The worker
 
