@@ -100,9 +100,10 @@ left, the job not cancelled — whoever settles the job puts it in the queue, an
 it like a chunk: under a lease, with the chunk's time limit, cancelled with the job, handed back
 after a transient failure, retried by `POST /jobs/{id}/retry`. The job reads `done` only after
 it. It never runs when a chunk failed or the job was cancelled; a retry that brings the failed
-chunks through runs it then (backend-processing §8.5). Its tasks are none, so the job's progress
-and outcome are those of its work. A kind that does not override it has no final chunk, and its
-jobs settle with their last chunk as before.
+chunks through runs it then, and the worker's recovery pass runs it for a retried job that had
+nothing left to reopen — cancelled while its last chunks ran (backend-processing §8.5). Its tasks
+are none, so the job's progress and outcome are those of its work. A kind that does not
+override it has no final chunk, and its jobs settle with their last chunk as before.
 
 It runs in a thread, under the worker's write lock of the dataset, as a chunk's `write` does,
 on the dataset **reopened outside the cache**: it must see what every worker wrote, not what
