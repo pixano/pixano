@@ -60,8 +60,12 @@ and are never touched by a rerun, which replaces the pending rows only.
 
 ### `prepare(writer, params)` — optional
 
-Runs once per job, under the planning lease, before `plan`; never for a replayed chunk, and
-never for a job retried with its chunks. The default does nothing, and most kinds keep it: it
+Runs once per job, under the planning lease, **after** `plan` has produced work and before
+the chunks are recorded; never when the plan was refused or empty, never for a replayed chunk,
+and never for a job retried with its chunks. After, so that everything that can refuse the
+job — a model the dataset's embeddings were not computed with, say — refuses it before
+anything is destroyed. So `plan` must not rely on what `prepare` will do. The default does
+nothing, and most kinds keep it: it
 exists for a state the chunks cannot each restore on their own, such as emptying a table
 before refilling it. Three rules, the first two checked by the suite:
 
@@ -71,6 +75,18 @@ before refilling it. Three rules, the first two checked by the suite:
   parameters never loses what the dataset holds.
 - **No `finalize` in return** until a kind needs one: what should happen at the end of a job
   is designed then, not by symmetry.
+
+It runs under the worker's write lock of the dataset, as a chunk's `write` does: the worker's
+chunks of other jobs may be writing the same dataset meanwhile, in other threads, and the
+dataset's own lock never waits. Another process writing the dataset — a person's save, another
+worker, an import — still makes that lock raise `DatasetBusyError`. Let it through: the runner
+then leaves the job in `planning` and plans it again a moment later, `prepare` included
+(backend-processing §10), whereas any other error fails the job. The runner's own lock is
+waited for ten seconds at most (`PLANNING_WRITE_LOCK_WAIT_S`): past them — a long write of this
+worker on the dataset, or one that hangs — the job is postponed the same way. And the whole
+planning, `plan` then `prepare`, has ten minutes (`PLANNING_TIMEOUT_S`): past them the job
+fails, and a `prepare` that had not started never starts. So a `prepare` must stay far below
+that, on the largest dataset it will meet.
 
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 

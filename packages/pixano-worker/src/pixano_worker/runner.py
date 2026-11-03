@@ -27,6 +27,7 @@ from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from collections.abc import Set as AbstractSet
 from contextlib import asynccontextmanager, contextmanager
+from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from pixano.datasets import Dataset
+from pixano.datasets.utils.errors import DatasetBusyError
 
 from . import queue
 from .kinds import Chunk, JobKind, JobParams, Outcome, Registry, TransientError
@@ -80,9 +82,15 @@ UNEXPECTED_ERROR_LIMIT = 60
 # hands the expired leases of a dead worker back to a busy worker, not only to an idle one.
 RECLAIM_INTERVAL_S = 30.0
 
-# Writes to a same dataset go one at a time. Several chunks of a dataset run at the same time,
-# and LanceDB is not made for concurrent writes on a same table. The lock is a thread lock:
-# `write` runs in a thread.
+# How long a job whose dataset was busy at planning waits before it is planned again. A dataset
+# is busy for the length of one write by someone else — a person's save, another worker's chunk —
+# or of an import. Long enough not to meet the same write again at once, short next to the job
+# itself.
+PLANNING_RETRY_DELAY = timedelta(seconds=2)
+
+# Writes to a same dataset go one at a time: a chunk's `write`, and a job's `prepare` at
+# planning. Several chunks of a dataset run at the same time, and LanceDB is not made for
+# concurrent writes on a same table. The lock is a thread lock: both run in a thread.
 #
 # It lives at module level, so renewing the thread pool cannot release it: a write that never
 # returns — storage that stopped answering — holds it until the process ends. Every wait for it
@@ -92,21 +100,29 @@ RECLAIM_INTERVAL_S = 30.0
 _write_locks: defaultdict[str, threading.Lock] = defaultdict(threading.Lock)
 _write_locks_guard = threading.Lock()
 
+# How long planning waits for this worker's other writes to its dataset before it postpones the
+# job, as when someone else is writing it. The loop waits for planning within its turn — no
+# claim, no recovery of expired leases meanwhile —, so the wait is short: giving up costs only
+# the postponement, `PLANNING_RETRY_DELAY`, after which the job is planned again. Ten seconds
+# outlast a chunk's write for each of the default four chunks in flight (`DEFAULT_CONCURRENCY`),
+# and a compaction, under a second at 30,000 rows (backend-processing §12).
+PLANNING_WRITE_LOCK_WAIT_S = 10.0
+
 # How long a chunk waits for this worker's other writes to its dataset before it is handed back
-# as after a transient failure. Generous: giving up spends one of the chunk's attempts
-# (`queue.MAX_ATTEMPTS`), and the chunk holds no lock while it waits, only its own slot. Five minutes
-# outlast every write queued ahead of it, and stay far below the chunk's time limit
-# (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write that hangs is handed back, and
-# its thread freed, instead of waiting that whole limit out, five times, and staying stuck on the
-# lock for good.
+# as after a transient failure. Far longer than planning's wait: giving up spends one of the
+# chunk's attempts (`queue.MAX_ATTEMPTS`), and the chunk holds no lock while it waits, only its own
+# slot. Five minutes outlast every write queued ahead of it, and stay far below the chunk's time
+# limit (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write that hangs is handed back,
+# and its thread freed, instead of waiting that whole limit out, five times, and staying stuck on
+# the lock for good.
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
-# How long the loop waits for each step of a planning — the preparation, then the split — before
-# it fails the job. Planning asks the kind which model it runs — a question to the inference
-# bounded by its own timeout —, prepares the dataset, then reads the identifiers it splits. Not
-# measured: a ceiling rather than an estimate, set far above that work, so that only a planning
-# stuck in its reads or in `prepare` — storage that stopped answering, a kind's bug — reaches it,
-# and the loop's turn, which it holds, is given back.
+# How long the loop waits for a planning — the split, then the preparation — before it fails the
+# job. Planning reads the identifiers it splits, asks the kind which model it runs — a question
+# to the inference bounded by its own timeout —, waits at most `PLANNING_WRITE_LOCK_WAIT_S` for
+# the dataset, and prepares it. Not measured: a ceiling rather than an estimate, set far above that
+# work, so that only a planning stuck in its reads or in `prepare` — storage that stopped
+# answering, a kind's bug — reaches it, and the loop's turn, which it holds, is given back.
 PLANNING_TIMEOUT_S = 600.0
 
 # What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
@@ -132,7 +148,7 @@ def _holding_write_lock(dataset_id: str, wait_s: float, busy: Callable[[str], Ex
         dataset_id: The dataset to write.
         wait_s: How long to wait for the lock.
         busy: Builds the exception raised when the lock is not free in time: what a dataset kept
-            busy means is the caller's to say — a chunk handed back.
+            busy means is the caller's to say — a planning postponed, a chunk handed back.
 
     Raises:
         Exception: The one `busy` builds, when another write of this worker on the dataset held
@@ -148,6 +164,10 @@ def _holding_write_lock(dataset_id: str, wait_s: float, busy: Callable[[str], Ex
         yield
     finally:
         lock.release()
+
+
+class PlanningAbandoned(RuntimeError):
+    """The loop stopped waiting for this planning: its `prepare` must not start any more."""
 
 
 # The job stays in `planning` while it is split: it is the lease that reserves it, not a state
@@ -233,7 +253,8 @@ async def plan_one(
     """Split a job waiting to be planned.
 
     Returns:
-        The identifier of the job that was split, or None if there was none.
+        The identifier of the job taken up — split, failed, or left to be planned again —, or
+        None if there was none.
     """
     row = await (await conn.execute(CLAIM_PLANNING, (queue.LEASE_TTL,))).fetchone()
     if row is None:
@@ -251,25 +272,43 @@ async def plan_one(
     async def refresh() -> bool:
         return (await conn.execute(REFRESH_PLANNING, (queue.LEASE_TTL, job_id))).rowcount > 0
 
+    # Set as soon as the loop no longer waits for the planning's thread, whatever ended the wait,
+    # before anything else is awaited: a thread that finished has nothing left to run, and one
+    # still running must not start a `prepare` nobody awaits any more.
+    abandoned = threading.Event()
     try:
         params = kind.validate_params(raw_params)
-        reader = _reader_for(library, dataset_id, media, fresh=True)
         async with _kept_alive(refresh, f"planning of job {job_id}"):
             pool = threads or default_threads()
-            # Preparation precedes the split, under the same lease: a planner that dies between
-            # the two leaves a `prepare` done and no chunk, and the next one redoes both — that
-            # is why `prepare` must be idempotent. The writer is built in the preparation's
-            # thread, not on the loop: naming the model may ask the inference.
-            await pool.run(
-                lambda: kind.prepare(_writer_for(library, dataset_id, kind, job_id, params), params),
-                PLANNING_TIMEOUT_S,
-            )
-            chunks = await pool.run(lambda: list(kind.plan(reader, params)), PLANNING_TIMEOUT_S)
+            try:
+                chunks = await pool.run(
+                    lambda: _plan_and_prepare(kind, library, dataset_id, media, job_id, params, abandoned),
+                    PLANNING_TIMEOUT_S,
+                )
+            finally:
+                abandoned.set()
+    except DatasetBusyError as error:
+        # Someone else is writing the dataset — a person's save, another worker's chunk, an
+        # import, or this worker's chunk of another job past the wait planning allows it —,
+        # which says nothing about the job: the same planning passes once that write is over.
+        # Failing the job made the person submit it again for nothing. The lease is cut short
+        # instead, so that the job is planned again after a delay, by any worker. `prepare` is
+        # idempotent, so a planning interrupted halfway is safe to redo.
+        await conn.execute(REFRESH_PLANNING, (PLANNING_RETRY_DELAY, job_id))
+        log.info(
+            "job %s: dataset busy at planning (%s), planned again in %ss",
+            job_id,
+            error,
+            PLANNING_RETRY_DELAY.total_seconds(),
+        )
+        return job_id
     except TimeLimitExceeded:
-        # This is the planning's own work that does not end: its reads or its `prepare`, on storage
-        # that stopped answering, or a kind's bug. Planned again, it would hold the loop's turn for
-        # the whole limit each time, with no bound on the number of tries (backend-processing §10),
-        # and leave one more thread stuck each time. Failing says it once.
+        # Unlike a busy dataset, this is the planning's own work that does not end: its reads or
+        # its `prepare`, on storage that stopped answering, or a kind's bug. Planned again, it
+        # would hold the loop's turn for the whole limit each time, with no bound on the number of
+        # tries (backend-processing §10), and leave one more thread stuck each time. Failing says
+        # it once. Its `prepare`, if it had not started, never will (`abandoned`); one already
+        # running holds the dataset's write lock, so a job submitted again waits for it.
         await _fail_job(conn, job_id, {"reason": PLANNING_TIMED_OUT, "timeout_s": PLANNING_TIMEOUT_S})
         log.error("job %s: planning still running after %ss, the job fails", job_id, PLANNING_TIMEOUT_S)
         return job_id
@@ -298,6 +337,64 @@ async def plan_one(
     else:
         log.info("job %s: split abandoned, the job is no longer in planning", job_id)
     return job_id
+
+
+def _plan_and_prepare(
+    kind: JobKind,
+    library: Path | None,
+    dataset_id: str,
+    media: MediaResolver | None,
+    job_id: str,
+    params: JobParams,
+    abandoned: threading.Event,
+) -> list[Chunk]:
+    """Split a job on its dataset reopened, then prepare the dataset: the planning's own work.
+
+    The split first, then the preparation: everything that can refuse the job — a model the
+    dataset's embeddings were not computed with, a dataset with nothing to do — refuses it before
+    `prepare` has destroyed anything. The other order would let a `prepare` empty a table for a job
+    its plan then refuses. A planner that dies after `prepare` leaves no chunk, and the next one
+    redoes both — that is why `prepare` must be idempotent.
+
+    `prepare` may write, so it runs under the dataset's write lock, as a chunk's `write` does:
+    this worker's chunks of other jobs may be writing the same dataset meanwhile, in other
+    threads. Unserialised, the dataset's own lock, which never waits, would refuse one of the
+    two: the job would fail at planning, or the chunk for good. The wait for that lock is bounded
+    (`PLANNING_WRITE_LOCK_WAIT_S`): past it, the dataset is busy, and the job is postponed as
+    when someone else writes it.
+
+    Runs in a thread: planning reads the dataset, and the writer asks the inference for its model.
+
+    Args:
+        kind: The job's kind.
+        library: The dataset library; None if none is configured.
+        dataset_id: The job's dataset.
+        media: The media resolver.
+        job_id: The job, for the writer's provenance.
+        params: The job's validated parameters.
+        abandoned: Set when the loop no longer waits for this planning.
+
+    Returns:
+        The chunks, empty when the job has nothing to do — then nothing was prepared.
+
+    Raises:
+        DatasetBusyError: This worker's write lock of the dataset was not free in time.
+        PlanningAbandoned: The loop stopped waiting before `prepare` started; nothing was prepared.
+    """
+    chunks = list(kind.plan(_reader_for(library, dataset_id, media, fresh=True), params))
+    if chunks:
+        # Built outside the lock: asking the inference for the model is no write.
+        writer = _writer_for(library, dataset_id, kind, job_id, params)
+        with _holding_write_lock(dataset_id, PLANNING_WRITE_LOCK_WAIT_S, busy=DatasetBusyError):
+            # Checked under the lock. A planning the loop gave up on is failed, or planned again
+            # once its lease expires; a `prepare` started now would run behind its back — after
+            # the chunks of that new planning have written, clearing what they wrote if it is a
+            # destructive one. One that started before holds the lock, so the new planning, and the
+            # chunks after it, wait for it.
+            if abandoned.is_set():
+                raise PlanningAbandoned(f"job {job_id}: the loop stopped waiting for its planning")
+            kind.prepare(writer, params)
+    return chunks
 
 
 async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk]) -> bool:

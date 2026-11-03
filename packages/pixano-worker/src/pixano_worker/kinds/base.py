@@ -24,7 +24,7 @@ The three contracts every kind fulfils:
 
 The hooks a kind overrides when the default does not fit it:
 
-- **`prepare(writer, params)`** puts the dataset in shape once per job, before `plan` — a table
+- **`prepare(writer, params)`** puts the dataset in shape once per job, after `plan` — a table
   emptied before it is refilled. Does nothing by default.
 - **`outcome(result, payload, task_count)`** says what each task of a chunk became: produced,
   skipped or quarantined. Every task produced by default.
@@ -170,12 +170,24 @@ class JobKind(ABC, Generic[ParamsT]):
         return {key: value for key, value in dumped.items() if key not in self.params_not_in_provenance}
 
     def prepare(self, writer: "JobWriter", params: ParamsT) -> None:
-        """Put the dataset in shape before the job is split.
+        """Put the dataset in shape before the job's chunks run.
 
-        Called once per job, under the planning lease, before `plan` — never by the replay of
-        a chunk nor by the relaunch of a job that already has its chunks. Doing nothing is the
+        Called once per job, under the planning lease, **after** `plan` has produced work and
+        before the chunks are recorded — never when the plan was refused or empty, never by the
+        replay of a chunk nor by the relaunch of a job that already has its chunks. After, so
+        that everything that can refuse the job refuses it before anything is destroyed; so
+        `plan` must not rely on what `prepare` will do. Doing nothing is the
         default, and it is what most kinds do: a kind only overrides this for a reset that its
         chunks cannot each do on their own — emptying a table before filling it, for example.
+
+        The runner calls it under its per-dataset write lock, as it does a chunk's `write`, so a
+        worker's planning never collides with its own chunks. A dataset another process is
+        writing (a person's save, another worker) postpones the planning instead of failing
+        the job: `prepare` runs again a moment later, hence the first rule below. So does a
+        write of this worker that keeps the lock beyond the runner's bounded wait for it. The
+        whole planning, `plan` then `prepare`, has a time limit, past which the job fails and
+        a `prepare` not started yet never starts: keep it far shorter, on the largest dataset
+        the kind will meet (backend-processing §10).
 
         Three rules, the first two checked by the contract suite:
 
