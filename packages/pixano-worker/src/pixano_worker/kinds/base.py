@@ -26,6 +26,8 @@ The hooks a kind overrides when the default does not fit it:
 
 - **`prepare(writer, params)`** puts the dataset in shape once per job, after `plan` — a table
   emptied before it is refilled. Does nothing by default.
+- **`finalize(reader, writer, params)`** completes the job once all its chunks are done — an
+  index built over everything they wrote. A kind without one has no closing step.
 - **`outcome(result, payload, task_count)`** says what each task of a chunk became: produced,
   skipped or quarantined. Every task produced by default.
 - **`model_identity(params)`** names the model the job runs, for the provenance of its rows.
@@ -189,19 +191,65 @@ class JobKind(ABC, Generic[ParamsT]):
         a `prepare` not started yet never starts: keep it far shorter, on the largest dataset
         the kind will meet (backend-processing §10).
 
-        Three rules, the first two checked by the contract suite:
+        Two rules, checked by the contract suite:
 
         - **Idempotent.** Called twice, the dataset is in the same state as after once: a
           planner that died after `prepare` lets its lease expire, and the next one starts over.
         - **Destroys nothing unless an explicit parameter asks for it.** A job launched with
           the default parameters must never lose what the dataset holds.
-        - **No `finalize` counterpart**, as long as no kind needs one: what must happen at the
-          end of a job gets designed then, not by symmetry.
+
+        What must happen at the end of a job is `finalize`'s, not a mirror of this one.
 
         Args:
             writer: Where to write through, already bound to the dataset and the job.
             params: The validated parameters.
         """
+
+    def finalize(self, reader: "JobReader", writer: "JobWriter", params: ParamsT) -> None:
+        """Complete the job, once every chunk of it is done.
+
+        For what only makes sense over the whole result: an index trained on every vector the
+        job wrote, figures summarising every row. A chunk cannot do it — it sees its own work,
+        not the others' — and the last chunk to finish does not know it is the last.
+
+        The engine runs it as a chunk of its own, the job's final chunk, which joins the queue
+        when every other chunk is done: claimed by any worker, under a lease, with the chunk
+        time limit, cancelled with the job, retried after a transient failure. It never runs
+        when a chunk failed or the job was cancelled; a retry that brings the failed chunks
+        through runs it then. The job reads `done` only once it has run. A kind that does not
+        override this method has no final chunk.
+
+        It runs in a thread, under the runner's per-dataset write lock, as a chunk's `write`
+        does, on the dataset reopened outside the cache: it must see what every worker wrote,
+        not what this one had open. A dataset another process is writing — a person's save —
+        hands it back to the queue rather than failing the job.
+
+        Three rules:
+
+        - **Idempotent.** A worker that dies while finalizing lets its lease expire, and the
+          final chunk runs again, maybe elsewhere: run twice, the dataset ends as after once.
+        - **Reads the dataset, never the chunks.** Their payloads and results are gone, and
+          other workers wrote part of them: what the job produced is what the dataset holds.
+        - **Deletes no row.** It may rebuild what derives from the rows — an index replaces the
+          previous one — but the rows stay as the chunks left them.
+
+        Args:
+            reader: Where to read the dataset from.
+            writer: Where to write through, already bound to the dataset and the job.
+            params: The validated parameters.
+
+        Raises:
+            TransientError: A failure of circumstance: the final chunk is retried later.
+        """
+
+    @property
+    def finalizes(self) -> bool:
+        """Whether this kind has a closing step: it overrides `finalize`.
+
+        Read at planning, to give the job a final chunk or not: a kind that does nothing at the
+        end must not make its jobs wait for an empty step.
+        """
+        return type(self).finalize is not JobKind.finalize
 
     @abstractmethod
     def plan(self, reader: "JobReader", params: ParamsT) -> Iterable[Chunk]:

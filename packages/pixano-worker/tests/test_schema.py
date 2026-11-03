@@ -24,6 +24,7 @@ from psycopg.types.json import Jsonb
 TABLES = ("schema_version", "job_kinds", "jobs", "job_chunks", "job_items", "job_events")
 INDEXES = (
     "job_chunks_pending_idx",
+    "job_chunks_one_final_idx",
     "job_chunks_expired_lease_idx",
     "jobs_created_at_idx",
     "jobs_to_plan_idx",
@@ -41,7 +42,7 @@ class TestSchemaFile:
     def test_every_create_is_conditional(self) -> None:
         """A bare CREATE slipped into the file would make the second startup fail."""
         unconditional = re.findall(
-            r"^CREATE\s+(?!SCHEMA IF NOT EXISTS|TABLE IF NOT EXISTS|INDEX IF NOT EXISTS)\S+.*$",
+            r"^CREATE\s+(?!SCHEMA IF NOT EXISTS|TABLE IF NOT EXISTS|(?:UNIQUE )?INDEX IF NOT EXISTS)\S+.*$",
             read_schema_sql(),
             flags=re.MULTILINE,
         )

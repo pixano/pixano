@@ -185,8 +185,12 @@ def _writer(kind: JobKind, target: _Target, job_id: str) -> JobWriter:
     )
 
 
-def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1) -> None:
-    """A whole job, as the engine runs it: prepare, split, then every chunk."""
+def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1, finalize_times: int = 1) -> None:
+    """A whole job, as the engine runs it: prepare, split, every chunk, then finalize.
+
+    `finalize_times` above one is a worker that died while finalizing, and the next one running
+    the final chunk again; zero stops the job before its closing step.
+    """
     params = _params(kind)
     for _ in range(prepare_times):
         kind.prepare(_writer(kind, target, job_id), params)
@@ -194,6 +198,8 @@ def _execute(kind: JobKind, target: _Target, job_id: str, prepare_times: int = 1
         kind.write(
             _writer(kind, target, job_id), kind.process(_reader(), chunk.payload, params), chunk.payload, params
         )
+    for _ in range(finalize_times if kind.finalizes else 0):
+        kind.finalize(_reader(), _writer(kind, target, job_id), params)
 
 
 #: Width of the vectors the simulated inference returns.
@@ -305,6 +311,29 @@ class TestPreparation:
         once, twice = _Target(), _Target()
         _execute(kind, once, "job-1")
         _execute(kind, twice, "job-1", prepare_times=2)
+
+        assert twice.fingerprint() == once.fingerprint()
+
+
+class TestFinalization:
+    """The `finalize` hook: no row deleted, and never two different states for two calls."""
+
+    def test_finalizing_deletes_no_row(self, kind: JobKind) -> None:
+        """The closing step derives from the rows; it leaves them as the chunks wrote them."""
+        target = _Target()
+        _execute(kind, target, "job-1", finalize_times=0)
+        before = target.fingerprint()
+
+        if kind.finalizes:
+            kind.finalize(_reader(), _writer(kind, target, "job-1"), _params(kind))
+
+        assert target.fingerprint() == before
+
+    def test_finalizing_twice_is_the_same_as_once(self, kind: JobKind) -> None:
+        """A worker that died while finalizing lets another run the final chunk again."""
+        once, twice = _Target(), _Target()
+        _execute(kind, once, "job-1")
+        _execute(kind, twice, "job-1", finalize_times=2)
 
         assert twice.fingerprint() == once.fingerprint()
 

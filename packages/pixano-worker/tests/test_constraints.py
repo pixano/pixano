@@ -115,6 +115,54 @@ class TestChunkConstraints:
             assert row is not None and row[0] == 0
 
 
+class TestFinalChunkConstraints:
+    """The final chunk runs a kind's `finalize` once the job's other chunks are done."""
+
+    def test_only_the_final_chunk_waits(self, db: psycopg.Connection) -> None:
+        """A chunk of work left waiting would never be claimed, and its job never settled."""
+        job = _new_job(db)
+
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(
+                f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state) VALUES (%s, 0, 1, 'waiting')",
+                (job,),
+            )
+
+    def test_a_chunk_of_work_has_tasks(self, db: psycopg.Connection) -> None:
+        """An empty chunk of work is a planning fault: it would count nothing and still run."""
+        job = _new_job(db)
+
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count) VALUES (%s, 0, 0)", (job,))
+
+    def test_the_final_chunk_has_no_task(self, db: psycopg.Connection) -> None:
+        """Its tasks would count in the progress, past the job's total."""
+        job = _new_job(db)
+
+        with pytest.raises(psycopg.errors.CheckViolation):
+            db.execute(
+                f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, final, state) "
+                "VALUES (%s, 0, 1, true, 'waiting')",
+                (job,),
+            )
+
+    def test_a_job_has_one_final_chunk_at_most(self, db: psycopg.Connection) -> None:
+        """Two would finalize the job twice, concurrently."""
+        job = _new_job(db)
+        db.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, final, state) "
+            "VALUES (%s, 0, 0, true, 'waiting')",
+            (job,),
+        )
+
+        with pytest.raises(psycopg.errors.UniqueViolation):
+            db.execute(
+                f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, final, state) "
+                "VALUES (%s, 1, 0, true, 'waiting')",
+                (job,),
+            )
+
+
 class TestPlanningLease:
     def test_a_planning_lease_only_exists_while_planning(self, db: psycopg.Connection) -> None:
         """A split-up job that kept its lease would still look reserved by a worker."""
