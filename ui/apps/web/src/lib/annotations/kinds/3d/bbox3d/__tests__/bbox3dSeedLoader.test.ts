@@ -120,3 +120,13 @@ describe("bbox3dSeedLoader", () => {
     });
   });
 });
+
+describe("bbox3dSeedLoader — a model's score", () => {
+  it("is read from the column the 3D box's schema declares", async () => {
+    const [box] = await bbox3dSeedLoader.load(
+      makeContext([makeRow({ source_type: "model", review_status: "pending", confidence: 0.83 })]),
+    );
+
+    expect(box.review).toMatchObject({ confidence: 0.83, scoreFields: ["confidence"] });
+  });
+});

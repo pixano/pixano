@@ -21,11 +21,32 @@ function resourceUrl(datasetId: string, resource: string, id?: string): string {
 const HTTP_NOT_FOUND = 404;
 
 /**
+ * The provenance and review columns every entity-annotation row carries,
+ * whatever its kind (`EntityAnnotation` in
+ * src/pixano/schemas/annotations/entity_annotation.py). Optional because a
+ * client must cope with rows written before they existed.
+ */
+export interface EntityAnnotationColumns {
+  /** `model`, `human`, `ground_truth`, `other` — or empty. */
+  source_type?: string;
+  source_name?: string;
+  /** A JSON object, serialized to a string by the backend. */
+  source_metadata?: string;
+  /** `pending` or `accepted` for a model's row; empty otherwise. */
+  review_status?: string;
+  /**
+   * The model's score, on the kinds whose schema has one; -1 means "not
+   * predicted". Absent from the other kinds' rows.
+   */
+  confidence?: number;
+}
+
+/**
  * Minimal shape of a BBox row as returned by `GET /datasets/:id/bboxes`.
  * We intentionally only type the fields we consume client-side; extra columns
- * (source_*, tracklet_id, frame_id, …) still come through in the payload.
+ * (tracklet_id, frame_id, …) still come through in the payload.
  */
-export interface BBoxRow {
+export interface BBoxRow extends EntityAnnotationColumns {
   id: string;
   record_id: string;
   entity_id: string;
@@ -33,7 +54,6 @@ export interface BBoxRow {
   coords: [number, number, number, number];
   format: "xywh" | "xyxy";
   is_normalized: boolean;
-  confidence?: number;
 }
 
 /**
@@ -42,7 +62,7 @@ export interface BBoxRow {
  * rotation matrix. Format is either 'xyzwhd' (center + size) or 'xyzxyz'
  * (axis-aligned min/max corners). Confidence is -1 for ground truth.
  */
-export interface BBox3DRow {
+export interface BBox3DRow extends EntityAnnotationColumns {
   id: string;
   record_id: string;
   entity_id: string;
@@ -51,7 +71,6 @@ export interface BBox3DRow {
   format: "xyzwhd" | "xyzxyz";
   rotation: number[];
   is_normalized: boolean;
-  confidence?: number;
 }
 
 /**

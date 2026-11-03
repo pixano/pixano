@@ -8,8 +8,14 @@ import type Konva from "konva";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LocalAnnotation } from "../../annotationCollection.svelte.js";
+import type { AnnotationReview, ReviewStatus } from "../../reviewStatus.js";
 import { EntityLabels2D } from "../entityLabels2D.js";
-import { BBOX_COLOR_PERSISTED } from "../scene2dStyleConstants.js";
+import {
+  BBOX_COLOR_DRAFT,
+  BBOX_COLOR_PERSISTED,
+  REVIEW_TAG_COLOR_ACCEPTED,
+  REVIEW_TAG_COLOR_PENDING,
+} from "../scene2dStyleConstants.js";
 
 interface FakeNode {
   attrs: Record<string, unknown>;
@@ -54,9 +60,15 @@ vi.mock("konva", () => {
   return { default: { Label, Tag: Node, Text: Node } };
 });
 
+const textOf = (label: FakeNode) =>
+  label.children.map((c) => c.cfg.text).find((t) => t !== undefined);
 const fillOf = (label: FakeNode) =>
   label.children.map((c) => c.cfg.fill).find((f) => f !== undefined);
 const live = () => labels.filter((l) => !l.destroyed);
+
+function modelReview(status: ReviewStatus): AnnotationReview {
+  return { status, sourceType: "model", sourceName: "detection" };
+}
 
 function annotation(overrides: Partial<LocalAnnotation> = {}): LocalAnnotation {
   return {
@@ -83,6 +95,67 @@ beforeEach(() => {
 });
 
 describe("EntityLabels2D", () => {
+  it("names a model's annotation's status next to its entity, on the status colour", () => {
+    const entityLabels = makeLabels();
+
+    entityLabels.sync([
+      { id: "a1", annotation: annotation({ review: modelReview("pending") }), anchor: ANCHOR },
+    ]);
+
+    expect(live()).toHaveLength(1);
+    expect(textOf(live()[0])).toBe("car · pending");
+    expect(fillOf(live()[0])).toBe(REVIEW_TAG_COLOR_PENDING);
+  });
+
+  it("rebuilds the label when the status changes", () => {
+    const entityLabels = makeLabels();
+    entityLabels.sync([
+      { id: "a1", annotation: annotation({ review: modelReview("pending") }), anchor: ANCHOR },
+    ]);
+
+    entityLabels.sync([
+      { id: "a1", annotation: annotation({ review: modelReview("accepted") }), anchor: ANCHOR },
+    ]);
+
+    expect(live()).toHaveLength(1);
+    expect(textOf(live()[0])).toBe("car · accepted");
+    expect(fillOf(live()[0])).toBe(REVIEW_TAG_COLOR_ACCEPTED);
+  });
+
+  it("shows the status even when the entity has nothing to name", () => {
+    const entityLabels = makeLabels();
+
+    entityLabels.sync([
+      {
+        id: "a1",
+        annotation: annotation({ entity: undefined, review: modelReview("accepted") }),
+        anchor: ANCHOR,
+      },
+    ]);
+
+    expect(textOf(live()[0])).toBe("accepted");
+    expect(fillOf(live()[0])).toBe(REVIEW_TAG_COLOR_ACCEPTED);
+  });
+
+  it("leaves a person's annotation and a draft as they were", () => {
+    const entityLabels = makeLabels();
+
+    entityLabels.sync([
+      {
+        id: "human",
+        annotation: annotation({
+          id: "human",
+          review: { status: "", sourceType: "other", sourceName: "" },
+        }),
+        anchor: ANCHOR,
+      },
+      { id: "draft", annotation: annotation({ id: "draft", persisted: false }), anchor: ANCHOR },
+    ]);
+
+    expect(live().map(textOf)).toEqual(["car", "car"]);
+    expect(live().map(fillOf)).toEqual([BBOX_COLOR_PERSISTED, BBOX_COLOR_DRAFT]);
+  });
+
   it("recolours a draft's label once it is saved", () => {
     const entityLabels = makeLabels();
     entityLabels.sync([{ id: "a1", annotation: annotation({ persisted: false }), anchor: ANCHOR }]);

@@ -12,6 +12,7 @@ import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { commitGeometryEdit } from "$lib/annotations/payloadBuilders.js";
+import type { ReviewStatus } from "$lib/annotations/reviewStatus.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import { ApiError } from "$lib/api/apiClient.js";
@@ -305,8 +306,16 @@ export function widgetSeam(manager: WorkspaceManager, widgetId = "image-widget")
 
 // ─── Rows ────────────────────────────────────────────────────────────────────
 
-/** A box a person drew in the interface. */
-export function humanBox(recordId: string, id: string): Row {
+/** What the worker writes as provenance (`provenance` in pixano_worker/writer.py). */
+export const MODEL_METADATA = JSON.stringify({
+  job_id: "job-1",
+  kind: "detection",
+  model: "yolo",
+  model_version: "v8",
+});
+
+/** A box a model produced, at a review status. */
+export function modelBox(recordId: string, id: string, status: ReviewStatus | "" = "pending"): Row {
   return {
     id,
     record_id: recordId,
@@ -315,10 +324,39 @@ export function humanBox(recordId: string, id: string): Row {
     coords: [0.1, 0.1, 0.2, 0.2],
     format: "xywh",
     is_normalized: true,
+    confidence: 0.87,
+    source_type: "model",
+    source_name: "detection",
+    source_metadata: MODEL_METADATA,
+    review_status: status,
+  };
+}
+
+/** A box a person drew in the interface. */
+export function humanBox(recordId: string, id: string): Row {
+  return {
+    ...modelBox(recordId, id),
     confidence: 1,
     source_type: "other",
     source_name: "Pixano",
     source_metadata: "{}",
+    review_status: "",
+  };
+}
+
+/** A mask a model produced — another kind, read through the same envelope. */
+export function modelMask(recordId: string, id: string, status: ReviewStatus = "pending"): Row {
+  return {
+    id,
+    record_id: recordId,
+    entity_id: `ent-${id}`,
+    view_id: viewIdOf(recordId),
+    size: [2, 2],
+    counts: "04",
+    source_type: "model",
+    source_name: "segmentation",
+    source_metadata: MODEL_METADATA,
+    review_status: status,
   };
 }
 
@@ -330,7 +368,7 @@ export function entityOf(recordId: string, id: string, fields: Record<string, un
 
 /** The record the box suites open. */
 export const REC = "rec-1";
-/** Where `humanBox` puts a box — what the dataset holds. */
+/** Where `modelBox` puts a box — what the dataset holds. */
 export const STORED: BBoxGeometry = [0.1, 0.1, 0.2, 0.2];
 /** Where `drag` moves a box by default. */
 export const MOVED: BBoxGeometry = [0.3, 0.3, 0.2, 0.2];
@@ -339,6 +377,11 @@ export const MOVED: BBoxGeometry = [0.3, 0.3, 0.2, 0.2];
 export async function openWithBoxes(...rows: Row[]) {
   const opened = await openManager({ [REC]: { [BBOX_RESOURCE]: rows } });
   return { ...opened, seam: widgetSeam(opened.manager) };
+}
+
+/** The review status an annotation shows. */
+export function statusOf(manager: WorkspaceManager, id: string): ReviewStatus | "" | undefined {
+  return manager.annotations.find(id)?.review?.status;
 }
 
 /** The geometry an annotation shows. */

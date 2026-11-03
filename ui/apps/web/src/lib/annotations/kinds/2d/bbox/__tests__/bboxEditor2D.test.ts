@@ -17,6 +17,7 @@ import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/scen
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
   humanBox,
+  modelBox,
   openManager,
   widgetSeam,
   type Row,
@@ -39,9 +40,9 @@ const STAGE_PIXELS = 200;
 /** How close a coordinate read back through pixels lands to what was meant. */
 const COORDS_DIGITS = 6;
 
-/** A person's box at [0.1, 0.1, 0.2, 0.2]: drawn 20 × 20 px at (10, 10). */
-const BOX = humanBox(REC, "b1");
-/** Another of the person's boxes, at [0.6, 0.6, 0.2, 0.2]: clear of the first. */
+/** A model's box at [0.1, 0.1, 0.2, 0.2]: drawn 20 × 20 px at (10, 10). */
+const BOX = modelBox(REC, "b1");
+/** A person's box, at [0.6, 0.6, 0.2, 0.2]: clear of the first. */
 const OTHER_BOX: Row = { ...humanBox(REC, "b2"), coords: [0.6, 0.6, 0.2, 0.2] };
 
 afterEach(() => {
@@ -55,7 +56,7 @@ afterEach(() => {
  * The record open on a real stage, with the bbox renderer and editor the image
  * widget wires, and the select tool the widget hands its keys to.
  *
- * @param box The box the record holds: a person's unless told otherwise.
+ * @param box The box the record holds: a model's pending one unless told otherwise.
  * @param others More boxes the record holds.
  */
 async function openOnCanvas(box: Row = BOX, ...others: Row[]) {

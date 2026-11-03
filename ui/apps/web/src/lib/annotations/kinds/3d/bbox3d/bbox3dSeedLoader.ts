@@ -5,13 +5,19 @@ License: CECILL-C
 -------------------------------------*/
 
 import { BBOX3D_RESOURCE } from "./bbox3dPayloadBuilder.js";
-import type { LocalBBox3DAnnotation } from "$lib/annotations/annotationCollection.svelte.js";
+import { persistedAnnotation } from "$lib/annotations/persistedAnnotation.js";
 import type { AnnotationSeedLoader, SeedLoadContext } from "$lib/annotations/seedLoaders.js";
 import type { Rotation3x3 } from "$lib/annotations/types.js";
 import type { BBox3DRow } from "$lib/api/annotations.js";
 
 /** A row-major 3×3 matrix has exactly nine entries. */
 const ROTATION_LENGTH = 9;
+
+/**
+ * The column of a 3D box's row that holds a model's score, as the backend's
+ * `BBox3D` schema declares it: the review reads the score from it.
+ */
+const BBOX3D_SCORE_FIELDS: readonly string[] = ["confidence"];
 
 /**
  * The one boundary where unvalidated rotations enter: a server row is typed
@@ -44,14 +50,21 @@ export const bbox3dSeedLoader: AnnotationSeedLoader = {
       recordId: ctx.recordId,
     });
 
-    return rows.map((row): LocalBBox3DAnnotation => ({
-      id: row.id,
-      entityId: row.entity_id,
-      kind: "bbox3d",
-      viewId: row.view_id ?? "",
-      geometry: { coords: row.coords, format: row.format, rotation: toRotation3x3(row.rotation) },
-      persisted: true,
-      entity: row.entity_id ? ctx.entitiesById.get(row.entity_id) : undefined,
-    }));
+    return rows.map((row) =>
+      persistedAnnotation(
+        row,
+        {
+          kind: "bbox3d",
+          viewId: row.view_id ?? "",
+          geometry: {
+            coords: row.coords,
+            format: row.format,
+            rotation: toRotation3x3(row.rotation),
+          },
+          scoreFields: BBOX3D_SCORE_FIELDS,
+        },
+        ctx,
+      ),
+    );
   },
 };
