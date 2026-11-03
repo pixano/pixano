@@ -1880,6 +1880,15 @@ class Dataset:
             # Typically "not enough rows to train IVF"; brute-force search remains exact.
             logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
 
+    # Through a vector index, a search reads this many times the candidates it was asked for
+    # and ranks them on their full vectors: quantised, an index ranks them only roughly.
+    # Measured on 50,000 to 300,000 vectors of 512 dimensions (pixano-worker's
+    # scripts/measure_vector_index.py, backend-processing §12): it brings back 99.9% to 100% of
+    # the exact nearest records through IVF_SQ, and 97% to 100% through IVF_PQ, where an IVF_PQ
+    # index read without it found 32% to 90%, for 4 to 7 ms more. Without an index the search is
+    # exact already, and LanceDB ignores it.
+    _SEARCH_REFINE_FACTOR = 10
+
     def search_records(
         self,
         query_vector: Sequence[float],
@@ -1905,7 +1914,13 @@ class Dataset:
 
         table = self.open_table(self._RECORD_EMBEDDING_TABLE)
         metric = self._record_embedding_space.get("metric", "cosine")
-        query = table.search(list(query_vector)).metric(metric).select(["record_id"])
+        query = (
+            table.search(list(query_vector))
+            .metric(metric)
+            .refine_factor(self._SEARCH_REFINE_FACTOR)
+            # `_distance` named: LanceDB adds it on its own today, and warns it will stop.
+            .select(["record_id", "_distance"])
+        )
         if record_id_filter is not None:
             query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
         # One vector per record, but group defensively so duplicates collapse to their best match.

@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from pixano.datasets.dataset import Dataset
@@ -156,3 +157,51 @@ class TestDropRecordEmbeddings:
         assert health["status"] == "ready"
         assert health["model_id"] == "new-model"
         assert health["dim"] == 4
+
+
+# A table large enough to train a vector index, in vectors of a modest dimension: the property
+# checked is the search's re-ranking, not the speed an index buys.
+INDEXED_RECORDS = 2_000
+INDEXED_DIM = 32
+NEAREST = 10
+QUERIES = 20
+
+# The share of the exact nearest records a search through the index must find. An index's training
+# is random, and a search reads only some of its partitions, so even re-ranked it can miss one now
+# and then: over 30 builds of this fixture it found 99.0% to 100% of them, against 41% at best
+# without re-ranking. The floor sits between, far from both.
+RECALL_FLOOR = 0.95
+
+
+@pytest.fixture()
+def indexed_dataset() -> tuple[Dataset, np.ndarray]:
+    """Records whose vectors gather around a few directions, as images around their subjects, indexed IVF_PQ."""
+    rng = np.random.default_rng(7)
+    directions = rng.standard_normal((20, INDEXED_DIM))
+    vectors = directions[rng.integers(0, 20, INDEXED_RECORDS)] + rng.normal(0.0, 0.3, (INDEXED_RECORDS, INDEXED_DIM))
+    vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+    tmp = Path(tempfile.mkdtemp()) / "indexed"
+    dataset = Dataset.create(tmp, DatasetInfo(name="indexed", description="d", record=Record, views={"image": Image}))
+    dataset.add_records({"records": [Record(id=f"r{i}") for i in range(INDEXED_RECORDS)]})
+    dataset.create_record_embedding_table(dim=INDEXED_DIM, model_id="test-clip", metric="cosine")
+    dataset.add_record_embeddings(
+        [{"record_id": f"r{i}", "view_id": f"img-r{i}", "vector": vectors[i].tolist()} for i in range(INDEXED_RECORDS)]
+    )
+    dataset.build_record_embedding_index()
+    assert [index.index_type for index in dataset.open_table("embeddings").list_indices() if "vector" in index.columns]
+    return dataset, vectors
+
+
+class TestSearchThroughAVectorIndex:
+    def test_it_finds_the_exact_nearest_records(self, indexed_dataset: tuple[Dataset, np.ndarray]):
+        """A quantised index ranks roughly: read without re-ranking, IVF_PQ found 38% of them here."""
+        dataset, vectors = indexed_dataset
+        rng = np.random.default_rng(11)
+        found = 0
+        for query in vectors[rng.integers(0, INDEXED_RECORDS, QUERIES)]:
+            exact = {f"r{i}" for i in np.argsort(vectors @ query)[::-1][:NEAREST]}
+
+            records, _ = dataset.search_records(query.tolist(), k=NEAREST)
+
+            found += len(exact & {record.id for record in records})
+        assert found / (QUERIES * NEAREST) >= RECALL_FLOOR
