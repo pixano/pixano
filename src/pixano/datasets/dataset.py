@@ -1928,6 +1928,15 @@ class Dataset:
     # six cameras — so k vectors can cover far fewer than k records.
     _SEARCH_WIDENING_FACTOR = 4
 
+    # Through a vector index, a search reads this many times the candidates it was asked for
+    # and ranks them on their full vectors: quantised, an index ranks them only roughly.
+    # Measured on 50,000 to 300,000 vectors of 512 dimensions (pixano-worker's
+    # scripts/measure_vector_index.py, backend-processing §12): it brings back 99.9% to 100% of
+    # the exact nearest records through IVF_SQ, and 97% to 100% through IVF_PQ, where an IVF_PQ
+    # index read without it found 32% to 90%, for 4 to 7 ms more. Without an index the search is
+    # exact already, and LanceDB ignores it.
+    _SEARCH_REFINE_FACTOR = 10
+
     def search_records(
         self,
         query_vector: Sequence[float] | Sequence[Sequence[float]],
@@ -1985,7 +1994,13 @@ class Dataset:
         """The closest record of each medium near ``vector``, widening until ``k`` records are found."""
         limit = k
         while True:
-            query = table.search(list(vector)).metric(metric).select(["record_id"])
+            query = (
+                table.search(list(vector))
+                .metric(metric)
+                .refine_factor(self._SEARCH_REFINE_FACTOR)
+                # `_distance` named: LanceDB adds it on its own today, and warns it will stop.
+                .select(["record_id", "_distance"])
+            )
             if record_id_filter is not None:
                 query = query.where(f"record_id IN {to_sql_list(record_id_filter)}", prefilter=True)
             results: pl.DataFrame = query.limit(limit).to_polars()

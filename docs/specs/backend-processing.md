@@ -260,6 +260,31 @@ The worker loop runs on asyncio, as the plan asks; the job-kind contract stays s
 
 **Written tables are compacted** every 64 writes, old versions cleaned after an hour. A write creates a Lance version; a job of 50 000 images would leave 6 250 of them. The hour is what protects a reader holding an older version. Compaction runs under the dataset's write lock, in the chunk that triggers it. Measured (`scripts/measure_compaction.py`) on a classification table filled by chunk-sized writes: 0.12 s median at 10 000 rows, 0.30 s at 30 000 with a 0.9 s maximum, growing with the table. Acceptable for step 1; the policy — every N writes, at the end of a job, or owned by a writer role — was settled for step 2: it stays as it is until a compaction outlasts a chunk, then moves out of the write lock (§19).
 
+**A search through a vector index re-ranks what it finds.** An index stores its vectors quantised, so it ranks its candidates only roughly: `Dataset.search_records` asks it for ten times the candidates it needs and ranks them on their full vectors (`Dataset._SEARCH_REFINE_FACTOR`); without an index the search is exact already, and LanceDB ignores the setting. Measured (`packages/pixano-worker/scripts/measure_vector_index.py`) on synthetic unit vectors of 512 dimensions gathered around a thousand directions, fifty searches of fifty records each, on an M1 Pro (8 cores, 16 GB):
+
+| vectors | search | index build | median search | exact nearest records found |
+| ------: | ------ | ----------: | ------------: | --------------------------: |
+| 50 000 | exact, no index | — | 25 ms | 100% |
+| 50 000 | IVF_PQ | 17 s | 2.0 ms | 90.2% |
+| 50 000 | IVF_PQ, re-ranked | 17 s | 6.6 ms | 97.2% |
+| 50 000 | IVF_SQ | 0.3 s | 2.2 ms | 99.7% |
+| 50 000 | IVF_SQ, re-ranked | 0.3 s | 6.6 ms | 100% |
+| 50 000 | IVF_HNSW_SQ, re-ranked | 14 s | 9.7 ms | 100% |
+| 100 000 | exact, no index | — | 61 ms | 100% |
+| 100 000 | IVF_PQ | 28 s | 2.6 ms | 61% |
+| 100 000 | IVF_PQ, re-ranked | 28 s | 8.1 ms | 100% |
+| 100 000 | IVF_SQ | 2.2 s | 2.9 ms | 98.7% |
+| 100 000 | IVF_SQ, re-ranked | 2.2 s | 7.8 ms | 100% |
+| 100 000 | IVF_HNSW_SQ, re-ranked | 35 s | 13.5 ms | 100% |
+| 300 000 | exact, no index | — | 162 ms | 100% |
+| 300 000 | IVF_PQ | 28 s | 3.2 ms | 32% |
+| 300 000 | IVF_PQ, re-ranked | 28 s | 10.5 ms | 99.9% |
+| 300 000 | IVF_SQ | 2.9 s | 3.8 ms | 98.0% |
+| 300 000 | IVF_SQ, re-ranked | 2.9 s | 10.0 ms | 99.9% |
+| 300 000 | IVF_HNSW_SQ, re-ranked | 89 s | 16.7 ms | 100% |
+
+Re-ranked, `IVF_SQ` and `IVF_HNSW_SQ` find 99.9% to 100% of the exact nearest records, and `IVF_PQ` 97% to 100%, for 4 to 7 ms more through `IVF_SQ` or `IVF_PQ`. Re-ranking is what an `IVF_PQ` index needed most: read without it, the one the application's in-process computation builds (`build_record_embedding_index`) found a third to nine tenths of them. An index's training is random, so two builds of one table give equivalent indexes, not the same: the figures move by a fraction of a point from one build to the next.
+
 **Provenance.** Rows written through `writer.provenance()` carry the kind as `source_name`, and in `source_metadata` a self-contained provenance: the job identifier, the kind, the model and its version when the kind runs one, and the job's parameters minus the engine's (§19). Jobs are cleaned by truncation, so that identifier outlives its row: it is kept as an opaque run label, not a reference. Embeddings rows carry none: the model lives in the dataset's sidecar.
 
 ## 13. Media
