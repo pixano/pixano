@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
@@ -32,6 +32,7 @@ from pixano.schemas import (
     Message,
     PointCloud,
     Record,
+    ReviewStatus,
     SequenceFrame,
     Text,
     TextSpan,
@@ -324,7 +325,18 @@ class ImportSpec(BaseModel):
 
 
 class ExportSpec(BaseModel):
-    """Declarative description of one export job (spec §10)."""
+    """Declarative description of one export job (spec §10).
+
+    Attributes:
+        format: Export format name.
+        destination: Destination directory.
+        media: ``files`` dumps embedded bytes beside the output; ``uris`` writes stored URIs.
+        options: Format options (e.g. ``include_record_fields`` for ``pixano_jsonl``).
+        review_statuses: The review statuses of the MODEL annotations to export (spec amendment
+            of 2026-10-05). Annotations no model produced are always exported, and a model's
+            annotation without a status counts as ``pending``. Empty, the default, means no
+            selection: every annotation is exported.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -332,6 +344,23 @@ class ExportSpec(BaseModel):
     destination: str
     media: Literal["files", "uris"] = "files"
     options: dict[str, Any] = Field(default_factory=dict)
+    review_statuses: list[ReviewStatus] = Field(default_factory=list)
+
+    @field_validator("review_statuses")
+    @classmethod
+    def _in_declaration_order(cls, statuses: list[ReviewStatus]) -> list[ReviewStatus]:
+        # One order whatever the caller's, without repeats: the selection is recorded in the
+        # exported dataset.yaml, where two equal selections must read the same.
+        return [status for status in ReviewStatus if status in statuses]
+
+    @field_validator("options")
+    @classmethod
+    def _selection_is_not_an_option(cls, options: dict[str, Any]) -> dict[str, Any]:
+        # An exported dataset.yaml records the selection under `options`; copied back into an
+        # export request there, it would select nothing while reading as if it did.
+        if "review_statuses" in options:
+            raise ValueError("review_statuses is a field of the export itself, not a format option.")
+        return options
 
 
 # ---------------------------------------------------------------------------

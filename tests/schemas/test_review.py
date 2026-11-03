@@ -4,8 +4,8 @@
 # License: CECILL-C
 # =====================================
 
-"""The review status a model's annotation carries, how a stored status reads, and which fields
-hold the model's score."""
+"""The review status a model's annotation carries, how a stored status reads, which fields hold
+the model's score, and which kinds a person can review."""
 
 import typing
 
@@ -21,9 +21,13 @@ from pixano.schemas import (
     Entity,
     KeyPoints,
     KeyPoints3D,
+    MultiPath,
+    Relation,
     ReviewStatus,
+    TextSpan,
     Tracklet,
     is_entity_annotation,
+    is_reviewable_annotation,
     model_score_alignment,
     model_score_fields,
     review_status_of,
@@ -150,3 +154,17 @@ class TestModelScoreAlignment:
         }
 
         assert misdeclared == set()
+
+
+class TestReviewableKinds:
+    @pytest.mark.parametrize("schema", [BBox, BBox3D, Classification, CompressedRLE, KeyPoints, MultiPath])
+    def test_a_kind_an_interface_shows_can_be_reviewed(self, schema: type):
+        assert is_reviewable_annotation(schema)
+
+    @pytest.mark.parametrize("schema", [Tracklet, Relation, TextSpan])
+    def test_structure_and_kinds_no_interface_shows_cannot(self, schema: type):
+        assert is_entity_annotation(schema)
+        assert not is_reviewable_annotation(schema)
+
+    def test_what_is_not_an_annotation_cannot(self):
+        assert not is_reviewable_annotation(Entity)

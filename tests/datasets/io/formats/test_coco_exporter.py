@@ -13,6 +13,7 @@ from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.io import export_dataset
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import BBox, Entity, Image, Record
+from tests.datasets.io._review_fixture import build_review_dataset
 
 
 @pytest.mark.parametrize(
@@ -76,3 +77,33 @@ def test_export_bbox_uses_pixel_xywh_without_changing_source(
     assert annotation["bbox"] == pytest.approx([10.0, 40.0, 30.0, 80.0])
     assert annotation["area"] == pytest.approx(2400.0)
     assert Dataset(dataset.path).get_data("bboxes")[0].model_dump() == original
+
+
+class TestExportByReviewStatus:
+    """The COCO export reads the same review selection as the JSONL one (spec amendment 2026-10-05)."""
+
+    @staticmethod
+    def _annotations(exported: Path) -> dict[str, dict]:
+        document = json.loads((exported / "instances_train.json").read_text(encoding="utf-8"))
+        return {annotation["pixano_id"]: annotation for annotation in document["annotations"]}
+
+    def test_only_selected_model_annotations_are_exported(self, tmp_path: Path):
+        dataset = build_review_dataset(tmp_path / "review_ds")
+
+        annotations = self._annotations(
+            export_dataset(dataset, tmp_path / "exported", format="coco", review_statuses=["accepted"])
+        )
+
+        # One COCO annotation per entity that still has a geometry.
+        assert set(annotations) == {"e_human", "e_truth", "e_accepted", "e_child", "e_mixed"}
+        # e_mixed's pending box is gone; its accepted mask remains.
+        assert "bbox" not in annotations["e_mixed"]
+        assert "segmentation" in annotations["e_mixed"]
+
+    def test_no_selection_exports_every_annotation(self, tmp_path: Path):
+        dataset = build_review_dataset(tmp_path / "review_ds")
+
+        annotations = self._annotations(export_dataset(dataset, tmp_path / "exported", format="coco"))
+
+        assert {"e_pending", "e_pending_only", "e_reimported", "e_parent", "e_related"} <= set(annotations)
+        assert {"bbox", "segmentation"} <= set(annotations["e_mixed"])
