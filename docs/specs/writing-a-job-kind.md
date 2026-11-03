@@ -178,8 +178,11 @@ both declare `other`.
 
 Every entity annotation schema carries `review_status`: `pending` or `accepted` on a model's
 row, empty on any other. A kind never sets it. The writer marks a `model` kind's rows `pending`
-(§1), and a row a person accepts is stored `accepted`, keeping the model's provenance and score
-([backend-processing §19](./backend-processing.md)). What it means for a kind:
+(§1), and from there people decide, through rules the API applies to every kind alike
+(`src/pixano/api/review.py`; [backend-processing §19](./backend-processing.md)). A person
+accepts a row as it is, or by saving an edit of it, which stores it `accepted` with the
+model's provenance and score; a person who rejects a row deletes it, so a rejected proposal
+leaves no row behind. What it means for a kind:
 
 - **Accepted rows are frozen.** `replace` leaves a row a person accepted where it is, rank
   included, and replaces the pending rows only. A model's row with no status —
@@ -187,6 +190,15 @@ row, empty on any other. A kind never sets it. The writer marks a `model` kind's
   application reads too, `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status
   either, and is never taken for a pending one: `replace` reaches only the identifiers the kind
   derived itself.
+- **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
+  provenance: write the model's own score there, never a placeholder. Each schema names its
+  score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a
+  classification. A new schema with a score declares it there. A list of scores that scores
+  another field position by position — one score per label — also says so in
+  `MODEL_SCORE_ALIGNMENT` (`{"confidences": "labels"}` on a classification): when a person
+  changes the labels, each label the model gave keeps the model's score and a label the person
+  adds takes the score sent with it. A guard test (`tests/schemas/test_review.py`) fails on a
+  score-like field left undeclared, and on a list of scores that declares nothing it scores.
 
 ---
 

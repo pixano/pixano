@@ -355,6 +355,78 @@ class TestStaticImage:
         assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_b").json() == stored_b
         assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_body_a").json() == stored_a
 
+    def _model_box(self, client: TestClient, box_id: str) -> None:
+        resp = client.post(
+            f"{STATIC_BASE}/bboxes",
+            json={
+                "id": box_id,
+                "record_id": "record_0",
+                "entity_id": "entity_0_0",
+                "coords": [0.0, 0.0, 0.1, 0.1],
+                "format": "xywh",
+                "is_normalized": True,
+                "source_type": "model",
+                "source_name": "detection",
+                "source_metadata": '{"model": "yolo"}',
+                "review_status": "pending",
+            },
+        )
+        assert resp.status_code in (200, 201), resp.text
+
+    def test_a_person_editing_a_pending_model_box_accepts_it_and_keeps_its_provenance(
+        self, static_image_client: TestClient
+    ):
+        """A rerun replaces pending rows only; an edit left pending would be lost. The person chose
+        to store that box: a saved edit accepts it.
+
+        The annotation interface sends its own provenance with every edit, as here.
+        """
+        self._model_box(static_image_client, "bbox_model_edit")
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/bbox_model_edit",
+            json={
+                "coords": [0.2, 0.2, 0.3, 0.3],
+                "source_type": "other",
+                "source_name": "Pixano",
+                "source_metadata": "{}",
+            },
+        )
+
+        body = resp.json()
+        assert (body["review_status"], body["source_type"], body["source_name"]) == ("accepted", "model", "detection")
+        assert body["source_metadata"] == '{"model": "yolo"}'
+
+    def test_a_review_that_sets_the_status_itself_is_kept(self, static_image_client: TestClient):
+        self._model_box(static_image_client, "bbox_model_accept")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_model_accept", json={"review_status": "accepted"})
+
+        assert resp.json()["review_status"] == "accepted"
+
+    def test_an_edit_that_sends_back_the_row_it_read_accepts_it(self, static_image_client: TestClient):
+        """A client that edits by sending back every field of the row it read sends the status
+        `pending` back too. Kept pending, the box would be replaced, and the person's edit with it,
+        by the next run of the model."""
+        self._model_box(static_image_client, "bbox_model_echo")
+        read = static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_model_echo").json()
+        assert read["review_status"] == "pending"
+        sent_back = {key: value for key, value in read.items() if key not in ("created_at", "updated_at")}
+        sent_back.update(coords=[0.3, 0.3, 0.2, 0.2], source_type="other", source_name="Pixano", source_metadata="{}")
+
+        body = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_model_echo", json=sent_back).json()
+
+        assert (body["review_status"], body["source_type"], body["coords"]) == (
+            "accepted",
+            "model",
+            [0.3, 0.3, 0.2, 0.2],
+        )
+
+    def test_a_human_box_is_edited_as_before(self, static_image_client: TestClient):
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_0_0", json={"confidence": 0.9})
+
+        assert resp.json()["review_status"] == ""
+
     def test_delete_bbox(self, static_image_client: TestClient):
         # Create then delete
         static_image_client.post(
@@ -489,6 +561,383 @@ class TestStaticImage:
         )
         assert resp.status_code == 200
         assert static_image_client.get(f"{STATIC_BASE}/entities/entity_geom").status_code == 200
+
+
+# ===========================================================================
+# Review of a model's annotations: the server's status rules
+# ===========================================================================
+
+MODEL_SOURCE = {"source_type": "model", "source_name": "detection", "source_metadata": '{"model": "yolo"}'}
+# What the annotation interface (ui/apps/web) sends with every edit: its own provenance.
+WEB_SOURCE = {"source_type": "other", "source_name": "Pixano", "source_metadata": "{}"}
+MODEL_SCORE = 0.42
+SERVER_STAMPS = ("created_at", "updated_at")
+MASK_SHAPE = (480, 640)
+MASK_SQUARE = slice(100, 200)
+MASK_SHIFT_PX = 30
+
+
+def _post_model_box(client: TestClient, box_id: str, **fields) -> dict:
+    """A detection, as the worker writes one: pending, with the model's provenance and score."""
+    body = {
+        "id": box_id,
+        "record_id": "record_0",
+        "entity_id": "entity_0_0",
+        "view_id": "image",
+        "coords": [0.0, 0.0, 0.1, 0.1],
+        "format": "xywh",
+        "is_normalized": True,
+        "confidence": MODEL_SCORE,
+        "review_status": "pending",
+        **MODEL_SOURCE,
+        **fields,
+    }
+    resp = client.post(f"{STATIC_BASE}/bboxes", json=body)
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _web_box_update(box: dict, coords: list[float]) -> dict:
+    """The body `buildBBoxUpdate` (ui/apps/web, bboxPayloadBuilder.ts) sends for a moved box."""
+    return {
+        "id": box["id"],
+        "record_id": box["record_id"],
+        "entity_id": box["entity_id"],
+        "view_id": box["view_id"],
+        "coords": coords,
+        "format": "xywh",
+        "is_normalized": True,
+        "confidence": 1,
+        **WEB_SOURCE,
+    }
+
+
+def _sent_back(client: TestClient, resource: str, row_id: str, **changes) -> dict:
+    """What a client that edits by sending back the row it read sends: the row the API returned,
+    changed, with its own provenance, the status included."""
+    read = client.get(f"{STATIC_BASE}/{resource}/{row_id}").json()
+    body = {key: value for key, value in read.items() if key not in SERVER_STAMPS}
+    body.update(WEB_SOURCE, **changes)
+    return body
+
+
+def _review(client: TestClient, box_id: str, status: str):
+    return client.put(f"{STATIC_BASE}/bboxes/{box_id}", json={"review_status": status})
+
+
+def _mask_counts(shift_px: int = 0) -> str:
+    """A square mask's compressed RLE counts, as the interface sends them, moved right by shift_px."""
+    mask = np.zeros(MASK_SHAPE, dtype=np.uint8)
+    mask[MASK_SQUARE, MASK_SQUARE] = 1
+    return CompressedRLE.from_mask(np.roll(mask, shift_px, axis=1), id="unused").model_dump()["counts"]
+
+
+class TestReviewStatusRules:
+    """What an update does to a model annotation's review status, whatever sends it."""
+
+    def test_rejecting_a_model_box_deletes_it_and_its_lone_entity(self, static_image_client: TestClient):
+        """A rejected proposal leaves no trace: rejecting is the row's delete, which takes the
+        entity too when nothing else names it. No review rule stands in its way."""
+        static_image_client.post(
+            f"{STATIC_BASE}/entities", json={"id": "entity_rejected", "record_id": "record_0", "parent_id": ""}
+        )
+        _post_model_box(static_image_client, "review_reject", entity_id="entity_rejected")
+
+        resp = static_image_client.delete(f"{STATIC_BASE}/bboxes/review_reject", params={"prune_orphan_entity": True})
+
+        assert resp.status_code == 204, resp.text
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_reject").status_code == 404
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_rejected").status_code == 404
+
+    def test_rejecting_a_model_box_keeps_an_entity_another_row_names(self, static_image_client: TestClient):
+        _post_model_box(static_image_client, "review_reject_named")
+
+        resp = static_image_client.delete(
+            f"{STATIC_BASE}/bboxes/review_reject_named", params={"prune_orphan_entity": True}
+        )
+
+        assert resp.status_code == 204, resp.text
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_reject_named").status_code == 404
+        assert static_image_client.get(f"{STATIC_BASE}/entities/entity_0_0").status_code == 200
+
+    @pytest.mark.parametrize("status", ["approved", "corrected", "rejected"])
+    def test_an_unknown_status_is_refused(self, static_image_client: TestClient, status: str):
+        """A model's row is pending or accepted: no other value is a status an update may ask for.
+        Rejecting is a delete, and a saved edit is accepted, so no status says either."""
+        _post_model_box(static_image_client, "review_unknown")
+
+        resp = _review(static_image_client, "review_unknown", status)
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_unknown").json()["review_status"] == "pending"
+
+    def test_a_model_box_cannot_lose_its_status(self, static_image_client: TestClient):
+        """An empty status would put the row outside the review: neither pending nor reviewed."""
+        _post_model_box(static_image_client, "review_emptied")
+
+        resp = _review(static_image_client, "review_emptied", "")
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_emptied").json()["review_status"] == "pending"
+
+    def test_an_edit_carrying_accepted_stores_both(self, static_image_client: TestClient):
+        """A client may send an edit and the decision in one update. The row keeps the model's
+        provenance and score, as for an edit alone."""
+        box = _post_model_box(static_image_client, "review_edit_and_accept")
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/review_edit_and_accept",
+            json={**_web_box_update(box, [0.3, 0.3, 0.1, 0.1]), "review_status": "accepted"},
+        )
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert (body["review_status"], body["coords"], body["confidence"]) == (
+            "accepted",
+            [0.3, 0.3, 0.1, 0.1],
+            MODEL_SCORE,
+        )
+        assert {key: body[key] for key in MODEL_SOURCE} == MODEL_SOURCE
+
+    def test_accepting_an_accepted_box_is_an_echo(self, static_image_client: TestClient):
+        _post_model_box(static_image_client, "review_accept_twice")
+        accepted = _review(static_image_client, "review_accept_twice", "accepted").json()
+
+        resp = _review(static_image_client, "review_accept_twice", "accepted")
+
+        assert resp.status_code == 200, resp.text
+        assert {key: value for key, value in resp.json().items() if key not in SERVER_STAMPS} == {
+            key: value for key, value in accepted.items() if key not in SERVER_STAMPS
+        }
+
+    def test_editing_an_accepted_box_keeps_it_accepted(self, static_image_client: TestClient):
+        box = _post_model_box(static_image_client, "review_accepted_edit")
+        _review(static_image_client, "review_accepted_edit", "accepted")
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/review_accepted_edit", json=_web_box_update(box, [0.3, 0.3, 0.1, 0.1])
+        )
+
+        assert resp.status_code == 200, resp.text
+        assert (resp.json()["review_status"], resp.json()["coords"]) == ("accepted", [0.3, 0.3, 0.1, 0.1])
+
+    def test_an_edit_that_sends_back_an_accepted_box_keeps_it_accepted(self, static_image_client: TestClient):
+        """A client sending back the status it read sends `accepted`: an echo, not a decision."""
+        _post_model_box(static_image_client, "review_accepted_echo")
+        _review(static_image_client, "review_accepted_echo", "accepted")
+        sent_back = _sent_back(static_image_client, "bboxes", "review_accepted_echo", coords=[0.4, 0.4, 0.1, 0.1])
+        assert sent_back["review_status"] == "accepted"
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/review_accepted_echo", json=sent_back)
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert (body["review_status"], body["coords"], body["source_type"]) == (
+            "accepted",
+            [0.4, 0.4, 0.1, 0.1],
+            "model",
+        )
+
+    def test_asking_for_pending_on_a_reviewed_box_decides_nothing(self, static_image_client: TestClient):
+        """No person sets pending. A client that sends back the row it read keeps the `pending` it
+        read before a save, and sends it with the next edit, so refusing it would fail that edit."""
+        _post_model_box(static_image_client, "review_stale_pending")
+        _review(static_image_client, "review_stale_pending", "accepted")
+
+        resp = _review(static_image_client, "review_stale_pending", "pending")
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["review_status"] == "accepted"
+
+    def test_a_second_edit_with_the_stale_pending_still_accepts(self, static_image_client: TestClient):
+        _post_model_box(static_image_client, "review_two_edits")
+        first = _sent_back(static_image_client, "bboxes", "review_two_edits", coords=[0.1, 0.1, 0.1, 0.1])
+        assert static_image_client.put(f"{STATIC_BASE}/bboxes/review_two_edits", json=first).status_code == 200
+        second = {**first, "coords": [0.2, 0.2, 0.1, 0.1]}  # the row the client read still says pending
+        assert second["review_status"] == "pending"
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/review_two_edits", json=second)
+
+        assert resp.status_code == 200, resp.text
+        assert (resp.json()["review_status"], resp.json()["coords"]) == ("accepted", [0.2, 0.2, 0.1, 0.1])
+
+    def test_a_body_that_changes_nothing_accepts_nothing(self, static_image_client: TestClient):
+        """A save of an untouched box (the row sent back as read) is no edit: the box stays in review."""
+        _post_model_box(static_image_client, "review_unchanged")
+        unchanged = _sent_back(static_image_client, "bboxes", "review_unchanged")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/review_unchanged", json=unchanged)
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["review_status"] == "pending"
+
+    def test_an_empty_body_accepts_nothing(self, static_image_client: TestClient):
+        _post_model_box(static_image_client, "review_empty_body")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/review_empty_body", json={})
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["review_status"] == "pending"
+
+    def test_an_edit_keeps_the_model_score(self, static_image_client: TestClient):
+        """The interface sends a confidence of 1 with every edit, which erased the model's score."""
+        box = _post_model_box(static_image_client, "review_score")
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/review_score", json=_web_box_update(box, [0.5, 0.5, 0.1, 0.1])
+        )
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert (body["review_status"], body["confidence"], body["coords"]) == (
+            "accepted",
+            MODEL_SCORE,
+            [0.5, 0.5, 0.1, 0.1],
+        )
+        assert {key: body[key] for key in MODEL_SOURCE} == MODEL_SOURCE
+
+    def test_a_model_row_without_a_status_reads_as_pending(self, static_image_client: TestClient):
+        """A re-imported model row has no status (the JSONL does not carry it): it can be reviewed."""
+        _post_model_box(static_image_client, "review_no_status", review_status="")
+
+        resp = _review(static_image_client, "review_no_status", "accepted")
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["review_status"] == "accepted"
+
+    def test_a_person_box_takes_no_status(self, static_image_client: TestClient):
+        for status in ("accepted", "pending"):
+            resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_1_0", json={"review_status": status})
+
+            assert resp.status_code == 400, status
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/bbox_1_0").json()["review_status"] == ""
+
+    def test_a_person_box_cannot_be_created_with_a_status(self, static_image_client: TestClient):
+        resp = static_image_client.post(
+            f"{STATIC_BASE}/bboxes",
+            json={
+                "id": "review_human_created",
+                "record_id": "record_0",
+                "entity_id": "entity_0_0",
+                "coords": [0.0, 0.0, 0.1, 0.1],
+                "format": "xywh",
+                "is_normalized": True,
+                "review_status": "accepted",
+                **WEB_SOURCE,
+            },
+        )
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_human_created").status_code == 404
+
+    def test_a_person_box_holding_a_status_can_still_be_edited(
+        self, static_image_dataset: Dataset, static_image_client: TestClient
+    ):
+        """A person's row written with a status before the rules existed: a client that sends back
+        the row it read sends that status back with each edit, which is an echo, not a request."""
+        row = BBox(
+            id="review_human_with_status",
+            record_id="record_0",
+            entity_id="entity_0_0",
+            view_id="image",
+            coords=[0.0, 0.0, 0.1, 0.1],
+            format="xywh",
+            is_normalized=True,
+            source_type="ground_truth",
+            review_status="accepted",
+        )
+        static_image_dataset.add_data("bboxes", [row], raise_or_warn="none")
+        # The row as a client read it. Not through GET: the API's open dataset does not
+        # see what another instance writes until it writes itself or reopens (known defect, spec §18).
+        sent_back = {**row.model_dump(exclude=set(SERVER_STAMPS)), **WEB_SOURCE, "coords": [0.2, 0.2, 0.1, 0.1]}
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/review_human_with_status", json=sent_back)
+
+        assert resp.status_code == 200, resp.text
+        assert (resp.json()["coords"], resp.json()["review_status"]) == ([0.2, 0.2, 0.1, 0.1], "accepted")
+
+    def test_a_body_naming_another_row_is_refused(self, static_image_client: TestClient):
+        """The rules are checked on the row the path names, but the merged row would be written
+        under the body's id: one row's content would overwrite another row's."""
+        box_a = _post_model_box(static_image_client, "review_path_a")
+        box_b = _post_model_box(static_image_client, "review_path_b", entity_id="entity_0_1")
+        static_image_client.put(
+            f"{STATIC_BASE}/bboxes/review_path_b", json=_web_box_update(box_b, [0.3, 0.3, 0.1, 0.1])
+        )
+        stored_b = static_image_client.get(f"{STATIC_BASE}/bboxes/review_path_b").json()
+        assert stored_b["review_status"] == "accepted"
+
+        resp = static_image_client.put(
+            f"{STATIC_BASE}/bboxes/review_path_a", json={"id": "review_path_b", "review_status": "accepted"}
+        )
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_path_b").json() == stored_b
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_path_a").json() == box_a
+
+    def test_a_person_box_cannot_be_written_over_a_model_box(self, static_image_client: TestClient):
+        """Written under the body's id, a person's row would replace the model's, its provenance
+        and its status with it."""
+        box = _post_model_box(static_image_client, "review_path_model")
+        human = _sent_back(static_image_client, "bboxes", "bbox_2_0", id="review_path_model")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/bboxes/bbox_2_0", json=human)
+
+        assert resp.status_code == 400
+        assert static_image_client.get(f"{STATIC_BASE}/bboxes/review_path_model").json() == box
+
+    # Masks follow the same rules, through the same code.
+
+    def _post_model_mask(self, client: TestClient, mask_id: str) -> dict:
+        resp = client.post(
+            f"{STATIC_BASE}/masks",
+            json={
+                "id": mask_id,
+                "record_id": "record_0",
+                "entity_id": "entity_0_0",
+                "view_id": "image",
+                "size": list(MASK_SHAPE),
+                "counts": _mask_counts(),
+                "review_status": "pending",
+                **MODEL_SOURCE,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        return resp.json()
+
+    def test_accepting_a_pending_model_mask_changes_only_its_status(self, static_image_client: TestClient):
+        mask = self._post_model_mask(static_image_client, "review_mask_accept")
+
+        resp = static_image_client.put(f"{STATIC_BASE}/masks/review_mask_accept", json={"review_status": "accepted"})
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["review_status"] == "accepted"
+        assert {key: body[key] for key in ("size", "counts", *MODEL_SOURCE)} == {
+            key: mask[key] for key in ("size", "counts", *MODEL_SOURCE)
+        }
+
+    def test_moving_a_pending_model_mask_accepts_it(self, static_image_client: TestClient):
+        mask = self._post_model_mask(static_image_client, "review_mask_move")
+        moved = _mask_counts(MASK_SHIFT_PX)
+        assert moved != mask["counts"]
+        # What `buildMaskUpdate` (ui/apps/web, maskPayloadBuilder.ts) sends for a translated mask.
+        web_body = {
+            "id": mask["id"],
+            "record_id": mask["record_id"],
+            "entity_id": mask["entity_id"],
+            "view_id": mask["view_id"],
+            "size": list(MASK_SHAPE),
+            "counts": moved,
+            **WEB_SOURCE,
+        }
+
+        resp = static_image_client.put(f"{STATIC_BASE}/masks/review_mask_move", json=web_body)
+
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert (body["review_status"], body["counts"]) == ("accepted", moved)
+        assert {key: body[key] for key in MODEL_SOURCE} == MODEL_SOURCE
 
 
 # ===========================================================================

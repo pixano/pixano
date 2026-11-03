@@ -18,9 +18,17 @@ from pydantic import BaseModel
 from pixano.datasets import Dataset
 from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.utils.errors import DatasetIntegrityError
-from pixano.schemas import SchemaGroup, View
+from pixano.schemas import (
+    ReviewStatus,
+    SchemaGroup,
+    View,
+    is_entity_annotation,
+    model_score_alignment,
+    model_score_fields,
+)
 from pixano.utils.python import quote_sql_string
 
+from . import review
 from .models import PaginatedResponse, merge_update_payload, serialize_row
 from .resources import ResourceSpec
 
@@ -307,6 +315,12 @@ class BaseService:
         except Exception as err:
             raise HTTPException(status_code=400, detail=f"Invalid data: {err}")
 
+        if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            try:
+                review.check_new_row(row)
+            except review.ReviewRuleError as err:
+                raise HTTPException(status_code=400, detail=str(err))
+
         # A client-generated id makes a POST safe to retry after a lost response.
         # Compare validated defaults and values, excluding only server timestamps.
         if data.get("id"):
@@ -354,6 +368,11 @@ class BaseService:
         prune_old_entity = prune_orphan_entity and self.resource.schema_group == SchemaGroup.ANNOTATION
         old_entity_id = getattr(existing, "entity_id", None) if prune_old_entity else None
 
+        if self.resource.schema_group == SchemaGroup.ANNOTATION:
+            try:
+                data = _as_human_edit_of(existing, data)
+            except review.ReviewRuleError as err:
+                raise HTTPException(status_code=400, detail=str(err))
         merged = merge_update_payload(existing, data)
         schema = self.dataset.info.tables[resolved_table]
         try:
@@ -399,6 +418,9 @@ class BaseService:
         check and the delete — on a local dataset only: a dataset on S3 has no
         lock, and there the check and the delete are two steps another write can
         come between. Kind-agnostic: works for any annotation resource.
+
+        No review rule applies: deleting a model's annotation is how a person
+        rejects it.
         """
         resolved_table = self.resolve_table()
 
@@ -465,3 +487,148 @@ class BaseService:
 
 
 __all__ = ["BaseService"]
+
+
+# What a person never edits on a model's row, with its score (`_model_owned_fields`): which
+# model produced it, in which run. The annotation interface sends its own source with every edit.
+_PROVENANCE_FIELDS = ("source_type", "source_name", "source_metadata")
+# Stamped by the server on every write. Not a person's edit.
+_SERVER_STAMPS = ("created_at", "updated_at")
+_STATUS_FIELD = "review_status"
+
+
+def _model_owned_fields(schema: type) -> tuple[str, ...]:
+    """What only the model writes on a row of this schema: its provenance and its score.
+
+    The score is each schema's own declaration (`pixano.schemas.model_score_fields`): a box's
+    ``confidence``, a classification's ``confidences``. The annotation interface sends a score of
+    1 with every edit, whatever the kind.
+    """
+    return (*_PROVENANCE_FIELDS, *model_score_fields(schema))
+
+
+def _keeping_what_the_model_owns(existing: LanceModel, data: dict[str, Any]) -> dict[str, Any]:
+    """A person's update of a model's row, without what only the model writes.
+
+    The model's scores follow what they score: realigned when the update changes it.
+    """
+    return {**_without(data, _model_owned_fields(type(existing))), **_model_scores_realigned(existing, data)}
+
+
+def _model_scores_realigned(existing: LanceModel, data: dict[str, Any]) -> dict[str, list[Any]]:
+    """The model's scores of a row, moved with the values they score when an update changes them.
+
+    A list of scores can score another list field, position by position
+    (`pixano.schemas.model_score_alignment`). Kept as stored while that field changes, the scores
+    would score other values, or no longer match their number and fail the schema's validation.
+    So each value the model gave keeps the model's score, and a value the person adds takes the
+    score the client sent at its position. The client must send its scores aligned with the
+    field, as the schema requires of any row.
+
+    Args:
+        existing: The model's row as stored.
+        data: The update the client sent.
+
+    Returns:
+        The realigned scores, by score field. A score whose scored field the update leaves as
+        stored is absent: the model's scores stay as they are.
+
+    Raises:
+        review.ReviewRuleError: The update adds a value to the scored field without a score for
+            it, aligned with the field.
+    """
+    realigned: dict[str, list[Any]] = {}
+    for score_field, scored_field in model_score_alignment(type(existing)).items():
+        edited = data.get(scored_field)
+        stored = list(getattr(existing, scored_field))
+        if not isinstance(edited, list) or edited == stored:
+            # Left as stored, or not a list, which the schema's validation refuses.
+            continue
+        sent = data.get(score_field)
+        sent_aligned: list[Any] | None = sent if isinstance(sent, list) and len(sent) == len(edited) else None
+        # A value the model gave twice keeps both scores, in the model's order.
+        unclaimed = list(zip(stored, getattr(existing, score_field)))
+        scores = []
+        for position, value in enumerate(edited):
+            given = next((index for index, (scored, _) in enumerate(unclaimed) if scored == value), None)
+            if given is not None:
+                scores.append(unclaimed.pop(given)[1])
+            elif sent_aligned is not None:
+                scores.append(sent_aligned[position])
+            else:
+                raise review.ReviewRuleError(
+                    f"'{scored_field}' gains a value the model did not give, {value!r}: send "
+                    f"'{score_field}' with one score per value of '{scored_field}', in its order."
+                )
+        realigned[score_field] = scores
+    return realigned
+
+
+def _as_human_edit_of(existing: LanceModel, data: dict[str, Any]) -> dict[str, Any]:
+    """Read an update of an annotation as what it is: a person's edit, or a review decision.
+
+    A model's row keeps what the model owns. The interface sends its own source ("Pixano",
+    "other") and a confidence of 1 with every edit. Without this rule, the edit would erase
+    which model produced the row and with what score. A score follows what it scores: a
+    relabelled classification keeps the model's score of each label the model gave
+    (`_model_scores_realigned`).
+
+    The review status follows the step 2 rules, whatever the kind of annotation (see `review`):
+
+    - an echo is not a decision. A status equal to the row's current one is dropped, and so is
+      ``pending``, which no person gives. A client that edits by sending back every field of the
+      row it read sends the status back too.
+    - a person saving a change of a model row's content accepts it, from pending or accepted:
+      the person chose to store that annotation. Left pending, the next run of the model would
+      replace the person's work, since a rerun replaces pending rows only. A body that changes
+      nothing accepts nothing.
+    - a request carrying a change and ``accepted`` stores both. The empty status and any value
+      other than ``pending`` and ``accepted`` are refused.
+    - a person's row takes no status.
+
+    Args:
+        existing: The row as stored.
+        data: The update the client sent.
+
+    Returns:
+        The update to apply.
+
+    Raises:
+        review.ReviewRuleError: The request asks for a status that the rules refuse.
+    """
+    is_model = review.is_model_row(existing)
+    if not is_entity_annotation(type(existing)):
+        # A row with no review status, such as a message: only what the model owns is kept.
+        return _keeping_what_the_model_owns(existing, data) if is_model else data
+    requested = data.get(_STATUS_FIELD)
+    if not is_model:
+        review.check_human_update(existing, requested)
+        return data
+
+    edit = _without(_keeping_what_the_model_owns(existing, data), (_STATUS_FIELD,))
+    decision = review.decision_of(existing, requested)
+    if decision is None and _changes_content(existing, edit):
+        decision = ReviewStatus.ACCEPTED
+    if decision is not None:
+        edit[_STATUS_FIELD] = decision.value
+    return edit
+
+
+def _without(data: dict[str, Any], fields: tuple[str, ...]) -> dict[str, Any]:
+    return {key: value for key, value in data.items() if key not in fields}
+
+
+def _changes_content(existing: LanceModel, edit: dict[str, Any]) -> bool:
+    """Whether applying the edit changes a field that a person may change.
+
+    The edited row is compared after validation, as the create path compares a retried row. A
+    value that the schema normalises, such as a mask's counts sent as text, is not a change.
+    """
+    schema = type(existing)
+    try:
+        edited = schema.model_validate(merge_update_payload(existing, edit))
+    except ValueError:
+        # The update's own validation refuses it with a 400. Nothing to compare.
+        return True
+    ignored = {*_model_owned_fields(schema), *_SERVER_STAMPS, _STATUS_FIELD}
+    return edited.model_dump(exclude=ignored) != existing.model_dump(exclude=ignored)

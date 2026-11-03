@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 from lancedb.pydantic import Vector
@@ -33,6 +33,8 @@ class BBox(PerFrameAnnotation):
     format: str
     is_normalized: bool
     confidence: float = -1.0
+
+    MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ("confidence",)
 
     @model_validator(mode="after")
     def _validate_fields(self) -> Self:
@@ -232,6 +234,8 @@ class BBox3D(PerFrameAnnotation):
     rotation: Vector(9)  # type: ignore[valid-type]
     is_normalized: bool
     confidence: float = -1.0
+
+    MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ("confidence",)
 
     @model_validator(mode="after")
     def _validate_fields(self) -> Self:

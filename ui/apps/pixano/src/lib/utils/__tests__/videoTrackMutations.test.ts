@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toRawAnnotation } from "$lib/api/adapters";
 import type { ResourceMutation } from "$lib/api/resourcePayloads";
 import { createSaveQueue } from "$lib/stores/saveQueue";
 import {
@@ -741,5 +742,44 @@ describe("retimeKeyframe", () => {
     expect(l5.data.frame_id).toBe("left-frame-6");
     expect([trackC.data.start_frame, trackC.data.end_frame]).toEqual([0, 6]);
     expect([trackL.data.start_frame, trackL.data.end_frame]).toEqual([6, 9]);
+  });
+
+  it("sends no review status for either half of a split model tracklet", async () => {
+    // The split clones the status the tracklet was read with into the right
+    // half, a person's new row, which the server refuses (a person's row takes no status).
+    // The left half's update sent it back too.
+    const { splitTrackInTwo } = await import("$lib/utils/videoOperations");
+
+    const entity = makeEntity();
+    const childs = [0, 1, 2, 3].map((frameIndex) =>
+      makeBBox(`bbox-${frameIndex}`, entity, frameIndex, "track-1", [0.1, 0.2, 0.2, 0.2]),
+    );
+    const readBack = {
+      id: "track-1",
+      record_id: "item-1",
+      view_id: "camera-frame-0",
+      entity_id: entity.id,
+      source_type: "model",
+      source_name: "tracking",
+      source_metadata: "{}",
+      review_status: "pending",
+      start_timestep: 0,
+      end_timestep: 3,
+    };
+    const tracklet = new Tracklet(toRawAnnotation(readBack, new Map(), "tracklets"));
+    tracklet.ui = { ...tracklet.ui, childs, top_entities: [entity] };
+
+    const rightTracklet = splitTrackInTwo(tracklet, 1, 2);
+
+    const staged = mockSaveQueue.mutations.filter(
+      (mutation) => mutation.target.resource === "tracklets",
+    );
+    expect(staged.map((mutation) => [mutation.op, mutation.target.id])).toEqual([
+      ["update", "track-1"],
+      ["create", rightTracklet.id],
+    ]);
+    for (const mutation of staged) {
+      expect(mutation.body).not.toHaveProperty("review_status");
+    }
   });
 });

@@ -4,6 +4,9 @@
 # License: CECILL-C
 # =====================================
 
+from types import MappingProxyType
+from typing import ClassVar, Mapping
+
 from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
@@ -21,6 +24,10 @@ class Classification(EntityAnnotation):
 
     labels: list[str]
     confidences: list[float]
+
+    MODEL_SCORE_FIELDS: ClassVar[tuple[str, ...]] = ("confidences",)
+    # One score per label: a relabelled model classification keeps the model's score of each label it gave.
+    MODEL_SCORE_ALIGNMENT: ClassVar[Mapping[str, str]] = MappingProxyType({"confidences": "labels"})
 
     @model_validator(mode="after")
     def _validate_fields(self):
