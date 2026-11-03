@@ -47,11 +47,6 @@ PENDING_REVIEW = ReviewStatus.PENDING.value
 # key produced shares one prefix and can be found — and cleaned — exactly.
 _ID_PREFIX_LENGTH = 16
 
-# Length of a record embedding's identifier, a digest without a rank: the format the embeddings
-# table was first written with, kept so that a rerun overwrites those vectors (see
-# `_record_embedding_id`).
-_RECORD_EMBEDDING_ID_LENGTH = 22
-
 # Every write creates a version of the Lance table; a job of 50,000 images in chunks of 8
 # creates 6,250 of them, and nothing reclaimed them — 101 versions measured after two jobs on
 # 400 images. A fragmented table slows down every read from the explorer. So we compact at a
@@ -91,12 +86,15 @@ class ModelIdentity:
 
 
 class DatasetReadSource(Protocol):
-    """The only operations planning a job needs.
+    """The only operations reading a job's dataset needs, to plan the job and process its chunks.
 
     A job kind must be able to enumerate what it is going to process without opening a dataset
     itself: the same reason as for writing — a single point, so that serialising or caching
     accesses one day remains a change to a single file.
     """
+
+    #: What the dataset holds: its tables and their schemas.
+    info: Any
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         """Count the rows of a table, without materialising it."""
@@ -247,18 +245,6 @@ def is_reviewed(row: Any) -> bool:
     without a status, re-imported from JSONL, was never reviewed.
     """
     return getattr(row, "review_status", "") not in NOT_REVIEWED_STATUSES
-
-
-def _record_embedding_id(kind: str, record_id: str) -> str:
-    """The identifier of a record's vector, in the format the embeddings table was first written with.
-
-    A digest of (kind, record, first rank), without the model and without a rank after a
-    prefix: a record has one vector, and the table holds one model, so a vector is replaced by
-    its record alone. Keeping that format lets a rerun overwrite the vectors already in a
-    dataset, rather than add a second set beside them under new identifiers.
-    """
-    digest = hashlib.blake2b(f"{kind}\x00{record_id}\x00{0}".encode(), digest_size=16).hexdigest()
-    return digest[:_RECORD_EMBEDDING_ID_LENGTH]
 
 
 class JobWriter:
@@ -438,8 +424,14 @@ class JobWriter:
     # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"
 
-    def write_record_embeddings(self, record_ids: Sequence[str], vectors: Sequence[Any], model: str) -> None:
-        """Write one vector per record, replacing the previous one.
+    def write_media_embeddings(
+        self, record_ids: Sequence[str], view_ids: Sequence[str], vectors: Sequence[Any], model: str
+    ) -> None:
+        """Write one vector per medium, replacing the previous one.
+
+        An embedding belongs to a medium — one camera of a nuScenes record, not the record: a
+        record with six images has six vectors, each carrying its `view_id`, and a search that
+        finds a medium returns its record. The medium is the replacement key.
 
         The table is not an ordinary one: its width depends on the model, so it can only be
         created once a first vector is known. Creating on the first pass avoids requiring the
@@ -451,11 +443,11 @@ class JobWriter:
         model.
 
         Raises:
-            ValueError: The vectors do not match the records, or the existing table was
+            ValueError: The vectors do not match the media, or the existing table was
                 computed with another model or another dimension.
         """
-        if len(record_ids) != len(vectors):
-            raise ValueError(f"{len(record_ids)} records for {len(vectors)} vectors")
+        if not len(record_ids) == len(view_ids) == len(vectors):
+            raise ValueError(f"{len(record_ids)} records, {len(view_ids)} media for {len(vectors)} vectors")
         if not vectors:
             return
 
@@ -474,8 +466,8 @@ class JobWriter:
 
         schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
-            schema(id=_record_embedding_id(self.kind, record_id), record_id=record_id, vector=list(vector))
-            for record_id, vector in zip(record_ids, vectors)
+            schema(id=derive_id(self.kind, view_id, 0), record_id=record_id, view_id=view_id, vector=list(vector))
+            for record_id, view_id, vector in zip(record_ids, view_ids, vectors)
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
         self._count_write(self.EMBEDDING_TABLE)

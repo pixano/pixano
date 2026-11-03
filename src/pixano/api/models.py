@@ -170,6 +170,8 @@ class SearchCapabilities(ResponseModel):
     detail: str | None = None
     embedded_rows: int = 0
     total_records: int = 0
+    # Embeddings belong to media: completeness is `embedded_rows` out of `total_media`.
+    total_media: int = 0
 
 
 class FilterSchemaResponse(ResponseModel):

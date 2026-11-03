@@ -32,7 +32,7 @@ from PIL import UnidentifiedImageError
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
 from pixano_worker import runner
 from pixano_worker.kinds import EmbeddingsKind, JobKind, TransientError
-from pixano_worker.kinds.inference import Failure, classify, witness_image
+from pixano_worker.kinds.inference import REFUSED_BY_THE_SERVER, Failure, chunk_media, classify, witness_image
 from pixano_worker.media import MediaResolver
 
 from pixano.datasets import Dataset
@@ -52,8 +52,6 @@ INFERENCE_MEDIA_ROOT = "/inference-media"
 WIDTH, HEIGHT = 200, 100
 # Each view, its record and its file.
 VIEWS = {"v1": ("r1", "a.png"), "v2": ("r2", "b.png")}
-# The records the views belong to: what the embeddings kind is given, and quarantines.
-RECORDS = [record_id for record_id, _ in VIEWS.values()]
 # The width of the simulated embedding model's vectors.
 DIM = 4
 # The model the embeddings kind asks the simulated server for.
@@ -181,9 +179,9 @@ class _Scene:
         return MediaResolver(str(self.media_root), INFERENCE_MEDIA_ROOT)
 
     def process(self, kind: JobKind, params: Any) -> dict[str, Any]:
-        """Process one chunk of every record, through the reader the runner gives a chunk."""
+        """Process one chunk of every view, through the reader the runner gives a chunk."""
         reader = runner._reader_for(self.library, DATASET_ID, self.resolver)
-        return kind.process(reader, {"record_ids": RECORDS}, params)
+        return kind.process(reader, {"table": IMAGES_TABLE, "view_ids": list(VIEWS)}, params)
 
 
 def _make_scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uri_of: Callable[[Path, str], str]) -> _Scene:
@@ -265,6 +263,16 @@ class TestTheWitness:
             (scene.media_root / "a.png").read_bytes()
         ), "the medium resent is the file as this worker reads it"
 
+    def test_corrupt_images_are_quarantined_when_their_bytes_are_refused_too(self, scene: _Scene, case: _Kind) -> None:
+        for _, file_name in VIEWS.values():
+            (scene.media_root / file_name).write_bytes(b"not an image")
+        kind = case.make(API_KEY)
+
+        result = scene.process(kind, _params(kind, case))
+
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(VIEWS)
+        assert {item["reason"] for item in result["quarantined"]} == {REFUSED_BY_THE_SERVER}
+
     def test_media_gone_from_the_storage_are_quarantined(self, scene: _Scene, case: _Kind) -> None:
         """Neither the inference nor this worker reads them: nothing to resend, nothing to blame but them."""
         for _, file_name in VIEWS.values():
@@ -273,7 +281,7 @@ class TestTheWitness:
 
         result = scene.process(kind, _params(kind, case))
 
-        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(VIEWS)
         assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
 
     def test_a_medium_gone_from_the_storage_leaves_the_next_to_be_resent(self, scene: _Scene, case: _Kind) -> None:
@@ -305,7 +313,7 @@ class TestTheWitness:
             for file in files:
                 file.chmod(0o644)
 
-        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(VIEWS)
         assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
         assert "cannot read it to resend it as bytes" in caplog.text
 
@@ -327,7 +335,7 @@ class TestTheWitness:
 
         result = scene.process(kind, _params(kind, case))
 
-        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(VIEWS)
         assert [image for image in scene.server.images if image.startswith("data:")] == [witness_image()]
 
     def test_an_inference_that_stops_answering_when_asked_again_blames_no_image(
@@ -407,7 +415,7 @@ class TestMediaDesignatedByUrl:
 
         result = by_url.process(kind, _params(kind, case))
 
-        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(RECORDS)
+        assert sorted(item["item_id"] for item in result["quarantined"]) == sorted(VIEWS)
         assert [image for image in by_url.server.images if image.startswith("data:")] == [witness_image()]
 
     @pytest.fixture
@@ -431,3 +439,26 @@ class TestMediaDesignatedByUrl:
 
         with pytest.raises(TransientError, match=f"{INFERENCE_MEDIA_ROOT} — check PIXANO_INFERENCE_MEDIA_ROOT"):
             url_then_path.process(kind, _params(kind, case))
+
+    def test_a_chunk_groups_its_media_by_designation(self, scene: _Scene) -> None:
+        """Only a path is kept for resending: a URL is not one, whatever this worker could read."""
+        dataset = Dataset.find(DATASET_ID, scene.library)
+        dataset.add_records({"records": [Record(id="r3"), Record(id="r4")]})
+        dataset.add_data(
+            IMAGES_TABLE,
+            [
+                Image(id="by-url", record_id="r3", logical_name="image", uri=f"{UNREACHABLE_HOST}/c.png"),
+                Image(id="embedded", record_id="r4", logical_name="image", raw_bytes=_png()),
+            ],
+            raise_or_warn="none",
+        )
+        reader = runner._reader_for(scene.library, DATASET_ID, scene.resolver, fresh=True)
+
+        found = chunk_media(reader, IMAGES_TABLE, ["v1", "by-url", "embedded"])
+
+        assert list(found.by_path) == ["v1"]
+        assert found.carried_bytes == 1
+        assert [reference for _, reference in found.media][:2] == [
+            f"{INFERENCE_MEDIA_ROOT}/a.png",
+            f"{UNREACHABLE_HOST}/c.png",
+        ]

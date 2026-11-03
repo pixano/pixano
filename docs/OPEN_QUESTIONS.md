@@ -101,3 +101,30 @@ Two things to watch:
   That is deliberate — `reassignEntity` re-reads the live annotation so the
   update body carries the entity id it just assigned. The hook itself is a pure
   function returning the new geometry, or `null` to refuse the move.
+
+## The embeddings health check reads every row's view
+
+**Status:** open (an accepted cost; a cache is the proposed fix).
+
+`Dataset.record_embedding_health` (`src/pixano/datasets/dataset.py`) reads no
+vector, but it reads the `view_id` of every row of the embeddings table to count
+the media embedded, and counts the rows of each image table. The explorer calls
+it before every semantic search and every request for its filter schema
+(`src/pixano/api/routers/explorer.py`), so its cost grows with the number of
+vectors — six per record on a six-camera dataset.
+
+It was accepted because counting distinct media is what makes the answer right:
+counting rows said "complete" with one camera of six embedded. No measurement of
+its cost on a large table is recorded.
+
+Options:
+
+- **Cache the answer per dataset instance**, keyed by the Lance versions of the
+  embeddings and image tables, and keep the exact scan for computing and
+  repairing. Beside it, `search_records` runs one vector search per vector of a
+  "similar to" record and rebuilds the record-id prefilter for each: building
+  that prefilter once per request is the same kind of saving.
+- **Keep counts in the sidecar, updated as vectors are written.** Cheap to read,
+  but a counter can drift from what it counts, and every writer of the table
+  must keep it.
+- **Keep the scan**, and measure it at scale first.

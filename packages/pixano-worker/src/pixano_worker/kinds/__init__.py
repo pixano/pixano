@@ -6,7 +6,7 @@
 
 """The job kinds this worker knows how to run."""
 
-from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError, media_chunks
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
@@ -48,5 +48,6 @@ __all__ = [
     "QuarantinedItem",
     "Registry",
     "TransientError",
+    "media_chunks",
     "default_registry",
 ]

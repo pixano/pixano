@@ -19,8 +19,13 @@ import logging
 import os
 from typing import Any, BinaryIO, Callable, Iterator, Sequence
 
+from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
+
 from .media import MediaResolver, ResolvedMedia
 from .writer import DatasetReadSource
+
+
+__all__ = ["MEDIA_TYPES", "JobReader", "MediaType", "media_type_of"]
 
 
 logger = logging.getLogger("pixano-worker")
@@ -65,6 +70,14 @@ class JobReader:
             rows = self.dataset.get_data(table_name, limit=PAGE_SIZE, skip=offset, where=where)
             for row in rows:
                 yield row.id
+
+    def media_tables(self, media_type: str) -> list[str]:
+        """The dataset's tables that hold media of this type, in a stable order.
+
+        Pixano stores every view of a type in one canonical table — nuScenes' six cameras are
+        all rows of `images`, told apart by their logical name — so this is usually one table.
+        """
+        return sorted(name for name, schema in self.dataset.info.tables.items() if media_type_of(schema) == media_type)
 
     def rows(self, table_name: str, ids: Sequence[str]) -> list[Any]:
         """Read specific rows, by identifier."""

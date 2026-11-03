@@ -117,10 +117,20 @@ was designated, which the media resolver says (`ResolvedMedia.designation`: `pat
 `bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
 and goes to quarantine with the rest.
 
+### Media types
+
+A kind that reads media declares `supported_media`, the types it can send to the inference
+(`image`, `video`, `point_cloud`, `text`), and takes the user's choice as a `media`
+parameter. Its `plan` calls `refuse_unsupported_media(params.media)` first: a job choosing a
+type the kind cannot process is refused whole, the types named — never run on part of what
+was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
+identifier with its `record_id` in the detail: the panel shows the record.
+
 ### `outcome(result, payload, task_count) -> Outcome`
 
 Optional. Says what each task of the chunk became: **produced**, **skipped** — the calculation
-does not apply, such as a record without an image for an image job, which is not a failure —
+does not apply, such as a record without an image for a kind that plans by record, which is
+not a failure —
 or **quarantined**, one `QuarantinedItem` per failed item. The default is "every task
 produced", which is right for a kind that neither skips nor loses anything.
 
