@@ -453,15 +453,26 @@ class JobRunner:
             pass
 
     def submit_export(
-        self, dataset_path: str, destination: str, format: str, media: str, options: dict[str, Any] | None = None
+        self,
+        dataset_path: str,
+        destination: str,
+        format: str,
+        media: str,
+        options: dict[str, Any] | None = None,
+        review_statuses: Sequence[str] = (),
     ) -> JobRecord:
-        """Create a pending export job and start it on the worker thread."""
-        job = self.store.create_job(
-            "export", dataset=Path(dataset_path).name, spec={"format": format, "media": media, **(options or {})}
-        )
+        """Create a pending export job and start it on the worker thread.
+
+        ``review_statuses`` is the export's review-status selection (see ``ExportSpec``); the job
+        spec records it when there is one.
+        """
+        spec: dict[str, Any] = {"format": format, "media": media, **(options or {})}
+        if review_statuses:
+            spec["review_statuses"] = list(review_statuses)
+        job = self.store.create_job("export", dataset=Path(dataset_path).name, spec=spec)
         thread = threading.Thread(
             target=self._run_export,
-            args=(job.id, dataset_path, destination, format, media, options),
+            args=(job.id, dataset_path, destination, format, media, options, review_statuses),
             daemon=True,
         )
         self._threads.append(thread)
@@ -476,6 +487,7 @@ class JobRunner:
         format: str,
         media: str,
         options: dict[str, Any] | None = None,
+        review_statuses: Sequence[str] = (),
     ) -> None:
         from .api import export_dataset
 
@@ -485,7 +497,14 @@ class JobRunner:
                 return
             self.store.update_job(job_id, status="running", pid=os.getpid(), heartbeat=time.time())
             try:
-                exported = export_dataset(dataset_path, destination, format=format, media=media, options=options)
+                exported = export_dataset(
+                    dataset_path,
+                    destination,
+                    format=format,
+                    media=media,
+                    options=options,
+                    review_statuses=review_statuses,
+                )
                 self.store.update_job(
                     job_id, status="done", progress={"phase": "done", "message": str(exported), "final": True}
                 )

@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import json
 import time
 from pathlib import Path
 
@@ -11,11 +12,19 @@ import PIL.Image
 import pytest
 import yaml
 from fastapi.testclient import TestClient
+from httpx import Response
 from s3path import S3Path
 
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
+from pixano.datasets.io.jobs import JobStore
+from tests.datasets.io._review_fixture import (
+    DROPPED_ENTITIES,
+    KEPT_ENTITIES,
+    REVIEW_DATASET_NAME,
+    build_review_dataset,
+)
 from tests.datasets.io.formats.test_lerobot_importer import make_v21_dataset, needs_ffmpeg
 
 
@@ -387,6 +396,79 @@ class TestLegacyAliasParity:
         client, _, _ = client_and_dirs
         assert client.post("/datasets/import", json={"source_dir": "/tmp", "import_type": "bogus"}).status_code == 400
         assert client.post("/datasets/import", json={"source_dir": "/nope/missing"}).status_code == 400
+
+
+class TestExportByReviewStatus:
+    """POST /io/exports takes the review selection of the shared ExportSpec (spec amendment 2026-10-05)."""
+
+    @staticmethod
+    def _start(client: TestClient, destination: Path, **fields) -> Response:
+        payload = {"dataset": REVIEW_DATASET_NAME, "destination": str(destination), **fields}
+        return client.post("/io/exports", json=payload)
+
+    @staticmethod
+    def _exported_entities(destination: Path) -> set[str]:
+        lines = (destination / "train" / "metadata.jsonl").read_text(encoding="utf-8").splitlines()
+        return {entity["id"] for entity in json.loads(lines[1])["entities"]}
+
+    @pytest.mark.parametrize(
+        ("requested", "recorded", "exported"),
+        [
+            pytest.param(["accepted", "accepted"], ["accepted"], KEPT_ENTITIES, id="accepted-without-repeats"),
+            pytest.param(
+                ["accepted", "pending"],
+                ["pending", "accepted"],
+                KEPT_ENTITIES | DROPPED_ENTITIES,
+                id="both-in-declaration-order",
+            ),
+        ],
+    )
+    def test_the_export_job_applies_and_records_the_selection(
+        self, client_and_dirs, tmp_path: Path, requested: list[str], recorded: list[str], exported: set[str]
+    ):
+        client, data_dir, _ = client_and_dirs
+        build_review_dataset(data_dir / "library" / REVIEW_DATASET_NAME)
+
+        started = self._start(client, tmp_path / "out", review_statuses=requested)
+
+        assert started.status_code == 202
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        assert self._exported_entities(tmp_path / "out") == exported
+        job = JobStore.for_data_dir(data_dir).get_job(started.json()["job_id"])
+        assert job.spec["review_statuses"] == recorded
+
+    def test_an_export_job_without_selection_exports_everything(self, client_and_dirs, tmp_path: Path):
+        client, data_dir, _ = client_and_dirs
+        build_review_dataset(data_dir / "library" / REVIEW_DATASET_NAME)
+
+        started = self._start(client, tmp_path / "out")
+
+        final = _wait_done(client, started.json()["job_id"])
+        assert final["status"] == "done", final["error"]
+        assert self._exported_entities(tmp_path / "out") == KEPT_ENTITIES | DROPPED_ENTITIES
+        assert "review_statuses" not in JobStore.for_data_dir(data_dir).get_job(started.json()["job_id"]).spec
+
+    @pytest.mark.parametrize(
+        "fields",
+        [
+            pytest.param({"review_statuses": ["bogus"]}, id="unknown-status"),
+            # A reject deletes the row, and a saved edit accepts it: neither is a status.
+            pytest.param({"review_statuses": ["rejected"]}, id="rejected-status"),
+            pytest.param({"review_statuses": ["corrected"]}, id="corrected-status"),
+            pytest.param({"review_statuses": [""]}, id="empty-status"),
+            pytest.param({"options": {"review_statuses": ["accepted"]}}, id="selection-as-format-option"),
+        ],
+    )
+    def test_an_invalid_selection_is_refused_without_a_job(self, client_and_dirs, tmp_path: Path, fields: dict):
+        client, data_dir, _ = client_and_dirs
+        build_review_dataset(data_dir / "library" / REVIEW_DATASET_NAME)
+
+        response = self._start(client, tmp_path / "out", **fields)
+
+        assert response.status_code == 422
+        assert JobStore.for_data_dir(data_dir).list_jobs() == []
+        assert not (tmp_path / "out").exists()
 
 
 class TestTimeSeriesDatasetSerialization:
