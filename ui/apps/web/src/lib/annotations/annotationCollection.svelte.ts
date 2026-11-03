@@ -8,7 +8,11 @@ import type { ClassificationGeometry } from "./kinds/2d/classification/classific
 import type { KeypointsGeometry } from "./kinds/2d/keypoints/keypointsTypes.js";
 import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
-import type { AnnotationReview } from "./reviewStatus.js";
+import {
+  storedStatusAfterWrite,
+  type AnnotationReview,
+  type ReviewStatus,
+} from "./reviewStatus.js";
 import type { CoordsNorm, Rotation3x3 } from "./types.js";
 
 /**
@@ -56,6 +60,21 @@ export interface LocalAnnotation<G = unknown> {
    * nothing to review — so draft tools never have to fill it.
    */
   review?: AnnotationReview;
+  /**
+   * What the dataset holds for this annotation's content, as last read or
+   * written — the content an unsaved edit started from. Kept apart from
+   * `geometry`/`entityId`/`entity`, which an edit overwrites in place, so that
+   * an edit that puts the content back as stored is seen to change nothing.
+   * Absent on a draft no write has carried yet.
+   */
+  persistedContent?: PersistedContent<G>;
+}
+
+/** The part of an annotation a person's edit changes, as the dataset holds it. */
+export interface PersistedContent<G = unknown> {
+  geometry: G;
+  entityId: string;
+  entity?: Record<string, unknown>;
 }
 
 /** Normalized xywh in [0, 1] — same convention as the backend BBox rows. */
@@ -175,6 +194,76 @@ export class AnnotationCollection implements AnnotationStore {
       annotation.entityId = entityId;
       annotation.entity = entity;
     }
+  }
+
+  /**
+   * The annotation's content as it is now, as a detached copy: what a body
+   * queued for it now carries. A copy, because the collection's objects are
+   * reactive proxies that a later edit may change in place. Undefined when the
+   * annotation is not here.
+   */
+  contentOf(id: string): PersistedContent | undefined {
+    const annotation = this.find(id);
+    if (!annotation) return undefined;
+    const content: PersistedContent = {
+      geometry: annotation.geometry,
+      entityId: annotation.entityId,
+      entity: annotation.entity,
+    };
+    return $state.snapshot(content);
+  }
+
+  /**
+   * Record, as a write of this annotation leaves for the backend, what the
+   * dataset holds once it lands: the content the write carries, and, for an
+   * update, the status the server stores for that body
+   * (`storedStatusAfterWrite`). So an edit of a model's row reads accepted as
+   * its write leaves, without waiting for anything to be read back.
+   *
+   * That content is the one taken when the body was queued (`contentOf`), not
+   * the annotation's content now: a write retried after a failure leaves with
+   * newer edits queued behind it, which it does not carry. A write that carries
+   * no content leaves the content recorded as it was.
+   *
+   * Recorded when the write leaves rather than when it lands, so that work
+   * begun while it is in flight is measured against what the dataset will hold
+   * once it lands: an edit taken back to the content on the wire sends nothing
+   * (the content compared is `persistedContent`), and a row whose edit is on
+   * the wire already reads accepted. Returns how to put the previous record
+   * back if the write fails — the status included, unless something has moved
+   * it since; nothing when the annotation is not in this collection.
+   *
+   * @param id The annotation the write is about.
+   * @param write `content`: what the write carries, if any; `updateBody`: the
+   *   body of an update (a create moves no status).
+   */
+  recordWrite(
+    id: string,
+    write: { content?: PersistedContent; updateBody?: Readonly<Record<string, unknown>> },
+  ): (() => void) | undefined {
+    const annotation = this.find(id);
+    if (!annotation) return undefined;
+    const previousContent = annotation.persistedContent;
+    const previousStatus = annotation.review?.status;
+    let statusMovedTo: ReviewStatus | "" | undefined;
+
+    if (write.content) annotation.persistedContent = write.content;
+    const review = annotation.review;
+    if (review && write.updateBody) {
+      const stored = storedStatusAfterWrite(review, write.updateBody);
+      if (review.status !== stored) {
+        review.status = stored;
+        statusMovedTo = stored;
+      }
+    }
+
+    return () => {
+      annotation.persistedContent = previousContent;
+      const current = annotation.review;
+      // Put back only a status nothing has moved since the write left.
+      const untouched = statusMovedTo !== undefined && current?.status === statusMovedTo;
+      if (current && untouched && previousStatus !== undefined) current.status = previousStatus;
+    };
   }
 }
 

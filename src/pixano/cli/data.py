@@ -275,6 +275,12 @@ def export_command(
         help="Include a Record base field in exported JSONL attrs (repeatable). "
         "Choices: status, created_at, updated_at, comment.",
     ),
+    review_status: list[str] = typer.Option(
+        [],
+        "--review-status",
+        help="Export only the model annotations with this review status (repeatable); annotations "
+        "no model produced are always exported. Choices: pending, accepted.",
+    ),
 ) -> None:
     """Export a dataset from the library (JSONL v2 output re-imports identically)."""
     library_dir = data_dir / "library"
@@ -282,7 +288,9 @@ def export_command(
     try:
         resolved = Dataset(dataset_dir) if dataset_dir.is_dir() else Dataset.find(dataset, library_dir)
         options = {"include_record_fields": include_record_field} if include_record_field else None
-        exported = export_dataset(resolved, destination, format=format, media=media, options=options)
+        exported = export_dataset(
+            resolved, destination, format=format, media=media, options=options, review_statuses=review_status
+        )
     except (PixanoDataError, FileNotFoundError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(code=1) from None

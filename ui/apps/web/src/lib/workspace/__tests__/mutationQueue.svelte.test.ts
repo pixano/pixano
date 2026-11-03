@@ -432,6 +432,68 @@ describe("MutationQueue — a request on the wire", () => {
     expect(queue.pending).toEqual([]);
     expect(queue.saveError).toBeNull();
   });
+
+  it("records each write as it leaves, and undoes the record when it fails", async () => {
+    const { gateway, release } = heldUpdates();
+    const events: string[] = [];
+    const locator: LocalAnnotationLocator = {
+      findLocalAnnotation: () => undefined,
+      recordWrite: (mutation) => {
+        events.push(`record ${mutation.op}`);
+        return () => events.push("undo");
+      },
+    };
+    const queue = new MutationQueue(gateway, makeSession(), locator);
+    queue.upsertUpdate(update({ coords: [0, 0, 1, 1] }));
+
+    const flushing = queue.flush();
+    expect(events).toEqual(["record update"]);
+    release(new Error("backend down"));
+    await flushing;
+
+    expect(events).toEqual(["record update", "undo"]);
+    // Back at the head of the queue, for the next save.
+    expect(queue.pending).toEqual([update({ coords: [0, 0, 1, 1] })]);
+  });
+});
+
+describe("MutationQueue — the locator told of each body queued", () => {
+  /** A locator recording the body of each mutation it is told of, as the queue then holds it. */
+  function recordingLocator() {
+    const bodies: unknown[] = [];
+    const locator: LocalAnnotationLocator = {
+      findLocalAnnotation: () => undefined,
+      recordQueued: (mutation) => {
+        bodies.push(mutation.op === "delete" ? null : { ...mutation.body });
+      },
+    };
+    return { locator, bodies };
+  }
+
+  const create = (body: Record<string, unknown>): ResourceMutation => ({
+    op: "create",
+    resource: "bboxes",
+    body: { id: "b1", ...body },
+    localAnnotationId: "b1",
+  });
+
+  it("is told of a mutation queued, and of a queued body a later gesture rewrites", () => {
+    const { gateway } = makeGateway();
+    const { locator, bodies } = recordingLocator();
+    const queue = new MutationQueue(gateway, makeSession(), locator);
+
+    queue.queue(create({ coords: [0, 0, 1, 1] }));
+    queue.patchPendingCreate("b1", "bboxes", { coords: [0.5, 0.5, 1, 1] });
+    queue.upsertUpdate({ op: "update", resource: "bboxes", id: "b2", body: { coords: [1] } });
+    queue.upsertUpdate({ op: "update", resource: "bboxes", id: "b2", body: { coords: [2] } });
+
+    expect(bodies).toEqual([
+      { id: "b1", coords: [0, 0, 1, 1] },
+      { id: "b1", coords: [0.5, 0.5, 1, 1] },
+      { coords: [1] },
+      { coords: [2] },
+    ]);
+  });
 });
 
 describe("MutationQueue — what a save reports", () => {

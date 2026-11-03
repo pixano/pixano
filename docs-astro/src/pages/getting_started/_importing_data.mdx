@@ -15,7 +15,7 @@ Pixano 0.8 imports and exports datasets as plain files — no Python required. T
 
 - **From the app**: what each step of the import wizard asks, and which choices exist only on the command line
 - **From the command line**: `pixano data import` and its options, the folder layout, the `metadata.jsonl` line format (JSONL v2), the `dataset.yaml` schema spec, and media storage
-- **Exporting**: how to export a dataset, including record base fields with `--include-record-field`
+- **Exporting**: how to export a dataset, including record base fields with `--include-record-field` and model annotations selected by review status with `--review-status`
 - **Jobs**: resuming, cancelling and rolling back an import — from either side
 
 </Callout>
@@ -499,6 +499,49 @@ schema:
 ```
 
 The importer recognizes `status`, `created_at`, `updated_at`, and `comment` as Record base fields by name and sets them directly. Timestamp fields accept ISO-8601 strings (e.g. `"2024-01-15T10:30:00"`); a value that cannot be parsed as the field's type fails the import with a clear validation error. On `create`/`overwrite` imports the provided `created_at`/`updated_at` values are **preserved as-is**; in `--mode add`, upsert semantics apply — a re-imported existing record keeps its stored `created_at` and gets a fresh `updated_at`.
+
+### Exporting by review status
+
+Annotations produced by a model carry a review status: `pending` until a person accepts them —
+as they are, or by saving an edit of them — then `accepted`. A person who rejects a model
+annotation deletes it, so a rejected annotation is in no export. By default an export contains
+every annotation, whatever its status. The `--review-status` flag (repeatable) exports only the
+model annotations with the listed statuses:
+
+```sh
+pixano data export /path/to/data_dir my_dataset ./exported \
+  --review-status accepted
+```
+
+- Annotations that no model produced — drawn by a person, or imported as ground truth — are
+  always exported.
+- A model annotation without a status counts as `pending`. This is the case of model annotations
+  re-imported from a JSONL export, because the format does not carry review statuses.
+- Only the kinds a person can review are filtered: boxes, 3D boxes, masks, keypoints,
+  multi-paths and classifications. A model's text spans are exported whatever their status.
+  Relations and 3D boxes are not written by either format, with or without the flag;
+  `--format coco` writes boxes, masks and keypoints only.
+- Tracklets are never filtered by their status. A tracklet that no model produced is always
+  exported, and keeps its entity. A model's tracklet is part of its entity: it goes only with
+  the entity, and does not keep it on its own.
+- An entity whose annotations were all left out is left out too, with its per-frame states and
+  its tracklets. It stays when a kept entity names it as its `parent_id`, or when a relation
+  of the record points at it or at one of its annotations, a tracklet included — the flag
+  never leaves a relation out. The relation itself is not exported, so such an entity
+  appears in the JSONL with no annotations, and not at all in a COCO export, which lists
+  only annotations. An entity that never had an annotation stays.
+- The flag works the same way with `--format coco`.
+
+The exported `dataset.yaml` records the selection under `options`, like `include_record_fields`,
+so the file remains a valid import spec:
+
+```yaml
+options:
+  review_statuses:
+    - accepted
+```
+
+The REST API takes the same selection as `review_statuses` in the body of `POST /io/exports`.
 
 ### Deterministic ids and round-trips
 

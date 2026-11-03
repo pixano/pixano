@@ -117,10 +117,20 @@ was designated, which the media resolver says (`ResolvedMedia.designation`: `pat
 `bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
 and goes to quarantine with the rest.
 
+### Media types
+
+A kind that reads media declares `supported_media`, the types it can send to the inference
+(`image`, `video`, `point_cloud`, `text`), and takes the user's choice as a `media`
+parameter. Its `plan` calls `refuse_unsupported_media(params.media)` first: a job choosing a
+type the kind cannot process is refused whole, the types named — never run on part of what
+was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
+identifier with its `record_id` in the detail: the panel shows the record.
+
 ### `outcome(result, payload, task_count) -> Outcome`
 
 Optional. Says what each task of the chunk became: **produced**, **skipped** — the calculation
-does not apply, such as a record without an image for an image job, which is not a failure —
+does not apply, such as a record without an image for a kind that plans by record, which is
+not a failure —
 or **quarantined**, one `QuarantinedItem` per failed item. The default is "every task
 produced", which is right for a kind that neither skips nor loses anything.
 
@@ -190,6 +200,14 @@ leaves no row behind. What it means for a kind:
   application reads too, `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status
   either, and is never taken for a pending one: `replace` reaches only the identifiers the kind
   derived itself.
+- **Fixing what an entity says accepts.** A person who changes an entity a kind wrote or
+  annotated — the class of a detected object, for instance — saves an edit of every model
+  annotation that names it and is still pending: the API makes them `accepted`, so the next run
+  leaves them alone instead of writing its own values back. Any field of the entity counts but
+  its links and timestamps (`ENTITY_SYSTEM_FIELDS`). A kind that writes what it found on an
+  entity gets this without asking — and so does a kind that writes its rows on another kind's
+  objects, whose pending rows a person's fix of the object accepts, though nobody looked at them
+  (backend-processing §19).
 - **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
   provenance: write the model's own score there, never a placeholder. Each schema names its
   score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a

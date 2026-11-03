@@ -4,13 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-"""The review of a model's annotations: which status an update may give a row.
+"""The review of a model's annotations: the status an update may give, and what an entity edit accepts.
 
 A model's annotation arrives ``pending``. A person accepts it — as it is, or by saving an edit of
 it — or rejects it, which deletes it (`ReviewStatus`). A person's own annotation carries no status,
 since there is nothing to review. The service applies these rules to every annotation it updates
-or creates, and none depends on the kind of annotation: every kind, including one added later,
-follows the same rules.
+or creates, and to the annotations naming an entity it updates. None depends on the kind of
+annotation: every kind, including one added later, follows the same rules.
 
 What every layer reads the same way — which stored status means "not reviewed yet", which fields
 hold a model's score — comes from `pixano.schemas`.
@@ -20,7 +20,9 @@ from typing import Any
 
 from lancedb.pydantic import LanceModel
 
-from pixano.schemas import AnnotationSourceKind, ReviewStatus, is_entity_annotation
+from pixano.datasets import Dataset
+from pixano.schemas import AnnotationSourceKind, ReviewStatus, is_entity_annotation, stored_statuses
+from pixano.utils.python import to_sql_list
 
 
 MODEL_SOURCE = AnnotationSourceKind.MODEL.value
@@ -31,6 +33,7 @@ NO_STATUS = ""
 
 _STATUS_COLUMN = "review_status"
 _SOURCE_COLUMN = "source_type"
+_ENTITY_COLUMN = "entity_id"
 
 # What an update of a model's row may ask for: ``pending``, which only echoes the status a model's
 # output arrives with, and ``accepted``, the one decision. A person who rejects the row deletes it.
@@ -120,6 +123,48 @@ def check_new_row(row: LanceModel) -> None:
         raise _human_row_refusal(status)
 
 
+def acceptances_of_entity_edit(dataset: Dataset, entity_id: str) -> dict[str, list[LanceModel]]:
+    """The model's annotations that a person's edit of an entity accepts, made ``accepted``.
+
+    What an annotation says can live in its entity: a detection's class, for instance, lives in
+    the object it names. A person who fixes the class edits the entity and leaves the annotation
+    as the model wrote it. That is an edit of what the annotation says all the same, saved by the
+    person, and it follows the rule of a saved edit of the row itself: a pending row becomes
+    ``accepted``. Left pending, the next run of the model would write its own class back over the
+    person's, and a reader of the status would take the row as never reviewed. An accepted row is
+    already a person's work and is not rewritten.
+
+    Every table of entity annotations is searched, whatever its kind. A table that lacks the
+    status column is skipped: a dataset whose migration to the review layout failed, a read-only
+    library for instance, has nowhere to store a decision in it. Nothing is written: the caller
+    stores the rows with the entity's edit.
+
+    Args:
+        dataset: The dataset holding the entity.
+        entity_id: The entity the person edits.
+
+    Returns:
+        The rows to store, by table, their status set to ``accepted``. Only the pending rows, a
+        model's row stored without a status included (`pixano.schemas.NOT_REVIEWED_STATUSES`).
+    """
+    where = (
+        f"{_ENTITY_COLUMN} IN {to_sql_list([entity_id])} AND {_SOURCE_COLUMN} = '{MODEL_SOURCE}' "
+        f"AND {_STATUS_COLUMN} IN {to_sql_list(stored_statuses(ReviewStatus.PENDING))}"
+    )
+    acceptances: dict[str, list[LanceModel]] = {}
+    for table_name, schema in dataset.info.tables.items():
+        if not is_entity_annotation(schema):
+            continue
+        if _STATUS_COLUMN not in dataset.open_table(table_name).schema.names:
+            continue
+        rows = dataset.get_data(table_name, where=where, limit=None)
+        for row in rows:
+            setattr(row, _STATUS_COLUMN, ReviewStatus.ACCEPTED.value)
+        if rows:
+            acceptances[table_name] = rows
+    return acceptances
+
+
 def _human_row_refusal(status: Any) -> ReviewRuleError:
     return ReviewRuleError(
         f"Only a model's annotation (source_type '{MODEL_SOURCE}') has a review status. "
@@ -131,6 +176,7 @@ __all__ = [
     "MODEL_SOURCE",
     "NO_STATUS",
     "ReviewRuleError",
+    "acceptances_of_entity_edit",
     "check_human_update",
     "check_new_row",
     "decision_of",

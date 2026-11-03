@@ -12,6 +12,7 @@ import {
   type LocalAnnotation,
   type LocalBBox,
 } from "../annotationCollection.svelte.js";
+import type { AnnotationReview } from "../reviewStatus.js";
 
 function makeBBox(id: string, persisted = false): LocalBBox {
   return {
@@ -84,7 +85,79 @@ describe("AnnotationCollection", () => {
     collection.setGeometry("a", [0.5, 0.5, 0.1, 0.1]);
     expect(collection.find("a")?.geometry).toEqual([0.5, 0.5, 0.1, 0.1]);
   });
+
+  it("recordWrite records the content a write carries, and puts the old one back on failure", () => {
+    const collection = new AnnotationCollection([
+      {
+        ...makeBBox("a", true),
+        persistedContent: { geometry: [0.1, 0.1, 0.2, 0.2], entityId: "e-a" },
+      },
+    ]);
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
+
+    const undo = collection.recordWrite("a", { content: collection.contentOf("a") });
+    expect(collection.find("a")?.persistedContent?.geometry).toEqual([0.5, 0.5, 0.2, 0.2]);
+
+    undo?.();
+    expect(collection.find("a")?.persistedContent?.geometry).toEqual([0.1, 0.1, 0.2, 0.2]);
+  });
+
+  it("recordWrite records the status an update stores, and puts it back on failure", () => {
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), review: modelReview("pending") },
+    ]);
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
+
+    const undo = collection.recordWrite("a", {
+      content: collection.contentOf("a"),
+      updateBody: { coords: [0.5, 0.5, 0.2, 0.2] },
+    });
+    // A person's change to a model's row is stored accepted, and reads so at once.
+    expect(collection.find("a")?.review?.status).toBe("accepted");
+
+    undo?.();
+    expect(collection.find("a")?.review?.status).toBe("pending");
+  });
+
+  it("recordWrite moves no status for a create", () => {
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), review: modelReview("pending") },
+    ]);
+
+    collection.recordWrite("a", { content: collection.contentOf("a") });
+
+    expect(collection.find("a")?.review?.status).toBe("pending");
+  });
+
+  it("contentOf takes a copy: an edit made afterwards does not change what a write carries", () => {
+    const collection = new AnnotationCollection([makeBBox("a", true)]);
+
+    const carried = collection.contentOf("a");
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
+    collection.recordWrite("a", { content: carried });
+
+    expect(collection.find("a")?.persistedContent).toEqual({
+      geometry: [0.1, 0.1, 0.2, 0.2],
+      entityId: "e-a",
+      entity: undefined,
+    });
+  });
+
+  it("recordWrite of a write that carries no content leaves the content recorded as it was", () => {
+    const stored = { geometry: [0.1, 0.1, 0.2, 0.2], entityId: "e-a" };
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), persistedContent: stored },
+    ]);
+
+    collection.recordWrite("a", {});
+
+    expect(collection.find("a")?.persistedContent).toEqual(stored);
+  });
 });
+
+function modelReview(status: AnnotationReview["status"]): AnnotationReview {
+  return { status, sourceType: "model", sourceName: "detection" };
+}
 
 describe("ViewScopedAnnotations", () => {
   function makeShared() {

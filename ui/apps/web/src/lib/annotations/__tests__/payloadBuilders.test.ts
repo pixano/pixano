@@ -178,8 +178,10 @@ describe("reassignEntity (change a persisted annotation's entity)", () => {
     return {
       collection,
       mutations: {
+        pending: [],
         queue: vi.fn(),
         upsertUpdate: vi.fn(),
+        dropForLocalAnnotation: vi.fn(),
         dropPendingEntityCreate: vi.fn(),
       },
       buildContext: CTX,

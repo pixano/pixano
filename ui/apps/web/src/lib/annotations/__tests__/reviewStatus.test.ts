@@ -10,6 +10,7 @@ import type { LocalAnnotation } from "../annotationCollection.svelte.js";
 import {
   isReviewable,
   reviewOf,
+  storedStatusAfterWrite,
   type AnnotationReview,
   type ReviewStatus,
 } from "../reviewStatus.js";
@@ -138,5 +139,38 @@ describe("isReviewable", () => {
     expect(isReviewable(annotation("d", undefined, false))).toBe(false);
     // A draft never is, even one carrying a model's review by mistake.
     expect(isReviewable(annotation("x", modelReview("pending"), false))).toBe(false);
+  });
+});
+
+describe("storedStatusAfterWrite", () => {
+  const stored = (status: ReviewStatus): AnnotationReview =>
+    reviewOf({ ...MODEL_ROW, review_status: status });
+
+  it("stores an Accept", () => {
+    expect(storedStatusAfterWrite(stored("pending"), { review_status: "accepted" })).toBe(
+      "accepted",
+    );
+  });
+
+  it("stores a change to a model's row accepted, whatever the status", () => {
+    for (const status of ["pending", "accepted"] as const) {
+      expect(storedStatusAfterWrite(stored(status), { coords: [0, 0, 1, 1] })).toBe("accepted");
+    }
+  });
+
+  it("reads an echo or pending as no decision, as the server does", () => {
+    expect(storedStatusAfterWrite(stored("accepted"), { review_status: "accepted" })).toBe(
+      "accepted",
+    );
+    expect(storedStatusAfterWrite(stored("accepted"), { review_status: "pending" })).toBe(
+      "accepted",
+    );
+    expect(storedStatusAfterWrite(stored("pending"), { review_status: "pending" })).toBe("pending");
+  });
+
+  it("moves no status on a person's row", () => {
+    expect(
+      storedStatusAfterWrite(reviewOf({ source_type: "other" }), { coords: [0, 0, 1, 1] }),
+    ).toBe("");
   });
 });

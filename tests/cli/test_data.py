@@ -14,6 +14,12 @@ from typer.testing import CliRunner
 
 from pixano.cli import app
 from pixano.datasets import Dataset
+from tests.datasets.io._review_fixture import (
+    DROPPED_ENTITIES,
+    KEPT_ENTITIES,
+    REVIEW_DATASET_NAME,
+    build_review_dataset,
+)
 from tests.datasets.io.formats.test_jsonl_importer import SPECS, materialize_corpus
 
 
@@ -80,6 +86,71 @@ class TestImportCommand:
         again = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
         assert again.exit_code == 1
         assert "already exists" in again.output
+
+
+class TestExportCommand:
+    """`--review-status` selects the model annotations to export (spec amendment 2026-10-05)."""
+
+    @staticmethod
+    def _data_dir_with_review_dataset(tmp_path: Path) -> Path:
+        data_dir = tmp_path / "data"
+        build_review_dataset(data_dir / "library" / REVIEW_DATASET_NAME)
+        return data_dir
+
+    @pytest.mark.parametrize(
+        ("requested", "recorded", "exported"),
+        [
+            pytest.param(["accepted", "accepted"], ["accepted"], KEPT_ENTITIES, id="accepted-without-repeats"),
+            pytest.param(
+                ["accepted", "pending"],
+                ["pending", "accepted"],
+                KEPT_ENTITIES | DROPPED_ENTITIES,
+                id="both-in-declaration-order",
+            ),
+        ],
+    )
+    def test_review_status_selects_model_annotations(
+        self, tmp_path: Path, requested: list[str], recorded: list[str], exported: set[str]
+    ):
+        data_dir = self._data_dir_with_review_dataset(tmp_path)
+        destination = tmp_path / "out"
+
+        flags = [argument for status in requested for argument in ("--review-status", status)]
+        result = runner.invoke(app, ["data", "export", str(data_dir), REVIEW_DATASET_NAME, str(destination), *flags])
+
+        assert result.exit_code == 0, result.output
+        line = json.loads((destination / "train" / "metadata.jsonl").read_text(encoding="utf-8").splitlines()[1])
+        assert {entity["id"] for entity in line["entities"]} == exported
+        spec = yaml.safe_load((destination / "dataset.yaml").read_text(encoding="utf-8"))
+        assert spec["options"] == {"review_statuses": recorded}
+
+    def test_review_status_applies_to_coco(self, tmp_path: Path):
+        data_dir = self._data_dir_with_review_dataset(tmp_path)
+        destination = tmp_path / "out"
+
+        result = runner.invoke(
+            app,
+            ["data", "export", str(data_dir), REVIEW_DATASET_NAME, str(destination)]
+            + ["--format", "coco", "--review-status", "accepted"],
+        )
+
+        assert result.exit_code == 0, result.output
+        document = json.loads((destination / "instances_train.json").read_text(encoding="utf-8"))
+        exported = {annotation["pixano_id"] for annotation in document["annotations"]}
+        assert exported == {"e_human", "e_truth", "e_accepted", "e_child", "e_mixed"}
+
+    @pytest.mark.parametrize("status", ["bogus", "corrected", "rejected"])
+    def test_unknown_review_status_fails_before_writing(self, tmp_path: Path, status: str):
+        data_dir = self._data_dir_with_review_dataset(tmp_path)
+        destination = tmp_path / "out"
+
+        result = runner.invoke(
+            app, ["data", "export", str(data_dir), REVIEW_DATASET_NAME, str(destination), "--review-status", status]
+        )
+
+        assert result.exit_code == 1
+        assert "review_statuses" in result.output
+        assert not destination.exists()
 
 
 class TestFormatsCommand:

@@ -97,22 +97,25 @@ class _Inference:
 
 
 class _Reader:
-    """A dataset where some records have no image, and others a lost image.
+    """A table of images — one per record here — where some are missing and others lost.
+
+    A medium's identifier is the name its test refers to ("r5"); its record is "rec-r5". The
+    two differ on purpose, so that a test cannot pass by confusing a medium with its record.
 
     As in a real dataset, a view designated by path carries no bytes of its own: only its file
-    can be read, through `open_media`.
+    can be read, through `open_media`. The dataset is not reachable at all, so that nothing here
+    reads a medium another way.
     """
 
     def __init__(
         self,
-        without_image: set[str] = frozenset(),  # type: ignore[assignment]
+        missing: set[str] = frozenset(),  # type: ignore[assignment]
         lost: set[str] = frozenset(),  # type: ignore[assignment]
         carried_bytes: bool = False,
     ) -> None:
-        self.without_image = without_image
+        self.missing = missing
         self.lost = lost
         self.carried_bytes = carried_bytes
-        self.dataset = SimpleNamespace(get_data=self._get_data)
         self.media = MediaResolver("/medias", "/medias")
 
     @staticmethod
@@ -121,15 +124,15 @@ class _Reader:
         inference recognises an image in both forms."""
         return io.BytesIO(view.uri.encode())
 
-    def _get_data(self, table_name: str, record_ids: list[str]) -> list[Any]:
+    def rows(self, table_name: str, ids: list[str]) -> list[Any]:
         return [
-            SimpleNamespace(id=f"img-{r}", record_id=r, uri=f"/medias/{r}.jpg")
-            for r in record_ids
-            if r not in self.without_image
+            SimpleNamespace(id=view_id, record_id=f"rec-{view_id}", uri=f"/medias/{view_id}.jpg")
+            for view_id in ids
+            if view_id not in self.missing
         ]
 
     def resolve_media(self, table_name: str, view: Any) -> ResolvedMedia | None:
-        if view.record_id in self.lost:
+        if view.id in self.lost:
             return None
         if self.carried_bytes:
             return ResolvedMedia(bytes_to_data_uri(view.uri.encode()), designation="bytes", reason="bytes")
@@ -149,7 +152,7 @@ RECORDS = [f"r{i}" for i in range(8)]
 
 
 def _run(reader: _Reader, records: list[str] = RECORDS) -> tuple[dict[str, Any], Any]:
-    payload = {"record_ids": records}
+    payload = {"table": "images", "view_ids": records}
     result = KIND.process(reader, payload, PARAMS)  # type: ignore[arg-type]
     return result, KIND.outcome(result, payload, len(records))
 
@@ -167,8 +170,10 @@ class TestItemFailures:
             "status": 500,
             "code": "internal_error",
             "message": "Inference error.",
+            "record_id": "rec-r5",
         }
-        assert "r5" not in result["record_ids"]
+        assert "r5" not in result["view_ids"]
+        assert result["record_ids"] == [f"rec-{view_id}" for view_id in result["view_ids"]]
 
     def test_several_corrupt_images_are_all_isolated(self, inference: _Inference) -> None:
         inference.bad = {"/medias/r0.jpg", "/medias/r7.jpg"}
@@ -198,18 +203,29 @@ class TestItemFailures:
         assert "/medias/r2.jpg" not in inference.calls[0]
 
 
-class TestSkipped:
-    def test_a_record_without_image_is_skipped_not_quarantined(self, inference: _Inference) -> None:
-        """The nuScenes case: a lidar sweep without a camera is not an error."""
-        _, outcome = _run(_Reader(without_image={"r1", "r3", "r4"}))
+class TestMissingMedia:
+    def test_a_medium_gone_from_its_table_is_quarantined(self, inference: _Inference) -> None:
+        """Planned, then deleted before its chunk ran: nothing is skipped any more, planning lists existing media."""
+        _, outcome = _run(_Reader(missing={"r1", "r3"}))
 
-        assert (outcome.produced, outcome.skipped, outcome.quarantined) == (5, 3, [])
+        assert (outcome.produced, outcome.skipped) == (6, 0)
+        assert sorted((item.item_id, item.reason) for item in outcome.quarantined) == [
+            ("r1", "media not found"),
+            ("r3", "media not found"),
+        ]
 
-    def test_a_chunk_without_any_image_calls_nothing(self, inference: _Inference) -> None:
-        _, outcome = _run(_Reader(without_image=set(RECORDS)))
+    def test_a_chunk_whose_media_are_all_gone_calls_nothing(self, inference: _Inference) -> None:
+        _, outcome = _run(_Reader(missing=set(RECORDS)))
 
-        assert (outcome.produced, outcome.skipped) == (0, 8)
+        assert (outcome.produced, len(outcome.quarantined)) == (0, 8)
         assert inference.calls == []
+
+
+class TestEarlierPayloads:
+    def test_a_chunk_planned_by_record_says_so(self, inference: _Inference) -> None:
+        """A chunk queued before the upgrade failed with the reason "'table'"."""
+        with pytest.raises(ValueError, match="planned by an earlier version"):
+            KIND.process(_Reader(), {"record_ids": RECORDS}, PARAMS)  # type: ignore[arg-type]
 
 
 class TestTransientFailures:
@@ -267,12 +283,12 @@ class TestTransientFailures:
 
         assert (outcome.produced, [item.item_id for item in outcome.quarantined]) == (0, ["r0"])
 
-    def test_a_single_image_among_records_without_image_is_quarantined_too(self, inference: _Inference) -> None:
+    def test_a_single_image_among_missing_media_is_quarantined_too(self, inference: _Inference) -> None:
         inference.bad = {"/medias/r5.jpg"}
 
-        _, outcome = _run(_Reader(without_image=set(RECORDS) - {"r5"}))
+        _, outcome = _run(_Reader(missing=set(RECORDS) - {"r5"}))
 
-        assert (outcome.produced, outcome.skipped, len(outcome.quarantined)) == (0, 7, 1)
+        assert (outcome.produced, outcome.skipped, len(outcome.quarantined)) == (0, 0, 8)
 
 
 class TestWitness:
@@ -350,31 +366,82 @@ class TestFatalFailures:
         assert len(inference.calls) == 1, "no search for a culprit on an error that depends on no image"
 
 
+class _PlanningReader:
+    """A nuScenes-like dataset: images in one table, point clouds in another."""
+
+    TABLES = {"image": ["images"], "point_cloud": ["point_clouds"], "video": [], "text": []}
+
+    def __init__(self, space: dict[str, Any] | None = None, images: int = 8, point_clouds: int = 3) -> None:
+        self.dataset = SimpleNamespace(record_embedding_space=lambda: space)
+        self._ids = {
+            "images": [f"img-{n}" for n in range(images)],
+            "point_clouds": [f"pc-{n}" for n in range(point_clouds)],
+        }
+
+    def media_tables(self, media_type: str) -> list[str]:
+        return self.TABLES[media_type]
+
+    def ids(self, table_name: str) -> list[str]:
+        return self._ids[table_name]
+
+
+def _plan(reader: _PlanningReader, **params: Any) -> list[Any]:
+    return list(KIND.plan(reader, KIND.validate_params({"model": "clip", **params})))  # type: ignore[arg-type]
+
+
 class TestModelOfTheExistingTable:
     """Refused at planning, before the inference runs over the whole dataset."""
 
-    class _PlanningReader:
-        def __init__(self, space: dict[str, Any] | None) -> None:
-            self.dataset = SimpleNamespace(record_embedding_space=lambda: space)
-
-        def ids(self, table_name: str) -> list[str]:
-            return RECORDS
-
     def test_a_dataset_without_embeddings_accepts_any_model(self) -> None:
-        chunks = list(KIND.plan(self._PlanningReader(None), PARAMS))  # type: ignore[arg-type]
+        chunks = _plan(_PlanningReader(None))
 
-        assert sum(chunk.task_count for chunk in chunks) == len(RECORDS)
+        assert sum(chunk.task_count for chunk in chunks) == 8
 
     def test_the_same_model_is_planned(self) -> None:
-        reader = self._PlanningReader({"model_id": "clip", "dim": 512})
-
-        assert list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+        assert _plan(_PlanningReader({"model_id": "clip", "dim": 512}))
 
     def test_another_model_fails_the_planning(self) -> None:
-        reader = self._PlanningReader({"model_id": "dinov2", "dim": 512})
-
         with pytest.raises(ValueError, match="dinov2"):
-            list(KIND.plan(reader, PARAMS))  # type: ignore[arg-type]
+            _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}))
+
+
+class TestPlanningByMedium:
+    """A task is a medium, and the user chooses which media types a job covers."""
+
+    def test_a_task_is_a_medium_and_a_chunk_names_its_table(self) -> None:
+        chunks = _plan(_PlanningReader(images=10), chunk_size=4)
+
+        assert [chunk.task_count for chunk in chunks] == [4, 4, 2]
+        assert {chunk.payload["table"] for chunk in chunks} == {"images"}
+        assert [view for chunk in chunks for view in chunk.payload["view_ids"]] == [f"img-{n}" for n in range(10)]
+
+    def test_images_by_default_and_nothing_else(self) -> None:
+        chunks = _plan(_PlanningReader())
+
+        assert all(view.startswith("img-") for chunk in chunks for view in chunk.payload["view_ids"])
+
+    def test_a_type_this_kind_cannot_send_refuses_the_whole_job(self) -> None:
+        """Whole, not partly: the user serves what the type needs, or narrows the selection."""
+        with pytest.raises(ValueError, match="cannot process point_cloud"):
+            _plan(_PlanningReader(), media=["image", "point_cloud"])
+
+    def test_an_unknown_type_is_refused_by_the_parameters(self) -> None:
+        with pytest.raises(ValueError):
+            KIND.validate_params({"model": "clip", "media": ["hologram"]})
+
+    def test_a_dataset_without_the_chosen_media_plans_nothing(self) -> None:
+        assert _plan(_PlanningReader(images=0)) == []
+
+    def test_the_form_starts_with_images_ticked(self) -> None:
+        """With a default factory, pydantic published no default,
+        the form started with nothing ticked, and Run was refused with a bare 422."""
+        media = KIND.params_model.model_json_schema()["properties"]["media"]
+
+        assert media["default"] == ["image"]
+        assert (
+            KIND.validate_params({"model": "clip"}).media == ["image"]
+            and KIND.validate_params({"model": "clip"}).media is not KIND.validate_params({"model": "clip"}).media
+        )
 
 
 class TestModelIdentity:
@@ -424,4 +491,4 @@ class TestModelIdentity:
     def test_engine_parameters_stay_out_of_the_provenance(self) -> None:
         recorded = KIND.provenance_params(KIND.validate_params({"model": "clip", "chunk_size": 3}))
 
-        assert recorded == {"model": "clip", "normalize": True}
+        assert recorded == {"model": "clip", "normalize": True, "media": ["image"]}

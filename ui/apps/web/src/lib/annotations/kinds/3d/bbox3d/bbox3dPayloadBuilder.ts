@@ -117,8 +117,9 @@ export const bbox3dPayloadBuilder = {
    * record edits it, so the editing widget's view is not the box's — and a box
    * imported as corners stays in corners until the editor moves it. Written
    * from the widget instead, an edit that changed nothing else would still
-   * change the row. A box drawn here carries the view of the widget that drew
-   * it, the one its create was built with.
+   * change the row, which the server records as a person's edit — and an edit
+   * saved accepts a model's box. A box drawn here carries the view of the
+   * widget that drew it, the one its create was built with.
    */
   buildUpdate(
     ctx: BuildContext,

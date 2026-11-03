@@ -356,3 +356,47 @@ describe("An entity created during a save, sent ahead of the write naming it", (
     expect(yWrites(backend)).toEqual([]);
   });
 });
+
+describe("What the dataset holds, recorded as each write leaves", () => {
+  /** What the workspace records the dataset holds of an annotation's content. */
+  const storedGeometryOf = (
+    manager: Awaited<ReturnType<typeof openManager>>["manager"],
+    id: string,
+  ) => manager.annotations.find(id)?.persistedContent?.geometry;
+
+  it("records the content a write carried, not an edit made while it was on the wire", async () => {
+    const { manager, backend, seam } = await openWithBoxes(humanBox(REC, "b1"));
+    drag(seam, "b1");
+    const held = deferred();
+    backend.holdWrites = held.promise;
+
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    drag(seam, "b1", DRAGGED_LAST);
+    held.resolve();
+    await saving;
+
+    expect(storedGeometryOf(manager, "b1")).toEqual(MOVED);
+    expect(geometryOf(manager, "b1")).toEqual(DRAGGED_LAST);
+  });
+
+  it("leaves the content recorded as it was when the write fails", async () => {
+    const { manager, backend, seam } = await openWithBoxes(humanBox(REC, "b1"));
+    backend.failWrites = new Error("backend down");
+
+    drag(seam, "b1");
+    expect(await manager.flushSave()).toBe(false);
+
+    expect(storedGeometryOf(manager, "b1")).toEqual(STORED);
+  });
+
+  it("records a draft's content once its create has left", async () => {
+    const { manager, seam } = await openWithBoxes();
+    const draft = commitNewAnnotation(seam, "bbox", MOVED);
+    expect(manager.annotations.find(draft.id)?.persistedContent).toBeUndefined();
+
+    await manager.flushSave();
+
+    expect(storedGeometryOf(manager, draft.id)).toEqual(MOVED);
+  });
+});

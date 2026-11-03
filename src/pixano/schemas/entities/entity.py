@@ -24,3 +24,7 @@ class Entity(RecordComponent):
 def is_entity(cls: type, strict: bool = False) -> bool:
     """Check if a class is an Entity or subclass of Entity."""
     return issubclass_strict(cls, Entity, strict)
+
+
+#: Entity columns that link an entity rather than describe it.
+ENTITY_SYSTEM_FIELDS = frozenset({"id", "record_id", "parent_id", "created_at", "updated_at"})
