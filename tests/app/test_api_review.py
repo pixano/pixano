@@ -6,9 +6,12 @@
 
 """The review of a model's annotations through the API, beyond one box's update.
 
-Each kind's own score stays the model's through a person's edit, following what it scores.
+The rules of an update that reach past the row it names: a person's edit of an entity accepts the
+model's pending annotations naming it, and each kind's own score stays the model's through a
+person's edit, following what it scores.
 """
 
+import json
 import tempfile
 from functools import lru_cache
 from pathlib import Path
@@ -20,7 +23,7 @@ from fastapi.testclient import TestClient
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset, DatasetInfo
-from pixano.features import BBox, Classification, Entity, Image, Record
+from pixano.features import BBox, Classification, Entity, Image, Record, Tracklet
 
 
 DATASET_ID = "review"
@@ -60,8 +63,8 @@ def _client(dataset: Dataset) -> TestClient:
     return TestClient(app)
 
 
-# Each kind's score, through a person's edit
-# ==========================================
+# A person's edit of what an entity says, and each kind's score
+# =============================================================
 
 BOX_COORDS = [0.1, 0.1, 0.2, 0.2]
 MODEL_SCORES = [0.87]
@@ -142,6 +145,181 @@ def _get(client: TestClient, resource: str, row_id: str) -> dict:
     resp = client.get(f"{BASE}/{resource}/{row_id}")
     assert resp.status_code == 200, resp.text
     return resp.json()
+
+
+def _legacy_entity_edit(client: TestClient, entity_id: str, **changes) -> dict:
+    """What the legacy interface's object inspector sends: the entity it read, changed
+    (entityCardOps.ts, `saveInputChange`)."""
+    read = _get(client, "entities", entity_id)
+    body = {key: value for key, value in read.items() if key not in ("created_at", "updated_at")}
+    resp = client.put(f"{BASE}/entities/{entity_id}", json={**body, **changes})
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+class TestAnEntityEditAccepts:
+    """A detection's class lives in its entity. A person who fixes it there saves an edit of what
+    the model's annotations naming that entity say, which accepts them: left pending, the next run
+    would write the model's class back, and a reader of the status would take them as never
+    reviewed."""
+
+    def test_relabelling_an_object_accepts_every_pending_model_annotation_naming_it(self, labelled_client: TestClient):
+        box_before = _get(labelled_client, "bboxes", "box_car")
+
+        _legacy_entity_edit(labelled_client, "e_car", category="truck")
+
+        box = _get(labelled_client, "bboxes", "box_car")
+        assert box["review_status"] == "accepted"
+        excluded = ("review_status", "created_at", "updated_at")
+        assert {k: v for k, v in box.items() if k not in excluded} == {
+            k: v for k, v in box_before.items() if k not in excluded
+        }
+        assert _get(labelled_client, "classifications", "cls_car")["review_status"] == "accepted"
+
+    def test_a_person_annotation_and_another_object_are_left_alone(self, labelled_client: TestClient):
+        _legacy_entity_edit(labelled_client, "e_car", category="truck")
+
+        person_box = _get(labelled_client, "bboxes", "box_car_person")
+        assert (person_box["review_status"], person_box["source_type"]) == ("", HUMAN["source_type"])
+        assert _get(labelled_client, "bboxes", "box_cat")["review_status"] == "pending"
+
+    def test_an_accepted_annotation_stays_accepted(self):
+        """Already a person's work: the edit does not even rewrite it."""
+        dataset = _labelled_dataset()
+        client = _client(dataset)
+        box_before = _get(client, "bboxes", "box_bus")
+        boxes_version = Dataset(dataset.path).open_table("bboxes").version
+
+        _legacy_entity_edit(client, "e_bus", category="truck")
+
+        assert _get(client, "bboxes", "box_bus") == box_before
+        assert Dataset(dataset.path).open_table("bboxes").version == boxes_version
+
+    def test_a_model_annotation_without_a_status_is_accepted_too(self):
+        """A re-imported model row has no status, since the JSONL does not carry it yet, and reads as
+        pending (`pixano.schemas.NOT_REVIEWED_STATUSES`). The edit looks for the rows to accept by
+        their stored status: it must name the empty one, or the row stays without a status and a
+        reader of the status takes it as never reviewed."""
+        dataset = _labelled_dataset()
+        without_status = _get_row(dataset, "bboxes", "box_car").model_copy(
+            update={"id": "box_car_without_status", "review_status": ""}
+        )
+        dataset.add_data("bboxes", [without_status], raise_or_warn="none")
+        client = _client(dataset)
+
+        _legacy_entity_edit(client, "e_car", category="truck")
+
+        assert _get(client, "bboxes", "box_car_without_status")["review_status"] == "accepted"
+
+    def test_an_edit_that_sends_the_entity_back_unchanged_accepts_nothing(self, labelled_client: TestClient):
+        _legacy_entity_edit(labelled_client, "e_car")
+
+        assert _get(labelled_client, "bboxes", "box_car")["review_status"] == "pending"
+
+    def test_moving_an_object_under_another_accepts_nothing(self, labelled_client: TestClient):
+        """Its links are not what it says: grouping objects is no edit of what a model found."""
+        _legacy_entity_edit(labelled_client, "e_car", parent_id="e_bus")
+
+        assert _get(labelled_client, "bboxes", "box_car")["review_status"] == "pending"
+
+
+# How many frames a model tracked the objects of `_tracked_dataset` over: one model box per frame.
+TRACKED_FRAMES = 30
+
+
+def _tracked_dataset(frames_of: dict[str, int]) -> Dataset:
+    """Objects a model tracked across frames: for each, its tracklet and one pending box per frame."""
+    info = DatasetInfo(
+        id=DATASET_ID,
+        name=DATASET_ID,
+        record=Record,
+        entity=LabelledEntity,
+        bbox=BBox,
+        tracklet=Tracklet,
+        views={"image": Image},
+    )
+    dataset = Dataset.create(Path(tempfile.mkdtemp()) / DATASET_ID, info)
+    dataset.add_records({"records": [Record(id="video")]})
+    for name, frames in frames_of.items():
+        entity_id, tracklet_id = f"e_{name}", f"t_{name}"
+        dataset.add_data("entities", [LabelledEntity(id=entity_id, record_id="video", category=name)])
+        dataset.add_data(
+            "tracklets",
+            [
+                Tracklet(
+                    id=tracklet_id,
+                    record_id="video",
+                    entity_id=entity_id,
+                    start_timestep=0,
+                    end_timestep=frames - 1,
+                    review_status="pending",
+                    **MODEL,
+                )
+            ],
+        )
+        dataset.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id=f"box_{name}_{frame}",
+                    record_id="video",
+                    entity_id=entity_id,
+                    tracklet_id=tracklet_id,
+                    frame_index=frame,
+                    view_id="image",
+                    coords=BOX_COORDS,
+                    format="xywh",
+                    is_normalized=True,
+                    confidence=MODEL_SCORES[0],
+                    review_status="pending",
+                    **MODEL,
+                )
+                for frame in range(frames)
+            ],
+        )
+    return dataset
+
+
+class TestAnEntityEditOfATrackedObject:
+    """A model that tracks an object writes one row per frame, all naming the object: a relabel
+    accepts them all at once."""
+
+    def test_the_reference_lookups_do_not_grow_with_the_rows_accepted(self, monkeypatch: pytest.MonkeyPatch):
+        """Written through the per-row reference checks, the acceptances would cost lookups per row
+        and per reference, under the dataset's write lock: seconds to relabel an object tracked over
+        500 frames. An acceptance changes the status alone and cannot break a reference."""
+        client = _client(_tracked_dataset({"cat": 1, "fox": TRACKED_FRAMES}))
+        lookups: list[str] = []
+        find_ids_in_table = Dataset.find_ids_in_table
+
+        def counted(dataset: Dataset, table_name: str, ids: set[str]) -> dict[str, bool]:
+            lookups.append(table_name)
+            return find_ids_in_table(dataset, table_name, ids)
+
+        monkeypatch.setattr(Dataset, "find_ids_in_table", counted)
+
+        _legacy_entity_edit(client, "e_cat", category="lynx")
+        one_frame = len(lookups)
+        lookups.clear()
+        _legacy_entity_edit(client, "e_fox", category="wolf")
+
+        assert len(lookups) == one_frame
+        statuses = {_get(client, "bboxes", f"box_fox_{frame}")["review_status"] for frame in range(TRACKED_FRAMES)}
+        assert statuses == {"accepted"}
+        assert _get(client, "tracklets", "t_fox")["review_status"] == "accepted"
+
+    def test_a_reference_left_dangling_on_a_row_does_not_fail_the_edit(self):
+        """Deleting a tracklet does not delete the rows that name it. Checked, those rows' reference
+        would fail the relabel with a 500 after the entity was stored, accepting none of them, and a
+        retry, finding the entity already relabelled, would accept nothing either."""
+        client = _client(_tracked_dataset({"fox": TRACKED_FRAMES}))
+        assert client.delete(f"{BASE}/tracklets/t_fox").status_code == 204
+
+        stored = _legacy_entity_edit(client, "e_fox", category="wolf")
+
+        assert stored["category"] == "wolf"
+        statuses = {_get(client, "bboxes", f"box_fox_{frame}")["review_status"] for frame in range(TRACKED_FRAMES)}
+        assert statuses == {"accepted"}
 
 
 # A model's top-2 answer, as a JSONL import with a model source stores it: one score per label.
@@ -281,3 +459,46 @@ class TestEachKindsScoreIsTheModels:
             TOP_SCORES,
             "pending",
         )
+
+
+# The spec version of a dataset whose annotation tables have no review status yet.
+SPEC_VERSION_BEFORE_REVIEW = 2
+
+
+def _without_status_column(dataset: Dataset, table_name: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Put a table back at the layout before review statuses, as a library that could not migrate.
+
+    The dataset says it is at spec version 2, and the migration that would add the column fails,
+    as on a read-only library: the dataset opens at the old layout (`Dataset.__init__`).
+    """
+    dataset.open_table(table_name).drop_columns(["review_status"])
+    info_file = dataset.path / "info.json"
+    info_json = json.loads(info_file.read_text(encoding="utf-8"))
+    info_json["spec_version"] = SPEC_VERSION_BEFORE_REVIEW
+    info_file.write_text(json.dumps(info_json), encoding="utf-8")
+
+    def read_only(_dataset: Dataset) -> None:
+        raise PermissionError("read-only library")
+
+    monkeypatch.setattr(Dataset, "_migrate_storage", read_only)
+
+
+class TestDatasetThatCouldNotMigrate:
+    """A table without the status column: a decision cannot be stored in it. The API still
+    answers."""
+
+    def test_an_entity_edit_accepts_nothing_in_a_table_without_the_column(self, monkeypatch: pytest.MonkeyPatch):
+        dataset = _labelled_dataset()
+        _without_status_column(dataset, "bboxes", monkeypatch)
+        client = _client(dataset)
+        boxes_version = Dataset(dataset.path).open_table("bboxes").version
+
+        resp = client.put(f"{BASE}/entities/e_car", json={"category": "truck"})
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["category"] == "truck"
+        # Nothing is written to a table that cannot hold the decision.
+        assert Dataset(dataset.path).open_table("bboxes").version == boxes_version
+        assert _get(client, "bboxes", "box_car")["coords"] == BOX_COORDS
+        # The classifications table has the column: its row is accepted as anywhere else.
+        assert _get(client, "classifications", "cls_car")["review_status"] == "accepted"

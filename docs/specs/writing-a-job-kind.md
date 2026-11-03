@@ -190,6 +190,14 @@ leaves no row behind. What it means for a kind:
   application reads too, `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status
   either, and is never taken for a pending one: `replace` reaches only the identifiers the kind
   derived itself.
+- **Fixing what an entity says accepts.** A person who changes an entity a kind wrote or
+  annotated — the class of a detected object, for instance — saves an edit of every model
+  annotation that names it and is still pending: the API makes them `accepted`, so the next run
+  leaves them alone instead of writing its own values back. Any field of the entity counts but
+  its links and timestamps (`ENTITY_SYSTEM_FIELDS`). A kind that writes what it found on an
+  entity gets this without asking — and so does a kind that writes its rows on another kind's
+  objects, whose pending rows a person's fix of the object accepts, though nobody looked at them
+  (backend-processing §19).
 - **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
   provenance: write the model's own score there, never a placeholder. Each schema names its
   score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a
