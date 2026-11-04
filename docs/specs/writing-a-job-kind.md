@@ -70,9 +70,13 @@ exists for a state the chunks cannot each restore on their own, such as emptying
 before refilling it. Two rules, both checked by the suite:
 
 - **Idempotent.** A planner that dies after `prepare` lets its lease expire and the next one
-  does both again, so twice must leave the dataset as once does.
+  does both again, so twice must leave the dataset as once does. The suite checks it with the
+  default parameters, and with each destructive parameter set (see "Media types and
+  confirmation") on a dataset a previous run wrote into.
 - **Nothing is destroyed unless an explicit parameter asks for it.** A job with default
-  parameters never loses what the dataset holds.
+  parameters never loses what the dataset holds. The suite compares every row of every table,
+  field by field but for `source_metadata` and timestamps, before and after a default
+  `prepare` on a dataset a run wrote into.
 
 What must happen at the end of a job is `finalize`'s, below — not a mirror of `prepare`.
 
@@ -123,9 +127,9 @@ suite:
 
 - **Idempotent.** A worker that dies while finalizing lets its lease expire, and the final
   chunk runs again, maybe elsewhere: twice must leave the dataset as once does. The suite runs
-  a whole job with `finalize` once and twice and compares the rows.
+  a whole job with `finalize` once and twice and compares every row.
 - **Deletes no row.** It may rebuild what derives from the rows — an index replaces the
-  previous one — but the rows stay as the chunks left them. The suite compares the rows
+  previous one — but the rows stay as the chunks left them. The suite compares every row
   before and after it.
 - **Reads the dataset, never the chunks.** Their payloads and results are gone, and other
   workers wrote part of them: what the job produced is what the dataset holds.
@@ -174,7 +178,11 @@ turns Run into a confirmation. Give such a parameter a plain `default`, not a
 `default_factory` — pydantic does not publish a factory's value, and the form starts from
 the published one. The embeddings kind's `replace_existing_embeddings` is one: its `prepare`
 drops the dataset's vectors (`writer.drop_embeddings`), and its `plan` then lets another model
-through.
+through. Make it a boolean flag: the contract suite finds these parameters in the published
+schema and runs `prepare` twice against once with each of them set, after checking that it
+reaches what a previous run left. It knows how to set a flag only, so a confirmed parameter of
+another type fails the suite until the test is told which value sets it — the form, for its
+part, asks for confirmation on any truthy value.
 
 ### `outcome(result, payload, task_count) -> Outcome`
 
