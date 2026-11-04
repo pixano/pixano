@@ -17,7 +17,7 @@ import { keypointsPayloadBuilder } from "./kinds/2d/keypoints/keypointsPayloadBu
 import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
 import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
-import { carriesContent, MODEL_SOURCE_TYPE } from "./reviewStatus.js";
+import { carriesContent, isReviewable, MODEL_SOURCE_TYPE } from "./reviewStatus.js";
 import type { MutationSink } from "./scene/sceneContext.js";
 import type { PendingAnnotation, PendingEntityChoice, ResourceMutation } from "./types.js";
 
@@ -315,9 +315,35 @@ export function buildDeleteMutations(
 }
 
 /**
- * Kind-agnostic local delete: queues the backend deletes for a persisted
- * annotation, or drops the not-yet-flushed creates for a draft, then removes
- * it from the collection. Used by select tools and widget delete buttons.
+ * What the delete gesture (Delete/Backspace, a trash button, a HUD's delete)
+ * does to an annotation, so a control can say so before it is pressed: it
+ * rejects a model's stored annotation — which deletes it — and deletes
+ * anything else. Reject and delete send the same delete: the name tells the
+ * reviewer that the row is a model's proposal.
+ */
+export type DeleteGesture = "delete" | "reject";
+
+/**
+ * What the delete gesture does to this annotation (`DeleteGesture`): `reject`
+ * on a model's stored annotation, whatever its status (`isReviewable`),
+ * `delete` on a person's annotation or a draft.
+ *
+ * @param annotation The annotation the gesture would act on.
+ * @returns The gesture's effect.
+ */
+export function deleteGestureFor(annotation: LocalAnnotation): DeleteGesture {
+  return isReviewable(annotation) ? "reject" : "delete";
+}
+
+/**
+ * Kind-agnostic local delete, the one path every delete gesture takes — the
+ * select tool's Delete/Backspace, the image widget's trash button, the 3D box
+ * HUD: queues the backend deletes for a persisted annotation, or drops the
+ * not-yet-flushed creates for a draft, then removes it from the collection.
+ *
+ * A model's annotation is deleted like any other: that is its rejection
+ * (`deleteGestureFor`). No row is left to mark it, so a later run of the model
+ * may propose it again.
  *
  * @param annotation The annotation the gesture acts on.
  * @param collection The store it lives in.

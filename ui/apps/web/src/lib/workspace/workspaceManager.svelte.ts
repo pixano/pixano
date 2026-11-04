@@ -367,6 +367,8 @@ export class WorkspaceManager {
    * delete for a persisted one, or drops its not-yet-flushed creates, then
    * removes it from the collection. The parent entity is pruned server-side
    * when this was its last annotation. One path for 2D tools and 3D widgets.
+   * A model's annotation is deleted like any: that is its rejection
+   * (`deleteLocalAnnotation`).
    */
   deleteAnnotation(annotation: LocalAnnotation, widgetId: string): void {
     deleteLocalAnnotation(annotation, this.session.annotations, this.mutations, widgetId);
