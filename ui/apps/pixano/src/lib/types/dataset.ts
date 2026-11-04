@@ -345,6 +345,9 @@ export type AnnotationUIFields = {
   displayControl: DisplayControl;
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
+  // A model's row accepted here and not saved yet: shown accepted, and its next update carries
+  // the Accept (`toResourceMutation`). Leaving the record without saving drops it.
+  unsavedAccept?: boolean;
   top_entities?: Entity[];
 };
 
