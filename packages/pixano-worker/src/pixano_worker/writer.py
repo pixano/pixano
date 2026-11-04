@@ -30,7 +30,8 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable, Protocol, Sequence
 
-from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus
+from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus, SchemaGroup
+from pixano.schemas.table_names import canonical_family_spec_for_slot
 
 
 logger = logging.getLogger("pixano-worker")
@@ -155,6 +156,10 @@ class DatasetWriteTarget(Protocol):
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         """The model and dimension of the embeddings already computed, or None if there are none."""
+        ...
+
+    def ensure_annotation_table(self, slot: str) -> str:
+        """Give the dataset the canonical table of an annotation slot it lacks; the table's name."""
         ...
 
     def open_table(self, name: str) -> Any:
@@ -396,6 +401,37 @@ class JobWriter:
             self.dataset.delete_data(table_name, stale)
             logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
         return written
+
+    def ensure_table(self, slot: str) -> str:
+        """The canonical table of an annotation slot, added to the dataset if it has none.
+
+        For a kind that writes annotations the dataset was not built with — masks on a dataset
+        of boxes. Called from `prepare`, and again before writing: a worker whose cached dataset
+        predates the table holds metadata without it.
+
+        A table the dataset already declares is answered from its metadata, without its write
+        lock. That lock never waits: taken by every job for nothing, it refused the job whenever
+        someone else was writing the dataset — a person's save, another job's chunk —, and marked
+        the dataset modified. Planning has just reopened the dataset, so what it declares is
+        current; and a table is never undeclared short of the dataset being replaced, which its
+        next write detects. Only creating the table takes the lock, under which the dataset
+        rereads its metadata before deciding, so a table another process created meanwhile is
+        found, not created twice.
+
+        Args:
+            slot: The `DatasetInfo` slot of an annotation family, such as `mask`.
+
+        Returns:
+            The table's name, as `replace` takes it.
+
+        Raises:
+            ValueError: The slot holds no annotations.
+        """
+        family = canonical_family_spec_for_slot(slot)
+        if family.schema_group is SchemaGroup.ANNOTATION and family.table_name in self.dataset.info.tables:
+            return family.table_name
+        # Creating it, or refusing a slot that holds no annotations, is the dataset's to decide.
+        return self.dataset.ensure_annotation_table(slot)
 
     def _count_write(self, table_name: str) -> None:
         """Count a write, and compact the table once enough have accumulated."""
