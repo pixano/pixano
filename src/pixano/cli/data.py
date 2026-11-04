@@ -25,6 +25,7 @@ from pixano.datasets.io import (
     export_dataset,
     import_dataset,
 )
+from pixano.datasets.io.jobs import FollowUp, FollowUpStarter, queue_import_follow_ups
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.utils import to_snake_case
 
@@ -123,6 +124,78 @@ def _build_spec(
     return spec.model_copy(update=updates) if updates else spec
 
 
+# What the CLI says when the embeddings are asked for and no model is known: it asks no inference.
+NO_MODEL_HERE = "no embeddings model — pass --embeddings-model or set PIXANO_EMBEDDINGS_MODEL"
+
+
+def _embeddings_follow_ups(
+    data_dir: Path, compute: Optional[bool], model: Optional[str], plan: ImportPlan
+) -> list[FollowUp]:
+    """The embeddings job an import queues once done: as asked, or by the deployment's default.
+
+    The deployment is read, as the server reads it, only when the embeddings may follow: the server's
+    modules load then, and never for `--no-embeddings` nor any other command. The CLI asks no
+    inference: the model is the one given, else PIXANO_EMBEDDINGS_MODEL. The default applies where
+    the job can run, which the queue is asked only once a model is known, and not to an import whose
+    plan holds no still image.
+    """
+    if compute is False:
+        return []
+    try:
+        from pixano.api.jobs.follow_ups import (
+            asks_for_embeddings,
+            considers_embeddings,
+            decide_embeddings,
+            embeddings_unavailable,
+            plan_has_still_images,
+        )
+        from pixano.api.settings import Settings
+
+        deployment = Settings(data_dir=data_dir)
+    except (ValueError, AttributeError) as error:
+        # An environment the server would refuse too: the import goes on, without the embeddings.
+        typer.echo(f"Embeddings not considered: the deployment's settings are invalid: {error}", err=True)
+        return []
+    wanted = asks_for_embeddings(compute, model)
+    has_images = plan_has_still_images(plan.inferred_schema)
+    if not considers_embeddings(wanted, default_on=deployment.embeddings_after_import, has_images=has_images):
+        return []
+    model = model or deployment.embeddings_model
+    unavailable = embeddings_unavailable(deployment.database_url) if wanted is None and model else None
+    return decide_embeddings(
+        wanted, model, default_on=deployment.embeddings_after_import, unavailable=unavailable, no_model=NO_MODEL_HERE
+    )
+
+
+def _follow_up_starter(data_dir: Path) -> FollowUpStarter:
+    """What queues an import's follow-ups on the deployment's job queue, once the import is done.
+
+    The deployment is read when it is called — only for an import with something to queue. The
+    dataset is looked for in the library the import wrote it into, under `data_dir`, whatever
+    library the environment names.
+    """
+
+    def submit(dataset_id: str, follow_ups: list[FollowUp]) -> list[FollowUp]:
+        from pixano.api.jobs.follow_ups import submit_follow_ups
+        from pixano.api.settings import Settings
+
+        database_url = Settings(data_dir=data_dir).database_url
+        return submit_follow_ups(database_url, Path(data_dir) / "library", dataset_id, follow_ups)
+
+    return submit
+
+
+def _echo_follow_ups(follow_ups: list[FollowUp]) -> None:
+    """Say what became of an import's follow-ups: queued, or why not."""
+    for follow_up in follow_ups:
+        model = follow_up.params.get("model")
+        name = f"{follow_up.kind.capitalize()}{f' ({model})' if model else ''}"
+        if follow_up.job_id:
+            typer.echo(f"{name} queued as job {follow_up.job_id}: follow it in the dataset's Jobs panel.")
+        elif follow_up.error:
+            typer.echo(f"{name} {follow_up.error}", err=True)
+
+
 @data_app.command(name="import")
 def import_command(
     data_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Pixano data directory."),
@@ -147,6 +220,16 @@ def import_command(
     ),
     info_py: Optional[str] = typer.Option(
         None, "--info-py", help="Advanced: DatasetInfo as 'path/to/file.py:attribute'."
+    ),
+    embeddings: Optional[bool] = typer.Option(
+        None,
+        "--embeddings/--no-embeddings",
+        help="Queue the embeddings job of what is imported once the import is done. By default, per "
+        "PIXANO_EMBEDDINGS_AFTER_IMPORT, where the job can run: a job queue (PIXANO_DATABASE_URL) where "
+        "pixano-worker runs it, and a model.",
+    ),
+    embeddings_model: Optional[str] = typer.Option(
+        None, "--embeddings-model", help="The model the embeddings job runs (default: PIXANO_EMBEDDINGS_MODEL)."
     ),
 ) -> None:
     """Import a dataset: analyze, confirm the plan, then ingest atomically."""
@@ -204,11 +287,13 @@ def import_command(
     from pixano.datasets.io.engine import ImportEngine
     from pixano.datasets.io.jobs import JobSink, JobStore
 
+    follow_ups = _embeddings_follow_ups(data_dir, embeddings, embeddings_model, plan)
     store = JobStore.for_data_dir(data_dir)
     job = store.create_job(
         "import",
         dataset=spec.dataset.name,
         spec={**spec.model_dump(mode="json", by_alias=True), "__source": resolved_source},
+        follow_ups=follow_ups,
     )
     store.update_job(job.id, status="running")
     sink = TqdmSink()
@@ -248,18 +333,22 @@ def import_command(
     finally:
         sink.close()
         job_sink.close()
+    # Queued before the job reads done, and recorded with it, as the server's runner does.
+    follow_ups = queue_import_follow_ups(store, job.id, _follow_up_starter(data_dir), result.dataset_id)
     store.update_job(
         job.id,
         status="done",
         dataset=result.dataset_id,
         manifest_path=str(result.manifest_path or ""),
         progress={"phase": "done", "table_counts": result.table_counts, "final": True},
+        follow_ups=follow_ups,
     )
     records = result.table_counts.get("records", 0)
     typer.echo(
         f"Dataset '{result.dataset_path.name}' imported successfully "
         f"({records} record(s), storage: {result.storage_mode}, job {job.id})."
     )
+    _echo_follow_ups(follow_ups)
 
 
 @data_app.command(name="export")
@@ -365,7 +454,13 @@ def jobs_command(
         if shown is None:
             typer.echo(f"Error: job '{job_id}' not found.", err=True)
             raise typer.Exit(code=1)
-        typer.echo(json.dumps(shown.__dict__, indent=2, default=str))
+        typer.echo(
+            json.dumps(
+                {**shown.__dict__, "follow_ups": [follow_up.to_json() for follow_up in shown.follow_ups]},
+                indent=2,
+                default=str,
+            )
+        )
         return
     if action == "cancel":
         try:
@@ -378,7 +473,7 @@ def jobs_command(
     if action == "resume":
         from pixano.datasets.io.jobs import JobRunner
 
-        runner = JobRunner(store, data_dir)
+        runner = JobRunner(store, data_dir, follow_up_starter=_follow_up_starter(data_dir))
         try:
             job = runner.submit_resume(job_id)
         except PixanoDataError as error:
@@ -394,6 +489,7 @@ def jobs_command(
             if final is not None and final.error.get("message"):
                 typer.echo(f"Error: {final.error['message']}", err=True)
             raise typer.Exit(code=1)
+        _echo_follow_ups(final.follow_ups)
         return
     if action == "rollback":
         from pixano.datasets.io.jobs import JobRunner

@@ -129,7 +129,10 @@ An import then queues the embeddings job of the dataset it imported into, unless
 otherwise; an add import has the job compute the whole dataset again, with the model its
 embeddings already use. Set `PIXANO_EMBEDDINGS_AFTER_IMPORT=false` to stop that by default, and
 `PIXANO_EMBEDDINGS_MODEL` to name the model rather than take the first embeddings model the
-inference serves.
+inference serves. The command line reads them too, but asks no inference: without
+`PIXANO_EMBEDDINGS_MODEL` or `--embeddings-model`, `pixano data import` queues no embeddings. The
+worker must serve the library the import wrote into: a command-line import into another data
+directory queues a job the worker cannot find, and that job fails.
 
 ## The demo, by hand
 

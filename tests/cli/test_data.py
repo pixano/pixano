@@ -5,6 +5,9 @@
 # =====================================
 
 import json
+import os
+import subprocess
+import sys
 import threading
 from pathlib import Path
 
@@ -14,6 +17,7 @@ from typer.testing import CliRunner
 
 from pixano.cli import app
 from pixano.datasets import Dataset
+from pixano.datasets.io.jobs import FollowUp, JobStore
 from tests.datasets.io._review_fixture import (
     DROPPED_ENTITIES,
     KEPT_ENTITIES,
@@ -21,6 +25,7 @@ from tests.datasets.io._review_fixture import (
     build_review_dataset,
 )
 from tests.datasets.io.formats.test_jsonl_importer import SPECS, materialize_corpus
+from tests.fixtures.job_queue import queued_jobs
 
 
 runner = CliRunner()
@@ -216,39 +221,207 @@ class TestJobsCommand:
         assert result.exit_code == 1 and "already" in result.output
 
 
+class TestEmbeddingsAfterTheImport:
+    """The embeddings job an import queues once done: asked for, or by default where it can run."""
+
+    @staticmethod
+    def _import(tmp_path: Path, *flags: str):
+        data_dir, source = _prepare_source(tmp_path)
+        result = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes", *flags])
+        return result, JobStore.for_data_dir(data_dir).list_jobs()[0]
+
+    def test_by_default_without_a_queue_nothing_is_asked(self, tmp_path: Path):
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        assert job.follow_ups == [] and "Embeddings" not in result.output
+
+    def test_by_default_where_the_job_can_run_it_is_queued(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
+    ):
+        monkeypatch.setenv("PIXANO_DATABASE_URL", embeddings_declared)
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "clip")
+
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        (follow_up,) = job.follow_ups
+        assert f"Embeddings (clip) queued as job {follow_up.job_id}" in result.output
+        assert queued_jobs(embeddings_declared) == [("embeddings", job.dataset, {"model": "clip"})]
+
+    def test_no_embeddings_asks_nothing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
+    ):
+        monkeypatch.setenv("PIXANO_DATABASE_URL", embeddings_declared)
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "clip")
+
+        result, job = self._import(tmp_path, "--no-embeddings")
+
+        assert result.exit_code == 0, result.output
+        assert job.follow_ups == [] and queued_jobs(embeddings_declared) == []
+
+    def test_asked_for_without_a_queue_the_import_says_why(self, tmp_path: Path):
+        """The import is done all the same: its data is in."""
+        result, job = self._import(tmp_path, "--embeddings", "--embeddings-model", "clip")
+
+        assert result.exit_code == 0, result.output
+        assert job.status == "done"
+        assert "Embeddings (clip) not queued: no job queue is configured" in result.output
+
+    def test_asked_for_without_a_model_says_how_to_name_one(self, tmp_path: Path):
+        """The command asks no inference: it names its own option."""
+        result, _ = self._import(tmp_path, "--embeddings")
+
+        assert result.exit_code == 0, result.output
+        assert "Embeddings not queued: no embeddings model — pass --embeddings-model" in result.output
+
+    def test_a_model_named_asks_for_the_job(self, tmp_path: Path):
+        result, job = self._import(tmp_path, "--embeddings-model", "clip")
+
+        assert result.exit_code == 0, result.output
+        assert "Embeddings (clip) not queued: no job queue is configured" in result.output
+
+    def test_no_embeddings_reads_no_deployment(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """A setting the server would refuse does not stop an import that asks for no embeddings."""
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_AFTER_IMPORT", "maybe")
+
+        result, job = self._import(tmp_path, "--no-embeddings")
+
+        assert result.exit_code == 0, result.output
+        assert job.status == "done" and job.follow_ups == []
+
+    def test_an_invalid_deployment_leaves_the_import_done_and_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_AFTER_IMPORT", "maybe")
+
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        assert job.status == "done"
+        assert "Embeddings not considered: the deployment's settings are invalid" in result.output
+
+    def test_by_default_an_import_without_a_still_image_asks_nothing(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
+    ):
+        """A video's frames are not still images: an import of them reads no refusal."""
+        monkeypatch.setenv("PIXANO_DATABASE_URL", embeddings_declared)
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "clip")
+        data_dir, source = _prepare_source(tmp_path, "frames_masks")
+
+        result = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes"])
+
+        assert result.exit_code == 0, result.output
+        assert JobStore.for_data_dir(data_dir).list_jobs()[0].follow_ups == []
+        assert "Embeddings" not in result.output and queued_jobs(embeddings_declared) == []
+
+    def test_the_dataset_is_looked_for_where_the_import_wrote_it(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
+    ):
+        """Whatever library the environment names, as the stack's does."""
+        monkeypatch.setenv("PIXANO_DATABASE_URL", embeddings_declared)
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "clip")
+        monkeypatch.setenv("LIBRARY_DIR", str(tmp_path / "elsewhere"))
+
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        (follow_up,) = job.follow_ups
+        assert follow_up.job_id, follow_up
+
+    def test_jobs_show_prints_the_follow_ups(self, tmp_path: Path):
+        data_dir, source = _prepare_source(tmp_path)
+        runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes", "--embeddings-model", "clip"])
+        job = JobStore.for_data_dir(data_dir).list_jobs()[0]
+
+        shown = runner.invoke(app, ["data", "jobs", str(data_dir), "show", job.id])
+
+        assert shown.exit_code == 0, shown.output
+        assert json.loads(shown.output)["follow_ups"] == [follow_up.to_json() for follow_up in job.follow_ups]
+
+
+def test_an_import_in_a_process_whose_environment_the_server_refuses_ends_done(tmp_path: Path):
+    """In a fresh process, loading the server is where the environment is read first."""
+    data_dir, source = _prepare_source(tmp_path)
+
+    imported = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from pixano.cli import app; app()",
+            "data",
+            "import",
+            str(data_dir),
+            str(source),
+            "--yes",
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PIXANO_EMBEDDINGS_AFTER_IMPORT": "maybe"},
+        check=False,
+    )
+
+    assert imported.returncode == 0, imported.stderr
+    assert "Embeddings not considered: the deployment's settings are invalid" in imported.stderr
+    assert JobStore.for_data_dir(data_dir).list_jobs()[0].status == "done"
+
+
+def test_the_command_line_starts_without_the_server():
+    """Loading the API reads every server setting: a value it refuses would break every command."""
+    loaded = subprocess.run(
+        [sys.executable, "-c", "import sys, pixano.cli; print('pixano.api' in sys.modules)"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert loaded.stdout.strip() == "False"
+
+
+def _interrupted_import(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *flags: str) -> tuple[Path, Path, JobStore]:
+    """Run an import of three images that fails after its first committed flush.
+
+    Returns:
+        The data directory, the source, and the job store, whose last job is the failed import.
+    """
+    import PIL.Image
+
+    from pixano.datasets.io.engine import ImportEngine
+    from pixano.datasets.io.formats.pixano_jsonl.importer import PixanoJsonlImporter
+
+    source = tmp_path / "source"
+    source.mkdir()
+    for name in ("a", "b", "c"):
+        PIL.Image.new("RGB", (8, 8), "red").save(source / f"{name}.png")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    monkeypatch.chdir(tmp_path)
+    original_batches = PixanoJsonlImporter.iter_batches
+
+    def fail_after_first(self, source, spec, plan, cursor=None):
+        for ordinal, bundle in enumerate(original_batches(self, source, spec, plan, cursor)):
+            if ordinal == 1:
+                raise RuntimeError("interrupted CLI import")
+            yield bundle
+
+    class SmallFlushEngine(ImportEngine):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, flush_rows=1, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(PixanoJsonlImporter, "iter_batches", fail_after_first)
+        patch.setattr("pixano.datasets.io.engine.ImportEngine", SmallFlushEngine)
+        imported = runner.invoke(app, ["data", "import", str(data_dir), "source", "--name", "ds", "--yes", *flags])
+    assert imported.exit_code == 1, imported.output
+    return data_dir, source, JobStore.for_data_dir(data_dir)
+
+
 class TestJobsCliRecovery:
     def test_cli_failure_boot_and_resume_preserve_all_records(self, tmp_path: Path, monkeypatch):
-        import PIL.Image
+        from pixano.datasets.io.engine import state_dir
+        from pixano.datasets.io.jobs import boot_recover
 
-        from pixano.datasets.io.engine import ImportEngine, state_dir
-        from pixano.datasets.io.formats.pixano_jsonl.importer import PixanoJsonlImporter
-        from pixano.datasets.io.jobs import JobStore, boot_recover
-
-        source = tmp_path / "source"
-        source.mkdir()
-        for name in ("a", "b", "c"):
-            PIL.Image.new("RGB", (8, 8), "red").save(source / f"{name}.png")
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
-        monkeypatch.chdir(tmp_path)
-        original_batches = PixanoJsonlImporter.iter_batches
-
-        def fail_after_first(self, source, spec, plan, cursor=None):
-            for ordinal, bundle in enumerate(original_batches(self, source, spec, plan, cursor)):
-                if ordinal == 1:
-                    raise RuntimeError("interrupted CLI import")
-                yield bundle
-
-        class SmallFlushEngine(ImportEngine):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, flush_rows=1, **kwargs)
-
-        with monkeypatch.context() as patch:
-            patch.setattr(PixanoJsonlImporter, "iter_batches", fail_after_first)
-            patch.setattr("pixano.datasets.io.engine.ImportEngine", SmallFlushEngine)
-            imported = runner.invoke(app, ["data", "import", str(data_dir), "source", "--name", "ds", "--yes"])
-        assert imported.exit_code == 1, imported.output
-        store = JobStore.for_data_dir(data_dir)
+        data_dir, source, store = _interrupted_import(tmp_path, monkeypatch)
         job = store.list_jobs()[0]
         assert job.status == "error" and job.cursor
         assert job.spec["__source"] == str(source.resolve())
@@ -268,6 +441,22 @@ class TestJobsCliRecovery:
         assert dataset.open_table("images").count_rows() == 3
         record_ids = {row.id for row in dataset.get_data("records")}
         assert {row.record_id for row in dataset.get_data("images")} == record_ids
+
+    def test_a_resumed_import_queues_what_its_first_run_was_asked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
+    ):
+        """Asked for when the import started, the embeddings are kept with its job through the failure."""
+        monkeypatch.setenv("PIXANO_DATABASE_URL", embeddings_declared)
+        data_dir, _, store = _interrupted_import(tmp_path, monkeypatch, "--embeddings", "--embeddings-model", "clip")
+        job = store.list_jobs()[0]
+        assert job.follow_ups == [FollowUp(kind="embeddings", params={"model": "clip"})]
+
+        resumed = runner.invoke(app, ["data", "jobs", str(data_dir), "resume", job.id])
+
+        assert resumed.exit_code == 0, resumed.output
+        (follow_up,) = store.get_job(job.id).follow_ups
+        assert f"Embeddings (clip) queued as job {follow_up.job_id}" in resumed.output
+        assert queued_jobs(embeddings_declared) == [("embeddings", store.get_job(job.id).dataset, {"model": "clip"})]
 
     @pytest.mark.parametrize("python_option", ["--importer", "--info-py"])
     def test_file_based_python_import_is_restart_only(self, tmp_path: Path, monkeypatch, python_option):
