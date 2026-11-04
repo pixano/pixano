@@ -28,7 +28,7 @@ import psycopg
 logger = logging.getLogger("pixano-worker")
 
 # Bump on every change to the DDL of sql/schema.sql, not on a change to its comments alone.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 SCHEMA_NAME = "pixano_jobs"
 

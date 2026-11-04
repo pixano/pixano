@@ -67,14 +67,14 @@ job — a model the dataset's embeddings were not computed with, say — refuses
 anything is destroyed. So `plan` must not rely on what `prepare` will do. The default does
 nothing, and most kinds keep it: it
 exists for a state the chunks cannot each restore on their own, such as emptying a table
-before refilling it. Three rules, the first two checked by the suite:
+before refilling it. Two rules, both checked by the suite:
 
 - **Idempotent.** A planner that dies after `prepare` lets its lease expire and the next one
   does both again, so twice must leave the dataset as once does.
 - **Nothing is destroyed unless an explicit parameter asks for it.** A job with default
   parameters never loses what the dataset holds.
-- **No `finalize` in return** until a kind needs one: what should happen at the end of a job
-  is designed then, not by symmetry.
+
+What must happen at the end of a job is `finalize`'s, below — not a mirror of `prepare`.
 
 It runs under the worker's write lock of the dataset, as a chunk's `write` does: the worker's
 chunks of other jobs may be writing the same dataset meanwhile, in other threads, and the
@@ -87,6 +87,39 @@ worker on the dataset, or one that hangs — the job is postponed the same way. 
 planning, `plan` then `prepare`, has ten minutes (`PLANNING_TIMEOUT_S`): past them the job
 fails, and a `prepare` that had not started never starts. So a `prepare` must stay far below
 that, on the largest dataset it will meet.
+
+### `finalize(reader, writer, params)` — optional
+
+Completes the job once every chunk of it is done: what only makes sense over the whole result,
+such as an index trained on every vector the job wrote. No chunk can do it — each sees its own
+work — and the last chunk to finish does not know it is the last.
+
+A kind that overrides it gets a **final chunk**, recorded at planning with the others but
+`waiting`, last in rank and without a task. When every other chunk is done — none failed, none
+left, the job not cancelled — whoever settles the job puts it in the queue, and any worker runs
+it like a chunk: under a lease, with the chunk's time limit, cancelled with the job, handed back
+after a transient failure, retried by `POST /jobs/{id}/retry`. The job reads `done` only after
+it. It never runs when a chunk failed or the job was cancelled; a retry that brings the failed
+chunks through runs it then (backend-processing §8.5). Its tasks are none, so the job's progress
+and outcome are those of its work. A kind that does not override it has no final chunk, and its
+jobs settle with their last chunk as before.
+
+It runs in a thread, under the worker's write lock of the dataset, as a chunk's `write` does,
+on the dataset **reopened outside the cache**: it must see what every worker wrote, not what
+this one had open. Raise `TransientError` for a failure of circumstance. A `DatasetBusyError` —
+another process writing the dataset, a person's save — is handed back to the queue the same
+way, not failed: the chunks are all done, and the job should not lose them for a save. Any other
+error fails the final chunk, and the job with it. Three rules, the first two checked by the
+suite:
+
+- **Idempotent.** A worker that dies while finalizing lets its lease expire, and the final
+  chunk runs again, maybe elsewhere: twice must leave the dataset as once does. The suite runs
+  a whole job with `finalize` once and twice and compares the rows.
+- **Deletes no row.** It may rebuild what derives from the rows — an index replaces the
+  previous one — but the rows stay as the chunks left them. The suite compares the rows
+  before and after it.
+- **Reads the dataset, never the chunks.** Their payloads and results are gone, and other
+  workers wrote part of them: what the job produced is what the dataset holds.
 
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 

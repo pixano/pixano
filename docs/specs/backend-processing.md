@@ -44,7 +44,7 @@ Lives in a dedicated PostgreSQL schema, `pixano_jobs`, so that the accounts and 
 | Table        | Holds                                                                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `jobs`       | one row per submitted job: its kind, its dataset, its validated parameters, its state, its task counters, and the lease of the worker splitting it                      |
-| `job_chunks` | the queue: one row per batch of tasks, with its lease, its attempt count, when it may next be claimed, and — once done — how many of its tasks were produced or skipped |
+| `job_chunks` | the queue: one row per batch of tasks, with its lease, its attempt count, when it may next be claimed, and — once done — how many of its tasks were produced or skipped; plus, for a kind that finalizes, the job's final chunk (§8.5) |
 | `job_items`  | the quarantine: one row per item a kind could not process, with the reason                                                                                              |
 | `job_events` | the append-only progress log an interface replays when it reconnects                                                                                                    |
 
@@ -68,6 +68,8 @@ The `interrupted` state of the SQLite store has no equivalent here, for that rea
 Each index serves one named query. The claim index is **partial** — it carries only claimable chunks, so it shrinks as work advances while the table keeps everything, and a chunk leaves the index the moment it is claimed. Its key is the chunk identifier, exactly the `ORDER BY` of the claim, so `SKIP LOCKED` walks forward instead of re-sorting.
 
 The expired-lease sweep is a separate statement, deliberately: folding it into the claim (`state = 'pending' OR (state = 'running' AND lease_until < now())`) would make the partial index unusable.
+
+A partial unique index on `job_id WHERE final` keeps one final chunk per job at most, and lets releasing it, and saying that a job is finalizing, find it without a scan of the job's chunks (§8.5).
 
 ### 4.4 Chunk payloads are opaque
 
@@ -188,6 +190,22 @@ A task the calculation does not apply to is counted, not stored — the embeddin
 **The outcome is aggregated on read** from the chunks and the quarantine, and shown by the API and the panel once a job ends. It is not kept as counters on the job: a counter can drift from what it summarises. `done_tasks` is the one denormalised counter, kept to avoid summing chunks on every progress event; it shares a transaction with the chunk it counts, and a concurrency test compares it against the sum. Validated in review.
 
 **A failed job says why.** The API exposes the job's error, or its first failed chunk's, without the stack trace; the panel shows the reason. The worker's reasons are in English for that purpose, as is the whole worker.
+
+### 8.5 A job's closing step: the final chunk
+
+Some work only makes sense once a job's chunks are all done — an index trained on every vector the job wrote, figures over every row. No chunk can do it, and the last chunk to finish does not know it is the last. A kind that overrides `finalize` (writing-a-job-kind.md §1) gets a **final chunk**: recorded at planning with the others, last in rank, with no task (`task_count = 0`, the only chunk allowed none), in the state `waiting`, which no claim reads.
+
+**Released by whoever settles the job.** Settling a job now first tries to release its final chunk, in the same transaction (`queue.RELEASE_FINAL`): when no other chunk of the job is left undone — none pending, running, failed or cancelled — and the job is neither cancelled nor finished, the chunk becomes `pending`, a state event `{"state": "running", "finalizing": true}` is written, and the job is not settled. The job settles once the final chunk is done, failed or cancelled.
+
+**A settlement locks the job's row first** (`runner.LOCK_JOB_FOR_SETTLEMENT`), as `finish` locks it to count a chunk done. Read committed, each statement sees what committed before it: without the lock, the last two chunks of a job finishing together could have one's settlement check the release while the other still ran, then settle the job once that other had committed — `done`, without its closing step, which stayed waiting for good. Under the lock no chunk is counted done between the two reads, so the last chunk to finish sees the others done; two settlements meeting are serialised by it, and the second finds the final chunk no longer waiting. The events that announce a job finalizing — the release's, the start of a retried job whose closing step alone was reopened — carry `"finalizing": true`, and any other state event of the job clears it.
+
+**It is a chunk, so it inherits everything a chunk has**, without a second copy of each: the claim, the lease and its recovery, the attempts and the fencing token, the time limit, the delay after a transient failure, the cancellation, `POST /jobs/{id}/retry`. Rather than a step the last chunk would run, which would need all of them again. It runs `finalize` in a thread, under the worker's write lock of the dataset, on the dataset reopened outside the cache, since it must see what every worker wrote. A `DatasetBusyError` — someone else writing the dataset — hands it back as transient: the chunks are all done, and the job must not lose them for a person's save. A chunk that met the same error fails (§12); a final chunk is the one place where waiting costs nothing but time.
+
+**It never runs after a failure or a cancellation.** A job with a failed chunk settles in `error` with its final chunk still waiting; a cancelled one settles `cancelled` the same way. A retry reopens the failed chunks and leaves the final chunk waiting — the application's statements did not change, since they only reopen chunks in error or cancelled — and the closing step runs once the reopened chunks pass. A cancellation after the release takes the final chunk out of the queue with the job's other pending chunks; a retry puts it back. One that arrives while the final chunk runs lets it complete — nothing is interrupted mid-chunk — and the job reads `cancelled`; its closing step did run.
+
+**It counts no task.** The job's total, its progress and its outcome are those of its work: the final chunk is done with nothing produced and nothing skipped, and advances no counter. The job reads `running` until it ends — `pending`, after a retry, until its final chunk is claimed.
+
+Schema version 6 added the final chunk: the `final` column, the `waiting` state, the two constraints that only a final chunk waits and that a chunk has tasks exactly when it is not final, and the partial unique index of §4.3. As for every change of the schema (§5), a database at version 5 is refused at startup, and the queue is recreated empty.
 
 ## 9. The worker process
 

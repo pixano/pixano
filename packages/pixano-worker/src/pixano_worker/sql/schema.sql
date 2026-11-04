@@ -84,7 +84,12 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     -- What the job kind must process, in a form the engine does not interpret.
     payload     jsonb       NOT NULL DEFAULT '{}'::jsonb
                                     CHECK (jsonb_typeof(payload) = 'object'),
-    task_count  integer     NOT NULL CHECK (task_count > 0),
+    task_count  integer     NOT NULL CHECK (task_count >= 0),
+    -- The chunk that runs the kind's `finalize`, once every other chunk of its job is done — an
+    -- index built over every vector the job wrote, for instance. A chunk rather than a step the
+    -- last chunk would run: it inherits the lease, the attempts, the time limit, the cancellation
+    -- and the retry, instead of a second copy of each.
+    final       boolean     NOT NULL DEFAULT false,
     state       text        NOT NULL DEFAULT 'pending',
     -- Serves two purposes: bounding the recoveries of a chunk that kills its worker, and
     -- serving as a fencing token — a write carries the `attempts` it claimed, so a worker
@@ -112,9 +117,18 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     updated_at  timestamptz NOT NULL DEFAULT now(),
 
     -- `cancelled` exists so that the claim query never has to join `jobs`: cancelling a job
-    -- flips its pending chunks, which takes them out of the partial index.
+    -- flips its pending chunks, which takes them out of the partial index. `waiting` is the
+    -- final chunk's state until its job's other chunks are all done: out of the claim's partial
+    -- index too, so that no worker can take it early.
     CONSTRAINT chunks_state_valid
-        CHECK (state IN ('pending', 'running', 'done', 'error', 'cancelled')),
+        CHECK (state IN ('waiting', 'pending', 'running', 'done', 'error', 'cancelled')),
+    -- Only the final chunk waits for the others.
+    CONSTRAINT chunks_only_the_final_waits
+        CHECK (state <> 'waiting' OR final),
+    -- A chunk of work has tasks, which the progress counts; the final chunk has none: a job's
+    -- progress and outcome are those of its work, not of its closing step.
+    CONSTRAINT chunks_tasks_only_for_work
+        CHECK (final = (task_count = 0)),
     -- Makes inserting a job's chunks idempotent: a replayed POST does not double the work.
     CONSTRAINT chunks_unique_seq UNIQUE (job_id, seq),
     -- A lease exists exactly during execution. A `done` that forgot to clear its own, or a
@@ -162,6 +176,11 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_events (
 -- the query, so the scan is ordered and SKIP LOCKED moves on without re-sorting.
 CREATE INDEX IF NOT EXISTS job_chunks_pending_idx
     ON pixano_jobs.job_chunks (id) WHERE state = 'pending';
+
+-- At most one final chunk per job, and the lookup of a job's final chunk without a scan of its
+-- chunks: releasing it once the others are done, and saying that a job is finalizing.
+CREATE UNIQUE INDEX IF NOT EXISTS job_chunks_one_final_idx
+    ON pixano_jobs.job_chunks (job_id) WHERE final;
 
 -- Recovery of expired leases. The "running" set is bounded by the number of workers times the
 -- batch size: the index stays tiny.

@@ -13,10 +13,10 @@ lone worker could sleep in front of pending work.
 Cancellation is checked **before each chunk**, never in the middle: a chunk is the atomic unit,
 and interrupting it would leave half-done work nobody knows anything about.
 
-The loop is asynchronous, the job kinds' code is not. `plan`, `process` and `write` are ordinary
-functions — that is the published contract, and LanceDB reads and writes are blocking anyway.
-So they go to a thread; the loop keeps for itself what benefits from being asynchronous: the
-database, the delays and the lease.
+The loop is asynchronous, the job kinds' code is not. `plan`, `process`, `write` and `finalize`
+are ordinary functions — that is the published contract, and LanceDB reads and writes are
+blocking anyway. So they go to a thread; the loop keeps for itself what benefits from being
+asynchronous: the database, the delays and the lease.
 """
 
 import asyncio
@@ -197,6 +197,13 @@ SELECT %s, chunk.seq, chunk.payload, chunk.task_count
 FROM unnest(%s::int[], %s::jsonb[], %s::int[]) AS chunk(seq, payload, task_count)
 """
 
+# The final chunk of a kind that finalizes, recorded with the others but waiting: it joins the
+# queue once they are all done (`queue.RELEASE_FINAL`). Last in rank, with no task.
+INSERT_FINAL_CHUNK = f"""
+INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, final, state)
+VALUES (%s, %s, 0, true, 'waiting')
+"""
+
 # Finishing the planning only applies to a job still being planned. Two planners can overlap —
 # the first too slow, its lease taken over by a second: the update locks the row, the second
 # waits, then no longer finds the job in `planning` and gives up instead of doubling the
@@ -214,8 +221,20 @@ WHERE id = %s AND state = 'planning'
 RETURNING id
 """
 
+# Taken first by a settlement, so that no chunk of the job is counted done between the
+# statements it reads the job's chunks with: `finish` counts a chunk done under this same lock
+# (`queue.ADVANCE_JOB`). Read committed, each statement sees what committed before it, so without
+# it a release check that saw a chunk still running, then a settlement that saw it done, settled
+# the job without its final chunk — the two last chunks of a job finishing together. NO KEY
+# UPDATE, as `queue.ADVANCE_JOB` takes it, for the same reason: recording an event or a
+# quarantined item takes KEY SHARE on the job's row through its foreign key, which this does not
+# conflict with.
+LOCK_JOB_FOR_SETTLEMENT = f"SELECT state FROM {SCHEMA_NAME}.jobs WHERE id = %s FOR NO KEY UPDATE"
+
 # A job with no chunk left pending or running is finished. Cancellation wins over error: a job
-# that was stopped is not a job that failed.
+# that was stopped is not a job that failed. A final chunk still waiting does not hold the job:
+# the settlement releases it first when the job's work is done (`queue.RELEASE_FINAL`), and
+# leaves it waiting when a chunk failed or the job was cancelled.
 SETTLE = f"""
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = CASE
@@ -322,7 +341,7 @@ async def plan_one(
         return job_id
 
     try:
-        recorded = await record_plan(conn, job_id, chunks)
+        recorded = await record_plan(conn, job_id, chunks, final=kind.finalizes)
     except DATABASE_UNAVAILABLE:
         raise
     except Exception as error:
@@ -397,11 +416,17 @@ def _plan_and_prepare(
     return chunks
 
 
-async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk]) -> bool:
+async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[Chunk], final: bool = False) -> bool:
     """Record a job's chunks and move it to pending, if it is still in planning.
 
     The job update goes first: it locks its row, so that a second planner waits, then finds
     that the job is no longer to be planned.
+
+    Args:
+        conn: The planner's connection.
+        job_id: The job planned.
+        chunks: Its chunks of work.
+        final: Its kind finalizes: a final chunk is recorded with the others, waiting for them.
 
     Returns:
         False if the job was no longer in planning — already split by another worker —, in
@@ -421,6 +446,8 @@ async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[C
                 [chunk.task_count for chunk in chunks],
             ),
         )
+        if final:
+            await conn.execute(INSERT_FINAL_CHUNK, (job_id, len(chunks)))
         await queue.record_event(
             conn, job_id, "state", {"state": "pending", "total_tasks": total, "chunks": len(chunks)}
         )
@@ -811,9 +838,29 @@ async def _execute(
             kind.write(writer, result, chunk.payload, params)
         return outcome
 
+    def finalize() -> Outcome:
+        params = kind.validate_params(raw_params)
+        # Reopened outside the cache first: the final chunk must see what every worker wrote —
+        # an embeddings table another worker created — not what this one had open. The reader
+        # and the writer then share that reopened dataset.
+        if library is not None:
+            _reopen_dataset(library, dataset_id)
+        reader = _reader_for(library, dataset_id, media)
+        writer = _writer_for(library, dataset_id, kind, chunk.job_id, params)
+        with _holding_write_lock(dataset_id, CHUNK_WRITE_LOCK_WAIT_S, busy=TransientError):
+            try:
+                kind.finalize(reader, writer, params)
+            except DatasetBusyError as error:
+                # Another process writing the dataset — a person's save — says nothing about the
+                # job, whose chunks are all done: the closing step waits for its turn, as a
+                # planning does, instead of failing everything they produced.
+                raise TransientError(str(error)) from error
+        # No task: the job's outcome is its work's.
+        return Outcome(produced=0)
+
     try:
         async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} of job {chunk.job_id}"):
-            outcome = await threads.run(work, timeout_s)
+            outcome = await threads.run(finalize if chunk.final else work, timeout_s)
     except TimeoutError:
         # The thread does not stop: a blocked call cannot be interrupted from the outside. The
         # chunk is handed back, and if the thread eventually completes, its result will be
@@ -917,10 +964,23 @@ async def settle_abandoned(conn: psycopg.AsyncConnection, recovery: queue.Recove
 
 
 async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
-    """Settle a job with nothing left pending or running, saying what it produced."""
+    """Settle a job with nothing left pending or running, saying what it produced.
+
+    A job whose kind finalizes is not settled when its last chunk of work is done: its final
+    chunk joins the queue instead, and the job is settled once that one is.
+    """
     # Settlement and event in one transaction: a worker killed between the two left a `done` job
     # whose end the interface only learned on reload.
     async with conn.transaction():
+        locked = await (await conn.execute(LOCK_JOB_FOR_SETTLEMENT, (job_id,))).fetchone()
+        if locked is None:
+            return
+        if await queue.release_final(conn, job_id):
+            # The state is unchanged; the event says that the job is now finalizing, so that an
+            # interface shows it rather than a full bar that does not end.
+            await queue.record_event(conn, job_id, "state", {"state": locked[0], "finalizing": True})
+            log.info("job %s: every chunk done, its final chunk is queued", job_id)
+            return
         row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
         if row is None:
             return

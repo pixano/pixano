@@ -65,7 +65,7 @@ FROM (
     LIMIT %s
 ) AS picked
 WHERE c.id = picked.id
-RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts
+RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts, c.final
 """
 
 # `attempts` serves as a fencing token: a worker whose lease expired while it was working must
@@ -170,7 +170,9 @@ RETURNING job_id
 # This mark is set by a second query, after the tasks are launched, so that the claim itself
 # never joins `jobs` and so that a crash right after leaves the chunks to their threads rather
 # than to their lease. Jobs are locked in the order of their identifiers, as everywhere several
-# `jobs` rows are taken at once.
+# `jobs` rows are taken at once. It also says whether the job is finalizing — its final chunk
+# queued or running —, as after a retry that reopened its closing step alone: the job starts again
+# on that chunk, and its announcement must not read as work.
 START_JOBS = f"""
 WITH picked AS (
     SELECT id FROM {SCHEMA_NAME}.jobs
@@ -182,7 +184,10 @@ UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = 'running', updated_at = now()
 FROM picked
 WHERE j.id = picked.id
-RETURNING j.id
+RETURNING j.id, EXISTS (
+    SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
+    WHERE c.job_id = j.id AND c.final AND c.state IN ('pending', 'running')
+)
 """
 
 # The safety net of START_JOBS: if the mark was missed — a crash between the claim and the mark — the
@@ -224,10 +229,37 @@ SELECT pg_notify(%s, json_build_object(
 
 IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs WHERE id = %s"
 
+# The final chunk joins the queue once every other chunk of its job is done — none failed, none
+# left to run — and the job is neither cancelled nor finished. Run by whoever settles the job,
+# in the settlement's transaction and under its lock on the job's row (`runner.settle`): a chunk
+# is counted done under that same lock, so what this statement reads and what the settlement
+# reads next are the same set of finished chunks, and the last chunk to finish sees the others
+# done. Two settlements meeting here are serialised by that same lock: the second finds the chunk
+# no longer waiting, and releases nothing.
+RELEASE_FINAL = f"""
+UPDATE {SCHEMA_NAME}.job_chunks AS f
+SET state = 'pending', available_at = now(), updated_at = now()
+WHERE f.job_id = %(job)s AND f.final AND f.state = 'waiting'
+  AND EXISTS (
+      SELECT 1 FROM {SCHEMA_NAME}.jobs j
+      WHERE j.id = f.job_id AND j.state IN ('pending', 'running') AND j.cancel_requested_at IS NULL
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
+      WHERE c.job_id = f.job_id AND NOT c.final AND c.state <> 'done'
+  )
+RETURNING f.id
+"""
+
 
 @dataclass(frozen=True)
 class Chunk:
-    """A claimed batch of tasks, with the token that authorises writing its result."""
+    """A claimed batch of tasks, with the token that authorises writing its result.
+
+    Attributes:
+        final: This chunk runs its job kind's `finalize`, now that the job's other chunks are
+            done. It carries no task.
+    """
 
     id: int
     job_id: str
@@ -235,6 +267,7 @@ class Chunk:
     payload: dict[str, Any]
     task_count: int
     attempts: int
+    final: bool = False
 
 
 # A stable identity, given by the deployment. Without it, the identity is host:pid — stable in
@@ -263,7 +296,9 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
     cursor = await conn.execute(CLAIM, (worker_id, LEASE_TTL, batch_size))
     rows = await cursor.fetchall()
     return [
-        Chunk(id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5])
+        Chunk(
+            id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5], final=row[6]
+        )
         for row in rows
     ]
 
@@ -283,10 +318,11 @@ async def start_jobs(conn: psycopg.AsyncConnection, job_ids: Iterable[str]) -> l
         return []
     async with conn.transaction():
         rows = await (await conn.execute(START_JOBS, (ids,))).fetchall()
-        started = [str(row[0]) for row in rows]
-        for job_id in started:
-            await record_event(conn, job_id, "state", {"state": "running"})
-    return started
+        for job_id, finalizing in rows:
+            await record_event(
+                conn, str(job_id), "state", {"state": "running", **({"finalizing": True} if finalizing else {})}
+            )
+    return [str(row[0]) for row in rows]
 
 
 @dataclass(frozen=True)
@@ -386,6 +422,10 @@ async def finish(
                 QUARANTINE,
                 (chunk.job_id, chunk.id, item.item_id, item.reason, Jsonb(item.detail) if item.detail else None),
             )
+        if chunk.final:
+            # The closing step carries no task: the job's progress is that of its work, which its
+            # last chunk already brought to its total, and the job was running long before.
+            return Finished(started_job=False)
         advanced = await (await conn.execute(ADVANCE_JOB, {"job": row[0], "tasks": row[1]})).fetchone()
         started = bool(advanced and advanced[0])
         if started:
@@ -470,3 +510,16 @@ async def is_cancelled(conn: psycopg.AsyncConnection, job_id: str) -> bool:
     """Has a cancellation been requested for this job?"""
     row = await (await conn.execute(IS_CANCELLED, (job_id,))).fetchone()
     return row is not None and bool(row[0])
+
+
+async def release_final(conn: psycopg.AsyncConnection, job_id: str) -> bool:
+    """Put a job's final chunk in the queue, if the job's other chunks are all done.
+
+    To call inside the transaction that settles the job, once it holds the lock on the job's row
+    (`runner.settle`), so that the release and its event commit together and no chunk is counted
+    done meanwhile.
+
+    Returns:
+        True if this call released it: the job is finalizing, and must not be settled yet.
+    """
+    return await (await conn.execute(RELEASE_FINAL, {"job": job_id})).fetchone() is not None
