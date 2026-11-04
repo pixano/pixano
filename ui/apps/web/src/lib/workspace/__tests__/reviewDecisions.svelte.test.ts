@@ -325,6 +325,69 @@ describe("Delete on a model's annotation is its reject", () => {
     expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "h1" }]);
   });
 
+  it("drops a model's unsaved edit before the delete, and sends the delete only", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+
+    drag(seam, "b1");
+    pressDelete(seam, "b1");
+    expect(manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
+    await manager.flushSave();
+
+    expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "b1" }]);
+  });
+
+  it("drops the entity an unsaved reassignment queued for a model's row", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+
+    reassignEntity(
+      manager.annotations.find("b1")!,
+      { mode: "new", entityFields: { category: "cat" } },
+      seam,
+    );
+    expect(manager.pendingMutations).toHaveLength(2); // the entity create + the update
+    pressDelete(seam, "b1");
+    await manager.flushSave();
+
+    // No orphan entity written for a box that was rejected.
+    expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "b1" }]);
+  });
+
+  it("drops a person's unsaved edit before the delete, as for a model's row", async () => {
+    const { manager, backend, seam } = await openWithBoxes(humanBox(REC, "h1"));
+
+    // Moved, then onto a new entity, then deleted: neither the edit nor the
+    // entity made for it is sent, so no entity is left that nothing names.
+    drag(seam, "h1");
+    reassignEntity(
+      manager.annotations.find("h1")!,
+      { mode: "new", entityFields: { category: "cat" } },
+      seam,
+    );
+    pressDelete(seam, "h1");
+    await manager.flushSave();
+
+    expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "h1" }]);
+  });
+
+  it("drops its own row's work only", async () => {
+    const { manager, backend, seam } = await openWithBoxes(
+      modelBox(REC, "b1"),
+      modelBox(REC, "b2"),
+    );
+
+    drag(seam, "b1");
+    drag(seam, "b2");
+    pressDelete(seam, "b1");
+    await manager.flushSave();
+
+    expect(backend.writes).toContainEqual({ op: "delete", resource: BBOX_RESOURCE, id: "b1" });
+    const updates = updatesSent(backend);
+    expect(updates.filter((w) => w.op === "update" && w.id === "b1")).toEqual([]);
+    expect(updates.find((w) => w.op === "update" && w.id === "b2")).toMatchObject({
+      body: { coords: MOVED },
+    });
+  });
+
   it("rejects from the 3D box HUD as well, the same single path", async () => {
     const box3d: Row = {
       ...modelBox(REC, "box-1"),

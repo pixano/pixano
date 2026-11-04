@@ -338,12 +338,19 @@ export function deleteGestureFor(annotation: LocalAnnotation): DeleteGesture {
 /**
  * Kind-agnostic local delete, the one path every delete gesture takes — the
  * select tool's Delete/Backspace, the image widget's trash button, the 3D box
- * HUD: queues the backend deletes for a persisted annotation, or drops the
- * not-yet-flushed creates for a draft, then removes it from the collection.
+ * HUD: drops what the queue holds for the annotation, queues the backend
+ * delete of a persisted one (`buildDeleteMutations`), then removes it from the
+ * collection.
  *
  * A model's annotation is deleted like any other: that is its rejection
  * (`deleteGestureFor`). No row is left to mark it, so a later run of the model
  * may propose it again.
+ *
+ * What the queue holds for a stored row — its update, an entity a reassignment
+ * queued for it — is dropped before the delete is queued, whoever made the
+ * row: an edit of a row about to be deleted would only be sent to be undone,
+ * and an entity made for it would be left named by nothing. A draft's creates
+ * are dropped the same way, so it is never created only to be deleted.
  *
  * @param annotation The annotation the gesture acts on.
  * @param collection The store it lives in.
@@ -362,10 +369,9 @@ export function deleteLocalAnnotation(
   cancelGesture?: () => void,
 ): void {
   cancelGesture?.();
+  mutations.dropForLocalAnnotation(annotation.id);
   if (annotation.persisted) {
     for (const m of buildDeleteMutations(annotation, widgetId)) mutations.queue(m);
-  } else {
-    mutations.dropForLocalAnnotation(annotation.id);
   }
   collection.remove(annotation.id);
 }

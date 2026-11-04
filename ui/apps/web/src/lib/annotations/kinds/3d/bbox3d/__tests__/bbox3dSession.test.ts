@@ -212,6 +212,8 @@ describe("BBox3DSession", () => {
 
       session.deleteBox();
 
+      // What the queue held for the box is dropped before its delete is queued.
+      expect(env.dropped).toEqual(["b1"]);
       expect(env.queued).toHaveLength(1);
       expect(env.queued[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "b1" });
       expect(env.collection.find("b1")).toBeUndefined();

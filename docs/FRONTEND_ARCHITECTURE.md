@@ -636,13 +636,20 @@ deleteLocalAnnotation(annotation, collection, mutations, widgetId, cancelGesture
        // discard — the shape back as stored, the gesture stopped, nothing
        // committed — so what follows applies to the row as stored
   → one branch for both: a Reject is a delete
+        mutations.dropForLocalAnnotation(id)    // its queued update, an entity a
+                                                //   reassignment queued for it, a
+                                                //   draft's creates
         persisted?  mutations.queue({op:"delete", resource, id})   // annotation only
-        draft?      mutations.dropForLocalAnnotation(id)            // unsend its creates
   → collection.remove(id)                      // the selection goes with it
   → (flush) DELETE …/{resource}/{id}?prune_orphan_entity=true
         → backend deletes the entity iff no stored row names it any more:
           an annotation of any kind, a child entity, a dynamic state (§2)
 ```
+
+What the queue holds for a stored row is dropped before its delete is queued,
+whoever made the row, a person's included: an edit of a row about to be deleted
+would only be sent to be undone, and an entity a reassignment made for it would
+be left named by nothing.
 
 A delete pressed while the mouse still holds a resize or a drag would otherwise
 let the gesture go on over a shape no longer there — Konva throwing at the next
@@ -729,7 +736,8 @@ and the server prunes its entity when nothing else names it. The controls say
 so: on a model's annotation, whatever its status, they read "Reject", and their
 tooltip says that rejecting deletes (`deleteGestureFor`). No row is left to mark
 the rejection, so a later run of the model may propose it again — a consequence
-accepted with the rule. A Reject takes the row off every canvas at once; before
+accepted with the rule. A Reject, like any delete, throws the row's unsaved work
+away — an edit, an entity a reassignment queued for it. A Reject takes the row off every canvas at once; before
 Save, only Discard brings it back, with the rest of the record's unsaved work,
 and nothing does after Save: there is no undo of one Reject.
 

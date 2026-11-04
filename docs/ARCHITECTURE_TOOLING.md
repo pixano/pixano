@@ -292,7 +292,9 @@ draft/edit/delete lifecycle so no tool, renderer or widget reaches into payload 
 - `deleteLocalAnnotation(annotation, collection, mutations, widgetId, cancelGesture?)`
   — the one path every delete gesture takes. A model's annotation is deleted
   like any other: that is its reject, and no row is left to mark it, so a later
-  run of the model may propose it again. `deleteGestureFor(annotation)` says
+  run of the model may propose it again. What the queue holds for a stored row —
+  its update, an entity a reassignment queued for it — is dropped before its
+  delete is queued, whoever made the row. `deleteGestureFor(annotation)` says
   what it will do, so a control can name it before it is pressed — `reject` for
   a model's stored row, whatever its status, `delete` for anything else.
   `cancelGesture`, called first, lets go of a resize or a drag still under way
