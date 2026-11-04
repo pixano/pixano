@@ -48,7 +48,13 @@ export function buildSeam(
   return {
     widgetId: opts.widgetId,
     buildContext: opts.buildContext,
-    collection: new ViewScopedAnnotations(() => manager.annotations, opts.buildContext.viewId),
+    // The review status filter applies to what every widget displays — here,
+    // once, so no renderer or tool has to know it exists (`find` stays unfiltered).
+    collection: new ViewScopedAnnotations(
+      () => manager.annotations,
+      opts.buildContext.viewId,
+      (annotation) => manager.isShownByReview(annotation),
+    ),
     mutations: buildMutationSink(manager),
     // The live-draft slot is shared workspace-wide, so ownership is enforced
     // here rather than left to each tool: `publish` stamps this widget's id, and

@@ -41,6 +41,21 @@ export const REVIEW_STATUS_FIELD = "review_status";
 export const MODEL_SOURCE_TYPE = "model";
 
 /**
+ * Filter key of the annotations no model produced. They carry no status, but a
+ * reviewer still wants to hide them, or see only them, like any status.
+ */
+export const HUMAN_REVIEW_FILTER = "human";
+
+/** What the review status filter hides on: a model row's status, or "made by a person". */
+export type ReviewFilterKey = ReviewStatus | typeof HUMAN_REVIEW_FILTER;
+
+/** Every filter key, in the order a reviewer meets them. */
+export const REVIEW_FILTER_KEYS: readonly ReviewFilterKey[] = [
+  ...REVIEW_STATUSES,
+  HUMAN_REVIEW_FILTER,
+];
+
+/**
  * The review state of a persisted annotation, read once from its row. Present
  * on every annotation a seed loader produced (`persistedAnnotation`), absent on
  * a draft: a draft is a person's work, and it gets its row's review state the
@@ -194,6 +209,23 @@ export function isReviewable(annotation: LocalAnnotation): annotation is Reviewa
     review.sourceType === MODEL_SOURCE_TYPE &&
     isReviewStatus(review.status)
   );
+}
+
+/** The filter key an annotation falls under: its status for a model's row, "human" otherwise. */
+export function reviewFilterKeyOf(annotation: LocalAnnotation): ReviewFilterKey {
+  return isReviewable(annotation) ? annotation.review.status : HUMAN_REVIEW_FILTER;
+}
+
+/**
+ * Whether the review status filter lets this annotation show. A draft always
+ * shows: it is being drawn, and hiding it would hide the gesture from the
+ * person making it.
+ */
+export function isShownByReviewFilter(
+  annotation: LocalAnnotation,
+  hidden: ReadonlySet<ReviewFilterKey>,
+): boolean {
+  return !annotation.persisted || !hidden.has(reviewFilterKeyOf(annotation));
 }
 
 /**

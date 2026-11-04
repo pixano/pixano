@@ -4,11 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { flushSync } from "svelte";
 import { describe, expect, it } from "vitest";
 
+import type { WorkspaceManager } from "../workspaceManager.svelte.js";
+import type { WorkspaceSession } from "../workspaceSession.svelte.js";
 import {
+  DATASET_ID,
   drag,
   entityOf,
+  humanBox,
   MODEL_METADATA,
   modelBox,
   MOVED,
@@ -20,6 +25,7 @@ import {
   STORED,
   updatesSent,
   viewIdOf,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "./workspaceHarness.js";
@@ -27,13 +33,106 @@ import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { CLASSIFICATION_RESOURCE } from "$lib/annotations/kinds/2d/classification/classificationPayloadBuilder.js";
 import { beginEntityReassign, reassignEntity } from "$lib/annotations/payloadBuilders.js";
-import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
+import {
+  HUMAN_REVIEW_FILTER,
+  REVIEW_STATUS,
+  type ReviewFilterKey,
+} from "$lib/annotations/reviewStatus.js";
 
-// What an edit of a model's annotation does to its review, run through the real
-// workspace — manager, mutation queue, commit helpers — and asserted on what
-// the screen shows and on what reaches the backend when the person presses
-// Save. What a save does with work begun during it is in
-// saveScenarios.svelte.test.ts.
+// What an edit of a model's annotation does to its review, and what the review
+// status filter lets a widget display, run through the real workspace —
+// manager, mutation queue, commit helpers, the seam — and asserted on what the
+// screen shows and on what reaches the backend when the person presses Save.
+// What a save does with work begun during it is in saveScenarios.svelte.test.ts.
+
+/**
+ * The session the manager holds. No control writes the filter yet, so the
+ * suite writes it where the manager reads it, as a control will.
+ */
+function sessionOf(manager: WorkspaceManager): WorkspaceSession {
+  return (manager as unknown as { session: WorkspaceSession }).session;
+}
+
+/** Switch these filter keys off, assigning a new set as every writer must. */
+function hide(manager: WorkspaceManager, ...keys: ReviewFilterKey[]): void {
+  sessionOf(manager).hiddenReviewStatuses = new Set(keys);
+}
+
+describe("Review status on what a widget displays", () => {
+  it("re-runs a widget's display when the filter changes", async () => {
+    const { manager, seam } = await openWithBoxes(
+      modelBox(REC, "b1"),
+      modelBox(REC, "b2", "accepted"),
+      humanBox(REC, "h1"),
+    );
+    const displayed: string[][] = [];
+    const stop = $effect.root(() => {
+      $effect(() => {
+        displayed.push(seam.collection.items.map((a) => a.id));
+      });
+    });
+    flushSync();
+    // Nothing is hidden by default.
+    expect(displayed.at(-1)).toEqual(["b1", "b2", "h1"]);
+
+    hide(manager, REVIEW_STATUS.ACCEPTED);
+    flushSync();
+    expect(displayed.at(-1)).toEqual(["b1", "h1"]);
+
+    hide(manager, REVIEW_STATUS.PENDING, HUMAN_REVIEW_FILTER);
+    flushSync();
+    expect(displayed.at(-1)).toEqual(["b2"]);
+
+    hide(manager);
+    flushSync();
+    expect(displayed.at(-1)).toEqual(["b1", "b2", "h1"]);
+
+    stop();
+  });
+
+  it("always shows a draft, whatever is hidden", async () => {
+    const { manager, seam } = await openWithBoxes(humanBox(REC, "h1"));
+    hide(manager, HUMAN_REVIEW_FILTER);
+
+    seam.collection.add({
+      id: "draft",
+      entityId: "ent-draft",
+      kind: "bbox",
+      viewId: viewIdOf(REC),
+      geometry: [0.5, 0.5, 0.1, 0.1],
+      persisted: false,
+    });
+
+    expect(seam.collection.items.map((a) => a.id)).toEqual(["draft"]);
+  });
+
+  it("still saves an edit of a row the filter hides", async () => {
+    const { manager, seam, backend } = await openWithBoxes(modelBox(REC, "b1"));
+
+    hide(manager, REVIEW_STATUS.PENDING);
+    expect(seam.collection.items).toEqual([]);
+    drag(seam, "b1");
+    await manager.flushSave();
+
+    expect(updatesSent(backend).map((w) => w.id)).toEqual(["b1"]);
+  });
+
+  it("keeps the filter when another record opens", async () => {
+    const other = "rec-2";
+    const { manager } = await openManager({
+      [REC]: { [BBOX_RESOURCE]: [modelBox(REC, "b1", "accepted")] },
+      [other]: {
+        [BBOX_RESOURCE]: [modelBox(other, "b2"), modelBox(other, "b3", "accepted")],
+      },
+    });
+    hide(manager, REVIEW_STATUS.ACCEPTED);
+
+    await manager.openRecord(DATASET_ID, other, VIEWPORT);
+
+    expect([...sessionOf(manager).hiddenReviewStatuses]).toEqual([REVIEW_STATUS.ACCEPTED]);
+    expect(widgetSeam(manager).collection.items.map((a) => a.id)).toEqual(["b2"]);
+  });
+});
 
 describe("An edit leaves the row in review until it is saved", () => {
   it("an edit reads pending, and Save stores it accepted", async () => {

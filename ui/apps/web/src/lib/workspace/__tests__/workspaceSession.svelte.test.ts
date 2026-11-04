@@ -71,6 +71,16 @@ describe("WorkspaceSession", () => {
     expect(session.entitySchemaName).toBeNull();
   });
 
+  it("hides nothing by default, and keeps the reviewer's filter on reset", () => {
+    const session = new WorkspaceSession();
+    expect([...session.hiddenReviewStatuses]).toEqual([]);
+
+    session.hiddenReviewStatuses = new Set(["human"]);
+    session.reset();
+
+    expect([...session.hiddenReviewStatuses]).toEqual(["human"]);
+  });
+
   it("multiple sessions are independent", () => {
     const a = new WorkspaceSession();
     const b = new WorkspaceSession();

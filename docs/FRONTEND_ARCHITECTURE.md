@@ -52,6 +52,7 @@ workspace, and out to the widgets / tools / renderers the user interacts with.
 │         · annotations: AnnotationCollection    ImageWidget (Konva)         │
 │         · entities / schema                    PointCloudWidget (Threlte)  │
 │         · visibleEntityIds                          │                      │
+│         · hiddenReviewStatuses (review filter)      │                      │
 │                   │                                 │ builds a             │
 │                   │ read/write via                  ▼ Scene2DContext       │
 │                   ▼                            Tools (input)               │
@@ -193,7 +194,8 @@ same one again: clears the workspace, unsaved changes included, then
 `selectRecordInDataset`), `flushSave`, `discardChanges`, `queueMutation`,
 `upsertUpdateMutation`, `deleteAnnotation`, `beginPendingAnnotation` /
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
-`toggleEntityVisible` / `showAllEntities`, `claimStagedWork` /
+`toggleEntityVisible` / `showAllEntities`, `isShownByReview` (the review status
+filter, §8), `claimStagedWork` /
 `releaseStagedWork` (a flag per holder of work a tool keeps unconfirmed, reached
 through the seam — "Unsaved work and saves" below), `discardStagedWork(widgetId)`
 (one widget's share of Discard, which a delete pressed mid-gesture calls first —
@@ -252,6 +254,7 @@ The record-scoped truth, replaced on every load:
 datasetId · recordId · entities[] · entitySchemaName · entitySchemaFields
 annotations : AnnotationCollection      // the shared model (§5)
 visibleEntityIds : Set<string> | null   // entity-driven visibility (null = all)
+hiddenReviewStatuses : ReadonlySet<ReviewFilterKey>  // review filter keys switched off
 stagedWork : ReadonlyMap<string, StagedWorkHolder>  // raised staged-work flags
 ```
 Held on a tiny shared object so each sub-service depends on this narrow type, not
@@ -264,8 +267,15 @@ and lowers its own flag through its widget's seam (`claimStagedWork`, "Unsaved
 work and saves" below); while any is raised the record is not all saved, and
 each raised flag counts as one unsaved item (`unsavedCount`). The manager alone
 writes the flags, in a private map it publishes here as a copy — always
-replaced, never mutated — and `clearWorkspace` / `reset()` empty it with the
-widgets.
+replaced, never mutated, like `hiddenReviewStatuses` — and `clearWorkspace` /
+`reset()` empty it with the widgets.
+
+`hiddenReviewStatuses` is the one exception to "replaced on every load": it is
+a reviewer's preference, not a property of the record, so neither a load nor
+`reset()` touches it and the next record opens with the filter the reviewer
+works with. It defaults to empty — nothing hidden — and a change **assigns** a
+new `Set`: Svelte 5 does not track a `Set`'s `add`/`delete` (the same pattern
+as `visibleEntityIds`).
 
 ### `RecordLoader` (`workspace/recordLoader.ts`)
 `load(datasetId, recordId, viewport)`:
@@ -475,22 +485,38 @@ sends nothing. It returns the undo the queue runs if the request fails, the
 status included when nothing has moved it since.
 
 ### `ViewScopedAnnotations` — the per-widget facade
-Implements the same **`AnnotationStore`** interface but scopes reads to *one view*:
-`_visible(a) = a.viewId === thisView || RECORD_SCOPED_KINDS.has(a.kind)`.
-- `RECORD_SCOPED_KINDS = {bbox3d}` ⇒ a 3D box passes every view filter, which is
+Implements the same **`AnnotationStore`** interface but scopes reads to *one view*,
+then filters what the widget displays:
+- **The view rule**:
+  `_inView(a) = a.viewId === thisView || RECORD_SCOPED_KINDS.has(a.kind)`.
+  `RECORD_SCOPED_KINDS = {bbox3d}` ⇒ a 3D box passes every view filter, which is
   what lets an image widget **project** it.
-- Reads (`items`, `byKind`, `find`, **and** `selected`/`selectedId`) are view-scoped;
-  **writes pass straight through** to the shared collection, so every other widget
+- **The display filter**: an `isShown(a)` predicate given at construction —
+  `buildSeam` passes `manager.isShownByReview`, the review status filter (§8);
+  drafts always pass it.
+- The **display reads** — `items`, `byKind`, `count` **and** `selected`/
+  `selectedId` — honour both. A selection on an annotation this widget does not
+  show reads as no selection, so a widget's delete never acts on something it
+  does not display.
+- **`find` honours the view rule only, never the display filter.** It is the
+  lifecycle's lookup — commit an edit, flip `persisted`, a HUD saving the box it
+  holds — and a row hidden from view is still a row: an edit already under way on
+  it must still reach the queue. Drafts and save are never filtered either.
+- **Writes pass straight through** to the shared collection, so every other widget
   sees them immediately.
 
 ```
 WorkspaceSession.annotations  (record: all kinds, all views)
-        ▲ writes                         ▲ reads (scoped)
+        ▲ writes                         ▲ reads (scoped, then display-filtered)
         │                                │
-  ImageWidget A ── ViewScopedAnnotations(view A) ─┐
-  ImageWidget B ── ViewScopedAnnotations(view B) ─┤ same underlying collection
-  PointCloudWidget ── reads byKind("bbox3d") ─────┘ (3D reads the raw collection)
+  ImageWidget A ──── ViewScopedAnnotations(view A) ────┐
+  ImageWidget B ──── ViewScopedAnnotations(view B) ────┤ same underlying collection;
+  PointCloudWidget ─ ViewScopedAnnotations(its view) ──┘ bbox3d passes every view
 ```
+
+Every widget builds its facade the same way, through `buildSeam` — the point
+cloud included: its renderer pulls `ctx.collection.byKind("bbox3d")` from the
+facade, so the review status filter applies to the 3D view like any other.
 
 ---
 
@@ -655,15 +681,17 @@ person's annotation and a draft are not reviewable.
 
 **The pieces, split to keep the import graph acyclic.**
 
-- `annotations/reviewStatus.ts` — the status vocabulary (`REVIEW_STATUS`),
+- `annotations/reviewStatus.ts` — the status vocabulary (`REVIEW_STATUS`, and
+  the filter keys `REVIEW_FILTER_KEYS`: the statuses plus `"human"`),
   `AnnotationReview`, `reviewOf(row, scoreFields)` (lenient: never throws; the
   score is read from the columns the kind declares — the first holding a number,
   or a list's first valid number — and the declaration is kept on
-  `AnnotationReview.scoreFields`), `isReviewable`, `storedStatusAfterWrite`
-  (what a write stores), `carriesContent` (whether an update body changes
-  content rather than carrying the status alone). Type-only imports, so seed
-  loaders and the label renderer can use it without the registry cycle
-  `viewScopedSeedLoader.ts` describes. No display text, and no column of any
+  `AnnotationReview.scoreFields`), `isReviewable`, `reviewFilterKeyOf`,
+  `isShownByReviewFilter`, `storedStatusAfterWrite` (what a write stores),
+  `carriesContent` (whether an update body changes content rather than carrying
+  the status alone). Type-only imports, so seed loaders and the label renderer
+  can use it without the registry cycle `viewScopedSeedLoader.ts` describes. No
+  display text, and no column of any
   kind: each kind's seed loader declares its score columns (`scoreFields`:
   `["confidence"]` for bbox and bbox3d, `["confidences"]` for classification,
   none for the others), as its backend schema does in `MODEL_SCORE_FIELDS`.
@@ -684,6 +712,14 @@ button stages, it does not save: it confirms the move into the record's unsaved
 work (`BBox3DSession.save` → `commitGeometryEdit`), so the box still reads
 pending after it, until the workspace's Save.
 
+**The status filter is display-only.** `session.hiddenReviewStatuses` (default
+empty: nothing hidden) holds the filter keys switched off — `pending`,
+`accepted`, or `"human"` for every annotation no model produced. It is read by
+`manager.isShownByReview`, which `buildSeam` hands every widget's
+`ViewScopedAnnotations` as its display predicate (§5), so it applies to every
+kind and no renderer or tool knows it exists. Drafts always show, and `find` and
+save are never filtered. No control sets it yet.
+
 **On the canvas.** The shared `EntityLabels2D` writes "entity · status" on a
 model's annotation, on a colour per status — pending or accepted
 (`REVIEW_TAG_COLOR_*` in `scene2dStyleConstants.ts`) —, even when the entity has
@@ -702,7 +738,10 @@ bbox3d — in 3D and projected — show no status.
   `WorkspaceSession`, `BoxEditor`, `PointCloudCamera`).
 - **2D**: `ImageWidget` re-runs `syncRenderers()` in an `$effect` that reads
   `annotations.items.length`, `annotations.selectedId`, and
-  `manager.visibleEntityIds`; the renderer reconciles Konva nodes.
+  `manager.visibleEntityIds`; the renderer reconciles Konva nodes. Computing
+  `items` runs the review display filter, which reads
+  `session.hiddenReviewStatuses` and each annotation's `review`, so a change of
+  the filter re-runs the reconcile too.
 - **3D**: `PointCloudScene` uses **Threlte on-demand rendering** — it redraws on
   reactive invalidation. Nothing is pushed into the scene: it mounts one component
   per `RENDERER_FACTORIES_3D` entry and each pulls its kind from

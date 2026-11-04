@@ -17,7 +17,7 @@ import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js
 const GEOMETRY: BBox3DGeometry = { coords: [0, 0, 0, 1, 1, 1], format: "xyzwhd" };
 
 /** Only the slice of the manager `buildSeam` actually touches. */
-function fakeManager() {
+function fakeManager(hiddenIds: ReadonlySet<string> = new Set()) {
   let liveDraft: LiveAnnotationDraft | null = null;
   return {
     annotations: new AnnotationCollection(),
@@ -33,6 +33,7 @@ function fakeManager() {
     dropMutationsForLocalAnnotation: () => {},
     beginPendingAnnotation: () => {},
     isEntityVisible: () => true,
+    isShownByReview: (annotation: { id: string }) => !hiddenIds.has(annotation.id),
   };
 }
 
@@ -107,5 +108,28 @@ describe("buildSeam — live-draft ownership", () => {
     // B observes A's gesture — that is the whole point of the slot.
     expect(b.liveDraft.get()?.editingId).toBe("box-1");
     expect(b.liveDraft.get()?.sourceWidgetId).toBe("widget-a");
+  });
+});
+
+// The review status filter reaches every widget through the seam, so no
+// renderer or tool needs to know about it.
+describe("buildSeam — review status filter", () => {
+  it("filters what the widget displays by the manager's review predicate, never find", () => {
+    const manager = fakeManager(new Set(["hidden"]));
+    for (const id of ["shown", "hidden"]) {
+      manager.annotations.add({
+        id,
+        entityId: `e-${id}`,
+        kind: "bbox3d",
+        viewId: "",
+        geometry: GEOMETRY,
+        persisted: true,
+      });
+    }
+
+    const { collection } = seamFor(manager, "widget-a");
+
+    expect(collection.items.map((a) => a.id)).toEqual(["shown"]);
+    expect(collection.find("hidden")?.id).toBe("hidden");
   });
 });

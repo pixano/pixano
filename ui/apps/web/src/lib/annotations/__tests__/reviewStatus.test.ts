@@ -8,7 +8,11 @@ import { describe, expect, it } from "vitest";
 
 import type { LocalAnnotation } from "../annotationCollection.svelte.js";
 import {
+  HUMAN_REVIEW_FILTER,
   isReviewable,
+  isShownByReviewFilter,
+  REVIEW_STATUS,
+  reviewFilterKeyOf,
   reviewOf,
   storedStatusAfterWrite,
   type AnnotationReview,
@@ -139,6 +143,42 @@ describe("isReviewable", () => {
     expect(isReviewable(annotation("d", undefined, false))).toBe(false);
     // A draft never is, even one carrying a model's review by mistake.
     expect(isReviewable(annotation("x", modelReview("pending"), false))).toBe(false);
+  });
+});
+
+describe("reviewFilterKeyOf", () => {
+  it("files every annotation under one filter key", () => {
+    expect(reviewFilterKeyOf(annotation("p", modelReview("pending")))).toBe("pending");
+    expect(reviewFilterKeyOf(annotation("m", modelReview("accepted")))).toBe("accepted");
+    expect(reviewFilterKeyOf(annotation("h", reviewOf({ source_type: "human" })))).toBe(
+      HUMAN_REVIEW_FILTER,
+    );
+    expect(reviewFilterKeyOf(annotation("d", undefined, false))).toBe(HUMAN_REVIEW_FILTER);
+  });
+});
+
+describe("isShownByReviewFilter", () => {
+  it("hides what the filter hides, and always shows a draft", () => {
+    const hidden = new Set([REVIEW_STATUS.ACCEPTED, HUMAN_REVIEW_FILTER] as const);
+    expect(isShownByReviewFilter(annotation("m", modelReview("pending")), hidden)).toBe(true);
+    expect(isShownByReviewFilter(annotation("a", modelReview("accepted")), hidden)).toBe(false);
+    expect(isShownByReviewFilter(annotation("h", reviewOf({})), hidden)).toBe(false);
+    expect(isShownByReviewFilter(annotation("d", undefined, false), hidden)).toBe(true);
+    // A draft carrying a model's review by mistake still shows.
+    expect(isShownByReviewFilter(annotation("x", modelReview("accepted"), false), hidden)).toBe(
+      true,
+    );
+  });
+
+  it("shows everything when nothing is hidden", () => {
+    const nothing = new Set<never>();
+    for (const shown of [
+      annotation("m", modelReview("pending")),
+      annotation("a", modelReview("accepted")),
+      annotation("h", reviewOf({})),
+    ]) {
+      expect(isShownByReviewFilter(shown, nothing)).toBe(true);
+    }
   });
 });
 
