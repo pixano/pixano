@@ -26,6 +26,8 @@ from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceCli
 from pixano_inference.schemas import EmbeddingRequest
 from pydantic import Field
 
+from pixano.inference.types import TASK_TO_CAPABILITY, InferenceTask
+
 from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
 from .base import (
@@ -51,6 +53,10 @@ from .inference import (
 
 
 log = logging.getLogger("pixano-worker")
+
+# The capability pixano-inference declares for the models this kind can call, from Pixano's own
+# mapping of inference tasks to capabilities rather than a name written here.
+EMBEDDING_CAPABILITY = TASK_TO_CAPABILITY[InferenceTask.EMBEDDING]
 
 
 class EmbeddingsParams(JobParams):
@@ -149,19 +155,22 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         datasets whose media are embedded.
 
         Everything that can refuse the job is checked here, before any computation: the media
-        types chosen, and the model of the vectors already there — a job that will not be able to
-        write its vectors must fail at planning, not after having run the inference over the
-        whole dataset.
+        types chosen, the model being served, and the model of the vectors already there — a job
+        that will not be able to write its vectors must fail at planning, not after having run
+        the inference over the whole dataset, nor after `prepare` has dropped the vectors it was
+        to replace.
 
         A job that replaces the existing embeddings skips the last check: replacing them is
         precisely how another model gets in, since `prepare`, run once this plan has succeeded,
         empties the table.
 
         Raises:
-            ValueError: A chosen media type cannot be processed, or the dataset already carries
-                embeddings from another model and the job does not replace them.
+            ValueError: A chosen media type cannot be processed, the inference serves no such
+                model, or the dataset already carries embeddings from another model and the job
+                does not replace them.
         """
         self.refuse_unsupported_media(params.media)
+        self.server.require_served(params.model, EMBEDDING_CAPABILITY)
         if not params.replace_existing_embeddings:
             check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         yield from media_chunks(reader, params.media, params.chunk_size)

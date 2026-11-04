@@ -6,10 +6,11 @@
 
 """What every job kind that calls pixano-inference needs, whatever it asks of it.
 
-Finding a chunk's media and designating each for the inference, knowing which checkpoint
-answered, for the provenance of a job's rows, whether a failed call is the server's fault or the
-medium's, and — when every medium of a chunk is refused — asking the server itself with an image
-known to be good. Kinds differ in the call they make, not in any of this.
+Knowing whether a model is served before a job starts, finding a chunk's media and designating
+each for the inference, knowing which checkpoint answered, for the provenance of a job's rows,
+whether a failed call is the server's fault or the medium's, and — when every medium of a chunk
+is refused — asking the server itself with an image known to be good. Kinds differ in the call
+they make, not in any of this.
 """
 
 import io
@@ -50,8 +51,9 @@ NO_RESPONSE = 0
 # say): no medium is at fault, and every call would fail the same way.
 INVALID_RESPONSE = "invalid_response"
 
-# How long a question about the server — which checkpoint a model loaded — may take. The answer
-# only completes a provenance: a slow server must not hold a chunk for the client's default minute.
+# How long a question about the server — which models it serves, which checkpoint — may take.
+# The answer only gates a plan or completes a provenance: a slow server must not hold either for
+# the client's default minute.
 QUERY_TIMEOUT_S = 5.0
 
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
@@ -188,6 +190,45 @@ class InferenceServer:
         return SyncPixanoInferenceClient(
             self.url, api_key=self.api_key or None, max_retries=max_retries, timeout=timeout
         )
+
+    def require_served(self, model: str, capability: str) -> None:
+        """Refuse a job whose model the server does not serve with this capability.
+
+        A server that cannot be reached, or answers that it is unwell, is not a refusal: it may
+        be restarting, and the chunks will wait for it like after any outage. A server that
+        answers the question can never pass — no permission, no route — is one: every chunk
+        would fail on the same answer, after `prepare` had already cleared what the job was to
+        replace. So is an answer this worker cannot read: a client and a server of different
+        versions, not a state of the server. Any other error fails the planning as it is.
+
+        Raises:
+            ValueError: The server serves no such model, the models it serves named; or it
+                refuses the question, or answers it in a form this worker cannot read, its
+                answer and its address named.
+        """
+        try:
+            with self.client(max_retries=0, timeout=QUERY_TIMEOUT_S) as client:
+                served = client.list_models()
+        except (httpx.TransportError, PixanoInferenceError) as error:
+            if classify(error) == "request":
+                if getattr(error, "code", None) == INVALID_RESPONSE:
+                    raise ValueError(
+                        f"the inference at {self.url} lists the models it serves in a form this worker "
+                        f"cannot read ({error}) — check that it runs the pixano-inference version this "
+                        "worker is built against"
+                    ) from error
+                raise ValueError(
+                    f"the inference at {self.url} refuses to list the models it serves ({error}) — "
+                    "check PIXANO_INFERENCE_URL and PIXANO_INFERENCE_API_KEY"
+                ) from error
+            log.warning("model '%s': cannot ask the inference whether it is served (%s)", model, error)
+            return
+        names = sorted(info.name for info in served if info.capability == capability)
+        if model not in names:
+            raise ValueError(
+                f"the inference serves no {capability} model named '{model}' — it serves "
+                f"{', '.join(names) or 'none'}. Deploy the model on pixano-inference, or choose one of those."
+            )
 
     def model_identity(self, model: str) -> ModelIdentity:
         """The model's name, and the checkpoint the server loaded under it.

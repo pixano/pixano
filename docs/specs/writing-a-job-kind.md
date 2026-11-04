@@ -76,6 +76,15 @@ before refilling it. Two rules, both checked by the suite:
 
 What must happen at the end of a job is `finalize`'s, below — not a mirror of `prepare`.
 
+Refusing in `plan` includes the inference's answer. A kind that runs a model asks the server
+whether it serves it (`InferenceServer.require_served`, in `plan`): a model it does not list
+for the kind's capability refuses the job, and so does a server that answers the question can
+never pass — no permission, no route: 401, 403, 404 or 405 —, its status and address named,
+before `prepare` clears anything; otherwise every chunk would fail on the same answer after
+`prepare` had cleared what the job was to replace. A server that cannot be reached, or gives
+any other answer — a 5xx while it restarts, say —, is not a refusal: the chunks wait for it
+like after any outage.
+
 It runs under the worker's write lock of the dataset, as a chunk's `write` does: the worker's
 chunks of other jobs may be writing the same dataset meanwhile, in other threads, and the
 dataset's own lock never waits. Another process writing the dataset — a person's save, another

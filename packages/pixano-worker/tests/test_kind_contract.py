@@ -241,7 +241,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def list_models(self) -> list[Any]:
-            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1

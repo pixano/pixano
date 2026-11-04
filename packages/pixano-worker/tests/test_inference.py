@@ -4,11 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-"""What a kind that calls the inference does on the real path when every medium of a chunk is
-refused: the witness that tells the inference's fault from the media's.
+"""What a kind that calls the inference does on the real path: the model check that refuses a job
+before `prepare` destroys anything, and the witness that tells the inference's fault from the
+media's when every medium of a chunk is refused.
 
-The dataset is a real one, its images files on disk designated by path, read through the
-runner's own reader. The inference is the official client talking to a server simulated at its
+The dataset is a real one, its images files on disk designated by path, read and written through
+the runner's own reader and writer. The inference is the official client talking to a server simulated at its
 HTTP edge, which reads an image the way the real one does — a path under its own media root, or
 the bytes of a data URI — and answers what the real one answers when it cannot: 500
 `internal_error`, for a corrupt image, a missing path or an unreachable URL alike.
@@ -19,6 +20,7 @@ import io
 import json
 import logging
 import os
+import threading
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,9 +33,11 @@ from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
 from pixano_worker import runner
-from pixano_worker.kinds import EmbeddingsKind, JobKind, TransientError
+from pixano_worker.kinds import Chunk, EmbeddingsKind, JobKind, TransientError
+from pixano_worker.kinds.embeddings import EMBEDDING_CAPABILITY
 from pixano_worker.kinds.inference import REFUSED_BY_THE_SERVER, Failure, chunk_media, classify, witness_image
 from pixano_worker.media import MediaResolver
+from pixano_worker.writer import JobWriter
 
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
@@ -54,7 +58,7 @@ WIDTH, HEIGHT = 200, 100
 VIEWS = {"v1": ("r1", "a.png"), "v2": ("r2", "b.png")}
 # The width of the simulated embedding model's vectors.
 DIM = 4
-# The model the embeddings kind asks the simulated server for.
+# The model the simulated server serves for embeddings, which the embeddings kind asks for.
 CLIP = "clip"
 # Where a URL designation points: a host the simulated inference cannot reach.
 UNREACHABLE_HOST = "https://media.example"
@@ -95,6 +99,8 @@ class _Server:
     """The inference at its HTTP edge, serving an embedding model.
 
     Attributes:
+        models_answer: What `GET /v1/models` answers instead of the models: a response, or an
+            exception the transport raises — the server cannot be reached.
         reads_paths: False for a server that does not read its media mount: it refuses every
             path it is sent, as the real one does, with a 500.
         bytes_answer: What the server does when a medium is sent as bytes: an exception the
@@ -102,8 +108,13 @@ class _Server:
         images: Each image the server was asked about, in order.
     """
 
+    MODELS = [
+        {"name": CLIP, "capability": EMBEDDING_CAPABILITY, "modelPath": "MobileCLIP2-S2", "status": "RUNNING"},
+    ]
+
     def __init__(self, media_root: Path) -> None:
         self.media_root = media_root
+        self.models_answer: httpx.Response | Exception | None = None
         self.reads_paths = True
         self.bytes_answer: Exception | httpx.Response | None = None
         self.images: list[str] = []
@@ -115,6 +126,10 @@ class _Server:
             return _refusal(httpx.codes.UNAUTHORIZED, "unauthorized", "Missing API key.")
         if key != API_KEY:
             return _refusal(httpx.codes.FORBIDDEN, "forbidden", "Invalid API key.")
+        if request.url.path == "/v1/models":
+            if isinstance(self.models_answer, Exception):
+                raise self.models_answer
+            return self.models_answer or httpx.Response(200, json=self.MODELS)
         body = json.loads(request.content)
         images = body["image"] if isinstance(body["image"], list) else [body["image"]]
         self.images.extend(images)
@@ -154,15 +169,23 @@ class _Kind:
 
     Attributes:
         make: The kind, bound to the simulated server with an API key.
-        model: The model it asks for.
+        model: The model it asks for, among those the server serves.
+        replace: The parameter that makes its `prepare` destroy what it wrote before.
+        written: How many of the rows it wrote a dataset holds — what `prepare` would destroy.
     """
 
     make: Callable[[str], JobKind]
     model: str
+    replace: str
+    written: Callable[[Dataset], int]
+
+
+def _vectors(dataset: Dataset) -> int:
+    return dataset.count_rows_where(JobWriter.EMBEDDING_TABLE) if dataset.has_record_embeddings() else 0
 
 
 KINDS = {
-    "embeddings": _Kind(lambda key: EmbeddingsKind(INFERENCE_URL, key), CLIP),
+    "embeddings": _Kind(lambda key: EmbeddingsKind(INFERENCE_URL, key), CLIP, "replace_existing_embeddings", _vectors),
 }
 
 
@@ -178,10 +201,30 @@ class _Scene:
     def resolver(self) -> MediaResolver:
         return MediaResolver(str(self.media_root), INFERENCE_MEDIA_ROOT)
 
+    def dataset(self) -> Dataset:
+        """The dataset as the application opens it: an instance of its own."""
+        return Dataset.find(DATASET_ID, self.library)
+
+    def plan(self, kind: JobKind, params: Any, job_id: str = "job-1") -> list[Chunk]:
+        """Plan a job as the runner does: split on the dataset reopened, then prepared under its write lock.
+
+        The loop waits for it all along, so it never abandons it.
+        """
+        return runner._plan_and_prepare(
+            kind, self.library, DATASET_ID, self.resolver, job_id, params, abandoned=threading.Event()
+        )
+
     def process(self, kind: JobKind, params: Any) -> dict[str, Any]:
         """Process one chunk of every view, through the reader the runner gives a chunk."""
         reader = runner._reader_for(self.library, DATASET_ID, self.resolver)
         return kind.process(reader, {"table": IMAGES_TABLE, "view_ids": list(VIEWS)}, params)
+
+    def run(self, kind: JobKind, params: Any, job_id: str) -> None:
+        """One job, planned, processed and written as the runner does it, without the queue."""
+        for chunk in self.plan(kind, params, job_id):
+            result = kind.process(runner._reader_for(self.library, DATASET_ID, self.resolver), chunk.payload, params)
+            writer = runner._writer_for(self.library, DATASET_ID, kind, job_id, params)
+            kind.write(writer, result, chunk.payload, params)
 
 
 def _make_scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uri_of: Callable[[Path, str], str]) -> _Scene:
@@ -243,6 +286,96 @@ def _params(kind: JobKind, case: _Kind, **params: Any) -> Any:
 @pytest.fixture(params=list(KINDS))
 def case(request: pytest.FixtureRequest) -> _Kind:
     return KINDS[request.param]
+
+
+class TestAModelCheckTheServerRefuses:
+    """Planning did not ask the inference whether it serves the job's model. A job naming a model it
+    cannot have passed planning, `prepare` destroyed what the job was to replace, then every chunk
+    failed on the same answer."""
+
+    @pytest.fixture
+    def written(self, scene: _Scene, case: _Kind) -> int:
+        """A first job of the kind ran: the dataset holds what a replacing job's `prepare` clears."""
+        kind = case.make(API_KEY)
+        scene.run(kind, _params(kind, case), "job-1")
+        written = case.written(scene.dataset())
+        assert written > 0, "the first job wrote nothing a replacing job could destroy"
+        return written
+
+    def test_a_served_model_lets_prepare_clear_what_the_job_replaces(
+        self, scene: _Scene, case: _Kind, written: int
+    ) -> None:
+        """What the refusals below keep from happening, on the same dataset."""
+        kind = case.make(API_KEY)
+
+        assert scene.plan(kind, _params(kind, case, **{case.replace: True}), "job-2")
+
+        assert case.written(scene.dataset()) == 0
+
+    def test_a_model_the_server_does_not_serve_refuses_the_job(self, scene: _Scene, case: _Kind, written: int) -> None:
+        kind = case.make(API_KEY)
+
+        with pytest.raises(ValueError, match="serves no .* model named 'not-served'"):
+            scene.plan(kind, _params(kind, case, model="not-served", **{case.replace: True}), "job-2")
+
+        assert case.written(scene.dataset()) == written
+
+    @pytest.mark.parametrize(
+        ("key", "answer", "status"),
+        [
+            pytest.param("", None, 401, id="no key"),
+            pytest.param("a-wrong-key", None, 403, id="wrong key"),
+            pytest.param(API_KEY, _refusal(404, "not_found", "Not Found."), 404, id="no such route"),
+            pytest.param(API_KEY, _refusal(405, "method_not_allowed", "Method Not Allowed."), 405, id="wrong method"),
+        ],
+    )
+    def test_refuses_the_job_before_prepare_destroys_anything(
+        self,
+        scene: _Scene,
+        case: _Kind,
+        written: int,
+        key: str,
+        answer: httpx.Response | None,
+        status: int,
+    ) -> None:
+        scene.server.models_answer = answer
+        kind = case.make(key)
+
+        with pytest.raises(ValueError, match=rf"inference at {INFERENCE_URL} refuses .*\[{status} "):
+            scene.plan(kind, _params(kind, case, **{case.replace: True}), "job-2")
+
+        assert case.written(scene.dataset()) == written
+
+    @pytest.mark.parametrize(
+        "answer",
+        [
+            pytest.param(httpx.ConnectError("[Errno 111] Connection refused"), id="connection refused"),
+            pytest.param(httpx.RemoteProtocolError("Server disconnected"), id="connection cut"),
+            pytest.param(_refusal(503, "unavailable", "Restarting."), id="come back later"),
+            pytest.param(_refusal(500, "internal_error", "Inference error."), id="unwell"),
+        ],
+    )
+    def test_a_server_that_cannot_say_does_not_refuse_the_job(
+        self, scene: _Scene, case: _Kind, answer: httpx.Response | Exception
+    ) -> None:
+        """It may be restarting: the chunks will wait for it like after any outage."""
+        scene.server.models_answer = answer
+        kind = case.make(API_KEY)
+
+        assert scene.plan(kind, _params(kind, case))
+
+    def test_an_answer_it_cannot_read_fails_the_planning_with_its_detail(
+        self, scene: _Scene, case: _Kind, written: int
+    ) -> None:
+        """Not a state of the server — a client and a server of different versions, say: said as it
+        is, rather than taken for an outage while `prepare` clears the dataset."""
+        kind = case.make(API_KEY)
+        scene.server.models_answer = httpx.Response(200, json=[{"model": case.model}])
+
+        with pytest.raises(ValueError, match="in a form this worker cannot read.*invalid_response"):
+            scene.plan(kind, _params(kind, case, **{case.replace: True}), "job-2")
+
+        assert case.written(scene.dataset()) == written
 
 
 class TestTheWitness:
