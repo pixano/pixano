@@ -616,6 +616,103 @@ class TestDetectedObjects:
 
         assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
 
+    def test_dropping_the_pending_rows_keeps_what_a_person_accepted(self, scene) -> None:
+        """Clearing a kind's previous proposals: what is still pending goes, whatever model wrote it."""
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[0], "accepted")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True)
+
+        assert dropped == 1
+        assert self._objects(scene) == {first[0]: ("cat", "accepted")}
+        assert len(scene.get_data("entities", limit=None)) == 1
+
+    def test_dropping_clears_a_model_row_stored_without_a_status(self, scene) -> None:
+        """A model's row re-imported from JSONL comes back without a status (the grammar carries
+        none). Nobody reviewed it, as the application reads it: left behind, the record would end
+        with the old model's boxes and the new one's, all pending."""
+        first = self._detect(scene, ["cat", "dog"])
+        for box_id in first:
+            self._review(scene, box_id, "")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(first)
+        assert self._objects(scene) == {}
+        assert scene.get_data("entities", limit=None) == []
+
+    @pytest.mark.parametrize("source_type", ["human", "ground_truth"])
+    def test_dropping_leaves_a_row_no_model_produced_under_the_kind_name(self, scene, source_type: str) -> None:
+        """Not reviewed covers the empty status, which every row no model produced carries too: only
+        the source keeps such a row out. Its name is free text, which an import's default source can
+        set to the kind's."""
+        from pixano.schemas import BBox
+
+        detected = self._detect(scene, ["cat"])
+        entity_schema = scene.info.tables["entities"]
+        scene.add_data("entities", [entity_schema(id="person-object", record_id="r1", category="person")])
+        scene.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id="person-box",
+                    record_id="r1",
+                    view_id="v2",
+                    entity_id="person-object",
+                    coords=[0.5, 0.5, 0.1, 0.1],
+                    format="xywh",
+                    is_normalized=True,
+                    source_type=source_type,
+                    source_name="detection",
+                    review_status="",
+                )
+            ],
+        )
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(detected)
+        assert [box.id for box in scene.get_data("bboxes", limit=None)] == ["person-box"]
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == ["person-object"]
+
+    def test_dropping_leaves_another_kind_alone(self, scene) -> None:
+        self._detect(scene, ["cat"])
+        writer = JobWriter(lambda: scene, "segmentation", "job-2", "model", model=ModelIdentity("sam"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 0
+        assert len(self._objects(scene)) == 1
+
+    def test_dropping_many_rows_names_them_in_bounded_batches(self, scene, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Clearing a dataset's pending boxes named all of them in one
+        filter — hundreds of thousands on a large dataset."""
+        import pixano_worker.writer as writer_module
+
+        monkeypatch.setattr(writer_module, "IDS_PER_QUERY", 2)
+        self._detect(scene, ["car", "dog", "cow", "cat", "bird"])
+        longest: list[int] = []
+        real_get, real_delete = scene.get_data, scene.delete_data
+
+        def get_data(table_name: str, ids: list[str] | None = None, **kwargs: Any) -> Any:
+            # The identifiers a filter names: those of its lists on an identifier column (id,
+            # entity_id, parent_id). The status list of `drop_pending` names statuses, not rows.
+            named_lists = re.findall(r"\b\w*id IN \(([^)]*)\)", kwargs.get("where") or "")
+            longest.append(len(ids) if ids is not None else sum(names.count("'") // 2 for names in named_lists))
+            return real_get(table_name, ids=ids, **kwargs)
+
+        def delete_data(table_name: str, ids: list[str]) -> Any:
+            longest.append(len(ids))
+            return real_delete(table_name, ids)
+
+        monkeypatch.setattr(scene, "get_data", get_data)
+        monkeypatch.setattr(scene, "delete_data", delete_data)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True)
+
+        assert dropped == 5
+        assert max(longest) <= 2
+        monkeypatch.undo()
+        assert scene.get_data("bboxes", limit=None) == [] and scene.get_data("entities", limit=None) == []
+
     def test_one_entity_per_box_is_required(self, scene) -> None:
         writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
 

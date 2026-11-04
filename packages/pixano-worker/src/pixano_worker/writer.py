@@ -28,7 +28,7 @@ import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Protocol, Sequence
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
 from pixano.schemas import (
     DEFAULT_LABEL_FIELD,
@@ -37,6 +37,7 @@ from pixano.schemas import (
     ReviewStatus,
     label_field_of,
 )
+from pixano.utils.python import to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
@@ -50,6 +51,19 @@ PENDING_REVIEW = ReviewStatus.PENDING.value
 
 # The canonical table of a dataset's entities.
 ENTITY_TABLE = "entities"
+
+# How many identifiers one filter or deletion names at most. Clearing a dataset's pending boxes
+# names every one of them — hundreds of thousands on a large dataset — and a filter that long
+# is slow to parse, when it is accepted at all.
+IDS_PER_QUERY = 1_000
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
+
 
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
@@ -449,6 +463,43 @@ class JobWriter:
             self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
 
+    def drop_pending(self, table_name: str, with_entities: bool = False) -> int:
+        """Delete every row this kind wrote that is still pending review, whatever its model.
+
+        For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
+        means the pending ones — a row a person accepted stays.
+
+        Args:
+            table_name: The kind's annotation table.
+            with_entities: Delete the entities those rows name too — the kind's own objects,
+                sharing their annotation's identifier.
+
+        Returns:
+            How many rows were deleted.
+        """
+        # Not reviewed as the application reads it (`pixano.schemas.NOT_REVIEWED_STATUSES`): a
+        # model's row re-imported from JSONL comes back without a status, and is pending all the same.
+        rows = self.dataset.get_data(
+            table_name,
+            where=(
+                f"source_type = '{MODEL_SOURCE}' AND source_name = '{self.kind}' "
+                f"AND review_status IN {to_sql_list(NOT_REVIEWED_STATUSES)}"
+            ),
+        )
+        pending = [row.id for row in rows]
+        if pending:
+            # The entities first: a crash between the two leaves boxes pointing at nothing, which
+            # the next attempt finds again as pending and finishes; the other order would leave
+            # entities nothing refers to, which no attempt would find.
+            if with_entities:
+                self._delete_existing(ENTITY_TABLE, pending)
+            for batch in _batched(pending):
+                self.dataset.delete_data(table_name, batch)
+            logger.info(
+                "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
+            )
+        return len(pending)
+
     def ensure_label_field(self) -> str:
         """The entity field this job writes a class into, added to the dataset if there is none.
 
@@ -473,6 +524,12 @@ class JobWriter:
     def read(self, table_name: str, where: str) -> list[Any]:
         """Rows of a table matching a filter — what a kind checks its outputs against."""
         return self.dataset.get_data(table_name, where=where)
+
+    def _delete_existing(self, table_name: str, ids: list[str]) -> None:
+        for batch in _batched(ids):
+            existing = [row.id for row in self.dataset.get_data(table_name, ids=batch)]
+            if existing:
+                self.dataset.delete_data(table_name, existing)
 
     def _count_write(self, table_name: str) -> None:
         """Count a write, and compact the table once enough have accumulated."""
