@@ -110,6 +110,15 @@ data and opens Review without starting the import.
 schema (views, record, entity, annotations), warnings and errors with their locations, and a
 few sample records. **Start import** stays disabled while the plan has errors.
 
+When a job queue is configured and the source holds still images (not video frames),
+**Compute embeddings after the import**, right after the dataset summary, queues the embeddings
+job of the dataset once the import is done, for semantic search and *similar to*. It is checked
+when the server can run the job, unless its administrator turned that default off, and offers
+the models the inference serves; when the job cannot run — no worker for it, no model — the box
+is disabled and says why. On a dataset that already has embeddings, the job uses their model,
+whatever model is chosen, and an add import has it compute the whole dataset again. The tray
+says whether the job was queued, or why not.
+
 **Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
 options, and annotation settings preserved. Adjust the setup and analyze again to review the
 updated plan; you do not need to upload the same folder again.
