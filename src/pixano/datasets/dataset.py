@@ -202,6 +202,26 @@ class Dataset:
                 )
         self._num_rows_cache: int | None = None
 
+    def is_stale(self) -> bool:
+        """Whether another process changed this dataset's metadata since it was read here.
+
+        A long-lived holder — the API's cache — asks before serving a request: a job that gives
+        the entities a new field rewrites `info.json`, and reading with the schema read before
+        would leave that field out. One `stat` per call; a replaced dataset counts as changed.
+
+        A dataset on S3 is never reported changed: there is no `stat` to compare, so its
+        holder serves the schema it first read until it drops the dataset — when a job ends,
+        for the API (docs/specs/backend-processing.md §20).
+        """
+        if isinstance(self.path, S3Path):
+            return False
+        try:
+            path_stat = self.path.stat()
+            info_mtime = self._info_file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return True
+        return (path_stat.st_dev, path_stat.st_ino) != self._directory_identity or info_mtime != self._info_mtime_ns
+
     @contextmanager
     def write_lock(self):
         """Protect a mutation and refresh cached handles before its integrity reads.
@@ -686,8 +706,11 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
-        # Handles read the latest table version per query, so caching is safe;
-        # Dataset-level cache invalidation drops the whole instance anyway.
+        # A cached handle stays on the table version it opened, since the connection sets no
+        # read consistency interval: what another instance or process writes (the worker, the
+        # API) is not seen through it. `write_lock` clears the cache, so this instance's own
+        # writes and the reads made under the lock see the latest version, and Dataset-level
+        # cache invalidation drops the whole instance. Any other read may be stale.
         self._table_handles[name] = table
         return table
 
