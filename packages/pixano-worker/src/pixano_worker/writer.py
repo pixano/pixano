@@ -18,7 +18,10 @@ same item write to the same rows.
 **The single writer, later.** LanceDB does not have PostgreSQL's concurrency control, and
 coordinating several workers writing to the same dataset is an open question. Having every
 write go through one place is what will make that coordination possible without touching a
-single job kind.
+single job kind — provided the unit coordinated is a kind's whole `write`, not each call made
+here. A kind reads through this writer, decides, then writes, within one `write`; the runner
+serialises that whole call per dataset, and a writer role across workers is to do the same
+(backend-processing §12 and §20).
 """
 
 import hashlib
@@ -277,6 +280,29 @@ def is_reviewed(row: Any) -> bool:
     return getattr(row, "review_status", "") not in NOT_REVIEWED_STATUSES
 
 
+def is_a_persons_work(row: Any) -> bool:
+    """Whether this row is a person's work: a row no model produced, or a model's row a person accepted.
+
+    A row with no source at all — an entity dynamic state imported or edited without one — is no
+    model's. A model's row nobody reviewed is not a person's work, whoever started the model — a
+    mask of the legacy smart tracking included: it reads as pending everywhere (`is_reviewed`).
+    Neither is a model's tracklet or dynamic state, which no one can review.
+    """
+    return getattr(row, "source_type", "") != MODEL_SOURCE or is_reviewed(row)
+
+
+@dataclass(frozen=True)
+class _AttachedWork:
+    """What the rest of the dataset attaches to a set of entities.
+
+    Attributes:
+        held: The entities a person's work names (`is_a_persons_work`), or that have a child
+            entity: they keep their object, whatever a model reruns.
+    """
+
+    held: set[str]
+
+
 class JobWriter:
     """Writes a job's outputs into a dataset, in a replayable way.
 
@@ -401,8 +427,15 @@ class JobWriter:
         An annotation can come with its entity — a detected box and the object it names. The
         entity shares its annotation's identifier, in the entities table, and follows it: written
         before it, since the annotation references it; kept when the annotation is frozen;
-        deleted with it when it is stale. Stale entities are looked up by the prefix too, in their
-        own table, so that a crash between the two writes leaves none behind for good.
+        deleted with it when it is stale. A rank is also frozen when **a person's work** names
+        its entity (`is_a_persons_work`) — a box or a mask a person drew, a model's mask a person
+        accepted, a child object: reassigning that object to whatever the model finds at the same
+        rank would contradict them silently. Stale entities are looked up by the prefix too, in
+        their own table, so that a crash between the two writes leaves none behind for good.
+
+        Other kinds annotate these objects too — a model's mask or keypoint on a detected object.
+        **A model's rows nobody reviewed hold nothing**: they would double the boxes of every
+        rerun, written beside the ranks they froze.
 
         Args:
             table_name: The target table.
@@ -437,6 +470,8 @@ class JobWriter:
                 for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id LIKE '{prefix}-%'")
                 if _rank_of(entity.id) is not None
             ]
+            candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
+            frozen |= {_rank_of(entity_id) for entity_id in self._attached_work(candidates, table_name).held}
         if covers is not None:
             entity_of = {entity.id: entity for entity in previous_entities}
             frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
@@ -478,7 +513,8 @@ class JobWriter:
         """Delete every row this kind wrote that is still pending review, whatever its model.
 
         For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
-        means the pending ones — a row a person accepted stays.
+        means the pending ones — a row a person accepted stays, and so does one whose entity a
+        person's work names (`is_a_persons_work`).
 
         Args:
             table_name: The kind's annotation table.
@@ -512,6 +548,9 @@ class JobWriter:
             )
             rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
         pending = [row.id for row in rows]
+        if pending and with_entities:
+            held = self._attached_work(set(pending), table_name).held
+            pending = [row_id for row_id in pending if row_id not in held]
         if pending:
             # The entities first: a crash between the two leaves boxes pointing at nothing, which
             # the next attempt finds again as pending and finishes; the other order would leave
@@ -524,6 +563,26 @@ class JobWriter:
                 "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
             )
         return len(pending)
+
+    def entities_with_a_persons_work(self, entity_ids: Iterable[str], own_table: str) -> set[str]:
+        """Those of these entities a person's work names, in any table, or that have a child entity.
+
+        A person's work is a row no model produced, or a model's row a person accepted, whatever
+        its kind (`is_a_persons_work`). Such an object keeps its rank in `replace` and survives
+        `drop_pending`; a kind asks it before proposing again an object a person worked on.
+
+        Each entity's own annotation — the row of `own_table` sharing its identifier — is not
+        counted: it is the object's, not work attached to it, and whether a person accepted it
+        is the kind's own rule.
+
+        Args:
+            entity_ids: The entities to look at.
+            own_table: The table of the annotations these entities share their identifier with.
+
+        Returns:
+            The entities, among these, a person's work names.
+        """
+        return self._attached_work(set(entity_ids), own_table).held
 
     def ensure_label_field(self) -> str:
         """The entity field this job writes a class into, added to the dataset if there is none.
@@ -549,6 +608,29 @@ class JobWriter:
     def read(self, table_name: str, where: str) -> list[Any]:
         """Rows of a table matching a filter — what a kind checks its outputs against."""
         return self.dataset.get_data(table_name, where=where)
+
+    def _attached_work(self, entity_ids: set[str], own_table: str) -> _AttachedWork:
+        """What the rest of the dataset attaches to these entities.
+
+        Every row of any table that names one of them — an annotation, a tracklet, a dynamic
+        state — apart from the row of `own_table` sharing its identifier, and every entity whose
+        parent one of them is. A person's work and a child entity hold the entity.
+        """
+        held: set[str] = set()
+        for batch in _batched(entity_ids):
+            listed = to_sql_list(batch)
+            for name, schema in self.dataset.info.tables.items():
+                if "entity_id" not in getattr(schema, "model_fields", {}):
+                    continue
+                for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
+                    if name == own_table and row.id == row.entity_id:
+                        continue
+                    if is_a_persons_work(row):
+                        held.add(row.entity_id)
+            if ENTITY_TABLE in self.dataset.info.tables:
+                children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
+                held |= {entity.parent_id for entity in children}
+        return _AttachedWork(held=held & entity_ids)
 
     def _delete_existing(self, table_name: str, ids: list[str]) -> None:
         for batch in _batched(ids):
