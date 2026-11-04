@@ -28,8 +28,9 @@ from pixano_worker.kinds.base import JobKind
 from pixano_worker.media import MediaResolver
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
+from pydantic import create_model
 
-from pixano.schemas import Image, Record
+from pixano.schemas import Entity, Image, Record
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -98,6 +99,10 @@ class _Target:
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "_space", None)
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        self.info.entity = create_model("ContractEntity", __base__=Entity, **{name: (str, "")})
+        self.info.tables["entities"] = self.info.entity
 
     def fingerprint(self) -> str:
         material = sorted(
