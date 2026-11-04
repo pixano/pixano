@@ -42,6 +42,16 @@ export function commitNormalizedWorkspaceRuntime(
 }
 
 /**
+ * Takes off the screen an annotation the dataset no longer holds, as a save found it: deleted
+ * since the record opened, or replaced by a model's run. Nothing is staged: it is gone already.
+ */
+export function forgetGoneAnnotation(id: string): void {
+  const kept = annotations.value.filter((annotation) => annotation.id !== id);
+  if (kept.length === annotations.value.length) return;
+  commitNormalizedWorkspaceRuntime(kept, entities.value);
+}
+
+/**
  * Puts a record, as the workspace loader returns it, in the workspace stores, in place of the
  * previous record and of the changes not saved yet.
  */

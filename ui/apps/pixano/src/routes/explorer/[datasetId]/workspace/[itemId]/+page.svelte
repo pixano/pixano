@@ -16,6 +16,7 @@ License: CECILL-C
   import { PrimaryButton } from "$lib/ui";
   import { createReviewReflection } from "$lib/utils/reviewActions";
   import { getExplorerRoute } from "$lib/utils/routes";
+  import { forgetGoneAnnotation } from "$lib/utils/workspaceRuntimeMutations";
 
   let { data }: PageProps = $props();
 
@@ -40,7 +41,12 @@ License: CECILL-C
   async function handleSaveItem() {
     const reflection = createReviewReflection(data.dataset.id);
     try {
-      await persistSaveItems(workspaceSaveQueue, data.dataset.id, reflection.onPersisted);
+      await persistSaveItems(
+        workspaceSaveQueue,
+        data.dataset.id,
+        reflection.onPersisted,
+        (mutation) => forgetGoneAnnotation(mutation.target.id),
+      );
     } finally {
       await reflection.finish();
     }
