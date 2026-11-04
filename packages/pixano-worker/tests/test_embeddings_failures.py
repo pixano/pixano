@@ -21,7 +21,7 @@ import httpx
 import numpy as np
 import pytest
 from pixano_inference.client import PixanoInferenceError
-from pixano_worker.kinds import EmbeddingsKind, TransientError
+from pixano_worker.kinds import CONFIRM_MARKER, EmbeddingsKind, TransientError
 from pixano_worker.kinds.inference import QUERY_TIMEOUT_S
 from pixano_worker.media import MediaResolver, ResolvedMedia
 
@@ -442,6 +442,46 @@ class TestPlanningByMedium:
             KIND.validate_params({"model": "clip"}).media == ["image"]
             and KIND.validate_params({"model": "clip"}).media is not KIND.validate_params({"model": "clip"}).media
         )
+
+
+class TestReplaceExistingEmbeddings:
+    """The explicit way to change a dataset's embedding model."""
+
+    class _Writer:
+        def __init__(self) -> None:
+            self.drops = 0
+
+        def drop_embeddings(self) -> None:
+            self.drops += 1
+
+    def test_without_the_parameter_nothing_is_dropped(self) -> None:
+        writer = self._Writer()
+
+        KIND.prepare(writer, KIND.validate_params({"model": "clip"}))  # type: ignore[arg-type]
+
+        assert writer.drops == 0
+
+    def test_with_the_parameter_the_table_is_dropped_before_planning(self) -> None:
+        writer = self._Writer()
+
+        KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
+
+        assert writer.drops == 1
+
+    def test_replacing_lets_another_model_through_planning(self) -> None:
+        """The check on the table's model is what replacing is for: `prepare` empties it after the plan."""
+        assert _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}), replace_existing_embeddings=True)
+
+    def test_the_form_is_asked_to_confirm_it(self) -> None:
+        field = KIND.params_model.model_json_schema()["properties"]["replace_existing_embeddings"]
+
+        assert "deletes every vector" in field[CONFIRM_MARKER]
+
+    def test_it_is_not_part_of_the_provenance(self) -> None:
+        """What the job did to the dataset before computing, not how a vector was computed."""
+        params = KIND.validate_params({"model": "clip", "replace_existing_embeddings": True})
+
+        assert "replace_existing_embeddings" not in KIND.provenance_params(params)
 
 
 class TestModelIdentity:

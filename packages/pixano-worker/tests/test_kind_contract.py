@@ -94,7 +94,14 @@ class _Target:
     def create_record_embedding_table(self, dim: int, model_id: str) -> None:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
-        self._space = {"model_id": model_id, "dim": dim}
+        self._space: dict[str, Any] | None = {"model_id": model_id, "dim": dim}
+
+    def drop_record_embeddings(self) -> None:
+        self._embeddings_ready = False
+        self.info.tables.pop("embeddings", None)
+        self._space = None
+        # The vectors go with their table, as in LanceDB.
+        self.rows = {row_id: row for row_id, row in self.rows.items() if not isinstance(row, _Vector)}
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "_space", None)

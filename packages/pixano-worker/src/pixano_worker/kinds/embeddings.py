@@ -28,7 +28,16 @@ from pydantic import Field
 
 from ..reader import JobReader, MediaType
 from ..writer import JobWriter, ModelIdentity, check_embedding_space
-from .base import Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError, media_chunks
+from .base import (
+    CONFIRM_MARKER,
+    Chunk,
+    JobKind,
+    JobParams,
+    Outcome,
+    QuarantinedItem,
+    TransientError,
+    media_chunks,
+)
 from .inference import (
     REFUSED_BY_THE_SERVER,
     InferenceServer,
@@ -52,6 +61,10 @@ class EmbeddingsParams(JobParams):
         media: The media types to embed. A record may hold several — nuScenes has six camera
             images and a point cloud — and each medium gets its own vector. A type this kind
             cannot send to the inference refuses the whole job.
+        replace_existing_embeddings: Delete the dataset's vectors before computing, whatever
+            their model. Without it, a dataset whose vectors come from another model refuses
+            the job: one table holds one model. Done once, at planning; the form asks for
+            confirmation.
         chunk_size: Media per chunk. It is also the size of the batch sent to the
             inference: one chunk is one call. The default of 8 is measured, not assumed —
             see "Chunk size, measured" in docs/specs/backend-processing.md. On CPU, growing
@@ -71,6 +84,13 @@ class EmbeddingsParams(JobParams):
     # submission form starts from it — with a factory the form started with nothing ticked.
     # Pydantic copies a mutable default, so no instance shares the list.
     media: list[MediaType] = Field(default=["image"], min_length=1)
+    replace_existing_embeddings: bool = Field(
+        default=False,
+        json_schema_extra={
+            CONFIRM_MARKER: "This deletes every vector already computed on this dataset, whatever their model, "
+            "before computing the new ones."
+        },
+    )
     chunk_size: int = Field(default=8, ge=1, le=256)
     normalize: bool = True
     max_retries: int = Field(default=3, ge=0, le=10)
@@ -92,7 +112,12 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         self.server = InferenceServer(inference_url, api_key)
 
     #: How the engine runs the job, not what it computes: absent from the provenance.
-    params_not_in_provenance = JobKind.params_not_in_provenance | {"request_timeout_s", "max_retries"}
+    params_not_in_provenance = JobKind.params_not_in_provenance | {
+        "request_timeout_s",
+        "max_retries",
+        # What the job did to the dataset before computing, not how a vector was computed.
+        "replace_existing_embeddings",
+    }
 
     def model_identity(self, params: EmbeddingsParams) -> ModelIdentity:
         """The model's name, and the checkpoint the server loaded under it.
@@ -101,6 +126,15 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         long as one table holds one model — so this completes the job's own provenance only.
         """
         return self.server.model_identity(params.model)
+
+    def prepare(self, writer: JobWriter, params: EmbeddingsParams) -> None:
+        """Empty the embeddings table first, when the job was asked to replace it.
+
+        Idempotent — dropping an absent table does nothing — and destructive only on the
+        explicit parameter, as the contract requires.
+        """
+        if params.replace_existing_embeddings:
+            writer.drop_embeddings()
 
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
         """Split the chosen media into batches.
@@ -119,12 +153,17 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         write its vectors must fail at planning, not after having run the inference over the
         whole dataset.
 
+        A job that replaces the existing embeddings skips the last check: replacing them is
+        precisely how another model gets in, since `prepare`, run once this plan has succeeded,
+        empties the table.
+
         Raises:
             ValueError: A chosen media type cannot be processed, or the dataset already carries
-                embeddings from another model.
+                embeddings from another model and the job does not replace them.
         """
         self.refuse_unsupported_media(params.media)
-        check_embedding_space(reader.dataset.record_embedding_space(), params.model)
+        if not params.replace_existing_embeddings:
+            check_embedding_space(reader.dataset.record_embedding_space(), params.model)
         yield from media_chunks(reader, params.media, params.chunk_size)
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: EmbeddingsParams) -> dict[str, Any]:

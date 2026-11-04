@@ -150,7 +150,7 @@ was designated, which the media resolver says (`ResolvedMedia.designation`: `pat
 `bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
 and goes to quarantine with the rest.
 
-### Media types
+### Media types and confirmation
 
 A kind that reads media declares `supported_media`, the types it can send to the inference
 (`image`, `video`, `point_cloud`, `text`), and takes the user's choice as a `media`
@@ -158,6 +158,14 @@ parameter. Its `plan` calls `refuse_unsupported_media(params.media)` first: a jo
 type the kind cannot process is refused whole, the types named — never run on part of what
 was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
 identifier with its `record_id` in the detail: the panel shows the record.
+
+A parameter that destroys something when set carries `CONFIRM_MARKER`
+(`x-pixano-confirm`) in its `json_schema_extra`, with the text to show: the submission form
+turns Run into a confirmation. Give such a parameter a plain `default`, not a
+`default_factory` — pydantic does not publish a factory's value, and the form starts from
+the published one. The embeddings kind's `replace_existing_embeddings` is one: its `prepare`
+drops the dataset's vectors (`writer.drop_embeddings`), and its `plan` then lets another model
+through.
 
 ### `outcome(result, payload, task_count) -> Outcome`
 
