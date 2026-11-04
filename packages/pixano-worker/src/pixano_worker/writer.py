@@ -52,6 +52,9 @@ PENDING_REVIEW = ReviewStatus.PENDING.value
 # The canonical table of a dataset's entities.
 ENTITY_TABLE = "entities"
 
+#: Which previous rows a write is about, given each with its entity (None when it has none).
+Coverage = Callable[[Any, Any | None], bool]
+
 # How many identifiers one filter or deletion names at most. Clearing a dataset's pending boxes
 # names every one of them — hundreds of thousands on a large dataset — and a filter that long
 # is slow to parse, when it is accepted at all.
@@ -378,6 +381,7 @@ class JobWriter:
         key: str,
         rows: Sequence[Any],
         entities: Sequence[Any] | None = None,
+        covers: Coverage | None = None,
     ) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
@@ -406,6 +410,10 @@ class JobWriter:
             rows: The rows to write. Their `id` field is overwritten.
             entities: One entity per row, when the rows are annotations of new objects. Their
                 `id` is overwritten, and each row's `entity_id` set to it.
+            covers: Which of the previous rows this write is about, given each with its entity
+                (None without `entities`). The others are left as they are and keep their rank,
+                like an accepted row — a detection asked for dogs replaces the dogs it found
+                before, not the cars. Every row by default.
 
         Returns:
             The identifiers written.
@@ -429,6 +437,9 @@ class JobWriter:
                 for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id LIKE '{prefix}-%'")
                 if _rank_of(entity.id) is not None
             ]
+        if covers is not None:
+            entity_of = {entity.id: entity for entity in previous_entities}
+            frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
 
         written: list[str] = []
         rank = 0
@@ -463,7 +474,7 @@ class JobWriter:
             self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
 
-    def drop_pending(self, table_name: str, with_entities: bool = False) -> int:
+    def drop_pending(self, table_name: str, with_entities: bool = False, covers: Coverage | None = None) -> int:
         """Delete every row this kind wrote that is still pending review, whatever its model.
 
         For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
@@ -473,6 +484,8 @@ class JobWriter:
             table_name: The kind's annotation table.
             with_entities: Delete the entities those rows name too — the kind's own objects,
                 sharing their annotation's identifier.
+            covers: Which of those rows to delete, given each with its entity, as for `replace`.
+                Every row by default.
 
         Returns:
             How many rows were deleted.
@@ -486,6 +499,18 @@ class JobWriter:
                 f"AND review_status IN {to_sql_list(NOT_REVIEWED_STATUSES)}"
             ),
         )
+        if covers is not None:
+            named = {row.entity_id for row in rows if row.entity_id}
+            entity_of = (
+                {
+                    entity.id: entity
+                    for batch in _batched(named)
+                    for entity in self.dataset.get_data(ENTITY_TABLE, ids=batch)
+                }
+                if ENTITY_TABLE in self.dataset.info.tables
+                else {}
+            )
+            rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
         pending = [row.id for row in rows]
         if pending:
             # The entities first: a crash between the two leaves boxes pointing at nothing, which

@@ -9,6 +9,7 @@
 import hashlib
 import json
 import re
+from collections import defaultdict
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -531,7 +532,7 @@ class TestDetectedObjects:
         return dataset
 
     @staticmethod
-    def _detect(scene, classes: list[str], job_id: str = "job-1") -> list[str]:
+    def _detect(scene, classes: list[str], job_id: str = "job-1", covers: Any = None) -> list[str]:
         from pixano.schemas import BBox
 
         writer = JobWriter(lambda: scene, "detection", job_id, "model", model=ModelIdentity("yolo"))
@@ -549,7 +550,7 @@ class TestDetectedObjects:
             for _ in classes
         ]
         entities = [writer.table_schema("entities")(id="", record_id="r1", **{field: name}) for name in classes]
-        return writer.replace("bboxes", "v1", boxes, entities)
+        return writer.replace("bboxes", "v1", boxes, entities, covers)
 
     @staticmethod
     def _objects(scene) -> dict[str, tuple[str, str]]:
@@ -706,12 +707,42 @@ class TestDetectedObjects:
         monkeypatch.setattr(scene, "delete_data", delete_data)
         writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
 
-        dropped = writer.drop_pending("bboxes", with_entities=True)
+        dropped = writer.drop_pending("bboxes", with_entities=True, covers=lambda _row, _entity: True)
 
         assert dropped == 5
         assert max(longest) <= 2
         monkeypatch.undo()
         assert scene.get_data("bboxes", limit=None) == [] and scene.get_data("entities", limit=None) == []
+
+    @staticmethod
+    def _about_dogs(_box: Any, entity: Any) -> bool:
+        return entity is not None and entity.category == "dog"
+
+    def test_a_write_replaces_only_the_rows_it_covers(self, scene) -> None:
+        """A detection asked for dogs finds none: the dog it found before goes, the car stays."""
+        first = self._detect(scene, ["car", "dog"])
+
+        self._detect(scene, [], covers=self._about_dogs)
+
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+
+    def test_a_covered_write_keeps_the_ranks_it_does_not_cover(self, scene) -> None:
+        """The car keeps its rank, so the new dogs take the ranks around it instead of overwriting it."""
+        first = self._detect(scene, ["car", "dog"])
+
+        written = self._detect(scene, ["dog", "dog"], covers=self._about_dogs)
+
+        assert first[0] not in written
+        assert self._objects(scene)[first[0]] == ("car", "pending")
+        assert len(self._objects(scene)) == 3
+
+    def test_dropping_deletes_only_the_rows_it_covers(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True, covers=self._about_dogs) == 1
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
 
     def test_one_entity_per_box_is_required(self, scene) -> None:
         writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
@@ -780,6 +811,9 @@ class TestCompaction:
         from pixano_worker import writer as writer_module
 
         monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 3)
+        # A fresh count: a writer without a dataset identifier counts under its address, which an
+        # earlier test's writer, freed, may have used for the same table.
+        monkeypatch.setattr(writer_module, "_writes_since_compaction", defaultdict(int))
         writer = JobWriter(lambda: dataset, "label", "job-1", "other")
 
         for n in range(7):
