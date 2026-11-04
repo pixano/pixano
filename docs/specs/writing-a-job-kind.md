@@ -92,7 +92,8 @@ that, on the largest dataset it will meet.
 
 Completes the job once every chunk of it is done: what only makes sense over the whole result,
 such as an index trained on every vector the job wrote. No chunk can do it — each sees its own
-work — and the last chunk to finish does not know it is the last.
+work — and the last chunk to finish does not know it is the last. The embeddings kind is the
+first to override it: it indexes the vectors (`writer.index_embeddings`).
 
 A kind that overrides it gets a **final chunk**, recorded at planning with the others but
 `waiting`, last in rank and without a task. When every other chunk is done — none failed, none
@@ -120,6 +121,15 @@ suite:
   before and after it.
 - **Reads the dataset, never the chunks.** Their payloads and results are gone, and other
   workers wrote part of them: what the job produced is what the dataset holds.
+
+The embeddings kind's `finalize` brought **`writer.index_embeddings()`**, for any kind that
+fills the embeddings table: it compacts the table, builds its `record_id` index, and from
+`VECTOR_INDEX_MIN_ROWS` vectors (50,000) the vector index its descriptor declares (`IVF_SQ` for a
+table the worker created), each rebuilt whole. Below the threshold, exact search is fast and an
+index would only lose results (backend-processing §12). It does not take the dataset's own lock,
+as compaction does not: a person's save is never refused for an index. A build that conflicts
+with another writer of the table raises; the embeddings kind hands its final chunk back to try
+again.
 
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 
