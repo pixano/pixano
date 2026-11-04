@@ -74,8 +74,8 @@ _NOT_REVIEWABLE: tuple[Callable[[type], bool], ...] = (is_tracklet, is_relation,
 # interface (ui/apps/web) has a widget for a still image, a point cloud and a text: the bases its
 # image, point-cloud and text extensions claim (`src/lib/extensions/builtin/`). It has none for a
 # video or its frames, which derive from an image here, for a frame of a point-cloud sequence,
-# which derives from a point cloud, or for a PDF; the legacy interface shows video but reviews
-# nothing. Add a kind when an interface can show it for review.
+# which derives from a point cloud, or for a PDF; the legacy interface reviews still images, and
+# shows video without reviewing it. Add a kind when an interface can show it for review.
 _SHOWN_FOR_REVIEW: tuple[Callable[[type], bool], ...] = (is_image, is_point_cloud, is_text)
 _FRAMES_OF_A_SEQUENCE: tuple[Callable[[type], bool], ...] = (is_sequence_frame, is_point_cloud_frame)
 
