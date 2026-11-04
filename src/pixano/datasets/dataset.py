@@ -27,6 +27,7 @@ import shortuuid
 from lancedb.common import DATA
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
+from pydantic import create_model
 from s3path import S3Path
 
 from pixano.datasets.queries import TableQueryBuilder
@@ -41,11 +42,13 @@ from pixano.datasets.utils.integrity import (
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
     Conversation,
+    Entity,
     Message,
     Record,
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    canonical_table_name_for_slot,
     is_entity_annotation,
     is_image,
     is_sequence_frame,
@@ -58,6 +61,7 @@ from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
+from .dataset_schema import _serialize_table_schema
 from .dataset_stat import DatasetStatistic, SplitStatusCount
 from .locking import dataset_mutation_lock, dataset_write
 
@@ -264,6 +268,35 @@ class Dataset:
 
         self._patch_info_json({"spec_version": self._CURRENT_SPEC_VERSION})
         self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    @dataset_write
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there.
+
+        For a job that writes a class on the objects it detects, on a dataset whose entities
+        have nowhere to hold one — nuScenes as imported, a dataset of plain images. The schema
+        class gains the field, the table gains the column, and `info.json` is rewritten, so the
+        interface offers the field like any other. Idempotent: a field already there is left
+        as it is.
+
+        Args:
+            name: The field to add, typed as text.
+
+        Raises:
+            DatasetAccessError: The dataset declares no entities.
+        """
+        declared = self.info.entity
+        if declared is None:
+            raise DatasetAccessError(f"Dataset {self.id} declares no entities.")
+        schema: type[Entity] = declared
+        table_name = canonical_table_name_for_slot("entity")
+        if name not in schema.model_fields:
+            schema = create_model(schema.__name__, __base__=schema, **{name: (str, "")})  # type: ignore[call-overload]
+            self.info.entity = schema
+            self.info.tables[table_name] = schema
+            self._table_handles.pop(table_name, None)
+        self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
+        self._patch_info_json({"entity": _serialize_table_schema(schema)})
 
     def _patch_info_json(self, fields: dict[str, Any]) -> None:
         """Set top-level fields of `info.json`, leaving the rest of the document as written.

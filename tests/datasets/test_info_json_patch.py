@@ -41,6 +41,16 @@ def _write_info_json(dataset: Dataset, info_json: dict[str, Any]) -> None:
     dataset._info_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
 
 
+def _with_unreadable_view(dataset: Dataset) -> Dataset:
+    """The dataset reopened after a later build gave it a view this one cannot read."""
+    info_json = _info_json(dataset)
+    info_json["views"][UNREADABLE_VIEW_NAME] = UNREADABLE_VIEW
+    _write_info_json(dataset, info_json)
+    reopened = Dataset(dataset.path)
+    assert UNREADABLE_VIEW_NAME not in reopened.info.views  # dropped on read, the premise
+    return reopened
+
+
 def _outdated(dataset: Dataset) -> None:
     """Take the dataset back one spec version, so that the next opener migrates it."""
     info_json = _info_json(dataset)
@@ -107,3 +117,23 @@ class TestStorageMigrationPatch:
         assert [json.loads(content) for content in written] == [
             {**stored, "spec_version": Dataset._CURRENT_SPEC_VERSION}
         ]
+
+
+class TestEntityFieldPatch:
+    def test_keeps_views_this_build_cannot_deserialize(self) -> None:
+        dataset = _with_unreadable_view(_dataset())
+
+        dataset.ensure_entity_text_field("category")
+
+        info_json = _info_json(dataset)
+        assert info_json["views"][UNREADABLE_VIEW_NAME] == UNREADABLE_VIEW
+        assert "category" in info_json["entity"]["fields"]
+        assert _leftover_temporary_files(dataset) == []
+
+    def test_keeps_the_permissions_of_info_json(self) -> None:
+        dataset = _dataset()
+        dataset._info_file.chmod(SHARED_PERMISSIONS)
+
+        dataset.ensure_entity_text_field("category")
+
+        assert stat.S_IMODE(dataset._info_file.stat().st_mode) == SHARED_PERMISSIONS
