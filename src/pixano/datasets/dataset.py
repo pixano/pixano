@@ -296,8 +296,9 @@ class Dataset:
         For a job that writes a class on the objects it detects, on a dataset whose entities
         have nowhere to hold one — nuScenes as imported, a dataset of plain images. The schema
         class gains the field, the table gains the column, and `info.json` is rewritten, so the
-        interface offers the field like any other. Idempotent: a field already there is left
-        as it is.
+        interface offers the field like any other. Idempotent: a field already declared, with its
+        column, is left as it is and nothing is written — a rewrite of `info.json` would make every
+        other holder of the dataset stale (`is_stale`), and a job calls this once per chunk.
 
         Args:
             name: The field to add, typed as text.
@@ -310,6 +311,8 @@ class Dataset:
             raise DatasetAccessError(f"Dataset {self.id} declares no entities.")
         schema: type[Entity] = declared
         table_name = canonical_table_name_for_slot("entity")
+        if name in schema.model_fields and name in self.open_table(table_name).schema.names:
+            return
         if name not in schema.model_fields:
             schema = create_model(schema.__name__, __base__=schema, **{name: (str, "")})  # type: ignore[call-overload]
             self.info.entity = schema
