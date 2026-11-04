@@ -20,13 +20,26 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pyarrow as pa
 import pytest
 from fastapi.testclient import TestClient
 
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset, DatasetInfo
-from pixano.features import BBox, Classification, CompressedRLE, Entity, Image, Record, Relation, TextSpan, Tracklet
+from pixano.datasets.queries import TableQueryBuilder
+from pixano.features import (
+    BBox,
+    Classification,
+    CompressedRLE,
+    Entity,
+    Image,
+    Record,
+    Relation,
+    SequenceFrame,
+    TextSpan,
+    Tracklet,
+)
 
 
 DATASET_ID = "review"
@@ -235,6 +248,133 @@ class TestNextRecordToReview:
             dataset.add_data(table_name, [row], raise_or_warn="none")
 
         assert _next(_client(dataset)) == {"record_id": "r4", "remaining": 1}
+
+
+# A model's rows on a video's frames
+# ==================================
+
+IMAGE_VIEW = "camera"
+VIDEO_VIEW = "video"
+
+
+def _frame(frame_id: str, record_id: str, frame_index: int) -> SequenceFrame:
+    return SequenceFrame(
+        id=frame_id,
+        record_id=record_id,
+        logical_name=VIDEO_VIEW,
+        timestamp=float(frame_index),
+        frame_index=frame_index,
+    )
+
+
+def _pending_box_on(view_id: str, box_id: str, record_id: str) -> BBox:
+    box = _box(box_id, record_id, "pending", MODEL)
+    box.view_id = view_id
+    return box
+
+
+def _pending_mask_on(view_id: str, mask_id: str, record_id: str) -> CompressedRLE:
+    mask = _mask(mask_id, record_id, "pending", MODEL)
+    mask.view_id = view_id
+    return mask
+
+
+def _image_and_video_dataset(boxes: list[BBox], masks: list[CompressedRLE] | None = None) -> Dataset:
+    """Records holding a camera image and a video of two frames each, with a model's rows on them."""
+    info = DatasetInfo(
+        id=DATASET_ID,
+        name=DATASET_ID,
+        record=Record,
+        entity=Entity,
+        bbox=BBox,
+        mask=CompressedRLE,
+        views={IMAGE_VIEW: Image, VIDEO_VIEW: SequenceFrame},
+    )
+    dataset = _create(Path(tempfile.mkdtemp()) / DATASET_ID, info, boxes, masks or [])
+    images = [Image(id=f"image_{record_id}", record_id=record_id, logical_name=IMAGE_VIEW) for record_id in RECORD_IDS]
+    frames = [_frame(f"frame_{record_id}_{index}", record_id, index) for record_id in RECORD_IDS for index in (0, 1)]
+    dataset.add_data("images", images, raise_or_warn="none")
+    dataset.add_data("sequence_frames", frames, raise_or_warn="none")
+    return dataset
+
+
+class TestRowsNoInterfaceCanShow:
+    """The review interface shows still images, point clouds and texts, not a video or its frames,
+    where the legacy interface's video tools store a model's boxes and masks, pending. Such rows
+    keep their status, but the queue does not propose them: a reviewer would be sent to a record
+    showing nothing to review, and `remaining` would never reach 0."""
+
+    def test_a_record_whose_only_pending_rows_are_on_frames_is_not_proposed(self):
+        dataset = _image_and_video_dataset(
+            [_pending_box_on("image_r1", "box_r1", "r1"), _pending_box_on("frame_r2_0", "box_r2", "r2")]
+        )
+        client = _client(dataset)
+
+        assert _next(client) == {"record_id": "r1", "remaining": 1}
+        assert _next(client, after="r1") == {"record_id": "r1", "remaining": 1}
+        assert _get(client, "bboxes", "box_r2")["review_status"] == "pending"
+
+    def test_a_record_with_a_pending_row_on_its_image_stays_until_that_row_is_reviewed(self):
+        dataset = _image_and_video_dataset(
+            [_pending_box_on("frame_r3_1", "box_r3", "r3")], [_pending_mask_on("image_r3", "mask_r3", "r3")]
+        )
+        client = _client(dataset)
+
+        assert _next(client) == {"record_id": "r3", "remaining": 1}
+
+        resp = client.put(f"{BASE}/masks/mask_r3", json={"review_status": "accepted"})
+        assert resp.status_code == 200, resp.text
+
+        assert _next(client) == {"record_id": None, "remaining": 0}
+
+    def test_a_row_naming_the_video_by_its_logical_name_is_not_proposed(self):
+        """The review interface finds a row's view by its id or by its logical name."""
+        dataset = _image_and_video_dataset(
+            [_pending_box_on(VIDEO_VIEW, "box_r4", "r4"), _pending_box_on(IMAGE_VIEW, "box_r5", "r5")]
+        )
+
+        assert _next(_client(dataset)) == {"record_id": "r5", "remaining": 1}
+
+    def test_a_row_naming_no_view_of_the_dataset_is_still_proposed(self):
+        """Only a row known to be on a view no interface shows is left out."""
+        dataset = _image_and_video_dataset(
+            [_pending_box_on("", "box_r1", "r1"), _pending_box_on("gone", "box_r6", "r6")]
+        )
+
+        assert _next(_client(dataset)) == {"record_id": "r1", "remaining": 2}
+
+    def test_tables_holding_their_ids_in_another_string_type_are_read_together(self, monkeypatch: pytest.MonkeyPatch):
+        """A table written by another tool may hold its ids as large strings, beside tables
+        holding strings: the queue reads both, rather than failing on the mix."""
+        read_as_written = TableQueryBuilder.to_arrow
+
+        def masks_in_large_strings(query: TableQueryBuilder) -> pa.Table:
+            table = read_as_written(query)
+            if query.table.name != "masks":
+                return table
+            return table.cast(
+                pa.schema(
+                    pa.field(field.name, pa.large_string()) if pa.types.is_string(field.type) else field
+                    for field in table.schema
+                )
+            )
+
+        monkeypatch.setattr(TableQueryBuilder, "to_arrow", masks_in_large_strings)
+        dataset = _image_and_video_dataset(
+            [_pending_box_on("image_r1", "box_r1", "r1"), _pending_box_on("frame_r2_0", "box_r2", "r2")],
+            [_pending_mask_on("image_r3", "mask_r3", "r3"), _pending_mask_on("frame_r4_0", "mask_r4", "r4")],
+        )
+
+        assert _next(_client(dataset)) == {"record_id": "r1", "remaining": 2}
+
+    def test_past_the_lookup_limit_the_frames_are_read_whole(self, monkeypatch: pytest.MonkeyPatch):
+        """Many rows under review on a video read every frame id at once, instead of looking up
+        their frames by the thousand."""
+        monkeypatch.setattr("pixano.api.review._VIEW_IDS_LOOKUP_LIMIT", 1)
+        on_frames = [_pending_box_on(f"frame_r2_{index}", f"box_r2_{index}", "r2") for index in (0, 1)]
+        dataset = _image_and_video_dataset([*on_frames, _pending_box_on("image_r3", "box_r3", "r3")])
+
+        assert _next(_client(dataset)) == {"record_id": "r3", "remaining": 1}
 
 
 # A person's edit of what an entity says, and each kind's score

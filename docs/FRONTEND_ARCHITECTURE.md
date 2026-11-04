@@ -137,7 +137,11 @@ Three ideas hold it together:
   holding a model's annotation at a review status, whatever its kind (it scans
   the tables of every kind a person can review —
   `pixano.schemas.is_reviewable_annotation`: every entity annotation but
-  tracklets, relations and text spans — and never creates one).
+  tracklets, relations and text spans — and never creates one). A row drawn on a
+  view this interface has no widget for — a video or its frames, a frame of a
+  point-cloud sequence, a PDF (`pixano.schemas.is_reviewable_view`) — is left
+  out and keeps its status: the record it proposes always shows something to
+  review.
 
 ### REST surface the frontend uses
 | Function | Defined in | HTTP | Notes |

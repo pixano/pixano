@@ -25,7 +25,8 @@ class NextRecordResponse(BaseModel):
 
     Attributes:
         record_id: The first record after ``after``, in record id order, wrapping round to the
-            first record. Null when no record holds a model's annotation at the status.
+            first record. Null when no record holds a model's annotation at the status that an
+            interface can show for review.
         remaining: How many records hold one. This includes the record the reviewer is on,
             when it still holds one.
     """
@@ -41,7 +42,9 @@ class NextRecordResponse(BaseModel):
     summary="Get the next record to review",
     description=(
         "The next record, in record id order, that holds a model's annotation at the given review "
-        "status, whatever the kind of annotation. Wraps round to the first record."
+        "status, whatever the kind of annotation. Wraps round to the first record. An annotation "
+        "drawn on a view no interface can show for review, such as a frame of a video, is left out "
+        "and keeps its status."
     ),
 )
 def get_next_record_to_review(

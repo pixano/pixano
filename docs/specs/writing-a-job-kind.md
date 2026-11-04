@@ -243,8 +243,10 @@ leaves no row behind. What it means for a kind:
   (backend-processing §19).
 - **Nothing to register — for a kind an interface can review.** Which kinds those are is one
   predicate, `pixano.schemas.is_reviewable_annotation`: every entity annotation but tracklets,
-  relations and text spans. The next record to review is found by scanning those tables, the
-  interface reads the status from any row, and the export by status filters those tables only.
+  relations and text spans. The next record to review is found by scanning those tables — for
+  rows on a view an interface can show for review, `pixano.schemas.is_reviewable_view`: not a
+  video or its frames —, the interface reads the status from any row, and the export by status
+  filters those tables only.
   A kind writing boxes, 3D boxes, masks, keypoints, paths or classifications is reviewable as
   it stands. A model's tracklets, relations or text spans stay outside the review — the queue
   does not wait for them, an export by status does not filter them (a model's tracklet goes

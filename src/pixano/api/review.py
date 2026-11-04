@@ -15,11 +15,11 @@ scan:
 - which status an update may give a row. The service applies these rules to every annotation
   it updates or creates;
 - which annotations a person's edit of an entity accepts;
-- which record still holds annotations at a given status, so that a reviewer can move from one
-  record to the next (`GET /datasets/{id}/review/next`).
+- which record still holds annotations at a given status, on a view an interface can show for
+  review, so that a reviewer can move from one record to the next (`GET /datasets/{id}/review/next`).
 
 What every layer reads the same way — which stored status means "not reviewed yet", which kinds
-can be reviewed, which fields hold a model's score — comes from `pixano.schemas`.
+and which views can be reviewed, which fields hold a model's score — comes from `pixano.schemas`.
 """
 
 from bisect import bisect_right
@@ -27,6 +27,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+import pyarrow as pa
+import pyarrow.compute as pc
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
 
@@ -37,6 +39,8 @@ from pixano.schemas import (
     ReviewStatus,
     is_entity_annotation,
     is_reviewable_annotation,
+    is_reviewable_view,
+    is_view,
     stored_statuses,
 )
 from pixano.utils.python import to_sql_list
@@ -52,6 +56,14 @@ _STATUS_COLUMN = "review_status"
 _SOURCE_COLUMN = "source_type"
 _RECORD_COLUMN = "record_id"
 _ENTITY_COLUMN = "entity_id"
+_VIEW_COLUMN = "view_id"
+_ID_COLUMN = "id"
+
+_VIEW_IDS_LOOKUP_LIMIT = 1_000
+"""The most view ids looked up in a view table by one filter. Past it, the table's ids are read
+whole, which costs less than lookups by the thousand. Measured in process on an M1 Pro: 100 000
+rows under review on 300 000 frames take about 105 ms read whole, 480 ms looked up; reading a
+million frame ids takes about 160 ms."""
 
 # What an update of a model's row may ask for: ``pending``, which only echoes the status a model's
 # output arrives with, and ``accepted``, the one decision. A person who rejects the row deletes it.
@@ -209,10 +221,13 @@ def records_at(dataset: Dataset, status: ReviewStatus) -> list[str]:
     """The records that hold a model's annotation at this status, in record id order.
 
     Each table of a kind a person can review (`pixano.schemas.is_reviewable_annotation`) is
-    scanned, whatever that kind, and only its record ids are read. A kind no interface can review
-    would keep its records in the queue for good. The scan uses the tables the dataset has. It
-    never goes through `BaseService.resolve_table`, which creates a missing annotation table: a
-    review must not change the dataset's tables.
+    scanned, whatever that kind, and only its record and view ids are read. A kind no interface
+    can review would keep its records in the queue for good, and so would a row drawn on a view
+    no interface can show for review (`pixano.schemas.is_reviewable_view`): a frame of a video,
+    where the legacy interface's video tools store a model's boxes and masks. Such a row is left
+    out and keeps its status; a record holding nothing else is not proposed. The scan uses the
+    tables the dataset has. It never goes through `BaseService.resolve_table`, which creates a
+    missing annotation table: a review must not change the dataset's tables.
 
     Args:
         dataset: The dataset under review.
@@ -223,11 +238,20 @@ def records_at(dataset: Dataset, status: ReviewStatus) -> list[str]:
         The distinct record ids, sorted.
     """
     where = f"{_SOURCE_COLUMN} = '{MODEL_SOURCE}' AND {_STATUS_COLUMN} IN {to_sql_list(stored_statuses(status))}"
-    records: set[str] = set()
-    for table in _tables_under_review(dataset):
-        found = TableQueryBuilder(table).select([_RECORD_COLUMN]).where(where).to_arrow()
-        records.update(found.column(_RECORD_COLUMN).to_pylist())
-    return sorted(records)
+    not_shown = _ViewsNotShown.of(dataset)
+    # Without such a view, every row is on a view an interface shows: the view ids are not read.
+    columns = [_RECORD_COLUMN, _VIEW_COLUMN] if not_shown else [_RECORD_COLUMN]
+    found = [
+        TableQueryBuilder(table).select(columns).where(where).to_arrow() for table in _tables_under_review(dataset)
+    ]
+    if not found:
+        return []
+    # Read together, the tables must agree on each column's type. A table written by another tool
+    # may hold its ids as large strings beside tables holding strings: "permissive" widens them.
+    rows = pa.concat_tables(found, promote_options="permissive")
+    if not_shown:
+        rows = not_shown.drop_rows_on_them(dataset, rows)
+    return sorted(pc.unique(rows.column(_RECORD_COLUMN)).to_pylist())
 
 
 def _tables_under_review(dataset: Dataset) -> Iterator[LanceTable]:
@@ -243,6 +267,56 @@ def _tables_under_review(dataset: Dataset) -> Iterator[LanceTable]:
         if _STATUS_COLUMN not in table.schema.names:
             continue
         yield table
+
+
+@dataclass(frozen=True)
+class _ViewsNotShown:
+    """The views of a dataset that no interface can show for review (`is_reviewable_view`).
+
+    Attributes:
+        tables: Their tables, where a row's ``view_id`` is looked up.
+        names: Their logical names. A row may hold one as its ``view_id`` in place of the view's
+            id, as some legacy rows hold a camera's name: the review interface resolves a row's
+            view by either (`SeedLoadContext.views` in ui/apps/web).
+    """
+
+    tables: tuple[str, ...]
+    names: frozenset[str]
+
+    @classmethod
+    def of(cls, dataset: Dataset) -> "_ViewsNotShown":
+        return cls(
+            tables=tuple(
+                name
+                for name, schema in dataset.info.tables.items()
+                if is_view(schema) and not is_reviewable_view(schema)
+            ),
+            names=frozenset(name for name, schema in dataset.info.views.items() if not is_reviewable_view(schema)),
+        )
+
+    def __bool__(self) -> bool:
+        return bool(self.tables)
+
+    def drop_rows_on_them(self, dataset: Dataset, rows: pa.Table) -> pa.Table:
+        """The rows whose ``view_id`` names none of these views, by id or by logical name.
+
+        A row with no view, or naming a view the dataset does not hold, stays: nothing says it
+        cannot be shown.
+        """
+        view_column = rows.column(_VIEW_COLUMN)
+        view_ids = [view_id for view_id in pc.unique(view_column).to_pylist() if view_id]
+        to_look_up = [view_id for view_id in view_ids if view_id not in self.names]
+        hidden_ids: list[pa.Array] = [pa.array(sorted(self.names.intersection(view_ids)), type=pa.string())]
+        if to_look_up:
+            for table_name in self.tables:
+                query = TableQueryBuilder(dataset.open_table(table_name)).select([_ID_COLUMN])
+                if len(to_look_up) <= _VIEW_IDS_LOOKUP_LIMIT:
+                    query = query.where(f"{_ID_COLUMN} IN {to_sql_list(to_look_up)}")
+                hidden_ids.extend(query.to_arrow().column(_ID_COLUMN).chunks)
+        value_set = pa.concat_arrays([chunk.cast(view_column.type) for chunk in hidden_ids])
+        if len(value_set) == 0:
+            return rows
+        return rows.filter(pc.invert(pc.is_in(view_column, value_set=value_set)))
 
 
 def next_record(dataset: Dataset, status: ReviewStatus, after: str | None = None) -> NextRecord:
