@@ -6,9 +6,11 @@
 
 """The review of a model's annotations through the API, beyond one box's update.
 
-The rules of an update that reach past the row it names: a person's edit of an entity accepts the
-model's pending annotations naming it, and each kind's own score stays the model's through a
-person's edit, following what it scores.
+`GET /datasets/{id}/review/next` finds the next record holding a model's annotations at a status.
+It looks for model annotations of any kind a person can review, here boxes and masks, and must
+leave the dataset's tables as they are. The rules of an update that reach past the row it names are
+here too: a person's edit of an entity accepts the model's pending annotations naming it, and each
+kind's own score stays the model's through a person's edit, following what it scores.
 """
 
 import json
@@ -17,22 +19,28 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
 from pixano.api.main import create_app
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset, DatasetInfo
-from pixano.features import BBox, Classification, Entity, Image, Record, Tracklet
+from pixano.features import BBox, Classification, CompressedRLE, Entity, Image, Record, Relation, TextSpan, Tracklet
 
 
 DATASET_ID = "review"
 BASE = f"/datasets/{DATASET_ID}"
+NEXT = f"{BASE}/review/next"
 
 MODEL = {"source_type": "model", "source_name": "detection", "source_metadata": '{"model": "yolo"}'}
 HUMAN = {"source_type": "ground_truth", "source_name": "Ground Truth"}
+MASK_SHAPE = (4, 4)
 
-RECORD_IDS = ["r1", "r2"]
+# What each record holds. r2 has a person's annotations only, and r6 holds nothing.
+PENDING_RECORDS = ["r1", "r3", "r5"]
+ACCEPTED_RECORDS = ["r3", "r4"]
+RECORD_IDS = ["r1", "r2", "r3", "r4", "r5", "r6"]
 
 
 def _box(box_id: str, record_id: str, status: str, source: dict[str, str]) -> BBox:
@@ -49,6 +57,31 @@ def _box(box_id: str, record_id: str, status: str, source: dict[str, str]) -> BB
     )
 
 
+def _mask(mask_id: str, record_id: str, status: str, source: dict[str, str]) -> CompressedRLE:
+    return CompressedRLE.from_mask(
+        np.ones(MASK_SHAPE, dtype=np.uint8),
+        id=mask_id,
+        record_id=record_id,
+        entity_id=f"entity_{mask_id}",
+        view_id="image",
+        review_status=status,
+        **source,
+    )
+
+
+def _create(path: Path, info: DatasetInfo, boxes: list[BBox], masks: list[CompressedRLE]) -> Dataset:
+    dataset = Dataset.create(path, info)
+    dataset.add_records({"records": [Record(id=record_id) for record_id in RECORD_IDS]})
+    annotations = [*boxes, *masks]
+    entities = [Entity(id=row.entity_id, record_id=row.record_id) for row in annotations]
+    dataset.add_data("entities", entities, raise_or_warn="none")
+    if boxes:
+        dataset.add_data("bboxes", boxes, raise_or_warn="none")
+    if masks:
+        dataset.add_data("masks", masks, raise_or_warn="none")
+    return dataset
+
+
 def _client(dataset: Dataset) -> TestClient:
     models_dir = Path(tempfile.mkdtemp()) / "models"
     models_dir.mkdir()
@@ -61,6 +94,147 @@ def _client(dataset: Dataset) -> TestClient:
     app = create_app(settings)
     app.dependency_overrides[get_settings] = settings_override
     return TestClient(app)
+
+
+@pytest.fixture
+def dataset() -> Dataset:
+    """Boxes and masks at every status, the way the worker writes a model's output."""
+    boxes = [
+        _box("box_r1_pending", "r1", "pending", MODEL),
+        _box("box_r2_human", "r2", "", HUMAN),
+        _box("box_r3_pending", "r3", "pending", MODEL),
+        _box("box_r3_accepted", "r3", "accepted", MODEL),
+        _box("box_r4_accepted", "r4", "accepted", MODEL),
+    ]
+    masks = [
+        _mask("mask_r2_human", "r2", "", HUMAN),
+        _mask("mask_r5_pending", "r5", "pending", MODEL),
+    ]
+    info = DatasetInfo(
+        id=DATASET_ID,
+        name=DATASET_ID,
+        record=Record,
+        entity=Entity,
+        bbox=BBox,
+        mask=CompressedRLE,
+        views={"image": Image},
+    )
+    return _create(Path(tempfile.mkdtemp()) / DATASET_ID, info, boxes, masks)
+
+
+@pytest.fixture
+def client(dataset: Dataset) -> TestClient:
+    return _client(dataset)
+
+
+def _next(client: TestClient, **params) -> dict:
+    resp = client.get(NEXT, params=params)
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+class TestNextRecordToReview:
+    def test_starts_at_the_first_record_holding_a_pending_annotation(self, client: TestClient):
+        assert _next(client) == {"record_id": "r1", "remaining": len(PENDING_RECORDS)}
+
+    def test_goes_through_the_records_in_id_order_and_wraps_round(self, client: TestClient):
+        visited = [_next(client, after=record_id)["record_id"] for record_id in PENDING_RECORDS]
+
+        assert visited == ["r3", "r5", "r1"]
+
+    def test_finds_a_record_whose_only_pending_annotation_is_a_mask(self, client: TestClient):
+        assert _next(client, after="r4")["record_id"] == "r5"
+
+    def test_never_returns_a_record_holding_only_a_person_annotations(self, client: TestClient):
+        returned = {_next(client, after=record_id)["record_id"] for record_id in RECORD_IDS}
+
+        assert returned == set(PENDING_RECORDS)
+
+    def test_a_record_left_without_pending_annotations_drops_out(self, client: TestClient):
+        """A decision saved through the API takes the record out of the queue."""
+        resp = client.put(f"{BASE}/bboxes/box_r1_pending", json={"review_status": "accepted"})
+        assert resp.status_code == 200, resp.text
+
+        assert _next(client) == {"record_id": "r3", "remaining": len(PENDING_RECORDS) - 1}
+
+    def test_answers_null_when_nothing_is_left(self, client: TestClient):
+        """Accepted, or rejected: a reject is the row's delete, as the interface sends it."""
+        for resource, row_id in [("bboxes", "box_r1_pending"), ("masks", "mask_r5_pending")]:
+            resp = client.put(f"{BASE}/{resource}/{row_id}", json={"review_status": "accepted"})
+            assert resp.status_code == 200, resp.text
+        resp = client.delete(f"{BASE}/bboxes/box_r3_pending", params={"prune_orphan_entity": True})
+        assert resp.status_code == 204, resp.text
+
+        assert _next(client, after="r3") == {"record_id": None, "remaining": 0}
+
+    def test_follows_the_status_asked_for(self, client: TestClient):
+        assert _next(client, status="accepted") == {"record_id": "r3", "remaining": len(ACCEPTED_RECORDS)}
+        assert _next(client, status="accepted", after="r4")["record_id"] == "r3"
+
+    def test_a_model_row_without_a_status_counts_as_pending(self, dataset: Dataset, client: TestClient):
+        """A re-imported model row has no status, since the JSONL does not carry it yet. It was
+        never reviewed, as the export by status also reads it."""
+        # Written before the API's first request. Once open, the API's dataset does not see what
+        # another instance writes until it writes itself or reopens (known defect, spec §18).
+        dataset.add_data("entities", [Entity(id="entity_box_r6", record_id="r6")], raise_or_warn="none")
+        dataset.add_data("bboxes", [_box("box_r6", "r6", "", MODEL)], raise_or_warn="none")
+
+        assert _next(client, after="r5") == {"record_id": "r6", "remaining": len(PENDING_RECORDS) + 1}
+
+    @pytest.mark.parametrize("status", ["approved", "", "PENDING", "corrected", "rejected"])
+    def test_refuses_a_status_that_does_not_exist(self, client: TestClient, status: str):
+        assert client.get(NEXT, params={"status": status}).status_code == 422
+
+    def test_creates_no_table_on_a_dataset_without_masks(self):
+        """The scan reads the tables the dataset has. Going through `BaseService.resolve_table`
+        would create every annotation table it asks about."""
+        info = DatasetInfo(
+            id=DATASET_ID, name=DATASET_ID, record=Record, entity=Entity, bbox=BBox, views={"image": Image}
+        )
+        path = Path(tempfile.mkdtemp()) / DATASET_ID
+        dataset = _create(path, info, [_box("box_r1_pending", "r1", "pending", MODEL)], [])
+        tables_before = set(dataset.info.tables)
+        assert "masks" not in tables_before
+
+        assert _next(_client(dataset)) == {"record_id": "r1", "remaining": 1}
+
+        assert set(Dataset(path).info.tables) == tables_before
+        assert not (path / Dataset._DB_PATH / "masks.lance").exists()
+
+    def test_a_kind_no_person_can_review_does_not_hold_the_queue(self):
+        """No interface shows a tracklet, a relation or a text span for review. A model's row of
+        one of them would keep its record in the queue for good: a reviewer moving to the next
+        record would cycle over records showing nothing to review, and `remaining` would never
+        reach 0."""
+        info = DatasetInfo(
+            id=DATASET_ID,
+            name=DATASET_ID,
+            record=Record,
+            entity=Entity,
+            bbox=BBox,
+            tracklet=Tracklet,
+            relation=Relation,
+            text_span=TextSpan,
+            views={"image": Image},
+        )
+        dataset = _create(Path(tempfile.mkdtemp()) / DATASET_ID, info, [_box("box_r4", "r4", "pending", MODEL)], [])
+        unreviewable = {
+            "tracklets": Tracklet(id="tracklet_r1", record_id="r1", entity_id="entity_r1", **MODEL),
+            "relations": Relation(id="relation_r2", record_id="r2", predicate="next_to", **MODEL),
+            "text_spans": TextSpan(
+                id="span_r3",
+                record_id="r3",
+                entity_id="entity_r3",
+                mention="a",
+                spans_start=[0],
+                spans_end=[1],
+                **MODEL,
+            ),
+        }
+        for table_name, row in unreviewable.items():
+            dataset.add_data(table_name, [row], raise_or_warn="none")
+
+        assert _next(_client(dataset)) == {"record_id": "r4", "remaining": 1}
 
 
 # A person's edit of what an entity says, and each kind's score
@@ -160,8 +334,8 @@ def _legacy_entity_edit(client: TestClient, entity_id: str, **changes) -> dict:
 class TestAnEntityEditAccepts:
     """A detection's class lives in its entity. A person who fixes it there saves an edit of what
     the model's annotations naming that entity say, which accepts them: left pending, the next run
-    would write the model's class back, and a reader of the status would take them as never
-    reviewed."""
+    would write the model's class back, and the queue and the export by status would read them as
+    never reviewed."""
 
     def test_relabelling_an_object_accepts_every_pending_model_annotation_naming_it(self, labelled_client: TestClient):
         box_before = _get(labelled_client, "bboxes", "box_car")
@@ -198,8 +372,8 @@ class TestAnEntityEditAccepts:
     def test_a_model_annotation_without_a_status_is_accepted_too(self):
         """A re-imported model row has no status, since the JSONL does not carry it yet, and reads as
         pending (`pixano.schemas.NOT_REVIEWED_STATUSES`). The edit looks for the rows to accept by
-        their stored status: it must name the empty one, or the row stays without a status and a
-        reader of the status takes it as never reviewed."""
+        their stored status: it must name the empty one, or the row stays without a status and the
+        queue and the export by status read it as never reviewed."""
         dataset = _labelled_dataset()
         without_status = _get_row(dataset, "bboxes", "box_car").model_copy(
             update={"id": "box_car_without_status", "review_status": ""}
@@ -210,6 +384,13 @@ class TestAnEntityEditAccepts:
         _legacy_entity_edit(client, "e_car", category="truck")
 
         assert _get(client, "bboxes", "box_car_without_status")["review_status"] == "accepted"
+
+    def test_the_record_leaves_the_queue(self, labelled_client: TestClient):
+        assert _next(labelled_client) == {"record_id": "r1", "remaining": 2}
+
+        _legacy_entity_edit(labelled_client, "e_car", category="truck")
+
+        assert _next(labelled_client) == {"record_id": "r2", "remaining": 1}
 
     def test_an_edit_that_sends_the_entity_back_unchanged_accepts_nothing(self, labelled_client: TestClient):
         _legacy_entity_edit(labelled_client, "e_car")
@@ -484,8 +665,16 @@ def _without_status_column(dataset: Dataset, table_name: str, monkeypatch: pytes
 
 
 class TestDatasetThatCouldNotMigrate:
-    """A table without the status column: a decision cannot be stored in it. The API still
-    answers."""
+    """A table without the status column: a decision cannot be stored in it, so its rows are
+    outside the review. The API still answers."""
+
+    def test_the_queue_skips_a_table_without_the_column(self, dataset: Dataset, monkeypatch: pytest.MonkeyPatch):
+        _without_status_column(dataset, "masks", monkeypatch)
+        client = _client(dataset)
+
+        # r5's only pending row is a mask. r1 and r3 hold pending boxes.
+        assert _next(client) == {"record_id": "r1", "remaining": 2}
+        assert "review_status" not in Dataset(dataset.path).open_table("masks").schema.names
 
     def test_an_entity_edit_accepts_nothing_in_a_table_without_the_column(self, monkeypatch: pytest.MonkeyPatch):
         dataset = _labelled_dataset()

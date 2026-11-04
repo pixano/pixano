@@ -26,7 +26,8 @@ NOT_REVIEWED_STATUSES: tuple[str, ...] = (ReviewStatus.PENDING.value, "")
 ``pending`` is the status a model's output arrives with. The empty status is a model's row stored
 without one: re-imported from JSONL, whose grammar does not carry the status, or written by a
 client that sets none, as the legacy interface's smart tracking does. Nobody reviewed either, so
-both read as ``pending``.
+both read as ``pending``: for the API's rules, for its queue, for the export by status, and for the
+worker's writer.
 """
 
 _SCORE_DECLARATION = "MODEL_SCORE_FIELDS"
@@ -63,16 +64,16 @@ def stored_statuses(status: ReviewStatus) -> tuple[str, ...]:
 # The kinds of entity annotation that no person can review yet. A tracklet is structure: the span
 # of an object across frames, reviewed through the per-frame annotations it groups. No interface
 # can show a relation or a text span for review yet. A model's row of such a kind would stay
-# pending forever, and an export by status would drop it although nobody could have accepted it.
-# Remove a kind from this list when an interface can review it.
+# pending forever: the queue would never empty, and an export by status would drop it although
+# nobody could have accepted it. Remove a kind from this list when an interface can review it.
 _NOT_REVIEWABLE: tuple[Callable[[type], bool], ...] = (is_tracklet, is_relation, is_text_span)
 
 
 def is_reviewable_annotation(cls: type) -> bool:
     """Whether a person can review a model's rows of this schema.
 
-    The export by review status filters only these. Every other row is outside the review: an
-    export keeps it whatever its status.
+    The review queue and the export by review status read only these. Every other row is outside
+    the review: the queue does not wait for it, and an export keeps it whatever its status.
 
     Args:
         cls: An annotation schema.

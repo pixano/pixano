@@ -133,6 +133,11 @@ Three ideas hold it together:
     One rule set, every kind — see `docs/specs/backend-processing.md` §19.
   - a `PUT` whose body names another row (an `id` other than the path's) is
     answered 400 before anything else, for every resource.
+- **`api/routers/review.py`** — `GET /datasets/{id}/review/next`: the next record
+  holding a model's annotation at a review status, whatever its kind (it scans
+  the tables of every kind a person can review —
+  `pixano.schemas.is_reviewable_annotation`: every entity annotation but
+  tracklets, relations and text spans — and never creates one).
 
 ### REST surface the frontend uses
 | Function | Defined in | HTTP | Notes |

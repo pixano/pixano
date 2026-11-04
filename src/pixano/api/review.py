@@ -4,24 +4,41 @@
 # License: CECILL-C
 # =====================================
 
-"""The review of a model's annotations: the status an update may give, and what an entity edit accepts.
+"""The review of a model's annotations: the status rules, and the next record to review.
 
 A model's annotation arrives ``pending``. A person accepts it — as it is, or by saving an edit of
 it — or rejects it, which deletes it (`ReviewStatus`). A person's own annotation carries no status,
-since there is nothing to review. The service applies these rules to every annotation it updates
-or creates, and to the annotations naming an entity it updates. None depends on the kind of
-annotation: every kind, including one added later, follows the same rules.
+since there is nothing to review. This module holds three things, and none depends on the kind of
+annotation. Every kind, including one added later, follows the same rules and is found by the same
+scan:
 
-What every layer reads the same way — which stored status means "not reviewed yet", which fields
-hold a model's score — comes from `pixano.schemas`.
+- which status an update may give a row. The service applies these rules to every annotation
+  it updates or creates;
+- which annotations a person's edit of an entity accepts;
+- which record still holds annotations at a given status, so that a reviewer can move from one
+  record to the next (`GET /datasets/{id}/review/next`).
+
+What every layer reads the same way — which stored status means "not reviewed yet", which kinds
+can be reviewed, which fields hold a model's score — comes from `pixano.schemas`.
 """
 
+from bisect import bisect_right
+from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Any
 
 from lancedb.pydantic import LanceModel
+from lancedb.table import LanceTable
 
 from pixano.datasets import Dataset
-from pixano.schemas import AnnotationSourceKind, ReviewStatus, is_entity_annotation, stored_statuses
+from pixano.datasets.queries import TableQueryBuilder
+from pixano.schemas import (
+    AnnotationSourceKind,
+    ReviewStatus,
+    is_entity_annotation,
+    is_reviewable_annotation,
+    stored_statuses,
+)
 from pixano.utils.python import to_sql_list
 
 
@@ -33,6 +50,7 @@ NO_STATUS = ""
 
 _STATUS_COLUMN = "review_status"
 _SOURCE_COLUMN = "source_type"
+_RECORD_COLUMN = "record_id"
 _ENTITY_COLUMN = "entity_id"
 
 # What an update of a model's row may ask for: ``pending``, which only echoes the status a model's
@@ -131,8 +149,8 @@ def acceptances_of_entity_edit(dataset: Dataset, entity_id: str) -> dict[str, li
     as the model wrote it. That is an edit of what the annotation says all the same, saved by the
     person, and it follows the rule of a saved edit of the row itself: a pending row becomes
     ``accepted``. Left pending, the next run of the model would write its own class back over the
-    person's, and a reader of the status would take the row as never reviewed. An accepted row is
-    already a person's work and is not rewritten.
+    person's, and the queue and the export by status would read the row as never reviewed. An
+    accepted row is already a person's work and is not rewritten.
 
     Every table of entity annotations is searched, whatever its kind. A table that lacks the
     status column is skipped: a dataset whose migration to the review layout failed, a read-only
@@ -172,13 +190,91 @@ def _human_row_refusal(status: Any) -> ReviewRuleError:
     )
 
 
+@dataclass(frozen=True)
+class NextRecord:
+    """The next record to review.
+
+    Attributes:
+        record_id: The first record after the one asked about, in record id order, wrapping
+            round to the first record. None when no record holds an annotation at the status.
+        remaining: How many records hold an annotation at the status. This includes the
+            record the reviewer is on, when it still holds one.
+    """
+
+    record_id: str | None
+    remaining: int
+
+
+def records_at(dataset: Dataset, status: ReviewStatus) -> list[str]:
+    """The records that hold a model's annotation at this status, in record id order.
+
+    Each table of a kind a person can review (`pixano.schemas.is_reviewable_annotation`) is
+    scanned, whatever that kind, and only its record ids are read. A kind no interface can review
+    would keep its records in the queue for good. The scan uses the tables the dataset has. It
+    never goes through `BaseService.resolve_table`, which creates a missing annotation table: a
+    review must not change the dataset's tables.
+
+    Args:
+        dataset: The dataset under review.
+        status: The status looked for. ``pending`` also finds a model's row with no status
+            (`pixano.schemas.NOT_REVIEWED_STATUSES`).
+
+    Returns:
+        The distinct record ids, sorted.
+    """
+    where = f"{_SOURCE_COLUMN} = '{MODEL_SOURCE}' AND {_STATUS_COLUMN} IN {to_sql_list(stored_statuses(status))}"
+    records: set[str] = set()
+    for table in _tables_under_review(dataset):
+        found = TableQueryBuilder(table).select([_RECORD_COLUMN]).where(where).to_arrow()
+        records.update(found.column(_RECORD_COLUMN).to_pylist())
+    return sorted(records)
+
+
+def _tables_under_review(dataset: Dataset) -> Iterator[LanceTable]:
+    """The dataset's tables of a kind a person can review, where a decision can be stored."""
+    for table_name, schema in dataset.info.tables.items():
+        if not is_reviewable_annotation(schema):
+            continue
+        table = dataset.open_table(table_name)
+        # A dataset whose migration to the review layout failed, a read-only library for
+        # instance, has tables without the column. A decision could not be stored in them, so
+        # their rows are outside the review, like a kind no interface can review: the queue
+        # does not wait for them.
+        if _STATUS_COLUMN not in table.schema.names:
+            continue
+        yield table
+
+
+def next_record(dataset: Dataset, status: ReviewStatus, after: str | None = None) -> NextRecord:
+    """The record to open next to review the annotations at a status.
+
+    Args:
+        dataset: The dataset under review.
+        status: The status the reviewer works on, usually ``pending``.
+        after: The record the reviewer is leaving, if any. It does not need to hold anything
+            at the status.
+
+    Returns:
+        The first record after ``after`` in record id order, wrapping round, and how many
+        records hold an annotation at the status.
+    """
+    records = records_at(dataset, status)
+    if not records:
+        return NextRecord(record_id=None, remaining=0)
+    following = bisect_right(records, after) if after is not None else 0
+    return NextRecord(record_id=records[following % len(records)], remaining=len(records))
+
+
 __all__ = [
     "MODEL_SOURCE",
     "NO_STATUS",
+    "NextRecord",
     "ReviewRuleError",
     "acceptances_of_entity_edit",
     "check_human_update",
     "check_new_row",
     "decision_of",
     "is_model_row",
+    "next_record",
+    "records_at",
 ]
