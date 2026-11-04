@@ -9,6 +9,9 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
+import stat
+import tempfile
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
@@ -259,14 +262,41 @@ class Dataset:
         if self.info.spec_version < 3:
             self._backfill_columns(is_entity_annotation, {"review_status": "''"})
 
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
+        self._patch_info_json({"spec_version": self._CURRENT_SPEC_VERSION})
         self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    def _patch_info_json(self, fields: dict[str, Any]) -> None:
+        """Set top-level fields of `info.json`, leaving the rest of the document as written.
+
+        Re-serializing `self.info` would persist what `DatasetInfo.from_json` dropped: the views
+        whose schema this build cannot deserialize. The raw document keeps them. On a local
+        disk, the new content goes to a temporary file of its own in the same directory, renamed
+        over `info.json`, so a reader never sees a half-written file; the file keeps its
+        permissions, which a temporary file would otherwise narrow to its owner. Callers hold the
+        write lock, since another writer's read-modify-write would race this one.
+
+        Args:
+            fields: The top-level fields to set, already serialized.
+        """
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json.update(fields)
+        content = json.dumps(info_json, indent=4)
+        if isinstance(self._info_file, S3Path):
+            # An object store replaces an object whole, so no reader sees half of it; and it has
+            # neither a directory to hold a temporary file nor permissions to keep.
+            self._info_file.write_text(content, encoding="utf-8")
+            return
+        permissions = stat.S_IMODE(self._info_file.stat().st_mode)
+        fd, tmp_name = tempfile.mkstemp(dir=self._info_file.parent, prefix=f"{self._info_file.name}.", suffix=".tmp")
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+                tmp_file.write(content)
+            tmp_path.chmod(permissions)
+            tmp_path.replace(self._info_file)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
         """Add the columns missing from every table whose schema ``applies_to`` selects.
