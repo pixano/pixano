@@ -349,7 +349,7 @@ Subclass `DatasetImporter`, yield `BatchBundle`s; run via the Python API, `--imp
 
 ## 9. Job model, REST API, CLI, GUI wizard
 
-**Job model** (`io/jobs.py`). SQLite (WAL) at `<data_dir>/.pixano/jobs.sqlite`: `jobs(id, kind[import|export], dataset, status, spec_json, plan_id, progress_json, cursor_json, manifest_path, error_json, pid, heartbeat, created_at, updated_at)` + `plans(id, plan_json, source_fingerprint, expires_at)`. Single in-process worker (concurrency 1) with cooperative cancellation checked at flush boundaries; server restart marks running jobs `interrupted` (resumable); the CLI runs jobs in-process and records them in the same store, so the GUI sees CLI imports. S3 `data_dir`/`library_dir` (`api/settings.py:47-48`) ⇒ typed `UnsupportedStorageError` for all io jobs in 0.8.0 (the guard currently at `import_datasets.py:224` is preserved in the new router, not dropped).
+**Job model** (`io/jobs.py`). SQLite (WAL) at `<data_dir>/.pixano/jobs.sqlite`: `jobs(id, kind[import|export], dataset, status, spec_json, plan_id, progress_json, cursor_json, manifest_path, error_json, pid, heartbeat, created_at, updated_at, follow_ups_json)` + `plans(id, plan_json, source_fingerprint, expires_at)`. Single in-process worker (concurrency 1) with cooperative cancellation checked at flush boundaries; server restart marks running jobs `interrupted` (resumable); the CLI runs jobs in-process and records them in the same store, so the GUI sees CLI imports. S3 `data_dir`/`library_dir` (`api/settings.py:47-48`) ⇒ typed `UnsupportedStorageError` for all io jobs in 0.8.0 (the guard currently at `import_datasets.py:224` is preserved in the new router, not dropped).
 
 **REST API** (`src/pixano/api/routers/data_io.py` + `views.py` extensions):
 
