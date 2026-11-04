@@ -7,7 +7,11 @@ License: CECILL-C
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadWorkspaceRecord } from "$lib/api/workspace";
-import { resetWorkspaceStores, reviewModeIsActive } from "$lib/stores/workspaceStores.svelte";
+import {
+  highlightedEntity,
+  resetWorkspaceStores,
+  reviewModeIsActive,
+} from "$lib/stores/workspaceStores.svelte";
 import { WorkspaceType } from "$lib/types/dataset";
 import { commitLoadedWorkspace } from "$lib/utils/workspaceRuntimeMutations";
 
@@ -67,5 +71,18 @@ describe("the review mode", () => {
     resetWorkspaceStores();
 
     expect(reviewModeIsActive.value).toBe(false);
+  });
+});
+
+describe("the next record", () => {
+  it("opens with no object focused, so that none of its annotations is faded", async () => {
+    // The focus named an object of the record left: kept, it faded every annotation of the
+    // record opened next.
+    await openRecord("record-1");
+    highlightedEntity.value = "an-object-of-record-1";
+
+    await openRecord("record-2");
+
+    expect(highlightedEntity.value).toBeNull();
   });
 });
