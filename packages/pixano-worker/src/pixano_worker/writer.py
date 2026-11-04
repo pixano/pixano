@@ -298,9 +298,20 @@ class _AttachedWork:
     Attributes:
         held: The entities a person's work names (`is_a_persons_work`), or that have a child
             entity: they keep their object, whatever a model reruns.
+        derived: Per table, the models' unreviewed rows that name one of the entities, other than
+            its own annotation, each with the entity it names: they go with their object.
     """
 
     held: set[str]
+    derived: dict[str, dict[str, str]]
+
+    def derived_from(self, entity_ids: set[str]) -> dict[str, list[str]]:
+        """Per table, the derived rows that name one of these entities."""
+        rows = {
+            table_name: [row_id for row_id, entity_id in named.items() if entity_id in entity_ids]
+            for table_name, named in self.derived.items()
+        }
+        return {table_name: row_ids for table_name, row_ids in rows.items() if row_ids}
 
 
 class JobWriter:
@@ -422,7 +433,8 @@ class JobWriter:
 
         The replacement is exact: scoped by (kind, model, key), which is what the prefix
         encodes, so another model's rows for the same key are left alone, and no output
-        shrinks past what is cleaned.
+        shrinks past what is cleaned — with one exception, the rows that name the objects it
+        replaces, below.
 
         An annotation can come with its entity — a detected box and the object it names. The
         entity shares its annotation's identifier, in the entities table, and follows it: written
@@ -435,7 +447,11 @@ class JobWriter:
 
         Other kinds annotate these objects too — a model's mask or keypoint on a detected object.
         **A model's rows nobody reviewed hold nothing**: they would double the boxes of every
-        rerun, written beside the ranks they froze.
+        rerun, written beside the ranks they froze. They go with their object instead, whatever
+        kind or model wrote them, when this write rewrites it at its rank or sweeps it: left
+        behind, they would name whatever the rank holds next, or an entity that is gone. They are
+        deleted first, so a crash never leaves one on an object that changed under it; the next
+        attempt finishes the rest (backend-processing §19).
 
         Args:
             table_name: The target table.
@@ -464,6 +480,8 @@ class JobWriter:
         ]
         frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
         previous_entities: list[Any] = []
+        candidates: set[str] = set()
+        attached = _AttachedWork(held=set(), derived={})
         if entities is not None:
             previous_entities = [
                 entity
@@ -471,10 +489,17 @@ class JobWriter:
                 if _rank_of(entity.id) is not None
             ]
             candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
-            frozen |= {_rank_of(entity_id) for entity_id in self._attached_work(candidates, table_name).held}
+            attached = self._attached_work(candidates, table_name)
+            frozen |= {_rank_of(entity_id) for entity_id in attached.held}
         if covers is not None:
             entity_of = {entity.id: entity for entity in previous_entities}
             frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
+
+        # Every object at a free rank is rewritten or swept below: what models left on it goes first.
+        replaced_objects = {entity_id for entity_id in candidates if _rank_of(entity_id) not in frozen}
+        cascaded = self._delete_derived(attached.derived_from(replaced_objects))
+        if cascaded:
+            logger.debug("job %s: %d unreviewed row(s) went with their object for %s", self.job_id, cascaded, key)
 
         written: list[str] = []
         rank = 0
@@ -514,7 +539,9 @@ class JobWriter:
 
         For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
         means the pending ones — a row a person accepted stays, and so does one whose entity a
-        person's work names (`is_a_persons_work`).
+        person's work names (`is_a_persons_work`). With the entities, the models' unreviewed
+        rows that name them go first, as in `replace`: a pending mask on a detected object goes
+        with it.
 
         Args:
             table_name: The kind's annotation table.
@@ -548,9 +575,12 @@ class JobWriter:
             )
             rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
         pending = [row.id for row in rows]
+        cascaded = 0
         if pending and with_entities:
-            held = self._attached_work(set(pending), table_name).held
-            pending = [row_id for row_id in pending if row_id not in held]
+            attached = self._attached_work(set(pending), table_name)
+            pending = [row_id for row_id in pending if row_id not in attached.held]
+            # What models left on the objects before the objects themselves, as in `replace`.
+            cascaded = self._delete_derived(attached.derived_from(set(pending)))
         if pending:
             # The entities first: a crash between the two leaves boxes pointing at nothing, which
             # the next attempt finds again as pending and finishes; the other order would leave
@@ -562,6 +592,8 @@ class JobWriter:
             logger.info(
                 "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
             )
+        if cascaded:
+            logger.info("job %s: %d unreviewed row(s) naming those objects went with them", self.job_id, cascaded)
         return len(pending)
 
     def entities_with_a_persons_work(self, entity_ids: Iterable[str], own_table: str) -> set[str]:
@@ -610,13 +642,15 @@ class JobWriter:
         return self.dataset.get_data(table_name, where=where)
 
     def _attached_work(self, entity_ids: set[str], own_table: str) -> _AttachedWork:
-        """What the rest of the dataset attaches to these entities.
+        """What the rest of the dataset attaches to these entities, sorted by who did it.
 
         Every row of any table that names one of them — an annotation, a tracklet, a dynamic
         state — apart from the row of `own_table` sharing its identifier, and every entity whose
-        parent one of them is. A person's work and a child entity hold the entity.
+        parent one of them is. A person's work and a child entity hold the entity; a model's
+        unreviewed row is derived from it.
         """
         held: set[str] = set()
+        derived: defaultdict[str, dict[str, str]] = defaultdict(dict)
         for batch in _batched(entity_ids):
             listed = to_sql_list(batch)
             for name, schema in self.dataset.info.tables.items():
@@ -627,10 +661,19 @@ class JobWriter:
                         continue
                     if is_a_persons_work(row):
                         held.add(row.entity_id)
+                    else:
+                        derived[name][row.id] = row.entity_id
             if ENTITY_TABLE in self.dataset.info.tables:
                 children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
                 held |= {entity.parent_id for entity in children}
-        return _AttachedWork(held=held & entity_ids)
+        return _AttachedWork(held=held & entity_ids, derived=dict(derived))
+
+    def _delete_derived(self, rows: dict[str, list[str]]) -> int:
+        """Delete, per table, the models' unreviewed rows that go with their object; how many."""
+        for table_name, row_ids in rows.items():
+            for batch in _batched(row_ids):
+                self.dataset.delete_data(table_name, batch)
+        return sum(len(row_ids) for row_ids in rows.values())
 
     def _delete_existing(self, table_name: str, ids: list[str]) -> None:
         for batch in _batched(ids):

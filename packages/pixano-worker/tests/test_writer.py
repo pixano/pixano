@@ -515,7 +515,8 @@ class TestDetectedObjects:
     """A detected box comes with the object it names, in the entities table.
 
     Other kinds annotate those objects — a mask on the object of the box that prompted it. Only a
-    person's work on an object holds it.
+    person's work on an object holds it; a model's unreviewed rows go with it when the detection
+    rewrites or sweeps it.
     """
 
     @pytest.fixture
@@ -856,6 +857,11 @@ class TestDetectedObjects:
         )
         return mask_id
 
+    @staticmethod
+    def _masks(scene) -> dict[str, str]:
+        """Each mask's object."""
+        return {mask.id: mask.entity_id for mask in scene.get_data("masks", limit=None)}
+
     def test_a_rerun_over_pending_masks_doubles_no_object(self, scene) -> None:
         """Held by its pending mask, an object's rank would stay frozen, and the rerun would write
         its boxes beside the previous ones — two cars and two dogs, all pending."""
@@ -866,6 +872,70 @@ class TestDetectedObjects:
 
         assert len(scene.get_data("bboxes", limit=None)) == 2
         assert len(scene.get_data("entities", limit=None)) == 2
+
+    def test_the_pending_masks_go_with_the_objects_a_rerun_rewrites(self, scene) -> None:
+        """Rewritten in place, rank 0 is now a dog: the car's mask must not stay on it."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._objects(scene) == {first[0]: ("dog", "pending"), first[1]: ("car", "pending")}
+        assert self._masks(scene) == {}
+
+    def test_a_shrinking_rerun_leaves_no_mask_naming_a_missing_object(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+
+        self._detect(scene, ["car"])
+
+        entities = {entity.id for entity in scene.get_data("entities", limit=None)}
+        assert len(scene.get_data("bboxes", limit=None)) == len(entities) == 1
+        assert set(self._masks(scene).values()) <= entities
+
+    # What a person did to an object: a mask drawn by hand, imported as ground truth, or a model's
+    # mask accepted.
+    PERSONS_MASKS = [
+        pytest.param("model", "accepted", id="accepted"),
+        pytest.param("human", "", id="human"),
+        pytest.param("ground_truth", "", id="ground-truth"),
+    ]
+
+    @pytest.mark.parametrize(("source_type", "status"), PERSONS_MASKS)
+    def test_only_a_persons_mask_holds_its_object(self, scene, source_type: str, status: str) -> None:
+        """The person's object keeps its rank, its class and its mask; the pending mask beside it
+        holds nothing, and goes with the object the rerun rewrites."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, [first[0]])
+        kept = self._attach_a_mask(scene, first[1], source_type, status)
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+        assert self._masks(scene) == {kept: first[1]}
+        assert len(scene.get_data("bboxes", limit=None)) == 3, "one rank held, two written around it"
+
+    def test_no_mask_is_left_on_an_object_a_crash_rewrote(self, scene, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The masks go before their objects change: a worker dying between the two writes leaves
+        no car's mask on what is now a dog, and the next attempt finishes the job."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+        real_update = scene.update_data
+
+        def update_data(table_name: str, data: list[Any], *args: Any, **kwargs: Any) -> Any:
+            if table_name == "bboxes":
+                raise RuntimeError("the worker died")
+            return real_update(table_name, data, *args, **kwargs)
+
+        monkeypatch.setattr(scene, "update_data", update_data)
+        with pytest.raises(RuntimeError, match="the worker died"):
+            self._detect(scene, ["dog"])
+
+        assert self._class_of(scene, first[0]) == "dog", "the object was rewritten before the crash"
+        assert self._masks(scene) == {}, "and the car's mask had gone before it"
+        monkeypatch.undo()
+        self._detect(scene, ["dog"])
+        assert self._objects(scene) == {first[0]: ("dog", "pending")}
 
     @staticmethod
     def _attach_a_row(scene, table_name: str, entity_id: str, **fields: str) -> str:
@@ -899,6 +969,28 @@ class TestDetectedObjects:
         pytest.param("entities", {}, id="child object"),
     ]
 
+    # A model's row nobody reviewed goes with the object: it reads as pending everywhere
+    # (`NOT_REVIEWED_STATUSES`), and left behind it would name whatever the rank holds next, or an
+    # entity that is gone. Tracklets and dynamic states are never reviewed, so a model's never holds.
+    MODELS_UNREVIEWED_ROWS = [
+        pytest.param(
+            "masks",
+            {
+                "source_type": "model",
+                "source_name": "smart-segmentation",
+                "source_metadata": '{"provider_name": "sam"}',
+            },
+            id="legacy smart-tracking mask",
+        ),
+        pytest.param(
+            "masks", {"source_type": "model", "source_name": "segmentation"}, id="model mask re-imported from JSONL"
+        ),
+        pytest.param("tracklets", {"source_type": "model", "source_name": "tracking"}, id="model tracklet"),
+        pytest.param(
+            "entity_dynamic_states", {"source_type": "model", "source_name": "tracking"}, id="model dynamic state"
+        ),
+    ]
+
     @pytest.mark.parametrize(("table_name", "fields"), PERSONS_WORK)
     def test_a_persons_work_holds_the_object(self, scene, table_name: str, fields: dict[str, str]) -> None:
         first = self._detect(scene, ["car", "dog"])
@@ -908,6 +1000,53 @@ class TestDetectedObjects:
 
         assert self._class_of(scene, first[1]) == "dog"
         assert attached in {row.id for row in scene.get_data(table_name, limit=None)}
+
+    @pytest.mark.parametrize(("table_name", "fields"), MODELS_UNREVIEWED_ROWS)
+    def test_a_models_unreviewed_row_goes_with_the_object(
+        self, scene, table_name: str, fields: dict[str, str]
+    ) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        attached = self._attach_a_row(scene, table_name, first[1], **fields)
+
+        self._detect(scene, ["car"])
+
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+        assert attached not in {row.id for row in scene.get_data(table_name, limit=None)}
+
+    def test_dropping_the_pending_rows_takes_their_pending_masks_along(self, scene) -> None:
+        """Held by their pending masks, the boxes would stay, and clearing would clear nothing."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(first)
+        assert self._objects(scene) == {}
+        assert scene.get_data("entities", limit=None) == []
+        assert self._masks(scene) == {}
+
+    @pytest.mark.parametrize(("source_type", "status"), PERSONS_MASKS)
+    def test_dropping_spares_an_object_a_person_left_a_mask_on(self, scene, source_type: str, status: str) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, [first[0]])
+        kept = self._attach_a_mask(scene, first[1], source_type, status)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 1
+        assert self._objects(scene) == {first[1]: ("dog", "pending")}
+        assert self._masks(scene) == {kept: first[1]}
+
+    def test_clearing_the_pending_masks_leaves_the_objects_they_name(self, scene) -> None:
+        """A kind whose masks own no object clears them without the objects: the objects and their
+        boxes stay, as does a mask a person accepted — whatever model wrote the pending ones."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first, model="sam-tiny")
+        self._segment(scene, first, model="sam-small")
+        kept = self._attach_a_mask(scene, first[1], "model", "accepted")
+        writer = JobWriter(lambda: scene, "segmentation", "job-2", "model", model=ModelIdentity("sam-tiny"))
+
+        assert writer.drop_pending("masks", with_entities=False) == 2 * len(first)
+        assert self._masks(scene) == {kept: first[1]}
+        assert self._objects(scene) == {first[0]: ("car", "pending"), first[1]: ("dog", "pending")}
 
     def test_tells_which_objects_carry_a_persons_work(self, scene) -> None:
         """What a kind asks before proposing an object again. A pending mask is
