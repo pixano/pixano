@@ -1117,9 +1117,10 @@ class Dataset:
         ``record_id`` and its 1-based position, so previous/next stay inside the
         current result set instead of walking the whole dataset.
 
-        The scan projects only the ``id`` column (ordered with an ``id`` tie-break
-        for a stable order) and returns a tiny payload. For a record that is not
-        in the filtered set, ``prev``/``next``/``position`` are ``None``.
+        The scan projects only ``id`` and the column sorted on (ordered with an
+        ``id`` tie-break for a stable order) and returns a tiny payload. For a
+        record that is not in the filtered set, ``prev``/``next``/``position``
+        are ``None``.
 
         Args:
             record_id: The record to locate.
@@ -1137,7 +1138,8 @@ class Dataset:
 
         sortcol = sortcol or "id"
         descending = order == "desc"
-        query = TableQueryBuilder(table, self._db_connection).select(["id"])
+        # The column sorted on is read too: the query orders only on what it selects.
+        query = TableQueryBuilder(table, self._db_connection).select(["id"] if sortcol == "id" else ["id", sortcol])
         if where is not None:
             query = query.where(where)
         if sortcol == "id":
