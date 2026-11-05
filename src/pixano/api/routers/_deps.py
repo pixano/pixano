@@ -63,18 +63,22 @@ def get_dataset_dep(
     return dataset
 
 
+# The largest offset the query engines take, 64-bit: past it, a query fails rather than skip.
+MAX_OFFSET = 2**63 - 1
+
+
 class PaginationParams:
     """Pagination query parameters.
 
     Attributes:
         limit: Maximum resources per page (1-1000, default 100).
-        offset: Number of resources to skip (default 0).
+        offset: Number of resources to skip (default 0, at most `MAX_OFFSET`).
     """
 
     def __init__(
         self,
         limit: Annotated[int, Query(ge=1, le=1000)] = 100,
-        offset: Annotated[int, Query(ge=0)] = 0,
+        offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
     ):
         self.limit = limit
         self.offset = offset

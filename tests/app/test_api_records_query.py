@@ -266,6 +266,12 @@ class TestOpenApiContract:
         assert {"filter", "q", "sort", "order"} <= names
 
 
+class TestOffset:
+    def test_beyond_what_a_query_takes_is_bad_input(self, client: TestClient):
+        response = client.get(f"{BASE}/records", params={"offset": 2**63})
+        assert response.status_code == 422
+
+
 class TestNeighbors:
     def test_neighbors_match_paged_order(self, client: TestClient):
         ordered = _all_ids(client, sort="id", order="asc")
