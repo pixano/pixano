@@ -101,7 +101,8 @@ def get_dataset_stats(
     dataset = get_dataset_dep(id, settings)
     result: dict[str, dict[str, int]] = {}
     for group, tables in dataset.info.groups.items():
-        if group == SchemaGroup.RECORD:
+        # The statistics tables are no table a client reads rows of (backend-processing §22.3).
+        if group in (SchemaGroup.RECORD, SchemaGroup.STATISTICS):
             continue
         group_counts: dict[str, int] = {}
         for table_name in tables:

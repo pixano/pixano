@@ -16,7 +16,7 @@ from typing import Literal, overload
 
 import PIL.Image
 from lancedb.pydantic import LanceModel
-from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_serializer, field_validator, model_validator
 from typing_extensions import Self
 
 # ---------------------------------------------------------------------------
@@ -35,11 +35,13 @@ from pixano.schemas import (
     CompressedRLE,
     Entity,
     EntityDynamicState,
+    EntityStatistics,
     KeyPoints,
     Message,
     MultiPath,
     Record,
     RecordComponent,
+    RecordStatistics,
     Relation,
     TextSpan,
     TimeSeries,
@@ -52,11 +54,15 @@ from pixano.schemas import (
     validate_canonical_table_map,
 )
 from pixano.schemas.schema_group import SchemaGroup, schema_to_group
+from pixano.statistics.computed import ComputedStatistic
 
 
 BOOKMARK_TYPES: tuple[str, ...] = ("TODO", "NEW", "FAVORITE")
 
 logger = logging.getLogger(__name__)
+
+# The computed statistics already logged as unreadable, by `info.json` and entry.
+_UNREADABLE_STATISTICS_LOGGED: set[tuple[str, str]] = set()
 
 
 _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
@@ -74,6 +80,8 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "message": Message,
     "timeseries": TimeSeries,
     "text_span": TextSpan,
+    "record_statistics": RecordStatistics,
+    "entity_statistics": EntityStatistics,
 }
 
 
@@ -108,6 +116,12 @@ class DatasetInfo(BaseModel):
         tracklet: Tracklet schema.
         message: Message schema.
         text_span: Text span schema.
+        record_statistics: Schema of the records' statistics table, once a statistic per record
+            was computed.
+        entity_statistics: Schema of the objects' statistics table, once a statistic per object
+            was computed.
+        statistics: The statistics the dataset holds the values of, with the job that computed
+            them last (backend-processing §22).
         views: Mapping of logical view names to view schema classes.
     """
 
@@ -135,6 +149,9 @@ class DatasetInfo(BaseModel):
     message: type[Message] | None = None
     timeseries: type[TimeSeries] | None = None
     text_span: type[TextSpan] | None = None
+    record_statistics: type[RecordStatistics] | None = None
+    entity_statistics: type[EntityStatistics] | None = None
+    statistics: list[ComputedStatistic] = Field(default_factory=list)
     views: dict[str, type[View]] = Field(default_factory=dict)
     tables: dict[str, type[LanceModel]] = Field(default_factory=dict, exclude=True)
 
@@ -148,6 +165,11 @@ class DatasetInfo(BaseModel):
     def serialize_workspace(self, workspace: WorkspaceType):
         """Dump workspace as string value, not enum."""
         return workspace.value
+
+    @field_serializer("statistics")
+    def serialize_statistics(self, statistics: list[ComputedStatistic]) -> list[dict]:
+        """Dump the computed statistics as JSON values: `info.json` holds their dates as text."""
+        return [computed.model_dump(mode="json") for computed in statistics]
 
     @field_validator("id", mode="after")
     @classmethod
@@ -249,13 +271,14 @@ class DatasetInfo(BaseModel):
     _SCHEMA_FIELDS: set[str] = {"tables", "views", *_DATASET_INFO_SLOT_TYPES.keys()}
 
     def json_info_dump(self) -> dict:
-        """Return a JSON-serializable dict of the dataset metadata.
+        """Return a JSON-serializable dict of the dataset metadata, as an export carries it.
 
         This excludes all schema-type fields (``tables``, ``views``, and schema
         slot fields like ``record``, ``entity``, etc.) that contain Python class
-        objects which cannot be serialized to JSON.
+        objects which cannot be serialized to JSON, and the statistics the dataset
+        computed: no export carries them (backend-processing §22.3).
         """
-        return self.model_dump(exclude=self._SCHEMA_FIELDS)
+        return self.model_dump(exclude={*self._SCHEMA_FIELDS, "statistics"})
 
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
@@ -341,6 +364,21 @@ class DatasetInfo(BaseModel):
                 # making every endpoint that loads this dataset fail.
                 logger.warning("Dropping view '%s' from %s with unsupported schema: %s", logical_name, json_fp, e)
         info_json["views"] = deserialized_views
+
+        # Drop the computed statistics that no longer read — composed under a rule changed since —
+        # rather than every endpoint that loads the dataset failing: their columns keep their
+        # values, and the dataset does not list them until they are computed again.
+        readable_statistics = []
+        for computed in info_json.get("statistics") or []:
+            try:
+                readable_statistics.append(ComputedStatistic.model_validate(computed))
+            except (ValidationError, TypeError, ValueError) as e:
+                # Logged once per entry: a dataset is read again at every write and every listing.
+                unreadable = (str(json_fp), json.dumps(computed, sort_keys=True, default=str))
+                if unreadable not in _UNREADABLE_STATISTICS_LOGGED:
+                    _UNREADABLE_STATISTICS_LOGGED.add(unreadable)
+                    logger.warning("Leaving out a computed statistic of %s that no longer reads: %s", json_fp, e)
+        info_json["statistics"] = readable_statistics
 
         info = DatasetInfo.model_validate(info_json)
         return info

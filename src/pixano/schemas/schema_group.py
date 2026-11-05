@@ -26,6 +26,7 @@ from .annotations import (
 from .embeddings import Embedding, ViewEmbedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
+from .statistics import EntityStatistics, RecordStatistics
 from .timeseries import TimeSeries
 from .views import (
     PDF,
@@ -49,6 +50,7 @@ class SchemaGroup(Enum):
     RECORD = "records"
     ENTITY = "entities"
     ENTITY_DYNAMIC_STATE = "entity_dynamic_states"
+    STATISTICS = "statistics"
     TIMESERIES = "timeseries"
     VIEW = "views"
 
@@ -101,6 +103,8 @@ CANONICAL_SCHEMA_TYPES = (
     Tracklet,
     Embedding,
     ViewEmbedding,
+    RecordStatistics,
+    EntityStatistics,
 )
 
 CANONICAL_SCHEMA_MAP: dict[str, type[LanceModel]] = {
@@ -119,6 +123,12 @@ def schema_to_group(schema_type: LanceModel | type) -> SchemaGroup:
         return SchemaGroup.EMBEDDING
     if isinstance(schema_type, Record) or is_class and issubclass(schema_type, Record):
         return SchemaGroup.RECORD
+    if (
+        isinstance(schema_type, (RecordStatistics, EntityStatistics))
+        or is_class
+        and issubclass(schema_type, (RecordStatistics, EntityStatistics))
+    ):
+        return SchemaGroup.STATISTICS
     if isinstance(schema_type, EntityDynamicState) or is_class and issubclass(schema_type, EntityDynamicState):
         return SchemaGroup.ENTITY_DYNAMIC_STATE
     if isinstance(schema_type, TimeSeries) or is_class and issubclass(schema_type, TimeSeries):
@@ -153,4 +163,6 @@ def group_to_str(group: SchemaGroup, plural: bool = False) -> str:
         return "annotations" if plural else "annotation"
     if group == SchemaGroup.EMBEDDING:
         return "embeddings" if plural else "embedding"
+    if group == SchemaGroup.STATISTICS:
+        return "statistics"
     raise ValueError(f"Unknown schema group: {group}")
