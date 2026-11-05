@@ -61,8 +61,10 @@ _ID_PREFIX_LENGTH = 16
 # rows once a kind produces that volume.
 COMPACT_EVERY_WRITES = 64
 # One hour: longer than any read from a Pixano client holds a version — an explorer page, an
-# export — so that no reader sees the version it is reading disappear. Shorter would risk
-# failing a read in progress; longer only costs disk, until the old versions are erased.
+# export — so that a reader seldom sees the version it is reading disappear: one that opened a
+# version already older than that — a dataset left idle, then compacted during the read — can,
+# and the explorer's reads of statistics try once again (backend-processing §22.5). Shorter would
+# risk failing reads in progress; longer only costs disk, until the old versions are erased.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
 # The write count per table, per dataset. The runner serialises a dataset's writes, so the

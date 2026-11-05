@@ -10,11 +10,17 @@ import pytest
 
 from pixano.api.query import (
     FILTER_OPERATORS,
+    STATISTICS_COLUMN_PREFIX,
     ColumnDescriptor,
     FilterCompileError,
     compile_filters,
+    compile_record_query,
+    compile_statistics_filters,
+    split_filters,
+    statistic_columns_by_name,
     validate_sort,
 )
+from pixano.datasets.queries.record_statistics import RECORD_STATISTICS_TABLE, RecordOrder, StatisticsFilter
 
 
 def _col(name: str, type_: str, *, source: str = "base", searchable: bool = False, indexed: bool = False):
@@ -192,3 +198,98 @@ class TestEmpty:
 
     def test_empty_query_string_is_ignored(self):
         assert compile_filters(CATALOGUE, [], q="") == (None, set(), True)
+
+
+def _statistic(name: str, type_: str) -> ColumnDescriptor:
+    return ColumnDescriptor(
+        name=f"{STATISTICS_COLUMN_PREFIX}{name}",
+        type=type_,
+        collection=False,
+        source="statistics",
+        filterable=True,
+        sortable=True,
+        searchable=False,
+        indexed=False,
+        operators=FILTER_OPERATORS[type_],
+        values=None,
+        values_complete=True,
+        table=RECORD_STATISTICS_TABLE,
+        label=name,
+    )
+
+
+STATISTICS_CATALOGUE = [*CATALOGUE, _statistic("bbox_count", "int"), _statistic("bbox_area_mean_px", "float")]
+
+
+class TestStatistics:
+    def test_the_filters_on_statistics_are_told_apart(self):
+        own, on_statistics = split_filters(
+            ["split:eq:train", "record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
+        )
+
+        assert own == ["split:eq:train"]
+        assert on_statistics == ["record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
+
+    def test_a_filter_on_statistics_reads_their_columns_as_the_join_does(self):
+        compiled = compile_statistics_filters(
+            STATISTICS_CATALOGUE,
+            [
+                "record_statistics.bbox_count:gte:2",
+                "record_statistics.bbox_area_mean_px:lt:10.5",
+                "record_statistics.bbox_count:nin:3,4",
+            ],
+        )
+
+        assert compiled == StatisticsFilter(
+            sql='s."bbox_count" >= 2 AND s."bbox_area_mean_px" < 10.5 AND s."bbox_count" NOT IN (3, 4)',
+            columns=("bbox_count", "bbox_area_mean_px"),
+        )
+
+    def test_no_filter_on_statistics(self):
+        assert compile_statistics_filters(STATISTICS_CATALOGUE, []) is None
+
+    @pytest.mark.parametrize(
+        "token,message",
+        [
+            ("record_statistics.unknown:eq:1", "Unknown statistic"),
+            ("record_statistics.bbox_count:contains:1", "not valid"),
+            ("record_statistics.bbox_count:gt:many", "not a valid integer"),
+        ],
+    )
+    def test_a_filter_on_statistics_refused(self, token: str, message: str):
+        with pytest.raises(FilterCompileError, match=message):
+            compile_record_query(STATISTICS_CATALOGUE, [token])
+
+    def test_the_whole_request(self):
+        query = compile_record_query(
+            STATISTICS_CATALOGUE,
+            ["split:eq:train", "record_statistics.bbox_count:gte:2"],
+            q="dog",
+            sort="record_statistics.bbox_area_mean_px",
+            order="desc",
+            raw_where="n > 1",
+        )
+
+        assert query.where.startswith("split = 'train' AND (") and query.where.endswith(") AND (n > 1)")
+        assert query.index_servable is False
+        assert query.statistics_filter == StatisticsFilter(sql='s."bbox_count" >= 2', columns=("bbox_count",))
+        assert query.order == RecordOrder(column="bbox_area_mean_px", descending=True, on_statistics=True)
+        assert query.through_statistics
+
+    def test_a_request_on_the_records_alone(self):
+        query = compile_record_query(STATISTICS_CATALOGUE, ["split:eq:train"], sort="score", order="desc")
+
+        assert query.order == RecordOrder(column="score", descending=True, on_statistics=False)
+        assert query.order.direction == "desc"
+        assert not query.through_statistics
+
+    def test_the_columns_a_page_shows(self):
+        assert statistic_columns_by_name(STATISTICS_CATALOGUE) == {
+            "record_statistics.bbox_count": "bbox_count",
+            "record_statistics.bbox_area_mean_px": "bbox_area_mean_px",
+        }
+        assert statistic_columns_by_name(CATALOGUE) == {}
+
+    def test_a_refusal_names_the_statistic_as_the_catalogue_does(self):
+        with pytest.raises(FilterCompileError, match="column 'record_statistics.bbox_count'"):
+            compile_record_query(STATISTICS_CATALOGUE, ["record_statistics.bbox_count:gt:many"])
