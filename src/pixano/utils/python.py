@@ -99,6 +99,11 @@ def quote_sql_string(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+#: How many identifiers one filter or deletion names at most. A list of hundreds of thousands —
+#: every pending box of a large dataset — is slow to parse, when it is accepted at all.
+IDS_PER_QUERY = 1_000
+
+
 def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
     """Convert an id, or a collection of ids, into a SQL ``IN``-list literal.
 

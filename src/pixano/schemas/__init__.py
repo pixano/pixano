@@ -76,7 +76,9 @@ from .entities import (
 )
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
+from .statistics import EntityStatistics, RecordStatistics, is_statistics, statistics_slot
 from .table_names import (
+    STATISTICS_SLOTS,
     canonical_base_schema_for_schema,
     canonical_family_spec_for_resource,
     canonical_family_spec_for_schema,
@@ -142,6 +144,9 @@ __all__ = [
     "Image",
     "Record",
     "RecordComponent",
+    "RecordStatistics",
+    "EntityStatistics",
+    "STATISTICS_SLOTS",
     "KeyPoints",
     "KeyPoints3D",
     "Message",
@@ -206,6 +211,8 @@ __all__ = [
     "is_image",
     "is_record",
     "is_record_component",
+    "is_statistics",
+    "statistics_slot",
     "is_supported_view_schema",
     "is_keypoints",
     "is_keypoints3d",

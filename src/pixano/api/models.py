@@ -22,15 +22,19 @@ from pixano.schemas import (
     Embedding,
     Entity,
     EntityDynamicState,
+    EntityStatistics,
     KeyPoints,
     Message,
     MultiPath,
     Record,
+    RecordStatistics,
     Relation,
     TextSpan,
     TimeSeries,
     Tracklet,
+    is_statistics,
 )
+from pixano.statistics.computed import ComputedStatistic
 
 
 T = TypeVar("T")
@@ -473,9 +477,16 @@ TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
 
 
 class DatasetInfoResponse(DatasetInfo):
-    """Dataset info plus the number of records."""
+    """Dataset info plus the number of records.
+
+    The statistics are left out: their tables are no table a client reads rows of, and what the
+    dataset computed is answered apart (`GET /datasets/{id}/statistics`, backend-processing §22.3).
+    """
 
     num_records: int
+    record_statistics: type[RecordStatistics] | None = Field(default=None, exclude=True)
+    entity_statistics: type[EntityStatistics] | None = Field(default=None, exclude=True)
+    statistics: list[ComputedStatistic] = Field(default_factory=list, exclude=True)
 
     @field_serializer(
         "record",
@@ -524,8 +535,8 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
-        """Build a full dataset response from a Dataset instance."""
-        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items()}
+        """Build a full dataset response from a Dataset instance, its statistics tables left out."""
+        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items() if not is_statistics(schema)}
         return cls(
             id=dataset.info.id,
             path=dataset.path,

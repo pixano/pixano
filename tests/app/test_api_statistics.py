@@ -6,6 +6,7 @@
 
 """The API of statistics: composing one for the library, and what a dataset offers and takes of them."""
 
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,7 +20,14 @@ from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset, DatasetInfo
 from pixano.features import BBox, Entity, Image, Record
 from pixano.statistics import definitions as definitions_module
-from pixano.statistics.definitions import MAX_LABEL_LENGTH, StatisticMeasure
+from pixano.statistics.computed import ComputedStatistic
+from pixano.statistics.definitions import (
+    MAX_LABEL_LENGTH,
+    StatisticChoices,
+    StatisticLevel,
+    StatisticMeasure,
+    define_statistic,
+)
 
 
 DATASET_ID = "statistics_api"
@@ -30,7 +38,7 @@ MASK_AREA = {"level": "record", "element": "mask", "measure": "area", "aggregati
 
 
 @pytest.fixture
-def client(tmp_path: Path) -> TestClient:
+def library(tmp_path: Path) -> Path:
     library = tmp_path / "library"
     dataset = Dataset.create(
         library / DATASET_ID,
@@ -40,6 +48,11 @@ def client(tmp_path: Path) -> TestClient:
     )
     dataset.add_records({"records": [Record(id="r1")]})
     dataset.add_data("entities", [VocEntity(id="e1", record_id="r1", category="dog")], raise_or_warn="none")
+    return library
+
+
+@pytest.fixture
+def client(library: Path, tmp_path: Path) -> TestClient:
     models_dir = tmp_path / "models"
     models_dir.mkdir()
     settings = Settings(library_dir=str(library), models_dir=str(models_dir))
@@ -143,3 +156,67 @@ class TestDatasetStatistics:
     @pytest.mark.parametrize("route", ["choices", "definitions"])
     def test_an_unknown_dataset_is_not_found(self, client: TestClient, route: str) -> None:
         assert client.get(f"/datasets/nowhere/statistics/{route}").status_code == 404
+
+
+class TestComputedStatistics:
+    def test_none_before_any_computation(self, client: TestClient) -> None:
+        assert client.get(f"/datasets/{DATASET_ID}/statistics").json() == []
+
+    def test_what_the_dataset_computed(self, library: Path, client: TestClient) -> None:
+        definition = define_statistic(
+            StatisticChoices(level=StatisticLevel.RECORD, element="bbox", measure=StatisticMeasure.COUNT)
+        )
+        Dataset(library / DATASET_ID).record_computed_statistics(
+            [
+                ComputedStatistic(
+                    definition=definition, job_id="job-1", computed_at=datetime(2026, 11, 4, tzinfo=timezone.utc)
+                )
+            ]
+        )
+
+        computed = client.get(f"/datasets/{DATASET_ID}/statistics").json()
+
+        assert [(item["definition"]["name"], item["job_id"], item["computed_at"]) for item in computed] == [
+            ("bbox_count", "job-1", "2026-11-04T00:00:00Z")
+        ]
+
+    def test_what_the_dataset_computed_since_the_application_read_it(self, library: Path, client: TestClient) -> None:
+        assert client.get(f"/datasets/{DATASET_ID}/statistics").json() == []
+        definition = define_statistic(
+            StatisticChoices(level=StatisticLevel.RECORD, element="bbox", measure=StatisticMeasure.COUNT)
+        )
+
+        # As a job would: another instance of the dataset, in another process.
+        Dataset(library / DATASET_ID).record_computed_statistics(
+            [ComputedStatistic(definition=definition, job_id="job-2", computed_at=datetime.now(timezone.utc))]
+        )
+
+        assert [item["job_id"] for item in client.get(f"/datasets/{DATASET_ID}/statistics").json()] == ["job-2"]
+
+
+class TestTheDatasetRoutesLeaveThemOut:
+    """The statistics tables are no table a client reads rows of: the routes describing a dataset skip them."""
+
+    @pytest.fixture(autouse=True)
+    def _computed(self, library: Path) -> None:
+        dataset = Dataset(library / DATASET_ID)
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, {"bbox_count": "int"})
+        dataset.ensure_statistic_columns(StatisticLevel.ENTITY, {"bbox_count": "int"})
+        definition = define_statistic(
+            StatisticChoices(level=StatisticLevel.RECORD, element="bbox", measure=StatisticMeasure.COUNT)
+        )
+        dataset.record_computed_statistics(
+            [ComputedStatistic(definition=definition, job_id="job-1", computed_at=datetime.now(timezone.utc))]
+        )
+
+    @pytest.mark.parametrize(
+        "route",
+        ["/datasets", f"/datasets/{DATASET_ID}", f"/datasets/{DATASET_ID}/info", f"/datasets/{DATASET_ID}/stats"],
+    )
+    def test_they_answer_and_say_nothing_of_them(self, client: TestClient, route: str) -> None:
+        response = client.get(route)
+
+        assert response.status_code == 200
+        # The dataset's identifier holds the word: what must not show is a key or a table named so.
+        leaked = [name for name in ('"statistics"', "record_statistics", "entity_statistics") if name in response.text]
+        assert leaked == []

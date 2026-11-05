@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import os
+import re
 import stat
 import tempfile
 from collections import defaultdict
@@ -55,9 +56,13 @@ from pixano.schemas import (
     is_video,
     is_view_embedding,
     media_type_of,
+    statistics_slot,
     validate_canonical_table_map,
 )
-from pixano.utils.python import to_sql_list, unique_list
+from pixano.schemas.table_names import canonical_family_spec_for_slot
+from pixano.statistics.computed import ComputedStatistic
+from pixano.statistics.definitions import COLUMN_NAME_PATTERN, MAX_COLUMN_NAME_LENGTH, StatisticLevel
+from pixano.utils.python import IDS_PER_QUERY, to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
@@ -106,6 +111,12 @@ def _validate_raise_or_warn(raise_or_warn: str) -> None:
     """Validate the raise_or_warn argument."""
     if raise_or_warn not in ("raise", "warn", "none"):
         raise ValueError(f"raise_or_warn must be 'raise', 'warn' or 'none', got '{raise_or_warn}'")
+
+
+def _computed_statistic_key(entry: Any) -> tuple[Any, Any] | None:
+    """The level and name of a computed statistic as `info.json` writes it, whether it reads or not."""
+    definition = entry.get("definition") if isinstance(entry, dict) else None
+    return (definition.get("level"), definition.get("name")) if isinstance(definition, dict) else None
 
 
 def _is_nested(query: Sequence[float] | Sequence[Sequence[float]]) -> bool:
@@ -320,6 +331,195 @@ class Dataset:
             self._table_handles.pop(table_name, None)
         self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
         self._patch_info_json({"entity": _serialize_table_schema(schema)})
+
+    #: The Arrow type of a statistic's values, by the statistic's value type, and its null as LanceDB
+    #: adds a column filled with it.
+    _STATISTIC_ARROW_TYPES: ClassVar[dict[str, pa.DataType]] = {"int": pa.int64(), "float": pa.float64()}
+    _STATISTIC_NULLS: ClassVar[dict[str, str]] = {"int": "CAST(NULL AS BIGINT)", "float": "CAST(NULL AS DOUBLE)"}
+
+    @staticmethod
+    def _statistics_family(level: StatisticLevel) -> Any:
+        """The canonical family of a level's statistics table: its slot, table and base schema."""
+        return canonical_family_spec_for_slot(statistics_slot(level.value))
+
+    def _check_statistic_columns(self, columns: dict[str, str], reserved: set[str]) -> None:
+        """Refuse a column that is no statistic's: a name a table would misread, or values of no type.
+
+        A statistic's column is to come from a job's parameters, which anybody can send: only a name
+        of the statistics' own pattern reaches a table (`COLUMN_NAME_PATTERN`).
+        """
+        for column, value_type in columns.items():
+            if len(column) > MAX_COLUMN_NAME_LENGTH or re.fullmatch(COLUMN_NAME_PATTERN, column) is None:
+                raise ValueError(f"'{column}' is no statistic's column name.")
+            if value_type not in self._STATISTIC_ARROW_TYPES:
+                raise ValueError(f"The values of '{column}' are int or float, not {value_type}.")
+        if reserved & set(columns):
+            raise ValueError(
+                f"A statistic cannot be named after a column every row carries: {sorted(reserved & set(columns))}."
+            )
+
+    @dataset_write
+    def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
+        """Give the dataset the statistics table of a level, with a column per statistic.
+
+        For a job computing statistics (backend-processing §22). The table is created empty the
+        first time, with its base schema, and declared in `info.json`; each column missing is added,
+        null for every row already there, typed as its statistic's values. Idempotent: what is there
+        already is left as it is, and `info.json` is not rewritten, so that a holder of the dataset is
+        not made to reopen it.
+
+        Under the write lock, `info.json` is read again when another instance changed it, and a
+        column another process added meanwhile is found rather than added twice.
+
+        Args:
+            level: The level of the statistics, which picks the table.
+            columns: Each statistic's column, with the type of its values, `int` or `float`.
+
+        Returns:
+            The table's name.
+
+        Raises:
+            ValueError: A column is no statistic's, holds values of another type, or is one every row
+                carries.
+        """
+        family = self._statistics_family(level)
+        slot = family.slot_name
+        table_name = family.table_name
+        self._check_statistic_columns(columns, set(family.base_schema.model_fields))
+        if table_name not in self.info.tables:
+            schema = family.base_schema
+            # The table before its declaration: a crash in between leaves an undeclared table, which
+            # the next call opens through `exist_ok`, rather than a declared table that is missing.
+            self._db_connection.create_table(name=table_name, schema=schema, exist_ok=True, embedding_functions=None)
+            setattr(self.info, slot, schema)
+            self.info.tables[table_name] = schema
+            self._patch_info_json({slot: _serialize_table_schema(schema)})
+            logger.info("Dataset %s: created the '%s' table", self.id, table_name)
+
+        existing = {field.name: field.type for field in self.open_table(table_name).schema}
+        for column, value_type in columns.items():
+            if column in existing and existing[column] != self._STATISTIC_ARROW_TYPES[value_type]:
+                raise ValueError(
+                    f"The column '{column}' of '{table_name}' holds {existing[column]}, not {value_type}."
+                )
+        missing = {
+            column: self._STATISTIC_NULLS[value_type]
+            for column, value_type in columns.items()
+            if column not in existing
+        }
+        if missing:
+            try:
+                self.open_table(table_name).add_columns(missing)
+            except Exception:
+                # Another process may have added them meanwhile: only those still missing are an error.
+                self._table_handles.pop(table_name, None)
+                if set(missing) - set(self.open_table(table_name).schema.names):
+                    raise
+            finally:
+                self._table_handles.pop(table_name, None)
+        return table_name
+
+    @dataset_write
+    def write_statistic_values(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """Write the values of statistics, one row per record or per object.
+
+        A row's identifier is its record's, or its object's: given, it is replaced by it. Only the
+        columns given are written: the other statistics of a row keep their values, and a row not
+        there yet gets none for them. The columns must be there already
+        (`ensure_statistic_columns`). Under the write lock, the rows of a record or an object deleted
+        since it was measured are not written: they would name nothing.
+
+        Args:
+            level: The level of the statistics, which picks the table.
+            rows: The rows: the record's identifier, plus the object's for an object, and the value
+                of each column given.
+            columns: The columns written, with the type of their values, `int` or `float`.
+
+        Returns:
+            The identifiers of the rows written: those of records and objects still there.
+
+        Raises:
+            ValueError: A column is not there, a row names no record or no object, or a record or
+                an object has two rows.
+        """
+        if not rows:
+            return []
+        family = self._statistics_family(level)
+        table = self.open_table(family.table_name)
+        self._check_statistic_columns(columns, set(family.base_schema.model_fields))
+        missing = set(columns) - set(table.schema.names)
+        if missing:
+            raise ValueError(f"The statistics table has no column {sorted(missing)}: ensure them first.")
+        own = "entity_id" if level is StatisticLevel.ENTITY else "record_id"
+        if any(not row.get(own) or not row.get("record_id") for row in rows):
+            raise ValueError(f"A row of statistics per {level.value} names no {own}.")
+        identified = [{**row, "id": row[own]} for row in rows]
+        if len({row["id"] for row in identified}) != len(identified):
+            raise ValueError("A record or an object has two rows of statistics in one write.")
+        owners = (
+            canonical_table_name_for_slot("entity") if level is StatisticLevel.ENTITY else SchemaGroup.RECORD.value
+        )
+        existing = self._existing_ids(owners, [row["id"] for row in identified])
+        identified = [row for row in identified if row["id"] in existing]
+        if not identified:
+            return []
+        base_fields = [pa.field(name, pa.string(), nullable=False) for name in family.base_schema.model_fields]
+        value_fields = [
+            pa.field(column, self._STATISTIC_ARROW_TYPES[value_type]) for column, value_type in columns.items()
+        ]
+        values = pa.Table.from_pylist(identified, schema=pa.schema([*base_fields, *value_fields]))
+        # In the table's order: Lance's merge does not match columns by name once `id` is indexed, as
+        # an import indexes it (`_in_table_order`).
+        values = values.select([name for name in table.schema.names if name in values.schema.names])
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(values)
+        return [row["id"] for row in identified]
+
+    def _existing_ids(self, table_name: str, ids: list[str]) -> set[str]:
+        """Those of these identifiers a table holds a row of."""
+        table = self.open_table(table_name)
+        existing: set[str] = set()
+        for start in range(0, len(ids), IDS_PER_QUERY):
+            batch = ids[start : start + IDS_PER_QUERY]
+            rows = table.search(None).select(["id"]).where(f"id IN {to_sql_list(batch)}").limit(len(batch)).to_arrow()
+            existing.update(rows.column("id").to_pylist())
+        return existing
+
+    @dataset_write
+    def record_computed_statistics(self, computed: list[ComputedStatistic]) -> None:
+        """Keep what a job computed: each statistic replaces the one of the same level and name.
+
+        The entries of `info.json` this build no longer reads — composed under a rule changed since,
+        left out of `info.statistics` — are kept as they are written: their columns may hold values
+        still, and they say what those are.
+
+        Args:
+            computed: The statistics whose values the job computed; of two of the same level and
+                name, the last.
+        """
+        computed = list(
+            {(statistic.definition.level, statistic.definition.name): statistic for statistic in computed}.values()
+        )
+        replaced = {(statistic.definition.level, statistic.definition.name) for statistic in computed}
+        self.info.statistics = [
+            *(
+                statistic
+                for statistic in self.info.statistics
+                if (statistic.definition.level, statistic.definition.name) not in replaced
+            ),
+            *computed,
+        ]
+        written = json.loads(self._info_file.read_text(encoding="utf-8")).get("statistics") or []
+        replaced_keys = {(level.value, name) for level, name in replaced}
+        self._patch_info_json(
+            {
+                "statistics": [
+                    *(entry for entry in written if _computed_statistic_key(entry) not in replaced_keys),
+                    *(statistic.model_dump(mode="json") for statistic in computed),
+                ]
+            }
+        )
 
     def _patch_info_json(self, fields: dict[str, Any]) -> None:
         """Set top-level fields of `info.json`, leaving the rest of the document as written.
