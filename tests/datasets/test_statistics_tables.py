@@ -10,9 +10,11 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
 import pytest
+from lancedb.merge import LanceMergeInsertBuilder
 
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.io import ImportSpec, SpecValidationError, resolve_dataset_info
@@ -38,6 +40,30 @@ def _dataset(tmp_path: Path) -> Dataset:
 
 def _info_json(dataset: Dataset) -> dict:
     return json.loads((dataset.path / "info.json").read_text(encoding="utf-8"))
+
+
+BOTH_COUNTS = {"bbox_count": "int", "mask_count": "int"}
+
+
+def _write(dataset: Dataset, values: dict[str, dict[str, int]], columns: dict[str, str] = BOTH_COUNTS) -> None:
+    dataset.write_statistic_values(
+        StatisticLevel.RECORD, [{"record_id": record, **counts} for record, counts in values.items()], columns
+    )
+
+
+def _counts(dataset: Dataset) -> list[tuple[str, int | None, int | None]]:
+    rows = sorted(dataset.open_table(RECORD_TABLE).to_arrow().to_pylist(), key=lambda row: row["id"])
+    return [(row["id"], row["bbox_count"], row["mask_count"]) for row in rows]
+
+
+def _rewritten_then_indexed(tmp_path: Path) -> Dataset:
+    """Two counts per record, r1's computed again, then `id` indexed as an import indexes it."""
+    dataset = _dataset(tmp_path)
+    dataset.ensure_statistic_columns(StatisticLevel.RECORD, BOTH_COUNTS)
+    _write(dataset, {"r1": {"bbox_count": 1, "mask_count": 1}, "r2": {"bbox_count": 1, "mask_count": 1}})
+    _write(dataset, {"r1": {"bbox_count": 2, "mask_count": 2}})
+    dataset.create_scalar_indexes(tables=[RECORD_TABLE])
+    return dataset
 
 
 def _computed(element: str = "bbox", job_id: str = "job-1") -> ComputedStatistic:
@@ -194,28 +220,6 @@ class TestEnsureStatisticColumns:
 
         assert [row["id"] for row in dataset.open_table(RECORD_TABLE).to_arrow().to_pylist()] == ["r1"]
 
-    def test_columns_given_in_another_order_than_the_tables_once_it_is_indexed(self, tmp_path: Path) -> None:
-        """An import indexes `id` on every table, after which Lance's merge reads columns by position."""
-        dataset = _dataset(tmp_path)
-        columns = {"bbox_count": "int", "mask_count": "int"}
-        dataset.ensure_statistic_columns(StatisticLevel.RECORD, columns)
-        dataset.write_statistic_values(
-            StatisticLevel.RECORD, [{"record_id": "r1", "bbox_count": 1, "mask_count": 2}], columns
-        )
-        dataset.create_scalar_indexes(tables=[RECORD_TABLE])
-
-        dataset.write_statistic_values(
-            StatisticLevel.RECORD,
-            [
-                {"record_id": "r1", "bbox_count": 3, "mask_count": 4},
-                {"record_id": "r2", "bbox_count": 5, "mask_count": 6},
-            ],
-            {"mask_count": "int", "bbox_count": "int"},
-        )
-
-        rows = sorted(dataset.open_table(RECORD_TABLE).to_arrow().to_pylist(), key=lambda row: row["id"])
-        assert [(row["id"], row["bbox_count"], row["mask_count"]) for row in rows] == [("r1", 3, 4), ("r2", 5, 6)]
-
     def test_a_jobs_own_columns_into_a_table_an_import_indexed(self, tmp_path: Path) -> None:
         """An import indexes `id` on every table: a later job writes its columns only, beside others."""
         dataset = _dataset(tmp_path)
@@ -364,6 +368,83 @@ class TestWriteStatisticValues:
         assert dataset.open_table(ENTITY_TABLE).to_arrow().to_pylist() == [
             {"id": "e1", "record_id": "r1", "entity_id": "e1", "bbox_area_mean_px": None}
         ]
+
+    def test_an_objects_other_statistics_are_kept_and_a_new_objects_are_none(self, tmp_path: Path) -> None:
+        dataset = _dataset(tmp_path)
+        dataset.add_data(
+            "entities", [Entity(id="e1", record_id="r1"), Entity(id="e2", record_id="r1")], raise_or_warn="none"
+        )
+        dataset.ensure_statistic_columns(StatisticLevel.ENTITY, BOTH_COUNTS)
+        dataset.write_statistic_values(
+            StatisticLevel.ENTITY,
+            [{"record_id": "r1", "entity_id": "e1", "bbox_count": 1, "mask_count": 2}],
+            BOTH_COUNTS,
+        )
+
+        dataset.write_statistic_values(
+            StatisticLevel.ENTITY,
+            [
+                {"record_id": "r1", "entity_id": "e1", "mask_count": 3},
+                {"record_id": "r1", "entity_id": "e2", "mask_count": 4},
+            ],
+            {"mask_count": "int"},
+        )
+
+        rows = sorted(dataset.open_table(ENTITY_TABLE).to_arrow().to_pylist(), key=lambda row: row["id"])
+        assert rows == [
+            {"id": "e1", "record_id": "r1", "entity_id": "e1", "bbox_count": 1, "mask_count": 3},
+            {"id": "e2", "record_id": "r1", "entity_id": "e2", "bbox_count": None, "mask_count": 4},
+        ]
+
+    def test_a_column_holding_values_of_another_type_is_refused(self, tmp_path: Path) -> None:
+        """A count written into a column of areas would be kept as 1.0, silently."""
+        dataset = _dataset(tmp_path)
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, {"bbox_area_mean_px": "float"})
+
+        with pytest.raises(ValueError, match="holds double, not int"):
+            dataset.write_statistic_values(
+                StatisticLevel.RECORD, [{"record_id": "r1", "bbox_area_mean_px": 1}], {"bbox_area_mean_px": "int"}
+            )
+
+    def test_lance_is_given_every_column_of_the_table_in_its_order(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Whatever Lance makes of some columns, or of columns in another order: it is never given any."""
+        dataset = _dataset(tmp_path)
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, BOTH_COUNTS)
+        given: list[pa.Schema] = []
+        execute = LanceMergeInsertBuilder.execute
+
+        def recording(builder: LanceMergeInsertBuilder, new_data: pa.Table, *args: Any, **kwargs: Any) -> Any:
+            given.append(new_data.schema)
+            return execute(builder, new_data, *args, **kwargs)
+
+        monkeypatch.setattr(LanceMergeInsertBuilder, "execute", recording)
+        _write(dataset, {"r1": {"mask_count": 1}}, {"mask_count": "int"})
+        _write(dataset, {"r2": {"mask_count": 2, "bbox_count": 3}}, {"mask_count": "int", "bbox_count": "int"})
+
+        assert given == [dataset.open_table(RECORD_TABLE).schema] * 2
+
+    def test_columns_in_another_order_once_a_statistic_computed_again_is_indexed(self, tmp_path: Path) -> None:
+        """Lance merges columns in another order by rewriting them in place: on a table whose `id` is
+        indexed, as an import indexes it, once a statistic computed again replaced rows, that left the
+        next write failing ("Ambiguous merge insert")."""
+        dataset = _rewritten_then_indexed(tmp_path)
+
+        _write(dataset, {"r2": {"mask_count": 3, "bbox_count": 3}}, {"mask_count": "int", "bbox_count": "int"})
+        _write(dataset, {"r1": {"bbox_count": 4, "mask_count": 5}, "r2": {"bbox_count": 6, "mask_count": 7}})
+
+        assert _counts(dataset) == [("r1", 4, 5), ("r2", 6, 7)]
+
+    def test_a_jobs_own_columns_once_a_statistic_computed_again_is_indexed(self, tmp_path: Path) -> None:
+        """A job writes its own columns, beside the others: the case above, for its usual write."""
+        dataset = _rewritten_then_indexed(tmp_path)
+
+        _write(dataset, {"r2": {"mask_count": 3}}, {"mask_count": "int"})
+        assert _counts(dataset) == [("r1", 2, 2), ("r2", 1, 3)]
+        _write(dataset, {"r1": {"bbox_count": 5, "mask_count": 6}, "r2": {"bbox_count": 7, "mask_count": 8}})
+
+        assert _counts(dataset) == [("r1", 5, 6), ("r2", 7, 8)]
 
     def test_the_info_an_export_carries_holds_no_statistics(self, tmp_path: Path) -> None:
         dataset = _dataset(tmp_path)
