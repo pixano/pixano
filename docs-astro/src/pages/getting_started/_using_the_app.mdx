@@ -138,6 +138,26 @@ Draw a shape and press `Enter`. The creation form opens:
 3. **Confirm** — the annotation is staged. Nothing is written until you press **Save** in the
    header. `Esc` cancels.
 
+### Reviewing what a model proposed
+
+A model's annotations — predictions imported with the dataset, for instance — are *pending
+review* until a person decides on them. On an image record, the **Entities** tab shows, on each entity and on each annotation a model proposed,
+**Pending review** with the model and, for a box, its confidence:
+
+- **Accept** keeps it as the model proposed it.
+- **Reject** deletes it, and the entity too once nothing else is left on it.
+
+On an entity, both act on what it shows: an annotation hidden, with its eye or by a filter, stays
+to review. Saving an edit of a model's annotation, or of its entity, accepts it too.
+
+The **Review** switch at the top of the **Entities** tab puts the record in review: what is still
+to review stays in view on the image and the rest fades. It says how much is left on the record,
+and **Accept all** accepts the entities shown — an entity with a hidden annotation, with its eye or
+the confidence filter, stays to review whole, its mask with its box.
+
+Decisions are staged like any change: **Save** writes them, and leaving the record without
+saving drops them. Video and 3D records are not reviewed.
+
 ## Keyboard shortcuts
 
 | Category | Shortcut | Action |
