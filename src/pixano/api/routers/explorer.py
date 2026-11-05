@@ -21,9 +21,9 @@ from pixano.api.models import (
 from pixano.api.query import (
     FilterCompileError,
     build_column_catalogue,
-    compile_filters,
-    validate_sort,
+    compile_record_query,
 )
+from pixano.api.record_reads import read_matching_ids, read_neighbors
 from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.routers.data_io import _data_dir
 from pixano.api.routers.records import _resolve_view_previews
@@ -114,6 +114,9 @@ def get_filter_schema(
             operators=list(column.operators),
             values=list(column.values) if column.values is not None else None,
             values_complete=column.values_complete,
+            table=column.table,
+            label=column.label,
+            unit=column.unit,
         )
         for column in catalogue
     ]
@@ -164,27 +167,11 @@ def get_record_neighbors(
     """Return a record's neighbors within the explorer's active filter and sort."""
     catalogue = build_column_catalogue(dataset, "records")
     try:
-        compiled_where, _referenced, _index_servable = compile_filters(catalogue, filter, q)
-        sortcol, sort_order = validate_sort(catalogue, sort, order)
+        record_query = compile_record_query(catalogue, filter, q, sort, order, raw_where=where)
     except FilterCompileError as err:
         raise HTTPException(status_code=400, detail=str(err)) from None
 
-    if where:
-        compiled_where = f"({where})" if compiled_where is None else f"{compiled_where} AND ({where})"
-
-    try:
-        neighbors = dataset.get_neighbors(
-            record_id=record_id,
-            table_name="records",
-            where=compiled_where,
-            sortcol=sortcol,
-            order=sort_order,
-        )
-    except RuntimeError as err:
-        # Only reachable via a malformed deprecated raw `where`.
-        if where:
-            raise HTTPException(status_code=400, detail=f"Invalid filter. {err}") from None
-        raise
+    neighbors = read_neighbors(dataset, record_query, record_id, raw_where=bool(where))
     return NeighborsResponse(**neighbors)
 
 
@@ -201,13 +188,10 @@ def _prefilter_record_ids(dataset: Dataset, filters: list[str] | None, where: st
         return None
     catalogue = build_column_catalogue(dataset, "records")
     try:
-        compiled_where, _referenced, _servable = compile_filters(catalogue, filters or [])
+        record_query = compile_record_query(catalogue, filters, raw_where=where)
     except FilterCompileError as err:
         raise HTTPException(status_code=400, detail=str(err)) from None
-    if where:
-        compiled_where = f"({where})" if compiled_where is None else f"{compiled_where} AND ({where})"
-    matches = dataset.get_data("records", where=compiled_where, limit=None)
-    return [record.id for record in (matches or [])]
+    return read_matching_ids(dataset, record_query, raw_where=bool(where))
 
 
 @router.post(
