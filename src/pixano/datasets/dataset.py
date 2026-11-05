@@ -396,16 +396,12 @@ class Dataset:
             self._patch_info_json({slot: _serialize_table_schema(schema)})
             logger.info("Dataset %s: created the '%s' table", self.id, table_name)
 
-        existing = {field.name: field.type for field in self.open_table(table_name).schema}
-        for column, value_type in columns.items():
-            if column in existing and existing[column] != self._STATISTIC_ARROW_TYPES[value_type]:
-                raise ValueError(
-                    f"The column '{column}' of '{table_name}' holds {existing[column]}, not {value_type}."
-                )
+        schema = self.open_table(table_name).schema
+        self._check_statistic_types(table_name, schema, columns)
         missing = {
             column: self._STATISTIC_NULLS[value_type]
             for column, value_type in columns.items()
-            if column not in existing
+            if column not in schema.names
         }
         if missing:
             try:
@@ -426,10 +422,10 @@ class Dataset:
         """Write the values of statistics, one row per record or per object.
 
         A row's identifier is its record's, or its object's: given, it is replaced by it. Only the
-        columns given are written: the other statistics of a row keep their values, and a row not
-        there yet gets none for them. The columns must be there already
-        (`ensure_statistic_columns`). Under the write lock, the rows of a record or an object deleted
-        since it was measured are not written: they would name nothing.
+        columns given change: the other statistics of a row are written back as they were read,
+        under the write lock, and a row not there yet gets none for them. The columns must be there
+        already (`ensure_statistic_columns`). Under the write lock, the rows of a record or an object
+        deleted since it was measured are not written: they would name nothing.
 
         Args:
             level: The level of the statistics, which picks the table.
@@ -441,17 +437,19 @@ class Dataset:
             The identifiers of the rows written: those of records and objects still there.
 
         Raises:
-            ValueError: A column is not there, a row names no record or no object, or a record or
-                an object has two rows.
+            ValueError: A column is not there or holds values of another type, a row names no record
+                or no object, or a record or an object has two rows.
         """
         if not rows:
             return []
         family = self._statistics_family(level)
         table = self.open_table(family.table_name)
+        schema = table.schema
         self._check_statistic_columns(columns, set(family.base_schema.model_fields))
-        missing = set(columns) - set(table.schema.names)
+        missing = set(columns) - set(schema.names)
         if missing:
             raise ValueError(f"The statistics table has no column {sorted(missing)}: ensure them first.")
+        self._check_statistic_types(family.table_name, schema, columns)
         own = "entity_id" if level is StatisticLevel.ENTITY else "record_id"
         if any(not row.get(own) or not row.get("record_id") for row in rows):
             raise ValueError(f"A row of statistics per {level.value} names no {own}.")
@@ -465,16 +463,52 @@ class Dataset:
         identified = [row for row in identified if row["id"] in existing]
         if not identified:
             return []
-        base_fields = [pa.field(name, pa.string(), nullable=False) for name in family.base_schema.model_fields]
-        value_fields = [
-            pa.field(column, self._STATISTIC_ARROW_TYPES[value_type]) for column, value_type in columns.items()
-        ]
-        values = pa.Table.from_pylist(identified, schema=pa.schema([*base_fields, *value_fields]))
-        # In the table's order: Lance's merge does not match columns by name once `id` is indexed, as
-        # an import indexes it (`_in_table_order`).
-        values = values.select([name for name in table.schema.names if name in values.schema.names])
+        # Every column of the table, in its order. Lance merges some columns only, or columns in
+        # another order, by rewriting them in place; once `id` is indexed, as an import indexes it,
+        # on a table where a merge replaced rows before (a statistic computed again), that leaves
+        # the next merge failing ("Ambiguous merge insert", "Missing too many rows in merge"; Lance
+        # 2.0.0, as lancedb 0.29 bundles it). `_in_table_order` met the same with an upsert in
+        # another order. The columns not written keep the values read here: under the write lock,
+        # no other local writer changes them in between. Remote storage has no such lock: there,
+        # two jobs writing the same rows at once may undo each other's columns.
+        written = [*family.base_schema.model_fields, *columns]
+        kept = [name for name in schema.names if name not in written]
+        records = unique_list([row["record_id"] for row in identified])
+        current = self._values_of_records(table, records, kept) if kept else {}
+        values = pa.Table.from_pylist(
+            [{**current.get(row["id"], {}), **{name: row.get(name) for name in written}} for row in identified],
+            schema=schema,
+        )
         table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(values)
         return [row["id"] for row in identified]
+
+    def _check_statistic_types(self, table_name: str, schema: pa.Schema, columns: dict[str, str]) -> None:
+        """Refuse a column a table holds already with values of another type than its statistic's."""
+        for column, value_type in columns.items():
+            if column in schema.names and schema.field(column).type != self._STATISTIC_ARROW_TYPES[value_type]:
+                raise ValueError(
+                    f"The column '{column}' of '{table_name}' holds {schema.field(column).type}, not {value_type}."
+                )
+
+    @staticmethod
+    def _values_of_records(table: LanceTable, record_ids: list[str], columns: list[str]) -> dict[str, dict[str, Any]]:
+        """The values of these columns in a table's rows of these records, by the rows' identifiers.
+
+        Read by record rather than by row: the objects of a record come in one query, not one each.
+        """
+        values: dict[str, dict[str, Any]] = {}
+        for start in range(0, len(record_ids), IDS_PER_QUERY):
+            batch = record_ids[start : start + IDS_PER_QUERY]
+            rows = (
+                table.search(None)
+                .select(["id", *columns])
+                .where(f"record_id IN {to_sql_list(batch)}")
+                .limit(None)
+                .to_arrow()
+            )
+            for row in rows.to_pylist():
+                values[row.pop("id")] = row
+        return values
 
     def _existing_ids(self, table_name: str, ids: list[str]) -> set[str]:
         """Those of these identifiers a table holds a row of."""
