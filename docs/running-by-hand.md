@@ -125,6 +125,12 @@ Open <http://localhost:7492> and switch to the new UI with the button in the hea
 panel shows the worker's kinds; a job submitted there is picked up by the worker started in
 step 3.
 
+An import then queues the embeddings job of the dataset it imported into, unless it says
+otherwise; an add import has the job compute the whole dataset again, with the model its
+embeddings already use. Set `PIXANO_EMBEDDINGS_AFTER_IMPORT=false` to stop that by default, and
+`PIXANO_EMBEDDINGS_MODEL` to name the model rather than take the first embeddings model the
+inference serves.
+
 ## The demo, by hand
 
 `docs/demo-etape1.md` prepares its datasets with a script that references the damaged images
