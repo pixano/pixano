@@ -276,6 +276,14 @@ class TestNeighbors:
         assert nb["position"] == 8
         assert nb["total"] == 15
 
+    @pytest.mark.parametrize("order", ["asc", "desc"])
+    def test_neighbors_match_paged_order_on_another_column(self, client: TestClient, order: str):
+        """Sorted on a column but `id`, they used to follow the identifiers' order instead."""
+        ordered = _all_ids(client, sort="score", order=order)
+        target = ordered[7]
+        nb = client.get(f"{BASE}/records/{target}/neighbors", params={"sort": "score", "order": order}).json()
+        assert (nb["prev"], nb["next"], nb["position"]) == (ordered[6], ordered[8], 8)
+
     def test_neighbors_respect_filter(self, client: TestClient):
         ordered = _all_ids(client, filter="split:eq:train", sort="id", order="asc")
         target = ordered[1]
