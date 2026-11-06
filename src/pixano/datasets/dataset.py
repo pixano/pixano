@@ -9,6 +9,9 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
+import stat
+import tempfile
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
@@ -24,6 +27,7 @@ import shortuuid
 from lancedb.common import DATA
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
+from pydantic import create_model
 from s3path import S3Path
 
 from pixano.datasets.queries import TableQueryBuilder
@@ -38,11 +42,13 @@ from pixano.datasets.utils.integrity import (
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
     Conversation,
+    Entity,
     Message,
     Record,
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    canonical_table_name_for_slot,
     is_entity_annotation,
     is_image,
     is_sequence_frame,
@@ -55,6 +61,7 @@ from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
+from .dataset_schema import _serialize_table_schema
 from .dataset_stat import DatasetStatistic, SplitStatusCount
 from .locking import dataset_mutation_lock, dataset_write
 
@@ -195,6 +202,26 @@ class Dataset:
                 )
         self._num_rows_cache: int | None = None
 
+    def is_stale(self) -> bool:
+        """Whether another process changed this dataset's metadata since it was read here.
+
+        A long-lived holder — the API's cache — asks before serving a request: a job that gives
+        the entities a new field rewrites `info.json`, and reading with the schema read before
+        would leave that field out. One `stat` per call; a replaced dataset counts as changed.
+
+        A dataset on S3 is never reported changed: there is no `stat` to compare, so its
+        holder serves the schema it first read until it drops the dataset — when a job ends,
+        for the API (docs/specs/backend-processing.md §20).
+        """
+        if isinstance(self.path, S3Path):
+            return False
+        try:
+            path_stat = self.path.stat()
+            info_mtime = self._info_file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return True
+        return (path_stat.st_dev, path_stat.st_ino) != self._directory_identity or info_mtime != self._info_mtime_ns
+
     @contextmanager
     def write_lock(self):
         """Protect a mutation and refresh cached handles before its integrity reads.
@@ -259,14 +286,73 @@ class Dataset:
         if self.info.spec_version < 3:
             self._backfill_columns(is_entity_annotation, {"review_status": "''"})
 
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
+        self._patch_info_json({"spec_version": self._CURRENT_SPEC_VERSION})
         self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    @dataset_write
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there.
+
+        For a job that writes a class on the objects it detects, on a dataset whose entities
+        have nowhere to hold one — nuScenes as imported, a dataset of plain images. The schema
+        class gains the field, the table gains the column, and `info.json` is rewritten, so the
+        interface offers the field like any other. Idempotent: a field already declared, with its
+        column, is left as it is and nothing is written — a rewrite of `info.json` would make every
+        other holder of the dataset stale (`is_stale`), and a job calls this once per chunk.
+
+        Args:
+            name: The field to add, typed as text.
+
+        Raises:
+            DatasetAccessError: The dataset declares no entities.
+        """
+        declared = self.info.entity
+        if declared is None:
+            raise DatasetAccessError(f"Dataset {self.id} declares no entities.")
+        schema: type[Entity] = declared
+        table_name = canonical_table_name_for_slot("entity")
+        if name in schema.model_fields and name in self.open_table(table_name).schema.names:
+            return
+        if name not in schema.model_fields:
+            schema = create_model(schema.__name__, __base__=schema, **{name: (str, "")})  # type: ignore[call-overload]
+            self.info.entity = schema
+            self.info.tables[table_name] = schema
+            self._table_handles.pop(table_name, None)
+        self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
+        self._patch_info_json({"entity": _serialize_table_schema(schema)})
+
+    def _patch_info_json(self, fields: dict[str, Any]) -> None:
+        """Set top-level fields of `info.json`, leaving the rest of the document as written.
+
+        Re-serializing `self.info` would persist what `DatasetInfo.from_json` dropped: the views
+        whose schema this build cannot deserialize. The raw document keeps them. On a local
+        disk, the new content goes to a temporary file of its own in the same directory, renamed
+        over `info.json`, so a reader never sees a half-written file; the file keeps its
+        permissions, which a temporary file would otherwise narrow to its owner. Callers hold the
+        write lock, since another writer's read-modify-write would race this one.
+
+        Args:
+            fields: The top-level fields to set, already serialized.
+        """
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json.update(fields)
+        content = json.dumps(info_json, indent=4)
+        if isinstance(self._info_file, S3Path):
+            # An object store replaces an object whole, so no reader sees half of it; and it has
+            # neither a directory to hold a temporary file nor permissions to keep.
+            self._info_file.write_text(content, encoding="utf-8")
+            return
+        permissions = stat.S_IMODE(self._info_file.stat().st_mode)
+        fd, tmp_name = tempfile.mkstemp(dir=self._info_file.parent, prefix=f"{self._info_file.name}.", suffix=".tmp")
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+                tmp_file.write(content)
+            tmp_path.chmod(permissions)
+            tmp_path.replace(self._info_file)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
         """Add the columns missing from every table whose schema ``applies_to`` selects.
@@ -623,8 +709,11 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
-        # Handles read the latest table version per query, so caching is safe;
-        # Dataset-level cache invalidation drops the whole instance anyway.
+        # A cached handle stays on the table version it opened, since the connection sets no
+        # read consistency interval: what another instance or process writes (the worker, the
+        # API) is not seen through it. `write_lock` clears the cache, so this instance's own
+        # writes and the reads made under the lock see the latest version, and Dataset-level
+        # cache invalidation drops the whole instance. Any other read may be stale.
         self._table_handles[name] = table
         return table
 

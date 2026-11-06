@@ -71,10 +71,10 @@ class _FakeDataset:
     def has_record_embeddings(self) -> bool:
         return "embeddings" in self.tables
 
-    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
+    def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
-        self.space: dict[str, Any] | None = {"model_id": model_id, "dim": dim}
+        self.space: dict[str, Any] | None = {"model_id": model_id, "dim": dim, "index_type": index_type}
 
     def drop_record_embeddings(self) -> None:
         self.tables.pop("embeddings", None)
@@ -510,11 +510,12 @@ class TestMediaEmbeddings:
     """An embeddings table accepts only one model."""
 
     def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
+        """With the vector index the job's closing step will give it, the one measured best."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
 
         writer.write_media_embeddings(["r1", "r2"], ["v-r1", "v-r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
 
-        assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2}
+        assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2, "index_type": "IVF_SQ"}
         assert len(dataset.tables["embeddings"]) == 2
 
     def test_the_same_model_replaces_its_vectors(self, dataset: _FakeDataset) -> None:
@@ -566,7 +567,7 @@ class TestMediaEmbeddings:
         writer.drop_embeddings()
         writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="dinov2")
 
-        assert dataset.record_embedding_space() == {"model_id": "dinov2", "dim": 3}
+        assert dataset.record_embedding_space() == {"model_id": "dinov2", "dim": 3, "index_type": "IVF_SQ"}
         assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "v-r2", 0)]
 
     def test_dropping_an_absent_table_does_nothing(self, dataset: _FakeDataset) -> None:
@@ -636,10 +637,93 @@ class TestEmbeddingTableCreatedElsewhere:
         fresh = _FakeDataset()
         fresh.create_record_embedding_table(dim=2, model_id="clip")
         created_on_stale = []
-        dataset.create_record_embedding_table = lambda dim, model_id: created_on_stale.append(model_id)  # type: ignore[assignment]
+        dataset.create_record_embedding_table = lambda dim, model_id, **_kwargs: created_on_stale.append(model_id)  # type: ignore[assignment]
         writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: fresh)
 
         writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
         assert created_on_stale == [], "the existing table would have been overwritten"
         assert len(fresh.tables["embeddings"]) == 1
+
+
+class TestIndexingEmbeddings:
+    """The embeddings job's closing step, against real Lance: the indexes a search reads."""
+
+    #: Vectors per write, as chunks deliver them: the table is built the way a job builds it.
+    VECTORS_PER_WRITE = 250
+
+    @classmethod
+    def _embedded(cls, tmp_path, vectors: int) -> tuple[Any, JobWriter]:
+        import numpy as np
+
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.records import Record
+
+        dataset = Dataset.create(tmp_path / "embedded", DatasetInfo(id="embedded", name="Embedded", record=Record))
+        dataset.add_data("records", [Record(id=f"rec-{n}") for n in range(vectors)] + [Record(id="rec-new")])
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: dataset)
+        rng = np.random.default_rng(3)
+        for start in range(0, vectors, cls.VECTORS_PER_WRITE):
+            batch = range(start, min(start + cls.VECTORS_PER_WRITE, vectors))
+            writer.write_media_embeddings(
+                [f"rec-{n}" for n in batch],
+                [f"img-{n}" for n in batch],
+                rng.standard_normal((len(batch), 16)).tolist(),
+                model="clip",
+            )
+        return dataset, writer
+
+    @staticmethod
+    def _indexes(dataset: Any) -> dict[str, str]:
+        """The embeddings table's indexes, by the column each covers."""
+        return {index.columns[0]: index.index_type for index in dataset.open_table("embeddings").list_indices()}
+
+    def test_a_small_table_gets_its_record_index_and_no_vector_index(self, tmp_path) -> None:
+        """Below the threshold, exact search is fast, and an index would only make it approximate."""
+        dataset, writer = self._embedded(tmp_path, 300)
+
+        assert writer.index_embeddings(min_rows=1_000) is None
+
+        assert self._indexes(dataset) == {"record_id": "BTree"}
+
+    def test_a_large_table_gets_the_vector_index_its_descriptor_declares(self, tmp_path) -> None:
+        """Over every vector, none left to an exact scan."""
+        dataset, writer = self._embedded(tmp_path, 1_000)
+
+        assert writer.index_embeddings(min_rows=1_000) == "IVF_SQ"
+
+        assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
+        stats = dataset.open_table("embeddings").index_stats("vector_idx")
+        assert (stats.num_indexed_rows, stats.num_unindexed_rows) == (1_000, 0)
+
+    def test_indexing_again_rebuilds_rather_than_stacks(self, tmp_path) -> None:
+        """A final chunk run again, after its worker died, leaves the table as one run does."""
+        dataset, writer = self._embedded(tmp_path, 1_000)
+        writer.index_embeddings(min_rows=1_000)
+        writer.write_media_embeddings(["rec-new"], ["img-new"], [[0.5] * 16], model="clip")
+
+        writer.index_embeddings(min_rows=1_000)
+        writer.index_embeddings(min_rows=1_000)
+
+        assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
+        stats = dataset.open_table("embeddings").index_stats("vector_idx")
+        assert (stats.num_indexed_rows, stats.num_unindexed_rows) == (1_001, 0)
+
+    def test_a_search_through_the_index_finds_the_vector_asked_for(self, tmp_path) -> None:
+        dataset, writer = self._embedded(tmp_path, 1_000)
+        writer.index_embeddings(min_rows=1_000)
+        query = dataset.open_table("embeddings").search().where("view_id = 'img-421'").to_list()[0]["vector"]
+
+        records, _ = dataset.search_records(list(query), k=1)
+
+        assert [record.id for record in records] == ["rec-421"]
+
+    def test_a_dataset_without_embeddings_has_nothing_to_index(self, tmp_path) -> None:
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.records import Record
+
+        dataset = Dataset.create(tmp_path / "bare", DatasetInfo(id="bare", name="Bare", record=Record))
+
+        assert JobWriter(lambda: dataset, "embeddings", "job-1").index_embeddings(min_rows=1) is None

@@ -86,6 +86,7 @@ class _Target:
 
     def __init__(self) -> None:
         self.compactions: list[str] = []
+        self.indexes: list[tuple[str, str]] = []
         self.tables: dict[str, dict[str, Any]] = {}
         self._embeddings_ready = False
         self.info = SimpleNamespace(tables={})
@@ -122,16 +123,21 @@ class _Target:
         return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
 
     def open_table(self, table_name: str) -> Any:
-        self.compactions.append(table_name)
-        return SimpleNamespace(optimize=lambda **_kwargs: None)
+        """A table that compacts and indexes, recording each operation: they change no row."""
+        return SimpleNamespace(
+            optimize=lambda **_kwargs: self.compactions.append(table_name),
+            count_rows=lambda: len(self.tables.get(table_name, {})),
+            create_scalar_index=lambda column, **_kwargs: self.indexes.append((table_name, column)),
+            create_index=lambda **kwargs: self.indexes.append((table_name, kwargs["vector_column_name"])),
+        )
 
     def has_record_embeddings(self) -> bool:
         return self._embeddings_ready
 
-    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
+    def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
-        self._space: dict[str, Any] | None = {"model_id": model_id, "dim": dim}
+        self._space: dict[str, Any] | None = {"model_id": model_id, "dim": dim, "index_type": index_type}
 
     def drop_record_embeddings(self) -> None:
         self._embeddings_ready = False

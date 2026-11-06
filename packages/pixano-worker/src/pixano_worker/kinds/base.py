@@ -244,7 +244,8 @@ class JobKind(ABC, Generic[ParamsT]):
         when every other chunk is done: claimed by any worker, under a lease, with the chunk
         time limit, cancelled with the job, retried after a transient failure. It never runs
         when a chunk failed or the job was cancelled; a retry that brings the failed chunks
-        through runs it then. The job reads `done` only once it has run. A kind that does not
+        through runs it then, and the worker's recovery pass runs it for a retried job that had
+        nothing left to reopen. The job reads `done` only once it has run. A kind that does not
         override this method has no final chunk.
 
         It runs in a thread, under the runner's per-dataset write lock, as a chunk's `write`

@@ -142,6 +142,28 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         if params.replace_existing_embeddings:
             writer.drop_embeddings()
 
+    def finalize(self, reader: JobReader, writer: JobWriter, params: EmbeddingsParams) -> None:
+        """Index the vectors, once the job wrote them all.
+
+        The index is trained on the whole table, which no chunk sees: built chunk by chunk, it
+        would be trained again at every write. Idempotent, since the index is rebuilt whole.
+
+        A build that fails is tried again later rather than failing the job: the vectors are all
+        written, and what fails a build is mostly another writer of the table — the
+        application's own computation, a recompute, a rollback, another worker — whose commit
+        conflicts with the index's. Until an index is built, the search stays exact.
+
+        Raises:
+            TransientError: The index could not be built this time.
+        """
+        try:
+            writer.index_embeddings()
+        except Exception as error:
+            # Logged with its trace here: the runner logs a transient failure by its reason alone,
+            # and a build that fails for good would otherwise leave only its message behind.
+            log.warning("job %s: the embeddings could not be indexed, tried again later", writer.job_id, exc_info=True)
+            raise TransientError(f"the embeddings could not be indexed: {error}") from error
+
     def plan(self, reader: JobReader, params: EmbeddingsParams) -> Iterable[Chunk]:
         """Split the chosen media into batches.
 
