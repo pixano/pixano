@@ -53,7 +53,12 @@ RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0
 # from what it summarises, an aggregate cannot. `done_tasks` alone reports 26 766 / 26 766 on
 # a dataset where 404 records carry an image — the outcome is what says so.
 _JOB_PROJECTION = f"""
-SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_at,
+SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks,
+       -- The tasks of the finished chunks and how far the running ones got — a long chunk, task by
+       -- task —, as the worker's progress events count them.
+       j.done_tasks + coalesce((SELECT sum(c.progress) FROM {SCHEMA_NAME}.job_chunks c
+                                WHERE c.job_id = j.id AND c.state = 'running'), 0)::int,
+       j.created_at,
        coalesce((SELECT sum(c.produced) FROM {SCHEMA_NAME}.job_chunks c
                  WHERE c.job_id = j.id AND c.state = 'done'), 0)::int,
        coalesce((SELECT sum(c.skipped) FROM {SCHEMA_NAME}.job_chunks c
@@ -85,8 +90,8 @@ FROM {SCHEMA_NAME}.job_items WHERE job_id = %s
 ORDER BY created_at, item_id LIMIT %s
 """
 
-# Ask for cancellation without touching the running chunks: their worker stops on its own
-# before the next one.
+# Ask for cancellation without touching the running chunks: their worker hears it, and stops them
+# before the next one — or, for a kind whose chunk runs long, between two steps of it.
 REQUEST_CANCEL = f"""
 UPDATE {SCHEMA_NAME}.jobs SET cancel_requested_at = now(), updated_at = now()
 WHERE id = %s AND state IN ('planning', 'pending', 'running') AND cancel_requested_at IS NULL

@@ -52,7 +52,8 @@ class JobResponse(BaseModel):
     """A job as the interface sees it.
 
     Attributes:
-        done_tasks: Tasks attempted so far — the progress bar.
+        done_tasks: Tasks attempted so far, with how far the running chunks got — the progress
+            bar.
         produced: Tasks that gave a result.
         skipped: Tasks the kind does not apply to, such as a record without an image for an
             image job. Not a failure.
