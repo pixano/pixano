@@ -303,8 +303,11 @@ class TestAJobThatEndsBadlyIsNotFinalized:
 
         assert _state(db, job) == ("done", 40, 40)
         assert kind.finalized == [job]
-        # The start on the closing step alone says the job is finalizing.
-        assert _states(db, job)[-2] == {"state": "running", "finalizing": True}
+        # The retry, then the start on the closing step alone, both say the job is finalizing.
+        assert _states(db, job)[-3:-1] == [
+            {"state": "pending", "cancel_requested": False, "finalizing": True},
+            {"state": "running", "finalizing": True},
+        ]
 
 
 class TestAFailingClosingStep:
