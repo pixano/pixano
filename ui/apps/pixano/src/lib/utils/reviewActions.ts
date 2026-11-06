@@ -16,7 +16,9 @@ import {
   annotations,
   entities,
   highlightedEntity,
+  itemMetas,
   preAnnotationIsActive,
+  reviewDecisionsLockedOn,
   selectedTool,
   workspaceSaveQueue,
 } from "$lib/stores/workspaceStores.svelte";
@@ -37,10 +39,16 @@ import { saveTo } from "$lib/utils/saveItemUtils";
 
 /**
  * Whether a review decision may be taken now: not under the Fusion tool, which merges objects;
- * not while the old pre-annotation mode hides the list of objects.
+ * not while the old pre-annotation mode hides the list of objects; not on a record "Save & next"
+ * is leaving.
  */
 export function canTakeReviewDecision(): boolean {
-  return selectedTool.value?.type !== ToolType.Fusion && !preAnnotationIsActive.value;
+  const lockedOn = reviewDecisionsLockedOn.value;
+  return (
+    selectedTool.value?.type !== ToolType.Fusion &&
+    !preAnnotationIsActive.value &&
+    (lockedOn === null || lockedOn !== itemMetas.value?.item.id)
+  );
 }
 
 /**

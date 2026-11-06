@@ -80,6 +80,10 @@ Toggle between **gallery** and **table**:
 Both views let you choose how many records to show per page. Clicking a record opens it in the
 Workspace.
 
+When a model's annotations wait for review on an image dataset, **Review** shows how many
+records hold some, and opens the first of them in review — see
+[Reviewing what a model proposed](#reviewing-what-a-model-proposed).
+
 ## Workspace
 
 The Workspace is where annotation happens.
@@ -156,7 +160,10 @@ and **Accept all** accepts the entities shown — an entity with a hidden annota
 the confidence filter, stays to review whole, its mask with its box.
 
 Decisions are staged like any change: **Save** writes them, and leaving the record without
-saving drops them. Video and 3D records are not reviewed.
+saving drops them. In review, the header offers **Save & next**, which saves and opens the next
+record to review, and says how many records are left. The next record follows the order of the
+records' ids over the whole dataset, whatever the Explorer's filters and sort; on the last record
+to review, it saves and stays. Video and 3D records are not reviewed.
 
 ## Keyboard shortcuts
 
