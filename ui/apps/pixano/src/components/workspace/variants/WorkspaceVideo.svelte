@@ -70,6 +70,7 @@ License: CECILL-C
     resetVideoStores,
     videoViewNames,
   } from "$lib/stores/videoStores.svelte";
+  import { videoTracking } from "$lib/stores/videoTrackingStore.svelte";
   import {
     annotationColors,
     annotations,
@@ -128,6 +129,12 @@ License: CECILL-C
   }
 
   let { selectedItem, resize }: Props = $props();
+
+  // The objects followed in the background: their jobs' progress reaches their cards as it happens.
+  $effect(() => {
+    void videoTracking.follow();
+    return () => videoTracking.unfollow();
+  });
 
   $effect(() => {
     if (selectedItem) {

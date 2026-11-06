@@ -8,8 +8,12 @@ License: CECILL-C
   import type { Job } from "$lib/api/jobsApi";
   import { progressOf } from "$lib/stores/jobsStore.svelte";
 
-  type Props = { job: Job };
-  let { job }: Props = $props();
+  type Props = {
+    job: Job;
+    /** Whether the count is written under the bar: not where the caller says it in its own words. */
+    counted?: boolean;
+  };
+  let { job, counted = true }: Props = $props();
 
   const ratio = $derived(progressOf(job));
   const percent = $derived(Math.round(ratio * 100));
@@ -34,11 +38,13 @@ License: CECILL-C
       class:animate-pulse={indeterminate}
     ></div>
   </div>
-  <span class="text-xs text-muted-foreground">
-    {#if indeterminate}
-      Planning…
-    {:else}
-      {job.done_tasks} / {job.total_tasks} tasks
-    {/if}
-  </span>
+  {#if counted}
+    <span class="text-xs text-muted-foreground">
+      {#if indeterminate}
+        Planning…
+      {:else}
+        {job.done_tasks} / {job.total_tasks} tasks
+      {/if}
+    </span>
+  {/if}
 </div>

@@ -27,6 +27,7 @@ License: CECILL-C
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ReviewStatusStrip from "../Review/ReviewStatusStrip.svelte";
+  import BackgroundTracking from "./BackgroundTracking.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
     handleSetDisplayControl as handleSetDC,
@@ -35,8 +36,12 @@ License: CECILL-C
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
   import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
+  import { selectedVideoSegmentationModel } from "$lib/stores/inferenceStores.svelte";
+  import { reloadOpenRecord } from "$lib/stores/recordReload.svelte";
   import { isTracking } from "$lib/stores/trackingStore.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { videoTracking } from "$lib/stores/videoTrackingStore.svelte";
   import {
     annotationColors,
     annotations,
@@ -45,9 +50,11 @@ License: CECILL-C
     itemMetas,
     mediaViews,
     reviewedAnnotation,
+    saveData,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
+  import { canTrackFrom, trackingBlocker } from "$lib/tracking/backgroundTracking";
   import type { Feature } from "$lib/types/workspace";
   import {
     Annotation,
@@ -186,6 +193,52 @@ License: CECILL-C
     }
     return counts;
   });
+
+  // ─── Tracking of this object through its video, in the background ──────────
+  // Followed from the frame shown to the video's end: from a frame where the object is drawn, or as
+  // long as its card shows the job's end.
+  const trackingJob = $derived(
+    itemMetas.value?.type === WorkspaceType.VIDEO ? videoTracking.jobOf(entity.id) : null,
+  );
+  const trackable = $derived.by(() => {
+    // The entity's annotations change in place: the store says when.
+    void entities.value;
+    return (
+      itemMetas.value?.type === WorkspaceType.VIDEO &&
+      (trackingJob !== null || canTrackFrom(entity, currentFrameIndex.value))
+    );
+  });
+  const trackingModelName = $derived(
+    videoTracking.modelFor(selectedVideoSegmentationModel.value?.name),
+  );
+  const trackingBlockedBy = $derived(
+    trackingBlocker({
+      available: videoTracking.available,
+      model: trackingModelName,
+      unsaved: saveData.value.length > 0,
+      lastFrame:
+        lastFrameIndex.value !== undefined && currentFrameIndex.value >= lastFrameIndex.value,
+    }),
+  );
+
+  function trackInBackground() {
+    const datasetId = currentDatasetStore.value?.id;
+    const recordId = itemMetas.value?.item.id;
+    if (!datasetId || !recordId || !trackingModelName) return;
+    void videoTracking.track(
+      datasetId,
+      recordId,
+      entity.id,
+      currentFrameIndex.value,
+      trackingModelName,
+    );
+  }
+
+  /** Read the record again, with the masks the job wrote; only with nothing unsaved to lose. */
+  async function showTrackedMasks() {
+    videoTracking.dismiss(entity.id);
+    await reloadOpenRecord();
+  }
 
   // ─── Review of what a model proposed for this object ────────────────────────
   const reviewSummary = $derived.by(() => {
@@ -607,6 +660,21 @@ License: CECILL-C
         canDecide={canTakeReviewDecision() && reviewTargets.length > 0}
         onAccept={() => acceptAnnotations(reviewTargetsOf(entity))}
         onReject={() => rejectAnnotations(reviewTargetsOf(entity))}
+      />
+    {/if}
+
+    {#if trackable}
+      <BackgroundTracking
+        job={trackingJob}
+        model={trackingModelName}
+        blocker={trackingBlockedBy}
+        starting={videoTracking.starting.includes(entity.id)}
+        refusal={videoTracking.refusalOf(entity.id)}
+        canShow={saveData.value.length === 0}
+        onTrack={trackInBackground}
+        onCancel={() => void videoTracking.cancel(entity.id)}
+        onShow={() => void showTrackedMasks()}
+        onDismiss={() => videoTracking.dismiss(entity.id)}
       />
     {/if}
   </Card.Header>
