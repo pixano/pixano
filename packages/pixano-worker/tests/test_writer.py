@@ -74,7 +74,12 @@ class _FakeDataset:
     def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
-        self.space = {"model_id": model_id, "dim": dim, "index_type": index_type}
+        self.space: dict[str, Any] | None = {"model_id": model_id, "dim": dim, "index_type": index_type}
+
+    def drop_record_embeddings(self) -> None:
+        self.tables.pop("embeddings", None)
+        self.info.tables.pop("embeddings", None)
+        self.space = None
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)
@@ -553,6 +558,23 @@ class TestMediaEmbeddings:
 
         with pytest.raises(ValueError, match="dimension 3"):
             writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="clip")
+
+    def test_dropping_the_table_lets_another_model_fill_it(self, dataset: _FakeDataset) -> None:
+        """What a job asked to replace the embeddings does at planning, before its first write."""
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
+
+        writer.drop_embeddings()
+        writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="dinov2")
+
+        assert dataset.record_embedding_space() == {"model_id": "dinov2", "dim": 3, "index_type": "IVF_SQ"}
+        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "v-r2", 0)]
+
+    def test_dropping_an_absent_table_does_nothing(self, dataset: _FakeDataset) -> None:
+        """`prepare` may run twice: a planner that died after it lets the next one start over."""
+        JobWriter(lambda: dataset, "embeddings", "job-1").drop_embeddings()
+
+        assert dataset.record_embedding_space() is None
 
 
 class TestCompaction:

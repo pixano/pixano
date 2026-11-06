@@ -171,6 +171,10 @@ class DatasetWriteTarget(Protocol):
         """Create the embeddings table for a given vector width, declaring the vector index it will get."""
         ...
 
+    def drop_record_embeddings(self) -> None:
+        """Delete the embeddings table and the model it declares."""
+        ...
+
     def record_embedding_space(self) -> dict[str, Any] | None:
         """The model and dimension of the embeddings already computed, or None if there are none."""
         ...
@@ -441,6 +445,15 @@ class JobWriter:
 
     # The canonical name of the record embeddings table in Pixano.
     EMBEDDING_TABLE = "embeddings"
+
+    def drop_embeddings(self) -> None:
+        """Delete the dataset's embeddings table, so that another model can fill it.
+
+        Only for a kind's `prepare`, and only on an explicit parameter: this destroys every
+        vector of the dataset. Harmless when there is no table.
+        """
+        self.dataset.drop_record_embeddings()
+        logger.info("job %s: embeddings table dropped before recomputing", self.job_id)
 
     def write_media_embeddings(
         self, record_ids: Sequence[str], view_ids: Sequence[str], vectors: Sequence[Any], model: str

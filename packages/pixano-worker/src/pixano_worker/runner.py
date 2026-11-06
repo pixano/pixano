@@ -118,11 +118,12 @@ PLANNING_WRITE_LOCK_WAIT_S = 10.0
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
 # How long the loop waits for a planning — the split, then the preparation — before it fails the
-# job. Planning reads the identifiers it splits, asks the kind which model it runs — a question
-# to the inference bounded by its own timeout —, waits at most `PLANNING_WRITE_LOCK_WAIT_S` for
-# the dataset, and prepares it. Not measured: a ceiling rather than an estimate, set far above that
-# work, so that only a planning stuck in its reads or in `prepare` — storage that stopped
-# answering, a kind's bug — reaches it, and the loop's turn, which it holds, is given back.
+# job. Planning reads the identifiers it splits, asks the inference whether it serves the job's
+# model and which checkpoint it loaded — two questions bounded by their own timeout —, waits at
+# most `PLANNING_WRITE_LOCK_WAIT_S` for the dataset, and prepares it. Not measured: a ceiling
+# rather than an estimate, set far above that work, so that only a planning stuck in its reads or
+# in `prepare` — storage that stopped answering, a kind's bug — reaches it, and the loop's turn,
+# which it holds, is given back.
 PLANNING_TIMEOUT_S = 600.0
 
 # What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
@@ -388,10 +389,10 @@ def _plan_and_prepare(
     """Split a job on its dataset reopened, then prepare the dataset: the planning's own work.
 
     The split first, then the preparation: everything that can refuse the job — a model the
-    dataset's embeddings were not computed with, a dataset with nothing to do — refuses it before
-    `prepare` has destroyed anything. The other order would let a `prepare` empty a table for a job
-    its plan then refuses. A planner that dies after `prepare` leaves no chunk, and the next one
-    redoes both — that is why `prepare` must be idempotent.
+    inference does not serve, or the dataset's embeddings were not computed with, a dataset with
+    nothing to do — refuses it before `prepare` has destroyed anything. The other order would let
+    a `prepare` empty a table for a job its plan then refuses. A planner that dies after `prepare`
+    leaves no chunk, and the next one redoes both — that is why `prepare` must be idempotent.
 
     `prepare` may write, so it runs under the dataset's write lock, as a chunk's `write` does:
     this worker's chunks of other jobs may be writing the same dataset meanwhile, in other

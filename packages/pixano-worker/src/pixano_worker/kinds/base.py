@@ -76,6 +76,10 @@ class JobParams(BaseModel):
 
 ParamsT = TypeVar("ParamsT", bound=JobParams)
 
+#: A key a parameter's JSON schema may carry to make the submission form ask for confirmation
+#: before the job starts, with this text. For a parameter that destroys something when set.
+CONFIRM_MARKER = "x-pixano-confirm"
+
 
 class Chunk(BaseModel):
     """A batch of tasks as a planner produces it.

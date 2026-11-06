@@ -21,7 +21,7 @@ import httpx
 import numpy as np
 import pytest
 from pixano_inference.client import PixanoInferenceError
-from pixano_worker.kinds import EmbeddingsKind, TransientError
+from pixano_worker.kinds import CONFIRM_MARKER, EmbeddingsKind, TransientError
 from pixano_worker.kinds.inference import QUERY_TIMEOUT_S
 from pixano_worker.media import MediaResolver, ResolvedMedia
 
@@ -55,6 +55,8 @@ class _Inference:
         self.unreachable_from_call: int | None = None
         self.calls: list[list[str]] = []
         self.opened = self.closed = 0
+        # What `GET /v1/models` lists.
+        self.models = [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
         self.opened += 1
@@ -69,7 +71,7 @@ class _Inference:
     def list_models(self) -> list[Any]:
         if self.unreachable:
             raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
-        return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2")]
+        return self.models
 
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
@@ -392,15 +394,15 @@ def _plan(reader: _PlanningReader, **params: Any) -> list[Any]:
 class TestModelOfTheExistingTable:
     """Refused at planning, before the inference runs over the whole dataset."""
 
-    def test_a_dataset_without_embeddings_accepts_any_model(self) -> None:
+    def test_a_dataset_without_embeddings_accepts_any_model(self, inference: _Inference) -> None:
         chunks = _plan(_PlanningReader(None))
 
         assert sum(chunk.task_count for chunk in chunks) == 8
 
-    def test_the_same_model_is_planned(self) -> None:
+    def test_the_same_model_is_planned(self, inference: _Inference) -> None:
         assert _plan(_PlanningReader({"model_id": "clip", "dim": 512}))
 
-    def test_another_model_fails_the_planning(self) -> None:
+    def test_another_model_fails_the_planning(self, inference: _Inference) -> None:
         with pytest.raises(ValueError, match="dinov2"):
             _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}))
 
@@ -408,19 +410,19 @@ class TestModelOfTheExistingTable:
 class TestPlanningByMedium:
     """A task is a medium, and the user chooses which media types a job covers."""
 
-    def test_a_task_is_a_medium_and_a_chunk_names_its_table(self) -> None:
+    def test_a_task_is_a_medium_and_a_chunk_names_its_table(self, inference: _Inference) -> None:
         chunks = _plan(_PlanningReader(images=10), chunk_size=4)
 
         assert [chunk.task_count for chunk in chunks] == [4, 4, 2]
         assert {chunk.payload["table"] for chunk in chunks} == {"images"}
         assert [view for chunk in chunks for view in chunk.payload["view_ids"]] == [f"img-{n}" for n in range(10)]
 
-    def test_images_by_default_and_nothing_else(self) -> None:
+    def test_images_by_default_and_nothing_else(self, inference: _Inference) -> None:
         chunks = _plan(_PlanningReader())
 
         assert all(view.startswith("img-") for chunk in chunks for view in chunk.payload["view_ids"])
 
-    def test_a_type_this_kind_cannot_send_refuses_the_whole_job(self) -> None:
+    def test_a_type_this_kind_cannot_send_refuses_the_whole_job(self, inference: _Inference) -> None:
         """Whole, not partly: the user serves what the type needs, or narrows the selection."""
         with pytest.raises(ValueError, match="cannot process point_cloud"):
             _plan(_PlanningReader(), media=["image", "point_cloud"])
@@ -429,7 +431,24 @@ class TestPlanningByMedium:
         with pytest.raises(ValueError):
             KIND.validate_params({"model": "clip", "media": ["hologram"]})
 
-    def test_a_dataset_without_the_chosen_media_plans_nothing(self) -> None:
+    def test_a_model_the_inference_does_not_serve_refuses_the_job(self, inference: _Inference) -> None:
+        with pytest.raises(ValueError, match="serves no embedding model named 'siglip' — it serves clip"):
+            _plan(_PlanningReader(), model="siglip")
+
+    def test_a_model_served_for_another_task_refuses_the_job(self, inference: _Inference) -> None:
+        """A detector of the same name is no embedding model: the chunks would all fail on it."""
+        inference.models = [SimpleNamespace(name="clip", model_path="yolo26n.pt", capability="detection")]
+
+        with pytest.raises(ValueError, match="serves no embedding model named 'clip' — it serves none"):
+            _plan(_PlanningReader())
+
+    def test_an_unreachable_inference_does_not_refuse_the_job(self, inference: _Inference) -> None:
+        """It may be restarting: the chunks will wait for it like after any outage."""
+        inference.unreachable = True
+
+        assert _plan(_PlanningReader())
+
+    def test_a_dataset_without_the_chosen_media_plans_nothing(self, inference: _Inference) -> None:
         assert _plan(_PlanningReader(images=0)) == []
 
     def test_the_form_starts_with_images_ticked(self) -> None:
@@ -442,6 +461,46 @@ class TestPlanningByMedium:
             KIND.validate_params({"model": "clip"}).media == ["image"]
             and KIND.validate_params({"model": "clip"}).media is not KIND.validate_params({"model": "clip"}).media
         )
+
+
+class TestReplaceExistingEmbeddings:
+    """The explicit way to change a dataset's embedding model."""
+
+    class _Writer:
+        def __init__(self) -> None:
+            self.drops = 0
+
+        def drop_embeddings(self) -> None:
+            self.drops += 1
+
+    def test_without_the_parameter_nothing_is_dropped(self) -> None:
+        writer = self._Writer()
+
+        KIND.prepare(writer, KIND.validate_params({"model": "clip"}))  # type: ignore[arg-type]
+
+        assert writer.drops == 0
+
+    def test_with_the_parameter_the_table_is_dropped_before_planning(self) -> None:
+        writer = self._Writer()
+
+        KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
+
+        assert writer.drops == 1
+
+    def test_replacing_lets_another_model_through_planning(self, inference: _Inference) -> None:
+        """The check on the table's model is what replacing is for: `prepare` empties it after the plan."""
+        assert _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}), replace_existing_embeddings=True)
+
+    def test_the_form_is_asked_to_confirm_it(self) -> None:
+        field = KIND.params_model.model_json_schema()["properties"]["replace_existing_embeddings"]
+
+        assert "deletes every vector" in field[CONFIRM_MARKER]
+
+    def test_it_is_not_part_of_the_provenance(self) -> None:
+        """What the job did to the dataset before computing, not how a vector was computed."""
+        params = KIND.validate_params({"model": "clip", "replace_existing_embeddings": True})
+
+        assert "replace_existing_embeddings" not in KIND.provenance_params(params)
 
 
 class TestModelIdentity:
