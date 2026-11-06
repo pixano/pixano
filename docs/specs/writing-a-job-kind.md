@@ -92,7 +92,8 @@ that, on the largest dataset it will meet.
 
 Completes the job once every chunk of it is done: what only makes sense over the whole result,
 such as an index trained on every vector the job wrote. No chunk can do it — each sees its own
-work — and the last chunk to finish does not know it is the last.
+work — and the last chunk to finish does not know it is the last. The embeddings kind is the
+first to override it: it indexes the vectors (`writer.index_embeddings`).
 
 A kind that overrides it gets a **final chunk**, recorded at planning with the others but
 `waiting`, last in rank and without a task. When every other chunk is done — none failed, none
@@ -100,10 +101,11 @@ left, the job not cancelled — whoever settles the job puts it in the queue, an
 it like a chunk: under a lease, with the chunk's time limit, cancelled with the job, handed back
 after a transient failure, retried by `POST /jobs/{id}/retry`. The job reads `done` only after
 it. It never runs when a chunk failed or the job was cancelled; a retry that brings the failed
-chunks through runs it then (backend-processing §8.5). Its tasks are none, so the job's progress
-and outcome are those of its work; meanwhile the new interface says *finalizing* under the full
-bar. A kind that does not override it has no final chunk, and its jobs settle with their last
-chunk as before.
+chunks through runs it then, and the worker's recovery pass runs it for a retried job that had
+nothing left to reopen — cancelled while its last chunks ran (backend-processing §8.5). Its tasks
+are none, so the job's progress and outcome are those of its work; meanwhile the new interface says
+*finalizing* under the full bar. A kind that does not override it has no final chunk, and its
+jobs settle with their last chunk as before.
 
 It runs in a thread, under the worker's write lock of the dataset, as a chunk's `write` does,
 on the dataset **reopened outside the cache**: it must see what every worker wrote, not what
@@ -121,6 +123,15 @@ suite:
   before and after it.
 - **Reads the dataset, never the chunks.** Their payloads and results are gone, and other
   workers wrote part of them: what the job produced is what the dataset holds.
+
+The embeddings kind's `finalize` brought **`writer.index_embeddings()`**, for any kind that
+fills the embeddings table: it compacts the table, builds its `record_id` index, and from
+`VECTOR_INDEX_MIN_ROWS` vectors (50,000) the vector index its descriptor declares (`IVF_SQ` for a
+table the worker created), each rebuilt whole. Below the threshold, exact search is fast and an
+index would only lose results (backend-processing §12). It does not take the dataset's own lock,
+as compaction does not: a person's save is never refused for an index. A build that conflicts
+with another writer of the table raises; the embeddings kind hands its final chunk back to try
+again.
 
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 
@@ -242,6 +253,18 @@ leaves no row behind. What it means for a kind:
   entity gets this without asking — and so does a kind that writes its rows on another kind's
   objects, whose pending rows a person's fix of the object accepts, though nobody looked at them
   (backend-processing §19).
+- **Nothing to register — for a kind an interface can review.** Which kinds those are is one
+  predicate, `pixano.schemas.is_reviewable_annotation`: every entity annotation but tracklets,
+  relations and text spans. The next record to review is found by scanning those tables — for
+  rows on a view an interface can show for review, `pixano.schemas.is_reviewable_view`: not a
+  video or its frames —, the interface reads the status from any row, and the export by status
+  filters those tables only.
+  A kind writing boxes, 3D boxes, masks, keypoints, paths or classifications is reviewable as
+  it stands. A model's tracklets, relations or text spans stay outside the review — the queue
+  does not wait for them, an export by status does not filter them (a model's tracklet goes
+  with its entity, as its structure) — until an interface can review them; the kind then leaves
+  the list in `src/pixano/schemas/annotations/review.py`.
+  What is not an entity annotation — an embedding, a message — is never reviewed.
 - **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
   provenance: write the model's own score there, never a placeholder. Each schema names its
   score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a

@@ -133,7 +133,10 @@ WHERE job_id = %s AND state IN ('error', 'cancelled')
 
 # Only a job that has ended badly can be retried, and it goes back to where its work is:
 # `pending` when it has chunks, `planning` when it never got any — a plan that failed, or a
-# cancellation before the worker reached it. Planning again is the only way to get chunks.
+# cancellation before the worker reached it. Planning again is the only way to get chunks. A job
+# whose chunks are all done — cancelled while its last ones ran — has nothing to reopen: the
+# worker's recovery pass settles it, after running its closing step if its kind has one
+# (backend-processing §8.5).
 RETRY_JOB = f"""
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = CASE WHEN EXISTS (SELECT 1 FROM {SCHEMA_NAME}.job_chunks c WHERE c.job_id = j.id)

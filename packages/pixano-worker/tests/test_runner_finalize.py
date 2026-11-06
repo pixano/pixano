@@ -474,3 +474,114 @@ class TestTheClosingStepSeesTheDataset:
 
         assert _state(db, job)[0] == "done"
         assert reopened == [(tmp_path, "ds")]
+
+
+class TestJobsNothingWillSettle:
+    """The recovery pass settles a job in flight that no chunk will settle any more."""
+
+    async def test_a_retry_with_nothing_to_reopen_finalizes_the_job(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry, kind: _Finalizes
+    ) -> None:
+        """A cancel while the last chunks ran: they completed, the closing step was left waiting.
+
+        The retry reopens nothing — no chunk failed nor was cancelled — so no chunk finishes to
+        release the final chunk: the job stayed pending for good.
+        """
+        job = _submit(db)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", WORK_CHUNKS - 2)
+        running = await queue.claim(adb, "worker-test", 2)
+        app_jobs.cancel(db, job)
+        for chunk in running:
+            await queue.finish(adb, chunk)
+        await runner.settle(adb, job)
+        assert _state(db, job)[0] == "cancelled"
+
+        app_jobs.retry(db, job)
+        await _drain(adb, registry)
+        assert _state(db, job)[0] == "pending", "nothing ran, nothing settled it"
+
+        assert await runner.settle_stranded(adb) == 1
+        # Released on a job still pending: the event says so, as the job's row does.
+        assert _states(db, job)[-1] == {"state": "pending", "finalizing": True}
+        await _drain(adb, registry)
+
+        assert _state(db, job) == ("done", 40, 40)
+        assert kind.finalized == [job]
+
+    async def test_a_retry_with_nothing_to_reopen_ends_a_job_without_a_closing_step(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        """The same cancel, on a kind without `finalize`: the retried job ends done instead of waiting for good."""
+        job = _submit(db, kind=FakeKind.name)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", WORK_CHUNKS - 2)
+        running = await queue.claim(adb, "worker-test", 2)
+        app_jobs.cancel(db, job)
+        for chunk in running:
+            await queue.finish(adb, chunk)
+        await runner.settle(adb, job)
+        app_jobs.retry(db, job)
+
+        assert await runner.settle_stranded(adb) == 1
+
+        assert _state(db, job) == ("done", 40, 40)
+
+    async def test_a_worker_that_died_before_settling_leaves_the_job_to_the_recovery_pass(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry, kind: _Finalizes
+    ) -> None:
+        """Every chunk's result committed, the settlement that follows never ran."""
+        job = _submit(db)
+        await runner.plan_one(adb, registry)
+        for chunk in await queue.claim(adb, "worker-dead", WORK_CHUNKS):
+            await queue.finish(adb, chunk)
+        assert _final_chunk(db, job)[1] == "waiting"
+
+        assert await runner.settle_stranded(adb) == 1
+        await _drain(adb, registry)
+
+        assert _state(db, job) == ("done", 40, 40)
+        assert kind.finalized == [job]
+
+    async def test_a_job_with_work_left_is_left_to_its_chunks(
+        self, db: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry
+    ) -> None:
+        job = _submit(db)
+        await runner.plan_one(adb, registry)
+        await runner.run_batch(adb, registry, "worker-test", 1)
+        await queue.claim(adb, "worker-test", 1)
+
+        assert await runner.settle_stranded(adb) == 0
+        assert _state(db, job)[0] == "running"
+
+    async def test_the_real_loop_runs_the_recovery_pass(
+        self,
+        db: psycopg.Connection,
+        postgres_url: str,
+        registry: Registry,
+        kind: _Finalizes,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The loop's pass every `RECLAIM_INTERVAL_S` takes the stranded job up, with nothing else to do."""
+        monkeypatch.setattr(runner, "RECLAIM_INTERVAL_S", POLL_INTERVAL_S)
+        job = _submit(db)
+        async with await psycopg.AsyncConnection.connect(postgres_url, autocommit=True) as adb:
+            await runner.plan_one(adb, registry)
+            for chunk in await queue.claim(adb, "worker-dead", WORK_CHUNKS):
+                await queue.finish(adb, chunk)
+        stop = asyncio.Event()
+        async with AsyncConnectionPool(postgres_url, min_size=1, max_size=5, kwargs={"autocommit": True}) as pool:
+            worker = asyncio.create_task(runner.work(pool, registry, "worker-test", 4, idle_poll_s=0.05, stop=stop))
+            try:
+                for _ in range(POLLS):
+                    if _state(db, job)[0] in ("done", "error", "cancelled"):
+                        break
+                    await asyncio.sleep(POLL_INTERVAL_S)
+            finally:
+                stop.set()
+                stopped, _ = await asyncio.wait({worker}, timeout=runner.SHUTDOWN_GRACE_S + STOP_MARGIN_S)
+                assert stopped, "the worker did not stop when asked"
+                await worker
+
+        assert _state(db, job) == ("done", 40, 40)
+        assert kind.finalized == [job]
