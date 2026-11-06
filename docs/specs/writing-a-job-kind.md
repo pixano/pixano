@@ -40,6 +40,14 @@ replanned after an outage must not describe something different from what was pa
 
 A chunk's payload is opaque to the engine, and must be a JSON object.
 
+**A chunk weighs one, unless its kind says otherwise.** The worker's time limit,
+`PIXANO_WORKER_CHUNK_TIMEOUT_S`, is set for the chunks kinds plan by default — a batch of
+images, one call and its retries, or a few short ones —; past it, the chunk is taken for hung and
+handed back. A chunk that takes several times that says so with `weight`, and gets that many
+times the limit: a kind that sends several long calls one after the other weighs its chunk by
+their number. Weigh what bounds the time, not the tasks: a chunk of eight images sent in one call
+weighs one, and so does a chunk of eight short segmentation calls.
+
 ### `model_identity(params)` and `provenance_params(params)` — provenance
 
 Every row a kind writes through `writer.provenance()` says by itself how it was produced:
@@ -149,6 +157,20 @@ as `plan` does: a chunk carries what designates its work, never the data itself.
 
 A brief hiccup can still be retried in place — the inference client already does so for 502,
 503 and 504. Raise `TransientError` for what outlasts that.
+
+**A long chunk says how far it got, and hears a cancellation.** A chunk that runs for minutes
+calls `reader.progress.advance_to(done)` as it goes, with the tasks of the chunk done so far: the
+worker records it every two seconds, and the job's progress counts it beside its finished chunks.
+Between two steps of its work, it calls `reader.progress.stop_if_cancelled()`, which raises
+`ChunkCancelled` once its job was cancelled: let it propagate, and the chunk leaves the queue as
+one never started. Nothing must be written before: what a chunk produces goes in `write`, which
+runs only for a chunk that completed. Progress is no resume point: a chunk claimed again — its
+worker died — starts over from zero, and its job's bar steps back. The same `ChunkCancelled`
+stops a chunk the worker no longer waits for — past its time limit, its lease gone to another
+worker, the worker stopping —: its thread, which nothing can interrupt, ends at its next step. A
+short chunk ignores both, and its progress jumps to its tasks when it finishes. The reader given
+to `plan` has no chunk: its progress counts nothing and is never cancelled. The demonstration kind
+`fake` (`kinds/fake.py`) does both, a task at a time.
 
 **Blame an item only on an answer, never on a silence.** A server that refused a request has
 told you something about its content; a server that did not answer has told you nothing. The

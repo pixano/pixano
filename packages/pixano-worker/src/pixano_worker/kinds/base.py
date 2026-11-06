@@ -83,10 +83,14 @@ class Chunk(BaseModel):
     Attributes:
         payload: What the kind will have to process. Opaque to the engine.
         task_count: Number of tasks, for progress.
+        weight: What the chunk weighs against a chunk of one inference call, which the worker's
+            time limit is set for: the chunk may run that many times the limit. A chunk that
+            sends several calls one after the other weighs their number.
     """
 
     payload: dict[str, Any]
     task_count: int
+    weight: float = Field(default=1.0, gt=0)
 
 
 class TransientError(Exception):

@@ -43,6 +43,8 @@ DEFAULT_CONCURRENCY = 4
 # without looking for a faulty image. Half an hour covers this case and still frees a hung chunk
 # within the morning. A slow server that *answers* 500 on every call can take longer (up to seven
 # calls to isolate one image out of eight): the limit is then what applies, and that is intended.
+# It is the limit of a chunk of weight one, what kinds plan by default: a chunk its kind weighs more
+# at planning — several inference calls one after the other — gets that many times it.
 DEFAULT_CHUNK_TIMEOUT_S = 1800.0
 
 # The demonstration job kinds — `fake`, which computes nothing, and `label`, which sets an
@@ -120,7 +122,8 @@ class WorkerConfig:
             the same storage at the same place.
         heartbeat_path: File whose freshness serves as the liveness probe.
         concurrency: Number of chunks executed at a time.
-        chunk_timeout_s: Maximum duration of a chunk, beyond which it is handed back to the queue.
+        chunk_timeout_s: Maximum duration of a chunk of weight one, beyond which it is handed back
+            to the queue; a chunk weighing more gets that many times it.
         demo_kinds: Also register the demonstration kinds, `fake` and `label`
             (`PIXANO_WORKER_DEMO_KINDS`). Off by default: they write wherever they are told, and
             have no place in a shared deployment.
