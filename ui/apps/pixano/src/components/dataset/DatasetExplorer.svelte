@@ -16,8 +16,13 @@ License: CECILL-C
   import TableSkeleton from "./TableSkeleton.svelte";
   import { invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
-  import { computeEmbeddings, getIoJob, listInferenceModels } from "$lib/api";
-  import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
+  import {
+    computeEmbeddings,
+    getIoJob,
+    getNextRecordToReview,
+    listInferenceModels,
+  } from "$lib/api";
+  import type { FilterSchemaResponse, IoJobResponse, NextRecordToReview } from "$lib/api/restTypes";
   import { DEFAULT_DATASET_GRID_SIZE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
@@ -34,6 +39,11 @@ License: CECILL-C
     searchError?: string;
     view?: "grid" | "table";
     onSelectItem?: (itemId: string) => void;
+    /**
+     * Open a record to review what a model proposed, in review; none where this interface does not
+     * review the dataset's annotations.
+     */
+    onOpenReview?: (recordId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
       currentPage: number;
@@ -55,6 +65,7 @@ License: CECILL-C
     searchError = "",
     view = "table",
     onSelectItem,
+    onOpenReview,
     onNavigate,
     pagination,
   }: Props = $props();
@@ -65,6 +76,36 @@ License: CECILL-C
   const hasActiveQuery = $derived(
     pagination.filters.length > 0 || pagination.q !== "" || similarTo !== "",
   );
+
+  // The records holding a model's annotation still to review, for the Review entry, where this
+  // interface reviews the dataset's annotations. A queue that cannot be read offers no review.
+  const datasetId = $derived(selectedDataset.id);
+  let reviewQueue = $state<{ datasetId: string; data: NextRecordToReview } | null>(null);
+  $effect(() => {
+    const askedFor = datasetId;
+    if (!onOpenReview) return;
+    let cancelled = false;
+    void getNextRecordToReview(askedFor)
+      .then((data) => {
+        if (!cancelled) reviewQueue = { datasetId: askedFor, data };
+      })
+      .catch(() => {
+        if (!cancelled) reviewQueue = null;
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+  const firstRecordToReview = $derived(
+    reviewQueue?.datasetId === datasetId ? reviewQueue.data.record_id : null,
+  );
+  const recordsToReview = $derived(
+    reviewQueue?.datasetId === datasetId ? reviewQueue.data.remaining : 0,
+  );
+
+  function openReview() {
+    if (firstRecordToReview) onOpenReview?.(firstRecordToReview);
+  }
 
   let computing = $state(false);
   let showConnectModal = $state(false);
@@ -229,6 +270,8 @@ License: CECILL-C
         onCompute={handleCompute}
         onClearSimilar={handleClearSimilar}
         onViewChange={handleViewChange}
+        {recordsToReview}
+        onReview={onOpenReview && firstRecordToReview ? openReview : undefined}
       />
     </div>
 
