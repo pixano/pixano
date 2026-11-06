@@ -443,6 +443,11 @@ export function geometryOf(manager: WorkspaceManager, id: string): unknown {
   return manager.annotations.find(id)?.geometry;
 }
 
+/** The review controller's list line of an annotation. */
+export function rowOf(manager: WorkspaceManager, id: string) {
+  return manager.review.rows.find((row) => row.id === id);
+}
+
 /** Drag a box to a new place, as the 2D editor does at the end of a gesture. */
 export function drag(seam: SeamContext, id: string, geometry: BBoxGeometry = MOVED): void {
   commitGeometryEdit(seam, id, geometry);

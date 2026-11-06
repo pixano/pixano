@@ -13,6 +13,7 @@ import {
   entityOf,
   geometryOf,
   humanBox,
+  modelBox,
   MOVED,
   openManager,
   openWithBoxes,
@@ -44,6 +45,54 @@ const DRAGGED_FIRST: BBoxGeometry = [0.2, 0.2, 0.2, 0.2];
 const DRAGGED_LAST: BBoxGeometry = [0.5, 0.5, 0.2, 0.2];
 
 describe("Work begun while a save is on the wire", () => {
+  it("a decision on the row being sent is kept for the next save", async () => {
+    const { manager, backend } = await openWithBoxes(modelBox(REC, "b1"));
+    serveLikeTheApi(backend, REC);
+    const held = deferred();
+    backend.holdWrites = held.promise;
+
+    manager.review.accept("b1");
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    expect(manager.review.reject("b1")).toBe(true);
+    backend.holdWrites = undefined;
+    held.resolve();
+
+    // The Reject was not sent, so the record is not all saved.
+    expect(await saving).toBe(false);
+    expect(manager.pendingCount).toBe(1);
+    expect(await manager.flushSave()).toBe(true);
+    expect(backend.writes).toEqual([
+      { op: "update", resource: BBOX_RESOURCE, id: "b1", body: { review_status: "accepted" } },
+      { op: "delete", resource: BBOX_RESOURCE, id: "b1" },
+    ]);
+    expect(backend.records[REC][BBOX_RESOURCE]).toEqual([]);
+  });
+
+  it("an edit queued behind the request on the wire is not sent once a Reject drops it, and its delete is", async () => {
+    const { manager, backend, seam } = await openWithBoxes(
+      modelBox(REC, "b1"),
+      modelBox(REC, "b2"),
+    );
+    drag(seam, "b1");
+    drag(seam, "b2");
+    const held = deferred();
+    backend.holdWrites = held.promise;
+
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    manager.review.reject("b2");
+    backend.holdWrites = undefined;
+    held.resolve();
+    await saving;
+    await manager.flushSave();
+
+    expect(updatesSent(backend).filter((w) => w.op === "update" && w.id === "b2")).toEqual([]);
+    expect(backend.writes.filter((w) => w.op === "delete")).toEqual([
+      { op: "delete", resource: BBOX_RESOURCE, id: "b2" },
+    ]);
+  });
+
   /** Commit a box with its entity, then hold its create on the wire, the entity stored. */
   async function draftWithCreateOnTheWire() {
     const opened = await openWithBoxes();
@@ -220,6 +269,37 @@ describe("Work begun while a save is on the wire", () => {
     expect(backend.records[REC][BBOX_RESOURCE][0].coords).toEqual(DRAGGED_LAST);
   });
 
+  it("an edit made after a failed save is the one sent last", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    const FIRST: BBoxGeometry = [0.2, 0.2, 0.2, 0.2];
+    serveLikeTheApi(backend, REC);
+    const held = deferred();
+    backend.holdWrites = held.promise;
+
+    manager.review.accept("b1");
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    // A drag queued behind the Accept on the wire, which then fails.
+    drag(seam, "b1", FIRST);
+    backend.failWrites = new Error("network down");
+    held.resolve();
+    expect(await saving).toBe(false);
+    backend.holdWrites = undefined;
+    backend.failWrites = undefined;
+    // The queue holds the Accept again, then the drag. A second drag replaces the latter.
+    drag(seam, "b1", MOVED);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(updatesSent(backend).map((w) => w.op === "update" && w.body.coords)).toEqual([
+      undefined,
+      MOVED,
+    ]);
+    expect(backend.records[REC][BBOX_RESOURCE][0]).toMatchObject({
+      coords: MOVED,
+      review_status: "accepted",
+    });
+  });
+
   it("a draft deleted while its entity's create is on the wire: its box create is never sent", async () => {
     const { manager, backend, seam } = await openWithBoxes();
     serveLikeTheApi(backend, REC);
@@ -378,6 +458,43 @@ describe("What the dataset holds, recorded as each write leaves", () => {
 
     expect(storedGeometryOf(manager, "b1")).toEqual(MOVED);
     expect(geometryOf(manager, "b1")).toEqual(DRAGGED_LAST);
+  });
+
+  it("a decision re-sent after a failure does not record an edit queued behind it as stored", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    serveLikeTheApi(backend, REC);
+    const firstTry = deferred();
+    backend.holdWrites = firstTry.promise;
+
+    manager.review.accept("b1");
+    const failing = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    drag(seam, "b1");
+    backend.failWrites = new Error("network down");
+    firstTry.resolve();
+    expect(await failing).toBe(false);
+    backend.failWrites = undefined;
+
+    // Saved again: the Accept leaves first, carrying the status alone.
+    const retry = deferred();
+    backend.holdWrites = retry.promise;
+    backend.log.length = 0;
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    // The box dragged back where the dataset holds it: no edit is left to send —
+    // which holds only if the Accept on the wire recorded the stored content,
+    // not the drag queued behind it.
+    drag(seam, "b1", STORED);
+    // The write on the wire is all that is left.
+    expect(manager.pendingMutations).toEqual([]);
+    backend.holdWrites = undefined;
+    retry.resolve();
+    expect(await saving).toBe(true);
+
+    expect(backend.writes).toEqual([
+      { op: "update", resource: BBOX_RESOURCE, id: "b1", body: { review_status: "accepted" } },
+    ]);
+    expect(geometryOf(manager, "b1")).toEqual(backend.records[REC][BBOX_RESOURCE][0].coords);
   });
 
   it("leaves the content recorded as it was when the write fails", async () => {
