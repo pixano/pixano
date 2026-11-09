@@ -11,6 +11,7 @@ import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
 import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { highlightEntity } from "$lib/utils/highlightOperations";
+import { selectForReview } from "$lib/utils/reviewKeyboard";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
 type SelectionShape = {
@@ -29,14 +30,16 @@ export const tryHighlightSelectionShape = (
     shape.status === "editing" && shape.type === ShapeType.none && shape.highlighted === "self";
   if (!isSelectionOnlyHighlight) return false;
 
+  const selectedAnnotation = shape.shapeId
+    ? objects.find((ann) => ann.id === shape.shapeId)
+    : undefined;
   let targetEntityId = shape.top_entity_id ?? "";
-  if (!targetEntityId && shape.shapeId) {
-    const selectedAnnotation = objects.find((ann) => ann.id === shape.shapeId);
-    if (selectedAnnotation) {
-      targetEntityId = getTopEntity(selectedAnnotation).id;
-    }
+  if (!targetEntityId && selectedAnnotation) {
+    targetEntityId = getTopEntity(selectedAnnotation).id;
   }
   if (targetEntityId) {
+    // In review, the shape selected is the one to review, before its entity is focused.
+    if (selectedAnnotation) selectForReview(selectedAnnotation);
     highlightEntity(targetEntityId, false);
   }
   return true;

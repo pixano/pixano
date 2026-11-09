@@ -11,6 +11,7 @@ import {
   entities,
   highlightedEntity,
   itemMetas,
+  reviewedAnnotation,
   views,
   workspaceSaveQueue,
 } from "$lib/stores/workspaceStores.svelte";
@@ -60,10 +61,12 @@ export function commitLoadedWorkspace(
   workspaceData: WorkspaceData,
   featureValues: FeaturesValues,
 ): void {
-  // Another item: nothing of the previous one stays in edit mode, nor focused — naming no object
-  // here, its focus would fade every annotation of the record opened.
+  // Another item: nothing of the previous one stays in edit mode, nor focused, nor under review —
+  // naming no object here, its focus would fade every annotation of the record opened, and the
+  // annotation under review hide them.
   clearTrackEditing();
   highlightedEntity.value = null;
+  reviewedAnnotation.value = null;
   workspaceSaveQueue.reset();
   views.value = workspaceData.views;
 

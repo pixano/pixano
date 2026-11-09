@@ -63,3 +63,35 @@ export function getEffectiveHighlight(
   }
   return ownHighlight;
 }
+
+/**
+ * The annotation the canvas shows alone, if any: the one under review, in review and with the Pan
+ * tool — a drawing tool shows the record whole —, while it names an annotation shown. Deleted or
+ * hidden, it hides nothing until the next one comes under review.
+ *
+ * @param underReviewId The annotation under review, if any.
+ */
+export function annotationShownAlone(
+  annotations: readonly Annotation[],
+  underReviewId: string | null,
+  reviewing: boolean,
+  selectedToolType: ToolType,
+): string | null {
+  if (!reviewing || selectedToolType !== ToolType.Pan || underReviewId === null) return null;
+  const underReview = annotations.find((annotation) => annotation.id === underReviewId);
+  return underReview && !underReview.ui.displayControl.hidden ? underReviewId : null;
+}
+
+/**
+ * Whether the review hides an annotation from the canvas: one annotation is under review, the one
+ * the review's keys act on, and it is shown alone, with a shape being edited.
+ *
+ * @param underReviewId The annotation shown alone, if any (`annotationShownAlone`).
+ */
+export function isHiddenByReview(annotation: Annotation, underReviewId: string | null): boolean {
+  return (
+    underReviewId !== null &&
+    annotation.id !== underReviewId &&
+    !annotation.ui.displayControl.editing
+  );
+}

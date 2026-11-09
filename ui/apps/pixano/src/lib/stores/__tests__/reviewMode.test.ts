@@ -10,6 +10,7 @@ import { loadWorkspaceRecord } from "$lib/api/workspace";
 import {
   highlightedEntity,
   resetWorkspaceStores,
+  reviewedAnnotation,
   reviewModeIsActive,
 } from "$lib/stores/workspaceStores.svelte";
 import { WorkspaceType } from "$lib/types/dataset";
@@ -84,5 +85,14 @@ describe("the next record", () => {
     await openRecord("record-2");
 
     expect(highlightedEntity.value).toBeNull();
+  });
+
+  it("opens with no annotation under review, which would hide every other one", async () => {
+    await openRecord("record-1");
+    reviewedAnnotation.value = "an-annotation-of-record-1";
+
+    await openRecord("record-2");
+
+    expect(reviewedAnnotation.value).toBeNull();
   });
 });

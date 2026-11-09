@@ -174,6 +174,12 @@ License: CECILL-C
     canEditBoxes?: boolean;
     /** Put a displayed box in edit mode; false when it cannot, so the click only selects. */
     onEditBox?: (box: BBox) => boolean;
+    /** Whether a click on a box puts it in edit mode; when not, it selects it, and E and the
+     *  chip's pencil still edit. */
+    editBoxOnClick?: boolean;
+    /** Whether a click on the image off every shape keeps the focused entity, else cleared; it
+     *  ends a box's edit mode either way. */
+    keepFocusOnEmptyClick?: boolean;
     /** Leave edit mode, keeping the changes; returns whether something was being edited. */
     onStopEditingBox?: () => boolean;
     /** Contextual actions of a box, listed in its chip's "…" menu. */
@@ -209,6 +215,8 @@ License: CECILL-C
     confirmKeys = [],
     canEditBoxes = false,
     onEditBox,
+    editBoxOnClick = true,
+    keepFocusOnEmptyClick = false,
     onStopEditingBox,
     getBoxActions,
   }: Props = $props();
@@ -1036,9 +1044,9 @@ License: CECILL-C
 
   function handleClickOnImageRelease(event: MouseEvent) {
     if (isSmartInferencePending) return;
-    if (shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) {
-      clearHighlighting();
-    }
+    if (!shouldClearHighlightingOnPanCanvasClick(selectedTool, event.button)) return;
+    if (keepFocusOnEmptyClick) onStopEditingBox?.();
+    else clearHighlighting();
   }
 
   function handlePointerUpOnImage(viewRef: Reference) {
@@ -1088,7 +1096,7 @@ License: CECILL-C
     if (event.evt.button !== 0 || isSmartInferencePending) return;
     const pointer = getViewLayer(viewName)?.getRelativePointerPosition();
     const box = (pointer && pickBoxAtPoint(bboxesByView[viewName] ?? [], pointer)) || clicked;
-    if (boxEditingEnabled && onEditBox?.(box)) return;
+    if (boxEditingEnabled && editBoxOnClick && onEditBox?.(box)) return;
     handleSelectBBox(box);
   }
 
