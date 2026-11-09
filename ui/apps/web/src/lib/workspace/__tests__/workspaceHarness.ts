@@ -7,6 +7,7 @@ License: CECILL-C
 import type { Component } from "svelte";
 
 import type { DatasetGateway } from "../datasetGateway.js";
+import type { NextRecordToReview, ReviewGateway } from "../reviewGateway.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
@@ -378,16 +379,48 @@ export function deferred<T = void>() {
   return { promise, resolve };
 }
 
+/**
+ * A `ReviewGateway` that answers what the test says and records what it was
+ * asked. A promise for an answer is a lookup the test holds on the wire.
+ */
+export function makeReviewGateway(
+  answer: NextRecordToReview | Error | Promise<NextRecordToReview>,
+  log: string[] = [],
+): ReviewGateway & { asked: { datasetId: string; status: ReviewStatus; after: string | null }[] } {
+  const asked: { datasetId: string; status: ReviewStatus; after: string | null }[] = [];
+  return {
+    asked,
+    nextRecordToReview: (datasetId, query) => {
+      log.push("nextRecordToReview");
+      asked.push({ datasetId, ...query });
+      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
+    },
+  };
+}
+
 /** The real manager over the fake backend, with the record already open. */
 export async function openManager(
   records: FakeBackend["records"],
-  opts: { recordId?: string; entities?: EntityRow[] } = {},
+  opts: {
+    recordId?: string;
+    entities?: EntityRow[];
+    next?: NextRecordToReview | Error | Promise<NextRecordToReview>;
+  } = {},
 ) {
   const { backend, gateway } = makeBackend(records, opts.entities);
-  const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+  const reviewGateway = makeReviewGateway(
+    opts.next ?? { recordId: null, remaining: 0 },
+    backend.log,
+  );
+  const manager = new WorkspaceManager(
+    makeRegistry(),
+    gateway,
+    makeLayoutRepository(),
+    reviewGateway,
+  );
   const recordId = opts.recordId ?? Object.keys(records)[0];
   await manager.openRecord(DATASET_ID, recordId, VIEWPORT);
-  return { manager, backend, recordId };
+  return { manager, backend, reviewGateway, recordId };
 }
 
 /** The seam an image widget of this record builds — what its tools commit through. */

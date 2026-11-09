@@ -14,11 +14,13 @@ import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder
 import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import {
+  deferred,
   entityOf,
   humanBox,
   modelBox,
   openManager,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
+import type { NextRecordToReview } from "$lib/workspace/reviewGateway.js";
 import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 // The image widget as a reviewer meets it: rendered on the real Konva, next to
@@ -45,14 +47,21 @@ const REJECT_TITLE = "Reject selected (Del)";
 /** What the trash button's tooltip says of a Reject, beyond its name. */
 const REJECT_TOOLTIP = "Reject selected (Del): rejecting deletes it";
 const DELETE_TITLE = "Delete selected (Del)";
+const BUSY_TITLE = "Not while Save & next is running";
 const NOTHING_SELECTED_TITLE = "Select an annotation to delete or reject it";
 const REASSIGN_TITLE = "Change the entity this annotation belongs to (E)";
 const REASSIGN_NOTHING_SELECTED_TITLE = "Select an annotation to change its entity";
 
 afterEach(() => cleanup());
 
-/** A record with a pending model box, an accepted one and a person's box, shown in an image widget. */
-async function openImageWidget() {
+/**
+ * A record with a pending model box, an accepted one and a person's box, shown in an image widget.
+ *
+ * @param next What the server answers when "Save & next" asks for the next record.
+ */
+async function openImageWidget(
+  next: NextRecordToReview | Promise<NextRecordToReview> = { recordId: null, remaining: 0 },
+) {
   const opened = await openManager(
     {
       [REC]: {
@@ -63,7 +72,7 @@ async function openImageWidget() {
         ],
       },
     },
-    { entities: ENTITIES },
+    { entities: ENTITIES, next },
   );
   const widget = opened.manager.widgets[0];
   const { unmount } = render(ImageWidget, {
@@ -173,6 +182,34 @@ describe("ImageWidget toolbar", () => {
     expect(descriptionOf(reassign())).toBeNull();
   });
 
+  it("rejects nothing while Save & next runs, from the trash button or the Delete key, and says why", async () => {
+    const lookup = deferred<NextRecordToReview>();
+    const { manager, backend } = await openImageWidget(lookup.promise);
+
+    const moving = manager.review.saveAndNext();
+    await waitFor(() => expect(backend.log).toContain("nextRecordToReview"));
+    // Selected while it looks for the next record, its save over: still named
+    // by what it does, the run being why it waits.
+    select(manager, "b1");
+    expect(trashButton().getAttribute("aria-label")).toBe(REJECT_TITLE);
+    expect(trashButton().title).toBe(BUSY_TITLE);
+    expect(descriptionOf(trashButton())).toBe(BUSY_TITLE);
+    expect(trashButton().disabled).toBe(true);
+    await fireEvent.click(trashButton());
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+
+    expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.pendingCount).toBe(0);
+    lookup.resolve({ recordId: null, remaining: 0 });
+    await moving;
+    flushSync();
+
+    // Once it is over, the button rejects again.
+    expect(trashButton().title).toBe(REJECT_TOOLTIP);
+    expect(descriptionOf(trashButton())).toBeNull();
+    expect(trashButton().disabled).toBe(false);
+  });
+
   it("lets go of a resize or a drag under way before it rejects, as the Delete key does", async () => {
     const { manager, widgetId } = await openImageWidget();
     // What an editor of this widget raises while a box is resized or dragged.
@@ -220,7 +257,7 @@ describe("ImageWidget toolbar", () => {
     shapeBegun.set(true);
     flushSync();
     expect(manager.pendingCount).toBe(0);
-    // Unsaved: the toolbar says so, as the Review tab does.
+    // Unsaved, as "Save & next" reads it: the toolbar says so, as the Review tab does.
     expect(within(toolbar()).getByText("1 unsaved")).toBeTruthy();
     expect(screen.getByText("1 unsaved", { selector: "p" })).toBeTruthy();
     expect(discard.disabled).toBe(false);
@@ -270,6 +307,22 @@ describe("ImageWidget keyboard", () => {
     flushSync();
     return event;
   }
+
+  it("leaves the keys typed in the Review tab's select to the select", async () => {
+    const { manager } = await openImageWidget();
+    select(manager, "b1");
+    const nextStatus = screen.getByRole("combobox");
+
+    // "acce" picks "accepted" in the select; the select tool used to take the
+    // "e" for an entity reassignment, and Backspace for a reject.
+    const typeahead = press(nextStatus, "e");
+    press(nextStatus, "Backspace");
+
+    expect(typeahead.defaultPrevented).toBe(false);
+    expect(manager.pendingAnnotation).toBeNull();
+    expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.pendingCount).toBe(0);
+  });
 
   it("leaves the keys typed in the reassignment's Entity select to the select", async () => {
     const { manager } = await openImageWidget();

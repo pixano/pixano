@@ -301,20 +301,27 @@ License: CECILL-C
   const reassignEntityRefusalId = `image-reassign-refusal-${stableWidgetId}`;
   // The button is named Reject on a model's annotation, whose delete is its
   // rejection, and Delete on any other; a Reject's tooltip says it deletes.
-  // With nothing selected, why it does nothing goes in its tooltip and its
-  // description — never its name, which is what assistive tech reads as the
-  // button's action.
+  // When it does nothing now, why goes in its tooltip and its description —
+  // never its name, which is what assistive tech reads as the button's action.
+  // Asked of the widget's own sink, whose lock holds a reject back while "Save
+  // & next" runs, as pressing the button would.
   const deleteGesture = $derived(
-    annotations.selected ? deleteGestureFor(annotations.selected) : null,
+    annotations.selected ? deleteGestureFor(annotations.selected, seam.mutations) : null,
   );
   const deleteLabel = $derived(
-    deleteGesture === "reject" ? "Reject selected (Del)" : "Delete selected (Del)",
+    deleteGesture === null || deleteGesture === "delete"
+      ? "Delete selected (Del)"
+      : "Reject selected (Del)",
   );
   const deleteTooltip = $derived(
     deleteGesture === "reject" ? "Reject selected (Del): rejecting deletes it" : deleteLabel,
   );
   const deleteRefusal = $derived(
-    deleteGesture === null ? "Select an annotation to delete or reject it" : null,
+    deleteGesture === null
+      ? "Select an annotation to delete or reject it"
+      : deleteGesture === "locked"
+        ? "Not while Save & next is running"
+        : null,
   );
   const deleteRefusalId = `image-delete-refusal-${stableWidgetId}`;
 

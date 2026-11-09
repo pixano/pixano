@@ -71,17 +71,16 @@ function sameAsStored(staged: readonly number[] | undefined, held: readonly numb
  * The editor reports drafts in; the HUD drives save/cancel/gizmo out.
  *
  * While the HUD holds a new box or a moved one, the session raises its
- * staged-work flag, so the workspace knows the record is not all saved: the
- * record counts the edit as unsaved work, and Discard reaches it. Every way out
- * of the HUD lowers it, and the record's Discard takes the way out a Cancel
- * takes.
+ * staged-work flag, so the workspace knows the record is not all saved — "Save
+ * & next" would otherwise leave it, and the edit with it. Every way out of the
+ * HUD lowers it, and the record's Discard takes the way out a Cancel takes.
  *
  * A gizmo drag — a move, a resize, a turn — holds the flag too, from its start
  * to its end, as a 2D shape's drag does, whatever the HUD held when it began: a
- * box a click only opened is work under way once a gizmo moves it. So the
- * record counts it as unsaved while it runs, and a Discard during it drops it
- * with the HUD: let go afterwards, it stages nothing. One flag for the HUD and
- * its drags, since both are the one box.
+ * box a click only opened is work under way once a gizmo moves it. So "Save &
+ * next" stays on the record while it runs, the record counts it as unsaved, and
+ * a Discard during it drops it with the HUD: let go afterwards, it stages
+ * nothing. One flag for the HUD and its drags, since both are the one box.
  *
  * A HUD holding nothing of its own — a box a click opened, maybe one whose move
  * is queued — shows the box as the record holds it, and closes once that box
@@ -172,12 +171,13 @@ export class BBox3DSession {
   /**
    * What the HUD's delete button does to the box being edited: a model's box is
    * rejected — deleted, as any box is (`deleteLocalAnnotation`) — so the button
-   * names it so.
+   * names it so; and nothing is done to it while "Save & next" runs, when no
+   * decision is taken.
    */
   get editingDeleteGesture(): DeleteGesture {
     const editingId = this.confirm?.editingId;
     const annotation = editingId ? this.seam.collection.find(editingId) : undefined;
-    return annotation ? deleteGestureFor(annotation) : "delete";
+    return annotation ? deleteGestureFor(annotation, this.seam.mutations) : "delete";
   }
 
   /**
@@ -258,6 +258,9 @@ export class BBox3DSession {
   deleteBox(): void {
     const editingId = this.confirm?.editingId;
     if (!editingId) return;
+    // No decision is taken while "Save & next" runs: the HUD stays open, with
+    // the box it holds, rather than closing on a delete that never happened.
+    if (this.editingDeleteGesture === "locked") return;
     const annotation = this.seam.collection.find(editingId);
     if (annotation) {
       deleteLocalAnnotation(
@@ -280,9 +283,10 @@ export class BBox3DSession {
   /**
    * Close the HUD once the box it shows is no longer the box the record holds.
    *
-   * A box deleted elsewhere — by a Delete, or by a Reject — closes the HUD
-   * whatever it holds: a move of its own has no box left to be saved on, and
-   * its raised flag would go on counting work that is gone.
+   * A box deleted elsewhere — by a Delete, or by a Reject in the Review tab —
+   * closes the HUD whatever it holds: a move of its own has no box left to be
+   * saved on, and its raised flag would go on counting, and keeping "Save &
+   * next" on the record for, work that is gone.
    *
    * A HUD holding nothing of its own closes too once Discard puts its box back
    * as stored. Such a HUD's flag is down, so Discard never reaches it; left

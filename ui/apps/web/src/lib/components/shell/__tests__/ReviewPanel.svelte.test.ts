@@ -11,6 +11,7 @@ import RightPanel from "../RightPanel.svelte";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import type { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import {
+  deferred,
   drag,
   entityOf,
   humanBox,
@@ -20,6 +21,7 @@ import {
   type FakeBackend,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
 import type { DatasetGateway } from "$lib/workspace/datasetGateway.js";
+import type { NextRecordToReview } from "$lib/workspace/reviewGateway.js";
 import { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 // The Review tab as a person uses it: rendered inside the right panel, over the
@@ -27,6 +29,7 @@ import { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 // is checked all the way to the body Save sends.
 
 const REC_1 = "rec-1";
+const REC_2 = "rec-2";
 
 function records(): FakeBackend["records"] {
   return {
@@ -37,6 +40,7 @@ function records(): FakeBackend["records"] {
         humanBox(REC_1, "h1"),
       ],
     },
+    [REC_2]: { [BBOX_RESOURCE]: [modelBox(REC_2, "b3")] },
   };
 }
 
@@ -46,8 +50,11 @@ const ENTITIES = [
   entityOf(REC_1, "ent-h1", { category: "tree" }),
 ];
 
-async function openReviewTab(rows: FakeBackend["records"] = records()) {
-  const opened = await openManager(rows, { entities: ENTITIES });
+async function openReviewTab(
+  next: NextRecordToReview | Promise<NextRecordToReview> = { recordId: REC_2, remaining: 2 },
+  rows: FakeBackend["records"] = records(),
+) {
+  const opened = await openManager(rows, { entities: ENTITIES, next });
   render(RightPanel, { props: { manager: opened.manager } });
   await fireEvent.click(screen.getByRole("button", { name: /^Review$/ }));
   return opened;
@@ -177,6 +184,35 @@ describe("Review tab", () => {
     expect(within(rowNamed("bus")).getByText("Accepted")).toBeTruthy();
   });
 
+  it("Save & next saves, then opens the next record and says how many hold the status", async () => {
+    const { manager, backend } = await openReviewTab();
+    await fireEvent.click(screen.getByRole("button", { name: "Accept car (bbox)" }));
+
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+
+    await waitFor(() => expect(manager.recordId).toBe(REC_2));
+    expect(backend.writes).toHaveLength(1);
+    await waitFor(() =>
+      expect(
+        screen.getByText("2 records hold pending annotations to review here, this one included."),
+      ).toBeTruthy(),
+    );
+  });
+
+  it("Save & next looks for the status chosen in the tab", async () => {
+    const { reviewGateway } = await openReviewTab({ recordId: null, remaining: 0 });
+
+    await fireEvent.change(screen.getByRole("combobox"), { target: { value: "accepted" } });
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+
+    await waitFor(() => expect(reviewGateway.asked[0]?.status).toBe("accepted"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("No other record has accepted annotations to review here."),
+      ).toBeTruthy(),
+    );
+  });
+
   it("counts work a tool holds with nothing queued, offers Discard for it, and Discard drops it", async () => {
     const { manager } = await openReviewTab();
     const discard = () => screen.getByRole("button", { name: /^Discard$/ });
@@ -189,7 +225,7 @@ describe("Review tab", () => {
 
     shapeBegun.set(true);
     await waitFor(() => expect(isDisabled(discard())).toBe(false));
-    // Unsaved — but nothing a save could send yet.
+    // Unsaved, as "Save & next" reads it — but nothing a save could send yet.
     expect(screen.getByText("1 unsaved")).toBeTruthy();
     expect(isDisabled(screen.getByRole("button", { name: /^Save$/ }))).toBe(true);
     await fireEvent.click(discard());
@@ -197,6 +233,55 @@ describe("Review tab", () => {
     await waitFor(() => expect(isDisabled(discard())).toBe(true));
     expect(screen.getByText("0 unsaved")).toBeTruthy();
     expect(dropped).toBe(1);
+  });
+});
+
+describe("Review tab, after Save & next could not move", () => {
+  const SAVE_FAILED = "Not moved: the save failed.";
+  const WORK_UNSAVED = "Not moved: some work is still unsaved — finish or discard it first.";
+
+  /** The tab once a decision's save failed under Save & next, the backend back since. */
+  async function afterAFailedSave() {
+    const opened = await openReviewTab();
+    await fireEvent.click(screen.getByRole("button", { name: "Accept car (bbox)" }));
+    opened.backend.failWrites = new Error("backend down");
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+    await waitFor(() => expect(screen.getByText(SAVE_FAILED)).toBeTruthy());
+    opened.backend.failWrites = undefined;
+    return opened;
+  }
+
+  it("says nothing more once the tab's Discard leaves nothing unsaved", async () => {
+    await afterAFailedSave();
+
+    await fireEvent.click(screen.getByRole("button", { name: /^Discard$/ }));
+
+    await waitFor(() => expect(screen.getByText("0 unsaved")).toBeTruthy());
+    expect(screen.queryByText(SAVE_FAILED)).toBeNull();
+    expect(screen.queryByText(WORK_UNSAVED)).toBeNull();
+  });
+
+  it("says nothing more once the tab's Save leaves nothing unsaved", async () => {
+    const { backend } = await afterAFailedSave();
+
+    await fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+
+    await waitFor(() => expect(backend.writes).toHaveLength(1));
+    await waitFor(() => expect(screen.getByText("0 unsaved")).toBeTruthy());
+    expect(screen.queryByText(SAVE_FAILED)).toBeNull();
+    expect(screen.queryByText(WORK_UNSAVED)).toBeNull();
+  });
+
+  it("still says why while the work it stopped on is there", async () => {
+    const { manager } = await openReviewTab();
+    // Work a tool holds: the record is not all saved, and Save & next stays.
+    manager.claimStagedWork("image-widget", () => {}).set(true);
+
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+
+    await waitFor(() => expect(screen.getByText(WORK_UNSAVED)).toBeTruthy());
+    // The count says so too: the tab never reads "0 unsaved" next to that line.
+    expect(screen.getByText("1 unsaved")).toBeTruthy();
   });
 });
 
@@ -253,5 +338,44 @@ describe("Review tab, read aloud", () => {
     const accept = screen.getByRole("button", { name: "Accept car (bbox)" });
     expect(isDisabled(accept)).toBe(false);
     expect(descriptionOf(accept)).toBeNull();
+  });
+
+  it("says no decision is taken while Save & next runs", async () => {
+    const lookup = deferred<NextRecordToReview>();
+    await openReviewTab(lookup.promise);
+
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+
+    await waitFor(() =>
+      expect(isDisabled(screen.getByRole("button", { name: "Accept car (bbox)" }))).toBe(true),
+    );
+    const busy = "Not while Save & next is running";
+    expect(descriptionOf(screen.getByRole("button", { name: "Accept car (bbox)" }))).toBe(busy);
+    expect(descriptionOf(screen.getByRole("button", { name: "Reject car (bbox)" }))).toBe(busy);
+    lookup.resolve({ recordId: null, remaining: 0 });
+  });
+
+  it("says a decision that can never be taken cannot, even while Save & next runs", async () => {
+    const lookup = deferred<NextRecordToReview>();
+    await openReviewTab(lookup.promise);
+    // Accepted here, then saved by the run itself.
+    await fireEvent.click(screen.getByRole("button", { name: "Accept car (bbox)" }));
+
+    await fireEvent.click(screen.getByRole("button", { name: /Save & next/ }));
+    await waitFor(() =>
+      expect(isDisabled(screen.getByRole("button", { name: "Reject car (bbox)" }))).toBe(true),
+    );
+
+    // What the run holds back says so; what no run will change says why not.
+    const busy = "Not while Save & next is running";
+    expect(descriptionOf(screen.getByRole("button", { name: "Reject car (bbox)" }))).toBe(busy);
+    expect(descriptionOf(screen.getByRole("button", { name: "Accept car (bbox)" }))).toBe(
+      "Already accepted",
+    );
+    expect(descriptionOf(screen.getByRole("button", { name: "Reject bus (bbox)" }))).toBe(busy);
+    expect(descriptionOf(screen.getByRole("button", { name: "Accept bus (bbox)" }))).toBe(
+      "Already accepted",
+    );
+    lookup.resolve({ recordId: null, remaining: 0 });
   });
 });
