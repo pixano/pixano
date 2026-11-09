@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { flushSync } from "svelte";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -17,6 +17,7 @@ import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import type { EntityRow } from "$lib/api/annotations.js";
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 import {
+  deferred,
   humanBox,
   modelBox,
   openManager,
@@ -24,6 +25,7 @@ import {
   type FakeBackend,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
+import type { NextRecordToReview } from "$lib/workspace/reviewGateway.js";
 
 // The HUD a 3D box opens, rendered over its real session and the real
 // workspace: its delete button must say what it does to the box it holds —
@@ -49,19 +51,29 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-/** The HUD of the box `editingId`, or of a box not drawn yet. */
-async function openHud(editingId?: string) {
-  const { manager } = await openManager({
-    [REC]: {
-      [BBOX3D_RESOURCE]: [as3D(modelBox(REC, "m1")), as3D(humanBox(REC, "h1"))],
+/**
+ * The HUD of the box `editingId`, or of a box not drawn yet.
+ *
+ * @param next What the server answers when "Save & next" asks for the next record.
+ */
+async function openHud(
+  editingId?: string,
+  next: NextRecordToReview | Promise<NextRecordToReview> = { recordId: null, remaining: 0 },
+) {
+  const { manager, backend } = await openManager(
+    {
+      [REC]: {
+        [BBOX3D_RESOURCE]: [as3D(modelBox(REC, "m1")), as3D(humanBox(REC, "h1"))],
+      },
     },
-  });
+    { next },
+  );
   const session = new BBox3DSession(widgetSeam(manager, "point-cloud-widget"));
   session.setResetEditor(() => {});
   render(BBox3DHud, { props: { session } });
   session.reportReady(COORDS, IDENTITY, editingId);
   flushSync();
-  return { manager, session };
+  return { manager, backend, session };
 }
 
 /** The HUD's delete button, whichever word it shows. */
@@ -76,6 +88,7 @@ describe("BBox3DHud", () => {
     expect(deleteButton().title).toBe(
       "Reject this 3D box: a model proposed it; rejecting deletes it",
     );
+    expect(deleteButton().disabled).toBe(false);
 
     await fireEvent.click(deleteButton());
 
@@ -99,6 +112,27 @@ describe("BBox3DHud", () => {
     await openHud();
 
     expect(screen.queryByRole("button", { name: /^(Reject|Delete)$/ })).toBeNull();
+  });
+
+  it("rejects nothing while Save & next runs, says why, and stays open", async () => {
+    const lookup = deferred<NextRecordToReview>();
+    const { manager, backend, session } = await openHud("m1", lookup.promise);
+
+    const moving = manager.review.saveAndNext();
+    await waitFor(() => expect(backend.log).toContain("nextRecordToReview"));
+    flushSync();
+    expect(deleteButton().title).toBe("Not while Save & next is running");
+    expect(deleteButton().disabled).toBe(true);
+    await fireEvent.click(deleteButton());
+
+    expect(session.confirm?.editingId).toBe("m1");
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.pendingCount).toBe(0);
+    lookup.resolve({ recordId: null, remaining: 0 });
+    await moving;
+    flushSync();
+
+    expect(deleteButton().disabled).toBe(false);
   });
 });
 
@@ -227,7 +261,7 @@ describe("BBox3DHud, a box changed under the HUD", () => {
     ]);
   });
 
-  it("closes when a Reject deletes a box whose move it holds", async () => {
+  it("closes when a Reject from the Review tab deletes a box whose move it holds", async () => {
     const scene = await openWithEditor();
     const moved = movedAlongX(scene.editor.open("m1"), ONE_UNIT);
     scene.session.reportReady(moved.coords, moved.rotation, "m1");
@@ -241,7 +275,7 @@ describe("BBox3DHud, a box changed under the HUD", () => {
     expect(hudShown()).toBe(false);
     expect(scene.editor.editor.drawPhase).toBe("idle");
     // The move went with its box: the delete is the one unsaved item left, and
-    // no flag keeps the record unsaved once it is saved.
+    // no flag keeps "Save & next" on the record once it is saved.
     expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
     expect(scene.manager.unsavedCount).toBe(1);
     await scene.manager.flushSave();

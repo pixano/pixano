@@ -163,7 +163,7 @@ interface SceneContextBase {
   widgetId: string;
   buildContext: BuildContext;
   collection: AnnotationStore;   // view-scoped window onto the shared collection
-  mutations: MutationSink;
+  mutations: MutationSink; // + decisionsLocked: no review decision while "Save & next" runs
   setActiveTool(id: string): void;
   requestRedraw(): void;
   claimStagedWork?(discard: () => void): StagedWorkFlag; // one holder's flag: set(staged)
@@ -190,9 +190,9 @@ duplication of seam wiring:
   points before Enter, the box editor's resize, a 2D editor's drag, a moved 3D
   box waiting for its HUD's Apply — claims a flag of its own once
   (`claimStagedWork(discard)`), keyed to it: lowering it never lowers another
-  holder's, in this widget or another. While any is
-  raised, the record is not all saved, and each raised flag counts as one
-  unsaved item; the record's Discard calls each raised flag's `discard`;
+  holder's, in this widget or another. While any is raised, the record is not
+  all saved, each raised flag counts as one unsaved item, and "Save & next"
+  stays on it; the record's Discard calls each raised flag's `discard`;
   `releaseStagedWork()` lowers the widget's flags as it closes, since nothing in
   it can confirm that work any more; `discardStagedWork()` is the widget's share
   of Discard — each of its raised holders' `discard`, then its flags lowered,
@@ -297,14 +297,16 @@ draft/edit/delete lifecycle so no tool, renderer or widget reaches into payload 
   like any other: that is its reject, and no row is left to mark it, so a later
   run of the model may propose it again. What the queue holds for a stored row —
   its update, an entity a reassignment queued for it — is dropped before its
-  delete is queued, whoever made the row. `deleteGestureFor(annotation)` says
-  what it will do, so a control can name it before it is pressed — `reject` for
-  a model's stored row, whatever its status, `delete` for anything else.
-  `cancelGesture`, called first, lets go of a resize or a drag still under way
-  where the delete was pressed — the select tool passes `ctx.discardStagedWork`,
-  and so does the image widget's trash button while the select tool is active —
-  so the delete applies to the row as stored, and the gesture's end commits
-  nothing over it.
+  delete is queued, whoever made the row. `deleteGestureFor(annotation, mutations)`
+  says what it will do, so a control can name it before it is pressed — `reject`
+  for a model's stored row, whatever its status, `delete` for anything else, and
+  `locked` for a model's row while "Save & next" runs, when it does nothing (the
+  sink's `decisionsLocked`, which `buildMutationSink` carries from the
+  workspace). `cancelGesture`, called first and only when the gesture deletes,
+  lets go of a resize or a drag still under way where the delete was pressed —
+  the select tool passes `ctx.discardStagedWork`, and so does the image widget's
+  trash button while the select tool is active — so the delete applies to the
+  row as stored, and the gesture's end commits nothing over it.
 
 The first two take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
 which both `Scene2DContext` and the widgets' seam satisfy.
@@ -450,14 +452,16 @@ gesture happening in another medium.
 
 A second seam feature exists for the same reason: work a tool holds before the
 person confirms it is in no mutation, so the workspace cannot tell on its own
-that the record holds unsaved work — the count would read 0 over it, and
-Discard would leave it in place. So each holder claims a flag of its own through
+that the record holds unsaved work — the count would read 0 over it, "Save &
+next" would leave it behind, and Discard would leave it in place.
+So each holder claims a flag of its own through
 the seam (`claimStagedWork(discard)`), with the callback that drops its work. A
 2D tool raises its flag from the first point, stroke or press, and is given its
 reset. A widget lowers its holders' flags as it closes (`releaseStagedWork`),
 and `manager.discardChanges` calls every raised flag's discard. Each raised flag
-counts as one item of `manager.unsavedCount`, the count every toolbar shows, so
-the count never reads 0 while a tool holds work. The manager keeps the raised
+counts as one item of `manager.unsavedCount`, the count every toolbar and the
+Review tab show, so the count never reads 0 while a tool holds work, nor while
+"Save & next" stays for it. The manager keeps the raised
 flags in a private map and publishes a copy on `session.stagedWork`: flags are
 lowered from widget teardowns, where Svelte gives a reactive read the value it
 had before the latest writes, so a change computed from the session's copy there
@@ -591,9 +595,9 @@ check` at baseline error count and `vitest` green:
   `transformstart`, keeps the transformer on them whatever the selection does,
   stamps their nodes (`BBOX_RESIZING_ATTR`, `bbox2dNodes.ts`) so the renderer's
   sync leaves their size and place alone, holds a staged-work flag — so the
-  record counts it as unsaved, and Discard stops it — and commits them at
-  `transformend`, by id, onto the row a save's read-back took into the
-  collection meanwhile, in place.
+  record counts it as unsaved, "Save & next" stays, and Discard stops it — and
+  commits them at `transformend`, by id, onto the row a save's read-back took
+  into the collection meanwhile, in place.
 
   A drag is held the same way: the editor hears `dragstart` on the layer too,
   holds the box and stamps its node (`BBOX_DRAGGING_ATTR`) until `dragend`, under
@@ -694,7 +698,9 @@ check` at baseline error count and `vitest` green:
   image widget's trash button does: it reads `session.editingDeleteGesture`
   (`deleteGestureFor` on the box being edited) and shows "Reject" for a model's
   box, its tooltip saying that rejecting deletes it, and "Delete" for a
-  person's (`BBox3DHud.svelte.test.ts`).
+  person's. It is held back, disabled and saying why, on a model's box while
+  "Save & next" runs (`BBox3DHud.svelte.test.ts`); `deleteBox` then leaves the
+  HUD open with its box.
   _Residual, all UX rather than plumbing:_
   - **No keyboard delete in the point cloud.** `selectTool2D` handles
     `Delete`/`Backspace` for 2D only; the 3D scene has no equivalent.

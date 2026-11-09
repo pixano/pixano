@@ -19,6 +19,7 @@ import {
   deferred,
   openManager,
   viewIdOf,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
@@ -272,6 +273,18 @@ describe("maskEditor2D on the real Konva, a drag still running when a save ends"
     scene.redraw();
     grabbed.release();
     expect(cellsMoved()).toEqual([1, 0]);
+  });
+
+  it("holds Save & next on the record while it runs", async () => {
+    const scene = await openOnCanvas();
+    const grabbed = grab(scene, nodeOf(scene, "m1"));
+    grabbed.moveTo(0, PIXELS_PER_CELL);
+
+    await scene.manager.review.saveAndNext(VIEWPORT);
+
+    expect(scene.manager.review.outcome).toEqual({ kind: "not-saved" });
+    grabbed.release();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
   });
 
   it("is saved where it stood when let go right as the save ends", async () => {

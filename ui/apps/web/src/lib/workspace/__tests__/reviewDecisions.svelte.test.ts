@@ -45,6 +45,7 @@ import { BBox3DSession } from "$lib/annotations/kinds/3d/bbox3d/bbox3dSession.sv
 import {
   beginEntityReassign,
   deleteGestureFor,
+  deleteLocalAnnotation,
   reassignEntity,
 } from "$lib/annotations/payloadBuilders.js";
 import {
@@ -762,10 +763,37 @@ describe("Delete on a model's annotation is its reject", () => {
       persisted: false,
     };
 
-    expect(deleteGestureFor(manager.annotations.find("pending")!)).toBe("reject");
-    expect(deleteGestureFor(manager.annotations.find("accepted")!)).toBe("reject");
-    expect(deleteGestureFor(manager.annotations.find("human")!)).toBe("delete");
-    expect(deleteGestureFor(draft)).toBe("delete");
+    const queue = widgetSeam(manager).mutations;
+    expect(deleteGestureFor(manager.annotations.find("pending")!, queue)).toBe("reject");
+    expect(deleteGestureFor(manager.annotations.find("accepted")!, queue)).toBe("reject");
+    expect(deleteGestureFor(manager.annotations.find("human")!, queue)).toBe("delete");
+    expect(deleteGestureFor(draft, queue)).toBe("delete");
+    // While "Save & next" runs, a model's annotation is neither rejected nor deleted.
+    expect(deleteGestureFor(manager.annotations.find("pending")!, { decisionsLocked: true })).toBe(
+      "locked",
+    );
+    expect(deleteGestureFor(manager.annotations.find("human")!, { decisionsLocked: true })).toBe(
+      "delete",
+    );
+  });
+
+  it("cancels no gesture when it does nothing", async () => {
+    const { manager, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    let cancelled = 0;
+    const cancel = () => cancelled++;
+
+    // "Save & next" runs: the reject is held back.
+    deleteLocalAnnotation(
+      manager.annotations.find("b1")!,
+      seam.collection,
+      { ...seam.mutations, decisionsLocked: true },
+      "w",
+      cancel,
+    );
+
+    expect(cancelled).toBe(0);
+    expect(manager.annotations.find("b1")).toBeDefined();
+    expect(manager.pendingCount).toBe(0);
   });
 
   it("is undone only by Discard, which brings the row back with the rest of the record's unsaved work", async () => {

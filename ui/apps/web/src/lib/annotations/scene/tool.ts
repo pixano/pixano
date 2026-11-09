@@ -26,7 +26,8 @@ const FORM_FIELD_TAGS: ReadonlySet<string> = new Set(["INPUT", "TEXTAREA", "SELE
 /**
  * Whether a key pressed with focus on `target` belongs to that form field
  * rather than to the canvas tools. A text field types it; a select picks an
- * option with it, and would otherwise start an entity reassignment on `E`. Tool
+ * option with it — "ac" jumps to "accepted" — and would otherwise start an
+ * entity reassignment on `E`, or reject the selection on Backspace. Tool
  * shortcuts are heard on `window`, so every widget and kind listening there
  * asks this one question before acting, and no field is exempted in one
  * place and forgotten in another.
@@ -45,7 +46,8 @@ export function isFormFieldTarget(target: EventTarget | null): boolean {
  * record: it claims a staged-work flag once (`Scene2DContext.claimStagedWork`),
  * raises it as that work begins, and lowers it once the work is committed,
  * cancelled (Escape) or dropped with the tool (`deactivate`). Its discard
- * callback drops the work: the record's Discard calls it.
+ * callback drops the work: the record's Discard calls it. While the flag is
+ * up, "Save & next" stays on the record instead of losing the work with it.
  */
 export interface ToolHandler2D {
   activate?(): void;

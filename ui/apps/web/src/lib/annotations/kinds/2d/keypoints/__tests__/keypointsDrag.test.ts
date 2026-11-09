@@ -23,6 +23,7 @@ import {
   deferred,
   openManager,
   viewIdOf,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
@@ -294,6 +295,19 @@ describe("keypoints on the shared flatCoordsEditor2D, a drag still running when 
     scene.redraw();
     grabbed.release();
     expectCoords(coordsOf(scene, "k1"), FACE_MOVED_10);
+  });
+
+  it("holds Save & next on the record while it runs", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "k1");
+    const grabbed = grab(scene, vertexOf(scene, "k1", 1));
+    grabbed.moveTo(0, 10);
+
+    await scene.manager.review.saveAndNext(VIEWPORT);
+
+    expect(scene.manager.review.outcome).toEqual({ kind: "not-saved" });
+    grabbed.release();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
   });
 
   it("a skeleton dragged whole and let go right as the save ends is saved where it stood", async () => {

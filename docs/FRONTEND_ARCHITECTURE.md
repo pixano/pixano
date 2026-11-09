@@ -69,9 +69,9 @@ Three ideas hold it together:
 2. **Per-kind plugin registries** (tools, renderers, payload builders, seed
    loaders) so a new annotation kind is added by dropping a module + registering
    it, never by editing a widget or the queue.
-3. **Narrow boundary interfaces** (`DatasetGateway`, `Scene2DContext`,
-   `MutationSink`, `AnnotationStore`) so tools/renderers/queue depend on contracts,
-   never on the concrete `WorkspaceManager`.
+3. **Narrow boundary interfaces** (`DatasetGateway`, `ReviewGateway`,
+   `Scene2DContext`, `MutationSink`, `AnnotationStore`) so tools/renderers/queue
+   depend on contracts, never on the concrete `WorkspaceManager`.
 
 ---
 
@@ -147,6 +147,7 @@ Three ideas hold it together:
 | `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
 | `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
 | `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | also a model's annotation's Reject (§8); a 404 counts as done, any other failure throws an `ApiError` with its status |
+| `getNextRecordToReview` | `api/review.ts` | `GET /datasets/{id}/review/next?status=&after=` | **kind-generic**; reached through `ReviewGateway` (§3) |
 
 Note `listAnnotations`' `view_name` query parameter actually filters the `view_id`
 column for annotations (legacy server-side naming — see `service.list` in
@@ -173,6 +174,14 @@ may come after the write was stored. `deleteEntity` is the conditional delete
 (§2) and resolves whether the entity is gone; resolving nothing reads as gone,
 the safe side: a write naming the entity then sends its create first.
 
+The review queue has a gateway of its own: `workspace/reviewGateway.ts` defines
+**`ReviewGateway`** (`nextRecordToReview(datasetId, {status, after})`), the one
+call the review needs, and `httpReviewGateway` forwards to `api/review.ts`. It is
+kept apart rather than added to `DatasetGateway`, so the review widens no
+existing contract: the loader, the queue and their fakes never see it. The two
+`http*Gateway` objects are the only places in the workspace layer that call
+`$lib/api`.
+
 ---
 
 ## 4. The workspace orchestration layer
@@ -190,12 +199,15 @@ WorkspaceManager
  ├─ widgets[]  : WidgetInstance[]         // the laid-out widget set
  ├─ storageMap : per-widget storage       // e.g. activeToolId (NOT annotations)
  ├─ pendingAnnotation                     // box awaiting its entity choice
- └─ review     : ReviewController         // list, status chips, decisions (§8)
+ └─ review     : ReviewController         // Review tab: list, chips, decisions,
+                                          //   "Save & next" (§8)
 ```
 
 Representative API: `openRecord` (the way to switch records, or to open the
 same one again: clears the workspace, unsaved changes included, then
-`selectRecordInDataset`), `flushSave`, `discardChanges`, `queueMutation`,
+`selectRecordInDataset`; "Save & next" moves through the private
+`replaceRecord`, the same without ending its hold — flow H), `flushSave`,
+`discardChanges`, `queueMutation`,
 `upsertUpdateMutation`, `deleteAnnotation`, `beginPendingAnnotation` /
 `confirmPendingAnnotation` / `cancelPendingAnnotation`, `isEntityVisible` /
 `toggleEntityVisible` / `showAllEntities`, `isShownByReview` (the review status
@@ -205,7 +217,9 @@ through the seam — "Unsaved work and saves" below), `discardStagedWork(widgetI
 (one widget's share of Discard, which a delete pressed mid-gesture calls first —
 flow E), `unsavedCount` (how many items of the record are unsaved, the one count
 every unsaved counter shows — "Unsaved work and saves" below), `hasUnsavedWork`
-(that count is not 0),
+(that count is not 0), `decisionsLocked` (the lock "Save & next" holds — flow H;
+`openRecord` tells `review.recordOpening` first, which takes the lock away from
+a run still going, whatever record opens),
 `saveDatasetLayout` / `restoreOpeningLayout` / `fitLayoutToViewport`. Getters
 forward to the session/queue (`annotations`, `entities`, `pendingCount` — the
 request on the wire included — `pendingMutations` — the queued ones only —
@@ -221,7 +235,14 @@ not this save's to read back or report on, so nothing is read back then. On the
 record it saved, a save that sent something reads the record back (`readBack`:
 the entities, then the annotations, merged with the work done meanwhile — flow
 D); one that failed reads back its entities only, since a write before the
-failure may have created one.
+failure may have created one. `flushSave` is the private `saveRecord`'s
+`saved`: `saveRecord` also says whether the save itself failed (`SaveReport`,
+`{saved, failed}`, `reviewController.svelte.ts`), taken as the flush ends,
+before the read-back — the Review tab's Save stays offered meanwhile, and a
+save it starts clears `saveError` — and that report is what "Save & next" reads
+(flow H). Every save, from whichever control, and every Discard clear a "Not
+moved" outcome first (`review.clearNotMoved`, flow H). "Save & next" moves to
+another record only on true (flow H).
 
 **Per-dataset layout preference.** Every record of a dataset declares the same
 views, so the arrangement the user builds on one is replayed on the others
@@ -266,6 +287,8 @@ annotations : AnnotationCollection      // the shared model (§5)
 visibleEntityIds : Set<string> | null   // entity-driven visibility (null = all)
 hiddenReviewStatuses : ReadonlySet<ReviewFilterKey>  // review chips switched off
 stagedWork : ReadonlyMap<string, StagedWorkHolder>  // raised staged-work flags
+decisionLock : {datasetId, recordId} | null  // the lock a running "Save & next" holds
+decisionsLocked : boolean (getter)      // decisionLock !== null: no review decision
 ```
 Held on a tiny shared object so each sub-service depends on this narrow type, not
 on the whole manager. `isEntityVisible(entityId)` reads `visibleEntityIds`; the
@@ -283,10 +306,22 @@ writes the flags, in a private map it publishes here as a copy — always
 replaced, never mutated, like `hiddenReviewStatuses` — and `clearWorkspace` /
 `reset()` empty it with the widgets.
 
+`decisionLock` is taken by "Save & next" from its save to the opening of the
+next record, and names the record the run is on: the one it saves, then the one
+it opens (flow H). Opening a record any other way releases it — from the record
+list, the record it saves included (`ReviewController.recordOpening`, which
+`openRecord` calls first; the run's own move goes through `replaceRecord`,
+which does not): the reviewer has taken a record in hand, and decisions are
+theirs again. It is raw state, never a
+proxy, so a run knows its own lock by identity and never releases one a later run
+has taken. `decisionsLocked` is a getter over it; every sink reads it
+(`MutationSink.decisionsLocked`), and the shared decision helpers refuse while it
+is up, whatever control asks.
+
 `hiddenReviewStatuses` is the one exception to "replaced on every load": it is
 a reviewer's preference, not a property of the record, so neither a load nor
-`reset()` touches it and the next record opens with the filter the reviewer
-works with. It defaults to empty — nothing hidden — and a chip toggle
+`reset()` touches it and "Save & next" keeps the filter the reviewer works
+with. It defaults to empty — nothing hidden — and a chip toggle
 (`ReviewController.toggle`) **assigns** a new `Set`: Svelte 5 does not track a `Set`'s `add`/`delete` (the same pattern
 as `visibleEntityIds`).
 
@@ -351,8 +386,9 @@ more guards keep a read-back from landing where it does not belong:
 Owns the list of pending writes and the flush lifecycle. Implements **`MutationSink`**:
 `queue`, `upsertUpdate` (replace the last queued update for the same
 resource+id, taking the newer gesture's `widgetId` with its body),
-`patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`.
-Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`, the plain
+`patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`,
+and `decisionsLocked` (the session's lock: the Review tab decides through the
+queue itself). Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`, the plain
 counter `writesLanded`, and `holdsWorkFor(id)` (a write of that annotation queued
 or on the wire). `writesLanded` counts the writes that reached the backend: each
 one answered, and each one that failed without the server refusing it — after a
@@ -563,14 +599,16 @@ A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
 that sent something reads the record back as any does — the entities, then the
 rows, merged with the work queued, the held shape left where the gesture has it
-— and reports work left: `flushSave` resolves false. Each raised flag counts as
-one item of `unsavedCount`, so the counters never read 0 while a tool holds
-work; a drag counts one while it runs, even on an annotation a queued change
+— and reports work left: `flushSave` resolves false, and "Save & next" stays.
+Each raised flag counts as one item of `unsavedCount`, so the counters never
+read 0 while "Save & next" stays;
+a drag counts one while it runs, even on an annotation a queued change
 already counts. Discard calls every raised flag's discard — the HUD closes, a
 tool forgets its points, a resize or a drag stops and commits nothing, and each
 annotation shows as stored
 — and is offered whenever anything is
-unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`), even with
+unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`, the tab's
+`canDiscard`), even with
 nothing queued. The manager keeps the raised flags in a private map and
 publishes a copy on `session.stagedWork`: widgets lower their flags from effect
 teardowns, where Svelte gives a reactive read the value it had before the
@@ -578,15 +616,15 @@ latest writes, so a change computed from the session there could bring a flag
 back or drop one another widget had just raised.
 
 **One unsaved count.** `WorkspaceManager.unsavedCount` is the only count of the
-record's unsaved work, derived once for every widget toolbar and `flushSave`,
-so they never disagree. Its rule is `countUnsavedWork`
+record's unsaved work, derived once for the Review tab, every widget toolbar and
+"Save & next", so the three never disagree. Its rule is `countUnsavedWork`
 (`workspace/unsavedWork.ts`), over the changes queued and the one on the wire:
 an annotation counts once, whatever they hold for it — an edit, a new entity and
 the update naming it — and so does a draft; a change that names no annotation
 counts on its own; an open entity form counts once — a draft's form is its
 draft, already counted, so only a stored annotation's reassignment adds one; and
 each raised staged-work flag counts once. `hasUnsavedWork` is that count above
-0, and it is what `flushSave` reads. The rule takes a draft no queued change
+0, and it is what `flushSave` and "Save & next" read. The rule takes a draft no queued change
 names for the draft the open form belongs to, since a draft's create is queued
 once its entity is chosen; nothing on the draft says which form is its.
 
@@ -595,8 +633,9 @@ once its entity is chosen; nothing on the draft says which form is its.
 **Keys typed in a form field stay there.** Tool shortcuts are heard on `window`.
 Every listener there — the image widget's, the 3D box editor's — asks
 `isFormFieldTarget(event.target)` (`scene/tool.ts`) first: a text field types
-the key, and a select picks an option with it instead of starting a
-reassignment on `E` or deleting the selection on Backspace.
+the key, and a select picks an option with it — "ac" jumps to "accepted" in the
+Review tab's status select — instead of starting a reassignment on `E` or
+deleting the selection on Backspace.
 
 ---
 
@@ -798,6 +837,8 @@ alone, a record-scoped kind keeping the row's own view and format (bbox3d).
 ### D) Save (persist to backend)
 ```
 flushSave()                                    // resolves: nothing left unsaved?
+  (saveRecord, which says too whether it failed: SaveReport {saved, failed})
+  → review.clearNotMoved()                     // any save ends "Not moved" (flow H)
   → note the open record, and whether anything is queued or on the wire
   → MutationQueue.flush()
        sort: entityCreate < annCreate < annDelete < entityDelete
@@ -834,7 +875,8 @@ flushSave()                                    // resolves: nothing left unsaved
                  // whose list failed stay as they are here; a shape held
                  // by a gesture becomes its row, its node left alone by the
                  // renderer, and the gesture commits onto that row
-  → failed? → false; the failed work stays as left
+  → failed? → false, reported failed — taken before the read-back; the failed
+              work stays as left
   → another record open now? → false
   → select(null); return nothing unsaved
 ```
@@ -845,9 +887,11 @@ deleteLocalAnnotation(annotation, collection, mutations, widgetId, cancelGesture
      // the one choke point: the 2D select tool (Delete/Backspace), the image
      // widget's trash button, the bbox3d HUD's delete (BBox3DSession.deleteBox),
      // the review controller's Reject, manager.deleteAnnotation
-  deleteGestureFor(annotation)                 // what the controls call it
+  deleteGestureFor(annotation, mutations)      // what the controls call it
      "delete"  anything not reviewable: a person's annotation, a draft
      "reject"  a model's stored annotation, whatever its status
+     "locked"  the same, while "Save & next" runs (the sink's decisionsLocked)
+  → "locked"? → nothing
   → cancelGesture()                            // a resize or a drag under way in
        // the widget lets go first: seam.discardStagedWork → each raised holder's
        // discard — the shape back as stored, the gesture stopped, nothing
@@ -884,12 +928,14 @@ confirm, and the box it held goes with it.
 Both buttons that delete read `deleteGestureFor` to say what they will do. The
 image widget's trash button is named by its action — "Reject selected (Del)" for
 a model's annotation, "Delete selected (Del)" otherwise and while nothing is
-selected —, its tooltip adding on a Reject that rejecting deletes; and with
-nothing selected, why it does nothing goes in its tooltip and its accessible
-description (an `sr-only` span it points to with `aria-describedby`), never its
-name: "Select an annotation to delete or reject it". The bbox3d HUD's button
-reads "Reject" or "Delete", through `BBox3DSession.editingDeleteGesture`, its
-tooltip saying that rejecting deletes.
+selected —, its tooltip adding on a Reject that rejecting deletes; and when it
+does nothing now, why goes in its tooltip and its accessible description (an
+`sr-only` span it points to with `aria-describedby`), never its name: "Select an
+annotation to delete or reject it", "Not while Save & next is running". The
+bbox3d HUD's button reads "Reject" or "Delete", through
+`BBox3DSession.editingDeleteGesture`, its tooltip saying that rejecting deletes,
+or why it does nothing now. Each asks with its own sink, so it says what
+pressing it does, and is disabled on a row the run holds back.
 
 ### F) Reassign an entity (existing box)
 ```
@@ -902,12 +948,12 @@ reassignEntity(annotation, choice, ctx)
           stored row names it any more (§2)
 ```
 
-### G) Accept or reject a model's annotation
+### G) Accept or reject a model's annotation (the Review tab)
 ```
-review.accept(id)                                   // ReviewController
+ReviewPanel Accept → review.accept(id)              // ReviewController
   → commitAccept(annotation, {collection, mutations, widgetId})
-       canAccept is false → nothing            // not reviewable, or not shown
-                                                //   pending (mayAccept)
+       canAccept is false → nothing            // locked, not reviewable, or not
+                                                //   shown pending (mayAccept)
        → mutations.upsertUpdate({op:"update", resource, id,
                                  body: {…the queued content edit's body, if any,
                                         review_status: "accepted"}})
@@ -915,10 +961,10 @@ review.accept(id)                                   // ReviewController
   → the chips may now hide it (the Accepted chip off) → selection dropped
   → (flush) PUT …/{resource}/{id}  {review_status: "accepted", …an edit}
 
-review.reject(id)
+ReviewPanel Reject → review.reject(id)
   → deleteLocalAnnotation(…)  when its gesture is "reject" (flow E)
        // true when the delete was queued: the row leaves the list and every
-       // canvas; false when refused (no such row, a person's, a draft)
+       // canvas; false when refused (no such row, a person's, a draft, locked)
 ```
 
 Accept is offered over an unsaved edit and carries it: the row's one queued
@@ -929,6 +975,70 @@ Reject is a delete: it throws the row's unsaved work away, and only Discard —
 with the rest of the record's unsaved work — brings the row back before Save;
 nothing does after.
 
+### H) Save & next
+```
+ReviewPanel "Save & next" → review.saveAndNext(viewport)
+  → lock = {datasetId, recordId}; session.decisionLock = lock
+       // no decision on any path: the tab's Accept/Reject, Delete, the trash
+       // button, the 3D HUD's Reject; the run knows its lock by identity
+  → navigator.save()                       // manager.saveRecord: {saved, failed}
+       lock no longer held (a record opened) → stop: no outcome, no move
+       not saved → "not saved": stay, work as left; saveFailed = the report's
+                   failed, taken as its flush ended — never the live
+                   saveError, which a Save pressed during the read-back clears
+  → gateway.nextRecordToReview(datasetId, {status: nextStatus, after: recordId})
+       → GET /datasets/{id}/review/next?status=…&after=…
+  → lock no longer held → stop: no outcome, no move
+  → navigator.hasUnsavedWork()             // unsavedCount > 0: a draft, an edit,
+       true → "not saved": stay, the work kept       //   work a tool holds, made
+                                                     //   during the lookup
+  → null, or the open record itself (the server wraps round) → "none left": stay
+  → lock = {datasetId, nextRecordId}; session.decisionLock = lock
+       // the hold moves with the reviewer onto the record it opens
+  → navigator.openRecord(datasetId, nextRecordId, viewport)
+       → manager.replaceRecord: clears, then loads — no recordOpening, so the
+         lock stays
+  → lock no longer held → stop: no outcome
+  → "opened": the panel shows how many records hold that status on a view shown
+       here, this one included
+  → an error, with the lock still held → "failed", on whichever record is open
+  → finally: release the lock if it is still this run's
+
+manager.openRecord(ds, rec) — the record list, while the run looks, whatever
+record it opens, the one being saved included
+  → review.recordOpening()
+       the lock → released: decisions are the reviewer's again
+       the last outcome → forgotten: it was about the record as it was
+```
+
+The reviewer can still act while it runs — draw, edit, delete a person's
+annotation, open a record from the list — though not decide, so it looks
+again after each step: a save never loses work begun during it, and nobody is
+moved away from a record they opened themselves. Opening a record from the list
+takes the lock away from the run — another record, or the very one it is
+saving, opened again: decisions are taken again at once, on every record, and
+the run moves nobody and reports nothing from then on — not even once the
+reviewer comes back to the record it was saving, since it knows its lock by
+identity. Only the run's own move keeps it (`ReviewNavigator.openRecord`, the
+manager's `replaceRecord`).
+The lock is released on every way out — the run ending, whatever it came to, and
+the reviewer leaving it — and a run left behind never releases a lock a later
+run holds.
+
+A "not saved" outcome is cleared, not merely hidden, once the reason "Save &
+next" gave is no longer the question: on any save or Discard
+(`ReviewController.clearNotMoved`, called by `flushSave` and `discardChanges`),
+on a record opened (`recordOpening`), and once the record has nothing
+unsaved (an effect the controller runs for the workspace's life); the getter
+already reads it as over while nothing is unsaved, so it never shows a moment too
+long. Work begun later is no reason "Save & next" gave, so the line does not
+come back with it. The outcome records why it stopped as it stopped —
+`{kind: "not-saved", saveFailed: true}` when the run's own save failed, as that
+save reported it when its flush ended (`SaveReport.failed`), without
+`saveFailed` when work was left — so the words never come from the live
+`saveError`, which a save started during the read-back clears, nor from a later
+save's error; the Review tab words its line from `outcome.saveFailed`.
+
 ---
 
 ## 8. Reviewing a model's annotations
@@ -936,17 +1046,23 @@ nothing does after.
 A model's annotation arrives `pending`, and `accepted` is where a person's review
 leaves it; a person's annotation carries no status (`ReviewStatus`,
 `src/pixano/schemas/annotations/entity_annotation.py`;
-`docs/specs/backend-processing.md` §19). The server owns that vocabulary; the
-interface reads it on every annotation it loads, and shows it on the canvas.
-Nothing in it is kind-specific: a kind's annotations carry their review state as
-soon as its seed loader builds through the shared envelope, and no kind name
-appears in the modules below.
+`docs/specs/backend-processing.md` §19). A reviewer accepts it — as it is, or by
+saving an edit of it — or rejects it, which deletes it. Review happens **inside
+the workspace, record by record**: a Review tab in the right panel lists the open
+record's annotations and takes the decisions, and "Save & next" opens the next
+record holding annotations of a chosen status. The server owns the rules; the
+interface reads the status on every annotation it loads, shows it on the canvas
+and in the tab, and mirrors the rules only to offer the buttons that will work.
+Nothing in it is kind-specific: a kind is reviewable as soon as its seed loader
+builds through the shared envelope, and no kind name appears in the modules
+below.
 
 **What is reviewable.** `isReviewable(a)`: persisted, `review.sourceType ===
 "model"`, and a known status. A model's row stored with no status — re-imported
 from JSONL, or a legacy smart-tracking mask — reads as `pending`, as the server
 reads it (`review_status_of`, `src/pixano/schemas/annotations/review.py`). A
-person's annotation and a draft are not reviewable.
+person's annotation and a draft are not reviewable; the Review tab lists them
+under the Human chip.
 
 **The pieces, split to keep the import graph acyclic.**
 
@@ -975,31 +1091,45 @@ person's annotation and a draft are not reviewable.
   `deleteLocalAnnotation` (flow E: every delete, a Reject included), next to the
   other commit helpers.
 - `workspace/reviewController.svelte.ts` — `ReviewController`, the review of the
-  open record for a panel to show, `manager.review`: the rows (the annotations
+  open record the Review tab shows, `manager.review`: the rows (the annotations
   the chips let through, of the entities the Entities tab shows — each with its
-  kind, label, model, version, score, status, `canAccept`, `canReject` and
-  whether it is selected), the per-chip counts, the chips (`isHidden`, `toggle`,
-  `isShown`), the record-wide unsaved count (`unsavedCount`, read from the
-  navigator — the manager's own count), select, accept and reject, save and
+  kind, label, model, version, score, status, `canAccept` with why not
+  (`acceptRefusal`), `canReject` and whether it is selected), the per-chip
+  counts, the chips (`isHidden`, `toggle`, `isShown`), the record-wide unsaved
+  count (`unsavedCount`, read from the navigator — the manager's own count),
+  select, accept and reject, save and
   whether there is anything to save (`canSave`: a queued change), discard and
-  whether there is anything to discard (`canDiscard`). Narrow injected deps —
-  `{session, sink: MutationSink, navigator: {save, unsavedCount, hasUnsavedWork, discardChanges}}`
-  — never the `WorkspaceManager`. It holds no review state of its own: statuses
-  live on the annotations, decisions on the queue, chips on the session. No
-  panel renders it yet.
+  whether there is anything to discard (`canDiscard`), "Save & next" and its
+  outcome. Narrow injected deps —
+  `{session, sink: MutationSink, navigator: {save, unsavedCount, hasUnsavedWork, discardChanges, openRecord}, gateway: ReviewGateway}`
+  — never the `WorkspaceManager`. The navigator's `save` resolves a
+  `SaveReport` (`{saved, failed}`), and its `openRecord` is "Save & next"'s own
+  move, which keeps the run's hold. It holds no review state of its own beyond
+  "Save & next" (the status it looks for, its outcome): statuses live on the
+  annotations, decisions on the queue, chips on the session.
+- `workspace/reviewGateway.ts`, `api/review.ts` — `ReviewGateway` +
+  `httpReviewGateway`, and the `fetch` of `GET …/review/next` (§3).
+- `components/shell/ReviewPanel.svelte` — presentational: the Review tab of
+  `RightPanel`. The unsaved count with its own Discard (offered while anything is
+  unsaved, work a tool holds included) and Save (offered while a change is
+  queued, `review.canSave`: work a tool holds, or a draft whose entity is still
+  being chosen, is finished in its tool or form first), the chips with their
+  counts, one line per annotation with Accept and Reject, "Save & next" with its
+  status select (pending by default). Every word it shows is written there.
 
 **Reject deletes.** A model's annotation is rejected by deleting it, like any
 row: `deleteLocalAnnotation` is the single choke point every delete gesture goes
 through (flow E) — the Delete key, the image widget's trash button, the 3D HUD,
-the review controller's Reject —,
+the Review tab's Reject —,
 and the server prunes its entity when nothing else names it. The controls say
 so: on a model's annotation, whatever its status, they read "Reject", and their
 tooltip says that rejecting deletes (`deleteGestureFor`). No row is left to mark
 the rejection, so a later run of the model may propose it again — a consequence
 accepted with the rule. A Reject, like any delete, throws the row's unsaved work
-away — an edit, an entity a reassignment queued for it. A Reject takes the row off every canvas at once; before
-Save, only Discard brings it back, with the rest of the record's unsaved work,
-and nothing does after Save: there is no undo of one Reject.
+away — an edit, an entity a reassignment queued for it. A Reject takes the row
+off the list and every canvas at once; before Save, only Discard brings it back,
+with the rest of the record's unsaved work, and nothing does after Save: there
+is no undo of one Reject.
 
 **Decisions are mutations.** An Accept is an update queued on the
 `MutationQueue` and sent by Save, like any edit — one write path: the status
@@ -1007,14 +1137,14 @@ alone, or riding on the row's unsaved edit. The queue holds one pending update
 per row, so an Accept and an edit of one row ride in one update, whichever came
 first (flows C and G), and the update belongs to the gesture that last wrote its
 body: `upsertUpdate` takes the newer `widgetId` with it. A Reject is the row's
-delete (flow E), which drops the row's unsaved work. Decisions taken through the
-controller carry `REVIEW_PANEL_SOURCE_ID`. No counter reads that stamp: every
-widget toolbar and the controller give one number, the record's unsaved items
-(`manager.unsavedCount`, which the controller reads through its navigator), so a
-decision taken through it reads as unsaved on every canvas too. Discard throws
-the record's unsaved work away from wherever it is pressed
-(`manager.discardChanges`: it drops the work tools hold, puts each annotation
-back as stored, and reads the entities and the rows again).
+delete (flow E), which drops the row's unsaved work. Decisions taken from the
+tab carry `REVIEW_PANEL_SOURCE_ID`. No counter reads that stamp: every widget
+toolbar and the Review tab show one number, the record's unsaved items
+(`manager.unsavedCount`, which the tab reads through `review.unsavedCount`), so
+a decision taken in the tab reads as unsaved on every canvas too, and the
+toolbar's Discard and the tab's Discard both throw the record's unsaved work
+away (`manager.discardChanges`: it drops the work tools hold, puts each
+annotation back as stored, and reads the entities and the rows again).
 
 **Shown status and stored status.** `AnnotationReview.status` is what the screen
 shows; `storedStatus` is what the dataset holds, read with the row and moved
@@ -1024,14 +1154,19 @@ row back. The stored status tells an unsaved Accept (shown accepted, stored
 pending — `isAcceptUnsaved`), which an edit carries on, and is what Discard
 puts back. A row's `canAccept`
 comes from `canAccept` — a model's stored row shown pending — and its
-`canReject` from `deleteGestureFor` — a model's stored row, whatever its status.
+`canReject` from `deleteGestureFor` — a model's stored row, whatever its status
+—; both are false while "Save & next" holds the decision lock. When either is
+refused on a model's row, the row says why as a code (`acceptRefusal`:
+`accepted` or `busy`; `rejectRefusal`: `busy`), which the Review tab only puts
+into words.
 
 **An edit stays in review until it is saved.** A content edit of a model's row —
 a drag, a resize, a reassignment, a box moved under the 3D HUD — leaves the row
 shown `pending`, and Accept offered: unsaved, it is the reviewer's work in
-progress. The workspace's Save — the toolbar's, or the controller's — sends it,
-the server stores the row `accepted`, keeping the model's provenance and score,
-and the row reads accepted as the write leaves (`recordWrite`, §5). Accept over
+progress. The workspace's Save — the toolbar's, the Review tab's, "Save & next"
+— sends it, the server stores the row `accepted`, keeping the model's
+provenance and score, and the row reads accepted as the write leaves (`recordWrite`, §5).
+Accept over
 the edit sends both in one update. An edit that puts the content back as stored
 is no edit: nothing is queued but an unsaved Accept (flow C). The 3D HUD's "Apply"
 button stages, it does not save: it confirms the move into the record's unsaved
@@ -1042,6 +1177,16 @@ with the editor's own round trip of the stored one, each number within a
 float32 round trip — flow C's rule (`sameValue`); a moved box keeps its stored
 rotation unless it was turned, and `bbox3dPayloadBuilder` writes the box's own
 view and format, so a HUD Apply that changed nothing does not accept the box.
+
+**Accessible decisions.** Each Accept and Reject button is named after the
+annotation it decides on (`Accept car (bbox)`); a refused one keeps the native
+`disabled` and says why, in its tooltip and as its accessible description (an
+`sr-only` span it points to with `aria-describedby`): "Already accepted", or
+"Save & next" running. "Already accepted", which no run will change, is given
+even while "Save & next" runs, so the button never promises a decision that will
+not come; "Not while Save & next is running" is said only of a decision the run
+holds back. Reject's tooltip says it deletes the annotation. The selected row carries
+`aria-current`, so the selection is not told by colour only.
 
 **The status chips are display-only.** `session.hiddenReviewStatuses` (default
 empty: nothing hidden) holds the chips switched off — `pending`,
@@ -1060,7 +1205,8 @@ no text to show, and rebuilds a label when its text or its colour changes —
 which also recolours a draft's label once it is saved. A person's annotation and
 a draft keep their saved and unsaved colours. Kinds drawn with those labels show
 the status on the canvas (bbox, mask, keypoints, multi-path); classification and
-bbox3d — in 3D and projected — show no status.
+bbox3d — in 3D and projected — show it in the Review tab only. The chips filter
+every kind.
 
 ---
 
@@ -1090,14 +1236,17 @@ bbox3d — in 3D and projected — show no status.
 ```
 ui/apps/web/src/lib/
 ├─ api/annotations.ts                      REST fetch wrappers
+├─ api/review.ts                           GET …/review/next
 ├─ workspace/
 │  ├─ workspaceManager.svelte.ts           orchestrator (composition root)
 │  ├─ workspaceSession.svelte.ts           record-scoped shared state
 │  ├─ recordLoader.ts                       (dataset,record) → widgets + data
 │  ├─ mutationQueue.svelte.ts               pending writes + flush
-│  ├─ reviewController.svelte.ts            the review of the record: rows, chips,
-│  │                                         counts, Accept/Reject, Save/Discard
+│  ├─ reviewController.svelte.ts            the Review tab's state: rows, chips,
+│  │                                         counts, Accept/Reject, Save/Discard,
+│  │                                         Save & next
 │  ├─ datasetGateway.ts                     I/O seam (interface + http impl)
+│  ├─ reviewGateway.ts                      review I/O seam (interface + http impl)
 │  ├─ unsavedWork.ts                        the one rule of the record's unsaved count
 │  ├─ datasetLayout.ts                      per-dataset layout rules (snapshot/
 │  │                                         resolve/parse) — no storage access
@@ -1126,6 +1275,7 @@ ui/apps/web/src/lib/
 │  └─ kinds/<2d|3d>/<kind>/                  per-kind: payloadBuilder, seedLoader,
 │                                            renderer, editor/tool (+ 3D: overlay/session/hud)
 └─ components/
+   ├─ shell/ReviewPanel.svelte                the Review tab (presentational)
    ├─ widgets/AnnotationToolbar.svelte        shared toolbar; sceneSeam.ts (buildSeam)
    ├─ widgets/image/ImageWidget.svelte        Konva host, builds Scene2DContext
    ├─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, camera
@@ -1141,8 +1291,9 @@ ui/apps/web/src/lib/
 | `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue; a refused write rejects with an `ApiError` carrying its 4xx status, and `deleteEntity` is the conditional delete, answering `{deleted}` |
 | `DatasetLayoutRepository` | `workspace/datasetLayoutRepository.ts` | `localStorageDatasetLayoutRepository`; consumed by loader + manager |
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
-| `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets and the `ReviewController` |
-| `ReviewControllerDeps` / `ReviewNavigator` | `workspace/reviewController.svelte.ts` | built by `WorkspaceManager` (`navigator` = `flushSave` as `save` + `unsavedCount` + `hasUnsavedWork` + `discardChanges`) |
+| `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`, `buildMutationSink`; consumed by tools/widgets and the `ReviewController`; carries `decisionsLocked`, the lock the decision helpers read |
+| `ReviewGateway` | `workspace/reviewGateway.ts` | `httpReviewGateway`; consumed by `ReviewController` |
+| `ReviewControllerDeps` / `ReviewNavigator` | `workspace/reviewController.svelte.ts` | built by `WorkspaceManager` (`navigator` = its private `saveRecord` as `save`, resolving a `SaveReport` + `unsavedCount` + `hasUnsavedWork` + `discardChanges` + its private `replaceRecord` as `openRecord`, "Save & next"'s own move) |
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |
 | `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too), `BBox3DSession` — with the callback Discard calls, and a delete pressed mid-gesture calls first for its widget; each raised flag counts once in `WorkspaceManager.unsavedCount` |
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |

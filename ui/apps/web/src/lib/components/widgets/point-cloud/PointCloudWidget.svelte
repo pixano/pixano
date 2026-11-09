@@ -127,7 +127,7 @@ License: CECILL-C
 
 <div class="relative flex h-full w-full flex-col bg-card">
   <!-- Toolbar. Its unsaved count is the record's — per annotation, plus each piece
-       of work a tool holds — the number the image widgets show. -->
+       of work a tool holds — the number the image widgets and the Review tab show. -->
   <AnnotationToolbar
     tools={TOOLS_3D}
     activeToolId={storage.activeToolId}

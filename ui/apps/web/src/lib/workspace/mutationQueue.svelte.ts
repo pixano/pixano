@@ -123,6 +123,15 @@ export class MutationQueue {
     private locator: LocalAnnotationLocator,
   ) {}
 
+  /**
+   * True while no review decision may be queued (`WorkspaceSession.decisionsLocked`):
+   * the queue is the sink the review panel decides through, so it carries the
+   * lock as every widget's sink does.
+   */
+  get decisionsLocked(): boolean {
+    return this.session.decisionsLocked;
+  }
+
   /** Append a mutation to the queue. Order matters; `flush` re-orders only
    * by resource (entities first, then annotations, deletes last) via
    * `sortMutations` — within a resource the original order is preserved. */
