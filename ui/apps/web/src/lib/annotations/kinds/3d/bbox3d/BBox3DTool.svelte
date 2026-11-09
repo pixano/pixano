@@ -61,6 +61,7 @@ License: CECILL-C
     () => session.gizmoVisibility,
     (coords, rotation, editingId) => session.reportReady(coords, rotation, editingId),
     () => session.reportCanceled(),
+    () => session.reportDragStarted(),
   );
 
   // A stable handle whose getters track the editor's reactive state, so the

@@ -299,8 +299,8 @@ export class WorkspaceManager {
 
   /**
    * A flag of its own for one holder of staged work in a widget — a tool, an
-   * editor — lowered until the holder raises it. Holders never lower one
-   * another's flags.
+   * editor, a HUD — lowered until the holder raises it. Holders never lower
+   * one another's flags.
    *
    * @param widgetId The widget the holder belongs to.
    * @param discard Drops the holder's work and lowers its flag; `discardChanges`

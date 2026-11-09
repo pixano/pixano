@@ -187,9 +187,10 @@ duplication of seam wiring:
   writes, stamped with the widget's id so a widget can only clear its own — the
   `liveDraft` channel (a gesture's preview, see the live projection note) and
   the staged-work flags. Each piece holding work unconfirmed — a 2D tool's
-  points before Enter, the box editor's resize, a 2D editor's drag — claims a
-  flag of its own once (`claimStagedWork(discard)`), keyed to it: lowering it
-  never lowers another holder's, in this widget or another. While any is
+  points before Enter, the box editor's resize, a 2D editor's drag, a moved 3D
+  box waiting for its HUD's Apply — claims a flag of its own once
+  (`claimStagedWork(discard)`), keyed to it: lowering it never lowers another
+  holder's, in this widget or another. While any is
   raised, the record is not all saved, and each raised flag counts as one
   unsaved item; the record's Discard calls each raised flag's `discard`;
   `releaseStagedWork()` lowers the widget's flags as it closes, since nothing in
@@ -339,7 +340,8 @@ delete named Delete rather than Reject — and nothing would fail.
      when the shape cannot hold one (DEBT-1); 3D → a `<Kind>Tool.svelte` overlay on
      `Tool3D.overlay`, plus (if it needs a confirm step) a `createSession` + a `hud`.
      Whatever holds work until it is confirmed — a 2D tool's shape in progress, an
-     editor's resize or drag — claims a staged-work flag
+     editor's resize or drag, a 3D session's staged box or gizmo drag — claims a
+     staged-work flag
      (`claimStagedWork(discard)`), raises it for work that changes something, lowers
      it on every way out, and drops the work when `discard` is called — by
      Discard, and by a delete pressed in the middle of a gesture, before it
@@ -355,7 +357,17 @@ delete named Delete rather than Reject — and nothing would fail.
      An editor commits geometry the server accepts: the box editor keeps a dragged
      box whole inside the image and cuts a resized one at its edges, never below
      the least size a resize leaves a box (`MIN_BBOX_PIXELS`)
-     (`kinds/2d/bbox/bboxImageBounds.ts`).
+     (`kinds/2d/bbox/bboxImageBounds.ts`). A 3D session raises its one flag while
+     a gizmo drag runs as well, from its press to its release, which its editor
+     reports as a 2D editor's gesture does — its start (`onDragStarted`, wired to
+     `BBox3DSession.reportDragStarted`), never per pointer move, and its end
+     through the box it leaves or the draw canceled; every way out of the HUD
+     drops a drag under way. A 3D session whose HUD stays open with
+     no work of its own — its flag down, out of Discard's reach — closes it once
+     the box it shows changes under it (`BBox3DSession.letGoOfChangedBox`): a
+     change judged as D9 judges an edit, numbers within a float32 round trip, and
+     never while a gizmo drag runs, which the session knows from those reports.
+     A box deleted elsewhere closes the HUD even when it holds a move.
      A key listener on `window` asks `isFormFieldTarget` (`scene/tool.ts`) first,
    - the **toolbar tool**: `draw<Kind>Tool.ts` (`Tool2D` with `createHandler`, or a
      `Tool3D` entry).
@@ -467,6 +479,40 @@ whose end no longer reaches the editor once the shape's group is gone, would
 leave its flag raised for good. One path, Discard's, so no kind knows a delete
 can interrupt its gesture.
 
+On 3D, `BBox3DSession` raises its flag for a new or moved box, never for a click
+that only opens one, lowers it on save, cancel, delete, entity change and the
+editor's reset, and is given `cancel()` as its discard. A HUD holding nothing of
+its own — a box a click opened, maybe one whose earlier move is queued — has its
+flag down, so Discard does not reach it; left open, it would go on showing, and
+saving again, a geometry the record no longer has.
+`BBox3DSession.letGoOfChangedBox`, run in an `$effect` of the HUD, closes such a
+HUD once the box changes under it, and any HUD once its box is deleted elsewhere
+— a move held there has no box left to be saved on. It judges a change as D9
+judges an edit: a save reads a box back rounded to the float32 the dataset
+stores — a move to x = 1.1 comes back as 1.100000023841858 — and an exact
+comparison would close the HUD on its own box, opened again on a box it had
+moved, or drawn, as a save read the box back. So the session compares as the
+no-op rule does (`sameValue`, which `payloadBuilders.ts` exports for it), and it
+leaves a gizmo drag under way alone: closing the HUD then would drop the editor
+to idle under the pointer, and the drag would be lost. Released, the drag
+reports its box, which is judged then.
+
+A gizmo drag is work under way in its own right, as a 2D shape's drag is: on a
+box a click only opened, a drag with no flag would show nothing in the count,
+and let a Discard during it end the drag and stage again, as the HUD's own, the
+geometry Discard had just thrown away. The editor reports a drag's start (`BoxEditor`'s
+`onDragStarted`, called from one `_beginDrag` for every gizmo — a ring, a
+translate arrow, a resize arrow, the box itself), which `BBox3DTool` wires to
+`BBox3DSession.reportDragStarted`; the session raises its one flag while the HUD
+holds work or a drag runs (`updateStaged`), so a drag of a box the HUD holds
+still counts once. Released (`reportReady`), the drag leaves the flag raised only
+if the box it leaves differs from the record's; dropped with the HUD
+(`closeConfirm`, on every way out), it lowers it. The record's Discard takes a
+Cancel's way out: the HUD closes, the editor is reset, and the release that
+follows stages nothing. The session's reactive `dragging` state, which those
+reports set, is the HUD's guard: one record of a drag for the flag and the
+guard.
+
 ## History — the refactor stages
 
 **Phases 0–6 (2026-06-11 design).** 0: mechanical renames (`localBBoxId` →
@@ -494,12 +540,22 @@ check` at baseline error count and `vitest` green:
 > behaviour rests on that move plus manual verification (draw / move / resize /
 > rotate / orbit-lock / save). This overlaps DEBT-3. What sits around it is
 > tested. `boxEditor.svelte.test.ts` runs the real `BoxEditor` for its key guard.
-> `bbox3dSession.test.ts` saves and deletes boxes on the real workspace; its
+> `bbox3dSession.test.ts` saves, stages and deletes boxes on the real workspace; its
 > untouched-save tests drive the real `BoxEditor`
 > (`__tests__/realBoxEditor.svelte.ts`, wired as `BBox3DTool` wires it, through
 > the shared `editorBoxOf`): opened with a real pointerdown on the box, an
 > untouched box comes back as the editor's own round trip makes it, which a test
-> rebuilding that trip could not catch drifting.
+> rebuilding that trip could not catch drifting. `BBox3DHud.svelte.test.ts`
+> renders the real HUD over a real session and workspace. Its tests store what
+> a save writes as the dataset does, rounded to float32 (`storeAsFloat32`) — a
+> fake handing back the exact numbers would hide a HUD closing on its own box —
+> and hold a real ring of the gizmo across a save whose read-back brings another
+> reviewer's move, which leaves the drag running, and across a Discard, which
+> drops it (`realBoxEditor.grabRing`). `bbox3dSession.test.ts` presses each
+> gizmo of the real editor — a ring, a translate arrow, a resize arrow, the box
+> itself (`realBoxEditor.grab`) — and checks the flag from the press to the
+> release, the unsaved count, and each way a drag is dropped: Discard, Escape,
+> the HUD's Cancel.
 
 ## Non-goals
 

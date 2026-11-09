@@ -31,8 +31,8 @@ export interface UnsavedWorkSources {
  *   being chosen, its create queued only once the choice is made. Otherwise the
  *   form is a stored annotation's reassignment, which nothing else counts.
  * - **Each raised holder of staged work** counts once: what it holds — points
- *   before Enter, a box being resized — is in no change yet, and may concern an
- *   annotation already counted for another one.
+ *   before Enter, a box being resized, a box held in the 3D HUD — is in no
+ *   change yet, and may concern an annotation already counted for another one.
  */
 export function countUnsavedWork(sources: UnsavedWorkSources): number {
   const items = new Set<unknown>();

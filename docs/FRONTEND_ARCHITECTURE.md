@@ -273,11 +273,12 @@ manager and the `ReviewController` both ask it, so the review list holds only th
 annotations of the entities the Entities tab shows.
 
 `stagedWork` shows the raised flags of work no mutation carries yet — a
-polygon's points before Enter, a box being resized, a shape being dragged —
-each with its widget and the callback that drops the work. Each holder raises
-and lowers its own flag through its widget's seam (`claimStagedWork`, "Unsaved
-work and saves" below); while any is raised the record is not all saved, and
-each raised flag counts as one unsaved item (`unsavedCount`). The manager alone
+polygon's points before Enter, a box being resized, a shape being dragged, the
+3D box HUD's "Apply this 3D box?" over a moved box — each with its widget and
+the callback that drops the work. Each holder raises and lowers its own flag
+through its widget's seam (`claimStagedWork`, "Unsaved work and saves" below);
+while any is raised the record is not all saved, and each raised flag counts as
+one unsaved item (`unsavedCount`). The manager alone
 writes the flags, in a private map it publishes here as a copy — always
 replaced, never mutated, like `hiddenReviewStatuses` — and `clearWorkspace` /
 `reset()` empty it with the widgets.
@@ -496,8 +497,9 @@ in the queue, and a write that lands meanwhile calls the read off.
 **Staged work.** Work a tool holds outside the queue, waiting for the person to
 confirm it, is unsaved work too: a polygon's or polyline's points before Enter,
 mask strokes, keypoints partly placed, smart segmentation's prompts, a box being
-drawn, a box being resized, a shape being dragged. Each holder claims a flag of
-its own once, through its widget's seam, with the callback that drops its work
+drawn, a box being resized, a shape being dragged, a box moved under the 3D HUD,
+a 3D box under a gizmo drag. Each holder claims a flag of its own once, through
+its widget's seam, with the callback that drops its work
 (`SceneContextBase.claimStagedWork(discard)` → `manager.claimStagedWork`,
 stamped with the widget's id and keyed to the holder, so lowering one flag never
 lowers another, in this widget or another), and raises it while it holds the
@@ -525,14 +527,48 @@ editor saw begin.
 A delete pressed during the gesture cancels it first (flow E), so the delete —
 a Reject, on a model's shape — applies to the shape as stored.
 
+The bbox3d session raises its flag when the HUD holds a new box, or a box whose
+staged geometry differs from what it holds — a plain click that only opens the
+HUD stages nothing — and while a gizmo drag runs (a move by an arrow or by the
+box itself, a resize, a turn), from its press to its release, whatever the HUD
+held when it began, as a 2D editor holds its flag through a drag. The editor
+reports a drag as it starts, never at each pointer move (`BoxEditor`'s
+`onDragStarted`, which `BBox3DTool` wires to `BBox3DSession.reportDragStarted`),
+and its end is the box it reports (`reportReady`) or the draw canceled
+(`reportCanceled`). One flag for the HUD and its drags, since both are the one
+box (`updateStaged`): a drag counts one unsaved item, on a box the HUD already
+holds too; released, it leaves the flag raised only if the box it leaves differs
+from the box the record holds. Every way out lowers it: save, cancel, delete,
+change entity, and the editor's reset (Escape and a tool switch included) — each
+drops a drag under way with the HUD, and so does the record's Discard, which
+calls `cancel()`: the editor is idle, so the release that follows stages
+nothing. A HUD holding nothing of its own, and no drag, has its flag down, so
+Discard does not reach it: it closes once the box it shows is no longer the box
+the record holds — Discard put it back as stored, it was deleted, or rejected,
+which deletes it — rather than go on showing, and saving again, a
+geometry the record no longer has (`BBox3DSession.letGoOfChangedBox`, run in an
+`$effect` of the HUD). It judges the box by the same float32 rule, so its own
+box read back by a save, rounded, is no change; and it lets a gizmo drag under
+way end first (the session's own `dragging` state, which the drag's start and
+end set, reactive so the effect runs again as the drag ends), since closing
+would drop the editor to idle under the pointer — a drag holds the flag, so
+Discard drops it rather than change its box under it, but a save's read-back
+still can: released, the drag reports its box, which is judged then — the HUD's
+own staged work if it differs from the box the record holds, nothing otherwise.
+A box deleted elsewhere — a Delete, a Reject — closes the HUD even when it holds
+a move: the move has no box left to be saved on, and its raised flag would go on
+counting work that is gone.
+
 A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
 that sent something reads the record back as any does — the entities, then the
 rows, merged with the work queued, the held shape left where the gesture has it
 — and reports work left: `flushSave` resolves false. Each raised flag counts as
 one item of `unsavedCount`, so the counters never read 0 while a tool holds
-work. Discard calls every raised flag's discard — a tool forgets its points, a
-resize or a drag stops and commits nothing, and each annotation shows as stored
+work; a drag counts one while it runs, even on an annotation a queued change
+already counts. Discard calls every raised flag's discard — the HUD closes, a
+tool forgets its points, a resize or a drag stops and commits nothing, and each
+annotation shows as stored
 — and is offered whenever anything is
 unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`), even with
 nothing queued. The manager keeps the raised flags in a private map and
@@ -997,7 +1033,7 @@ progress. The workspace's Save — the toolbar's, or the controller's — sends 
 the server stores the row `accepted`, keeping the model's provenance and score,
 and the row reads accepted as the write leaves (`recordWrite`, §5). Accept over
 the edit sends both in one update. An edit that puts the content back as stored
-is no edit: nothing is queued but an unsaved Accept (flow C). The 3D HUD's "Save"
+is no edit: nothing is queued but an unsaved Accept (flow C). The 3D HUD's "Apply"
 button stages, it does not save: it confirms the move into the record's unsaved
 work (`BBox3DSession.save` → `commitGeometryEdit`), so the box still reads
 pending after it, until the workspace's Save. The 3D HUD stages nothing for a
@@ -1005,7 +1041,7 @@ box it opened and nobody moved (`BBox3DSession.save`), comparing the staged box
 with the editor's own round trip of the stored one, each number within a
 float32 round trip — flow C's rule (`sameValue`); a moved box keeps its stored
 rotation unless it was turned, and `bbox3dPayloadBuilder` writes the box's own
-view and format, so a HUD Save that changed nothing does not accept the box.
+view and format, so a HUD Apply that changed nothing does not accept the box.
 
 **The status chips are display-only.** `session.hiddenReviewStatuses` (default
 empty: nothing hidden) holds the chips switched off — `pending`,
@@ -1108,7 +1144,7 @@ ui/apps/web/src/lib/
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets and the `ReviewController` |
 | `ReviewControllerDeps` / `ReviewNavigator` | `workspace/reviewController.svelte.ts` | built by `WorkspaceManager` (`navigator` = `flushSave` as `save` + `unsavedCount` + `hasUnsavedWork` + `discardChanges`) |
 | `Scene2DContext` | `scene/sceneContext.ts` | built by `ImageWidget`; consumed by tools/editors (renderers get the read-only `Scene2DReadContext`) |
-| `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too) — with the callback Discard calls, and a delete pressed mid-gesture calls first for its widget; each raised flag counts once in `WorkspaceManager.unsavedCount` |
+| `StagedWorkFlag` (`SceneContextBase.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`) | `scene/sceneContext.ts` | built by `buildSeam` (→ `manager.claimStagedWork` / `releaseStagedWork` / `discardStagedWork`, stamped with the widget id); claimed by each holder of unconfirmed work — a 2D tool's handler, the bbox, mask, multi-path and keypoints editors (a drag; the bbox editor's resize too), `BBox3DSession` — with the callback Discard calls, and a delete pressed mid-gesture calls first for its widget; each raised flag counts once in `WorkspaceManager.unsavedCount` |
 | `PayloadBuilder` | `payloadBuilders.ts` | per-kind builders in `kinds/.../` |
 | `AnnotationSeedLoader` | `seedLoaders.ts` | per-kind seed loaders, each building its annotations through `persistedAnnotation` |
 | `ResourceMutation` | `annotations/types.ts` | the unit the queue flushes |

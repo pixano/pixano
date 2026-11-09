@@ -70,8 +70,9 @@ export class WorkspaceSession {
   liveDraft = $state<LiveAnnotationDraft | null>(null);
   /**
    * The raised flags of work no mutation carries yet — work begun in a tool
-   * and waiting for the person to confirm it, such as a polygon before Enter —
-   * keyed by flag. Raised and lowered by each holder through its widget's seam
+   * and waiting for the person to confirm it, such as a polygon before Enter
+   * or a 3D box moved but not yet applied from its HUD — keyed by flag. Raised
+   * and lowered by each holder through its widget's seam
    * (`SceneContextBase.claimStagedWork`); while any is raised, the record is
    * not all saved.
    *

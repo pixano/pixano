@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { BBOX3D_RESOURCE } from "../bbox3dPayloadBuilder.js";
 import { BBox3DSession, type PendingConfirm } from "../bbox3dSession.svelte.js";
+import type { BoxEditor } from "../boxEditor.svelte.js";
 import { realBoxEditor } from "./realBoxEditor.svelte.js";
 import {
   AnnotationCollection,
@@ -39,6 +40,8 @@ function makeSeam() {
   const dropped: string[] = [];
   let pending: PendingAnnotation | null = null;
   let liveDraft: LiveAnnotationDraft | null = null;
+  let staged = false;
+  let dropStaged: () => void = () => {};
   const seam: SeamContext = {
     widgetId: "w1",
     buildContext: { datasetId: "ds", recordId: "rec", viewId: "v1" },
@@ -61,6 +64,10 @@ function makeSeam() {
         if (liveDraft?.sourceWidgetId === "w1") liveDraft = null;
       },
     },
+    claimStagedWork: (discard) => {
+      dropStaged = discard;
+      return { set: (value) => (staged = value) };
+    },
     setActiveTool: () => {},
     requestRedraw: () => {},
     beginPendingAnnotation: (p) => (pending = p),
@@ -76,6 +83,9 @@ function makeSeam() {
     dropped,
     getPending: () => pending,
     getLiveDraft: () => liveDraft,
+    isStaged: () => staged,
+    /** What the record's Discard does to the session's work. */
+    dropStaged: () => dropStaged(),
   };
 }
 
@@ -364,6 +374,188 @@ describe("BBox3DSession", () => {
   });
 });
 
+describe("BBox3DSession staged work", () => {
+  let env: ReturnType<typeof makeSeam>;
+  let session: BBox3DSession;
+  let editor: ReturnType<typeof boxEditorFor>;
+  beforeEach(() => {
+    env = makeSeam();
+    session = new BBox3DSession(env.seam);
+    env.collection.add({
+      id: "b1",
+      entityId: "e1",
+      kind: "bbox3d",
+      viewId: "v1",
+      geometry: { coords: COORDS, format: "xyzwhd", rotation: STORED_YAW_ROTATION },
+      persisted: true,
+    });
+    editor = boxEditorFor(session, env.collection);
+  });
+
+  it("holds nothing for a click that only opens a box", () => {
+    editor.open("b1");
+
+    expect(session.confirm).not.toBeNull();
+    expect(env.isStaged()).toBe(false);
+  });
+
+  it("holds a new box", () => {
+    session.reportReady(COORDS, ROTATION);
+
+    expect(env.isStaged()).toBe(true);
+  });
+
+  const waysOut: [string, (s: BBox3DSession) => void][] = [
+    ["saved", (s) => s.save()],
+    ["cancelled", (s) => s.cancel()],
+    ["deleted", (s) => s.deleteBox()],
+    ["moved to another entity", (s) => s.changeEntity()],
+    ["dropped by its editor", (s) => s.reportCanceled()],
+  ];
+  it.each(waysOut)("holds a moved box until it is %s", (_way, leave) => {
+    const moved = movedOneUnit(editor.open("b1"));
+    session.reportReady(moved.coords, moved.rotation, "b1");
+    expect(env.isStaged()).toBe(true);
+
+    leave(session);
+
+    expect(env.isStaged()).toBe(false);
+  });
+
+  it("drops a moved box when the record's Discard asks: the HUD and the editor close", () => {
+    const moved = movedOneUnit(editor.open("b1"));
+    session.reportReady(moved.coords, moved.rotation, "b1");
+
+    env.dropStaged();
+
+    expect(session.confirm).toBeNull();
+    expect(env.isStaged()).toBe(false);
+    expect(editor.editor.drawPhase).toBe("idle");
+    expect(env.updates).toEqual([]);
+  });
+});
+
+describe("BBox3DSession, a gizmo drag", () => {
+  // A gizmo drag is work under way from its press to its release, as a 2D
+  // shape's drag is: the session's flag is raised as the editor starts it —
+  // on a box a click only opened too — and lowered as it ends, unless it left
+  // the HUD a box to save. Discard, Escape or Cancel during it drops it.
+
+  /** How far off the opened box's axes a press on its face lands: on the box, clear of every gizmo. */
+  const OFF_AXIS = 1;
+
+  let env: ReturnType<typeof makeSeam>;
+  let session: BBox3DSession;
+  let wired: ReturnType<typeof boxEditorFor>;
+  beforeEach(() => {
+    env = makeSeam();
+    session = new BBox3DSession(env.seam);
+    // Upright, so that two of its rings face the camera edge-on (`grabRing`).
+    env.collection.add({
+      id: "b1",
+      entityId: "e1",
+      kind: "bbox3d",
+      viewId: "v1",
+      geometry: { coords: COORDS, format: "xyzwhd", rotation: ROTATION },
+      persisted: true,
+    });
+    wired = boxEditorFor(session, env.collection);
+    wired.open("b1");
+  });
+
+  /** Where the arrow `id` of the opened box stands. */
+  const arrowAt = (arrows: readonly { id: string; pos: [number, number, number] }[], id: string) =>
+    arrows.find((arrow) => arrow.id === id)!.pos;
+
+  /** The drag the editor is in: its phase, and for a move, whether along an axis or on the ground. */
+  type Drag = Pick<BoxEditor, "drawPhase" | "moveMode">;
+  const dragOf = (editor: BoxEditor): Drag => ({
+    drawPhase: editor.drawPhase,
+    moveMode: editor.moveMode,
+  });
+
+  // Each gizmo of the box, pressed with what would shadow it hidden: seen
+  // from the front, a ring seen edge-on crosses the arrows along it.
+  const gizmos: [string, Drag, () => { release(): void }][] = [
+    ["a rotation ring", { drawPhase: "rotating", moveMode: "ground" }, () => wired.grabRing()],
+    [
+      "a translate arrow",
+      { drawPhase: "moving", moveMode: "axis" },
+      () => {
+        session.toggleGizmo("rings");
+        return wired.grab(arrowAt(wired.editor.translateArrowGizmos, "+x"));
+      },
+    ],
+    [
+      "a resize arrow",
+      { drawPhase: "resizing-face", moveMode: "ground" },
+      () => {
+        session.toggleGizmo("rings");
+        return wired.grab(arrowAt(wired.editor.arrowGizmos, "+x"));
+      },
+    ],
+    [
+      "the box itself",
+      { drawPhase: "moving", moveMode: "ground" },
+      () => {
+        const [x, y, z] = wired.editor.previewCenter;
+        return wired.grab([x + OFF_AXIS, y - OFF_AXIS, z]);
+      },
+    ],
+  ];
+  it.each(gizmos)(
+    "holds the flag while %s is dragged, from its press to its release",
+    (_gizmo, drag, press) => {
+      expect(env.isStaged()).toBe(false);
+
+      const held = press();
+      expect(dragOf(wired.editor)).toEqual(drag);
+      expect(env.isStaged()).toBe(true);
+
+      // Let go where it was pressed, the drag changed nothing: the HUD holds nothing.
+      held.release();
+      expect(wired.editor.drawPhase).toBe("confirming");
+      expect(env.isStaged()).toBe(false);
+    },
+  );
+
+  it("keeps the flag raised once a drag that turned the box is let go: the HUD holds it", () => {
+    const ring = wired.grabRing();
+    ring.turn();
+
+    ring.release();
+
+    expect(session.confirm?.rotation).not.toEqual(ROTATION);
+    expect(env.isStaged()).toBe(true);
+  });
+
+  const drops: [string, () => void][] = [
+    ["the record's Discard drops it", () => env.dropStaged()],
+    [
+      "Escape is pressed",
+      () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })),
+    ],
+    ["the HUD is cancelled", () => session.cancel()],
+  ];
+  it.each(drops)(
+    "ends a drag that turned the box when %s: let go then, it stages nothing",
+    (_way, drop) => {
+      const ring = wired.grabRing();
+      ring.turn();
+      expect(env.isStaged()).toBe(true);
+
+      drop();
+      expect(env.isStaged()).toBe(false);
+      expect(wired.editor.drawPhase).toBe("idle");
+      ring.release();
+
+      expect(session.confirm).toBeNull();
+      expect(env.isStaged()).toBe(false);
+      expect(env.updates).toEqual([]);
+    },
+  );
+});
+
 describe("BBox3DSession on the real workspace", () => {
   const REC_1 = "rec-1";
 
@@ -427,7 +619,7 @@ describe("BBox3DSession on the real workspace", () => {
     const moved = movedOneUnit(editor.open("m1"));
     session.reportReady(moved.coords, moved.rotation, "m1");
 
-    // The HUD's Save stages the move into the record's unsaved work: the box
+    // The HUD's Apply stages the move into the record's unsaved work: the box
     // stays in review until the workspace's Save, which stores it accepted.
     session.save();
     expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
@@ -457,5 +649,69 @@ describe("BBox3DSession on the real workspace", () => {
 
     const sent = backend.writes.find((w) => w.op === "update");
     expect(sent?.op === "update" ? sent.body.rotation : undefined).toEqual(turned);
+  });
+
+  it("Discard closes a HUD holding a moved box, and puts the box back as stored", async () => {
+    const { manager, session, editor } = await open();
+    const moved = movedOneUnit(editor.open("m1"));
+    session.reportReady(moved.coords, moved.rotation, "m1");
+    expect(manager.review.canDiscard).toBe(true);
+
+    await manager.review.discard();
+
+    expect(session.confirm).toBeNull();
+    expect(editor.editor.drawPhase).toBe("idle");
+    expect(manager.hasUnsavedWork).toBe(false);
+    expect(geometryOf(manager, "m1").coords).toEqual(COORDS);
+  });
+
+  describe("a gizmo drag on a box a click only opened", () => {
+    /** The model's box upright, so that its rings can be grabbed (`grabRing`). */
+    const upright = () => modelBox3D(REC_1, "m1", { rotation: [...ROTATION] });
+
+    it("counts as one unsaved item while it runs, and as none once let go where it began", async () => {
+      const { manager, editor } = await open(upright());
+      editor.open("m1");
+      expect(manager.unsavedCount).toBe(0);
+
+      const ring = editor.grabRing();
+      expect(manager.unsavedCount).toBe(1);
+
+      ring.release();
+      expect(manager.unsavedCount).toBe(0);
+    });
+
+    it("counts once with the box the HUD holds: one box, one unsaved item", async () => {
+      const { manager, editor } = await open(upright());
+      editor.open("m1");
+      const turning = editor.grabRing();
+      turning.turn();
+      turning.release();
+      expect(manager.unsavedCount).toBe(1);
+
+      // A quarter turn about the camera's axis leaves two rings edge-on again.
+      const again = editor.grabRing();
+      expect(manager.unsavedCount).toBe(1);
+      again.release();
+      expect(manager.unsavedCount).toBe(1);
+    });
+
+    it("is dropped by Discard, HUD and all: let go then, it stages nothing", async () => {
+      const { manager, session, editor } = await open(upright());
+      editor.open("m1");
+      const ring = editor.grabRing();
+      ring.turn();
+      expect(manager.review.canDiscard).toBe(true);
+
+      await manager.review.discard();
+      expect(session.confirm).toBeNull();
+      expect(editor.editor.drawPhase).toBe("idle");
+      ring.release();
+
+      expect(session.confirm).toBeNull();
+      expect(manager.hasUnsavedWork).toBe(false);
+      expect(manager.pendingCount).toBe(0);
+      expect(geometryOf(manager, "m1").rotation).toEqual(ROTATION);
+    });
   });
 });
