@@ -211,8 +211,14 @@ request on the wire included — `pendingMutations` — the queued ones only —
 `flushSave()` resolves to a boolean: true when the save went through **and**
 nothing is left unsaved — `unsavedCount` is 0: no queued change, no request on
 the wire, no draft, no entity form open, no work a tool holds staged. It is
-false when the save failed (the error is on `saveError`), or when work is still
-unsaved — begun during the save, or held in a tool.
+false when the save failed (the error is on `saveError`), when another save was
+still running, when work begun during the save or held in a tool is still
+unsaved, or when another record was opened while it ran: that record's state is
+not this save's to read back or report on, so nothing is read back then. On the
+record it saved, a save that sent something reads the record back (`readBack`:
+the entities, then the annotations, merged with the work done meanwhile — flow
+D); one that failed reads back its entities only, since a write before the
+failure may have created one.
 
 **Per-dataset layout preference.** Every record of a dataset declares the same
 views, so the arrangement the user builds on one is replayed on the others
@@ -298,15 +304,58 @@ as `visibleEntityIds`).
    resolved state is kept on `session.openingLayout` so "Reset layout" can undo
    the moves made on this record.
 
-`reloadEntities()` refetches just the entity list after a save (token-guarded) so
-the panel/picker reflect created/pruned entities.
+`reloadEntities(stillWanted?)` refetches just the entity list so the
+panel/picker reflect created/pruned entities: after a save, and by Discard
+before its rows. It is token-guarded, and `stillWanted` is asked once the list
+has arrived, as for the annotations: a read-back calls it off when a write has
+landed since it began — the list may predate that write, and would take its
+entities off the panel and the labels of the boxes moved onto them.
+
+`reloadAnnotations({stillWanted?, holdsWork?})` refetches the annotations
+through the seed loaders and merges them into the collection, without touching
+the widgets, their arrangement or their tools. Both read-backs use it — a save's
+and Discard's, each through `WorkspaceManager.readBack`, right after
+`reloadEntities`: each annotation's label snapshot is read from the entities, so
+the other order labels a reassigned box with nothing. The rows never overwrite
+work done while they were read (`AnnotationCollection.takeRowsRead`, §5): an
+annotation `holdsWork` names — a write of it queued or on the wire — keeps its
+version here, drafts stay, an annotation deleted here stays deleted, and every
+other annotation becomes its row, in place, so a tool or an editor in the middle
+of a gesture commits by id onto the row read. Only the kinds actually read are
+replaced: a kind whose list failed keeps every annotation it shows, and the
+failure is reported. A failed request says nothing about what the dataset holds;
+taken for an empty table, it would take the whole kind off the canvases and the
+chip counts after one 5xx, while the save said it had succeeded. It is
+token-guarded like the others, and `stillWanted` is asked once the rows have
+arrived, before they are taken: the read-back passes "no write has landed since
+I began" (`MutationQueue.writesLanded`, below), since rows read before a write
+that landed may predate it — that write's own save reads the record back. Two
+more guards keep a read-back from landing where it does not belong:
+
+- **Not while another record loads.** The loader records which record its views
+  were read for (`viewsRecord`); a reload asked between a load's start and its
+  views reads nothing, since the rows would be placed against the previous
+  record's views. A load also checks its token before recording its views, so
+  of two loads the later one's views win.
+- **Never older rows over newer ones.** Each reload takes a number as it starts
+  (`reloadCount`), and the loader keeps the number of the latest one whose rows
+  were taken (`latestLanded`): rows read before rows already taken are dropped,
+  whatever order the answers arrive in. A later reload that never lands — called
+  off, or failed for every kind — does not stop an earlier one that still applies.
 
 ### `MutationQueue` (`workspace/mutationQueue.svelte.ts`)
 Owns the list of pending writes and the flush lifecycle. Implements **`MutationSink`**:
 `queue`, `upsertUpdate` (replace the last queued update for the same
 resource+id, taking the newer gesture's `widgetId` with its body),
 `patchPendingCreate` (merge into a not-yet-sent create), `dropForLocalAnnotation`.
-Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`. Each time
+Plus reactive `pending`, `inFlight`, `count`, `saving`, `saveError`, the plain
+counter `writesLanded`, and `holdsWorkFor(id)` (a write of that annotation queued
+or on the wire). `writesLanded` counts the writes that reached the backend: each
+one answered, and each one that failed without the server refusing it — after a
+network error, a lost answer or a 5xx it may have been stored. A refusal (a 4xx,
+`isRefusal` — a delete as any write, §3) stored nothing, and is not counted. A
+read-back begun before the count last moved is called off (`RecordLoader`
+above). Each time
 a body is written into the queue — queued, or rewritten by a later gesture — the
 **`LocalAnnotationLocator`**'s `recordQueued(mutation)` is told, so the manager
 keeps the content that body carries (`AnnotationCollection.contentOf`) until it
@@ -354,7 +403,8 @@ flight then neither comes back into the new queue nor reports its error there.
    and none dropped while the flush ran is sent. As each request leaves, the
    locator's `recordWrite(mutation)` records what the dataset will hold once it
    lands (§5, `AnnotationCollection.recordWrite`): the content the body carried
-   when it was queued; a failure undoes that record.
+   when it was queued; a failure undoes that record. As it completes,
+   `writesLanded` is bumped, unless the server refused it.
 3. On a successful **create** of an annotation, flip its local `persisted = true`
    via the locator's `findLocalAnnotation(id)` (→ the session's
    collection). Drafts thus become "saved" without a per-widget lookup.
@@ -370,7 +420,20 @@ queue (§4, `MutationQueue`). A write dropped while a save runs — a draft
 deleted, a change of mind, Discard, another record — is never sent, since each
 write is looked at again after every await of the flush; a write a gesture
 moved onto a new entity during a save waits for that entity's create, sent
-first, whenever it was queued.
+first, whenever it was queued. A read-back never lands on another record, nor
+over newer rows: `flushSave` checks the open record before and after it, rows
+read before a write that landed since are dropped — `writesLanded`, which a
+refused write leaves as it is, so a failed later save that stored nothing calls
+off nobody's read-back — and rows read before rows already taken are dropped,
+while a later read that never lands stops nothing (§4, `RecordLoader`). Nor does
+it land over work: its rows merge with what was done while they were read —
+queued or on the wire, drafts, deletes — and a shape a gesture holds commits
+onto the row read (`takeRowsRead`). A save's entity list is read back under the
+same guards, before its annotations, so the two go together; a save that failed
+reads back its entities only. Discard puts the stored record back at once, then
+reads it again by the same path, entities before rows, so its labels follow the
+dataset: an edit or an Accept made while the rows are read stays, on screen and
+in the queue, and a write that lands meanwhile calls the read off.
 
 **Staged work.** Work a tool holds outside the queue, waiting for the person to
 confirm it, is unsaved work too: a polygon's or polyline's points before Enter,
@@ -396,19 +459,23 @@ path's or the skeleton's group when a point is dragged) with its kind's
 attribute — `BBOX_RESIZING_ATTR`, `BBOX_DRAGGING_ATTR`, `MASK_DRAGGING_ATTR`,
 `MULTI_PATH_DRAGGING_ATTR`, `KEYPOINTS_DRAGGING_ATTR` — and the renderer's sync
 leaves a stamped node alone, so a save ending under the gesture neither snaps
-the shape back nor drops its move: the node stays where the gesture has it, and
-the gesture is committed by id when the pointer is let go — only one the editor
-saw begin.
+the shape back nor drops its move: its read-back takes the shape's row into the
+collection, in place, the node stays where the gesture has it, and the gesture
+is committed by id onto that row when the pointer is let go — only one the
+editor saw begin.
 
 A delete pressed during the gesture cancels it first (flow E), so the delete —
 a Reject, on a model's shape — applies to the shape as stored.
 
 A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
-reports work left: `flushSave` resolves false. Each raised flag counts as one
-item of `unsavedCount`, so the counters never read 0 while a tool holds work.
-Discard calls every raised flag's discard — a tool forgets its points, a resize
-or a drag stops and commits nothing — and is offered whenever anything is
+that sent something reads the record back as any does — the entities, then the
+rows, merged with the work queued, the held shape left where the gesture has it
+— and reports work left: `flushSave` resolves false. Each raised flag counts as
+one item of `unsavedCount`, so the counters never read 0 while a tool holds
+work. Discard calls every raised flag's discard — a tool forgets its points, a
+resize or a drag stops and commits nothing, and each annotation shows as stored
+— and is offered whenever anything is
 unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`), even with
 nothing queued. The manager keeps the raised flags in a private map and
 publishes a copy on `session.stagedWork`: widgets lower their flags from effect
@@ -460,19 +527,20 @@ The one in-memory shape for **every** kind — pure data, no methods:
   every seed loader builds through (`persistedAnnotation`, §8); absent on a draft,
   which is a person's work with nothing to review. It carries two statuses:
   `status`, what the screen shows, an unsaved Accept included — an unsaved
-  edit leaves it as stored —, and `storedStatus`, what the dataset holds, which
-  tells an unsaved Accept (§8).
+  edit leaves it as stored —, and `storedStatus`, what the dataset holds: what
+  Discard puts back, and what tells an unsaved Accept (§8).
 - `persistedContent` is a detached copy of what the dataset holds of the
   content — `{geometry, entityId, entity}` — set by the envelope. An edit
   overwrites `geometry`/`entityId`/`entity` in place; this copy is what the
-  content was before it. Absent on a draft no write has carried yet.
+  content was before it, and what Discard puts back. Absent on a draft no write
+  has carried yet.
 
 ### `AnnotationCollection` — the record-scoped source of truth
 `$state` list + `selectedId`, with `find/byKind/add/remove/select/setGeometry/
-setEntity/setReview/contentOf/recordWrite`. **Owned by `WorkspaceSession`, one
-instance per record load, shared by every widget.** Optimistic edits mutate
-`geometry` (or `review`, for an Accept) in place; the `MutationQueue` is the
-ledger of what still has to reach the backend.
+setEntity/setReview/contentOf/recordWrite/restoreStored/takeRowsRead`. **Owned
+by `WorkspaceSession`, one instance per record load, shared by every widget.**
+Optimistic edits mutate `geometry` (or `review`, for an Accept) in place; the
+`MutationQueue` is the ledger of what still has to reach the backend.
 
 `setReview` shows a new review state and keeps the stored status as it was: an
 Accept still unsaved is never mistaken for one the server holds.
@@ -486,8 +554,9 @@ for that body as `storedStatus` (`storedStatusAfterWrite`, the mirror of the
 server's rules: `accepted` asked stores `accepted`, and so does content on a
 model's row; an echo or `pending` stores nothing new). The status shown moves
 with the stored one when it showed the stored one — no unsaved Accept —, so an
-edited model's row reads `accepted` as its write leaves, with no read of the
-record, and is not offered Accept again. A write that carries no content — an
+edited model's row reads `accepted` as its write leaves, without waiting for the
+save's read-back, and is not offered Accept again — even when that read-back is
+called off. A write that carries no content — an
 Accept alone (`carriesContent`) — leaves `persistedContent` as it was. Recorded
 as the write leaves rather than when it lands, so that work begun while it is
 on the wire is measured against what the dataset will hold once it lands: an
@@ -495,6 +564,19 @@ edit taken back to the content on the wire sends nothing. It returns the undo
 the queue runs if the request fails: the stored status as it was, and the
 status shown when it moved and nothing has moved it since — an unsaved Accept
 still shows, and is sent again with the write.
+
+`restoreStored()` puts every annotation back as the dataset holds it — content
+from `persistedContent`, status from `storedStatus` — and drops the drafts and
+the selection: what Discard shows at once, before the rows are read again.
+`takeRowsRead(rows, holdsWork, kindsRead)` is how a read-back — a save's or
+Discard's — lands (§4, `RecordLoader`): the rows read, except where work was done
+meanwhile. An annotation with a write queued or on the wire keeps its version
+here, drafts stay, an annotation deleted here stays deleted, an annotation of a
+kind whose rows could not be read (not in `kindsRead`) stays as shown, the
+selection stays while its annotation exists, and every other annotation becomes
+its row. It works in place, so the collection every widget holds stays the same
+object: a tool or an editor in the middle of a gesture — work staged, in no
+mutation yet — keeps working on it, and commits by id onto the row read.
 
 ### `ViewScopedAnnotations` — the per-widget facade
 Implements the same **`AnnotationStore`** interface but scopes reads to *one view*,
@@ -621,7 +703,8 @@ alone, a record-scoped kind keeping the row's own view and format (bbox3d).
 
 ### D) Save (persist to backend)
 ```
-flushSave()
+flushSave()                                    // resolves: nothing left unsaved?
+  → note the open record, and whether anything is queued or on the wire
   → MutationQueue.flush()
        sort: entityCreate < annCreate < annDelete < entityDelete
        for each, sendIfStillQueued — looked at again after every await:
@@ -629,12 +712,31 @@ flushSave()
             names an entity whose create is still queued?
                  → send that create first, then look again
             out of pending, inFlight; recordWrite; gateway.create/update/delete…
-       on success: annotation create → persisted = true
+       on success: writesLanded++; annotation create → persisted = true
        on failure: undo recordWrite
+            refused (4xx)? → stored nothing
+            otherwise      → writesLanded++: it may have been stored
             abandoned create? → not retried; its delete dropped on a 4xx,
                                 kept otherwise
             any other write → back to the head of the queue
-  → reloadEntities()  (token-guarded refetch → session.entities fresh)
+  → another save still running? → false; its result is not ours
+  → another record open now? → false; nothing read back
+  → something was sent? → readBack({annotations: the save did not fail})
+       → note writesLanded                     // a write landing later moves it
+       → reloadEntities(no write landed since) (token-guarded → session.entities)
+       → annotations, and still no write landed since?
+            → reloadAnnotations({stillWanted: no write landed since, holdsWork})
+                 // entities first: labels read them. The server decides what a
+                 // save stored — a model's row a person edited comes back
+                 // "accepted" — so the rows are read back, and merged
+                 // (takeRowsRead): work queued or on the wire, drafts,
+                 // annotations deleted here, and every annotation of a kind
+                 // whose list failed stay as they are here; a shape held
+                 // by a gesture becomes its row, its node left alone by the
+                 // renderer, and the gesture commits onto that row
+  → failed? → false; the failed work stays as left
+  → another record open now? → false
+  → select(null); return nothing unsaved
 ```
 
 ### E) Delete (+ backend orphan cascade)
@@ -721,10 +823,11 @@ review.reject(id)
 
 Accept is offered over an unsaved edit and carries it: the row's one queued
 update holds the edit and `accepted`, and the server stores both. An edit after
-an Accept keeps it (flow C). Discard undoes all of it: it empties the queue and
-reads the record's annotations again. A Reject is a delete: it throws the row's
-unsaved work away, and only Discard — with the rest of the record's unsaved
-work — brings the row back before Save; nothing does after.
+an Accept keeps it (flow C). Discard undoes all of it: it empties the queue,
+puts the stored content and status back at once, and reads the record again. A
+Reject is a delete: it throws the row's unsaved work away, and only Discard —
+with the rest of the record's unsaved work — brings the row back before Save;
+nothing does after.
 
 ---
 
@@ -808,14 +911,18 @@ delete (flow E), which drops the row's unsaved work. Decisions taken through the
 controller carry `REVIEW_PANEL_SOURCE_ID`. No counter reads that stamp: every
 widget toolbar and the controller give one number, the record's unsaved items
 (`manager.unsavedCount`, which the controller reads through its navigator), so a
-decision taken through it reads as unsaved on every canvas too.
+decision taken through it reads as unsaved on every canvas too. Discard throws
+the record's unsaved work away from wherever it is pressed
+(`manager.discardChanges`: it drops the work tools hold, puts each annotation
+back as stored, and reads the entities and the rows again).
 
 **Shown status and stored status.** `AnnotationReview.status` is what the screen
 shows; `storedStatus` is what the dataset holds, read with the row and moved
 only by a write of it (`recordWrite`, §5). There is no transition table to
 mirror: the one decision is `accepted`, from `pending`, and no update takes a
 row back. The stored status tells an unsaved Accept (shown accepted, stored
-pending — `isAcceptUnsaved`), which an edit carries on. A row's `canAccept`
+pending — `isAcceptUnsaved`), which an edit carries on, and is what Discard
+puts back. A row's `canAccept`
 comes from `canAccept` — a model's stored row shown pending — and its
 `canReject` from `deleteGestureFor` — a model's stored row, whatever its status.
 

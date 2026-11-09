@@ -418,42 +418,53 @@ export class WorkspaceManager {
 
   /**
    * Throw away every unsaved edit and put the record back as it was last saved.
-   * Work a tool holds staged goes too: every holder of a raised flag drops it.
    *
-   * The backend *is* that state, so the annotations are refetched rather than
-   * rolled back from a snapshot: an optimistic edit has already been applied in
-   * place, and reconstructing what it overwrote would mean keeping a shadow
-   * copy of the whole collection for a button most sessions never press.
+   * At once, the queue is emptied, every tool holding staged work drops it, a
+   * draft waiting for its entity is cancelled, and each annotation is put back
+   * as stored — its content and status as last read or written, which every
+   * annotation keeps (`AnnotationCollection.restoreStored`). Then the record is
+   * read back (`readBack`), since only the backend has what a local copy cannot
+   * give back: an annotation deleted here, what the server itself changed. The
+   * reviewer may go on working meanwhile: what they edit or decide on keeps
+   * that work when the rows land.
    *
-   * Only the annotations are reloaded — not the widgets, their arrangement or
-   * their active tools — so undoing an edit does not feel like reopening the
-   * record, which is the whole point of having this instead of a page refresh.
+   * Only the record's entities and annotations are read again — not the
+   * widgets, their arrangement or their active tools — so undoing an edit does
+   * not feel like reopening the record, which is the whole point of having this
+   * instead of a page refresh.
    */
   async discardChanges(): Promise<void> {
     this.mutations.reset();
     this.dropStagedWork();
-    await this.loader.reloadAnnotations();
-    // The annotation that was selected may no longer exist (a discarded
-    // create) — and even when it does, the collection it belonged to is gone.
-    this.session.annotations.select(null);
-    this.pendingAnnotation?.onCancel();
-    this.pendingAnnotation = null;
+    this.cancelPendingAnnotation();
+    this.session.annotations.restoreStored();
+    await this.readBack({ annotations: true });
   }
 
   /**
-   * Flush every queued mutation to the backend.
+   * Flush every queued mutation to the backend, then read back what it stored.
    *
    * Resolves true when the save went through and left nothing unsaved. False
-   * when it failed (the error is on `saveError`), or when work is still
-   * unsaved: begun during the save — a change, a draft — or held in a tool.
+   * when it failed (the error is on `saveError`), when another save was still
+   * running, when work begun during the save — a change, a draft — or held in
+   * a tool is still unsaved, or when another record was opened meanwhile: that
+   * record's state is not this save's to read back or report on.
    */
   async flushSave(): Promise<boolean> {
+    const { datasetId, recordId } = this.session;
+    const sending = this.mutations.count > 0;
     await this.mutations.flush();
-    if (this.mutations.saveError) return false;
-    // Entity creates/prunes happen backend-side; refresh the local entity list
-    // so the panel and picker reflect them. Skipped when the flush errored, so
-    // the failed work stays on screen exactly as the user left it.
-    await this.loader.reloadEntities();
+    // `flush` returns at once while another one runs: that save is not ours to
+    // report, and its result is not known yet.
+    if (this.mutations.saving) return false;
+    if (!this.isOpen(datasetId, recordId)) return false;
+    const failed = this.mutations.saveError !== null;
+    // Nothing sent, nothing changed. A save that failed may still have written
+    // before its failure — an entity created — so its entities are read back
+    // too; its annotations are not, the failed work being still queued.
+    if (sending) await this.readBack({ annotations: !failed });
+    if (failed) return false;
+    if (!this.isOpen(datasetId, recordId)) return false;
     // Saving ends the edit, so drop the selection: every kind's editing
     // affordances — a bbox's transformer, a path's vertex handles — are tied to
     // it, and a saved annotation should read as a finished outline rather than
@@ -463,12 +474,50 @@ export class WorkspaceManager {
   }
 
   /**
+   * Read back what the server holds for the open record: its entities, then
+   * its annotations.
+   *
+   * The server decides what a write stored — a model's row a person edited
+   * comes back accepted, whatever the client believed — and creates or prunes
+   * entities. The entities come first, since each annotation's label snapshot
+   * is read from them: the other order labels a reassigned box with nothing.
+   *
+   * The rows never overwrite work done meanwhile: an annotation with a write
+   * queued or on the wire keeps its version here, drafts stay, and a tool's
+   * staged work is committed onto the row read (`RecordLoader.reloadAnnotations`).
+   * Only a write that lands while the record is read calls the read off — the
+   * rows may predate it; that write's own save reads the record back. A write
+   * the server refused stored nothing, and calls off nothing
+   * (`MutationQueue.writesLanded`). Another record opened meanwhile calls it off
+   * too.
+   *
+   * A kind whose rows could not be read keeps what it shows: a failed request
+   * says nothing about what the dataset holds, and the save it follows still
+   * went through.
+   */
+  private async readBack(opts: { annotations: boolean }): Promise<void> {
+    const writes = this.mutations.writesLanded;
+    const noWriteLandedSince = () => this.mutations.writesLanded === writes;
+    await this.loader.reloadEntities(noWriteLandedSince);
+    if (!opts.annotations || !noWriteLandedSince()) return;
+    await this.loader.reloadAnnotations({
+      stillWanted: noWriteLandedSince,
+      holdsWork: (id) => this.mutations.holdsWorkFor(id),
+    });
+  }
+
+  /**
    * Whether the open record holds work not saved yet — a queued change, a
    * draft, a draft waiting for its entity, work a tool holds staged. Discard
    * then has something to throw away.
    */
   get hasUnsavedWork(): boolean {
     return !this.nothingUnsaved();
+  }
+
+  /** Whether this record is still the open one. */
+  private isOpen(datasetId: string | null, recordId: string | null): boolean {
+    return this.session.datasetId === datasetId && this.session.recordId === recordId;
   }
 
   /**

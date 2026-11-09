@@ -86,10 +86,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   `persistedAnnotation(row, { kind, viewId, geometry, scoreFields }, ctx)`,
   as `bbox3dSeedLoader.ts` does, so its rows carry their review state.
   **A failed fetch rejects**, in either case: never catch it into an empty list. An
-  empty list reads as a table holding nothing, and a reload would take every
+  empty list reads as a table holding nothing, and a save's read-back would take every
   annotation of the kind off the screen after one failed request. What a failure means
   is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
-  nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
+  nothing for the kind, a read-back keeps what the kind shows. `seedLoaders.test.ts`
   fails every registered loader in turn, so a loader that swallows its failure fails it.
   **`scoreFields`** names the columns of the kind's rows that hold a model's score: the
   ones its backend schema declares in `MODEL_SCORE_FIELDS` (`src/pixano/schemas`), kept as
@@ -162,6 +162,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   select tool's Delete/Backspace and the image widget's trash button call the widget's
   `discardStagedWork` — so the delete applies to the shape as stored, and the gesture's
   end commits nothing over it; the kind writes nothing more for it.
+
+  A save ending under a held gesture reads the record back and takes the shape's row into
+  the collection, in place: the stamped node stays where the gesture has it, and the commit
+  lands by id on the row read.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
   A handler that holds work not in the collection yet — points placed, strokes painted, a
@@ -209,8 +213,9 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     `widgetSeam` come from `workspace/__tests__/workspaceHarness.ts`): a mocked Konva
     answers whatever the mock says, and can pass while a resize goes unsaved.
   - An editable 2D kind drags a shape across a save there (`multiPathDrag.test.ts`): the
-    flag is raised once for the drag, the save leaves the shape where it is dragged, the
-    release saves it, and Discard drops the drag. Send a window `mouseup` after each test:
+    flag is raised once for the drag, the save's read-back leaves the shape where it is
+    dragged — the collection stays the same object — the release saves it, and Discard
+    drops the drag. Send a window `mouseup` after each test:
     Konva's drags are global, and one a failed test left running moves with the next
     test's pointer.
   - It also presses Delete during each of its gestures, through the real select tool's

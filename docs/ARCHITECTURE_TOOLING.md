@@ -100,7 +100,9 @@ Optimistic edits mutate `geometry` in place; the pending mutation queue is the
 ledger of unsaved changes, and `persistedContent` — a detached copy, set by the
 seed envelope and moved only by a write (`AnnotationCollection.recordWrite`) — is
 what the content was before them: what tells an edit that changes nothing from
-one that does.
+one that does, and what Discard puts back. `review` keeps two statuses, the one
+shown and the one stored (`storedStatus`), which tells an unsaved Accept and is
+what Discard restores (`FRONTEND_ARCHITECTURE.md` §8).
 
 A single **record-scoped** `AnnotationCollection` (`.svelte.ts` runes class)
 lives on `WorkspaceSession.annotations` — one instance per loaded record, shared
@@ -534,7 +536,8 @@ check` at baseline error count and `vitest` green:
   stamps their nodes (`BBOX_RESIZING_ATTR`, `bbox2dNodes.ts`) so the renderer's
   sync leaves their size and place alone, holds a staged-work flag — so the
   record counts it as unsaved, and Discard stops it — and commits them at
-  `transformend`, by id.
+  `transformend`, by id, onto the row a save's read-back took into the
+  collection meanwhile, in place.
 
   A drag is held the same way: the editor hears `dragstart` on the layer too,
   holds the box and stamps its node (`BBOX_DRAGGING_ATTR`) until `dragend`, under

@@ -84,8 +84,8 @@ export const SEED_LOADERS: readonly AnnotationSeedLoader[] = [
  *
  * "Read nothing" and "could not read" stay apart. The first says the record
  * holds no annotation of the kind; the second says nothing about what it
- * holds, and a reload that took one for the other took every annotation of
- * the kind off the screen after one failed request.
+ * holds, and a save's read-back that took one for the other took every
+ * annotation of the kind off the screen after one failed request.
  */
 export type KindLoad =
   | { kind: AnnotationKind; read: true; annotations: LocalAnnotation[] }

@@ -59,6 +59,16 @@ export class MutationQueue {
   count = $derived(this.pending.length + (this.inFlight ? 1 : 0));
 
   /**
+   * How many writes have reached the backend so far: each one answered, and
+   * each one that failed without the server refusing it — after a network
+   * error or a 5xx, it may have been stored before its answer was lost. A read
+   * of the record begun before the latest one may hold rows older than what
+   * that write stored, and is not to be trusted (`WorkspaceManager.readBack`).
+   * A write the server refused (a 4xx) stored nothing, and is not counted.
+   */
+  writesLanded = 0;
+
+  /**
    * Bumped by `reset`, so that a request still in flight when the queue was
    * abandoned — another record opened — neither comes back into the new
    * record's queue on failure nor reports its error there.
@@ -85,6 +95,14 @@ export class MutationQueue {
    * `sortMutations` — within a resource the original order is preserved. */
   queue(mutation: ResourceMutation): void {
     this.append(mutation);
+  }
+
+  /** Whether any write of this annotation is queued or on the wire. */
+  holdsWorkFor(localAnnotationId: string): boolean {
+    return (
+      this.inFlight?.localAnnotationId === localAnnotationId ||
+      this.pending.some((m) => m.localAnnotationId === localAnnotationId)
+    );
   }
 
   /**
@@ -346,6 +364,7 @@ export class MutationQueue {
       return;
     }
     this.inFlight = null;
+    this.writesLanded++;
     this.landed(mutation);
   }
 
@@ -368,7 +387,7 @@ export class MutationQueue {
    *
    * A refusal — a 4xx (`isRefusal`) — says the server stored nothing. Any other
    * failure says nothing of the kind: it may have stored the write before the
-   * answer was lost.
+   * answer was lost, so it counts as landed for the reads begun before it.
    *
    * A create nothing wants any more (`abandoned`) is not tried again. Refused,
    * it made nothing: the delete queued to undo it is dropped, and there is no
@@ -379,10 +398,12 @@ export class MutationQueue {
    * reset meanwhile.
    */
   private failed(mutation: ResourceMutation, err: unknown, generation: number): void {
+    const refused = isRefusal(err);
+    if (!refused) this.writesLanded++;
     const compensation = this.abandoned.get(mutation);
     if (compensation !== undefined) {
       this.abandoned.delete(mutation);
-      if (!isRefusal(err)) throw err;
+      if (!refused) throw err;
       this.pending = this.pending.filter((m) => m !== compensation);
       return;
     }

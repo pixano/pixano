@@ -79,6 +79,21 @@ export interface FakeBackend {
    * as each write starts, so a test can hold one write and let the others pass.
    */
   holdWrites?: Promise<void>;
+  /**
+   * Hold the answer of every annotation listing until the test releases it.
+   * The rows are read when the listing is asked, as a server reads them before
+   * the answer travels back: an answer held this way may be older than a write
+   * made meanwhile.
+   */
+  holdListings?: Promise<void>;
+  /**
+   * Hold the answer of every entity listing, read when it is asked, as
+   * `holdListings` holds the annotations'. Read as each listing starts, so a
+   * test can hold one save's listing and let a later one pass.
+   */
+  holdEntityListings?: Promise<void>;
+  /** Hold the dataset's description, the first read of a record load. */
+  holdDataset?: Promise<void>;
 }
 
 const stubComponent = (() => null) as unknown as Component<WidgetComponentProps>;
@@ -158,13 +173,17 @@ export function makeBackend(records: FakeBackend["records"], entities: EntityRow
     log: [],
   };
   const gateway: DatasetGateway = {
-    getDataset: () => {
+    getDataset: async () => {
       backend.log.push("getDataset");
-      return Promise.resolve(makeDataset());
+      await backend.holdDataset;
+      return makeDataset();
     },
-    listEntities: (_datasetId, { recordId }) => {
+    listEntities: async (_datasetId, { recordId }) => {
       backend.log.push("listEntities");
-      return Promise.resolve(jsonCopy(backend.entities.filter((e) => e.record_id === recordId)));
+      const hold = backend.holdEntityListings;
+      const entities = jsonCopy(backend.entities.filter((e) => e.record_id === recordId));
+      await hold;
+      return entities;
     },
     loadImageByLogicalName: (_datasetId, recordId) =>
       Promise.resolve({
@@ -176,7 +195,7 @@ export function makeBackend(records: FakeBackend["records"], entities: EntityRow
     listRecordImages: () => Promise.resolve([]),
     loadPointCloudByLogicalName: () => Promise.resolve(null),
     loadTextByLogicalName: () => Promise.resolve(null),
-    listAnnotations: <TRow>(
+    listAnnotations: async <TRow>(
       _datasetId: string,
       resource: string,
       params: { recordId?: string },
@@ -184,9 +203,9 @@ export function makeBackend(records: FakeBackend["records"], entities: EntityRow
       backend.log.push(`list ${resource}`);
       // A copy, as a fresh HTTP response would be: the loader must not share
       // objects with the "server".
-      return Promise.resolve(
-        jsonCopy(backend.records[params.recordId ?? ""]?.[resource] ?? []) as TRow[],
-      );
+      const rows = jsonCopy(backend.records[params.recordId ?? ""]?.[resource] ?? []);
+      await backend.holdListings;
+      return rows as TRow[];
     },
     createEntity: async (_datasetId, body) => {
       await recordWrite(backend, { op: "create", resource: "entities", body: jsonCopy(body) });
