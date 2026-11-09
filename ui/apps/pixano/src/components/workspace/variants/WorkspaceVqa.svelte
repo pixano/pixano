@@ -81,6 +81,7 @@ License: CECILL-C
   import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
+  import { clickBesideShapesKeepsFocus, clickEditsBoxes } from "$lib/utils/reviewKeyboard";
 
   interface Props {
     // Attributes
@@ -508,6 +509,8 @@ License: CECILL-C
         }}
         canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
         onEditBox={(box) => enterEditMode(box)}
+        editBoxOnClick={clickEditsBoxes()}
+        keepFocusOnEmptyClick={clickBesideShapesKeepsFocus()}
         onStopEditingBox={exitEditMode}
         getBoxActions={imageBoxActions}
       />
