@@ -272,8 +272,8 @@ interface PayloadBuilder<G> { kind; resource;
 ```
 
 `PAYLOAD_BUILDERS` maps kind → builder; `SEED_LOADERS` is the REST→local mirror.
-Two kind-agnostic helpers (`lib/annotations/payloadBuilders.ts`) own the whole
-draft/edit lifecycle so no tool, renderer or widget reaches into payload internals:
+Kind-agnostic helpers (`lib/annotations/payloadBuilders.ts`) own the whole
+draft/edit/delete lifecycle so no tool, renderer or widget reaches into payload internals:
 
 - `commitNewAnnotation(ctx, kind, geometry, ids?)` — add a draft (`persisted:false`)
   to the collection and queue its creates.
@@ -289,8 +289,21 @@ draft/edit lifecycle so no tool, renderer or widget reaches into payload interna
   which the server stores `accepted`. The rule reads nothing of the kind but its
   `buildUpdate`, so that body must follow from the annotation alone
   (`ADDING_AN_ANNOTATION_KIND.md`, the payload builder).
+- `deleteLocalAnnotation(annotation, collection, mutations, widgetId, cancelGesture?)`
+  — the one path every delete gesture takes. A model's annotation is deleted
+  like any other: that is its reject, and no row is left to mark it, so a later
+  run of the model may propose it again. What the queue holds for a stored row —
+  its update, an entity a reassignment queued for it — is dropped before its
+  delete is queued, whoever made the row. `deleteGestureFor(annotation)` says
+  what it will do, so a control can name it before it is pressed — `reject` for
+  a model's stored row, whatever its status, `delete` for anything else.
+  `cancelGesture`, called first, lets go of a resize or a drag still under way
+  where the delete was pressed — the select tool passes `ctx.discardStagedWork`,
+  and so does the image widget's trash button while the select tool is active —
+  so the delete applies to the row as stored, and the gesture's end commits
+  nothing over it.
 
-Both take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
+The first two take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
 which both `Scene2DContext` and the widgets' seam satisfy.
 
 On the read side, every seed loader wraps a stored row in the same envelope,
@@ -301,8 +314,8 @@ a model's score, as its backend schema declares them (`MODEL_SCORE_FIELDS`); the
 review reads the score from them, and the edit rule leaves them out of what an
 edit changes, so no shared module names a column (`bboxSeedLoader.ts`:
 `["confidence"]`). A loader that hand-built its `LocalAnnotation` would load a
-model's rows as if a person had drawn them — no status, none on its label — and
-nothing would fail.
+model's rows as if a person had drawn them — no status, none on its label, its
+delete named Delete rather than Reject — and nothing would fail.
 
 ### Adding a new annotation kind (the recipe)
 
@@ -608,6 +621,15 @@ check` at baseline error count and `vitest` green:
   creates for an unsaved one) and is wired to a Delete button in `BBox3DHud.svelte`.
   `deleteBox()` and `changeEntity()` shipped untested; both are now covered in
   `bbox3dSession.test.ts` (2026-07-30).
+  **Delete on a model's box is its reject.**
+  `deleteLocalAnnotation` deletes a model's box as it deletes a person's: the
+  box leaves the dataset at Save, with its entity when nothing else names it.
+  The HUD path inherits this unchanged, and a test covers it
+  (`reviewDecisions.svelte.test.ts`). The HUD button names what it will do, as the
+  image widget's trash button does: it reads `session.editingDeleteGesture`
+  (`deleteGestureFor` on the box being edited) and shows "Reject" for a model's
+  box, its tooltip saying that rejecting deletes it, and "Delete" for a
+  person's (`BBox3DHud.svelte.test.ts`).
   _Residual, all UX rather than plumbing:_
   - **No keyboard delete in the point cloud.** `selectTool2D` handles
     `Delete`/`Backspace` for 2D only; the 3D scene has no equivalent.

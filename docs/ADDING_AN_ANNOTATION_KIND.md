@@ -15,12 +15,14 @@ for the rules.
 - **Renderers cannot write.** A 2D renderer receives a read-only `Scene2DReadContext`
   (no `mutations`, no `setActiveTool`). Editing input lives in a tool/editor that gets
   the full context.
-- **Never hand-build mutations.** Use `commitNewAnnotation` / `commitGeometryEdit`
-  (`payloadBuilders.ts`) — they own the draft→queue→persist lifecycle for every kind.
+- **Never hand-build mutations.** Use the helpers of `payloadBuilders.ts` — they own
+  the draft→queue→persist lifecycle for every kind: `commitNewAnnotation` /
+  `commitGeometryEdit` to create and edit, `deleteLocalAnnotation` to delete — a
+  model's annotation as well, which is its reject.
 - **Never hand-build the `LocalAnnotation` envelope.** A seed loader wraps each row
   with `persistedAnnotation` (`persistedAnnotation.ts`), which reads its provenance
   and review status. A hand-built one loads a model's rows as a person's: no status,
-  and none on its label.
+  none on its label, and its delete named Delete rather than Reject.
 - **Work a tool holds is the record's unsaved work.** A shape begun and not committed —
   points before Enter, a box being drawn — is in no mutation. Its holder claims a
   staged-work flag of its own, once (`ctx.claimStagedWork(discard)`), raises it while it
@@ -33,7 +35,8 @@ for the rules.
 - **Keys typed in a form field belong to it.** A key listener on `window` — a tool's
   shortcut, an editor's Escape — returns early when `isFormFieldTarget(event.target)`
   (`scene/tool.ts`): a select picks an option with the keys typed in it, and an `E` or a
-  Backspace there must not reassign or delete the selection, nor Escape drop a 3D edit.
+  Backspace there must not reassign, delete or reject the selection, nor Escape drop a
+  3D edit.
 - **No shared magic strings between files.** If two files agree on a literal (e.g. a
   Konva node `name`), put it in one `<kind>...Nodes.ts` / `Constants.ts` and import it
   (see `bbox2dNodes.ts`).
@@ -183,6 +186,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   confirm state + tool-UI state, with `save()`/`cancel()` that call the commit helpers. It
   lives in the kind so the widget stays kind-agnostic.
 - `<Kind>Hud.svelte` — the `Tool3D.hud`: the DOM confirm/secondary UI, driven by the session.
+  A delete button calls `deleteLocalAnnotation` through the session; name it from
+  `deleteGestureFor(annotation)` (`reject` on a model's annotation, `delete` otherwise), as
+  the image widget's trash button does, its tooltip saying on a Reject that rejecting
+  deletes (`BBox3DHud.svelte`, `BBox3DSession.editingDeleteGesture`).
 - `draw<Kind>Tool.ts` — the `Tool3D` entry wiring `overlay` + `createSession` + `hud`.
 
 → register in `TOOLS_3D` (`registry3d.ts`).
@@ -202,7 +209,8 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     Konva's drags are global, and one a failed test left running moves with the next
     test's pointer.
   - It also presses Delete during each of its gestures, through the real select tool's
-    `onKeyDown`: the shape is deleted as stored, and no flag stays raised once saved.
+    `onKeyDown`: every shape is deleted as stored — on a model's shape, that delete is its
+    Reject — and no flag stays raised once saved.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the
@@ -232,7 +240,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
 - [ ] every holder of unconfirmed work (2D tool handler, editor gesture) claims a staged-work flag, lowers it on every way out, and drops its work on discard; window key listeners ask `isFormFieldTarget`
 - [ ] tool + `TOOLS_2D|3D`
-- [ ] write path uses `commitNewAnnotation` / `commitGeometryEdit` only
+- [ ] write path uses `commitNewAnnotation` / `commitGeometryEdit` / `deleteLocalAnnotation` only
 - [ ] shared literals extracted (no cross-file magic strings)
 - [ ] tests added; `check` / `vitest` / `build` green; no widget/scene edits
 

@@ -63,6 +63,9 @@ class JobResponse(BaseModel):
         cancel_requested: Someone asked the job to stop. Until its state says `cancelled`, the
             chunks in flight are finishing — an interface should say so rather than leave the
             job looking as if the request had been lost.
+        finalizing: The job's work is done and its closing step runs — an index being built
+            over every vector it wrote, for one. Its bar is full but it is not `done` yet: an
+            interface should say so.
     """
 
     id: str
@@ -77,6 +80,7 @@ class JobResponse(BaseModel):
     cancel_requested: bool
     error: dict[str, Any] | None
     created_at: str
+    finalizing: bool
 
     @classmethod
     def of(cls, record: jobs.JobRecord) -> "JobResponse":
@@ -94,6 +98,7 @@ class JobResponse(BaseModel):
             cancel_requested=record.cancel_requested,
             error=record.error,
             created_at=record.created_at.isoformat(),
+            finalizing=record.finalizing,
         )
 
 

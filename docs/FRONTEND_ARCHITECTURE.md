@@ -154,7 +154,7 @@ Three ideas hold it together:
 | `deleteEntity` | `api/annotations.ts` | `DELETE …/entities/{id}` | a 404 counts as done, any other failure throws an `ApiError` with its status |
 | `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
 | `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
-| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | a 404 counts as done, any other failure throws an `ApiError` with its status |
+| `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | also a model's annotation's Reject (§8); a 404 counts as done, any other failure throws an `ApiError` with its status |
 
 Note `listAnnotations`' `view_name` query parameter actually filters the `view_id`
 column for annotations (legacy server-side naming — see `service.list` in
@@ -406,8 +406,8 @@ the shape back nor drops its move: the node stays where the gesture has it, and
 the gesture is committed by id when the pointer is let go — only one the editor
 saw begin.
 
-A delete pressed during the gesture cancels it first (flow E), so the delete
-applies to the shape as stored.
+A delete pressed during the gesture cancels it first (flow E), so the delete —
+a Reject, on a model's shape — applies to the shape as stored.
 
 A widget lowers its holders' flags as it closes (`releaseStagedWork`), since
 nothing in it can confirm that work any more. While a flag is raised, a save
@@ -633,18 +633,32 @@ flushSave()
 
 ### E) Delete (+ backend orphan cascade)
 ```
-deleteAnnotation(annotation)            // 2D: via ctx + deleteLocalAnnotation; 3D: manager
-  → 2D: cancelGesture()                 // deleteLocalAnnotation's: a resize or a
-       // drag under way in the widget lets go first: seam.discardStagedWork →
-       // each raised holder's discard — the shape back as stored, the gesture
-       // stopped, nothing committed — so what follows applies to the row as stored
-  → persisted?  mutations.queue({op:"delete", resource, id})   // annotation only
-     draft?     mutations.dropForLocalAnnotation(id)            // unsend its creates
-  → collection.remove(id)
+deleteLocalAnnotation(annotation, collection, mutations, widgetId, cancelGesture?)
+     // the one choke point: the 2D select tool (Delete/Backspace), the image
+     // widget's trash button, the bbox3d HUD's delete (BBox3DSession.deleteBox),
+     // manager.deleteAnnotation
+  deleteGestureFor(annotation)                 // what the controls call it
+     "delete"  anything not reviewable: a person's annotation, a draft
+     "reject"  a model's stored annotation, whatever its status
+  → cancelGesture()                            // a resize or a drag under way in
+       // the widget lets go first: seam.discardStagedWork → each raised holder's
+       // discard — the shape back as stored, the gesture stopped, nothing
+       // committed — so what follows applies to the row as stored
+  → one branch for both: a Reject is a delete
+        mutations.dropForLocalAnnotation(id)    // its queued update, an entity a
+                                                //   reassignment queued for it, a
+                                                //   draft's creates
+        persisted?  mutations.queue({op:"delete", resource, id})   // annotation only
+  → collection.remove(id)                      // the selection goes with it
   → (flush) DELETE …/{resource}/{id}?prune_orphan_entity=true
         → backend deletes the entity iff no stored row names it any more:
           an annotation of any kind, a child entity, a dynamic state (§2)
 ```
+
+What the queue holds for a stored row is dropped before its delete is queued,
+whoever made the row, a person's included: an edit of a row about to be deleted
+would only be sent to be undone, and an entity a reassignment made for it would
+be left named by nothing.
 
 A delete pressed while the mouse still holds a resize or a drag would otherwise
 let the gesture go on over a shape no longer there — Konva throwing at the next
@@ -656,7 +670,18 @@ widget's flags are lowered; another widget's work stays. No kind knows a delete
 can interrupt its gesture. The select tool passes it on Delete/Backspace; the
 image widget's trash button passes it only while the select tool is active —
 the only tool under which a resize or a drag runs — since a draw tool's staged
-work is a shape not drawn yet.
+work is a shape not drawn yet. The HUD's delete passes none: it closes its own
+confirm, and the box it held goes with it.
+
+Both buttons that delete read `deleteGestureFor` to say what they will do. The
+image widget's trash button is named by its action — "Reject selected (Del)" for
+a model's annotation, "Delete selected (Del)" otherwise and while nothing is
+selected —, its tooltip adding on a Reject that rejecting deletes; and with
+nothing selected, why it does nothing goes in its tooltip and its accessible
+description (an `sr-only` span it points to with `aria-describedby`), never its
+name: "Select an annotation to delete or reject it". The bbox3d HUD's button
+reads "Reject" or "Delete", through `BBox3DSession.editingDeleteGesture`, its
+tooltip saying that rejecting deletes.
 
 ### F) Reassign an entity (existing box)
 ```
@@ -709,6 +734,21 @@ person's annotation and a draft are not reviewable.
   one `LocalAnnotation` envelope, `review` and `persistedContent` included. Both
   `createViewScopedSeedLoader` and the record-scoped `bbox3dSeedLoader` use it,
   so no loader can forget the review.
+- `annotations/payloadBuilders.ts` — `deleteGestureFor` and
+  `deleteLocalAnnotation` (flow E: every delete, a Reject included), next to the
+  other commit helpers.
+
+**Reject deletes.** A model's annotation is rejected by deleting it, like any
+row: `deleteLocalAnnotation` is the single choke point every delete gesture goes
+through (flow E) — the Delete key, the image widget's trash button, the 3D HUD —,
+and the server prunes its entity when nothing else names it. The controls say
+so: on a model's annotation, whatever its status, they read "Reject", and their
+tooltip says that rejecting deletes (`deleteGestureFor`). No row is left to mark
+the rejection, so a later run of the model may propose it again — a consequence
+accepted with the rule. A Reject, like any delete, throws the row's unsaved work
+away — an edit, an entity a reassignment queued for it. A Reject takes the row off every canvas at once; before
+Save, only Discard brings it back, with the rest of the record's unsaved work,
+and nothing does after Save: there is no undo of one Reject.
 
 **An edit stays in review until it is saved.** A content edit of a model's row —
 a drag, a resize, a reassignment, a box moved under the 3D HUD — leaves the row

@@ -14,7 +14,9 @@ import {
   beginEntityReassign,
   commitDraftWithEntity,
   commitGeometryEdit,
+  deleteGestureFor,
   deleteLocalAnnotation,
+  type DeleteGesture,
 } from "$lib/annotations/payloadBuilders.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { Rotation3x3 } from "$lib/annotations/types.js";
@@ -92,6 +94,17 @@ export class BBox3DSession {
   }
 
   /**
+   * What the HUD's delete button does to the box being edited: a model's box is
+   * rejected — deleted, as any box is (`deleteLocalAnnotation`) — so the button
+   * names it so.
+   */
+  get editingDeleteGesture(): DeleteGesture {
+    const editingId = this.confirm?.editingId;
+    const annotation = editingId ? this.seam.collection.find(editingId) : undefined;
+    return annotation ? deleteGestureFor(annotation) : "delete";
+  }
+
+  /**
    * The persisted annotation the confirm currently targets, if any. The HUD
    * consults it to offer entity reassignment (only meaningful once the box has
    * been saved and thus has an entity to move away from).
@@ -159,7 +172,10 @@ export class BBox3DSession {
     this.resetEditor();
   }
 
-  /** Delete the box currently being edited (its orphaned entity is pruned server-side). */
+  /**
+   * Delete the box currently being edited — on a model's box, its Reject (its
+   * orphaned entity is pruned server-side).
+   */
   deleteBox(): void {
     const editingId = this.confirm?.editingId;
     if (!editingId) return;
