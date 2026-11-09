@@ -738,13 +738,51 @@ describe("RecordLoader.reloadAnnotations when lists fail", () => {
     await loader.reloadAnnotations();
 
     // The boxes were read, and their rows replace the box shown; the masks
-    // could not be read, and the stored mask stays. The draft mask goes: the
-    // Discard that reads again has dropped its create.
-    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-2", "m-1"]);
+    // could not be read, and the stored mask stays. The draft mask stays too: a
+    // read-back keeps the work done meanwhile (Discard drops drafts before it).
+    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-2", "m-1", "m-draft"]);
     expect(consoleSpy).toHaveBeenCalledWith(
       "Could not refresh the mask annotations:",
       expect.objectContaining({ message: "masks down" }),
     );
+    consoleSpy.mockRestore();
+  });
+
+  it("takes an earlier read still on its way when a later one read no kind at all", async () => {
+    let everyListFails = false;
+    let holdNextBoxes = false;
+    let releaseHeldBoxes: (rows: BBoxRow[]) => void = () => {};
+    const session = new WorkspaceSession();
+    const loader = new RecordLoader({
+      workspace: makeSink().sink,
+      registry: makeRegistry(oneViewExtension()),
+      gateway: {
+        ...makeGateway({ dataset: makeDataset({ cam: { base: "Image" } }) }),
+        listAnnotations: <TRow>(_datasetId: string, resource: string): Promise<TRow[]> => {
+          if (everyListFails) return Promise.reject(new Error("server down"));
+          if (resource !== BBOX_RESOURCE) return Promise.resolve([] as TRow[]);
+          if (!holdNextBoxes) return Promise.resolve([bboxOnView("bb-1")] as TRow[]);
+          holdNextBoxes = false;
+          return new Promise<TRow[]>((resolve) => {
+            releaseHeldBoxes = (rows) => resolve(rows as TRow[]);
+          });
+        },
+      },
+      session,
+      layoutRepository: makeLayoutRepository(),
+    });
+    await loader.load("ds-1", "rec-1", VIEWPORT);
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // The first read waits on its boxes; the second fails for every kind and lands first.
+    holdNextBoxes = true;
+    const earlier = loader.reloadAnnotations();
+    everyListFails = true;
+    await loader.reloadAnnotations();
+    releaseHeldBoxes([bboxOnView("bb-2")]);
+    await earlier;
+
+    expect(session.annotations.items.map((a) => a.id)).toEqual(["bb-2"]);
     consoleSpy.mockRestore();
   });
 });

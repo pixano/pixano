@@ -87,7 +87,7 @@ describe("PointCloudWidget", () => {
 
   it("lets go of an edit its tools held staged once it closes", async () => {
     const { manager, widgetId, unmount } = await renderWidget();
-    // What a tool of the widget raises while it holds work not confirmed yet.
+    // What the 3D box HUD raises while it holds a moved box.
     manager.claimStagedWork(widgetId, () => {}).set(true);
     expect(await manager.flushSave()).toBe(false);
 

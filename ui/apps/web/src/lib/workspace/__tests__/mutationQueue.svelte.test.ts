@@ -4,9 +4,9 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { MutationGateway } from "../datasetGateway.js";
+import { httpDatasetGateway, type MutationGateway } from "../datasetGateway.js";
 import { MutationQueue, type LocalAnnotationLocator } from "../mutationQueue.svelte.js";
 import { WorkspaceSession } from "../workspaceSession.svelte.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
@@ -530,4 +530,42 @@ describe("MutationQueue — what a save reports", () => {
 
     expect(queue.pending.map((m) => m.widgetId)).toEqual(["canvas"]);
   });
+});
+
+describe("MutationQueue — what reached the server, over the HTTP gateway", () => {
+  /** The statuses of a refusal — a busy dataset — and of a proxy's failure, which may come after a write. */
+  const HTTP_CONFLICT = 409;
+  const HTTP_BAD_GATEWAY = 502;
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** Make the server answer every request with `status`. */
+  function answerWith(status: number): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ detail: "x" }), { status }))),
+    );
+  }
+
+  const deletes: [string, ResourceMutation][] = [
+    ["an annotation delete", { op: "delete", resource: "bboxes", id: "b1" }],
+    ["an entity delete", { op: "delete", resource: ENTITY_RESOURCE, id: "e1" }],
+  ];
+
+  it.each(deletes)(
+    "%s the server refuses reached nothing; one a proxy fails may have",
+    async (_write, mutation) => {
+      const queue = new MutationQueue(httpDatasetGateway, makeSession(), noopLocator);
+      queue.queue(mutation);
+
+      answerWith(HTTP_CONFLICT);
+      await queue.flush();
+      expect(queue.saveError).toContain(String(HTTP_CONFLICT));
+      expect(queue.writesLanded).toBe(0);
+
+      answerWith(HTTP_BAD_GATEWAY);
+      await queue.flush();
+      expect(queue.writesLanded).toBe(1);
+    },
+  );
 });

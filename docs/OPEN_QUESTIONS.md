@@ -128,3 +128,33 @@ Options:
   but a counter can drift from what it counts, and every writer of the table
   must keep it.
 - **Keep the scan**, and measure it at scale first.
+
+## An entity the save queue gave up on stays in the dataset
+
+**Status:** open (an accepted limit).
+
+The new interface's save queue deletes an entity it created and no longer
+names, and only conditionally (`DELETE …/entities/{id}?only_if_unnamed=true`):
+the server deletes it only if no stored row names it. It never deletes an
+entity named by a write that failed without the server refusing it — a network
+error, a lost answer, a 5xx —, since that write may have been stored
+(`mayHaveStored` in `ui/apps/web/src/lib/workspace/mutationQueue.svelte.ts`).
+When it was not, the entity stays in the dataset, named by nothing: a draft
+deleted after its create's answer was lost, a reassignment lost and then
+changed. `reset()` — a Discard, another record opened — forgets the entities
+the queue created as well, so one whose create had left before a Discard can
+stay the same way.
+
+It was accepted as the price of never deleting what a stored row names: the
+browser sees one record, and cannot tell what a write whose answer was lost
+stored. Keeping the delete queued after a Discard would show one unsaved item
+right after it. FRONTEND_ARCHITECTURE.md describes the queue's rules.
+
+Options:
+
+- **A server-side sweep** of the entities nothing names, as a maintenance
+  command or a job.
+- **Read the record back after a failure that is not a refusal**, before
+  deciding what the queue still owns. It would also close the other cases of a
+  lost answer, where the server stored a write the browser takes for failed.
+- **An identifier per write**, so that a retry can ask whether a write landed.

@@ -27,8 +27,8 @@ function contextFailing(failingResource: string): SeedLoadContext {
 
 describe("loadEveryKind", () => {
   // Every registered loader, so a kind added with a loader that swallows its
-  // failure into an empty list fails here: a reload would take that empty list
-  // for a table holding nothing, and empty the kind on screen.
+  // failure into an empty list fails here: a save's read-back would take that
+  // empty list for a table holding nothing, and empty the kind on screen.
   it("says which kind could not be read, and reads every other one", async () => {
     for (const failing of SEED_LOADERS) {
       const loads = await loadEveryKind(contextFailing(payloadBuilderFor(failing.kind).resource));

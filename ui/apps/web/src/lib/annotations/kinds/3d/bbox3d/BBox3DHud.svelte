@@ -22,6 +22,11 @@ License: CECILL-C
     { key: "resizeArrows", icon: Scaling, label: "resize arrows" },
     { key: "translateArrows", icon: Move, label: "translate arrows" },
   ];
+
+  // The HUD shows the box as the record holds it, unless it holds a move of its
+  // own: when the box changes under it — Discard, a delete — it closes
+  // rather than show, and save again, what the record no longer has.
+  $effect(() => session.letGoOfChangedBox());
 </script>
 
 {#if session.confirm}
@@ -29,13 +34,14 @@ License: CECILL-C
     <div
       class="pointer-events-auto flex items-center gap-2 rounded-lg border border-border bg-background/95 px-3 py-2 text-sm shadow-lg backdrop-blur-sm"
     >
-      <span class="text-muted-foreground">Save this 3D box?</span>
+      <span class="text-muted-foreground">Apply this 3D box?</span>
       <button
         type="button"
         onclick={() => session.save()}
+        title="Keep this 3D box with the record's unsaved changes: the workspace's Save stores it"
         class="rounded bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
       >
-        Save
+        Apply
       </button>
       <button
         type="button"

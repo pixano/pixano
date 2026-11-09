@@ -16,6 +16,7 @@ import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/scen
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import { rleToString } from "$lib/utils/maskUtils.js";
 import {
+  deferred,
   openManager,
   viewIdOf,
   widgetSeam,
@@ -230,14 +231,18 @@ describe("maskEditor2D on the real Konva, a drag still running when a save ends"
     expect([node.x(), node.y()]).toEqual([0, 0]);
   });
 
-  it("is not put back by the save: it is saved once let go", async () => {
+  it("is not put back by the save's read-back: it is saved once let go", async () => {
     const scene = await openOnCanvas(humanMask("m2"));
-    // Something for the save to send.
+    // Something for the save to send, so that it reads the record back.
     editOtherMask(scene);
     const grabbed = grab(scene, nodeOf(scene, "m1"));
     grabbed.moveTo(PIXELS_PER_CELL, 0);
+    const annotations = scene.manager.annotations;
 
     expect(await scene.manager.flushSave()).toBe(false);
+    // The rows read back were merged into the collection every widget holds,
+    // the mask being dragged left where the pointer has it.
+    expect(scene.manager.annotations).toBe(annotations);
     // A save ends by clearing the selection, and the widget syncs its scene then.
     scene.redraw();
     expect(nodeOf(scene, "m1").x()).toBe(PIXELS_PER_CELL);
@@ -246,6 +251,27 @@ describe("maskEditor2D on the real Konva, a drag still running when a save ends"
 
     expect(cellsMoved()).toEqual([3, 0]);
     expect(queuedCounts(scene)).toBe(MOVED_COUNTS);
+  });
+
+  it("keeps a read-back already on its way from landing over it", async () => {
+    const scene = await openOnCanvas(humanMask("m2"));
+    editOtherMask(scene);
+    const listing = deferred();
+    scene.backend.holdListings = listing.promise;
+    scene.backend.log.length = 0;
+    const saved = scene.manager.flushSave();
+    await vi.waitFor(() => expect(scene.backend.log).toContain(`list ${MASK_RESOURCE}`));
+    const annotations = scene.manager.annotations;
+
+    const grabbed = grab(scene, nodeOf(scene, "m1"));
+    grabbed.moveTo(PIXELS_PER_CELL, 0);
+    listing.resolve();
+    expect(await saved).toBe(false);
+
+    expect(scene.manager.annotations).toBe(annotations);
+    scene.redraw();
+    grabbed.release();
+    expect(cellsMoved()).toEqual([1, 0]);
   });
 
   it("is saved where it stood when let go right as the save ends", async () => {
