@@ -66,7 +66,7 @@ async function renderWidget() {
 }
 
 describe("PointCloudWidget", () => {
-  it("counts the record's unsaved work per annotation, as the image toolbar does", async () => {
+  it("counts the record's unsaved work per annotation, as the image toolbar and Review tab do", async () => {
     const { manager } = await renderWidget();
 
     // A new box: its entity and itself, two writes for one annotation.

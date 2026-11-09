@@ -102,15 +102,15 @@ export class WorkspaceManager {
    */
   private stagedFlags = new Map<string, StagedWorkHolder>();
 
-  /** The review of the open record: list, status chips, decisions. */
+  /** The review of the open record, which the Review tab shows: list, status chips, decisions. */
   readonly review: ReviewController;
 
   /**
    * How many items of the open record are unsaved (`countUnsavedWork`): each
    * annotation with a change queued or on the wire, each draft, an entity form
    * open on a reassignment, each raised holder of staged work. The one count
-   * every widget toolbar shows, and the one `flushSave` reads — so they never
-   * disagree. Derived once for all of them.
+   * the Review tab and every widget toolbar show, and the one `flushSave`
+   * reads — so they never disagree. Derived once for all of them.
    */
   readonly unsavedCount: number = $derived.by(() => {
     const inFlight = this.mutations.inFlight;

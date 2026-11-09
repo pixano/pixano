@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import RightPanel from "../../shell/RightPanel.svelte";
 import ImageWidget from "../image/ImageWidget.svelte";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import {
   entityOf,
@@ -70,6 +71,7 @@ async function openImageWidget() {
     context: new Map([["workspaceManager", opened.manager]]),
   });
   render(RightPanel, { props: { manager: opened.manager } });
+  await fireEvent.click(screen.getByRole("button", { name: /^Review$/ }));
   return { ...opened, widgetId: widget.id, unmount };
 }
 
@@ -95,7 +97,26 @@ function select(manager: WorkspaceManager, id: string): void {
   flushSync();
 }
 
+const statusOf = (manager: WorkspaceManager, id: string) =>
+  manager.annotations.find(id)?.review?.status;
+
 describe("ImageWidget toolbar", () => {
+  it("counts a decision taken in the Review tab, and Discard undoes it", async () => {
+    const { manager } = await openImageWidget();
+    const discard = within(toolbar()).getByTitle<HTMLButtonElement>(DISCARD_TITLE);
+    expect(discard.disabled).toBe(true);
+
+    await fireEvent.click(screen.getByRole("button", { name: "Accept car (bbox)" }));
+
+    // The panel's decision is the record's unsaved work, so the canvas's own
+    // Discard — the only one an image-only layout had — must reach it.
+    expect(within(toolbar()).getByText("1 unsaved")).toBeTruthy();
+    expect(discard.disabled).toBe(false);
+    await fireEvent.click(discard);
+    await waitFor(() => expect(manager.pendingCount).toBe(0));
+    expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.PENDING);
+  });
+
   it("says the trash button rejects a model's box, and rejects it", async () => {
     const { manager } = await openImageWidget();
     expect(trashButton().disabled).toBe(true);
@@ -199,8 +220,9 @@ describe("ImageWidget toolbar", () => {
     shapeBegun.set(true);
     flushSync();
     expect(manager.pendingCount).toBe(0);
-    // Unsaved: the toolbar says so.
+    // Unsaved: the toolbar says so, as the Review tab does.
     expect(within(toolbar()).getByText("1 unsaved")).toBeTruthy();
+    expect(screen.getByText("1 unsaved", { selector: "p" })).toBeTruthy();
     expect(discard.disabled).toBe(false);
     await fireEvent.click(discard);
 

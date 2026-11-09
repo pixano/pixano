@@ -227,7 +227,7 @@ describe("BBox3DHud, a box changed under the HUD", () => {
     ]);
   });
 
-  it("closes when a Reject deletes a box whose move it holds", async () => {
+  it("closes when a Reject from the Review tab deletes a box whose move it holds", async () => {
     const scene = await openWithEditor();
     const moved = movedAlongX(scene.editor.open("m1"), ONE_UNIT);
     scene.session.reportReady(moved.coords, moved.rotation, "m1");

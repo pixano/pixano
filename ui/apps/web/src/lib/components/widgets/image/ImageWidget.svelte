@@ -340,8 +340,9 @@ License: CECILL-C
 
 <div class="flex h-full flex-col bg-card">
   <!-- The unsaved count and Discard cover the whole record, as Save and Discard do:
-       an edit made in another widget is this record's unsaved work as much as a box
-       moved here. The workspace's one count: per annotation, plus each piece of work
+       a decision taken in the Review tab, or an edit made in another widget, is
+       this record's unsaved work as much as a box moved here. The workspace's one
+       count, which the Review tab shows too: per annotation, plus each piece of work
        a tool holds. -->
   <AnnotationToolbar
     tools={TOOLS_2D}

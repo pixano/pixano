@@ -221,11 +221,12 @@ both declare `other`.
 
 Every entity annotation schema carries `review_status`: `pending` or `accepted` on a model's
 row, empty on any other. A kind never sets it. The writer marks a `model` kind's rows `pending`
-(§1), and from there people decide, through rules the API applies to every kind alike
-(`src/pixano/api/review.py`; [backend-processing §19](./backend-processing.md)). A person
-accepts a row as it is, or by saving an edit of it, which stores it `accepted` with the
-model's provenance and score; a person who rejects a row deletes it, so a rejected proposal
-leaves no row behind. What it means for a kind:
+(§1), and from there people decide — in the workspace's Review tab, through rules the API
+applies to every kind alike (`src/pixano/api/review.py`;
+[backend-processing §19](./backend-processing.md)). A person accepts a row as it is, or by
+saving an edit of it, which stores it `accepted` with the model's provenance and score; a
+person who rejects a row deletes it, so a rejected proposal leaves no row behind. What it
+means for a kind:
 
 - **Accepted rows are frozen.** `replace` leaves a row a person accepted where it is, rank
   included, and replaces the pending rows only. A model's row with no status —

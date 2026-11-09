@@ -18,6 +18,7 @@ import {
 import {
   isReviewable,
   isShownByReviewFilter,
+  mayAccept,
   REVIEW_FILTER_KEYS,
   reviewFilterKeyOf,
   type ReviewFilterKey,
@@ -26,10 +27,11 @@ import type { MutationSink } from "$lib/annotations/scene/sceneContext.js";
 import { pickEntityLabel } from "$lib/annotations/types.js";
 
 /**
- * The source id the review controller stamps on the work it queues — its
- * Accepts, and the deletes its Rejects send — in the `widgetId` slot of a
- * mutation. The review panel is not a widget; every unsaved counter is
- * record-wide, so the decisions show wherever the reviewer looks.
+ * The source id the review panel stamps on the work it queues — its Accepts,
+ * and the deletes its Rejects send — in the `widgetId` slot of a mutation. The
+ * panel is not a widget; every unsaved counter — the widgets' toolbars and the
+ * Review tab — is record-wide, so the decisions show wherever the reviewer
+ * looks.
  */
 export const REVIEW_PANEL_SOURCE_ID = "review-panel";
 
@@ -56,7 +58,10 @@ export interface ReviewControllerDeps {
   navigator: ReviewNavigator;
 }
 
-/** One line of the review list: what a panel shows, already read from the annotation. */
+/** Why a model's row is not offered Accept: it reads accepted already, so nothing is left to accept. */
+export type AcceptRefusal = "accepted";
+
+/** One line of the review list: what the panel shows, already read from the annotation. */
 export interface ReviewRow {
   id: string;
   kind: AnnotationKind;
@@ -71,13 +76,25 @@ export interface ReviewRow {
   /** False for a draft, which has no row in the dataset yet. */
   persisted: boolean;
   canAccept: boolean;
+  /** Why Accept is not offered on a model's row; null when it is, and on a person's row. */
+  acceptRefusal: AcceptRefusal | null;
   canReject: boolean;
   selected: boolean;
+}
+
+/**
+ * Why a model's row is not offered Accept, or null when it is — or when the row
+ * is a person's, which takes no decision.
+ */
+function acceptRefusalOf(annotation: LocalAnnotation, offered: boolean): AcceptRefusal | null {
+  if (offered || !isReviewable(annotation) || mayAccept(annotation.review)) return null;
+  return "accepted";
 }
 
 function toRow(annotation: LocalAnnotation, selectedId: string | null): ReviewRow {
   const review = annotation.review;
   const reviewable = isReviewable(annotation);
+  const acceptOffered = canAccept(annotation);
   return {
     id: annotation.id,
     kind: annotation.kind,
@@ -87,7 +104,8 @@ function toRow(annotation: LocalAnnotation, selectedId: string | null): ReviewRo
     confidence: reviewable ? review?.confidence : undefined,
     filterKey: reviewFilterKeyOf(annotation),
     persisted: annotation.persisted,
-    canAccept: canAccept(annotation),
+    canAccept: acceptOffered,
+    acceptRefusal: acceptRefusalOf(annotation, acceptOffered),
     // A model's stored row, whatever its status: its Reject deletes it.
     canReject: deleteGestureFor(annotation) === "reject",
     selected: annotation.id === selectedId,
@@ -95,12 +113,12 @@ function toRow(annotation: LocalAnnotation, selectedId: string | null): ReviewRo
 }
 
 /**
- * The review of the open record: what a review panel lists and counts, the
+ * The review of the open record: what the Review tab lists and counts, the
  * status chips that filter it and the canvas, and the decisions.
  *
  * Holds no review state of its own: the statuses live on the annotations, the
  * decisions on the mutation queue, the chips on the session — so a widget, a
- * keyboard shortcut and a panel all see the same thing. Kind-agnostic: a kind
+ * keyboard shortcut and the Review tab all see the same thing. Kind-agnostic: a kind
  * added later is listed, filtered and decided on without a line here.
  */
 export class ReviewController {
@@ -144,17 +162,17 @@ export class ReviewController {
   }
 
   /**
-   * Whether Save has anything to send: a queued change. Work a tool holds, or
-   * a draft whose entity is still being chosen, is unsaved too, but is
-   * finished in its tool or form before a save can carry it.
+   * Whether the Review tab's Save has anything to send: a queued change. Work
+   * a tool holds, or a draft whose entity is still being chosen, is unsaved
+   * too, but is finished in its tool or form before a save can carry it.
    */
   get canSave(): boolean {
     return this.deps.sink.pending.length > 0;
   }
 
   /**
-   * Whether Discard has anything to throw away: a queued change, a draft, or
-   * work a tool holds staged with an empty queue.
+   * Whether the Review tab's Discard has anything to throw away: a queued
+   * change, a draft, or work a tool holds staged with an empty queue.
    */
   get canDiscard(): boolean {
     return this.deps.navigator.hasUnsavedWork();
@@ -230,12 +248,12 @@ export class ReviewController {
 
   // ─── Saving ───────────────────────────────────────────────────────────────
 
-  /** Send every unsaved change of the record. */
+  /** Send every unsaved change of the record — the Review tab's Save. */
   save(): Promise<boolean> {
     return this.deps.navigator.save();
   }
 
-  /** Throw away every unsaved change of the record. */
+  /** Throw away every unsaved change of the record — the Review tab's Discard. */
   discard(): Promise<void> {
     return this.deps.navigator.discardChanges();
   }

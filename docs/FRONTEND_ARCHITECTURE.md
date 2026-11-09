@@ -190,7 +190,7 @@ WorkspaceManager
  ├─ widgets[]  : WidgetInstance[]         // the laid-out widget set
  ├─ storageMap : per-widget storage       // e.g. activeToolId (NOT annotations)
  ├─ pendingAnnotation                     // box awaiting its entity choice
- └─ review     : ReviewController         // list, status chips, decisions (§8)
+ └─ review     : ReviewController         // Review tab: list, chips, decisions (§8)
 ```
 
 Representative API: `openRecord` (the way to switch records, or to open the
@@ -570,7 +570,8 @@ already counts. Discard calls every raised flag's discard — the HUD closes, a
 tool forgets its points, a resize or a drag stops and commits nothing, and each
 annotation shows as stored
 — and is offered whenever anything is
-unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`), even with
+unsaved (`manager.hasUnsavedWork`: the toolbar's `discardDisabled`, the tab's
+`canDiscard`), even with
 nothing queued. The manager keeps the raised flags in a private map and
 publishes a copy on `session.stagedWork`: widgets lower their flags from effect
 teardowns, where Svelte gives a reactive read the value it had before the
@@ -578,8 +579,8 @@ latest writes, so a change computed from the session there could bring a flag
 back or drop one another widget had just raised.
 
 **One unsaved count.** `WorkspaceManager.unsavedCount` is the only count of the
-record's unsaved work, derived once for every widget toolbar and `flushSave`,
-so they never disagree. Its rule is `countUnsavedWork`
+record's unsaved work, derived once for the Review tab, every widget toolbar and
+`flushSave`, so they never disagree. Its rule is `countUnsavedWork`
 (`workspace/unsavedWork.ts`), over the changes queued and the one on the wire:
 an annotation counts once, whatever they hold for it — an edit, a new entity and
 the update naming it — and so does a draft; a change that names no annotation
@@ -902,9 +903,9 @@ reassignEntity(annotation, choice, ctx)
           stored row names it any more (§2)
 ```
 
-### G) Accept or reject a model's annotation
+### G) Accept or reject a model's annotation (the Review tab)
 ```
-review.accept(id)                                   // ReviewController
+ReviewPanel Accept → review.accept(id)              // ReviewController
   → commitAccept(annotation, {collection, mutations, widgetId})
        canAccept is false → nothing            // not reviewable, or not shown
                                                 //   pending (mayAccept)
@@ -915,7 +916,7 @@ review.accept(id)                                   // ReviewController
   → the chips may now hide it (the Accepted chip off) → selection dropped
   → (flush) PUT …/{resource}/{id}  {review_status: "accepted", …an edit}
 
-review.reject(id)
+ReviewPanel Reject → review.reject(id)
   → deleteLocalAnnotation(…)  when its gesture is "reject" (flow E)
        // true when the delete was queued: the row leaves the list and every
        // canvas; false when refused (no such row, a person's, a draft)
@@ -936,17 +937,22 @@ nothing does after.
 A model's annotation arrives `pending`, and `accepted` is where a person's review
 leaves it; a person's annotation carries no status (`ReviewStatus`,
 `src/pixano/schemas/annotations/entity_annotation.py`;
-`docs/specs/backend-processing.md` §19). The server owns that vocabulary; the
-interface reads it on every annotation it loads, and shows it on the canvas.
-Nothing in it is kind-specific: a kind's annotations carry their review state as
-soon as its seed loader builds through the shared envelope, and no kind name
-appears in the modules below.
+`docs/specs/backend-processing.md` §19). A reviewer accepts it — as it is, or by
+saving an edit of it — or rejects it, which deletes it. Review happens **inside
+the workspace, record by record**: a Review tab in the right panel lists the open
+record's annotations and takes the decisions. The server owns the rules; the
+interface reads the status on every annotation it loads, shows it on the canvas
+and in the tab, and mirrors the rules only to offer the buttons that will work.
+Nothing in it is kind-specific: a kind is reviewable as soon as its seed loader
+builds through the shared envelope, and no kind name appears in the modules
+below.
 
 **What is reviewable.** `isReviewable(a)`: persisted, `review.sourceType ===
 "model"`, and a known status. A model's row stored with no status — re-imported
 from JSONL, or a legacy smart-tracking mask — reads as `pending`, as the server
 reads it (`review_status_of`, `src/pixano/schemas/annotations/review.py`). A
-person's annotation and a draft are not reviewable.
+person's annotation and a draft are not reviewable; the Review tab lists them
+under the Human chip.
 
 **The pieces, split to keep the import graph acyclic.**
 
@@ -975,31 +981,39 @@ person's annotation and a draft are not reviewable.
   `deleteLocalAnnotation` (flow E: every delete, a Reject included), next to the
   other commit helpers.
 - `workspace/reviewController.svelte.ts` — `ReviewController`, the review of the
-  open record for a panel to show, `manager.review`: the rows (the annotations
+  open record the Review tab shows, `manager.review`: the rows (the annotations
   the chips let through, of the entities the Entities tab shows — each with its
-  kind, label, model, version, score, status, `canAccept`, `canReject` and
-  whether it is selected), the per-chip counts, the chips (`isHidden`, `toggle`,
-  `isShown`), the record-wide unsaved count (`unsavedCount`, read from the
-  navigator — the manager's own count), select, accept and reject, save and
+  kind, label, model, version, score, status, `canAccept` with why not
+  (`acceptRefusal`), `canReject` and whether it is selected), the per-chip
+  counts, the chips (`isHidden`, `toggle`, `isShown`), the record-wide unsaved
+  count (`unsavedCount`, read from the navigator — the manager's own count),
+  select, accept and reject, save and
   whether there is anything to save (`canSave`: a queued change), discard and
   whether there is anything to discard (`canDiscard`). Narrow injected deps —
   `{session, sink: MutationSink, navigator: {save, unsavedCount, hasUnsavedWork, discardChanges}}`
   — never the `WorkspaceManager`. It holds no review state of its own: statuses
-  live on the annotations, decisions on the queue, chips on the session. No
-  panel renders it yet.
+  live on the annotations, decisions on the queue, chips on the session.
+- `components/shell/ReviewPanel.svelte` — presentational: the Review tab of
+  `RightPanel`. The unsaved count with its own Discard (offered while anything is
+  unsaved, work a tool holds included) and Save (offered while a change is
+  queued, `review.canSave`: work a tool holds, or a draft whose entity is still
+  being chosen, is finished in its tool or form first), the chips with their
+  counts, one line per annotation with Accept and Reject. Every word it shows is
+  written there.
 
 **Reject deletes.** A model's annotation is rejected by deleting it, like any
 row: `deleteLocalAnnotation` is the single choke point every delete gesture goes
 through (flow E) — the Delete key, the image widget's trash button, the 3D HUD,
-the review controller's Reject —,
+the Review tab's Reject —,
 and the server prunes its entity when nothing else names it. The controls say
 so: on a model's annotation, whatever its status, they read "Reject", and their
 tooltip says that rejecting deletes (`deleteGestureFor`). No row is left to mark
 the rejection, so a later run of the model may propose it again — a consequence
 accepted with the rule. A Reject, like any delete, throws the row's unsaved work
-away — an edit, an entity a reassignment queued for it. A Reject takes the row off every canvas at once; before
-Save, only Discard brings it back, with the rest of the record's unsaved work,
-and nothing does after Save: there is no undo of one Reject.
+away — an edit, an entity a reassignment queued for it. A Reject takes the row
+off the list and every canvas at once; before Save, only Discard brings it back,
+with the rest of the record's unsaved work, and nothing does after Save: there
+is no undo of one Reject.
 
 **Decisions are mutations.** An Accept is an update queued on the
 `MutationQueue` and sent by Save, like any edit — one write path: the status
@@ -1007,14 +1021,14 @@ alone, or riding on the row's unsaved edit. The queue holds one pending update
 per row, so an Accept and an edit of one row ride in one update, whichever came
 first (flows C and G), and the update belongs to the gesture that last wrote its
 body: `upsertUpdate` takes the newer `widgetId` with it. A Reject is the row's
-delete (flow E), which drops the row's unsaved work. Decisions taken through the
-controller carry `REVIEW_PANEL_SOURCE_ID`. No counter reads that stamp: every
-widget toolbar and the controller give one number, the record's unsaved items
-(`manager.unsavedCount`, which the controller reads through its navigator), so a
-decision taken through it reads as unsaved on every canvas too. Discard throws
-the record's unsaved work away from wherever it is pressed
-(`manager.discardChanges`: it drops the work tools hold, puts each annotation
-back as stored, and reads the entities and the rows again).
+delete (flow E), which drops the row's unsaved work. Decisions taken from the
+tab carry `REVIEW_PANEL_SOURCE_ID`. No counter reads that stamp: every widget
+toolbar and the Review tab show one number, the record's unsaved items
+(`manager.unsavedCount`, which the tab reads through `review.unsavedCount`), so
+a decision taken in the tab reads as unsaved on every canvas too, and the
+toolbar's Discard and the tab's Discard both throw the record's unsaved work
+away (`manager.discardChanges`: it drops the work tools hold, puts each
+annotation back as stored, and reads the entities and the rows again).
 
 **Shown status and stored status.** `AnnotationReview.status` is what the screen
 shows; `storedStatus` is what the dataset holds, read with the row and moved
@@ -1025,11 +1039,13 @@ pending — `isAcceptUnsaved`), which an edit carries on, and is what Discard
 puts back. A row's `canAccept`
 comes from `canAccept` — a model's stored row shown pending — and its
 `canReject` from `deleteGestureFor` — a model's stored row, whatever its status.
+When Accept is refused on a model's row, the row says why as a code
+(`acceptRefusal`: `accepted`), which the Review tab only puts into words.
 
 **An edit stays in review until it is saved.** A content edit of a model's row —
 a drag, a resize, a reassignment, a box moved under the 3D HUD — leaves the row
 shown `pending`, and Accept offered: unsaved, it is the reviewer's work in
-progress. The workspace's Save — the toolbar's, or the controller's — sends it,
+progress. The workspace's Save — the toolbar's, or the Review tab's — sends it,
 the server stores the row `accepted`, keeping the model's provenance and score,
 and the row reads accepted as the write leaves (`recordWrite`, §5). Accept over
 the edit sends both in one update. An edit that puts the content back as stored
@@ -1042,6 +1058,13 @@ with the editor's own round trip of the stored one, each number within a
 float32 round trip — flow C's rule (`sameValue`); a moved box keeps its stored
 rotation unless it was turned, and `bbox3dPayloadBuilder` writes the box's own
 view and format, so a HUD Apply that changed nothing does not accept the box.
+
+**Accessible decisions.** Each Accept and Reject button is named after the
+annotation it decides on (`Accept car (bbox)`); a refused one keeps the native
+`disabled` and says why, in its tooltip and as its accessible description (an
+`sr-only` span it points to with `aria-describedby`): "Already accepted".
+Reject's tooltip says it deletes the annotation. The selected row carries
+`aria-current`, so the selection is not told by colour only.
 
 **The status chips are display-only.** `session.hiddenReviewStatuses` (default
 empty: nothing hidden) holds the chips switched off — `pending`,
@@ -1060,7 +1083,8 @@ no text to show, and rebuilds a label when its text or its colour changes —
 which also recolours a draft's label once it is saved. A person's annotation and
 a draft keep their saved and unsaved colours. Kinds drawn with those labels show
 the status on the canvas (bbox, mask, keypoints, multi-path); classification and
-bbox3d — in 3D and projected — show no status.
+bbox3d — in 3D and projected — show it in the Review tab only. The chips filter
+every kind.
 
 ---
 
@@ -1095,7 +1119,7 @@ ui/apps/web/src/lib/
 │  ├─ workspaceSession.svelte.ts           record-scoped shared state
 │  ├─ recordLoader.ts                       (dataset,record) → widgets + data
 │  ├─ mutationQueue.svelte.ts               pending writes + flush
-│  ├─ reviewController.svelte.ts            the review of the record: rows, chips,
+│  ├─ reviewController.svelte.ts            the Review tab's state: rows, chips,
 │  │                                         counts, Accept/Reject, Save/Discard
 │  ├─ datasetGateway.ts                     I/O seam (interface + http impl)
 │  ├─ unsavedWork.ts                        the one rule of the record's unsaved count
@@ -1126,6 +1150,7 @@ ui/apps/web/src/lib/
 │  └─ kinds/<2d|3d>/<kind>/                  per-kind: payloadBuilder, seedLoader,
 │                                            renderer, editor/tool (+ 3D: overlay/session/hud)
 └─ components/
+   ├─ shell/ReviewPanel.svelte                the Review tab (presentational)
    ├─ widgets/AnnotationToolbar.svelte        shared toolbar; sceneSeam.ts (buildSeam)
    ├─ widgets/image/ImageWidget.svelte        Konva host, builds Scene2DContext
    ├─ widgets/point-cloud/PointCloudWidget…   Threlte host; PointCloudScene, camera

@@ -131,19 +131,22 @@ describe("ReviewController — list, chips and counts", () => {
       confidence: 0.87,
       filterKey: REVIEW_STATUS.PENDING,
       canAccept: true,
+      acceptRefusal: null,
       canReject: true,
     });
     // An accepted row can still be rejected, which deletes it.
     expect(manager.review.rows[1]).toMatchObject({
       filterKey: REVIEW_STATUS.ACCEPTED,
       canAccept: false,
+      acceptRefusal: "accepted",
       canReject: true,
     });
-    // A person's row takes no decision.
+    // A person's row takes no decision, so none is refused either.
     expect(manager.review.rows[2]).toMatchObject({
       filterKey: HUMAN_REVIEW_FILTER,
       source: "",
       canAccept: false,
+      acceptRefusal: null,
       canReject: false,
     });
     expect(manager.review.counts).toEqual({ pending: 1, accepted: 1, human: 1 });
