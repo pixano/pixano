@@ -32,7 +32,11 @@ import {
 } from "./workspaceHarness.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
-import { commitNewAnnotation, reassignEntity } from "$lib/annotations/payloadBuilders.js";
+import {
+  commitDraftWithEntity,
+  commitNewAnnotation,
+  reassignEntity,
+} from "$lib/annotations/payloadBuilders.js";
 import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import { deleteAnnotation } from "$lib/api/annotations.js";
@@ -41,7 +45,12 @@ import { ApiError } from "$lib/api/apiClient.js";
 // What a save does with the work around it, run through the real workspace —
 // manager, mutation queue, record loader, commit helpers — over a recording
 // fake backend: work begun while a request is on the wire, the entities a save
-// creates, and when a read-back lands.
+// creates and the deletes that follow them, and when a read-back lands.
+
+/** The entity deletes the workspace sent — each one the server applies only if nothing names the entity. */
+function entityDeletesSent(backend: FakeBackend) {
+  return backend.writes.filter((w) => w.op === "delete" && w.resource === "entities");
+}
 
 /** A 5xx a proxy answers after the server stored the write: no refusal, so it may have been stored. */
 const GATEWAY_TIMEOUT = new ApiError("Gateway Timeout", 504, "");
@@ -71,6 +80,19 @@ async function refusalOfARealDelete(status: number): Promise<unknown> {
     vi.unstubAllGlobals();
   }
   throw new Error(`a delete answered ${status} did not fail`);
+}
+
+/** A box drawn and linked, in the entity form, to an entity the record lists. */
+function drawLinkedTo(seam: SeamContext, id: string, entityId: string): void {
+  seam.collection.add({
+    id,
+    entityId: "",
+    kind: "bbox",
+    viewId: viewIdOf(REC),
+    geometry: MOVED,
+    persisted: false,
+  });
+  commitDraftWithEntity(seam.collection.find(id)!, { mode: "existing", entityId }, seam);
 }
 
 /**
@@ -328,7 +350,7 @@ describe("Work begun while a save is on the wire", () => {
     drag(seam, draft.id);
     release();
 
-    await saving;
+    expect(await saving).toBe(false);
     await manager.flushSave();
     const updates = updatesSent(backend);
     expect(updates).toHaveLength(1);
@@ -364,12 +386,12 @@ describe("Work begun while a save is on the wire", () => {
     manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
     release();
 
-    await saving;
+    expect(await saving).toBe(false);
     await manager.flushSave();
     expect(backend.writes.at(-1)).toEqual({ op: "delete", resource: BBOX_RESOURCE, id: draft.id });
   });
 
-  it("a box deleted while its create is on the wire leaves nothing to send if the server refuses that create", async () => {
+  it("a box deleted while its create is on the wire leaves nothing behind if the server refuses that create", async () => {
     const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
     const serve = backend.onWrite!;
     // Refused for good, as an invalid body is: the server stored nothing.
@@ -382,26 +404,36 @@ describe("Work begun while a save is on the wire", () => {
     release();
     await saving;
 
-    // There is no row to create again, nor one to delete, nor a failure to report.
+    // There is no row to create again, nor one to delete, nor a failure to
+    // report — only the entity made for it, which nothing names any more.
     expect(manager.saveError).toBeNull();
-    expect(manager.pendingMutations).toEqual([]);
+    expect(manager.pendingMutations).toEqual([
+      expect.objectContaining({ op: "delete", resource: "entities", id: draft.entityId }),
+    ]);
+    expect(await manager.flushSave()).toBe(true);
     expect(backend.writes.filter((w) => w.resource === BBOX_RESOURCE)).toEqual([]);
+    expect(backend.entities).toEqual([]);
   });
 
-  it("a box deleted while its create is on the wire leaves no box behind if that create is lost on the way", async () => {
+  it("a box deleted while its create is on the wire leaves no box behind if that create is lost on the way, and lets its entity be", async () => {
     const { manager, backend, draft, saving, release } = await draftWithCreateOnTheWire();
 
     manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
     // Nothing reached the server: the create may as well have, so its undoing stays.
     backend.failWrites = new Error("network down");
     release();
-    await saving;
+    expect(await saving).toBe(false);
     expect(manager.saveError).toBe("network down");
     backend.failWrites = undefined;
 
-    await manager.flushSave();
+    expect(await manager.flushSave()).toBe(true);
     expect(manager.pendingCount).toBe(0);
     expect(backend.records[REC][BBOX_RESOURCE]).toEqual([]);
+    // A stored box would have taken its entity with it as its delete pruned
+    // it. None was, but no client can tell: the entity a stored row may name
+    // is no longer the queue's to delete, and is left behind.
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(backend.entities.map((entity) => entity.id)).toEqual([draft.entityId]);
   });
 
   it.each([
@@ -417,11 +449,11 @@ describe("Work begun while a save is on the wire", () => {
       // refusal: it says nothing of what was stored.
       backend.loseAnswers = lostAnswer;
       release();
-      await saving;
+      expect(await saving).toBe(false);
       backend.loseAnswers = undefined;
       expect(backend.records[REC][BBOX_RESOURCE].map((row) => row.id)).toEqual([draft.id]);
 
-      await manager.flushSave();
+      expect(await manager.flushSave()).toBe(true);
       expect(backend.records[REC][BBOX_RESOURCE]).toEqual([]);
       expect(backend.entities).toEqual([]);
       expect(manager.annotations.find(draft.id)).toBeUndefined();
@@ -545,7 +577,7 @@ describe("Work begun while a save is on the wire", () => {
     backend.holdWrites = undefined;
     held.resolve();
 
-    await saving;
+    expect(await saving).toBe(true);
     const order = backend.writes.map((w) => (w.op === "create" ? w.body.id : w.id));
     expect(order).toEqual(["x", entityId, "y"]);
     expect(backend.writes.at(-1)).toMatchObject({ body: { entity_id: entityId } });
@@ -556,21 +588,22 @@ describe("An entity created during a save, sent ahead of the write naming it", (
   const ENTITIES = [entityOf(REC, "ent-x"), entityOf(REC, "ent-y")];
 
   /**
-   * Boxes x and y, each with an edit queued, a save started with x's write on
-   * the wire; y is then moved onto a new entity, whose create the save sends
-   * ahead of y's write — and holds on the wire. The backend stores every write
-   * as the server does.
+   * Model boxes x and y, each with an edit queued, a save started with x's
+   * write on the wire; y is then moved onto a new entity, whose create the save
+   * sends ahead of y's write — and holds on the wire. The backend stores every
+   * write as the server does.
    */
-  async function entityCreateOnTheWire() {
+  async function entityCreateOnTheWire(opts: { yQueued?: "drag" | "accept" } = {}) {
     const opened = await openManager(
-      { [REC]: { [BBOX_RESOURCE]: [humanBox(REC, "x"), humanBox(REC, "y")] } },
+      { [REC]: { [BBOX_RESOURCE]: [modelBox(REC, "x"), modelBox(REC, "y")] } },
       { entities: ENTITIES.map((entity) => ({ ...entity })) },
     );
     const { manager, backend } = opened;
     const seam = widgetSeam(manager);
     serveLikeTheApi(backend, REC);
     drag(seam, "x");
-    drag(seam, "y");
+    if (opts.yQueued === "accept") manager.review.accept("y");
+    else drag(seam, "y");
     const xHeld = deferred();
     backend.holdWrites = xHeld.promise;
     const saving = manager.flushSave();
@@ -594,12 +627,102 @@ describe("An entity created during a save, sent ahead of the write naming it", (
 
   const yRow = (backend: FakeBackend) =>
     backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "y")!;
+  const rowIds = (backend: FakeBackend) => backend.records[REC][BBOX_RESOURCE].map((row) => row.id);
   const entityIds = (backend: FakeBackend) => backend.entities.map((entity) => entity.id);
   const yWrites = (backend: FakeBackend) =>
     backend.writes.filter((w) => w.op === "update" && w.id === "y");
 
+  it("a Reject meanwhile: y is deleted, the edit it threw away is never sent, and no entity nothing names is left", async () => {
+    const { manager, backend, saving, entityId, release } = await entityCreateOnTheWire();
+
+    expect(manager.review.reject("y")).toBe(true);
+    release();
+    await saving;
+    expect(yWrites(backend)).toEqual([]);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(yWrites(backend)).toEqual([]);
+    expect(backend.writes).toContainEqual({ op: "delete", resource: BBOX_RESOURCE, id: "y" });
+    expect(rowIds(backend)).toEqual(["x"]);
+    // The new entity, which nothing names, is gone; so is y's own, pruned with y.
+    expect(entityIds(backend)).toEqual(["ent-x"]);
+    expect(entityIds(backend)).not.toContain(entityId);
+    expect(manager.annotations.find("y")).toBeUndefined();
+  });
+
+  it("a Reject meanwhile, the server refusing the entity: nothing is left to undo or retry", async () => {
+    const { manager, backend, saving, release } = await entityCreateOnTheWire();
+    const serve = backend.onWrite!;
+    backend.onWrite = (write) => {
+      if (write.op === "create" && write.resource === "entities") throw refusal("Invalid data");
+      serve(write);
+    };
+
+    manager.review.reject("y");
+    release();
+    await saving;
+    expect(manager.saveError).toBeNull();
+    expect(await manager.flushSave()).toBe(true);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(backend.writes.filter((w) => w.resource === "entities")).toEqual([]);
+    expect(rowIds(backend)).toEqual(["x"]);
+    expect(entityIds(backend)).toEqual(["ent-x"]);
+    expect(manager.pendingCount).toBe(0);
+  });
+
+  it("a Reject meanwhile, the entity's create lost on the way: its delete stays, and is done", async () => {
+    const { manager, backend, saving, entityId, release } = await entityCreateOnTheWire();
+
+    manager.review.reject("y");
+    backend.loseAnswers = new Error("connection reset");
+    release();
+    expect(await saving).toBe(false);
+    backend.loseAnswers = undefined;
+    // The server stored it, though the answer never came: it may exist.
+    expect(entityIds(backend)).toContain(entityId);
+
+    expect(await manager.flushSave()).toBe(true);
+    expect(entityIds(backend)).not.toContain(entityId);
+    expect(rowIds(backend)).toEqual(["x"]);
+  });
+
+  it("a change of mind back to y's own entity: the move is never sent, the Accept is, and the new entity goes", async () => {
+    const { manager, backend, saving, entityId, release, seam } = await entityCreateOnTheWire({
+      yQueued: "accept",
+    });
+
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-y" }, seam);
+    release();
+    await saving;
+    await manager.flushSave();
+
+    // The move rode on y's Accept; taken back, it leaves the Accept alone.
+    expect(yWrites(backend)).toEqual([
+      { op: "update", resource: BBOX_RESOURCE, id: "y", body: { review_status: "accepted" } },
+    ]);
+    expect(yRow(backend)).toMatchObject({ entity_id: "ent-y", review_status: "accepted" });
+    expect(entityIds(backend)).toEqual(["ent-x", "ent-y"]);
+    expect(entityIds(backend)).not.toContain(entityId);
+  });
+
+  it("a change of mind to another entity: y's write names that one, and the new entity goes", async () => {
+    const { manager, backend, saving, entityId, release, seam } = await entityCreateOnTheWire();
+
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    release();
+    await saving;
+    expect(manager.saveError).toBeNull();
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(yWrites(backend).map((w) => w.op === "update" && w.body.entity_id)).toEqual(["ent-x"]);
+    expect(entityIds(backend)).not.toContain(entityId);
+    // y's old entity, which nothing names any more, the server pruned.
+    expect(entityIds(backend)).toEqual(["ent-x"]);
+  });
+
   it("a second new entity meanwhile: its create is sent before the write naming it", async () => {
-    const { manager, backend, saving, release, seam } = await entityCreateOnTheWire();
+    const { manager, backend, saving, entityId, release, seam } = await entityCreateOnTheWire();
 
     reassignEntity(
       manager.annotations.find("y")!,
@@ -613,9 +736,10 @@ describe("An entity created during a save, sent ahead of the write naming it", (
     // No write named an entity not created yet.
     expect(manager.saveError).toBeNull();
     expect(yWrites(backend).map((w) => w.op === "update" && w.body.entity_id)).toEqual([secondId]);
-    await manager.flushSave();
+    expect(await manager.flushSave()).toBe(true);
     expect(yRow(backend).entity_id).toBe(secondId);
     expect(entityIds(backend)).toContain(secondId);
+    expect(entityIds(backend)).not.toContain(entityId);
   });
 
   it("Discard meanwhile: the edit it threw away is never sent", async () => {
@@ -641,6 +765,388 @@ describe("An entity created during a save, sent ahead of the write naming it", (
 
     expect(manager.recordId).toBe("rec-2");
     expect(yWrites(backend)).toEqual([]);
+  });
+
+  /** How y's first write fails: refused, lost on the way (nothing stored), or its answer lost (stored). */
+  type Failure = "refused" | "lost on the way" | "answer lost";
+
+  /**
+   * Model boxes x and y; y moved onto a new entity, "cat", and saved: the
+   * entity is stored, then y's write fails, once, as `failure` says. The failed
+   * save reads the entities back, so the entity form lists "cat" since.
+   */
+  async function yMovedOntoCatFailing(failure: Failure) {
+    const opened = await openManager(
+      { [REC]: { [BBOX_RESOURCE]: [modelBox(REC, "x"), modelBox(REC, "y")] } },
+      { entities: ENTITIES.map((entity) => ({ ...entity })) },
+    );
+    const { manager, backend } = opened;
+    const seam = widgetSeam(manager);
+    serveLikeTheApi(backend, REC);
+    const serve = backend.onWrite!;
+    let failing = true;
+    backend.onWrite = (write) => {
+      if (!failing || write.op !== "update" || write.id !== "y") return serve(write);
+      failing = false;
+      if (failure === "refused") throw refusal("Invalid data");
+      if (failure === "lost on the way") throw new Error("network down");
+      serve(write);
+      throw new Error("connection reset");
+    };
+    reassignEntity(
+      manager.annotations.find("y")!,
+      { mode: "new", entityFields: { category: "cat" } },
+      seam,
+    );
+    const cat = manager.annotations.find("y")!.entityId;
+    expect(await manager.flushSave()).toBe(false);
+    expect(manager.entities.map((entity) => entity.id)).toContain(cat);
+    return { ...opened, seam, cat };
+  }
+
+  it("the entity created, y's write refused, then a change of mind: the entity goes", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(yRow(backend).entity_id).toBe("ent-x");
+    expect(entityIds(backend)).not.toContain(cat);
+  });
+
+  it("the entity created, y's write refused, a change of mind, then back to it: its delete is never sent", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+    const y = () => manager.annotations.find("y")!;
+
+    reassignEntity(y(), { mode: "existing", entityId: "ent-x" }, seam);
+    expect(manager.pendingMutations).toContainEqual(
+      expect.objectContaining({ op: "delete", resource: "entities", id: cat }),
+    );
+    reassignEntity(y(), { mode: "existing", entityId: cat }, seam);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(yRow(backend).entity_id).toBe(cat);
+    expect(entityIds(backend)).toContain(cat);
+  });
+
+  it("the entity created, y's write lost on the way, then a change of mind: the entity is let be, as a stored row may name it", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("lost on the way");
+
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(yRow(backend).entity_id).toBe("ent-x");
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(entityIds(backend)).toContain(cat);
+  });
+
+  it("y's write stored, its answer lost, then a Reject: y's delete takes the entity it names, and the queue deletes none", async () => {
+    const { manager, backend, cat } = await yMovedOntoCatFailing("answer lost");
+    expect(yRow(backend).entity_id).toBe(cat);
+
+    expect(manager.review.reject("y")).toBe(true);
+    expect(await manager.flushSave()).toBe(true);
+
+    // The entity a stored row may name is not the queue's to delete: the
+    // server prunes it with the row that named it.
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(rowIds(backend)).toEqual(["x"]);
+    expect(entityIds(backend)).toEqual(["ent-x"]);
+  });
+
+  it("y's write stored, its answer lost, then moved back to its own entity: nothing deletes the one it names", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("answer lost");
+
+    // As the screen knows it, y is back as stored: there is nothing to send.
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-y" }, seam);
+    expect(manager.pendingCount).toBe(0);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(yRow(backend).entity_id).toBe(cat);
+    expect(entityIds(backend)).toContain(cat);
+  });
+
+  it("a draft whose create was stored, its answer lost, then deleted: nothing deletes the entity its row names", async () => {
+    const { manager, backend, seam } = await openWithBoxes();
+    serveLikeTheApi(backend, REC);
+    const serve = backend.onWrite!;
+    backend.onWrite = (write) => {
+      serve(write);
+      if (write.op === "create" && write.resource === BBOX_RESOURCE) {
+        throw new Error("connection reset");
+      }
+    };
+    const draft = commitNewAnnotation(seam, "bbox", STORED);
+    expect(await manager.flushSave()).toBe(false);
+    backend.onWrite = serve;
+
+    manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(backend.records[REC][BBOX_RESOURCE].map((row) => row.entity_id)).toEqual([
+      draft.entityId,
+    ]);
+    expect(entityIds(backend)).toEqual([draft.entityId]);
+  });
+
+  it("a draft's create lost on the way, then refused: deleting the draft deletes its entity", async () => {
+    const { manager, backend, seam } = await openWithBoxes();
+    serveLikeTheApi(backend, REC);
+    const serve = backend.onWrite!;
+    const draftCreate = (write: { op: string; resource: string }) =>
+      write.op === "create" && write.resource === BBOX_RESOURCE;
+    backend.onWrite = (write) => {
+      if (draftCreate(write)) throw new Error("network down");
+      return serve(write);
+    };
+    const draft = commitNewAnnotation(seam, "bbox", STORED);
+    expect(await manager.flushSave()).toBe(false);
+    // Tried again, it is refused: the server stored nothing of it.
+    backend.onWrite = (write) => {
+      if (draftCreate(write)) throw refusal("Invalid data");
+      return serve(write);
+    };
+    expect(await manager.flushSave()).toBe(false);
+    backend.onWrite = serve;
+
+    manager.deleteAnnotation(manager.annotations.find(draft.id)!, "image-widget");
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([
+      { op: "delete", resource: "entities", id: draft.entityId },
+    ]);
+    expect(entityIds(backend)).not.toContain(draft.entityId);
+  });
+
+  it("a Reject meanwhile, then a box drawn on the entity the read-back lists: the entity stays", async () => {
+    const { manager, backend, saving, entityId, release, seam } = await entityCreateOnTheWire();
+
+    manager.review.reject("y");
+    release();
+    await saving;
+    expect(manager.entities.map((entity) => entity.id)).toContain(entityId);
+    drawLinkedTo(seam, "b", entityId);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "b")?.entity_id).toBe(
+      entityId,
+    );
+    expect(entityIds(backend)).toContain(entityId);
+  });
+
+  it("a draft refused, deleted, then drawn again on the entity the read-back lists: the entity stays", async () => {
+    const { manager, backend, seam } = await openWithBoxes();
+    serveLikeTheApi(backend, REC);
+    const serve = backend.onWrite!;
+    backend.onWrite = (write) => {
+      if (write.op === "create" && write.resource === BBOX_RESOURCE) throw refusal("Invalid data");
+      return serve(write);
+    };
+    const first = commitNewAnnotation(seam, "bbox", STORED);
+    expect(await manager.flushSave()).toBe(false);
+    backend.onWrite = serve;
+    expect(manager.entities.map((entity) => entity.id)).toContain(first.entityId);
+
+    manager.deleteAnnotation(manager.annotations.find(first.id)!, "image-widget");
+    drawLinkedTo(seam, "b2", first.entityId);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(backend.records[REC][BBOX_RESOURCE].map((row) => [row.id, row.entity_id])).toEqual([
+      ["b2", first.entityId],
+    ]);
+    expect(entityIds(backend)).toContain(first.entityId);
+  });
+
+  it("a box moved onto the entity while its delete is on the wire: the entity is created again first", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    // y's write lands; the entity's delete, sent last, is held on the wire.
+    const updateHeld = deferred();
+    backend.holdWrites = updateHeld.promise;
+    backend.log.length = 0;
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    const deleteHeld = deferred();
+    backend.holdWrites = deleteHeld.promise;
+    updateHeld.resolve();
+    await vi.waitFor(() => expect(backend.log).toContain("delete entities"));
+
+    // The form still lists "cat": x is moved onto it.
+    reassignEntity(manager.annotations.find("x")!, { mode: "existing", entityId: cat }, seam);
+    backend.holdWrites = undefined;
+    deleteHeld.resolve();
+    await saving;
+    // Nothing named it as the server deleted it.
+    expect(entityIds(backend)).not.toContain(cat);
+
+    expect(await manager.flushSave()).toBe(true);
+    expect(manager.saveError).toBeNull();
+    expect(backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "x")?.entity_id).toBe(cat);
+    expect(entityIds(backend)).toContain(cat);
+  });
+  it("the entity's create sent again refused: it is sent again before the next write naming it, whatever its first box does", async () => {
+    const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    const updateHeld = deferred();
+    backend.holdWrites = updateHeld.promise;
+    backend.log.length = 0;
+    const saving = manager.flushSave();
+    await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+    const deleteHeld = deferred();
+    backend.holdWrites = deleteHeld.promise;
+    updateHeld.resolve();
+    await vi.waitFor(() => expect(backend.log).toContain("delete entities"));
+    reassignEntity(manager.annotations.find("x")!, { mode: "existing", entityId: cat }, seam);
+    backend.holdWrites = undefined;
+    deleteHeld.resolve();
+    await saving;
+    // The entity's create, sent again before x's write, is refused once: the dataset is busy.
+    const serve = backend.onWrite!;
+    backend.onWrite = (write) => {
+      if (write.op !== "create" || write.resource !== "entities") return serve(write);
+      backend.onWrite = serve;
+      throw refusal("Dataset busy");
+    };
+    expect(await manager.flushSave()).toBe(false);
+
+    // y, which the entity was made for, moves on to another new entity.
+    reassignEntity(
+      manager.annotations.find("y")!,
+      { mode: "new", entityFields: { category: "dog" } },
+      seam,
+    );
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "x")?.entity_id).toBe(cat);
+    expect(entityIds(backend)).toContain(cat);
+  });
+
+  it.each([
+    ["refused", "refused"],
+    ["its answer lost", "answer lost"],
+  ] as const)(
+    "a box moved onto the entity while its delete is on the wire, the delete %s: no delete of it is sent again",
+    async (_outcome, outcome) => {
+      const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+      reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+      const serve = backend.onWrite!;
+      backend.onWrite = (write) => {
+        if (write.op !== "delete" || write.resource !== "entities") return serve(write);
+        backend.onWrite = serve;
+        if (outcome === "refused") throw refusal("Dataset busy");
+        serve(write);
+        throw new Error("connection reset");
+      };
+      const updateHeld = deferred();
+      backend.holdWrites = updateHeld.promise;
+      backend.log.length = 0;
+      const saving = manager.flushSave();
+      await vi.waitFor(() => expect(backend.log).toContain(`update ${BBOX_RESOURCE}`));
+      const deleteHeld = deferred();
+      backend.holdWrites = deleteHeld.promise;
+      updateHeld.resolve();
+      await vi.waitFor(() => expect(backend.log).toContain("delete entities"));
+
+      reassignEntity(manager.annotations.find("x")!, { mode: "existing", entityId: cat }, seam);
+      backend.holdWrites = undefined;
+      deleteHeld.resolve();
+      expect(await saving).toBe(false);
+      const deletesBefore = entityDeletesSent(backend).length;
+
+      expect(await manager.flushSave()).toBe(true);
+      expect(entityDeletesSent(backend)).toHaveLength(deletesBefore);
+      expect(backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "x")?.entity_id).toBe(
+        cat,
+      );
+      expect(entityIds(backend)).toContain(cat);
+    },
+  );
+
+  it.each([
+    [
+      "a dynamic state",
+      (backend: FakeBackend, cat: string) =>
+        backend.entityDynamicStates.push({ id: "state-1", entity_id: cat }),
+    ],
+    [
+      "a child entity",
+      (backend: FakeBackend, cat: string) =>
+        backend.entities.push(entityOf(REC, "part-1", { parent_id: cat })),
+    ],
+    [
+      "a row of another record",
+      (backend: FakeBackend, cat: string) => {
+        backend.records["rec-2"] = {
+          [BBOX_RESOURCE]: [modelBox("rec-2", "w", "pending", { entity_id: cat })],
+        };
+      },
+    ],
+  ])(
+    "an entity %s names, which the record does not show: its delete leaves it, and nothing creates it again",
+    async (_namer, nameIt) => {
+      const { manager, backend, seam, cat } = await yMovedOntoCatFailing("refused");
+      nameIt(backend, cat);
+
+      reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+      expect(await manager.flushSave()).toBe(true);
+      expect(entityDeletesSent(backend)).toEqual([{ op: "delete", resource: "entities", id: cat }]);
+      expect(entityIds(backend)).toContain(cat);
+
+      // Still listed, it is picked for x: it exists, and is sent no create.
+      backend.writes.length = 0;
+      reassignEntity(manager.annotations.find("x")!, { mode: "existing", entityId: cat }, seam);
+      expect(await manager.flushSave()).toBe(true);
+      expect(backend.writes.map((w) => `${w.op} ${w.resource}`)).toEqual([
+        `update ${BBOX_RESOURCE}`,
+      ]);
+    },
+  );
+});
+
+describe("An entity this session created, once a stored row names it", () => {
+  const entityIdsOf = (backend: FakeBackend) => backend.entities.map((entity) => entity.id);
+
+  it("a box drawn and saved, then another edit saved: its entity is not the queue's to delete", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    serveLikeTheApi(backend, REC);
+    const draft = commitNewAnnotation(seam, "bbox", STORED);
+    expect(await manager.flushSave()).toBe(true);
+
+    drag(seam, "b1");
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(entityIdsOf(backend)).toContain(draft.entityId);
+  });
+
+  it("one entity named by two saved boxes, one moved away: no delete of it is sent", async () => {
+    const { manager, backend } = await openManager(
+      { [REC]: { [BBOX_RESOURCE]: [modelBox(REC, "y"), modelBox(REC, "z")] } },
+      { entities: [entityOf(REC, "ent-x"), entityOf(REC, "ent-y"), entityOf(REC, "ent-z")] },
+    );
+    const seam = widgetSeam(manager);
+    serveLikeTheApi(backend, REC);
+    reassignEntity(
+      manager.annotations.find("y")!,
+      { mode: "new", entityFields: { category: "cat" } },
+      seam,
+    );
+    const cat = manager.annotations.find("y")!.entityId;
+    expect(await manager.flushSave()).toBe(true);
+    reassignEntity(manager.annotations.find("z")!, { mode: "existing", entityId: cat }, seam);
+    expect(await manager.flushSave()).toBe(true);
+
+    reassignEntity(manager.annotations.find("y")!, { mode: "existing", entityId: "ent-x" }, seam);
+    expect(await manager.flushSave()).toBe(true);
+
+    expect(entityDeletesSent(backend)).toEqual([]);
+    expect(backend.records[REC][BBOX_RESOURCE].find((row) => row.id === "z")?.entity_id).toBe(cat);
+    expect(entityIdsOf(backend)).toContain(cat);
   });
 });
 

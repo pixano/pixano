@@ -8,6 +8,7 @@ import type { MutationGateway } from "./datasetGateway.js";
 import type { WorkspaceSession } from "./workspaceSession.svelte.js";
 import { sortMutations } from "$lib/annotations/buildPayloads.js";
 import type { ResourceMutation } from "$lib/annotations/types.js";
+import type { EntityDeleteAnswer } from "$lib/api/annotations.js";
 import { ApiError, isRefusal } from "$lib/api/apiClient.js";
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 
@@ -76,13 +77,45 @@ export class MutationQueue {
   private generation = 0;
 
   /**
-   * The creates on the wire that nothing wants any more — a draft deleted — each
-   * with the delete queued to undo what it makes once it lands. Should the
-   * server refuse the create, it made nothing: that delete is dropped. Should it
-   * fail any other way, it may have made it: the delete stays queued, and the
-   * create is not tried again.
+   * The creates on the wire that nothing wants any more — a draft deleted, an
+   * entity nothing names now — each with the delete queued to undo what it
+   * makes once it lands. Should the server refuse the create, it made nothing:
+   * that delete is dropped. Should it fail any other way, it may have made it:
+   * the delete stays queued, and the create is not tried again.
    */
   private abandoned = new Map<ResourceMutation, ResourceMutation>();
+
+  /**
+   * The entities this queue's creates may have made — sent, and not refused —
+   * that no write the server may have stored names yet, by id, each with its
+   * create. Changing one's mind about an entity must not leave it in the
+   * dataset: one that nothing queued names any more has a delete queued
+   * (`settleSentEntities`), which the server applies only if nothing names it
+   * (`MutationGateway.deleteEntity`). Once a write naming it lands, or fails in
+   * a way that may have stored it, a row may name it: it is no longer this
+   * queue's to delete, and the server prunes it when that row lets go of it.
+   */
+  private sentEntities = new Map<string, EntityCreate>();
+
+  /**
+   * The entities this queue's deletes may have removed — answered deleted, or
+   * failed in a way that may have deleted them — by id, each with its create.
+   * A write may name one again: one queued while its delete was on the wire,
+   * or one picked from a list read before. That write sends the create first
+   * (`sendIfStillQueued`), which the server takes as a retry should the entity
+   * still be there. The entity stays here until that create lands: one that
+   * fails is not queued — no gesture's to drop — but sent again before the
+   * next write naming the entity.
+   */
+  private deletedEntities = new Map<string, EntityCreate>();
+
+  /**
+   * The creates that failed in a way that may have stored them, each with the
+   * create of the entity it names, which the queue let go of then (`failed`).
+   * Should the server refuse one later, that entity is the queue's to delete
+   * again (`storedNothing`).
+   */
+  private uncertainCreates = new Map<ResourceMutation, EntityCreate>();
 
   constructor(
     private gateway: MutationGateway,
@@ -95,6 +128,9 @@ export class MutationQueue {
    * `sortMutations` — within a resource the original order is preserved. */
   queue(mutation: ResourceMutation): void {
     this.append(mutation);
+    // It may name an entity whose delete is queued, as a draft linked to an
+    // entity picked from the list does: that delete is dropped.
+    this.settleSentEntities();
   }
 
   /** Whether any write of this annotation is queued or on the wire. */
@@ -128,6 +164,8 @@ export class MutationQueue {
     } else {
       this.append(mutation);
     }
+    // The body replaced may have named an entity this one does not.
+    this.settleSentEntities();
   }
 
   /**
@@ -188,7 +226,8 @@ export class MutationQueue {
    * behind: `upsertUpdate` replaces the annotation's update so only the last
    * choice is referenced, but the creates piled up, and the abandoned one was
    * written to the dataset with nothing pointing at it. Correcting a mistake
-   * should not litter.
+   * should not litter. An entity whose create has already left has a delete
+   * queued instead, once nothing names it (`settleSentEntities`).
    */
   dropPendingEntityCreate(localAnnotationId: string): void {
     this.pending = this.pending.filter(
@@ -199,6 +238,7 @@ export class MutationQueue {
           m.localAnnotationId === localAnnotationId
         ),
     );
+    this.settleSentEntities();
   }
 
   /**
@@ -215,6 +255,15 @@ export class MutationQueue {
    * failed without a refusal is back in the queue, and dropped here as any
    * queued create: it may have stored its row before its answer was lost, and
    * that row stays in the dataset.
+   *
+   * An entity made for the annotation, sent and named by nothing any more: it
+   * has a delete queued (`settleSentEntities`). So dropping a draft does not,
+   * as a rule, leave the entity made for it in the dataset — nor does an edit
+   * thrown away leave the entity it had moved the annotation onto. The
+   * exception is an entity named by a write that failed without the server
+   * refusing it: that write may have been stored, and the entity is left where
+   * it is (`failed`). A reset of the queue (Discard, another record) before
+   * these deletes are sent drops them with the rest of the unsaved work.
    */
   dropForLocalAnnotation(localAnnotationId: string): ResourceMutation[] {
     const dropped: ResourceMutation[] = [];
@@ -241,6 +290,7 @@ export class MutationQueue {
       });
       this.abandoned.set(sending, compensation);
     }
+    this.settleSentEntities();
     return dropped;
   }
 
@@ -249,6 +299,9 @@ export class MutationQueue {
     this.pending = [];
     this.saveError = null;
     this.abandoned.clear();
+    this.sentEntities.clear();
+    this.deletedEntities.clear();
+    this.uncertainCreates.clear();
     this.generation++;
   }
 
@@ -263,7 +316,8 @@ export class MutationQueue {
    * still rewrite a queued body this save is about to send — moving that
    * annotation onto an entity created for it, whose create was queued after the
    * save began. That create is sent first, so no write names an entity that
-   * does not exist yet.
+   * does not exist yet. The deletes of entities nothing names any more are the
+   * last it sends (`sortMutations`): every write naming one is sent before.
    */
   async flush(): Promise<void> {
     if (this.saving) return;
@@ -301,7 +355,10 @@ export class MutationQueue {
   /**
    * Send one write of a flush, if it is still queued — preceded by the create
    * of the entity it names when that create is queued too: one queued after
-   * the flush began, by the gesture that moved the annotation onto it.
+   * the flush began, by the gesture that moved the annotation onto it. Or when
+   * this queue's delete may have removed that entity (`deletedEntities`): the
+   * write was queued while the delete was on the wire, or names the entity
+   * from a list read before it.
    *
    * Every request is awaited, and a gesture made meanwhile may drop the write
    * (a change of mind, a draft deleted), rewrite it to name another new entity,
@@ -323,11 +380,19 @@ export class MutationQueue {
     await this.send(datasetId, mutation, generation);
   }
 
-  /** The queued create of the entity this write names, which must be sent first. */
+  /**
+   * The create of the entity this write names, when it must be sent first: one
+   * queued, or — for an entity this queue's delete may have removed — a copy of
+   * the create that made it.
+   */
   private entityCreateToSendBefore(mutation: ResourceMutation): ResourceMutation | undefined {
     const entityId = entityNamedBy(mutation);
     if (entityId === undefined) return undefined;
-    return this.pending.find((m) => createdEntityId(m) === entityId);
+    const queued = this.pending.find((m) => createdEntityId(m) === entityId);
+    if (queued) return queued;
+    const deleted = this.deletedEntities.get(entityId);
+    // A copy: the create sent before is known by identity (`abandoned`).
+    return deleted && { ...deleted, body: { ...deleted.body } };
   }
 
   /** Append to the queue, telling the locator; returns the mutation as the queue holds it. */
@@ -354,9 +419,14 @@ export class MutationQueue {
   ): Promise<void> {
     this.pending = this.pending.filter((m) => m !== mutation);
     this.inFlight = mutation;
+    const entityId = createdEntityId(mutation);
+    if (mutation.op === "create" && entityId !== undefined) {
+      this.sentEntities.set(entityId, mutation);
+    }
     const undoRecord = this.locator.recordWrite?.(mutation);
+    let answer: EntityDeleteAnswer | void;
     try {
-      await this.run(datasetId, mutation);
+      answer = await this.run(datasetId, mutation);
     } catch (err) {
       this.inFlight = null;
       undoRecord?.();
@@ -365,12 +435,28 @@ export class MutationQueue {
     }
     this.inFlight = null;
     this.writesLanded++;
-    this.landed(mutation);
+    this.landed(mutation, answer);
   }
 
-  /** What a write that landed leaves to do. */
-  private landed(mutation: ResourceMutation): void {
+  /**
+   * What a write that landed leaves to do.
+   *
+   * @param mutation The write.
+   * @param answer The server's answer to an entity delete; nothing for any
+   *   other write.
+   */
+  private landed(mutation: ResourceMutation, answer: EntityDeleteAnswer | void): void {
     this.abandoned.delete(mutation);
+    this.uncertainCreates.delete(mutation);
+    const created = createdEntityId(mutation);
+    if (created !== undefined) this.deletedEntities.delete(created);
+    // A stored row names this entity now: the server prunes it when that row
+    // lets go of it. It is no longer this queue's to delete.
+    const named = entityNamedBy(mutation);
+    if (named !== undefined) this.sentEntities.delete(named);
+    if (isEntityDelete(mutation)) {
+      this.entityDeleteAnswered(mutation.id, answer ? answer.deleted : true);
+    }
     if (
       mutation.op === "create" &&
       mutation.resource !== ENTITY_RESOURCE &&
@@ -382,41 +468,163 @@ export class MutationQueue {
   }
 
   /**
+   * What an entity delete answered leaves to do. Gone, the entity may be named
+   * again — by a write queued while the delete was on the wire — and that
+   * write then sends its create first. Kept, something stored names it. Either
+   * way it is no longer this queue's to delete.
+   */
+  private entityDeleteAnswered(entityId: string, gone: boolean): void {
+    const create = this.sentEntities.get(entityId);
+    this.sentEntities.delete(entityId);
+    if (gone && create) this.deletedEntities.set(entityId, create);
+    else this.deletedEntities.delete(entityId);
+  }
+
+  /**
    * What a write that failed leaves to do; throws its error, unless nothing is
    * left of it to report.
    *
    * A refusal — a 4xx (`isRefusal`) — says the server stored nothing. Any other
    * failure says nothing of the kind: it may have stored the write before the
-   * answer was lost, so it counts as landed for the reads begun before it.
+   * answer was lost. So it counts as landed for the reads begun before it, and
+   * a row may name the entity the write names: that entity is no longer this
+   * queue's to delete, whatever becomes of the write. An entity delete that
+   * failed so may have deleted the entity.
    *
    * A create nothing wants any more (`abandoned`) is not tried again. Refused,
    * it made nothing: the delete queued to undo it is dropped, and there is no
    * failure to report. Otherwise that delete stays queued — answered "not
-   * found" if nothing was made — and the failure is reported.
+   * found" if nothing was made — and the failure is reported. A create that
+   * failed no longer names its entity: one made for it nothing else names has
+   * a delete queued (`settleSentEntities`) — unless it may have been stored.
    *
    * Any other write comes back at the head of the queue, unless the queue was
-   * reset meanwhile.
+   * reset meanwhile, or it creates again an entity this queue's delete may
+   * have removed (`deletedEntities`): that one is sent again before the next
+   * write naming the entity.
    */
   private failed(mutation: ResourceMutation, err: unknown, generation: number): void {
     const refused = isRefusal(err);
-    if (!refused) this.writesLanded++;
+    if (refused) this.storedNothing(mutation);
+    else this.mayHaveStored(mutation);
     const compensation = this.abandoned.get(mutation);
     if (compensation !== undefined) {
       this.abandoned.delete(mutation);
-      if (!refused) throw err;
-      this.pending = this.pending.filter((m) => m !== compensation);
-      return;
+      if (refused) this.pending = this.pending.filter((m) => m !== compensation);
+      this.settleSentEntities();
+      if (refused) return;
+      throw err;
     }
-    if (generation === this.generation) this.pending = [mutation, ...this.pending];
+    if (generation === this.generation && !this.isRecreation(mutation)) {
+      this.pending = [mutation, ...this.pending];
+    }
+    // An entity delete back in the queue may meet a write that names the
+    // entity again: that delete is dropped.
+    this.settleSentEntities();
     throw err;
   }
 
-  private async run(datasetId: string, mutation: ResourceMutation): Promise<void> {
+  /**
+   * Whether this write creates again an entity this queue's delete may have
+   * removed — sent from `deletedEntities`, where it stays until it lands.
+   */
+  private isRecreation(mutation: ResourceMutation): boolean {
+    const entityId = createdEntityId(mutation);
+    return entityId !== undefined && this.deletedEntities.has(entityId);
+  }
+
+  /**
+   * A write the server refused stored nothing; an entity create made nothing.
+   * A create the server refuses after it failed in a way that may have stored
+   * it gives the entity it names back to the queue (`uncertainCreates`): a
+   * change of mind then deletes it, as for any create. Its first try may still
+   * have stored a row — a refusal of the retry, such as a busy dataset's 409,
+   * does not say — but the delete is one the server applies only if nothing
+   * names the entity, so such a row keeps it.
+   */
+  private storedNothing(mutation: ResourceMutation): void {
+    const entityId = createdEntityId(mutation);
+    if (entityId !== undefined) this.sentEntities.delete(entityId);
+    const entityCreate = this.uncertainCreates.get(mutation);
+    if (entityCreate === undefined) return;
+    this.uncertainCreates.delete(mutation);
+    const named = createdEntityId(entityCreate);
+    if (named !== undefined && !this.sentEntities.has(named)) {
+      this.sentEntities.set(named, entityCreate);
+    }
+  }
+
+  /**
+   * A write that failed without a refusal may have been stored: it counts as
+   * landed for the reads begun before it (`writesLanded`). The entity it names
+   * may be named by its row now, so the queue lets go of it — a create keeps it
+   * in `uncertainCreates` until the server says more. An entity delete may
+   * have removed its entity (`deletedEntities`).
+   */
+  private mayHaveStored(mutation: ResourceMutation): void {
+    this.writesLanded++;
+    const named = entityNamedBy(mutation);
+    const entityCreate = named === undefined ? undefined : this.sentEntities.get(named);
+    if (named !== undefined && entityCreate !== undefined) {
+      this.sentEntities.delete(named);
+      if (mutation.op === "create") this.uncertainCreates.set(mutation, entityCreate);
+    }
+    if (isEntityDelete(mutation)) {
+      const deletedCreate = this.sentEntities.get(mutation.id);
+      if (deletedCreate !== undefined) this.deletedEntities.set(mutation.id, deletedCreate);
+    }
+  }
+
+  /**
+   * Undo, or stop undoing, each entity this queue's creates may have made that
+   * no stored row may name yet (`sentEntities`), by what is queued now. One
+   * that nothing queued or on the wire names any more — a reassignment changed
+   * its mind, a delete threw the edit away, a draft was deleted, its create
+   * failed — has a delete queued, which the server applies only if nothing
+   * names the entity; should its create be on the wire, that create is
+   * abandoned. One named again before that delete left has the delete dropped.
+   * One named again while it is on the wire waits for its answer
+   * (`entityDeleteAnswered`).
+   */
+  private settleSentEntities(): void {
+    const deletes = (m: ResourceMutation | null, entityId: string) =>
+      m !== null && isEntityDelete(m) && m.id === entityId;
+    for (const [entityId, create] of this.sentEntities) {
+      const queuedDelete = this.pending.find((m) => deletes(m, entityId));
+      const named = this.namesEntity(entityId);
+      if (named && queuedDelete) {
+        this.pending = this.pending.filter((m) => m !== queuedDelete);
+        if (this.abandoned.get(create) === queuedDelete) this.abandoned.delete(create);
+        continue;
+      }
+      if (named || queuedDelete || deletes(this.inFlight, entityId)) continue;
+      const compensation = this.append({
+        op: "delete",
+        resource: ENTITY_RESOURCE,
+        id: entityId,
+        widgetId: create.widgetId,
+        localAnnotationId: create.localAnnotationId,
+      });
+      if (this.inFlight === create) this.abandoned.set(create, compensation);
+    }
+  }
+
+  /** Whether a write queued or on the wire names this entity. */
+  private namesEntity(entityId: string): boolean {
+    const names = (m: ResourceMutation) => entityNamedBy(m) === entityId;
+    return (this.inFlight !== null && names(this.inFlight)) || this.pending.some(names);
+  }
+
+  /** Send one write; resolves the server's answer to an entity delete. */
+  private async run(
+    datasetId: string,
+    mutation: ResourceMutation,
+  ): Promise<EntityDeleteAnswer | void> {
     if (mutation.resource === ENTITY_RESOURCE) {
       if (mutation.op === "create") {
         await this.gateway.createEntity(datasetId, mutation.body);
       } else if (mutation.op === "delete") {
-        await this.gateway.deleteEntity(datasetId, mutation.id);
+        return this.gateway.deleteEntity(datasetId, mutation.id);
       }
       return;
     }
@@ -436,6 +644,9 @@ export class MutationQueue {
  */
 const ENTITY_REFERENCE_FIELD = "entity_id";
 
+/** A write creating an entity — what this queue keeps of each entity it made. */
+type EntityCreate = Extract<ResourceMutation, { op: "create" }>;
+
 /** The id of the entity this write creates, if it creates one. */
 function createdEntityId(mutation: ResourceMutation): string | undefined {
   if (mutation.op !== "create" || mutation.resource !== ENTITY_RESOURCE) return undefined;
@@ -451,6 +662,12 @@ function entityNamedBy(mutation: ResourceMutation): string | undefined {
   if (mutation.op === "delete" || mutation.resource === ENTITY_RESOURCE) return undefined;
   const id = mutation.body[ENTITY_REFERENCE_FIELD];
   return typeof id === "string" ? id : undefined;
+}
+
+function isEntityDelete(
+  mutation: ResourceMutation,
+): mutation is Extract<ResourceMutation, { op: "delete" }> {
+  return mutation.op === "delete" && mutation.resource === ENTITY_RESOURCE;
 }
 
 /**

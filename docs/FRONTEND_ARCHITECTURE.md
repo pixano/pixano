@@ -120,7 +120,8 @@ Three ideas hold it together:
     dataset write lock, so no write naming the entity lands between them: one
     arriving meanwhile is refused as a busy dataset's 409. Without the
     parameter, an entity's `DELETE` is unchanged: deleted whatever names it,
-    answered 204.
+    answered 204. The web interface makes no other entity delete (§4,
+    `MutationQueue`).
   - **review rules** on every entity annotation's update and create
     (`api/review.py`): a person's saved edit of a model's row accepts it and
     keeps the model's provenance and score (each schema declares its own score
@@ -142,7 +143,7 @@ Three ideas hold it together:
 | `listAnnotations<TRow>` | `api/annotations.ts` | `GET …/{resource}?record_id=` | **kind-generic** — the caller passes the `resource` its payload builder owns, so a new kind adds no method here |
 | `loadImageByLogicalName` / `loadPointCloudByLogicalName` | `api/workspace.ts` | `GET …/{view}` | media + calibration |
 | `createEntity` | `api/annotations.ts` | `POST …/entities` | |
-| `deleteEntity` | `api/annotations.ts` | `DELETE …/entities/{id}` | a 404 counts as done, any other failure throws an `ApiError` with its status |
+| `deleteEntity` | `api/annotations.ts` | `DELETE …/entities/{id}?only_if_unnamed=true` | the only entity delete the client makes; resolves `{deleted}`, a 404 read as deleted; any other failure throws an `ApiError` with its status |
 | `createAnnotation` | `api/annotations.ts` | `POST …/{resource}` | kind-generic (resource = table) |
 | `updateAnnotation` | `api/annotations.ts` | `PUT …/{resource}/{id}?prune_orphan_entity=true` | geometry / entity reassign |
 | `deleteAnnotation` | `api/annotations.ts` | `DELETE …/{resource}/{id}?prune_orphan_entity=true` | also a model's annotation's Reject (§8); a 404 counts as done, any other failure throws an `ApiError` with its status |
@@ -168,7 +169,9 @@ The writes (`MutationGateway`, the half the queue sees) keep one contract on
 failure: a write the server refused — a 4xx — rejects with an `ApiError`
 carrying that status (`isRefusal`, `api/apiClient.ts`), a delete as any other,
 and stored nothing; any other failure — a network error, a lost answer, a 5xx —
-may come after the write was stored.
+may come after the write was stored. `deleteEntity` is the conditional delete
+(§2) and resolves whether the entity is gone; resolving nothing reads as gone,
+the safe side: a write naming the entity then sends its create first.
 
 ---
 
@@ -381,6 +384,55 @@ which would drop that work unsent once the request returned:
   delete costs nothing when the row was never made. Only a reset of the queue
   (Discard, another record) before that delete is sent leaves the row there.
 
+**An entity created and no longer named is deleted — unless a stored row may
+name it.** The browser sees one record, and never every row that may name an
+entity: a row of another record, a child entity, a write whose answer was lost.
+So the queue never deletes an entity outright: it asks the server, which sees
+them all, to delete it if nothing names it. It keeps the
+entities its creates may have made (`sentEntities`): each entity create that
+left and was not refused, until a write naming it may have been stored — it
+lands (the server prunes the entity from then on, when that row lets go of it),
+or it fails without a refusal — or until the entity is deleted. After every
+gesture that writes, drops or rewrites queued bodies (`queue`, `upsertUpdate`,
+`dropForLocalAnnotation`, `dropPendingEntityCreate`) and after every failed
+write, `settleSentEntities` looks at each: one that no write queued or on the
+wire names any more — a reassignment changed its mind, a delete threw the
+edit away, a draft was deleted, even after the server refused the write naming
+it, which stored nothing — gets a delete queued, its create abandoned if it is
+still on the wire; one named again before that delete left, by whatever path —
+a draft linked to it from the list (`queue`), an edit, a reassignment — has the
+delete dropped. Every such delete
+is the conditional one (`deleteEntity`, `?only_if_unnamed=true`, §2), sorted
+last in the flush that sends it.
+
+A write naming an entity whose delete is on the wire waits for the answer: it
+was queued after that flush began, and goes with the next one. Answered
+deleted — a 404 included — or failed without a refusal, which may have deleted
+it, the entity is kept as maybe gone (`deletedEntities`), and the next write
+naming it sends a copy of its create first (`sendIfStillQueued`), which the
+server takes as a retry should the entity still be there. The entity stays
+maybe gone until that create lands: a create that fails is not queued — no
+gesture's to drop — but sent again before the next write naming it. Answered
+`deleted: false`, something stored names the entity, and it is no longer the
+queue's.
+
+A write that failed without the server refusing it — a network error, a lost
+answer, a 5xx — may have been stored (`mayHaveStored`): the entity it names
+leaves the queue's hands, and no delete of it is ever made, conditional or
+not. Only a create keeps a way back (`uncertainCreates`): should the server
+refuse it when it is sent again, the entity it names is the queue's to delete
+again (`storedNothing`) — conditionally, so a row its first try may have
+stored keeps it.
+
+Accepted, as the price of never deleting what a row names, an entity can be
+left with nothing naming it: one named by a write lost on the way and then
+thrown away — a draft deleted after its create's answer was lost, a
+reassignment lost, then changed. `reset()` forgets them all, so a Discard also
+leaves in the dataset an entity whose create had left and that nothing names
+once the queue is emptied: keeping its delete queued would show one unsaved
+item right after Discard. `docs/OPEN_QUESTIONS.md` records the ways this limit
+could be lifted.
+
 A failed request goes back to the head of the queue, and `upsertUpdate`
 replacing the last queued update keeps the gestures in their order behind it:
 an edit made after a failed save is the one sent last.
@@ -390,7 +442,8 @@ flight then neither comes back into the new queue nor reports its error there.
 `flush()`:
 1. `sortMutations(pending)` by **`mutationPriority`**: `entityCreate(0) <
    annotationCreate(1) < annotationDelete(2) < entityDelete(3)` — entities are
-   created before the annotations that reference them, and deleted after them.
+   created before the annotations that reference them, and deleted after them:
+   an entity delete, always the conditional one, is the last thing a flush sends.
 2. POST/PUT/DELETE each via the gateway, through `sendIfStillQueued`. Every
    request is awaited, and a gesture made meanwhile may drop a write this flush
    is about to send (a draft deleted, a change of mind), rewrite it to name a
@@ -399,7 +452,9 @@ flight then neither comes back into the new queue nor reports its error there.
    await: one no longer queued, or whose queue was reset, is not sent; one
    naming an entity whose create is still queued — by its `entity_id` as it
    reads now — waits for that create to be sent, and is looked at again, until
-   no such create is left. No write names an entity that does not exist yet,
+   no such create is left; one naming an entity this queue's delete may have
+   removed (`deletedEntities`) is preceded the same way by a copy of that
+   entity's create. No write names an entity that does not exist yet,
    and none dropped while the flush ran is sent. As each request leaves, the
    locator's `recordWrite(mutation)` records what the dataset will hold once it
    lands (§5, `AnnotationCollection.recordWrite`): the content the body carried
@@ -420,7 +475,10 @@ queue (§4, `MutationQueue`). A write dropped while a save runs — a draft
 deleted, a change of mind, Discard, another record — is never sent, since each
 write is looked at again after every await of the flush; a write a gesture
 moved onto a new entity during a save waits for that entity's create, sent
-first, whenever it was queued. A read-back never lands on another record, nor
+first, whenever it was queued. An entity the queue created and nothing names any
+more is deleted only if no stored row names it — the server checks, under the
+delete's own write lock (`?only_if_unnamed=true`) — and one named by a write
+that may have been stored is never deleted (§4). A read-back never lands on another record, nor
 over newer rows: `flushSave` checks the open record before and after it, rows
 read before a write that landed since are dropped — `writesLanded`, which a
 refused write leaves as it is, so a failed later save that stored nothing calls
@@ -709,15 +767,21 @@ flushSave()                                    // resolves: nothing left unsaved
        sort: entityCreate < annCreate < annDelete < entityDelete
        for each, sendIfStillQueued — looked at again after every await:
             dropped meanwhile, or the queue reset? → not sent
-            names an entity whose create is still queued?
-                 → send that create first, then look again
+            names an entity whose create is still queued, or that a delete of
+            this queue may have removed? → send that create first, then look
+                                           again
             out of pending, inFlight; recordWrite; gateway.create/update/delete…
-       on success: writesLanded++; annotation create → persisted = true
+       on success: writesLanded++; annotation create → persisted = true;
+                   entity delete answered deleted → its create kept, sent
+                   again before the next write naming it
        on failure: undo recordWrite
             refused (4xx)? → stored nothing
-            otherwise      → writesLanded++: it may have been stored
+            otherwise      → writesLanded++; may have been stored: the entity
+                             it names is let go, never deleted by the queue
             abandoned create? → not retried; its delete dropped on a 4xx,
-                                kept otherwise
+                                kept otherwise; an entity made for it that
+                                nothing names now → delete queued
+                                (?only_if_unnamed=true)
             any other write → back to the head of the queue
   → another save still running? → false; its result is not ours
   → another record open now? → false; nothing read back
@@ -1038,7 +1102,7 @@ ui/apps/web/src/lib/
 
 | Contract | Defined in | Implemented / consumed by |
 |---|---|---|
-| `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue; a refused write rejects with an `ApiError` carrying its 4xx status |
+| `DatasetGateway` | `workspace/datasetGateway.ts` | `httpDatasetGateway`; consumed by loader + queue; a refused write rejects with an `ApiError` carrying its 4xx status, and `deleteEntity` is the conditional delete, answering `{deleted}` |
 | `DatasetLayoutRepository` | `workspace/datasetLayoutRepository.ts` | `localStorageDatasetLayoutRepository`; consumed by loader + manager |
 | `AnnotationStore` | `annotations/annotationCollection.svelte.ts` | `AnnotationCollection`, `ViewScopedAnnotations` |
 | `MutationSink` | `scene/sceneContext.ts` | `MutationQueue`; consumed by tools/widgets and the `ReviewController` |
