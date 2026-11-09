@@ -554,6 +554,29 @@ describe("An edit that leaves the content as stored is not an edit", () => {
     ]);
   });
 
+  it("a 3D box saved from its HUD turned less than storage can tell queues nothing", async () => {
+    const box3d: Row = {
+      ...modelBox(REC, "box-1"),
+      view_id: "",
+      coords: [0, 0, 0, 1, 1, 1],
+      format: "xyzwhd",
+      rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    };
+    const { manager } = await openManager({ [REC]: { [BBOX3D_RESOURCE]: [box3d] } });
+    const session = new BBox3DSession(widgetSeam(manager, "point-cloud-widget"));
+    session.setResetEditor(() => {});
+    // A turn a hair away from the stored one, closer than float32 storage tells
+    // apart: the edit rule's tolerance, not the HUD's own untouched check — a
+    // box the real editor opens and saves untouched is in bbox3dSession.test.ts.
+    const barelyTurned: Rotation3x3 = [1 - 1e-8, 1e-9, 0, -1e-9, 1 - 1e-8, 0, 0, 0, 1];
+
+    session.reportReady([0, 0, 0, 1, 1, 1], barelyTurned, "box-1");
+    session.save();
+
+    expect(manager.pendingCount).toBe(0);
+    expect(statusOf(manager, "box-1")).toBe(REVIEW_STATUS.PENDING);
+  });
+
   it("a model's classification moved onto the entity it has keeps its score and status", async () => {
     const classification: Row = {
       id: "c1",

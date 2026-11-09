@@ -490,8 +490,14 @@ check` at baseline error count and `vitest` green:
 > tests (the suite covers loaders/builders/queue/seeds, not the Threlte scene).
 > Stage 3 moved the editor and its markup verbatim into `BBox3DTool.svelte`;
 > behaviour rests on that move plus manual verification (draw / move / resize /
-> rotate / orbit-lock / save). This overlaps DEBT-3.
-> `boxEditor.svelte.test.ts` runs the real `BoxEditor` for its key guard.
+> rotate / orbit-lock / save). This overlaps DEBT-3. What sits around it is
+> tested. `boxEditor.svelte.test.ts` runs the real `BoxEditor` for its key guard.
+> `bbox3dSession.test.ts` saves and deletes boxes on the real workspace; its
+> untouched-save tests drive the real `BoxEditor`
+> (`__tests__/realBoxEditor.svelte.ts`, wired as `BBox3DTool` wires it, through
+> the shared `editorBoxOf`): opened with a real pointerdown on the box, an
+> untouched box comes back as the editor's own round trip makes it, which a test
+> rebuilding that trip could not catch drifting.
 
 ## Non-goals
 

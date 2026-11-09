@@ -11,22 +11,55 @@ import type {
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { generateShortId } from "$lib/annotations/buildPayloads.js";
 import {
+  bboxTransform,
+  threeBoxToLanceXYZWHD,
+  threeQuaternionToLanceRotation,
+} from "$lib/annotations/coordinateTransforms";
+import {
   beginEntityReassign,
   commitDraftWithEntity,
   commitGeometryEdit,
   deleteGestureFor,
   deleteLocalAnnotation,
+  sameValue,
   type DeleteGesture,
 } from "$lib/annotations/payloadBuilders.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { Rotation3x3 } from "$lib/annotations/types.js";
 
+type Coords3D = [number, number, number, number, number, number];
+
 /** A 3D box the editor has staged and is waiting for the user to confirm. */
 export interface PendingConfirm {
-  coords: [number, number, number, number, number, number];
+  coords: Coords3D;
   rotation?: Rotation3x3;
   /** Set when editing an existing box; absent when creating a new one. */
   editingId?: string;
+}
+
+/**
+ * A box as the editor stages it when a click opens it and nothing moves: its
+ * geometry taken to three.js space and back, the way `BBox3DTool` hands boxes
+ * to the editor and the editor reports them. The trip does not give back the
+ * stored numbers — a rotation goes through a quaternion, corners become centre
+ * and size — but it is the same trip every time, so a staged box equal to this
+ * one (`sameAsStored`) is the box untouched.
+ */
+function asStagedUntouched(geometry: BBox3DGeometry): { coords: Coords3D; rotation: Rotation3x3 } {
+  const { position, size, quaternion } = bboxTransform(geometry);
+  return {
+    coords: threeBoxToLanceXYZWHD(position, size),
+    rotation: threeQuaternionToLanceRotation(quaternion),
+  };
+}
+
+/**
+ * Whether numbers the editor staged are those of the box, as the dataset keeps
+ * them: equal within float32's precision, the rule that tells an edit changing
+ * nothing (`sameValue`).
+ */
+function sameAsStored(staged: readonly number[] | undefined, held: readonly number[]): boolean {
+  return staged !== undefined && sameValue(staged, held);
 }
 
 /**
@@ -115,20 +148,23 @@ export class BBox3DSession {
     return this.seam.collection.find(editingId)?.persisted ?? false;
   }
 
-  /** Commit the pending draft (create or edit) through the shared helpers. */
+  /**
+   * Commit the pending draft (create or edit) through the shared helpers. A box
+   * opened and saved without being moved is left as it is: nothing is written,
+   * so a model's box is not saved as a person's edit, which would accept it,
+   * by a person who changed nothing. Saved here, a move joins the record's
+   * unsaved work, not the dataset: a model's pending box still reads pending,
+   * until the workspace's Save stores it accepted, or an Accept.
+   */
   save(): void {
     const pending = this.confirm;
     if (!pending) return;
     this.confirm = null;
 
-    const geometry: BBox3DGeometry = {
-      coords: pending.coords,
-      format: "xyzwhd",
-      rotation: pending.rotation,
-    };
-
     if (pending.editingId) {
-      commitGeometryEdit(this.seam, pending.editingId, geometry);
+      const box = this.boxBeingEdited(pending.editingId);
+      const geometry = box ? stagedGeometry(pending, box) : null;
+      if (geometry) commitGeometryEdit(this.seam, pending.editingId, geometry);
       this.resetEditor();
       return;
     }
@@ -141,7 +177,7 @@ export class BBox3DSession {
       entityId: "",
       kind: "bbox3d",
       viewId: this.seam.buildContext.viewId,
-      geometry,
+      geometry: { coords: pending.coords, format: "xyzwhd", rotation: pending.rotation },
       persisted: false,
     };
     this.seam.collection.add(draft);
@@ -201,4 +237,31 @@ export class BBox3DSession {
   toggleGizmo(key: keyof GizmoVisibility): void {
     this.gizmoVisibility = { ...this.gizmoVisibility, [key]: !this.gizmoVisibility[key] };
   }
+
+  private boxBeingEdited(id: string): LocalBBox3DAnnotation | undefined {
+    const annotation = this.seam.collection.find(id);
+    return annotation?.kind === "bbox3d" ? (annotation as LocalBBox3DAnnotation) : undefined;
+  }
+}
+
+/**
+ * The geometry saving the staged box writes, or null when the box is as it
+ * stands — as the dataset keeps it (`sameAsStored`). Only what the gesture
+ * changed is taken from the editor: a box moved or resized but not turned
+ * keeps its own rotation, rather than the copy the editor's quaternion gives
+ * back a few float digits away.
+ */
+function stagedGeometry(
+  pending: PendingConfirm,
+  box: LocalBBox3DAnnotation,
+): BBox3DGeometry | null {
+  const untouched = asStagedUntouched(box.geometry);
+  const moved = !sameAsStored(pending.coords, untouched.coords);
+  const turned = !sameAsStored(pending.rotation, untouched.rotation);
+  if (!moved && !turned) return null;
+  return {
+    coords: pending.coords,
+    format: "xyzwhd",
+    rotation: turned ? pending.rotation : box.geometry.rotation,
+  };
 }

@@ -184,7 +184,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   (`activeDragging`, `editingId`) via `reportHandle`.
 - `<kind>Session.svelte.ts` (if it needs a confirm step) — a class holding the transient
   confirm state + tool-UI state, with `save()`/`cancel()` that call the commit helpers. It
-  lives in the kind so the widget stays kind-agnostic.
+  lives in the kind so the widget stays kind-agnostic. A `save()` of a box nobody moved
+  commits nothing: compare the staged geometry with what the editor stages for the
+  untouched annotation, numbers within a float32 round trip (`sameValue`, from
+  `payloadBuilders.ts`), so the editor's own conversions (a quaternion, corners to centre
+  and size) are not taken for an edit (`bbox3dSession.svelte.ts`, `asStagedUntouched`,
+  `sameAsStored`).
 - `<Kind>Hud.svelte` — the `Tool3D.hud`: the DOM confirm/secondary UI, driven by the session.
   A delete button calls `deleteLocalAnnotation` through the session; name it from
   `deleteGestureFor(annotation)` (`reject` on a model's annotation, `delete` otherwise), as
@@ -211,6 +216,9 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   - It also presses Delete during each of its gestures, through the real select tool's
     `onKeyDown`: every shape is deleted as stored — on a model's shape, that delete is its
     Reject — and no flag stays raised once saved.
+  - A 3D session can be tested on the real workspace too, with the real box editor driving
+    it (`bbox3dSession.test.ts`, `__tests__/realBoxEditor.svelte.ts`): a test that rebuilds
+    what the editor reports passes whatever the editor does.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the

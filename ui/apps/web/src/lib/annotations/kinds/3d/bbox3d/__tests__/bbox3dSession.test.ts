@@ -4,15 +4,29 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import { beforeEach, describe, expect, it } from "vitest";
+import * as THREE from "three";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { BBox3DSession } from "../bbox3dSession.svelte.js";
+import { BBOX3D_RESOURCE } from "../bbox3dPayloadBuilder.js";
+import { BBox3DSession, type PendingConfirm } from "../bbox3dSession.svelte.js";
+import { realBoxEditor } from "./realBoxEditor.svelte.js";
 import {
   AnnotationCollection,
+  type AnnotationStore,
   type BBox3DGeometry,
 } from "$lib/annotations/annotationCollection.svelte.js";
+import { threeQuaternionToLanceRotation } from "$lib/annotations/coordinateTransforms";
+import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { PendingAnnotation, ResourceMutation, Rotation3x3 } from "$lib/annotations/types.js";
+import {
+  modelBox,
+  openManager,
+  serveLikeTheApi,
+  widgetSeam,
+  type Row,
+} from "$lib/workspace/__tests__/workspaceHarness.js";
+import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 const COORDS: [number, number, number, number, number, number] = [1, 2, 3, 4, 5, 6];
 const ROTATION: Rotation3x3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -64,6 +78,38 @@ function makeSeam() {
     getLiveDraft: () => liveDraft,
   };
 }
+
+// ─── The real box editor ──────────────────────────────────────────────────────
+// The untouched-save check compares what the editor reports with the box as
+// stored, number for number: only the editor itself can say what it reports.
+
+const editorTeardowns: (() => void)[] = [];
+
+afterEach(() => {
+  for (const teardown of editorTeardowns.splice(0)) teardown();
+  document.body.innerHTML = "";
+});
+
+/** The real box editor wired to the session (`realBoxEditor`), stopped after the test. */
+function boxEditorFor(session: BBox3DSession, collection: Pick<AnnotationStore, "byKind">) {
+  const wired = realBoxEditor(session, collection);
+  editorTeardowns.push(wired.teardown);
+  return wired;
+}
+
+/** What the editor stages once the box it opened is moved one unit along X. */
+function movedOneUnit(opened: PendingConfirm): PendingConfirm {
+  const coords = [...opened.coords] as PendingConfirm["coords"];
+  coords[0] += 1;
+  return { ...opened, coords };
+}
+
+/** A turn about the up axis that float32 storage cannot hold exactly. */
+const YAW = 0.7;
+const COS_YAW = Math.fround(Math.cos(YAW));
+const SIN_YAW = Math.fround(Math.sin(YAW));
+/** That turn as the dataset gives it back: a row-major matrix of float32 values. */
+const STORED_YAW_ROTATION: Rotation3x3 = [COS_YAW, -SIN_YAW, 0, SIN_YAW, COS_YAW, 0, 0, 0, 1];
 
 describe("BBox3DSession", () => {
   let env: ReturnType<typeof makeSeam>;
@@ -315,5 +361,101 @@ describe("BBox3DSession", () => {
     session.toggleGizmo("rings");
     expect(session.gizmoVisibility.rings).toBe(false);
     expect(session.gizmoVisibility.resizeArrows).toBe(true);
+  });
+});
+
+describe("BBox3DSession on the real workspace", () => {
+  const REC_1 = "rec-1";
+
+  /** A model's 3D box as the dataset holds it: record-wide (no view), turned, float32. */
+  function modelBox3D(recordId: string, id: string, overrides: Partial<Row> = {}): Row {
+    return {
+      ...modelBox(recordId, id),
+      view_id: "",
+      coords: [...COORDS],
+      format: "xyzwhd",
+      rotation: [...STORED_YAW_ROTATION],
+      is_normalized: false,
+      confidence: 0.83,
+      ...overrides,
+    };
+  }
+
+  async function open(box: Row = modelBox3D(REC_1, "m1")) {
+    const opened = await openManager({ [REC_1]: { [BBOX3D_RESOURCE]: [box] } });
+    const seam = widgetSeam(opened.manager, "point-cloud-widget");
+    const session = new BBox3DSession(seam);
+    const editor = boxEditorFor(session, seam.collection);
+    return { ...opened, session, editor };
+  }
+
+  const geometryOf = (manager: WorkspaceManager, id: string) =>
+    manager.annotations.find(id)!.geometry as BBox3DGeometry;
+
+  it("saves an untouched model box as it is: nothing sent, still pending, Accept still offered", async () => {
+    const { manager, session, editor } = await open();
+    // The trip through a quaternion does not give the stored rotation back.
+    expect(editor.open("m1").rotation).not.toEqual(STORED_YAW_ROTATION);
+
+    session.save();
+
+    expect(manager.pendingCount).toBe(0);
+    expect(geometryOf(manager, "m1").rotation).toEqual(STORED_YAW_ROTATION);
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.review.accept("m1")).toBe(true);
+  });
+
+  it("saves an untouched box stored as corners, turned, as it is", async () => {
+    const corners = modelBox3D(REC_1, "m1", { coords: [0, 0, 0, 2, 4, 6], format: "xyzxyz" });
+    const { manager, session, editor } = await open(corners);
+    editor.open("m1");
+
+    session.save();
+
+    expect(manager.pendingCount).toBe(0);
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(geometryOf(manager, "m1")).toEqual({
+      format: "xyzxyz",
+      coords: [0, 0, 0, 2, 4, 6],
+      rotation: STORED_YAW_ROTATION,
+    });
+  });
+
+  it("sends only the move of a moved box: its own rotation and view stay as stored", async () => {
+    const { manager, session, editor, backend } = await open();
+    serveLikeTheApi(backend, REC_1);
+    const moved = movedOneUnit(editor.open("m1"));
+    session.reportReady(moved.coords, moved.rotation, "m1");
+
+    // The HUD's Save stages the move into the record's unsaved work: the box
+    // stays in review until the workspace's Save, which stores it accepted.
+    session.save();
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.review.rows.find((row) => row.id === "m1")?.canAccept).toBe(true);
+    expect(await manager.flushSave()).toBe(true);
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.ACCEPTED);
+
+    const sent = backend.writes.find((w) => w.op === "update");
+    expect(sent?.op === "update" ? sent.body : undefined).toMatchObject({
+      coords: moved.coords,
+      rotation: STORED_YAW_ROTATION,
+      view_id: "",
+      format: "xyzwhd",
+    });
+  });
+
+  it("sends the rotation a box was turned to", async () => {
+    const { manager, session, editor, backend } = await open();
+    const opened = editor.open("m1");
+    const turned = threeQuaternionToLanceRotation(
+      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), YAW / 2),
+    );
+    session.reportReady(opened.coords, turned, "m1");
+
+    session.save();
+    await manager.flushSave();
+
+    const sent = backend.writes.find((w) => w.op === "update");
+    expect(sent?.op === "update" ? sent.body.rotation : undefined).toEqual(turned);
   });
 });

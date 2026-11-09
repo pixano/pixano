@@ -829,7 +829,12 @@ the edit sends both in one update. An edit that puts the content back as stored
 is no edit: nothing is queued but an unsaved Accept (flow C). The 3D HUD's "Save"
 button stages, it does not save: it confirms the move into the record's unsaved
 work (`BBox3DSession.save` → `commitGeometryEdit`), so the box still reads
-pending after it, until the workspace's Save.
+pending after it, until the workspace's Save. The 3D HUD stages nothing for a
+box it opened and nobody moved (`BBox3DSession.save`), comparing the staged box
+with the editor's own round trip of the stored one, each number within a
+float32 round trip — flow C's rule (`sameValue`); a moved box keeps its stored
+rotation unless it was turned, and `bbox3dPayloadBuilder` writes the box's own
+view and format, so a HUD Save that changed nothing does not accept the box.
 
 **The status chips are display-only.** `session.hiddenReviewStatuses` (default
 empty: nothing hidden) holds the chips switched off — `pending`,
