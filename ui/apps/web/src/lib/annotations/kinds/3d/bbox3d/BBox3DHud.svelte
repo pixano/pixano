@@ -55,13 +55,16 @@ License: CECILL-C
         </button>
       {/if}
       {#if session.confirm.editingId}
+        {@const gesture = session.editingDeleteGesture}
         <button
           type="button"
           onclick={() => session.deleteBox()}
-          title="Delete this 3D box"
+          title={gesture === "reject"
+            ? "Reject this 3D box: a model proposed it; rejecting deletes it"
+            : "Delete this 3D box"}
           class="rounded border border-destructive/40 px-2.5 py-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground"
         >
-          Delete
+          {gesture === "reject" ? "Reject" : "Delete"}
         </button>
       {/if}
       <div class="mx-1 h-4 w-px bg-border"></div>
