@@ -54,6 +54,8 @@ License: CECILL-C
     splitCounts={data.splitCounts ?? []}
     semanticActive={data.semantic?.active ?? false}
     similarTo={data.semantic?.similarTo ?? ""}
+    model={data.semantic?.model ?? ""}
+    searchNotice={data.searchNotice ?? ""}
     searchError={data.searchError ?? ""}
     view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
