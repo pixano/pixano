@@ -321,6 +321,8 @@ Re-ranked, `IVF_SQ` and `IVF_HNSW_SQ` find 99.9% to 100% of the exact nearest re
 
 **Search is by medium, results by record.** A record's distance is its closest medium's; the search widens until it has k distinct records, and stops when it finds fewer vectors than it asked for. "Similar to" a record searches with every medium it has. The health counts distinct embedded media against the dataset's still images: `partial` means some image has no vector. Verified on nuScenes: 2 424 vectors, six per record for the 404 that have cameras, `ready`; "similar to" returns 20 distinct records for k = 20 in a quarter of a second.
 
+**A search reads one model's embeddings.** `model` in `POST /datasets/{id}/records/search` names them — a model's name, or its space's id when two checkpoints share the name —, the default ones otherwise; a text is embedded by that very model, and refused (409) when the inference serves it with other weights than the stored vectors', whose distances would then mean nothing. `GET /datasets/{id}/embedding-spaces` lists every model with its health, `PUT …/embedding-spaces/default` changes the default, `DELETE …/embedding-spaces/{space_id}` deletes one model's embeddings.
+
 ## 14. Chunk size, measured
 
 `chunk_size` is the only knob of the embeddings kind that changes how the engine behaves rather
