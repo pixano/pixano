@@ -12,7 +12,9 @@ import {
   initialValue,
   initialValues,
   missingRequired,
+  modelOptions,
   modelTasks,
+  proposeModels,
   toggleChoice,
   toParams,
 } from "../schemaForm";
@@ -232,10 +234,47 @@ describe("a model field", () => {
     properties: { model: { type: "string", "x-pixano-model-task": "embedding" } },
   };
 
+  it("renders as the models served for its task", () => {
+    expect(fieldKind(detection.properties!.model)).toBe("model");
+  });
+
   it("names each task the kinds need once", () => {
     expect(modelTasks([detection, embeddings, detection, FAKE_SCHEMA])).toEqual([
       "detection",
       "embedding",
     ]);
+  });
+
+  it("proposes the first model the inference serves for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), {
+      detection: ["yolo26s", "yolov8n"],
+      embedding: ["clip"],
+    });
+
+    expect(values).toEqual({ model: "yolo26s", box_threshold: 0.5 });
+  });
+
+  it("keeps a model the user already chose", () => {
+    const values = proposeModels(detection, { model: "yolov8n" }, { detection: ["yolo26s"] });
+
+    expect(values.model).toBe("yolov8n");
+  });
+
+  it("lists a model typed before the served ones arrived, so the list shows what will run", () => {
+    // The list showed the first served model, the job ran the typed one.
+    expect(modelOptions(["yolo26s", "yolov8n"], "my-detector")).toEqual([
+      "my-detector",
+      "yolo26s",
+      "yolov8n",
+    ]);
+    expect(modelOptions(["yolo26s"], "yolo26s")).toEqual(["yolo26s"]);
+    expect(modelOptions(["yolo26s"], "")).toEqual(["yolo26s"]);
+  });
+
+  it("stays empty, and required, when the inference serves nothing for its task", () => {
+    const values = proposeModels(detection, initialValues(detection), { embedding: ["clip"] });
+
+    expect(values.model).toBe("");
+    expect(missingRequired(detection, values)).toEqual(["model"]);
   });
 });

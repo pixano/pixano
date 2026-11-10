@@ -8,7 +8,15 @@ import type { JsonSchema } from "$lib/api/jobs";
 
 /** What a field renders as. `unsupported` is shown, never hidden. */
 export type FieldKind =
-  "string" | "number" | "integer" | "boolean" | "enum" | "array" | "choices" | "unsupported";
+  | "string"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "enum"
+  | "array"
+  | "choices"
+  | "model"
+  | "unsupported";
 
 /** The models the inference serves, by task — what a model field offers. */
 export type ServedModels = Record<string, string[]>;
@@ -23,6 +31,7 @@ const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
  */
 export function fieldKind(schema: JsonSchema): FieldKind {
   if (schema.enum && schema.enum.length > 0) return "enum";
+  if (modelTaskOf(schema)) return "model";
 
   const type = schema.type ?? nonNullType(schema.anyOf);
   if (type && RENDERABLE.has(type)) return type as FieldKind;
@@ -57,6 +66,38 @@ export function modelTasks(schemas: JsonSchema[]): string[] {
     Object.values(schema.properties ?? {}).map(modelTaskOf),
   );
   return [...new Set(tasks.filter((task): task is string => task !== undefined))];
+}
+
+/**
+ * Propose a served model in every model field still empty.
+ *
+ * The models arrive after the form is drawn, and a field the user already filled keeps what
+ * they chose. The first model the inference lists is proposed: nothing in the job names one.
+ */
+export function proposeModels(
+  schema: JsonSchema,
+  values: Record<string, unknown>,
+  served: ServedModels,
+): Record<string, unknown> {
+  const proposed = { ...values };
+  for (const [name, field] of Object.entries(schema.properties ?? {})) {
+    const task = modelTaskOf(field);
+    const first = task ? served[task]?.[0] : undefined;
+    if (first !== undefined && (proposed[name] === "" || proposed[name] === undefined)) {
+      proposed[name] = first;
+    }
+  }
+  return proposed;
+}
+
+/**
+ * The models a model field lists: those served, and the value it holds if it is not one of
+ * them — typed before the list arrived, say. Without it the list would show the first model
+ * while the job ran with the typed one.
+ */
+export function modelOptions(served: string[], value: unknown): string[] {
+  const current = typeof value === "string" ? value : "";
+  return current !== "" && !served.includes(current) ? [current, ...served] : served;
 }
 
 /** The value a field starts at: its declared default, or an empty value of its kind. */
