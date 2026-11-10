@@ -26,10 +26,11 @@ from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceCli
 from pixano_inference.schemas import EmbeddingRequest
 from pydantic import Field
 
+from pixano.datasets.embedding_spaces import AmbiguousModelError
 from pixano.inference.types import TASK_TO_CAPABILITY, InferenceTask
 
 from ..reader import JobReader, MediaType
-from ..writer import JobWriter, ModelIdentity, check_embedding_space
+from ..writer import JobWriter, ModelIdentity
 from .base import (
     CONFIRM_MARKER,
     Chunk,
@@ -58,6 +59,14 @@ log = logging.getLogger("pixano-worker")
 # mapping of inference tasks to capabilities rather than a name written here.
 EMBEDDING_CAPABILITY = TASK_TO_CAPABILITY[InferenceTask.EMBEDDING]
 
+# Why a job refuses a dataset whose embeddings.json it could not read entirely: rewritten, the
+# description would lose what this build left out, and the vectors it names.
+UNREADABLE_EMBEDDINGS = (
+    "this dataset's description of its embeddings (embeddings.json) cannot be read entirely, so no job may "
+    "change it: submit the job again if it was a passing error; if it stays so, repair the file, or compute "
+    "every model's embeddings again from nothing from the explorer"
+)
+
 
 class EmbeddingsParams(JobParams):
     """Parameters of the embeddings computation.
@@ -67,10 +76,10 @@ class EmbeddingsParams(JobParams):
         media: The media types to embed. A record may hold several — nuScenes has six camera
             images and a point cloud — and each medium gets its own vector. A type this kind
             cannot send to the inference refuses the whole job.
-        replace_existing_embeddings: Delete the dataset's vectors before computing, whatever
-            their model. Without it, a dataset whose vectors come from another model refuses
-            the job: one table holds one model. Done once, at planning; the form asks for
-            confirmation.
+        replace_existing_embeddings: Delete the vectors this model — this checkpoint of it —
+            already computed on the dataset before computing them again; the other models' are
+            left as they are. Without it, the job adds to its model's vectors, replacing those of
+            the media it embeds again. Done once, at planning; the form asks for confirmation.
         chunk_size: Media per chunk. It is also the size of the batch sent to the
             inference: one chunk is one call. The default of 8 is measured, not assumed —
             see "Chunk size, measured" in docs/specs/backend-processing.md. On CPU, growing
@@ -93,8 +102,8 @@ class EmbeddingsParams(JobParams):
     replace_existing_embeddings: bool = Field(
         default=False,
         json_schema_extra={
-            CONFIRM_MARKER: "This deletes every vector already computed on this dataset, whatever their model, "
-            "before computing the new ones."
+            CONFIRM_MARKER: "This deletes every vector this model already computed on this dataset before "
+            "computing them again. The other models' vectors are kept."
         },
     )
     chunk_size: int = Field(default=8, ge=1, le=256)
@@ -128,19 +137,53 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
     def model_identity(self, params: EmbeddingsParams) -> ModelIdentity:
         """The model's name, and the checkpoint the server loaded under it.
 
-        Embedding rows carry no provenance today — the model lives in the dataset's sidecar as
-        long as one table holds one model — so this completes the job's own provenance only.
+        Embedding rows carry no provenance: the model and its checkpoint name the dataset's
+        embeddings space they go to, and complete the job's own provenance.
         """
         return self.server.model_identity(params.model)
 
-    def prepare(self, writer: JobWriter, params: EmbeddingsParams) -> None:
-        """Empty the embeddings table first, when the job was asked to replace it.
+    @staticmethod
+    def _checkpoint_written(result: dict[str, Any], payload: dict[str, Any]) -> str:
+        """The checkpoint a chunk's vectors are written under: the weights that answered, else planning's."""
+        answered, planned = result.get("checkpoint") or "", payload.get("checkpoint") or ""
+        if answered and planned and answered != planned:
+            log.warning(
+                "the inference serves the model with %s, not the %s it served when the job was planned: "
+                "these vectors go to its own space",
+                answered,
+                planned,
+            )
+        return answered or planned
 
-        Idempotent — dropping an absent table does nothing — and destructive only on the
-        explicit parameter, as the contract requires.
+    @staticmethod
+    def _checkpoint_of(writer: JobWriter) -> str:
+        """The checkpoint of the writer's model, asked outside the dataset's lock; empty if untold."""
+        return (writer.model.version if writer.model is not None else None) or ""
+
+    def prepare(self, writer: JobWriter, params: EmbeddingsParams) -> None:
+        """Empty the vectors of the job's model first, when the job was asked to replace them.
+
+        Its space stays where it is, the default one if it was. Idempotent — a model the dataset
+        holds no vectors of is left as it is — and destructive only on the explicit parameter, as
+        the contract requires. The model's checkpoint is the one the writer's model was asked for,
+        right after planning: a checkpoint the inference does not tell empties only a space
+        recorded without one, and refuses the job rather than empty another weights' vectors.
+
+        Raises:
+            ValueError: Which of the model's spaces is this job's cannot be told.
         """
-        if params.replace_existing_embeddings:
-            writer.drop_embeddings()
+        if not params.replace_existing_embeddings:
+            return
+        checkpoint = self._checkpoint_of(writer)
+        try:
+            writer.empty_embeddings(params.model, checkpoint)
+        except AmbiguousModelError as error:
+            advice = (
+                "delete those of its embeddings that are not this checkpoint's first"
+                if checkpoint
+                else "the inference does not say which weights it serves: submit the job again once it does"
+            )
+            raise ValueError(f"cannot tell which of this model's embeddings to replace: {error}; {advice}") from error
 
     def finalize(self, reader: JobReader, writer: JobWriter, params: EmbeddingsParams) -> None:
         """Index the vectors, once the job wrote them all.
@@ -157,7 +200,7 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             TransientError: The index could not be built this time.
         """
         try:
-            writer.index_embeddings()
+            writer.index_embeddings(params.model)
         except Exception as error:
             # Logged with its trace here: the runner logs a transient failure by its reason alone,
             # and a build that fails for good would otherwise leave only its message behind.
@@ -177,25 +220,32 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         datasets whose media are embedded.
 
         Everything that can refuse the job is checked here, before any computation: the media
-        types chosen, the model being served, and the model of the vectors already there — a job
-        that will not be able to write its vectors must fail at planning, not after having run
-        the inference over the whole dataset, nor after `prepare` has dropped the vectors it was
-        to replace.
-
-        A job that replaces the existing embeddings skips the last check: replacing them is
-        precisely how another model gets in, since `prepare`, run once this plan has succeeded,
-        empties the table.
+        types chosen, the model being served, and the dataset's description of its embeddings,
+        which no job may change unless it was read entirely. Another model's vectors are no
+        reason to refuse: each model has a table of its own. Each chunk carries the model's
+        checkpoint as the server tells it now.
 
         Raises:
             ValueError: A chosen media type cannot be processed, the inference serves no such
-                model, or the dataset already carries embeddings from another model and the job
-                does not replace them.
+                model, the dataset's description of its embeddings cannot be read entirely, or the
+                inference tells no checkpoint for a model the dataset holds several of.
         """
         self.refuse_unsupported_media(params.media)
-        self.server.require_served(params.model, EMBEDDING_CAPABILITY)
-        if not params.replace_existing_embeddings:
-            check_embedding_space(reader.dataset.record_embedding_space(), params.model)
-        yield from media_chunks(reader, params.media, params.chunk_size)
+        told = self.server.require_served(params.model, EMBEDDING_CAPABILITY)
+        if not reader.dataset.record_embeddings_fully_read():
+            raise ValueError(UNREADABLE_EMBEDDINGS)
+        held = [space for space in reader.dataset.record_embedding_spaces() if space["model_id"] == params.model]
+        if told == "" and len(held) > 1:
+            # A server that answers without naming the weights never will: no chunk could tell
+            # which of them its vectors are, and each would run its inference for nothing.
+            raise ValueError(
+                f"the inference does not say which weights it serves '{params.model}' with, and this dataset "
+                f"holds the embeddings of {len(held)} of its checkpoints: delete those not served any more first"
+            )
+        # The weights the server serves now, read again: the chunks' fallback, when they cannot ask.
+        checkpoint = told or ""
+        for chunk in media_chunks(reader, params.media, params.chunk_size):
+            yield chunk.model_copy(update={"payload": {**chunk.payload, "checkpoint": checkpoint}})
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: EmbeddingsParams) -> dict[str, Any]:
         """Embed a batch of media and return their vectors, with the fate of each medium.
@@ -253,6 +303,9 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
             "record_ids": [record_of[view_id] for view_id, _ in embedded],
             "view_ids": [view_id for view_id, _ in embedded],
             "vectors": [vector for _, vector in embedded],
+            # The weights that answered, as the server tells them right after: the space the
+            # vectors go to, whatever was served when the job was planned.
+            "checkpoint": (self.server.served_checkpoint(params.model) or "") if embedded else "",
             "skipped": 0,
             "quarantined": quarantined,
             "carried_bytes": found.carried_bytes,
@@ -273,14 +326,42 @@ class EmbeddingsKind(JobKind[EmbeddingsParams]):
         """Write one vector per medium, replacing the previous one.
 
         The key is the medium: recomputing a dataset's embeddings replaces the vectors instead
-        of stacking a second series.
+        of stacking a second series. The model's checkpoint is the one the server told right
+        after it answered (`process`), or failing it the one planning read — never one this worker
+        remembers from another job. A chunk whose checkpoint is told by neither, which the dataset
+        cannot place between several checkpoints of the model, is handed back rather than written
+        by guess.
+
+        Raises:
+            TransientError: The checkpoint is not told, and the dataset holds several of the model's:
+                a later attempt may be told it.
+            ValueError: The checkpoint told matches several spaces recorded without theirs: no
+                attempt will tell more.
         """
         vectors = result["vectors"]
         started = time.perf_counter()
         if vectors:
-            writer.write_media_embeddings(
-                record_ids=result["record_ids"], view_ids=result["view_ids"], vectors=vectors, model=params.model
-            )
+            checkpoint = self._checkpoint_written(result, payload)
+            try:
+                space = writer.write_media_embeddings(
+                    record_ids=result["record_ids"],
+                    view_ids=result["view_ids"],
+                    vectors=vectors,
+                    model=params.model,
+                    checkpoint=checkpoint,
+                )
+            except AmbiguousModelError as error:
+                if checkpoint:
+                    raise ValueError(f"the embeddings of this chunk have no space of their own: {error}") from error
+                raise TransientError(f"the embeddings of this chunk have no space to go to yet: {error}") from error
+            if space is not None and not checkpoint and space["checkpoint"]:
+                log.warning(
+                    "job %s: the inference did not say which weights it served; the vectors go to the one space "
+                    "of %s, of the checkpoint %s",
+                    writer.job_id,
+                    params.model,
+                    space["checkpoint"],
+                )
         phases = result.get("phases_s", {})
         # One line per chunk, with the job: this is what scripts/measure_throughput.py adds up.
         log.info(

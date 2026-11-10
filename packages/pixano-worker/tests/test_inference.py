@@ -37,7 +37,7 @@ from pixano_worker.kinds import Chunk, EmbeddingsKind, JobKind, TransientError
 from pixano_worker.kinds.embeddings import EMBEDDING_CAPABILITY
 from pixano_worker.kinds.inference import REFUSED_BY_THE_SERVER, Failure, chunk_media, classify, witness_image
 from pixano_worker.media import MediaResolver
-from pixano_worker.writer import JobWriter
+from pixano_worker.writer import JobWriter, derive_id
 
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
@@ -181,7 +181,9 @@ class _Kind:
 
 
 def _vectors(dataset: Dataset) -> int:
-    return dataset.count_rows_where(JobWriter.EMBEDDING_TABLE) if dataset.has_record_embeddings() else 0
+    """The vectors of the model the embeddings kind asks for: those its `prepare` would destroy."""
+    space = dataset.record_embedding_space(CLIP)
+    return dataset.count_rows_where(space["table"]) if space is not None else 0
 
 
 KINDS = {
@@ -595,3 +597,138 @@ class TestMediaDesignatedByUrl:
             f"{INFERENCE_MEDIA_ROOT}/a.png",
             f"{UNREACHABLE_HOST}/c.png",
         ]
+
+
+class TestTwoCheckpointsOfTheModel:
+    """The embeddings job on the real path, a dataset holding the model's vectors of two checkpoints."""
+
+    #: An older checkpoint of the model, whose vectors the dataset holds from before.
+    OLDER = "ViT-B-32"
+    #: The checkpoint the simulated server serves the model with.
+    SERVED = "MobileCLIP2-S2"
+    #: The value each checkpoint's vectors hold, to tell them apart; the server answers ones.
+    STORED = 0.5
+
+    def _with_two_checkpoints(self, scene: _Scene) -> None:
+        dataset = scene.dataset()
+        # The identifiers a job of the model derives: its rows replace these, where they land.
+        rows = [
+            {
+                "id": derive_id("embeddings", view, 0),
+                "record_id": record_id,
+                "view_id": view,
+                "vector": [self.STORED] * DIM,
+            }
+            for view, (record_id, _) in VIEWS.items()
+        ]
+        dataset.upsert_record_embeddings(CLIP, self.OLDER, rows)
+        dataset.upsert_record_embeddings(CLIP, self.SERVED, rows)
+
+    @staticmethod
+    def _vectors(scene: _Scene, checkpoint: str) -> list[list[float]]:
+        dataset = scene.dataset()
+        space = dataset.matching_record_embedding_space(CLIP, checkpoint)
+        assert space is not None
+        vectors = dataset.open_table(space["table"]).to_arrow()
+        return [list(vector) for vector in vectors.column("vector").to_pylist()]
+
+    def test_a_job_writes_into_the_space_of_the_checkpoint_the_server_serves(self, scene: _Scene) -> None:
+        self._with_two_checkpoints(scene)
+        kind = KINDS["embeddings"].make(API_KEY)
+
+        scene.run(kind, _params(kind, KINDS["embeddings"]), "job-1")
+
+        assert {value for vector in self._vectors(scene, self.SERVED) for value in vector} == {1.0}
+        assert {value for vector in self._vectors(scene, self.OLDER) for value in vector} == {self.STORED}
+
+    def test_replacing_while_the_server_does_not_tell_its_checkpoint_deletes_nothing(self, scene: _Scene) -> None:
+        """The server restarting at planning: which of the two to replace cannot be told, so none is."""
+        self._with_two_checkpoints(scene)
+        scene.server.models_answer = httpx.ConnectError("the inference is restarting")
+        kind = KINDS["embeddings"].make(API_KEY)
+
+        with pytest.raises(ValueError, match="cannot tell which of this model's embeddings to replace"):
+            scene.plan(kind, _params(kind, KINDS["embeddings"], replace_existing_embeddings=True))
+
+        assert len(scene.dataset().record_embedding_spaces()) == 2
+
+    def test_a_chunk_whose_checkpoint_is_untold_is_handed_back_rather_than_written_by_guess(
+        self, scene: _Scene
+    ) -> None:
+        self._with_two_checkpoints(scene)
+        scene.server.models_answer = httpx.ConnectError("the inference is restarting")
+        kind = KINDS["embeddings"].make(API_KEY)
+        params = _params(kind, KINDS["embeddings"])
+        (chunk,) = scene.plan(kind, params)
+        result = kind.process(runner._reader_for(scene.library, DATASET_ID, scene.resolver), chunk.payload, params)
+        writer = runner._writer_for(scene.library, DATASET_ID, kind, "job-1", params)
+
+        with pytest.raises(TransientError, match="no space to go to yet"):
+            kind.write(writer, result, chunk.payload, params)
+
+        assert chunk.payload["checkpoint"] == ""
+        assert {value for vector in self._vectors(scene, self.SERVED) for value in vector} == {self.STORED}
+
+    def test_a_chunk_carries_the_checkpoint_planning_read_whatever_its_worker_remembers(self, scene: _Scene) -> None:
+        """Planned when the server told its checkpoint, written by a worker that never asked it."""
+        self._with_two_checkpoints(scene)
+        planner = KINDS["embeddings"].make(API_KEY)
+        params = _params(planner, KINDS["embeddings"])
+        (chunk,) = scene.plan(planner, params)
+        scene.server.models_answer = httpx.ConnectError("the inference is restarting")
+        writer_kind = EmbeddingsKind(INFERENCE_URL, API_KEY)
+        # What the chunk's worker remembers of the model, from a job of before.
+        writer_kind.server._checkpoints[CLIP] = self.OLDER
+        result = writer_kind.process(
+            runner._reader_for(scene.library, DATASET_ID, scene.resolver), chunk.payload, params
+        )
+
+        writer = runner._writer_for(scene.library, DATASET_ID, writer_kind, "job-1", params)
+
+        writer_kind.write(writer, result, chunk.payload, params)
+
+        assert chunk.payload["checkpoint"] == self.SERVED
+        assert {value for vector in self._vectors(scene, self.SERVED) for value in vector} == {1.0}
+        assert {value for vector in self._vectors(scene, self.OLDER) for value in vector} == {self.STORED}
+
+    def test_weights_redeployed_during_the_job_write_into_a_space_of_their_own(self, scene: _Scene) -> None:
+        """Planned on the served checkpoint; by the chunk, the server serves other weights under the name."""
+        self._with_two_checkpoints(scene)
+        kind = KINDS["embeddings"].make(API_KEY)
+        params = _params(kind, KINDS["embeddings"])
+        (chunk,) = scene.plan(kind, params)
+        redeployed = [
+            {**model, "modelPath": "ViT-L-14"} if model["name"] == CLIP else model for model in _Server.MODELS
+        ]
+        scene.server.models_answer = httpx.Response(200, json=redeployed)
+        result = kind.process(runner._reader_for(scene.library, DATASET_ID, scene.resolver), chunk.payload, params)
+        writer = runner._writer_for(scene.library, DATASET_ID, kind, "job-1", params)
+
+        kind.write(writer, result, chunk.payload, params)
+
+        assert chunk.payload["checkpoint"] == self.SERVED
+        assert {value for vector in self._vectors(scene, "ViT-L-14") for value in vector} == {1.0}
+        assert {value for vector in self._vectors(scene, self.SERVED) for value in vector} == {self.STORED}
+
+    def test_replacing_while_the_server_does_not_tell_its_checkpoint_keeps_the_one_space_of_a_checkpoint_told(
+        self, scene: _Scene
+    ) -> None:
+        """Its weights may not be those served now: the replacement is refused rather than empty them."""
+        dataset = scene.dataset()
+        rows = [
+            {
+                "id": derive_id("embeddings", view, 0),
+                "record_id": record_id,
+                "view_id": view,
+                "vector": [self.STORED] * DIM,
+            }
+            for view, (record_id, _) in VIEWS.items()
+        ]
+        dataset.upsert_record_embeddings(CLIP, self.OLDER, rows)
+        scene.server.models_answer = httpx.ConnectError("the inference is restarting")
+        kind = KINDS["embeddings"].make(API_KEY)
+
+        with pytest.raises(ValueError, match="does not say which weights it serves: submit the job again"):
+            scene.plan(kind, _params(kind, KINDS["embeddings"], replace_existing_embeddings=True))
+
+        assert {value for vector in self._vectors(scene, self.OLDER) for value in vector} == {self.STORED}

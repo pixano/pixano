@@ -9,6 +9,7 @@
 import hashlib
 import json
 import re
+from dataclasses import replace
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -16,6 +17,9 @@ from typing import Any
 import pytest
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter, ModelIdentity, derive_id
+
+from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
+from pixano.datasets.utils.errors import DatasetAccessError
 
 
 class _Vector:
@@ -50,6 +54,8 @@ class _FakeDataset:
         self.compactions: list[str] = []
         self.tables: dict[str, dict[str, Any]] = {}
         self.info = SimpleNamespace(tables={})
+        # The embeddings spaces, kept by the real description: the stand-in decides nothing of its own.
+        self.spaces = EmbeddingSpaces()
 
     def update_data(self, table_name: str, data: list[Any]) -> None:
         table = self.tables.setdefault(table_name, {})
@@ -64,33 +70,61 @@ class _FakeDataset:
     def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
         return _matching(self.tables.get(table_name, {}), ids, where)
 
-    def open_table(self, table_name: str) -> Any:
-        self.compactions.append(table_name)
+    def open_table(self, name: str) -> Any:
+        self.compactions.append(name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
-    def has_record_embeddings(self) -> bool:
-        return "embeddings" in self.tables
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        return [space.as_document() for space in self.spaces.spaces]
 
-    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = "IVF_PQ") -> dict[str, Any]:
-        self.tables.setdefault("embeddings", {})
-        self.info.tables["embeddings"] = _Vector
-        space: dict[str, Any] = {"model_id": model_id, "dim": dim, "index_type": index_type}
-        self.space: dict[str, Any] | None = space
-        return space
+    def upsert_record_embeddings(
+        self, model_id: str, checkpoint: str, rows: list[dict[str, Any]], *, index_type: str = "IVF_PQ"
+    ) -> dict[str, Any]:
+        dim = len(rows[0]["vector"])
+        space = self.spaces.matching(model_id, checkpoint, dim, strict=True)
+        if space is not None and space.dim != dim:
+            raise DatasetAccessError(f"embeddings of model '{model_id}' of dimension {space.dim}, not {dim}")
+        if space is None:
+            space = self.spaces.new_space(model_id, checkpoint, dim, index_type=index_type)
+            self.spaces = self.spaces.with_space(space)
+            self.tables.setdefault(space.table, {})
+            self.info.tables[space.table] = _Vector
+        elif checkpoint and not space.checkpoint:
+            self.spaces = self.spaces.with_checkpoint(space, checkpoint)
+            space = self.spaces.get(space.id) or space
+        self.update_data(space.table, [_Vector(**row) for row in rows])
+        return space.as_document()
 
-    def drop_record_embeddings(self) -> None:
-        self.tables.pop("embeddings", None)
-        self.info.tables.pop("embeddings", None)
-        self.space = None
+    def empty_model_record_embeddings(
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None
+    ) -> dict[str, Any] | None:
+        if not checkpoint and any(space.model_id == model_id and space.checkpoint for space in self.spaces.spaces):
+            raise AmbiguousModelError(f"model '{model_id}' holds the embeddings of a checkpoint told")
+        space = self.spaces.matching(model_id, checkpoint or "", strict=True)
+        if space is None:
+            return None
+        emptied = replace(space, checkpoint=checkpoint or space.checkpoint, index_type=index_type or space.index_type)
+        self.spaces = self.spaces.replacing(emptied)
+        # The vectors go with their table, as in LanceDB.
+        self.tables.pop(space.table, None)
+        return emptied.as_document()
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
-        return getattr(self, "space", None)
+    def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
+        space = self.spaces.find(model)
+        return space.as_document() if space is not None else None
 
     def checksum(self, table_name: str) -> str:
         """A fingerprint of the content, insensitive to the write order."""
         table = self.tables.get(table_name, {})
         material = json.dumps(sorted((row_id, row.payload) for row_id, row in table.items()))
         return hashlib.sha256(material.encode()).hexdigest()
+
+
+def _space(dataset: Any, model: str) -> dict[str, Any]:
+    """The space of a model the test wrote the vectors of."""
+    space = dataset.record_embedding_space(model)
+    assert space is not None, f"no embeddings of {model}"
+    return space
 
 
 @pytest.fixture
@@ -106,8 +140,20 @@ class _EmptySource:
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return 0
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
+    def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
         return None
+
+    def record_embeddings_fully_read(self) -> bool:
+        return True
+
+    def read_record_vectors(self, model: str | None = None) -> None:
+        return None
+
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        return []
+
+    def get_all_ids(self, table_name: str = "records") -> list[str]:
+        return []
 
     def get_data(
         self,
@@ -509,16 +555,24 @@ class TestAgainstRealLance:
 
 
 class TestMediaEmbeddings:
-    """An embeddings table accepts only one model."""
+    """Each model writes a table of its own, a model being its name and its checkpoint."""
 
     def test_the_first_write_creates_the_table_for_its_model(self, dataset: _FakeDataset) -> None:
         """With the vector index the job's closing step will give it, the one measured best."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
 
-        writer.write_media_embeddings(["r1", "r2"], ["v-r1", "v-r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
+        writer.write_media_embeddings(
+            ["r1", "r2"], ["v-r1", "v-r2"], [[0.1, 0.2], [0.3, 0.4]], model="clip", checkpoint="ckpt-a"
+        )
 
-        assert dataset.record_embedding_space() == {"model_id": "clip", "dim": 2, "index_type": "IVF_SQ"}
-        assert len(dataset.tables["embeddings"]) == 2
+        space = _space(dataset, "clip")
+        assert (space["model_id"], space["checkpoint"], space["dim"], space["index_type"]) == (
+            "clip",
+            "ckpt-a",
+            2,
+            "IVF_SQ",
+        )
+        assert len(dataset.tables[space["table"]]) == 2
 
     def test_the_same_model_replaces_its_vectors(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
@@ -526,7 +580,7 @@ class TestMediaEmbeddings:
 
         writer.write_media_embeddings(["r1"], ["v-r1"], [[0.5, 0.6]], model="clip")
 
-        assert len(dataset.tables["embeddings"]) == 1
+        assert len(dataset.tables[_space(dataset, "clip")["table"]]) == 1
 
     def test_a_record_with_several_media_gets_a_vector_each(self, dataset: _FakeDataset) -> None:
         """An embedding belongs to a medium — nuScenes has six cameras per record."""
@@ -535,7 +589,8 @@ class TestMediaEmbeddings:
         writer.write_media_embeddings(["r1", "r1"], ["cam-front", "cam-back"], [[0.1, 0.2], [0.3, 0.4]], model="clip")
         writer.write_media_embeddings(["r1"], ["cam-front"], [[0.9, 0.9]], model="clip")
 
-        rows = {row.view_id: (row.record_id, row.vector) for row in dataset.tables["embeddings"].values()}
+        table = dataset.tables[_space(dataset, "clip")["table"]]
+        rows = {row.view_id: (row.record_id, row.vector) for row in table.values()}
         assert rows == {"cam-front": ("r1", [0.9, 0.9]), "cam-back": ("r1", [0.3, 0.4])}
 
     def test_media_and_vectors_must_match(self, dataset: _FakeDataset) -> None:
@@ -544,39 +599,74 @@ class TestMediaEmbeddings:
                 ["r1", "r1"], ["a", "b"], [[0.1]], model="clip"
             )
 
-    def test_another_model_is_refused_rather_than_mixed_in(self, dataset: _FakeDataset) -> None:
-        """Same dimension, other model: nothing would break on write, the search would be wrong."""
+    def test_another_model_writes_a_table_of_its_own(self, dataset: _FakeDataset) -> None:
+        """Same dimension, other model: mixed in one table, every search would be wrong without a word."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
         writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
-        with pytest.raises(ValueError, match="dinov2"):
-            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4]], model="dinov2")
+        writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4]], model="dinov2")
 
-        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "v-r1", 0)]
+        clip, dinov2 = _space(dataset, "clip"), _space(dataset, "dinov2")
+        assert list(dataset.tables[clip["table"]]) == [derive_id("embeddings", "v-r1", 0)]
+        assert list(dataset.tables[dinov2["table"]]) == [derive_id("embeddings", "v-r2", 0)]
 
-    def test_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
+    def test_another_checkpoint_of_the_model_writes_a_table_of_its_own(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a")
+
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.3, 0.4]], model="clip", checkpoint="ckpt-b")
+
+        assert [space.checkpoint for space in dataset.spaces.spaces] == ["ckpt-a", "ckpt-b"]
+
+    def test_the_very_model_at_another_dimension_is_refused(self, dataset: _FakeDataset) -> None:
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a")
+
+        with pytest.raises(ValueError, match="dimension 2, not 3"):
+            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="clip", checkpoint="ckpt-a")
+
+    def test_a_checkpoint_left_untold_never_writes_into_one_of_several(self, dataset: _FakeDataset) -> None:
+        """Two checkpoints of the model, and a writer that cannot tell its own: no guess, no row."""
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.3, 0.4]], model="clip", checkpoint="ckpt-b")
+
+        with pytest.raises(AmbiguousModelError, match="ckpt-a, ckpt-b"):
+            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.5, 0.6]], model="clip")
+
+        assert sum(len(dataset.tables[space.table]) for space in dataset.spaces.spaces) == 2
+
+    def test_a_checkpoint_the_inference_tells_late_is_recorded_on_the_same_space(self, dataset: _FakeDataset) -> None:
+        """An inference that could not tell its checkpoint for the first chunk: one space all the same."""
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
         writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
 
-        with pytest.raises(ValueError, match="dimension 3"):
-            writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="clip")
+        writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4]], model="clip", checkpoint="ckpt-a")
 
-    def test_dropping_the_table_lets_another_model_fill_it(self, dataset: _FakeDataset) -> None:
-        """What a job asked to replace the embeddings does at planning, before its first write."""
+        (space,) = dataset.spaces.spaces
+        assert space.checkpoint == "ckpt-a"
+        assert len(dataset.tables[space.table]) == 2
+
+    def test_emptying_a_models_embeddings_keeps_its_space_and_leaves_the_others(self, dataset: _FakeDataset) -> None:
         writer = JobWriter(lambda: dataset, "embeddings", "job-1")
-        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.3, 0.4]], model="dinov2", checkpoint="vitb14")
 
-        writer.drop_embeddings()
-        writer.write_media_embeddings(["r2"], ["v-r2"], [[0.3, 0.4, 0.5]], model="dinov2")
+        writer.empty_embeddings("clip", "ckpt-a")
 
-        assert dataset.record_embedding_space() == {"model_id": "dinov2", "dim": 3, "index_type": "IVF_SQ"}
-        assert list(dataset.tables["embeddings"]) == [derive_id("embeddings", "v-r2", 0)]
+        clip, dinov2 = dataset.spaces.spaces
+        assert (clip.model_id, clip.index_type, dataset.spaces.default) == ("clip", "IVF_SQ", clip.id)
+        assert (clip.table in dataset.tables, len(dataset.tables[dinov2.table])) == (False, 1)
 
-    def test_dropping_an_absent_table_does_nothing(self, dataset: _FakeDataset) -> None:
+    def test_emptying_a_model_the_dataset_holds_none_of_does_nothing(self, dataset: _FakeDataset) -> None:
         """`prepare` may run twice: a planner that died after it lets the next one start over."""
-        JobWriter(lambda: dataset, "embeddings", "job-1").drop_embeddings()
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
+        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="dinov2", checkpoint="vitb14")
 
-        assert dataset.record_embedding_space() is None
+        writer.empty_embeddings("clip", "ckpt-a")
+
+        (dinov2,) = dataset.spaces.spaces
+        assert (dinov2.model_id, len(dataset.tables[dinov2.table])) == ("dinov2", 1)
 
 
 class TestCompaction:
@@ -632,20 +722,54 @@ class TestCompaction:
         assert versions < 40, f"{versions} versions for 40 writes: nothing was compacted"
 
 
-class TestEmbeddingTableCreatedElsewhere:
-    """A cached dataset did not see the table created by another worker."""
+class TestEmbeddingSpaceCreatedElsewhere:
+    """A worker's cached dataset did not see the space another worker created: it finds it, not recreates it."""
 
-    def test_rereads_the_dataset_before_creating(self, dataset: _FakeDataset) -> None:
-        fresh = _FakeDataset()
-        fresh.create_record_embedding_table(dim=2, model_id="clip")
-        created_on_stale = []
-        dataset.create_record_embedding_table = lambda dim, model_id, **_kwargs: created_on_stale.append(model_id)  # type: ignore[assignment]
-        writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: fresh)
+    def test_writes_into_the_space_another_worker_created(self, tmp_path) -> None:
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.records import Record
 
-        writer.write_media_embeddings(["r1"], ["v-r1"], [[0.1, 0.2]], model="clip")
+        dataset = Dataset.create(tmp_path / "shared", DatasetInfo(id="shared", name="Shared", record=Record))
+        dataset.add_data("records", [Record(id="r1"), Record(id="r2")])
+        stale = Dataset(dataset.path)
+        JobWriter(lambda: dataset, "embeddings", "job-1").write_media_embeddings(
+            ["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a"
+        )
 
-        assert created_on_stale == [], "the existing table would have been overwritten"
-        assert len(fresh.tables["embeddings"]) == 1
+        JobWriter(lambda: stale, "embeddings", "job-1").write_media_embeddings(
+            ["r2"], ["v-r2"], [[0.3, 0.4]], model="clip", checkpoint="ckpt-a"
+        )
+
+        reopened = Dataset(dataset.path)
+        (space,) = reopened.record_embedding_spaces()
+        assert reopened.open_table(space["table"]).count_rows() == 2
+
+    def test_creates_again_the_space_another_worker_deleted_rather_than_write_from_what_it_read(
+        self, tmp_path
+    ) -> None:
+        """Another worker's replacement deleted the space this worker's cached dataset still holds."""
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas.records import Record
+
+        dataset = Dataset.create(tmp_path / "shared", DatasetInfo(id="shared", name="Shared", record=Record))
+        dataset.add_data("records", [Record(id="r1"), Record(id="r2")])
+        JobWriter(lambda: dataset, "embeddings", "job-1").write_media_embeddings(
+            ["r1"], ["v-r1"], [[0.1, 0.2]], model="clip", checkpoint="ckpt-a"
+        )
+        stale = Dataset(dataset.path)
+        # Deleted from the application, as a person can.
+        other = Dataset(dataset.path)
+        other.drop_record_embeddings(_space(other, "clip")["id"])
+
+        JobWriter(lambda: stale, "embeddings", "job-2").write_media_embeddings(
+            ["r2"], ["v-r2"], [[0.3, 0.4]], model="clip", checkpoint="ckpt-a"
+        )
+
+        reopened = Dataset(dataset.path)
+        (space,) = reopened.record_embedding_spaces()
+        assert reopened.open_table(space["table"]).count_rows() == 1
 
 
 class TestIndexingEmbeddings:
@@ -664,7 +788,7 @@ class TestIndexingEmbeddings:
 
         dataset = Dataset.create(tmp_path / "embedded", DatasetInfo(id="embedded", name="Embedded", record=Record))
         dataset.add_data("records", [Record(id=f"rec-{n}") for n in range(vectors)] + [Record(id="rec-new")])
-        writer = JobWriter(lambda: dataset, "embeddings", "job-1", reopen_dataset=lambda: dataset)
+        writer = JobWriter(lambda: dataset, "embeddings", "job-1")
         rng = np.random.default_rng(3)
         for start in range(0, vectors, cls.VECTORS_PER_WRITE):
             batch = range(start, min(start + cls.VECTORS_PER_WRITE, vectors))
@@ -685,7 +809,7 @@ class TestIndexingEmbeddings:
         """Below the threshold, exact search is fast, and an index would only make it approximate."""
         dataset, writer = self._embedded(tmp_path, 300)
 
-        assert writer.index_embeddings(min_rows=1_000) is None
+        assert writer.index_embeddings("clip", min_rows=1_000) == []
 
         assert self._indexes(dataset) == {"record_id": "BTree"}
 
@@ -693,7 +817,7 @@ class TestIndexingEmbeddings:
         """Over every vector, none left to an exact scan."""
         dataset, writer = self._embedded(tmp_path, 1_000)
 
-        assert writer.index_embeddings(min_rows=1_000) == "IVF_SQ"
+        assert writer.index_embeddings("clip", min_rows=1_000) == ["IVF_SQ"]
 
         assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
         stats = dataset.open_table("embeddings").index_stats("vector_idx")
@@ -702,11 +826,11 @@ class TestIndexingEmbeddings:
     def test_indexing_again_rebuilds_rather_than_stacks(self, tmp_path) -> None:
         """A final chunk run again, after its worker died, leaves the table as one run does."""
         dataset, writer = self._embedded(tmp_path, 1_000)
-        writer.index_embeddings(min_rows=1_000)
+        writer.index_embeddings("clip", min_rows=1_000)
         writer.write_media_embeddings(["rec-new"], ["img-new"], [[0.5] * 16], model="clip")
 
-        writer.index_embeddings(min_rows=1_000)
-        writer.index_embeddings(min_rows=1_000)
+        writer.index_embeddings("clip", min_rows=1_000)
+        writer.index_embeddings("clip", min_rows=1_000)
 
         assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
         stats = dataset.open_table("embeddings").index_stats("vector_idx")
@@ -714,7 +838,7 @@ class TestIndexingEmbeddings:
 
     def test_a_search_through_the_index_finds_the_vector_asked_for(self, tmp_path) -> None:
         dataset, writer = self._embedded(tmp_path, 1_000)
-        writer.index_embeddings(min_rows=1_000)
+        writer.index_embeddings("clip", min_rows=1_000)
         query = dataset.open_table("embeddings").search().where("view_id = 'img-421'").to_list()[0]["vector"]
 
         records, _ = dataset.search_records(list(query), k=1)
@@ -728,4 +852,48 @@ class TestIndexingEmbeddings:
 
         dataset = Dataset.create(tmp_path / "bare", DatasetInfo(id="bare", name="Bare", record=Record))
 
-        assert JobWriter(lambda: dataset, "embeddings", "job-1").index_embeddings(min_rows=1) is None
+        assert JobWriter(lambda: dataset, "embeddings", "job-1").index_embeddings("clip", min_rows=1) == []
+
+    def test_indexes_every_checkpoint_of_the_models_name(self, tmp_path) -> None:
+        """The closing step cannot tell which checkpoint the job wrote: it indexes them all."""
+        dataset, writer = self._embedded(tmp_path, 1_000)
+        # The space learns its checkpoint; another checkpoint gets a space of its own.
+        writer.write_media_embeddings(["rec-0"], ["img-0"], [[0.5] * 16], model="clip", checkpoint="ckpt-a")
+        writer.write_media_embeddings(["rec-1"], ["img-1"], [[0.5] * 16], model="clip", checkpoint="ViT-L-14")
+
+        built = writer.index_embeddings("clip", min_rows=1_000)
+
+        assert built == ["IVF_SQ"]
+        tables = {space["checkpoint"]: space["table"] for space in dataset.record_embedding_spaces()}
+        indexes = {
+            checkpoint: {index.columns[0] for index in dataset.open_table(table).list_indices()}
+            for checkpoint, table in tables.items()
+        }
+        assert indexes == {"ckpt-a": {"record_id", "vector"}, "ViT-L-14": {"record_id"}}
+
+    def test_a_space_that_cannot_be_indexed_keeps_none_of_the_others_from_it(self, tmp_path) -> None:
+        """Its failure is raised once the others were indexed: the job is tried again, not left unindexed."""
+        dataset, writer = self._embedded(tmp_path, 1_000)
+        writer.write_media_embeddings(["rec-0"], ["img-0"], [[0.5] * 16], model="clip", checkpoint="ckpt-a")
+        broken = writer.write_media_embeddings(["rec-1"], ["img-1"], [[0.5] * 16], model="clip", checkpoint="ViT-L-14")
+        assert broken is not None
+        dataset._db_connection.drop_table(broken["table"])
+
+        with pytest.raises(Exception, match=broken["table"]):
+            writer.index_embeddings("clip", min_rows=1_000)
+
+        assert {index.columns[0] for index in dataset.open_table("embeddings").list_indices()} == {
+            "record_id",
+            "vector",
+        }
+
+    def test_indexes_the_table_of_its_own_model(self, tmp_path) -> None:
+        """Another model's table is left as it is."""
+        dataset, writer = self._embedded(tmp_path, 300)
+        writer.write_media_embeddings(["rec-1"], ["img-1"], [[0.5] * 8], model="dinov2")
+        dinov2 = _space(dataset, "dinov2")
+
+        writer.index_embeddings("dinov2", min_rows=1_000)
+
+        indexed = {index.columns[0] for index in dataset.open_table(dinov2["table"]).list_indices()}
+        assert (indexed, self._indexes(dataset)) == ({"record_id"}, {})

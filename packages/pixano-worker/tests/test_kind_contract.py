@@ -18,6 +18,7 @@ its schema carries, and each is exercised set.
 
 import json
 import re
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 
@@ -30,6 +31,7 @@ from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
 from pydantic import BaseModel
 
+from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
 from pixano.schemas import Image, Record
 
 
@@ -88,7 +90,8 @@ class _Target:
         self.compactions: list[str] = []
         self.indexes: list[tuple[str, str]] = []
         self.tables: dict[str, dict[str, Any]] = {}
-        self._embeddings_ready = False
+        # The embeddings spaces, kept by the real description: the double decides nothing of its own.
+        self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={})
 
     @property
@@ -129,28 +132,43 @@ class _Target:
             count_rows=lambda: len(self.tables.get(table_name, {})),
             create_scalar_index=lambda column, **_kwargs: self.indexes.append((table_name, column)),
             create_index=lambda **kwargs: self.indexes.append((table_name, kwargs["vector_column_name"])),
+            list_indices=lambda: [],
         )
 
-    def has_record_embeddings(self) -> bool:
-        return self._embeddings_ready
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        return [space.as_document() for space in self.spaces.spaces]
 
-    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = "IVF_PQ") -> dict[str, Any]:
-        self._embeddings_ready = True
-        self.info.tables["embeddings"] = _Vector
-        space: dict[str, Any] = {"model_id": model_id, "dim": dim, "index_type": index_type}
-        self._space: dict[str, Any] | None = space
-        return space
+    def upsert_record_embeddings(
+        self, model_id: str, checkpoint: str, rows: list[dict[str, Any]], *, index_type: str = "IVF_PQ"
+    ) -> dict[str, Any]:
+        dim = len(rows[0]["vector"])
+        space = self.spaces.matching(model_id, checkpoint, dim, strict=True)
+        if space is not None and space.dim != dim:
+            raise ValueError(f"embeddings of model '{model_id}' of dimension {space.dim}, not {dim}")
+        if space is None:
+            space = self.spaces.new_space(model_id, checkpoint, dim, index_type=index_type)
+            self.spaces = self.spaces.with_space(space)
+            self.info.tables[space.table] = _Vector
+        elif checkpoint and not space.checkpoint:
+            self.spaces = self.spaces.with_checkpoint(space, checkpoint)
+            space = self.spaces.get(space.id) or space
+        self.update_data(space.table, [_Vector(**row) for row in rows])
+        return space.as_document()
 
-    def drop_record_embeddings(self) -> None:
-        self._embeddings_ready = False
-        self.info.tables.pop("embeddings", None)
-        self._space = None
-        # The vectors go with their table, as in LanceDB. Kept, they would let a kind that drops
+    def empty_model_record_embeddings(
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None
+    ) -> dict[str, Any] | None:
+        if not checkpoint and any(space.model_id == model_id and space.checkpoint for space in self.spaces.spaces):
+            raise AmbiguousModelError(f"model '{model_id}' holds the embeddings of a checkpoint told")
+        space = self.spaces.matching(model_id, checkpoint or "", strict=True)
+        if space is None:
+            return None
+        emptied = replace(space, checkpoint=checkpoint or space.checkpoint, index_type=index_type or space.index_type)
+        self.spaces = self.spaces.replacing(emptied)
+        # The vectors go with their table, as in LanceDB. Kept, they would let a kind that empties
         # them with its default parameters pass for one that destroys nothing.
-        self.tables.pop(JobWriter.EMBEDDING_TABLE, None)
-
-    def record_embedding_space(self) -> dict[str, Any] | None:
-        return getattr(self, "_space", None)
+        self.tables.pop(space.table, None)
+        return emptied.as_document()
 
 
 #: The fields that change between two runs of the same work without changing what a row holds:
@@ -225,8 +243,14 @@ class _Source:
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
+    def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
         return None
+
+    def record_embeddings_fully_read(self) -> bool:
+        return True
+
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        return []
 
     def get_data(
         self,
@@ -369,8 +393,8 @@ class TestProvenance:
     def test_every_written_row_carries_the_kind_and_its_parameters(self, kind: JobKind) -> None:
         target = _Target()
         _execute(kind, target, "job-1")
-        # Embedding rows carry no provenance fields: the model lives in the dataset's sidecar
-        # as long as one table holds one model (backend-processing §12).
+        # Embedding rows carry no provenance fields: their model and checkpoint name the space
+        # they are written to, in the dataset's embeddings.json (backend-processing §12).
         with_provenance = [row for row in target.rows.values() if hasattr(row, "source_metadata")]
         if not with_provenance:
             pytest.skip(f"'{kind.name}' writes no row that carries provenance with its example")

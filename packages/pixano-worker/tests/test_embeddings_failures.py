@@ -24,7 +24,9 @@ from pixano_inference.client import PixanoInferenceError
 from pixano_worker.kinds import CONFIRM_MARKER, EmbeddingsKind, TransientError
 from pixano_worker.kinds.inference import QUERY_TIMEOUT_S
 from pixano_worker.media import MediaResolver, ResolvedMedia
+from pixano_worker.writer import ModelIdentity
 
+from pixano.datasets.embedding_spaces import AmbiguousModelError
 from pixano.inference.media import bytes_to_data_uri
 
 
@@ -55,8 +57,11 @@ class _Inference:
         self.unreachable_from_call: int | None = None
         self.calls: list[list[str]] = []
         self.opened = self.closed = 0
-        # What `GET /v1/models` lists.
-        self.models = [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
+        # What `GET /v1/models` lists, when a test says; else the model, served with the weights below.
+        self.models: list[Any] | None = None
+        # The weights the server serves the model with, and whether it answers which.
+        self.model_path: str | None = "MobileCLIP2-S2"
+        self.models_unreachable = False
 
     def client(self, *_args: Any, **_kwargs: Any) -> "_Inference":
         self.opened += 1
@@ -69,9 +74,11 @@ class _Inference:
         self.closed += 1
 
     def list_models(self) -> list[Any]:
-        if self.unreachable:
+        if self.unreachable or self.models_unreachable:
             raise PixanoInferenceError(0, "connection_error", "[Errno 111] Connection refused")
-        return self.models
+        if self.models is not None:
+            return self.models
+        return [SimpleNamespace(name="clip", model_path=self.model_path, capability="embedding")]
 
     def embedding(self, request: Any, **_kwargs: Any) -> Any:
         images = list(request.image)
@@ -186,10 +193,11 @@ class TestItemFailures:
         assert sorted(item.item_id for item in outcome.quarantined) == ["r0", "r7"]
 
     def test_the_client_is_closed_with_the_chunk(self, inference: _Inference) -> None:
-        """A client holds a connection pool, and one was left per chunk."""
+        """A client holds a connection pool, and one was left per chunk: two now, both closed — the
+        call's, and the question of which weights answered."""
         _run(_Reader())
 
-        assert inference.opened == inference.closed == 1
+        assert inference.opened == inference.closed == 2
 
     def test_a_healthy_batch_costs_a_single_call(self, inference: _Inference) -> None:
         """The search for the culprit costs nothing on the day there is none."""
@@ -373,8 +381,20 @@ class _PlanningReader:
 
     TABLES = {"image": ["images"], "point_cloud": ["point_clouds"], "video": [], "text": []}
 
-    def __init__(self, space: dict[str, Any] | None = None, images: int = 8, point_clouds: int = 3) -> None:
-        self.dataset = SimpleNamespace(record_embedding_space=lambda: space)
+    def __init__(
+        self,
+        space: dict[str, Any] | None = None,
+        images: int = 8,
+        point_clouds: int = 3,
+        fully_read: bool = True,
+        spaces: list[dict[str, Any]] | None = None,
+    ) -> None:
+        held = spaces if spaces is not None else ([space] if space is not None else [])
+        self.dataset = SimpleNamespace(
+            record_embedding_space=lambda model=None: space,
+            record_embeddings_fully_read=lambda: fully_read,
+            record_embedding_spaces=lambda: held,
+        )
         self._ids = {
             "images": [f"img-{n}" for n in range(images)],
             "point_clouds": [f"pc-{n}" for n in range(point_clouds)],
@@ -387,12 +407,13 @@ class _PlanningReader:
         return self._ids[table_name]
 
 
-def _plan(reader: _PlanningReader, **params: Any) -> list[Any]:
-    return list(KIND.plan(reader, KIND.validate_params({"model": "clip", **params})))  # type: ignore[arg-type]
+def _plan(reader: _PlanningReader, kind: EmbeddingsKind | None = None, **params: Any) -> list[Any]:
+    planner = kind or KIND
+    return list(planner.plan(reader, planner.validate_params({"model": "clip", **params})))  # type: ignore[arg-type]
 
 
-class TestModelOfTheExistingTable:
-    """Refused at planning, before the inference runs over the whole dataset."""
+class TestTheEmbeddingsAlreadyThere:
+    """Each model has a table of its own: another model's vectors refuse nothing."""
 
     def test_a_dataset_without_embeddings_accepts_any_model(self, inference: _Inference) -> None:
         chunks = _plan(_PlanningReader(None))
@@ -402,9 +423,30 @@ class TestModelOfTheExistingTable:
     def test_the_same_model_is_planned(self, inference: _Inference) -> None:
         assert _plan(_PlanningReader({"model_id": "clip", "dim": 512}))
 
-    def test_another_model_fails_the_planning(self, inference: _Inference) -> None:
-        with pytest.raises(ValueError, match="dinov2"):
-            _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}))
+    def test_another_model_is_planned_beside_them(self, inference: _Inference) -> None:
+        assert _plan(_PlanningReader({"model_id": "dinov2", "dim": 768}))
+
+    def test_a_server_that_names_no_weights_for_a_model_held_twice_fails_the_planning(
+        self, inference: _Inference
+    ) -> None:
+        """It never will: each chunk would run its inference for vectors with no space to go to."""
+        inference.model_path = None
+        spaces = [{"model_id": "clip", "checkpoint": "a"}, {"model_id": "clip", "checkpoint": "b"}]
+
+        with pytest.raises(ValueError, match="holds the embeddings of 2 of its checkpoints"):
+            _plan(_PlanningReader(spaces=spaces), kind=EmbeddingsKind("http://inference", ""))
+
+    def test_a_server_that_cannot_be_asked_for_a_model_held_twice_still_plans(self, inference: _Inference) -> None:
+        """It may be restarting: the chunks ask again, and are handed back while it does not answer."""
+        inference.models_unreachable = True
+        spaces = [{"model_id": "clip", "checkpoint": "a"}, {"model_id": "clip", "checkpoint": "b"}]
+
+        assert _plan(_PlanningReader(spaces=spaces), kind=EmbeddingsKind("http://inference", ""))
+
+    def test_a_description_that_cannot_be_read_entirely_fails_the_planning(self, inference: _Inference) -> None:
+        """Refused before the inference runs over the whole dataset: no chunk could write its vectors."""
+        with pytest.raises(ValueError, match="cannot be read entirely"):
+            _plan(_PlanningReader(fully_read=False))
 
 
 class TestPlanningByMedium:
@@ -464,37 +506,54 @@ class TestPlanningByMedium:
 
 
 class TestReplaceExistingEmbeddings:
-    """The explicit way to change a dataset's embedding model."""
+    """The explicit way to compute a model's embeddings again from nothing."""
 
     class _Writer:
-        def __init__(self) -> None:
-            self.drops = 0
+        """A writer whose model the runner asked the inference for, outside the dataset's lock."""
 
-        def drop_embeddings(self) -> None:
-            self.drops += 1
+        def __init__(self, checkpoint: str | None = "MobileCLIP2-S2", ambiguous: bool = False) -> None:
+            self.model = ModelIdentity("clip", checkpoint)
+            self.drops: list[tuple[str, str]] = []
+            self._ambiguous = ambiguous
 
-    def test_without_the_parameter_nothing_is_dropped(self) -> None:
+        def empty_embeddings(self, model: str, checkpoint: str = "") -> None:
+            if self._ambiguous:
+                raise AmbiguousModelError(f"model '{model}' names 2 embedding spaces, of the checkpoints a, b")
+            self.drops.append((model, checkpoint))
+
+    def test_without_the_parameter_nothing_is_dropped(self, inference: _Inference) -> None:
         writer = self._Writer()
 
         KIND.prepare(writer, KIND.validate_params({"model": "clip"}))  # type: ignore[arg-type]
 
-        assert writer.drops == 0
+        assert writer.drops == []
 
-    def test_with_the_parameter_the_table_is_dropped_before_planning(self) -> None:
+    def test_with_the_parameter_only_the_jobs_model_is_dropped(self, inference: _Inference) -> None:
+        """This checkpoint of this model: the other models' vectors are kept."""
         writer = self._Writer()
 
         KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
 
-        assert writer.drops == 1
+        assert writer.drops == [("clip", "MobileCLIP2-S2")]
 
-    def test_replacing_lets_another_model_through_planning(self, inference: _Inference) -> None:
-        """The check on the table's model is what replacing is for: `prepare` empties it after the plan."""
-        assert _plan(_PlanningReader({"model_id": "dinov2", "dim": 512}), replace_existing_embeddings=True)
+    def test_a_checkpoint_left_untold_refuses_the_job_rather_than_guess(self) -> None:
+        """Planned while the inference could not say which weights it serves: no space is emptied by guess."""
+        writer = self._Writer(checkpoint=None, ambiguous=True)
+
+        with pytest.raises(ValueError, match="does not say which weights it serves: submit the job again"):
+            KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
+
+    def test_a_checkpoint_told_that_matches_several_spaces_asks_for_the_others_to_go(self) -> None:
+        writer = self._Writer(checkpoint="MobileCLIP2-S2", ambiguous=True)
+
+        with pytest.raises(ValueError, match="delete those of its embeddings that are not this checkpoint's first"):
+            KIND.prepare(writer, KIND.validate_params({"model": "clip", "replace_existing_embeddings": True}))  # type: ignore[arg-type]
 
     def test_the_form_is_asked_to_confirm_it(self) -> None:
         field = KIND.params_model.model_json_schema()["properties"]["replace_existing_embeddings"]
 
-        assert "deletes every vector" in field[CONFIRM_MARKER]
+        assert "deletes every vector this model already computed" in field[CONFIRM_MARKER]
+        assert "other models' vectors are kept" in field[CONFIRM_MARKER]
 
     def test_it_is_not_part_of_the_provenance(self) -> None:
         """What the job did to the dataset before computing, not how a vector was computed."""
@@ -551,3 +610,47 @@ class TestModelIdentity:
         recorded = KIND.provenance_params(KIND.validate_params({"model": "clip", "chunk_size": 3}))
 
         assert recorded == {"model": "clip", "normalize": True, "media": ["image"]}
+
+
+class TestWhichWeightsAnswered:
+    """The checkpoint is asked when it matters, never taken from what this worker remembers of another job."""
+
+    @staticmethod
+    def _kind() -> EmbeddingsKind:
+        return EmbeddingsKind("http://inference", "")
+
+    def test_each_planning_reads_it_again(self, inference: _Inference) -> None:
+        """Weights redeployed under the name since the last job are this job's."""
+        kind = self._kind()
+        assert kind.model_identity(PARAMS).version == "MobileCLIP2-S2"
+        inference.model_path = "ViT-L-14"
+
+        chunks = _plan(_PlanningReader(), kind=kind)
+
+        assert {chunk.payload["checkpoint"] for chunk in chunks} == {"ViT-L-14"}
+
+    def test_a_server_that_cannot_be_asked_at_planning_leaves_nothing_remembered(self, inference: _Inference) -> None:
+        kind = self._kind()
+        kind.model_identity(PARAMS)
+        inference.models_unreachable = True
+
+        chunks = _plan(_PlanningReader(), kind=kind)
+
+        assert {chunk.payload["checkpoint"] for chunk in chunks} == {""}
+        assert kind.model_identity(PARAMS).version is None
+
+    def test_a_chunk_tells_the_weights_that_answered_it(self, inference: _Inference) -> None:
+        kind = self._kind()
+        kind.model_identity(PARAMS)
+        inference.model_path = "ViT-L-14"
+
+        result = kind.process(_Reader(), {"table": "images", "view_ids": RECORDS}, PARAMS)  # type: ignore[arg-type]
+
+        assert result["checkpoint"] == "ViT-L-14"
+
+    def test_the_weights_that_answered_come_before_those_planning_read(self) -> None:
+        """Redeployed during the job: the vectors go to the space of the weights that made them."""
+        written = EmbeddingsKind._checkpoint_written({"checkpoint": "ViT-L-14"}, {"checkpoint": "MobileCLIP2-S2"})
+        planned = EmbeddingsKind._checkpoint_written({"checkpoint": ""}, {"checkpoint": "MobileCLIP2-S2"})
+
+        assert (written, planned) == ("ViT-L-14", "MobileCLIP2-S2")

@@ -127,12 +127,16 @@ def registry(db: psycopg.Connection) -> Registry:
 
 
 async def _embed(
-    db: psycopg.Connection, adb: psycopg.AsyncConnection, registry: Registry, library: tuple[Path, MediaResolver]
+    db: psycopg.Connection,
+    adb: psycopg.AsyncConnection,
+    registry: Registry,
+    library: tuple[Path, MediaResolver],
+    **params: Any,
 ) -> str:
     """Submit an embeddings job, plan it and run it to its end; return its identifier."""
     row = db.execute(
         f"INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params) VALUES ('embeddings', %s, %s) RETURNING id",
-        (DATASET_ID, Jsonb({"model": "clip", "chunk_size": 32})),
+        (DATASET_ID, Jsonb({"model": "clip", "chunk_size": 32, **params})),
     ).fetchone()
     assert row is not None
     path, media = library
@@ -205,10 +209,10 @@ class TestTheJobIndexesItsVectors:
         index_embeddings = writer_module.JobWriter.index_embeddings
         conflicts = [RuntimeError("Commit conflict for version 12: another writer committed meanwhile")]
 
-        def conflicting_once(self: Any, min_rows: int | None = None) -> str | None:
+        def conflicting_once(self: Any, model: str, min_rows: int | None = None) -> list[str]:
             if conflicts:
                 raise conflicts.pop()
-            return index_embeddings(self, min_rows)
+            return index_embeddings(self, model, min_rows)
 
         monkeypatch.setattr(writer_module.JobWriter, "index_embeddings", conflicting_once)
 
@@ -229,3 +233,67 @@ class TestTheJobIndexesItsVectors:
 
         assert _outcome(db, job) == ("done", "done")
         assert _indexes(Dataset(path / DATASET_ID)) == {"record_id": "BTree", "vector": "IvfSq"}
+
+
+class TestBesideAnotherModel:
+    """A dataset holding another model's embeddings: each model in a table of its own, through the queue."""
+
+    #: A model the dataset holds the vectors of from before, at a width of its own.
+    OTHER_MODEL, OTHER_CHECKPOINT, OTHER_DIM = "dinov2", "vitb14", 8
+
+    def _with_another_model(self, library: tuple[Path, MediaResolver]) -> dict[str, Any]:
+        rows = [
+            {"id": f"dino-{n}", "record_id": f"rec-{n}", "view_id": f"img-{n}", "vector": [1.0] * self.OTHER_DIM}
+            for n in range(IMAGES)
+        ]
+        return Dataset(library[0] / DATASET_ID).upsert_record_embeddings(self.OTHER_MODEL, self.OTHER_CHECKPOINT, rows)
+
+    @staticmethod
+    def _space(dataset: Dataset, model: str) -> dict[str, Any]:
+        space = dataset.record_embedding_space(model)
+        assert space is not None, f"no embeddings of {model}"
+        return space
+
+    @staticmethod
+    def _indexed(dataset: Dataset, space: dict[str, Any]) -> dict[str, str]:
+        return {index.columns[0]: index.index_type for index in dataset.open_table(space["table"]).list_indices()}
+
+    async def test_the_jobs_model_gets_a_table_of_its_own_indexed_the_other_left_as_it_was(
+        self,
+        db: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        registry: Registry,
+        library: tuple[Path, MediaResolver],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(writer_module, "VECTOR_INDEX_MIN_ROWS", IMAGES)
+        other = self._with_another_model(library)
+
+        job = await _embed(db, adb, registry, library)
+
+        assert _outcome(db, job) == ("done", "done")
+        dataset = Dataset(library[0] / DATASET_ID)
+        clip = self._space(dataset, "clip")
+        assert (clip["checkpoint"], clip["table"] != other["table"]) == ("MobileCLIP2-S2", True)
+        assert self._indexed(dataset, clip) == {"record_id": "BTree", "vector": "IvfSq"}
+        assert (dataset.open_table(other["table"]).count_rows(), self._indexed(dataset, other)) == (IMAGES, {})
+        records, _ = dataset.search_records(_vector_of("img-42.png"), k=1, model="clip")
+        assert [record.id for record in records] == ["rec-42"]
+
+    async def test_replacing_deletes_the_jobs_model_only(
+        self,
+        db: psycopg.Connection,
+        adb: psycopg.AsyncConnection,
+        registry: Registry,
+        library: tuple[Path, MediaResolver],
+    ) -> None:
+        other = self._with_another_model(library)
+        await _embed(db, adb, registry, library)
+
+        job = await _embed(db, adb, registry, library, replace_existing_embeddings=True)
+
+        assert _outcome(db, job) == ("done", "done")
+        dataset = Dataset(library[0] / DATASET_ID)
+        assert [space["model_id"] for space in dataset.record_embedding_spaces()] == [self.OTHER_MODEL, "clip"]
+        assert dataset.open_table(other["table"]).count_rows() == IMAGES
+        assert dataset.open_table(self._space(dataset, "clip")["table"]).count_rows() == IMAGES

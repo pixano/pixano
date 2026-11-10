@@ -488,13 +488,21 @@ _open_datasets_guard = threading.Lock()
 
 
 def _open_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Open a dataset, once; serve it from the cache afterwards."""
+    """Open a dataset, once; serve it from the cache afterwards, while another process has not changed it.
+
+    A dataset another process changed since — its schema in `info.json`, its embeddings spaces in
+    `embeddings.json`: another worker's job, the application — is opened again (`Dataset.is_stale`,
+    three `stat` calls), as the application's cache does: a chunk must not read a space another
+    worker created, or write into one it deleted, from what this worker read before.
+    """
     key = (library, dataset_id)
     with _open_datasets_guard:
         cached = _open_datasets.get(key)
-        if cached is not None:
-            _open_datasets.move_to_end(key)
-            return cached
+    if cached is not None and not _changed_since_opened(cached):
+        with _open_datasets_guard:
+            if _open_datasets.get(key) is cached:
+                _open_datasets.move_to_end(key)
+        return cached
     opened = Dataset.find(dataset_id, library)
     with _open_datasets_guard:
         _open_datasets[key] = opened
@@ -502,6 +510,20 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
         while len(_open_datasets) > _OPEN_DATASETS_MAX:
             _open_datasets.popitem(last=False)
     return opened
+
+
+def _changed_since_opened(dataset: Dataset) -> bool:
+    """Whether another process changed a cached dataset since it was opened (`Dataset.is_stale`).
+
+    A dataset its files cannot be examined of — a storage that stopped answering a `stat` — is
+    served as it was opened: reopening it would fail the same way, and the chunk would fail on it
+    where the dataset it holds may serve it.
+    """
+    try:
+        return dataset.is_stale()
+    except OSError as error:
+        log.warning("dataset %s: cannot tell whether it changed (%s), served as it was opened", dataset.path, error)
+        return False
 
 
 def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
@@ -521,8 +543,8 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
         fresh: Reopen the dataset bypassing the cache. Planning asks for it: it is a job's
             first look at its dataset, and a dataset recreated under the worker — reimported,
             its embeddings table dropped — was otherwise seen as it was at the previous
-            opening, until the worker restarted. The chunks, for their part, read what
-            planning reopened.
+            opening, until the worker restarted. The chunks, for their part, read what the
+            cache holds, opened again once another process changed the dataset.
     """
 
     def open_dataset() -> Dataset:
@@ -547,17 +569,11 @@ def _writer_for(library: Path | None, dataset_id: str, kind: JobKind, job_id: st
             raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _open_dataset(library, dataset_id)
 
-    def reopen_dataset() -> Dataset:
-        if library is None:
-            raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
-        return _reopen_dataset(library, dataset_id)
-
     return JobWriter(
         open_dataset,
         kind.name,
         job_id,
         kind.source_type,
-        reopen_dataset,
         dataset_id,
         params=kind.provenance_params(params),
         model=kind.model_identity(params),

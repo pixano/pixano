@@ -52,8 +52,8 @@ NO_RESPONSE = 0
 INVALID_RESPONSE = "invalid_response"
 
 # How long a question about the server — which models it serves, which checkpoint — may take.
-# The answer only gates a plan or completes a provenance: a slow server must not hold either for
-# the client's default minute.
+# The answer gates a plan, names the space an embeddings chunk writes to, completes a provenance:
+# a slow server must not hold any of them for the client's default minute.
 QUERY_TIMEOUT_S = 5.0
 
 # Side of the witness image: the smallest the server accepts without arguing. It only serves to
@@ -191,7 +191,7 @@ class InferenceServer:
             self.url, api_key=self.api_key or None, max_retries=max_retries, timeout=timeout
         )
 
-    def require_served(self, model: str, capability: str) -> None:
+    def require_served(self, model: str, capability: str) -> str | None:
         """Refuse a job whose model the server does not serve with this capability.
 
         A server that cannot be reached, or answers that it is unwell, is not a refusal: it may
@@ -200,6 +200,10 @@ class InferenceServer:
         would fail on the same answer, after `prepare` had already cleared what the job was to
         replace. So is an answer this worker cannot read: a client and a server of different
         versions, not a state of the server. Any other error fails the planning as it is.
+
+        Returns:
+            The checkpoint the server serves the model with, read again (`model_identity`): empty
+            when the server tells none, None when it cannot be asked.
 
         Raises:
             ValueError: The server serves no such model, the models it serves named; or it
@@ -222,13 +226,23 @@ class InferenceServer:
                     "check PIXANO_INFERENCE_URL and PIXANO_INFERENCE_API_KEY"
                 ) from error
             log.warning("model '%s': cannot ask the inference whether it is served (%s)", model, error)
-            return
+            # What was remembered of the model may be weights redeployed since: not to be vouched for.
+            self._checkpoints.pop(model, None)
+            return None
         names = sorted(info.name for info in served if info.capability == capability)
         if model not in names:
             raise ValueError(
                 f"the inference serves no {capability} model named '{model}' — it serves "
                 f"{', '.join(names) or 'none'}. Deploy the model on pixano-inference, or choose one of those."
             )
+        # What the server loaded under that name now, for this job: weights deployed under the
+        # name since the last job are not taken for the previous ones (`model_identity`).
+        checkpoint = next((info.model_path for info in served if info.name == model), None)
+        if checkpoint:
+            self._checkpoints[model] = checkpoint
+        else:
+            self._checkpoints.pop(model, None)
+        return checkpoint or ""
 
     def model_identity(self, model: str) -> ModelIdentity:
         """The model's name, and the checkpoint the server loaded under it.
@@ -236,14 +250,30 @@ class InferenceServer:
         The server declares no version as such; the checkpoint path is what identifies which
         weights answered. Asked once per model per process, and only a successful answer is
         remembered: a server that could not be asked is asked again on the next chunk rather
-        than leaving every later row without a version.
+        than leaving every later row without a version. Each planning reads it again, or forgets
+        it when the server cannot be asked (`require_served`): weights deployed under the name
+        since are this job's.
         """
-        if model not in self._checkpoints:
+        # Read once: a planning on another thread may forget it meanwhile (`require_served`).
+        checkpoint = self._checkpoints.get(model)
+        if checkpoint is None:
             checkpoint = self._checkpoint_of(model)
             if checkpoint is None:
                 return ModelIdentity(model)
             self._checkpoints[model] = checkpoint
-        return ModelIdentity(model, self._checkpoints[model])
+        return ModelIdentity(model, checkpoint)
+
+    def served_checkpoint(self, model: str) -> str | None:
+        """The checkpoint the server serves the model with now, asked of it; None when it cannot tell.
+
+        Not the one remembered (`model_identity`): weights deployed under the name since are the
+        ones that answer now. The server does not say which weights answered a call, so the closest
+        is to ask right after it. Remembered when told.
+        """
+        checkpoint = self._checkpoint_of(model)
+        if checkpoint is not None:
+            self._checkpoints[model] = checkpoint
+        return checkpoint
 
     def _checkpoint_of(self, model: str) -> str | None:
         try:
