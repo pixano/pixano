@@ -8,6 +8,7 @@
 
 from .base import (
     CONFIRM_MARKER,
+    MODEL_TASK_MARKER,
     Chunk,
     JobKind,
     JobParams,
@@ -45,6 +46,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
 
 __all__ = [
     "CONFIRM_MARKER",
+    "MODEL_TASK_MARKER",
     "Chunk",
     "FakeKind",
     "EmbeddingsKind",

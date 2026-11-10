@@ -504,6 +504,17 @@ class TestPlanningByMedium:
             and KIND.validate_params({"model": "clip"}).media is not KIND.validate_params({"model": "clip"}).media
         )
 
+    def test_names_no_model_and_asks_the_form_for_a_served_one(self) -> None:
+        """A model name in a kind is a guess about a deployment: the form offers the models the
+        inference serves for embeddings instead."""
+        from pixano_worker.kinds import MODEL_TASK_MARKER
+
+        schema = KIND.params_model.model_json_schema()
+
+        assert "model" in schema["required"]
+        assert "default" not in schema["properties"]["model"]
+        assert schema["properties"]["model"][MODEL_TASK_MARKER] == "embedding"
+
 
 class TestReplaceExistingEmbeddings:
     """The explicit way to compute a model's embeddings again from nothing."""
