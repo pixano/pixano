@@ -2032,7 +2032,7 @@ class Dataset:
         space = self._embedding_spaces.matching(model_id, checkpoint or "", dim)
         return space.as_document() if space is not None else None
 
-    def record_embedding_health(self, model: str | None = None) -> dict[str, Any]:
+    def record_embedding_health(self, model: str | None = None, media: int | None = None) -> dict[str, Any]:
         """Health check of one model's embedding storage.
 
         The description alone advertises semantic search; the physical LanceDB table is only
@@ -2050,6 +2050,8 @@ class Dataset:
 
         Args:
             model: The model — its space's id or its name —; the default one when None.
+            media: The still images the dataset holds, when the caller counted them already — for
+                the health of several spaces —; counted when None.
 
         Returns:
             ``{"status", "id", "model_id", "checkpoint", "dim", "rows", "records", "media",
@@ -2067,7 +2069,7 @@ class Dataset:
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
-            "media": self._still_image_count(),
+            "media": self._still_image_count() if media is None else media,
             "embedded_media": 0,
             "detail": None,
         }
@@ -2173,14 +2175,15 @@ class Dataset:
 
     @dataset_write
     def empty_model_record_embeddings(
-        self, model_id: str, checkpoint: str = "", index_type: str | None = None
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None, dim: int | None = None
     ) -> dict[str, Any] | None:
         """Empty the embeddings of a model known by its name and checkpoint, keeping its space.
 
-        For a writer about to compute its model again from nothing, before it knows its vectors'
-        dimension — the model's own, unchanged. The space keeps its id, its place and the default
-        a search uses; its table is created again, empty, and the space records the checkpoint and
-        the vector index told. It is looked for and emptied under one lock, the description read
+        For a writer about to compute its model again from nothing: before it knows its vectors'
+        dimension — the model's own, unchanged —, or after, its first vectors in hand (`dim`), which
+        repairs a space that records another. The space keeps its id, its place and the default a
+        search uses; its table is created again, empty, and the space records the checkpoint, the
+        vector index and the dimension told. It is looked for and emptied under one lock, the description read
         again under it, so that a space another process recorded meanwhile is found. The other
         models' embeddings are left as they are.
 
@@ -2191,6 +2194,7 @@ class Dataset:
             model_id: The model's name.
             checkpoint: The weights loaded under that name; empty when the caller cannot tell.
             index_type: The vector index the table is to get once filled; the space's when None.
+            dim: The vectors' dimension, when the caller knows it; the space's when None.
 
         Returns:
             The space emptied, or None when the dataset holds none of that model.
@@ -2213,7 +2217,10 @@ class Dataset:
         if space is None:
             return None
         emptied = dataclasses.replace(
-            space, checkpoint=checkpoint or space.checkpoint, index_type=index_type or space.index_type
+            space,
+            checkpoint=checkpoint or space.checkpoint,
+            index_type=index_type or space.index_type,
+            dim=int(dim) if dim else space.dim,
         )
         self._create_embedding_table(emptied, mode="overwrite")
         if emptied != space:

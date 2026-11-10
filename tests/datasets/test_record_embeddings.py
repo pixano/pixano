@@ -449,6 +449,19 @@ class TestSeveralModels:
         assert reopened.open_table(siglip["table"]).count_rows() == 0
         assert reopened.open_table(clip["table"]).count_rows() == 20
 
+    def test_emptying_a_model_at_the_dimension_its_vectors_have_repairs_a_space_that_records_another(self):
+        dataset, clip, _ = _two_model_dataset()
+        broken = _rewrite(dataset, lambda document: document["spaces"][0].update(dim=16))
+        assert broken.record_embedding_health(clip["id"])["status"] == "dim_mismatch"
+
+        emptied = broken.empty_model_record_embeddings("test-clip", "ckpt-a", dim=8)
+        broken.add_record_embeddings(
+            [{"record_id": "r1", "view_id": "img-r1", "vector": _bit_vector(1)}], emptied["id"]
+        )
+
+        assert (emptied["id"], emptied["dim"]) == (clip["id"], 8)
+        assert Dataset(dataset.path).record_embedding_health(clip["id"])["status"] == "partial"
+
     def test_emptying_the_default_model_leaves_it_the_default(self):
         dataset, clip, _ = _two_model_dataset()
 
