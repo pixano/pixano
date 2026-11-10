@@ -167,8 +167,8 @@ class DatasetWriteTarget(Protocol):
         """Whether a record embeddings table already exists."""
         ...
 
-    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = ...) -> None:
-        """Create the embeddings table for a given vector width, declaring the vector index it will get."""
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = ...) -> dict[str, Any]:
+        """Create a model's embeddings table, declaring the vector index it will get; the model's space."""
         ...
 
     def drop_record_embeddings(self) -> None:

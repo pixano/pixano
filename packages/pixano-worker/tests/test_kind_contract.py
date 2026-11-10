@@ -134,10 +134,12 @@ class _Target:
     def has_record_embeddings(self) -> bool:
         return self._embeddings_ready
 
-    def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = "IVF_PQ") -> dict[str, Any]:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
-        self._space: dict[str, Any] | None = {"model_id": model_id, "dim": dim, "index_type": index_type}
+        space: dict[str, Any] = {"model_id": model_id, "dim": dim, "index_type": index_type}
+        self._space: dict[str, Any] | None = space
+        return space
 
     def drop_record_embeddings(self) -> None:
         self._embeddings_ready = False
