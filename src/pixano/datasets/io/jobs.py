@@ -108,12 +108,15 @@ class FollowUp:
         params: The job's parameters.
         job_id: The queued job's identifier, once queued.
         error: Why it was not queued.
+        defaulted: The parameters the request did not name, which the deployment's defaults chose:
+            fitting the follow-up to the dataset written may choose otherwise.
     """
 
     kind: str
     params: dict[str, Any] = field(default_factory=dict)
     job_id: str = ""
     error: str = ""
+    defaulted: tuple[str, ...] = ()
 
     @property
     def pending(self) -> bool:
@@ -121,8 +124,8 @@ class FollowUp:
         return not self.job_id and not self.error
 
     def to_json(self) -> dict[str, Any]:
-        """The follow-up as the store keeps it."""
-        return asdict(self)
+        """The follow-up as the store keeps it, in JSON's own types."""
+        return {**asdict(self), "defaulted": list(self.defaulted)}
 
     @classmethod
     def from_json(cls, payload: dict[str, Any]) -> FollowUp:
@@ -132,12 +135,15 @@ class FollowUp:
             params=dict(payload.get("params") or {}),
             job_id=str(payload.get("job_id") or ""),
             error=str(payload.get("error") or ""),
+            defaulted=tuple(str(name) for name in payload.get("defaulted") or ()),
         )
 
 
-FollowUpStarter = Callable[[str, list[FollowUp]], list[FollowUp]]
+FollowUpStarter = Callable[[str, list[FollowUp]], list[list[FollowUp]]]
 """Queues an import's pending follow-ups: given the imported dataset's identifier and them, returns
-each, in the same order, with its job identifier or the reason it was not queued."""
+what each became, in the same order — itself, or the several jobs it stands for on that dataset,
+such as the embeddings of each model the dataset holds —, each with its job identifier or the
+reason it was not queued."""
 
 # What a pending follow-up records when the process that ran its import has no starter to queue it.
 NO_STARTER = "not queued: the import ran without a job queue to queue it on"
@@ -162,7 +168,7 @@ FAILED = "not queued: queueing it failed — the log of the process that ran the
 def queue_follow_ups(
     starter: FollowUpStarter | None, dataset_id: str, follow_ups: Sequence[FollowUp]
 ) -> list[FollowUp]:
-    """Queue an import's pending follow-ups once it is done; return them all with their outcomes.
+    """Queue an import's pending follow-ups once it is done; return them all, each pending one as what it became.
 
     A follow-up that cannot be queued says why, and the import stays done: the data is in, and a
     job missing is a job one can still start by hand.
@@ -173,25 +179,29 @@ def queue_follow_ups(
         follow_ups: The import's follow-ups, as kept with its job.
 
     Returns:
-        The follow-ups, in their order, the pending ones with their outcome.
+        The follow-ups, in their order, each pending one in place of what it became, with its outcome.
     """
     pending = [follow_up for follow_up in follow_ups if follow_up.pending]
     if not pending:
         return list(follow_ups)
     if starter is None:
-        outcomes = [replace(follow_up, error=NO_STARTER) for follow_up in pending]
+        became = [[replace(follow_up, error=NO_STARTER)] for follow_up in pending]
     else:
         try:
-            outcomes = starter(dataset_id, pending)
-            if len(outcomes) != len(pending):
-                raise RuntimeError(f"{len(pending)} follow-up(s) asked, {len(outcomes)} answered")
-            outcomes = [replace(outcome, error=NO_OUTCOME) if outcome.pending else outcome for outcome in outcomes]
+            became = starter(dataset_id, pending)
+            if len(became) != len(pending):
+                raise RuntimeError(f"{len(pending)} follow-up(s) asked, {len(became)} answered")
+            became = [
+                [replace(outcome, error=NO_OUTCOME) if outcome.pending else outcome for outcome in outcomes]
+                or [replace(follow_up, error=NO_OUTCOME)]
+                for follow_up, outcomes in zip(pending, became, strict=True)
+            ]
         except Exception as error:  # noqa: BLE001 - an import is never failed by its follow-ups
             logger.warning("the follow-ups of an import into %s could not be queued: %s", dataset_id, error)
             logger.debug("the follow-ups' failure", exc_info=True)
-            outcomes = [replace(follow_up, error=FAILED) for follow_up in pending]
-    answered = iter(outcomes)
-    return [next(answered) if follow_up.pending else follow_up for follow_up in follow_ups]
+            became = [[replace(follow_up, error=FAILED)] for follow_up in pending]
+    answered = iter(became)
+    return [outcome for follow_up in follow_ups for outcome in (next(answered) if follow_up.pending else [follow_up])]
 
 
 def queue_import_follow_ups(
@@ -210,6 +220,9 @@ def queue_import_follow_ups(
         job_id: The import job, whose data is in.
         starter: What queues them, or None when nothing can.
         dataset_id: The imported dataset.
+
+    Returns:
+        The job's follow-ups, each pending one in place of what it became, with its outcome.
     """
     job = store.get_job(job_id)
     follow_ups = list(job.follow_ups) if job else []

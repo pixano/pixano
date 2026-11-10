@@ -16,6 +16,7 @@ import yaml
 from typer.testing import CliRunner
 
 from pixano.cli import app
+from pixano.cli.data import _echo_follow_ups
 from pixano.datasets import Dataset
 from pixano.datasets.io.jobs import FollowUp, JobStore
 from tests.datasets.io._review_fixture import (
@@ -542,3 +543,18 @@ class TestFixCreationDates:
         assert result.exit_code == 0, result.output
         assert "Error processing 'aaa_broken'" in result.output
         assert "1 dataset(s) updated" in result.output
+
+
+class TestSayingWhatBecameOfTheFollowUps:
+    def test_each_job_on_a_line_of_its_own(self, capsys: pytest.CaptureFixture[str]):
+        """The embeddings of every model a dataset holds: one line each, queued or not."""
+        _echo_follow_ups(
+            [
+                FollowUp(kind="embeddings", params={"model": "clip"}, job_id="j1"),
+                FollowUp(kind="embeddings", params={"model": "siglip"}, error="not queued: no worker"),
+            ]
+        )
+
+        out, err = capsys.readouterr()
+        assert out == "Embeddings (clip) queued as job j1: follow it in the dataset's Jobs panel.\n"
+        assert err == "Embeddings (siglip) not queued: no worker\n"

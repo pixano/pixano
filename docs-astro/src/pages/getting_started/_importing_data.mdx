@@ -183,8 +183,8 @@ builds on; add a `dataset.yaml` when you need custom attributes or other annotat
 | `--media` | `embed` (default, self-contained) or `uri` (store datalake URIs verbatim). |
 | `--dry-run` | Validate and print the plan without creating the dataset. |
 | `--yes`, `-y` | Skip the confirmation prompt — use this in scripts and CI. |
-| `--embeddings`, `--no-embeddings` | Queue, or not, the embeddings job of the dataset imported into, once the import is done. By default it is queued where the job can run — a job queue (`PIXANO_DATABASE_URL`) where `pixano-worker` runs it, and a model — unless `PIXANO_EMBEDDINGS_AFTER_IMPORT` is false or the source holds no still image. With `--mode add`, the job computes the whole dataset again, with the model its embeddings already use. |
-| `--embeddings-model` | The model the embeddings job runs; naming one asks for the job. Default: `PIXANO_EMBEDDINGS_MODEL`. The command asks no inference: without either, it queues no embeddings. |
+| `--embeddings`, `--no-embeddings` | Queue, or not, the embeddings job of the dataset imported into, once the import is done. By default it is queued where the job can run — a job queue (`PIXANO_DATABASE_URL`) where `pixano-worker` runs it, and a model — unless `PIXANO_EMBEDDINGS_AFTER_IMPORT` is false or the source holds no still image. On a dataset that already has embeddings, as with `--mode add`, every model it holds is computed again too, one job per model, each over the whole dataset. |
+| `--embeddings-model` | The model the embeddings job runs, beside the models the dataset already holds; naming one asks for the job. Default: `PIXANO_EMBEDDINGS_MODEL`, used only for a dataset without embeddings. The command asks no inference: without either, it queues no embeddings. |
 
 ### The line format (JSONL v2)
 

@@ -160,10 +160,16 @@ def _embeddings_follow_ups(
     has_images = plan_has_still_images(plan.inferred_schema)
     if not considers_embeddings(wanted, default_on=deployment.embeddings_after_import, has_images=has_images):
         return []
+    named = bool(model)
     model = model or deployment.embeddings_model
     unavailable = embeddings_unavailable(deployment.database_url) if wanted is None and model else None
     return decide_embeddings(
-        wanted, model, default_on=deployment.embeddings_after_import, unavailable=unavailable, no_model=NO_MODEL_HERE
+        wanted,
+        model,
+        named=named,
+        default_on=deployment.embeddings_after_import,
+        unavailable=unavailable,
+        no_model=NO_MODEL_HERE,
     )
 
 
@@ -175,7 +181,7 @@ def _follow_up_starter(data_dir: Path) -> FollowUpStarter:
     library the environment names.
     """
 
-    def submit(dataset_id: str, follow_ups: list[FollowUp]) -> list[FollowUp]:
+    def submit(dataset_id: str, follow_ups: list[FollowUp]) -> list[list[FollowUp]]:
         from pixano.api.jobs.follow_ups import submit_follow_ups
         from pixano.api.settings import Settings
 
@@ -224,12 +230,15 @@ def import_command(
     embeddings: Optional[bool] = typer.Option(
         None,
         "--embeddings/--no-embeddings",
-        help="Queue the embeddings job of what is imported once the import is done. By default, per "
-        "PIXANO_EMBEDDINGS_AFTER_IMPORT, where the job can run: a job queue (PIXANO_DATABASE_URL) where "
-        "pixano-worker runs it, and a model.",
+        help="Queue the embeddings job of what is imported once the import is done, and one per model the "
+        "dataset already holds. By default, per PIXANO_EMBEDDINGS_AFTER_IMPORT, where the job can run: a job "
+        "queue (PIXANO_DATABASE_URL) where pixano-worker runs it, and a model.",
     ),
     embeddings_model: Optional[str] = typer.Option(
-        None, "--embeddings-model", help="The model the embeddings job runs (default: PIXANO_EMBEDDINGS_MODEL)."
+        None,
+        "--embeddings-model",
+        help="The model the embeddings job runs, beside the models the dataset already holds (default: "
+        "PIXANO_EMBEDDINGS_MODEL, for a dataset without embeddings only).",
     ),
 ) -> None:
     """Import a dataset: analyze, confirm the plan, then ingest atomically."""
