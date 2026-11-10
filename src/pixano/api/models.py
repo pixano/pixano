@@ -560,8 +560,13 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
-        """Build a full dataset response from a Dataset instance."""
-        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items()}
+        """Build a full dataset response from a Dataset instance, its embeddings tables left out.
+
+        A search reads a model's embeddings, through `embeddings.json`, and no client reads the rows of
+        their tables; nor does a client tell such a table, which bears no schema of its own, from a view's.
+        """
+        embeddings = {space["table"] for space in dataset.record_embedding_spaces()}
+        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items() if name not in embeddings}
         return cls(
             id=dataset.info.id,
             path=dataset.path,

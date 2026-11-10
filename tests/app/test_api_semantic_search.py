@@ -131,6 +131,19 @@ class TestSearchCapability:
         assert search["models"] == ["mock-clip"]
 
 
+class TestDescribedToAClient:
+    """A dataset's description leaves its embeddings tables out: a search reads them, no client does."""
+
+    def test_its_tables(self):
+        dataset = _build_dataset(with_embeddings=True)
+        _with_a_second_model(dataset)
+        client = _make_client(dataset)
+
+        tables = client.get(BASE).json()["tables"]
+
+        assert tables.keys() == {"records", "images"}
+
+
 class TestRecordSearch:
     def test_text_search_ranks_records(self):
         provider = _make_provider()
