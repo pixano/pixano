@@ -55,7 +55,12 @@ License: CECILL-C
       used to push the Run button out of sight and leave the job list no room at all.
     -->
     <div class="max-h-[60%] shrink-0 overflow-y-auto border-b border-border">
-      <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
+      <SubmitJobForm
+        kinds={jobsStore.kinds}
+        {dataset}
+        servedModels={jobsStore.servedModels}
+        onSubmit={run}
+      />
     </div>
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">

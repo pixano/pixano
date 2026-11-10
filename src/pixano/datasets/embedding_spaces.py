@@ -69,6 +69,14 @@ _SPACE_FIELDS = frozenset({"id", "table", "model_id", "checkpoint", "dim", "metr
 _DOCUMENT_FIELDS = frozenset({"version", "default", "spaces"})
 
 
+class AmbiguousModelError(ValueError):
+    """A writer that does not tell its model's checkpoint names several spaces of that model.
+
+    Its vectors cannot go to one of them by guess: they would mix with another checkpoint's, which
+    a search could not tell apart.
+    """
+
+
 def space_id(model_id: str, checkpoint: str) -> str:
     """The identifier of a model's space: its name made readable, and a hash of its name and checkpoint.
 
@@ -278,11 +286,18 @@ class EmbeddingSpaces:
         """The space of this id."""
         return next((space for space in self.spaces if space.id == identifier), None)
 
-    def matching(self, model_id: str, checkpoint: str, dim: int | None = None) -> EmbeddingSpace | None:
+    def matching(
+        self, model_id: str, checkpoint: str, dim: int | None = None, *, strict: bool = False
+    ) -> EmbeddingSpace | None:
         """The space of a model, by its name and checkpoint (`EmbeddingSpace.is_model`).
 
-        Where several match — a request that does not say its checkpoint — the one of that very
-        checkpoint first, then the default one, then the first created.
+        Where several match — a request that does not say its checkpoint, a space recorded
+        without its own — the one of that very checkpoint first; failing it, the default one, then
+        the first created, for a reader; none for a writer (`strict`), which would mix its vectors
+        with another checkpoint's.
+
+        Raises:
+            AmbiguousModelError: `strict`, and several spaces match none of them by its checkpoint.
         """
         candidates = [space for space in self.spaces if space.is_model(model_id, checkpoint, dim)]
         if not candidates:
@@ -290,6 +305,17 @@ class EmbeddingSpaces:
         exact = [space for space in candidates if space.checkpoint == checkpoint]
         if exact:
             return exact[0]
+        if strict and len(candidates) > 1:
+            checkpoints = ", ".join(space.checkpoint or "none told" for space in candidates)
+            if checkpoint:
+                raise AmbiguousModelError(
+                    f"model '{model_id}' of checkpoint '{checkpoint}' matches {len(candidates)} embedding spaces "
+                    f"recorded without theirs (checkpoints {checkpoints}): which is its own cannot be told"
+                )
+            raise AmbiguousModelError(
+                f"model '{model_id}' names {len(candidates)} embedding spaces, of the checkpoints {checkpoints}: "
+                "its own checkpoint must be told to choose"
+            )
         return next((space for space in candidates if space.id == self.default), candidates[0])
 
     def new_space(
@@ -335,8 +361,18 @@ class EmbeddingSpaces:
 
     def with_checkpoint(self, space: EmbeddingSpace, checkpoint: str) -> "EmbeddingSpaces":
         """These spaces, `space` now knowing its checkpoint; its id, table and place unchanged."""
-        learnt = replace(space, checkpoint=checkpoint)
-        return replace(self, spaces=tuple(learnt if kept.id == space.id else kept for kept in self.spaces))
+        return self.replacing(replace(space, checkpoint=checkpoint))
+
+    def replacing(self, space: EmbeddingSpace) -> "EmbeddingSpaces":
+        """These spaces, `space` in place of the one of its id: its place, and the default, unchanged.
+
+        Raises:
+            KeyError: No space has its id.
+            ValueError: Another space has its table.
+        """
+        if self.get(space.id) is None:
+            raise KeyError(space.id)
+        return replace(self, spaces=tuple(space if kept.id == space.id else kept for kept in self.spaces))
 
     def without(self, identifier: str) -> "EmbeddingSpaces":
         """These spaces but the one of this id; the default moves to the first left if it was that one."""

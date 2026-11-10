@@ -34,12 +34,18 @@ const api = vi.hoisted(() => ({
   listJobKinds: vi.fn(),
   openJobStream: vi.fn(),
   submitJob: vi.fn(),
+  listInferenceModels: vi.fn(),
 }));
 
 // Mocked as it is, so that it outlives `vi.resetModules()` as mocked modules do: the jobs module
 // below, mocked and so loaded once, tells refusals apart by this ApiError class, and the tests
 // build theirs from the same one.
 vi.mock("$lib/api/apiClient", async (importOriginal) => await importOriginal());
+
+vi.mock("$lib/api/inference", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("$lib/api/inference")>()),
+  listInferenceModels: api.listInferenceModels,
+}));
 
 vi.mock("$lib/api/jobs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("$lib/api/jobs")>()),
@@ -86,14 +92,23 @@ async function startedStore(): Promise<{ store: Store; stream: FakeStream }> {
   return started;
 }
 
-/** A kind the worker runs; what it does is beside the point here. */
-const EMBEDDINGS_KIND = { name: "embeddings", params_schema: { type: "object", properties: {} } };
+/** A kind whose `model` parameter names a model served for `task`. */
+function kindWithModel(name: string, task: string) {
+  return {
+    name,
+    params_schema: { properties: { model: { type: "string", "x-pixano-model-task": task } } },
+  };
+}
+
+/** A kind the worker runs, whose model the inference serves for embeddings. */
+const EMBEDDINGS_KIND = kindWithModel("embeddings", "embedding");
 
 beforeEach(() => {
   api.listJobs.mockReset().mockResolvedValue([job()]);
   api.listJobKinds.mockReset().mockResolvedValue([]);
   api.openJobStream.mockReset();
   api.submitJob.mockReset();
+  api.listInferenceModels.mockReset().mockResolvedValue([]);
 });
 
 /** What the server answers on an installation without a PostgreSQL database configured. */
@@ -129,6 +144,7 @@ describe("jobsStore on an installation without a job queue", () => {
     expect(store.loading).toBe(false);
     // The stream would be refused too, and nothing would ever say it reconnected.
     expect(api.openJobStream).not.toHaveBeenCalled();
+    expect(api.listInferenceModels).not.toHaveBeenCalled();
   });
 
   it("drops the kinds of an earlier opening, so no form offers a Run that would fail", async () => {
@@ -200,7 +216,7 @@ describe("jobsStore on an installation without a job queue", () => {
 });
 
 describe("jobsStore closed while its lists load", () => {
-  it("opens no stream once stopped before the lists arrive", async () => {
+  it("opens no stream and asks for no models once stopped before the lists arrive", async () => {
     // Escape right after opening the panel: stop() runs while start() still awaits.
     let finishListing: (jobs: Job[]) => void = () => {};
     api.listJobs.mockReturnValue(new Promise<Job[]>((resolve) => (finishListing = resolve)));
@@ -213,12 +229,14 @@ describe("jobsStore closed while its lists load", () => {
     await starting;
 
     expect(api.openJobStream).not.toHaveBeenCalled();
+    expect(api.listInferenceModels).not.toHaveBeenCalled();
     expect(store.live).toBe(false);
   });
 
   it("follows for the panel opened again before the first lists arrived", async () => {
     // Closing a panel must not stop the next one from following. The first start, landing
-    // last, leaves the following to the second: no second stream.
+    // last, leaves the following to the second: no second stream, no second question about
+    // the models served.
     let finishFirstListing: (jobs: Job[]) => void = () => {};
     api.listJobs.mockReturnValueOnce(
       new Promise<Job[]>((resolve) => (finishFirstListing = resolve)),
@@ -234,6 +252,7 @@ describe("jobsStore closed while its lists load", () => {
     stream.onopen?.();
 
     expect(api.openJobStream).toHaveBeenCalledTimes(1);
+    expect(api.listInferenceModels).toHaveBeenCalledTimes(1);
     expect(store.live).toBe(true);
   });
   it("keeps the lists of the panel opened again when the first answer lands last", async () => {
@@ -374,5 +393,42 @@ describe("jobsStore hearing a failure", () => {
     });
 
     expect(store.jobs[0].error).toEqual({ reason: "planning failed", detail: "boom" });
+  });
+});
+
+describe("jobsStore asking which models are served", () => {
+  it("asks once per task the kinds need, and keeps the names", async () => {
+    api.listJobKinds.mockResolvedValue([
+      kindWithModel("detection", "detection"),
+      kindWithModel("embeddings", "embedding"),
+    ]);
+    api.listInferenceModels.mockImplementation((task: string) =>
+      Promise.resolve([
+        { name: task === "detection" ? "yolo26s" : "clip", task, provider_name: "p" },
+      ]),
+    );
+
+    const { store } = await startedStore();
+
+    expect(
+      api.listInferenceModels.mock.calls.map((call: unknown[]) => String(call[0])).sort(),
+    ).toEqual(["detection", "embedding"]);
+    expect(store.servedModels).toEqual({ detection: ["yolo26s"], embedding: ["clip"] });
+  });
+
+  it("leaves out a task the inference cannot answer for, and still loads the others", async () => {
+    api.listJobKinds.mockResolvedValue([
+      kindWithModel("detection", "detection"),
+      kindWithModel("embeddings", "embedding"),
+    ]);
+    api.listInferenceModels.mockImplementation((task: string) =>
+      task === "detection"
+        ? Promise.reject(new Error("unsupported task"))
+        : Promise.resolve([{ name: "clip", task, provider_name: "p" }]),
+    );
+
+    const { store } = await startedStore();
+
+    expect(store.servedModels).toEqual({ embedding: ["clip"] });
   });
 });

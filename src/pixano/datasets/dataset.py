@@ -68,6 +68,7 @@ from .embedding_spaces import (
     DEFAULT_METRIC,
     DEFAULT_SOURCE_VIEW,
     FIRST_TABLE,
+    AmbiguousModelError,
     EmbeddingSpace,
     EmbeddingSpaces,
     is_embeddings_table,
@@ -2031,7 +2032,7 @@ class Dataset:
         space = self._embedding_spaces.matching(model_id, checkpoint or "", dim)
         return space.as_document() if space is not None else None
 
-    def record_embedding_health(self, model: str | None = None) -> dict[str, Any]:
+    def record_embedding_health(self, model: str | None = None, media: int | None = None) -> dict[str, Any]:
         """Health check of one model's embedding storage.
 
         The description alone advertises semantic search; the physical LanceDB table is only
@@ -2049,6 +2050,8 @@ class Dataset:
 
         Args:
             model: The model — its space's id or its name —; the default one when None.
+            media: The still images the dataset holds, when the caller counted them already — for
+                the health of several spaces —; counted when None.
 
         Returns:
             ``{"status", "id", "model_id", "checkpoint", "dim", "rows", "records", "media",
@@ -2066,7 +2069,7 @@ class Dataset:
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
-            "media": self._still_image_count(),
+            "media": self._still_image_count() if media is None else media,
             "embedded_media": 0,
             "detail": None,
         }
@@ -2170,6 +2173,60 @@ class Dataset:
         self._save_embedding_spaces(spaces.without(space.id))
         self._drop_embedding_tables({space.table})
 
+    @dataset_write
+    def empty_model_record_embeddings(
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None, dim: int | None = None
+    ) -> dict[str, Any] | None:
+        """Empty the embeddings of a model known by its name and checkpoint, keeping its space.
+
+        For a writer about to compute its model again from nothing: before it knows its vectors'
+        dimension — the model's own, unchanged —, or after, its first vectors in hand (`dim`), which
+        repairs a space that records another. The space keeps its id, its place and the default a
+        search uses; its table is created again, empty, and the space records the checkpoint, the
+        vector index and the dimension told. It is looked for and emptied under one lock, the description read
+        again under it, so that a space another process recorded meanwhile is found. The other
+        models' embeddings are left as they are.
+
+        A caller that does not tell its checkpoint empties only a space recorded without one: a
+        space of a checkpoint told may hold another weights' vectors than those the caller runs.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            index_type: The vector index the table is to get once filled; the space's when None.
+            dim: The vectors' dimension, when the caller knows it; the space's when None.
+
+        Returns:
+            The space emptied, or None when the dataset holds none of that model.
+
+        Raises:
+            DatasetAccessError: `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and a space of that name records one; or several
+                spaces match.
+        """
+        checkpoint = checkpoint or ""
+        spaces = self._writable_spaces()
+        if not checkpoint:
+            told = [space.checkpoint for space in spaces.spaces if space.model_id == model_id and space.checkpoint]
+            if told:
+                raise AmbiguousModelError(
+                    f"model '{model_id}' holds the embeddings of the checkpoints {', '.join(told)}: the weights "
+                    "served now must be told, to know whether they are those"
+                )
+        space = spaces.matching(model_id, checkpoint, strict=True)
+        if space is None:
+            return None
+        emptied = dataclasses.replace(
+            space,
+            checkpoint=checkpoint or space.checkpoint,
+            index_type=index_type or space.index_type,
+            dim=int(dim) if dim else space.dim,
+        )
+        self._create_embedding_table(emptied, mode="overwrite")
+        if emptied != space:
+            self._save_embedding_spaces(spaces.replacing(emptied))
+        return emptied.as_document()
+
     def _drop_embedding_tables(self, names: set[str]) -> None:
         """Drop these embeddings tables, each as far as it goes: a corrupt one must not block a repair."""
         for table_name in sorted(names):
@@ -2211,11 +2268,12 @@ class Dataset:
         Raises:
             DatasetAccessError: The dataset holds that very model — name and checkpoint — at another
                 dimension, or its `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
         """
         checkpoint = checkpoint or ""
         dim = int(dim)
         spaces = self._writable_spaces()
-        space = spaces.matching(model_id, checkpoint, dim)
+        space = spaces.matching(model_id, checkpoint, dim, strict=True)
         if space is None:
             space = spaces.new_space(model_id, checkpoint, dim, metric, source_view, index_type)
             # A table of that name no description names holds nothing to keep: one a run created before
@@ -2299,11 +2357,12 @@ class Dataset:
 
         Raises:
             DatasetAccessError: The dataset's `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
         """
         checkpoint = checkpoint or ""
         dim = int(dim)
         spaces = self._writable_spaces()
-        replaced = spaces.matching(model_id, checkpoint, dim)
+        replaced = spaces.matching(model_id, checkpoint, dim, strict=True)
         kept = spaces.without(replaced.id) if replaced is not None else spaces
         # A space of its own, not `ensure_record_embedding_space`'s: a caller that does not tell its
         # checkpoint would be handed the space of another checkpoint of that name, vectors included.
@@ -2316,6 +2375,59 @@ class Dataset:
         if replaced is not None and replaced.table != space.table:
             self._drop_embedding_tables({replaced.table})
         return space.as_document()
+
+    @dataset_write
+    def upsert_record_embeddings(
+        self,
+        model_id: str,
+        checkpoint: str,
+        rows: list[dict[str, Any]],
+        metric: str = DEFAULT_METRIC,
+        source_view: str = DEFAULT_SOURCE_VIEW,
+        index_type: str = DEFAULT_INDEX_TYPE,
+    ) -> dict[str, Any]:
+        """Write a model's vectors into its space, created when the dataset holds none, replacing rows by id.
+
+        The space is found or created, and the rows written, under one acquisition of the write
+        lock, which reads the description again: a space another process created meanwhile is
+        found, not created twice, and one it deleted is created again, never written into from
+        what this instance last read.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            rows: Dicts with ``id``, ``record_id``, ``view_id`` and ``vector``, all of one dimension.
+            metric: The distance a search ranks them by, for a new space.
+            source_view: The views the vectors are computed from, for a new space.
+            index_type: The vector index the table gets once filled, for a new space.
+
+        Returns:
+            The space's description (`EmbeddingSpace.as_document`).
+
+        Raises:
+            ValueError: No row.
+            DatasetAccessError: The dataset holds that very model at another dimension, or its
+                `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
+        """
+        if not rows:
+            raise ValueError("No vector to write.")
+        space = self.ensure_record_embedding_space(
+            model_id, checkpoint, len(rows[0]["vector"]), metric, source_view, index_type
+        )
+        schema = self.info.tables[space["table"]]
+        instances = [
+            schema(
+                id=row["id"],
+                record_id=row["record_id"],
+                view_id=row.get("view_id", ""),
+                frame_id=row.get("frame_id", ""),
+                vector=row["vector"],
+            )
+            for row in rows
+        ]
+        self.update_data(space["table"], instances)
+        return space
 
     @dataset_write
     def add_record_embeddings(self, rows: list[dict[str, Any]], space_id: str | None = None) -> None:

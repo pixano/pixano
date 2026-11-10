@@ -14,6 +14,7 @@ from pixano.datasets.embedding_spaces import (
     FIRST_TABLE,
     FORMAT_VERSION,
     TABLE_PREFIX,
+    AmbiguousModelError,
     EmbeddingSpaces,
     is_embeddings_table,
     space_id,
@@ -182,6 +183,19 @@ class TestFindingASpace:
         assert spaces.matching(CLIP, CLIP_CHECKPOINT, 512) == spaces.spaces[0]
         assert spaces.matching(CLIP, "ViT-L-14", 768) is None
 
+    def test_a_writer_that_does_not_tell_its_checkpoint_is_never_handed_one_of_several(self) -> None:
+        spaces = _two_models()
+        other_clip = spaces.new_space(CLIP, "ViT-B-32", 512)
+        spaces = spaces.with_space(other_clip)
+
+        # A reader is handed the default one; a writer, none by guess.
+        assert spaces.matching(CLIP, "", 512) == spaces.spaces[0]
+        with pytest.raises(AmbiguousModelError, match=f"{CLIP_CHECKPOINT}, ViT-B-32"):
+            spaces.matching(CLIP, "", 512, strict=True)
+        # Told, or alone of its name at that dimension, it is no guess.
+        assert spaces.matching(CLIP, "ViT-B-32", 512, strict=True) == other_clip
+        assert spaces.matching(SIGLIP, "", 1152, strict=True) == spaces.spaces[1]
+
     def test_the_very_model_matches_whatever_the_dimension(self) -> None:
         spaces = _two_models()
 
@@ -224,6 +238,17 @@ class TestChangingSpaces:
         assert spaces.with_default(siglip.id).default == siglip.id
         with pytest.raises(KeyError):
             spaces.with_default("dinov2-00000000")
+
+    def test_a_space_replaced_keeps_its_place_and_the_default(self) -> None:
+        spaces = _two_models().with_default(_two_models().spaces[1].id)
+        siglip = spaces.spaces[1]
+
+        replaced = spaces.replacing(replace(siglip, index_type="IVF_SQ"))
+
+        assert [space.id for space in replaced.spaces] == [space.id for space in spaces.spaces]
+        assert (replaced.default, replaced.spaces[1].index_type) == (siglip.id, "IVF_SQ")
+        with pytest.raises(KeyError):
+            spaces.replacing(replace(siglip, id="dinov2-00000000"))
 
     def test_a_space_learning_its_checkpoint_keeps_its_id_and_table(self) -> None:
         spaces = EmbeddingSpaces.from_document({"table": "embeddings", "model_id": CLIP, "dim": 512})
