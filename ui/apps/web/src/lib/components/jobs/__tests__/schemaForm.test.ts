@@ -12,6 +12,7 @@ import {
   initialValue,
   initialValues,
   missingRequired,
+  modelTasks,
   toggleChoice,
   toParams,
 } from "../schemaForm";
@@ -214,6 +215,27 @@ describe("confirmationsFor", () => {
   it("gives the parameter's text once it is set", () => {
     expect(confirmationsFor(schema, { replace_existing_embeddings: true })).toEqual([
       "This deletes every vector already computed.",
+    ]);
+  });
+});
+
+describe("a model field", () => {
+  // A kind with a required model, named by its task and not by a name.
+  const detection: JsonSchema = {
+    properties: {
+      model: { type: "string", minLength: 1, "x-pixano-model-task": "detection" } as JsonSchema,
+      box_threshold: { type: "number", default: 0.5 },
+    },
+    required: ["model"],
+  };
+  const embeddings: JsonSchema = {
+    properties: { model: { type: "string", "x-pixano-model-task": "embedding" } },
+  };
+
+  it("names each task the kinds need once", () => {
+    expect(modelTasks([detection, embeddings, detection, FAKE_SCHEMA])).toEqual([
+      "detection",
+      "embedding",
     ]);
   });
 });

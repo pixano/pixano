@@ -10,6 +10,9 @@ import type { JsonSchema } from "$lib/api/jobs";
 export type FieldKind =
   "string" | "number" | "integer" | "boolean" | "enum" | "array" | "choices" | "unsupported";
 
+/** The models the inference serves, by task — what a model field offers. */
+export type ServedModels = Record<string, string[]>;
+
 const RENDERABLE = new Set(["string", "number", "integer", "boolean"]);
 
 /**
@@ -41,6 +44,19 @@ function scalarType(schema: JsonSchema): string | undefined {
 function nonNullType(branches: JsonSchema[] | undefined): string | undefined {
   const usable = (branches ?? []).filter((branch) => branch.type && branch.type !== "null");
   return usable.length === 1 ? usable[0].type : undefined;
+}
+
+/** The inference task a model parameter belongs to, if it is one. */
+export function modelTaskOf(schema: JsonSchema): string | undefined {
+  return schema["x-pixano-model-task"] || undefined;
+}
+
+/** The inference tasks whose models a set of kinds asks for, each once. */
+export function modelTasks(schemas: JsonSchema[]): string[] {
+  const tasks = schemas.flatMap((schema) =>
+    Object.values(schema.properties ?? {}).map(modelTaskOf),
+  );
+  return [...new Set(tasks.filter((task): task is string => task !== undefined))];
 }
 
 /** The value a field starts at: its declared default, or an empty value of its kind. */
