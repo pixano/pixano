@@ -22,7 +22,7 @@ from s3path import S3Path
 from pixano.datasets.dataset import _UNREAD, Dataset, _file_stamp
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.embedding_spaces import FORMAT_VERSION
+from pixano.datasets.embedding_spaces import FORMAT_VERSION, AmbiguousModelError
 from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import Image, Record
 
@@ -405,17 +405,13 @@ class TestSeveralModels:
         assert dataset.record_embedding_space()["id"] == recomputed["id"]
         assert dataset.open_table(recomputed["table"]).count_rows() == 0
 
-    def test_recomputing_a_model_that_does_not_tell_its_checkpoint_keeps_the_other_checkpoints(self):
-        dataset, _, _ = _two_model_dataset()
-        other = dataset.ensure_record_embedding_space("test-clip", "ckpt-c", dim=8)
-        dataset.add_record_embeddings(
-            [{"record_id": "r1", "view_id": "img-r1", "vector": _bit_vector(1)}], other["id"]
-        )
+    def test_recomputing_a_model_that_does_not_tell_its_checkpoint_keeps_the_other_names(self):
+        dataset, _, siglip = _two_model_dataset()
 
         recomputed = dataset.create_record_embedding_table(dim=8, model_id="test-clip")
 
         assert (recomputed["checkpoint"], dataset.open_table(recomputed["table"]).count_rows()) == ("", 0)
-        assert dataset.open_table(other["table"]).count_rows() == 1
+        assert dataset.open_table(siglip["table"]).count_rows() == 20
 
     def test_another_checkpoint_of_a_name_is_another_space(self):
         dataset, _, _ = _two_model_dataset()
@@ -439,6 +435,59 @@ class TestSeveralModels:
         reopened = Dataset(dataset.path)
         assert [space["model_id"] for space in reopened.record_embedding_spaces()] == ["test-siglip"]
         assert reopened.record_embedding_space()["model_id"] == "test-siglip"
+
+    def test_a_model_known_by_its_name_and_checkpoint_empties_its_own_embeddings_only(self):
+        """Its space keeps its id, its place and the default; only its vectors go."""
+        dataset, clip, siglip = _two_model_dataset()
+
+        emptied = dataset.empty_model_record_embeddings("test-siglip", "ckpt-b", index_type="IVF_SQ")
+
+        assert (emptied["id"], emptied["table"], emptied["index_type"]) == (siglip["id"], siglip["table"], "IVF_SQ")
+        reopened = Dataset(dataset.path)
+        assert [space["id"] for space in reopened.record_embedding_spaces()] == [clip["id"], siglip["id"]]
+        assert reopened.record_embedding_space()["id"] == clip["id"]
+        assert reopened.open_table(siglip["table"]).count_rows() == 0
+        assert reopened.open_table(clip["table"]).count_rows() == 20
+
+    def test_emptying_the_default_model_leaves_it_the_default(self):
+        dataset, clip, _ = _two_model_dataset()
+
+        dataset.empty_model_record_embeddings("test-clip", "ckpt-a")
+
+        assert Dataset(dataset.path).record_embedding_space()["id"] == clip["id"]
+
+    def test_a_model_that_does_not_tell_its_checkpoint_never_empties_a_space_that_records_one(self):
+        """The weights served now may not be those: the space recorded with its checkpoint is left as it is."""
+        dataset, clip, _ = _two_model_dataset()
+
+        with pytest.raises(AmbiguousModelError, match="ckpt-a"):
+            dataset.empty_model_record_embeddings("test-clip")
+
+        assert dataset.open_table(clip["table"]).count_rows() == 20
+        assert dataset.empty_model_record_embeddings("test-dinov2") is None
+
+    def test_a_model_that_does_not_tell_its_checkpoint_empties_the_space_recorded_without_one(self):
+        dataset, _, _ = _two_model_dataset()
+        untold = dataset.ensure_record_embedding_space("test-dinov2", "", dim=8)
+        dataset.add_record_embeddings(
+            [{"record_id": "r1", "view_id": "img-r1", "vector": _bit_vector(1)}], untold["id"]
+        )
+
+        emptied = dataset.empty_model_record_embeddings("test-dinov2")
+
+        assert emptied["id"] == untold["id"]
+        assert dataset.open_table(untold["table"]).count_rows() == 0
+
+    def test_a_model_a_process_recorded_meanwhile_is_found_and_emptied(self):
+        dataset, _, _ = _two_model_dataset()
+        Dataset(dataset.path).upsert_record_embeddings(
+            "test-dinov2", "vitb14", [{"id": "d1", "record_id": "r1", "view_id": "img-r1", "vector": _bit_vector(1)}]
+        )
+
+        emptied = dataset.empty_model_record_embeddings("test-dinov2", "vitb14")
+
+        assert emptied is not None
+        assert dataset.open_table(emptied["table"]).count_rows() == 0
 
     def test_dropping_a_space_the_dataset_does_not_hold_leaves_it_as_it_is(self):
         dataset, _, _ = _two_model_dataset()
@@ -583,6 +632,72 @@ class TestSeveralModels:
             assert dataset.open_table(space["table"]).count_rows() == 19
 
 
+class TestWritingAModelsVectors:
+    """A writer that knows its model, not its space: found or created, and written, under one lock."""
+
+    @staticmethod
+    def _rows(*indexes: int, dim: int = 8) -> list[dict[str, Any]]:
+        return [
+            {"id": f"e-r{i}", "record_id": f"r{i}", "view_id": f"img-r{i}", "vector": _bit_vector(i, dim=dim)}
+            for i in indexes
+        ]
+
+    def test_creates_the_space_and_replaces_rows_by_id(self):
+        dataset, _, _ = _two_model_dataset()
+
+        dataset.upsert_record_embeddings("test-dinov2", "vitb14", self._rows(1, 2))
+        space = dataset.upsert_record_embeddings("test-dinov2", "vitb14", self._rows(2, 3))
+
+        assert space["model_id"] == "test-dinov2"
+        assert dataset.open_table(space["table"]).count_rows() == 3
+
+    def test_a_space_another_process_deleted_is_created_again_not_written_from_what_was_read(self):
+        """The writer's instance still holds the space: written into from it, the rows would land nowhere."""
+        dataset, _, siglip = _two_model_dataset()
+        Dataset(dataset.path).drop_record_embeddings(siglip["id"])
+
+        space = dataset.upsert_record_embeddings("test-siglip", "ckpt-b", self._rows(1, dim=SIGLIP_DIM))
+
+        assert dataset.open_table(space["table"]).count_rows() == 1
+        assert [s["model_id"] for s in Dataset(dataset.path).record_embedding_spaces()] == [
+            "test-clip",
+            "test-siglip",
+        ]
+
+    def test_a_space_another_process_created_is_written_into_not_created_twice(self):
+        dataset, _, _ = _two_model_dataset()
+        Dataset(dataset.path).upsert_record_embeddings("test-dinov2", "vitb14", self._rows(1))
+
+        space = dataset.upsert_record_embeddings("test-dinov2", "vitb14", self._rows(2))
+
+        assert dataset.open_table(space["table"]).count_rows() == 2
+        assert len(Dataset(dataset.path).record_embedding_spaces()) == 3
+
+    def test_a_writer_that_does_not_tell_its_checkpoint_never_guesses_between_two(self):
+        dataset, _, _ = _two_model_dataset()
+        dataset.ensure_record_embedding_space("test-clip", "ckpt-c", dim=8)
+
+        with pytest.raises(AmbiguousModelError, match="ckpt-a, ckpt-c"):
+            dataset.upsert_record_embeddings("test-clip", "", self._rows(1))
+        with pytest.raises(AmbiguousModelError):
+            dataset.empty_model_record_embeddings("test-clip")
+        with pytest.raises(AmbiguousModelError):
+            dataset.create_record_embedding_table(dim=8, model_id="test-clip")
+
+    def test_a_writer_that_does_not_tell_its_checkpoint_writes_into_the_one_space_of_its_name(self):
+        dataset, clip, _ = _two_model_dataset()
+
+        space = dataset.upsert_record_embeddings("test-clip", "", self._rows(1))
+
+        assert space["id"] == clip["id"]
+
+    def test_no_row_is_refused(self):
+        dataset, _, _ = _two_model_dataset()
+
+        with pytest.raises(ValueError, match="No vector"):
+            dataset.upsert_record_embeddings("test-clip", "ckpt-a", [])
+
+
 class TestTheEmbeddingsFile:
     """`embeddings.json`: the document a build before several models reads, while it can; replaced whole."""
 
@@ -671,8 +786,9 @@ class TestADescriptionThisBuildCannotReadEntirely:
             lambda dataset: dataset.create_record_embedding_table(dim=8, model_id="test-dinov2"),
             lambda dataset: dataset.set_default_record_embedding_space(dataset.record_embedding_space()["id"]),
             lambda dataset: dataset.drop_record_embeddings(dataset.record_embedding_space()["id"]),
+            lambda dataset: dataset.empty_model_record_embeddings("test-siglip", "ckpt-b"),
         ],
-        ids=["ensure", "create", "set_default", "drop_one"],
+        ids=["ensure", "create", "set_default", "drop_one", "empty_model"],
     )
     def test_refuses_to_rewrite_it(self, damaged: tuple[Dataset, dict[str, Any]], write: Callable[[Dataset], Any]):
         dataset, clip = damaged
@@ -805,13 +921,11 @@ class TestEmbeddingsWrittenBeforeSeveralModels:
         assert len(Dataset(legacy.path).record_embedding_spaces()) == 2
         assert legacy.open_table("embeddings").count_rows() == 20
 
-    def test_its_name_recomputed_from_nothing_never_takes_its_space(self, legacy: Dataset):
+    def test_its_name_at_another_dimension_recomputed_from_nothing_never_takes_its_id(self, legacy: Dataset):
         """It keeps the id of a space without a checkpoint once it learns its own; a new one gets another."""
         learnt = legacy.ensure_record_embedding_space("test-clip", "ckpt-a", dim=8)
-        other = legacy.ensure_record_embedding_space("test-clip", "ckpt-b", dim=8)
-        legacy.set_default_record_embedding_space(other["id"])
 
-        recomputed = legacy.create_record_embedding_table(dim=8, model_id="test-clip")
+        recomputed = legacy.create_record_embedding_table(dim=16, model_id="test-clip")
 
         assert recomputed["id"] != learnt["id"]
         assert [space["id"] for space in legacy.record_embedding_spaces()] == [learnt["id"], recomputed["id"]]
