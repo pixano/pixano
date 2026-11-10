@@ -270,14 +270,14 @@ class TestEmbeddingCorruption:
     """A broken embedding store must degrade to actionable errors + a repair path, never 500."""
 
     def _corrupt_missing_table(self, dataset: Dataset) -> Dataset:
-        shutil.rmtree(dataset.path / "db" / "embeddings.lance")
+        shutil.rmtree(dataset.path / "db" / f"{dataset.record_embedding_space()['table']}.lance")
         return dataset
 
     def _corrupt_dim(self, dataset: Dataset) -> Dataset:
         sidecar = dataset.path / "embeddings.json"
-        space = json.loads(sidecar.read_text())
-        space["dim"] = 16  # stored vectors are DIM=8
-        sidecar.write_text(json.dumps(space))
+        document = json.loads(sidecar.read_text())
+        document["spaces"][0]["dim"] = 16  # stored vectors are DIM=8
+        sidecar.write_text(json.dumps(document))
         return dataset
 
     def test_filters_report_missing_table_and_stop_advertising_semantic(self):
@@ -519,7 +519,7 @@ class TestSeveralModels:
     def test_a_broken_default_offers_no_search_naming_no_model_but_the_model_that_is_fine(self):
         dataset = _build_dataset(with_embeddings=True)
         _with_a_second_model(dataset)
-        shutil.rmtree(dataset.path / "db" / "embeddings.lance")
+        shutil.rmtree(dataset.path / "db" / f"{dataset.record_embedding_space()['table']}.lance")
         client = _make_client(dataset, _make_provider())
 
         search = client.get(f"{BASE}/filters").json()["search"]
@@ -539,7 +539,7 @@ class TestSeveralModels:
 
         (space,) = client.get(f"{BASE}/embedding-spaces").json()
         assert (space["model_id"], space["default"]) == (SIGLIP, True)
-        assert "embeddings.lance" not in {path.name for path in (dataset.path / "db").iterdir()}
+        assert f"{default['table']}.lance" not in {path.name for path in (dataset.path / "db").iterdir()}
 
     def test_no_space_is_an_empty_list(self):
         client = _make_client(_build_dataset(with_embeddings=False))

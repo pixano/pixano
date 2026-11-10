@@ -11,8 +11,8 @@ from dataclasses import replace
 import pytest
 
 from pixano.datasets.embedding_spaces import (
-    FIRST_TABLE,
     FORMAT_VERSION,
+    LEGACY_TABLE,
     TABLE_PREFIX,
     AmbiguousModelError,
     EmbeddingSpaces,
@@ -35,13 +35,13 @@ def _two_models() -> EmbeddingSpaces:
 
 class TestTheDocument:
     def test_written_before_there_were_several_spaces_reads_as_one_space(self) -> None:
-        legacy = {"table": "embeddings", "model_id": CLIP, "dim": 512, "metric": "cosine", "index_type": "IVF_SQ"}
+        legacy = {"table": LEGACY_TABLE, "model_id": CLIP, "dim": 512, "metric": "cosine", "index_type": "IVF_SQ"}
 
         spaces = EmbeddingSpaces.from_document(legacy)
 
         (space,) = spaces.spaces
         assert (space.table, space.model_id, space.checkpoint, space.dim, space.index_type) == (
-            "embeddings",
+            LEGACY_TABLE,
             CLIP,
             "",
             512,
@@ -57,21 +57,22 @@ class TestTheDocument:
         assert document["version"] == FORMAT_VERSION
         assert EmbeddingSpaces.from_document(document) == spaces
 
-    def test_of_one_model_in_the_first_table_is_the_document_a_build_before_several_spaces_reads(self) -> None:
+    def test_of_one_model_is_written_as_the_document_of_several(self) -> None:
         clip = EmbeddingSpaces().new_space(CLIP, CLIP_CHECKPOINT, 512)
         spaces = EmbeddingSpaces().with_space(clip)
 
         document = spaces.to_document()
 
-        assert document == clip.as_document()
-        assert (document["table"], document["dim"], document["model_id"]) == (FIRST_TABLE, 512, CLIP)
+        assert (document["version"], document["spaces"]) == (FORMAT_VERSION, [clip.as_document()])
         assert EmbeddingSpaces.from_document(document) == spaces
 
-    def test_of_one_model_in_a_table_of_its_own_lists_it(self) -> None:
-        spaces = _two_models()
-        left = spaces.without(spaces.spaces[0].id)
+    def test_written_again_the_document_of_before_several_models_keeps_its_table(self) -> None:
+        legacy = EmbeddingSpaces.from_document({"table": LEGACY_TABLE, "model_id": CLIP, "dim": 512})
 
-        assert left.to_document()["spaces"] == [left.spaces[0].as_document()]
+        document = legacy.to_document()
+
+        assert (document["version"], document["spaces"][0]["table"]) == (FORMAT_VERSION, LEGACY_TABLE)
+        assert EmbeddingSpaces.from_document(document) == legacy
 
     def test_a_space_it_cannot_read_is_left_out_and_the_others_kept(self) -> None:
         document = _two_models().to_document()
@@ -91,13 +92,15 @@ class TestTheDocument:
 
         assert (len(spaces.spaces), spaces.fully_read) == (2, False)
 
-    def test_two_spaces_of_one_table_are_kept_once(self) -> None:
+    def test_two_spaces_of_the_legacy_table_are_kept_once(self) -> None:
+        """The one table two spaces of the document can both name, each of another id."""
         document = _two_models().to_document()
-        document["spaces"].append({**document["spaces"][0], "id": "clip-00000000"})
+        for entry in document["spaces"]:
+            entry["table"] = LEGACY_TABLE
 
         spaces = EmbeddingSpaces.from_document(document)
 
-        assert (len(spaces.spaces), spaces.fully_read) == (2, False)
+        assert ([space.model_id for space in spaces.spaces], spaces.fully_read) == ([CLIP], False)
 
     @pytest.mark.parametrize("table", ["records", "embeddings_another-space", ""])
     def test_a_space_naming_a_table_not_its_own_is_left_out(self, table: str) -> None:
@@ -108,10 +111,10 @@ class TestTheDocument:
 
         assert ([space.model_id for space in spaces.spaces], spaces.fully_read) == ([CLIP], False)
 
-    def test_the_document_of_one_space_is_that_of_the_first_table_whatever_it_says(self) -> None:
+    def test_the_document_of_before_several_models_names_the_legacy_table_whatever_it_says(self) -> None:
         spaces = EmbeddingSpaces.from_document({"table": "records", "model_id": CLIP, "dim": 512})
 
-        assert spaces.spaces[0].table == FIRST_TABLE
+        assert spaces.spaces[0].table == LEGACY_TABLE
 
     @pytest.mark.parametrize("dim", [float("inf"), "eight", None, -1, 2**31, 1e300])
     def test_a_space_of_no_dimension_is_left_out(self, dim: object) -> None:
@@ -177,7 +180,7 @@ class TestFindingASpace:
         assert spaces.matching(CLIP, "", 768) is None
 
     def test_a_space_recorded_without_its_checkpoint_is_that_names_at_its_dimension(self) -> None:
-        spaces = EmbeddingSpaces.from_document({"table": "embeddings", "model_id": CLIP, "dim": 512})
+        spaces = EmbeddingSpaces.from_document({"table": LEGACY_TABLE, "model_id": CLIP, "dim": 512})
 
         assert spaces.matching(CLIP, CLIP_CHECKPOINT) == spaces.spaces[0]
         assert spaces.matching(CLIP, CLIP_CHECKPOINT, 512) == spaces.spaces[0]
@@ -210,12 +213,11 @@ class TestFindingASpace:
 
 
 class TestChangingSpaces:
-    def test_the_first_space_keeps_the_tables_old_name_and_the_others_get_their_own(self) -> None:
+    def test_every_space_gets_a_table_of_its_own_name(self) -> None:
         spaces = _two_models()
         clip, siglip = spaces.spaces
 
-        assert clip.table == FIRST_TABLE
-        assert siglip.table == f"{TABLE_PREFIX}{siglip.id}"
+        assert (clip.table, siglip.table) == (f"{TABLE_PREFIX}{clip.id}", f"{TABLE_PREFIX}{siglip.id}")
 
     def test_the_first_space_is_the_default(self) -> None:
         spaces = _two_models()
@@ -258,11 +260,12 @@ class TestChangingSpaces:
 
         assert (learnt.id, learnt.table, learnt.checkpoint) == (space.id, space.table, CLIP_CHECKPOINT)
 
-    def test_the_first_tables_name_is_free_again_once_its_space_is_gone(self) -> None:
-        spaces = _two_models()
-        left = spaces.without(spaces.spaces[0].id)
+    def test_the_space_read_from_the_document_of_before_keeps_its_table_beside_the_new_ones(self) -> None:
+        legacy = EmbeddingSpaces.from_document({"table": "embeddings", "model_id": CLIP, "dim": 512})
 
-        assert left.new_space("dinov2", "vitb14", 768).table == FIRST_TABLE
+        spaces = legacy.with_space(legacy.new_space(SIGLIP, "so400m", 1152))
+
+        assert [space.table for space in spaces.spaces] == [LEGACY_TABLE, f"{TABLE_PREFIX}{spaces.spaces[1].id}"]
 
     def test_a_new_space_never_takes_the_id_of_one_that_learnt_its_checkpoint(self) -> None:
         spaces = EmbeddingSpaces.from_document({"table": "embeddings", "model_id": CLIP, "dim": 512})

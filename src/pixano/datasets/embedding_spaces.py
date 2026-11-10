@@ -9,25 +9,20 @@
 Each model gets its own LanceDB table, with its own dimension, metric and vector index: a job of
 one model never rewrites the rows another model's index covers, and two models' jobs never write
 the same table (backend-processing §12). A dataset describes its spaces in `embeddings.json`, beside
-`info.json`.
+`info.json`, and names the one a search uses when none is named:
 
-A dataset of one model, whose vectors are in the table `embeddings`, keeps the document a dataset
-always had — the space's fields at its top level, its id and its checkpoint added —, which a version
-of Pixano from before several models reads as it always did:
-
-    {"id": "clip-3f2a9c1d", "table": "embeddings", "model_id": "clip", "checkpoint": "MobileCLIP2-S2",
-     "dim": 512, "metric": "cosine", "source_view": "image", "index_type": "IVF_SQ"}
-
-A dataset of several models lists them, and names the one a search uses when none is named:
-
-    {"version": 2, "default": "clip-3f2a9c1d", "spaces": [{"id": "clip-3f2a9c1d", "table": "embeddings", ...},
-     {"id": "siglip-0b7e44a2", "table": "embeddings_siglip-0b7e44a2", ...}]}
+    {"version": 2, "default": "clip-3f2a9c1d", "spaces": [{"id": "clip-3f2a9c1d",
+     "table": "embeddings_clip-3f2a9c1d", "model_id": "clip", "checkpoint": "MobileCLIP2-S2", "dim": 512,
+     "metric": "cosine", "source_view": "image", "index_type": "IVF_SQ"}, ...]}
 
 A model is its name and its checkpoint: two checkpoints of one name are two spaces, their vectors not
 comparable. A space or a caller that does not say its checkpoint — a space recorded before
 checkpoints were, an inference that could not tell — is that name's, unless their dimensions differ,
-which proves two models. The first space a dataset holds gets the table `embeddings`, every other one
-`embeddings_<id>`.
+which proves two models. A new space's table is `embeddings_<id>`.
+
+The document a dataset wrote before there were several models — one model's fields at its top
+level, its vectors in the table `embeddings` — is read as that one space, which keeps its table, and
+is written in this format at its first change.
 
 What a document holds that this build does not know — a field of a later version — is written back
 as it was read. A document this build cannot read entirely is not to be rewritten at all
@@ -46,11 +41,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-#: The version of the document of several spaces this module writes, and the latest it reads.
+#: The version of the document this module writes, and the latest it reads.
 FORMAT_VERSION = 2
-#: The table of the first space a dataset holds: the name embeddings had before there were several.
-FIRST_TABLE = "embeddings"
-#: What names the tables of the other spaces, before the space's id.
+#: The table of the one model a dataset described before there were several: its space keeps it.
+LEGACY_TABLE = "embeddings"
+#: What names a space's table, before the space's id.
 TABLE_PREFIX = "embeddings_"
 #: The longest part of a model's name a space's id keeps.
 _MAX_SLUG_LENGTH = 40
@@ -65,7 +60,7 @@ DEFAULT_INDEX_TYPE = "IVF_PQ"
 
 #: The fields of a space this module reads; any other is written back as it was read.
 _SPACE_FIELDS = frozenset({"id", "table", "model_id", "checkpoint", "dim", "metric", "source_view", "index_type"})
-#: The fields of the document of several spaces this module reads; any other is written back as read.
+#: The fields of the document this module reads; any other is written back as read.
 _DOCUMENT_FIELDS = frozenset({"version", "default", "spaces"})
 
 
@@ -88,8 +83,8 @@ def space_id(model_id: str, checkpoint: str) -> str:
 
 
 def is_embeddings_table(name: str) -> bool:
-    """Whether a table's name is that of a space's table: `FIRST_TABLE`, or `TABLE_PREFIX` and an id."""
-    return name == FIRST_TABLE or name.startswith(TABLE_PREFIX)
+    """Whether a table's name is that of a space's table: `TABLE_PREFIX` and an id, or `LEGACY_TABLE`."""
+    return name == LEGACY_TABLE or name.startswith(TABLE_PREFIX)
 
 
 @dataclass(frozen=True)
@@ -98,7 +93,7 @@ class EmbeddingSpace:
 
     Attributes:
         id: The space's identifier, `space_id` of its model when it was created.
-        table: The LanceDB table holding its vectors: `FIRST_TABLE`, or `TABLE_PREFIX` and its id.
+        table: The LanceDB table holding its vectors: `TABLE_PREFIX` and its id, or `LEGACY_TABLE`.
         model_id: The model's name, as the inference serves it.
         checkpoint: The weights loaded under that name; empty when the space was recorded without it.
         dim: The vectors' dimension.
@@ -146,7 +141,7 @@ class EmbeddingSpace:
 
 
 def _space_from(entry: Any, *, flat: bool = False) -> EmbeddingSpace:
-    """A space read from an entry of the document of several spaces, or from the document of one (`flat`).
+    """A space read from an entry of the document, or from the document written before several models (`flat`).
 
     Raises:
         ValueError: The entry is not a space this module can read.
@@ -162,10 +157,10 @@ def _space_from(entry: Any, *, flat: bool = False) -> EmbeddingSpace:
     model_id = str(entry.get("model_id") or "")
     checkpoint = str(entry.get("checkpoint") or "")
     identifier = str(entry.get("id") or space_id(model_id, checkpoint))
-    # The document of one space is that of the table `embeddings`, which the builds before several
-    # spaces read whatever it said.
-    table = FIRST_TABLE if flat else str(entry.get("table") or "")
-    if table not in (FIRST_TABLE, f"{TABLE_PREFIX}{identifier}"):
+    # The document written before several models: whatever it says, the build that wrote it wrote its
+    # vectors in the table `embeddings`.
+    table = LEGACY_TABLE if flat else str(entry.get("table") or "")
+    if table not in (LEGACY_TABLE, f"{TABLE_PREFIX}{identifier}"):
         raise ValueError(f"the embedding space {identifier} names the table '{table}', which is not one of its own")
     return EmbeddingSpace(
         id=identifier,
@@ -219,12 +214,12 @@ class EmbeddingSpaces:
         back on the first.
 
         Raises:
-            ValueError: The document is no object, or the document of one space that cannot be read.
+            ValueError: The document is no object, or one written before several models that cannot be read.
         """
         if not isinstance(document, dict):
             raise ValueError("embeddings.json holds an object")
         if "spaces" not in document:
-            # The document of one space: what every dataset wrote before there were several.
+            # The document written before several models: one model's fields at its top level.
             only = _space_from(document, flat=True)
             return cls(spaces=(only,), default=only.id)
         entries = document["spaces"]
@@ -255,10 +250,7 @@ class EmbeddingSpaces:
         )
 
     def to_document(self) -> dict[str, Any]:
-        """The spaces as `embeddings.json` holds them: the document of one space where it can be."""
-        if len(self.spaces) == 1 and self.spaces[0].table == FIRST_TABLE and not self.unknown:
-            # One model, in the table embeddings always had: a build before several spaces reads it too.
-            return self.spaces[0].as_document()
+        """The spaces as `embeddings.json` holds them."""
         return {
             **self.unknown,
             "version": FORMAT_VERSION,
@@ -330,8 +322,7 @@ class EmbeddingSpaces:
         """A space for a model this dataset does not hold yet, of an id and a table no space has.
 
         Its id is `space_id` of the model, a number added if a space has it already — one that learnt
-        its checkpoint after it was created. Its table is `FIRST_TABLE` while no space uses that name,
-        `TABLE_PREFIX` and the id otherwise.
+        its checkpoint after it was created —, and its table `TABLE_PREFIX` and that id.
         """
         ids = {space.id for space in self.spaces}
         identifier = base = space_id(model_id, checkpoint)
@@ -339,10 +330,9 @@ class EmbeddingSpaces:
         while identifier in ids:
             number += 1
             identifier = f"{base}-{number}"
-        taken = {space.table for space in self.spaces}
         return EmbeddingSpace(
             id=identifier,
-            table=FIRST_TABLE if FIRST_TABLE not in taken else f"{TABLE_PREFIX}{identifier}",
+            table=f"{TABLE_PREFIX}{identifier}",
             model_id=model_id,
             checkpoint=checkpoint,
             dim=int(dim),
