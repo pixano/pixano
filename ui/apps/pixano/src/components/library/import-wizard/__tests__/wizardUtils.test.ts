@@ -10,19 +10,30 @@ import { preflightLayout } from "../layoutPreflight";
 import {
   canAnalyze,
   DEFAULT_FIELDS,
+  embeddingsRequest,
+  followUpLines,
   formatBytes,
   groupFindings,
+  initialEmbeddingsChoice,
   intentToFormat,
   isHubId,
   mergeSpec,
+  nextEmbeddingsChoice,
+  offersEmbeddingsChoice,
   parseAdvancedSpec,
   parseEpisodeSelection,
+  planHasImages,
   schemaSections,
   setupValidationMessage,
   showsLerobotFields,
   type WizardFields,
 } from "../wizardUtils";
-import type { ImportPlanResponse, InferredSchemaResponse } from "$lib/api/restTypes";
+import type {
+  ImportEmbeddingsOffer,
+  ImportPlanResponse,
+  InferredSchemaResponse,
+  IoJobResponse,
+} from "$lib/api/restTypes";
 
 const fields = (overrides: Partial<WizardFields>): WizardFields => ({
   ...structuredClone(DEFAULT_FIELDS),
@@ -547,5 +558,194 @@ describe("background job tracking", () => {
     expect(jobStateLabel(makeEntry("running", { cancelRequested: true }))).toBe("Cancelling…");
     expect(jobStateLabel(makeEntry("done"))).toBe("Imported");
     expect(jobStateLabel(makeEntry("interrupted"))).toBe("Failed");
+  });
+});
+
+describe("embeddings after the import", () => {
+  const offer = (overrides: Partial<ImportEmbeddingsOffer> = {}): ImportEmbeddingsOffer => ({
+    queue_configured: true,
+    available: true,
+    reason: null,
+    enabled_by_default: true,
+    models: ["clip", "siglip"],
+    default_model: "siglip",
+    ...overrides,
+  });
+  const planWithViews = (...bases: string[]): ImportPlanResponse =>
+    ({
+      inferred_schema: {
+        views: Object.fromEntries(bases.map((base, index) => [`view${index}`, { base }])),
+      },
+    }) as never;
+  const imagePlan = planWithViews("Image");
+
+  it("a plan holds images when one of its views is a still image", () => {
+    expect(planHasImages(imagePlan)).toBe(true);
+    expect(planHasImages(planWithViews("Video", "Image"))).toBe(true);
+    // A frame belongs to its video: the embeddings job computes still images only.
+    expect(planHasImages(planWithViews("SequenceFrame"))).toBe(false);
+    expect(planHasImages(planWithViews("Text"))).toBe(false);
+    expect(planHasImages(null)).toBe(false);
+  });
+
+  it("offers the choice for still images where a job queue is configured", () => {
+    expect(offersEmbeddingsChoice(offer(), imagePlan)).toBe(true);
+    // Unavailable, it is shown with its reason: a worker or a model is missing.
+    expect(offersEmbeddingsChoice(offer({ available: false }), imagePlan)).toBe(true);
+    // An installation without jobs never reads a refusal.
+    expect(offersEmbeddingsChoice(offer({ queue_configured: false }), imagePlan)).toBe(false);
+    expect(offersEmbeddingsChoice(offer(), planWithViews("Video"))).toBe(false);
+    expect(offersEmbeddingsChoice(null, imagePlan)).toBe(false);
+  });
+
+  it("opens on where the job can run and the server's default says so, with its model", () => {
+    expect(initialEmbeddingsChoice(offer())).toEqual({
+      compute: true,
+      model: "siglip",
+      decided: true,
+    });
+    expect(initialEmbeddingsChoice(offer({ enabled_by_default: false })).compute).toBe(false);
+    expect(initialEmbeddingsChoice(offer({ available: false }))).toMatchObject({
+      compute: false,
+      decided: false,
+    });
+    expect(initialEmbeddingsChoice(offer({ default_model: null })).model).toBe("clip");
+    expect(initialEmbeddingsChoice(offer({ default_model: null, models: [] })).model).toBe("");
+  });
+
+  it("read again, the offer keeps what the user chose, whatever it says now", () => {
+    const chosen = { compute: false, model: "clip", decided: true };
+    const unusable = offer({ available: false, reason: "busy", models: [], default_model: null });
+
+    expect(nextEmbeddingsChoice(chosen, offer())).toEqual(chosen);
+    expect(nextEmbeddingsChoice(chosen, unusable)).toEqual(chosen);
+    // A model no longer served gives way to the default one.
+    expect(nextEmbeddingsChoice(chosen, offer({ models: ["siglip"] }))).toEqual({
+      compute: false,
+      model: "siglip",
+      decided: true,
+    });
+  });
+
+  it("read again, a choice the user never could make starts from the server's default", () => {
+    const never = { compute: false, model: "", decided: false };
+
+    expect(nextEmbeddingsChoice(never, offer())).toEqual({
+      compute: true,
+      model: "siglip",
+      decided: true,
+    });
+  });
+
+  it("asks for the job with the chosen model", () => {
+    const chosen = { compute: true, model: "clip", decided: true };
+    expect(embeddingsRequest(chosen, offer(), imagePlan)).toEqual({
+      compute_embeddings: true,
+      embeddings_model: "clip",
+    });
+  });
+
+  it("says no when unchecked, without still images or without a model", () => {
+    const off = { compute_embeddings: false };
+    expect(
+      embeddingsRequest({ compute: false, model: "clip", decided: true }, offer(), imagePlan),
+    ).toEqual(off);
+    expect(
+      embeddingsRequest(
+        { compute: true, model: "clip", decided: true },
+        offer(),
+        planWithViews("Text"),
+      ),
+    ).toEqual(off);
+    expect(
+      embeddingsRequest({ compute: true, model: "", decided: true }, offer(), imagePlan),
+    ).toEqual(off);
+  });
+
+  it("sends the user's no even when the job could not run when read again", () => {
+    // Unchecked on a usable offer, then Edit setup and Review: the offer is unavailable now.
+    let choice = initialEmbeddingsChoice(offer());
+    choice = { ...choice, compute: false };
+    const unavailable = offer({ available: false, reason: "busy" });
+    choice = nextEmbeddingsChoice(choice, unavailable);
+
+    expect(embeddingsRequest(choice, unavailable, imagePlan)).toEqual({
+      compute_embeddings: false,
+    });
+  });
+
+  it("leaves the server to decide until the user could choose", () => {
+    // The server checks again when the import starts: the job may run by then.
+    const unavailable = offer({ available: false });
+    expect(embeddingsRequest(initialEmbeddingsChoice(unavailable), unavailable, imagePlan)).toEqual(
+      {},
+    );
+    expect(
+      embeddingsRequest({ compute: false, model: "", decided: false }, null, imagePlan),
+    ).toEqual({});
+    // A plan that does not say which views it holds is not one without images.
+    expect(
+      embeddingsRequest({ compute: true, model: "clip", decided: true }, offer(), {
+        inferred_schema: null,
+      } as never),
+    ).toEqual({});
+  });
+
+  it("the tray says what became of the job once the import is done", () => {
+    const job = (status: string, follow_ups: IoJobResponse["follow_ups"]): IoJobResponse =>
+      ({ job_id: "i1", status, progress: {}, error: {}, follow_ups }) as never;
+    const queued = { kind: "embeddings", params: { model: "clip" }, job_id: "j9", error: "" };
+    const refused = {
+      kind: "embeddings",
+      params: { model: "clip" },
+      job_id: "",
+      error: "not queued: no worker runs the embeddings job — start pixano-worker",
+    };
+    const noModel = {
+      kind: "embeddings",
+      params: {},
+      job_id: "",
+      error: "not queued: no embeddings model — name one",
+    };
+    const pending = { kind: "embeddings", params: { model: "clip" }, job_id: "", error: "" };
+
+    expect(followUpLines(job("done", [queued]))).toEqual([
+      {
+        text: "Embeddings (clip) queued.",
+        notQueued: false,
+      },
+    ]);
+    expect(followUpLines(job("done", [refused]))).toEqual([
+      {
+        text: "Embeddings (clip) not queued: no worker runs the embeddings job — start pixano-worker",
+        notQueued: true,
+      },
+    ]);
+    expect(followUpLines(job("done", [noModel]))).toEqual([
+      { text: "Embeddings not queued: no embeddings model — name one", notQueued: true },
+    ]);
+    expect(followUpLines(job("done", [pending]))).toEqual([
+      { text: "Embeddings (clip) not queued.", notQueued: true },
+    ]);
+    // Nothing until the import is done, and nothing from a server that predates follow-ups.
+    expect(followUpLines(job("running", [refused]))).toEqual([]);
+    expect(followUpLines(job("done", undefined))).toEqual([]);
+  });
+
+  it("the tray says what became of each job a follow-up became, on a line of its own", () => {
+    const job = (follow_ups: IoJobResponse["follow_ups"]): IoJobResponse =>
+      ({ job_id: "i1", status: "done", progress: {}, error: {}, follow_ups }) as never;
+    const clip = { kind: "embeddings", params: { model: "clip" }, job_id: "j9", error: "" };
+    const siglip = {
+      kind: "embeddings",
+      params: { model: "siglip" },
+      job_id: "",
+      error: "not queued: the job queue cannot be read",
+    };
+
+    expect(followUpLines(job([clip, siglip]))).toEqual([
+      { text: "Embeddings (clip) queued.", notQueued: false },
+      { text: "Embeddings (siglip) not queued: the job queue cannot be read", notQueued: true },
+    ]);
   });
 });
