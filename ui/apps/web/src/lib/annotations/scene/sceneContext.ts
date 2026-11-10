@@ -152,10 +152,10 @@ export interface SceneContextBase {
    * lower whatever flag of the widget is left. Another widget's work stays.
    *
    * What a delete pressed in the middle of a gesture calls first
-   * (`deleteLocalAnnotation`'s `cancelGesture`), so the delete applies to the
-   * row as stored and the gesture ends having committed nothing over it. The
-   * one path Discard takes: no kind has to know a delete can interrupt its
-   * gesture.
+   * (`deleteLocalAnnotation`'s `cancelGesture`), so the delete — on a model's
+   * row, its Reject — applies to the row as stored and the gesture ends having
+   * committed nothing over it. The one path Discard takes: no kind has to know
+   * a delete can interrupt its gesture.
    */
   discardStagedWork?(): void;
 }

@@ -45,7 +45,7 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 INSERT_JOB = f"""
 INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
 VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb, false
 """
 
 # What a job's tasks became, next to how many were attempted. Aggregated on read from the
@@ -70,7 +70,16 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
             coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
                                WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
             - 'trace'
-       END
+       END,
+       -- The job's work is done and its kind's closing step — the final chunk — is queued or
+       -- running: an interface says so, rather than leave a full bar that does not end. Only
+       -- for a job in flight: a cancelled job's final chunk can stay queued — handed back to the
+       -- queue, after a transient failure, an expired lease or a worker's stop, between a
+       -- cancel's dropping of the pending chunks and its settlement — until a worker drops it.
+       -- One lookup in the partial index of final chunks.
+       j.state IN ('pending', 'running') AND EXISTS (
+           SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
+           WHERE c.job_id = j.id AND c.final AND c.state IN ('pending', 'running'))
 FROM {SCHEMA_NAME}.jobs j
 """
 
@@ -124,7 +133,10 @@ WHERE job_id = %s AND state IN ('error', 'cancelled')
 
 # Only a job that has ended badly can be retried, and it goes back to where its work is:
 # `pending` when it has chunks, `planning` when it never got any — a plan that failed, or a
-# cancellation before the worker reached it. Planning again is the only way to get chunks.
+# cancellation before the worker reached it. Planning again is the only way to get chunks. A job
+# whose chunks are all done — cancelled while its last ones ran — has nothing to reopen: the
+# worker's recovery pass settles it, after running its closing step if its kind has one
+# (backend-processing §8.5).
 RETRY_JOB = f"""
 UPDATE {SCHEMA_NAME}.jobs AS j
 SET state = CASE WHEN EXISTS (SELECT 1 FROM {SCHEMA_NAME}.job_chunks c WHERE c.job_id = j.id)

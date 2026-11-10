@@ -25,7 +25,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractContextManager, asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pixano_worker import queue, runner
@@ -158,7 +158,7 @@ class _ChunksJob:
 
 class _ResetsTheEmbeddings(FakeKind):
     """A kind whose `prepare` writes, through a call that takes the dataset's lock: it creates the
-    dataset's embeddings table, emptying any it had, and notes each time it starts."""
+    embeddings table of its model, emptying any it had, and notes each time it starts."""
 
     name = "resets-embeddings"
 
@@ -167,7 +167,10 @@ class _ResetsTheEmbeddings(FakeKind):
 
     def prepare(self, writer: JobWriter, params: FakeParams) -> None:
         self.prepared.append(writer.job_id)
-        writer.dataset.create_record_embedding_table(dim=EMBEDDING_DIM, model_id=EMBEDDING_MODEL)
+        # A call of the dataset itself, past the writer's contract: no kind creates a model's table
+        # empty, but this one only needs a write that takes the lock.
+        dataset = cast(Dataset, writer.dataset)
+        dataset.create_record_embedding_table(dim=EMBEDDING_DIM, model_id=EMBEDDING_MODEL)
 
 
 class _RefusesItsDataset(FakeKind):

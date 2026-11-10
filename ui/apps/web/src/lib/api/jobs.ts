@@ -26,6 +26,8 @@ export type Job = {
   /** Why the job failed, when it did — at least a `reason`. Null otherwise. */
   error: Record<string, unknown> | null;
   created_at: string;
+  /** Its work is done and its closing step runs — an index being built. Full bar, not done yet. */
+  finalizing: boolean;
 };
 
 /** An item a job could not process, and why. */
@@ -67,6 +69,11 @@ export type JsonSchema = {
   minItems?: number;
   /** Set on a parameter that destroys something when set: the form asks before running. */
   "x-pixano-confirm"?: string;
+  /**
+   * Set on a model parameter: the inference task its model belongs to. The form offers the
+   * models the inference serves for that task rather than a name written into the job.
+   */
+  "x-pixano-model-task"?: string;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */
@@ -155,6 +162,7 @@ export type JobEvent = {
   skipped?: number;
   quarantined?: number;
   cancel_requested?: boolean;
+  finalizing?: boolean;
 };
 
 /**

@@ -177,12 +177,43 @@ describe("BBox3DSession", () => {
       });
     }
 
+    it("rejects a model's saved box, which deletes it, and says so", () => {
+      env.collection.add({
+        id: "m1",
+        entityId: "e1",
+        kind: "bbox3d",
+        viewId: "v1",
+        geometry: { coords: COORDS, format: "xyzwhd", rotation: ROTATION },
+        persisted: true,
+        review: { status: "pending", sourceType: "model", sourceName: "detection" },
+      });
+      session.reportReady(COORDS, ROTATION, "m1");
+      expect(session.editingDeleteGesture).toBe("reject");
+
+      session.deleteBox();
+
+      expect(env.updates).toEqual([]);
+      expect(env.queued).toHaveLength(1);
+      expect(env.queued[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "m1" });
+      expect(env.collection.find("m1")).toBeUndefined();
+      expect(session.confirm).toBeNull();
+    });
+
+    it("deletes a person's saved box, and says so", () => {
+      addPersisted();
+      session.reportReady(COORDS, ROTATION, "b1");
+
+      expect(session.editingDeleteGesture).toBe("delete");
+    });
+
     it("queues a delete for a saved box and drops it from the collection", () => {
       addPersisted();
       session.reportReady(COORDS, ROTATION, "b1");
 
       session.deleteBox();
 
+      // What the queue held for the box is dropped before its delete is queued.
+      expect(env.dropped).toEqual(["b1"]);
       expect(env.queued).toHaveLength(1);
       expect(env.queued[0]).toMatchObject({ op: "delete", resource: "bbox3ds", id: "b1" });
       expect(env.collection.find("b1")).toBeUndefined();

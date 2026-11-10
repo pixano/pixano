@@ -26,6 +26,7 @@ from pixano.api.routers.messages import router as messages_router
 from pixano.api.routers.multi_paths import router as multi_paths_router
 from pixano.api.routers.records import router as records_router
 from pixano.api.routers.relation import router as relation_router
+from pixano.api.routers.review import router as review_router
 from pixano.api.routers.text_spans import router as text_spans_router
 from pixano.api.routers.timeseries import router as timeseries_router
 from pixano.api.routers.tracklets import router as tracklets_router
@@ -60,6 +61,7 @@ API_ROUTERS: tuple[APIRouter, ...] = (
     explorer_router,
     inference_router,
     jobs_router,
+    review_router,
     ui_router,
     *RESOURCE_ROUTERS,
 )
