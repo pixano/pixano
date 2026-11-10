@@ -67,7 +67,6 @@ from .embedding_spaces import (
     DEFAULT_INDEX_TYPE,
     DEFAULT_METRIC,
     DEFAULT_SOURCE_VIEW,
-    FIRST_TABLE,
     AmbiguousModelError,
     EmbeddingSpace,
     EmbeddingSpaces,
@@ -191,9 +190,6 @@ class Dataset:
     _INFO_FILE: str = "info.json"
     _FEATURES_VALUES_FILE: str = "features_values.json"
     _EMBEDDINGS_FILE: str = "embeddings.json"
-    # The table of a dataset's first embeddings model (`embedding_spaces.FIRST_TABLE`); the others
-    # are named by `embeddings.json`.
-    _RECORD_EMBEDDING_TABLE: str = FIRST_TABLE
     _STAT_FILE: str = "stats.json"
     _THUMB_FILE: str = "preview.png"
 

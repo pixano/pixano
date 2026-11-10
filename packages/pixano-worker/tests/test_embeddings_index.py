@@ -147,8 +147,10 @@ async def _embed(
 
 
 def _indexes(dataset: Dataset) -> dict[str, str]:
-    """The embeddings table's indexes, by the column each covers."""
-    return {index.columns[0]: index.index_type for index in dataset.open_table("embeddings").list_indices()}
+    """The default model's embeddings table's indexes, by the column each covers."""
+    space = dataset.record_embedding_space()
+    assert space is not None
+    return {index.columns[0]: index.index_type for index in dataset.open_table(space["table"]).list_indices()}
 
 
 def _outcome(db: psycopg.Connection, job: str) -> tuple[Any, ...]:
