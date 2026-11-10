@@ -71,10 +71,11 @@ class _FakeDataset:
     def has_record_embeddings(self) -> bool:
         return "embeddings" in self.tables
 
-    def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = "IVF_PQ") -> dict[str, Any]:
         self.tables.setdefault("embeddings", {})
         self.info.tables["embeddings"] = _Vector
         self.space = {"model_id": model_id, "dim": dim, "index_type": index_type}
+        return self.space
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)

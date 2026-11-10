@@ -99,10 +99,11 @@ class _Target:
     def has_record_embeddings(self) -> bool:
         return self._embeddings_ready
 
-    def create_record_embedding_table(self, dim: int, model_id: str, index_type: str = "IVF_PQ") -> None:
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = "IVF_PQ") -> dict[str, Any]:
         self._embeddings_ready = True
         self.info.tables["embeddings"] = _Vector
         self._space = {"model_id": model_id, "dim": dim, "index_type": index_type}
+        return self._space
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "_space", None)
