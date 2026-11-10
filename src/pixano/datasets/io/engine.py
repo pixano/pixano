@@ -770,7 +770,7 @@ class ImportEngine:
             dataset.info.id != manifest.dataset_id
             or set(manifest.pre_import_versions) != expected_tables
             or set(dataset.info.tables) != expected_tables
-            or set(dataset._db_connection.table_names()) != expected_tables
+            or set(dataset._db_connection.list_tables().tables) != expected_tables
             or not manifest.post_mutation_token
             or mutation_token(target_dir) != manifest.post_mutation_token
         ):
