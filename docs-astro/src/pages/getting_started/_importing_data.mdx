@@ -115,9 +115,10 @@ When a job queue is configured and the source holds still images (not video fram
 job of the dataset once the import is done, for semantic search and *similar to*. It is checked
 when the server can run the job, unless its administrator turned that default off, and offers
 the models the inference serves; when the job cannot run — no worker for it, no model — the box
-is disabled and says why. On a dataset that already has embeddings, the job uses their model,
-whatever model is chosen, and an add import has it compute the whole dataset again. The tray
-says whether the job was queued, or why not.
+is disabled and says why. On a dataset that already has embeddings, every model it holds is
+computed again, one job per model, each over the whole dataset: the media an add import brings are
+in none of them yet. A model you choose is computed beside them; left to the server, its model is
+used only for a dataset without embeddings. The tray says whether each job was queued, or why not.
 
 **Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
 options, and annotation settings preserved. Adjust the setup and analyze again to review the

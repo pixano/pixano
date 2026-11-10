@@ -731,4 +731,21 @@ describe("embeddings after the import", () => {
     expect(followUpLines(job("running", [refused]))).toEqual([]);
     expect(followUpLines(job("done", undefined))).toEqual([]);
   });
+
+  it("the tray says what became of each job a follow-up became, on a line of its own", () => {
+    const job = (follow_ups: IoJobResponse["follow_ups"]): IoJobResponse =>
+      ({ job_id: "i1", status: "done", progress: {}, error: {}, follow_ups }) as never;
+    const clip = { kind: "embeddings", params: { model: "clip" }, job_id: "j9", error: "" };
+    const siglip = {
+      kind: "embeddings",
+      params: { model: "siglip" },
+      job_id: "",
+      error: "not queued: the job queue cannot be read",
+    };
+
+    expect(followUpLines(job([clip, siglip]))).toEqual([
+      { text: "Embeddings (clip) queued.", notQueued: false },
+      { text: "Embeddings (siglip) not queued: the job queue cannot be read", notQueued: true },
+    ]);
+  });
 });

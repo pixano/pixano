@@ -229,6 +229,8 @@ export interface IoFollowUp {
   job_id: string;
   /** Why it was not queued; empty otherwise. */
   error: string;
+  /** The parameters the request did not name, which the server's defaults chose. */
+  defaulted?: string[];
 }
 
 /** Whether an import can queue the embeddings job of what it imports (`GET /io/imports/embeddings`). */

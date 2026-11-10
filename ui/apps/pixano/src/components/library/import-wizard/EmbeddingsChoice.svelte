@@ -41,7 +41,8 @@ License: CECILL-C
   </label>
   {#if offer.available}
     <p id={DESCRIPTION_ID} class="mt-1 text-xs text-muted-foreground">
-      Runs in the background once the import is done, for semantic search and “similar to”.
+      Runs in the background once the import is done, for semantic search and “similar to”, and
+      computes again the models a dataset already holds.
     </p>
     {#if compute}
       <label class="mt-3 block max-w-xs text-xs font-medium text-muted-foreground">
