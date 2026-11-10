@@ -6,7 +6,8 @@ License: CECILL-C
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { computeEmbeddings, searchRecords } from "../search";
+import { ApiError, serverDetail } from "../apiClient";
+import { computeEmbeddings, searchRecords, setDefaultEmbeddingSpace } from "../search";
 
 const fetchMock = vi.fn();
 
@@ -85,9 +86,48 @@ describe("computeEmbeddings", () => {
     expect(requestBody()).toEqual({ model: "clip", force: false });
   });
 
-  it("passes force for repair / model-switch recomputes", async () => {
+  it("passes force to compute a model again from nothing", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ job_id: "job-2" }));
     await computeEmbeddings("ds", "clip", true);
     expect(requestBody()).toEqual({ model: "clip", force: true });
+  });
+
+  it("names the inference to compute on", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ job_id: "job-3" }));
+    await computeEmbeddings("ds", "clip", false, "gpu");
+    expect(requestBody()).toEqual({ model: "clip", force: false, provider_name: "gpu" });
+  });
+});
+
+describe("setDefaultEmbeddingSpace", () => {
+  it("names the model by its id and returns it as the default", async () => {
+    const stored = {
+      id: "siglip-0b7e44a2",
+      model_id: "siglip",
+      checkpoint: "",
+      dim: 768,
+      default: true,
+      status: "ready",
+      embedded_rows: 60,
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(stored));
+
+    const space = await setDefaultEmbeddingSpace("ds", "siglip-0b7e44a2");
+
+    expect(space).toEqual(stored);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect([url, init.method]).toEqual(["/datasets/ds/embedding-spaces/default", "PUT"]);
+    expect(requestBody()).toEqual({ space_id: "siglip-0b7e44a2" });
+  });
+
+  it("fails with the server's words when it refuses", async () => {
+    const refusal = "Dataset ds has no embedding space 'gone'.";
+    fetchMock.mockResolvedValueOnce(jsonResponse({ detail: refusal }, 404));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const failure = await setDefaultEmbeddingSpace("ds", "gone").catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(serverDetail(failure)).toBe(refusal);
   });
 });

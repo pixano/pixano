@@ -51,6 +51,29 @@ export function buildQueryString(
   return query ? `?${query}` : "";
 }
 
+/**
+ * The server's own words for a request it failed, from the `detail` of a FastAPI error body: a
+ * sentence, the first of a list of refusals, or the message of a coded error — a dataset busy
+ * being written. Null when the error carries none.
+ */
+export function serverDetail(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(error.body);
+  } catch {
+    return null;
+  }
+  const detail = (parsed as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0] as { msg?: unknown } | null;
+    if (typeof first?.msg === "string") return first.msg;
+  }
+  const message = (detail as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message ? message : null;
+}
+
 export async function requestJson<T>(
   url: string,
   init: RequestInit = {},
