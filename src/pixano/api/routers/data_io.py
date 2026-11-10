@@ -145,14 +145,15 @@ class ImportRequestIO(BaseModel):
     spec: dict[str, Any] = Field(default_factory=dict)
     compute_embeddings: bool | None = Field(
         default=None,
-        description="Queue the embeddings job of what is imported once the import is done. Unset "
-        "follows the server's default (PIXANO_EMBEDDINGS_AFTER_IMPORT), which only applies where "
-        "the job can run.",
+        description="Queue the embeddings job of what is imported once the import is done — one per "
+        "model the dataset already holds too. Unset follows the server's default "
+        "(PIXANO_EMBEDDINGS_AFTER_IMPORT), which only applies where the job can run.",
     )
     embeddings_model: str | None = Field(
         default=None,
-        description="The model the embeddings job runs. Unset is the server's (PIXANO_EMBEDDINGS_MODEL), "
-        "else the first embeddings model the inference serves.",
+        description="The model the embeddings job runs, beside the models the dataset already holds. Unset "
+        "is the server's (PIXANO_EMBEDDINGS_MODEL), else the first embeddings model the inference serves, "
+        "used only for a dataset without embeddings.",
     )
 
 
@@ -439,7 +440,13 @@ async def _import_follow_ups(request: ImportRequestIO, settings: Settings, has_i
         or settings.embeddings_model
         or next(iter(await _served_embedding_models(settings)), None)
     )
-    return decide_embeddings(wanted, model, default_on=settings.embeddings_after_import, unavailable=unavailable)
+    return decide_embeddings(
+        wanted,
+        model,
+        named=bool(request.embeddings_model),
+        default_on=settings.embeddings_after_import,
+        unavailable=unavailable,
+    )
 
 
 @router.post("/exports", status_code=202, operation_id="start_export_job")

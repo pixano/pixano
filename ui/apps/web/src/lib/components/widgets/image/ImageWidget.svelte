@@ -11,7 +11,11 @@ License: CECILL-C
 
   import AnnotationToolbar from "../AnnotationToolbar.svelte";
   import { buildSeam } from "../sceneSeam.js";
-  import { beginEntityReassign, deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
+  import {
+    beginEntityReassign,
+    deleteGestureFor,
+    deleteLocalAnnotation,
+  } from "$lib/annotations/payloadBuilders.js";
   import {
     DEFAULT_TOOL_2D,
     getTool2D,
@@ -283,9 +287,9 @@ License: CECILL-C
   // draft's entity is still being chosen by the create flow.
   const canReassignEntity = $derived(annotations.selected?.persisted === true);
   // A disabled button with no explanation reads as broken; say which of the two
-  // reasons it is, so the fix ("select something", "save first") is obvious. The
-  // reason is the tooltip and the description, never the name, which assistive
-  // tech reads as the button's action.
+  // reasons it is, so the fix ("select something", "save first") is obvious. As
+  // for the trash button, the reason is the tooltip and the description, never
+  // the name, which assistive tech reads as the button's action.
   const reassignEntityLabel = "Change the entity this annotation belongs to (E)";
   const reassignEntityRefusal = $derived(
     canReassignEntity
@@ -295,6 +299,43 @@ License: CECILL-C
         : "Select an annotation to change its entity",
   );
   const reassignEntityRefusalId = `image-reassign-refusal-${stableWidgetId}`;
+  // The button is named Reject on a model's annotation, whose delete is its
+  // rejection, and Delete on any other; a Reject's tooltip says it deletes.
+  // With nothing selected, why it does nothing goes in its tooltip and its
+  // description — never its name, which is what assistive tech reads as the
+  // button's action.
+  const deleteGesture = $derived(
+    annotations.selected ? deleteGestureFor(annotations.selected) : null,
+  );
+  const deleteLabel = $derived(
+    deleteGesture === "reject" ? "Reject selected (Del)" : "Delete selected (Del)",
+  );
+  const deleteTooltip = $derived(
+    deleteGesture === "reject" ? "Reject selected (Del): rejecting deletes it" : deleteLabel,
+  );
+  const deleteRefusal = $derived(
+    deleteGesture === null ? "Select an annotation to delete or reject it" : null,
+  );
+  const deleteRefusalId = `image-delete-refusal-${stableWidgetId}`;
+
+  function deleteSelected() {
+    const annotation = annotations.selected;
+    if (!annotation || !sceneContext) return;
+    // A resize or a drag of a shape can only be under way with the select tool
+    // active: it is let go of first, as the Delete key does, or the shape it
+    // leaves half done would be committed over the delete. A draw tool's points
+    // belong to a shape not drawn yet, and stay.
+    const cancelGesture =
+      storage.activeToolId === DEFAULT_TOOL_2D ? () => seam.discardStagedWork?.() : undefined;
+    deleteLocalAnnotation(
+      annotation,
+      annotations,
+      sceneContext.mutations,
+      stableWidgetId,
+      cancelGesture,
+    );
+    syncRenderers();
+  }
 </script>
 
 <div class="flex h-full flex-col bg-card">
@@ -337,30 +378,18 @@ License: CECILL-C
       {/if}
       <button
         type="button"
-        onclick={() => {
-          const annotation = annotations.selected;
-          if (!annotation || !sceneContext) return;
-          // A resize or a drag of a shape can only be under way with the select tool
-          // active: it is let go of first, as the Delete key does, or the shape it
-          // leaves half done would be committed over the delete. A draw tool's
-          // points belong to a shape not drawn yet, and stay.
-          const cancelGesture =
-            storage.activeToolId === DEFAULT_TOOL_2D ? () => seam.discardStagedWork?.() : undefined;
-          deleteLocalAnnotation(
-            annotation,
-            annotations,
-            sceneContext.mutations,
-            stableWidgetId,
-            cancelGesture,
-          );
-          syncRenderers();
-        }}
-        disabled={!hasSelection}
-        title="Delete selected (Del)"
+        onclick={deleteSelected}
+        disabled={deleteRefusal !== null}
+        title={deleteRefusal ?? deleteTooltip}
+        aria-label={deleteLabel}
+        aria-describedby={deleteRefusal ? deleteRefusalId : undefined}
         class="rounded p-1 text-muted-foreground hover:bg-destructive/20 hover:text-destructive disabled:opacity-40"
       >
         <Trash2 class="h-3.5 w-3.5" />
       </button>
+      {#if deleteRefusal}
+        <span id={deleteRefusalId} class="sr-only">{deleteRefusal}</span>
+      {/if}
     {/snippet}
   </AnnotationToolbar>
 

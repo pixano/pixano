@@ -355,7 +355,7 @@ class TableQueryBuilder:
             count_table = None  # noqa: F841
             db = self._db_connection if self._db_connection is not None else lancedb.connect(self.table._conn.uri)
             count_name = self._order_by[0][1:]
-            if count_name in db.table_names():
+            if count_name in db.list_tables().tables:
                 count_tbl = db.open_table(count_name)
                 count_table = (
                     count_tbl.search(None)

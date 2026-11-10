@@ -9,8 +9,11 @@
 An import runs in the application, or in the CLI that started it; processing jobs run in
 pixano-worker. Whoever starts an import decides here what it asks for, and the import engine keeps
 that with its job (`FollowUp`). Once the data is in, the engine calls `submit_follow_ups`, bound to
-the deployment's queue and library. What cannot be queued says why on the import's job, and the
-import stays done: one can still start the job by hand.
+the deployment's queue and library, which fits each to the dataset as written: the embeddings asked
+for become one job per model name to compute — every model the dataset already holds, whose
+embeddings lack the media the import added, and the model the import named, or the deployment's
+default where the dataset holds none. What cannot be queued says why on the import's job, and the
+import stays done: one can still start the jobs by hand.
 
 The embeddings are asked for by default only where they can run — a queue reachable, where a worker
 declared the job, and a model to name — and on an import not known to hold no still image, so that
@@ -53,6 +56,12 @@ NO_MODEL = "no embeddings model — name one, set PIXANO_EMBEDDINGS_MODEL, or se
 # The import form names none: it offers what the deployment and the inference give.
 NO_MODEL_SERVED = "no embeddings model — set PIXANO_EMBEDDINGS_MODEL, or serve one from the inference"
 NO_IMAGE = "the dataset has no image to embed"
+# As the worker words its own refusal of such a dataset, at a job's planning.
+EMBEDDINGS_UNREADABLE = (
+    "this dataset's description of its embeddings (embeddings.json) cannot be read entirely, so no job may "
+    "change it: submit the job again if it was a passing error; if it stays so, repair the file, or compute "
+    "every model's embeddings again from nothing from the explorer"
+)
 QUEUE_UNREADABLE = "the job queue cannot be read — the log of the process that asked says why"
 
 
@@ -104,15 +113,23 @@ def embeddings_unavailable(database_url: str | None) -> str | None:
 
 
 def decide_embeddings(
-    wanted: bool | None, model: str | None, *, default_on: bool, unavailable: str | None, no_model: str = NO_MODEL
+    wanted: bool | None,
+    model: str | None,
+    *,
+    named: bool,
+    default_on: bool,
+    unavailable: str | None,
+    no_model: str = NO_MODEL,
 ) -> list[FollowUp]:
-    """The embeddings follow-up an import asks for, if any.
+    """The embeddings follow-up an import asks for, if any: one at most.
 
     Args:
         wanted: What the request says (`asks_for_embeddings`). None follows the deployment's default,
             which only applies where the job can run.
         model: The model the job would run, as the caller resolved it — the request's, the
             deployment's, or the first the inference serves. None when none is known.
+        named: Whether the request named that model. One it did not name stands in only for a
+            dataset that holds no embeddings yet (`submit_follow_ups`).
         default_on: The deployment's default (`PIXANO_EMBEDDINGS_AFTER_IMPORT`).
         unavailable: Why the job cannot run now, or None; only read for the default.
         no_model: What to say when the request asks for the job and no model is known: the CLI, which
@@ -128,17 +145,17 @@ def decide_embeddings(
         return []
     if not model:
         return [FollowUp(kind=EMBEDDINGS_KIND, error=f"not queued: {no_model}")]
-    return [FollowUp(kind=EMBEDDINGS_KIND, params={"model": model})]
+    return [FollowUp(kind=EMBEDDINGS_KIND, params={"model": model}, defaulted=() if named else ("model",))]
 
 
 def submit_follow_ups(
     database_url: str | None, library_dir: Path, dataset_id: str, follow_ups: list[FollowUp]
-) -> list[FollowUp]:
+) -> list[list[FollowUp]]:
     """Queue an import's pending follow-ups on the job queue; bound to a deployment, its `FollowUpStarter`.
 
-    Each is fitted to the dataset first, so that one with nothing to do says so whatever the queue's
-    state. All are queued in one transaction: a database error rolls them all back, and each says
-    the queue could not be read.
+    Each is fitted to the dataset first — the embeddings into one job per model to compute —, so
+    that one with nothing to do says so whatever the queue's state. All are queued in one
+    transaction: a database error rolls them all back, and each says the queue could not be read.
 
     Args:
         database_url: The job queue's database.
@@ -147,7 +164,8 @@ def submit_follow_ups(
         follow_ups: The pending follow-ups.
 
     Returns:
-        Each follow-up, in order, with the queued job's identifier or the reason it was not queued.
+        What each follow-up became, in order — itself, or one per model for the embeddings —, each
+        with the queued job's identifier or the reason it was not queued.
 
     Raises:
         FileNotFoundError: The dataset is not in the library; `queue_follow_ups` turns it into a
@@ -155,18 +173,27 @@ def submit_follow_ups(
     """
     dataset = Dataset.find(dataset_id, library_dir) if any(f.kind == EMBEDDINGS_KIND for f in follow_ups) else None
     fitted = [
-        _fit_embeddings(dataset, follow_up) if dataset is not None and follow_up.kind == EMBEDDINGS_KIND else follow_up
+        _fit_embeddings(dataset, follow_up)
+        if dataset is not None and follow_up.kind == EMBEDDINGS_KIND
+        else [follow_up]
         for follow_up in follow_ups
     ]
-    if all(follow_up.error for follow_up in fitted):
+    if all(follow_up.error for became in fitted for follow_up in became):
         return fitted
     try:
         with _queue_connection(database_url) as conn:
-            return [follow_up if follow_up.error else _submit(conn, dataset_id, follow_up) for follow_up in fitted]
+            return [
+                [follow_up if follow_up.error else _submit(conn, dataset_id, follow_up) for follow_up in became]
+                for became in fitted
+            ]
     except (QueueUnavailableError, psycopg.Error) as error:
         reason = _public_reason(error)
         return [
-            follow_up if follow_up.error else replace(follow_up, error=f"not queued: {reason}") for follow_up in fitted
+            [
+                follow_up if follow_up.error else replace(follow_up, error=f"not queued: {reason}")
+                for follow_up in became
+            ]
+            for became in fitted
         ]
 
 
@@ -179,22 +206,36 @@ def _submit(conn: psycopg.Connection, dataset_id: str, follow_up: FollowUp) -> F
     return replace(follow_up, job_id=job.id)
 
 
-def _fit_embeddings(dataset: Dataset, follow_up: FollowUp) -> FollowUp:
-    """The embeddings follow-up fitted to the dataset the import wrote.
+def _fit_embeddings(dataset: Dataset, follow_up: FollowUp) -> list[FollowUp]:
+    """The embeddings follow-up fitted to the dataset the import wrote: one per model name to compute.
 
     - A dataset with no still image has nothing for the job to embed.
-    - A dataset that already holds embeddings keeps their model: one table holds one model, and the
-      worker refuses a job that names another. The job an add import queues on an embedded dataset
-      computes every medium of it again, the new ones among them: the embeddings job has no way to
-      compute only what is missing.
+    - A dataset whose description of its embeddings cannot be read entirely takes no job: the
+      worker would refuse each.
+    - Otherwise every model the dataset already holds is computed again — the media an import
+      added are in none of their embeddings yet —, and so is the model the import named, first.
+      A model the deployment chose instead stands in only for a dataset without embeddings: it
+      adds no model to a dataset that has some.
+
+    One job per model name: a job computes the checkpoint the inference serves under that name,
+    into that checkpoint's embeddings, so a checkpoint held that is not served any more is not
+    computed again, and two held are one job. A model held without a name cannot be asked for. A
+    model the inference does not serve any more is refused at its job's planning, which says so.
+    Each job computes every medium of the dataset again, the new ones among them: the embeddings
+    job has no way to compute only what is missing.
     """
     if not any(media_type_of(schema) == EMBEDDED_MEDIA for schema in dataset.info.tables.values()):
-        return replace(follow_up, error=f"not queued: {NO_IMAGE}")
-    space = dataset.record_embedding_space() or {}
-    model = space.get("model_id")
-    if model and model != follow_up.params.get("model"):
-        return replace(follow_up, params={**follow_up.params, "model": model})
-    return follow_up
+        return [replace(follow_up, error=f"not queued: {NO_IMAGE}")]
+    if not dataset.record_embeddings_fully_read():
+        return [replace(follow_up, error=f"not queued: {EMBEDDINGS_UNREADABLE}")]
+    held = [space["model_id"] for space in dataset.record_embedding_spaces() if space["model_id"]]
+    asked = follow_up.params.get("model")
+    # A model no one named is not needed where the dataset holds some.
+    unneeded = "model" in follow_up.defaulted and bool(held)
+    models = dict.fromkeys([*([asked] if asked and not unneeded else []), *held])
+    if not models:
+        return [replace(follow_up, error=f"not queued: {NO_MODEL}")]
+    return [replace(follow_up, params={**follow_up.params, "model": model}) for model in models]
 
 
 @contextmanager

@@ -118,11 +118,12 @@ PLANNING_WRITE_LOCK_WAIT_S = 10.0
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
 # How long the loop waits for a planning — the split, then the preparation — before it fails the
-# job. Planning reads the identifiers it splits, asks the kind which model it runs — a question
-# to the inference bounded by its own timeout —, waits at most `PLANNING_WRITE_LOCK_WAIT_S` for
-# the dataset, and prepares it. Not measured: a ceiling rather than an estimate, set far above that
-# work, so that only a planning stuck in its reads or in `prepare` — storage that stopped
-# answering, a kind's bug — reaches it, and the loop's turn, which it holds, is given back.
+# job. Planning reads the identifiers it splits, asks the inference whether it serves the job's
+# model and which checkpoint it loaded — two questions bounded by their own timeout —, waits at
+# most `PLANNING_WRITE_LOCK_WAIT_S` for the dataset, and prepares it. Not measured: a ceiling
+# rather than an estimate, set far above that work, so that only a planning stuck in its reads or
+# in `prepare` — storage that stopped answering, a kind's bug — reaches it, and the loop's turn,
+# which it holds, is given back.
 PLANNING_TIMEOUT_S = 600.0
 
 # What a job whose planning outlasted `PLANNING_TIMEOUT_S` says it failed for.
@@ -255,6 +256,24 @@ RETURNING j.state
 """
 
 
+# The jobs in flight that nothing will settle: none of their chunks is pending or running, so no
+# chunk will finish to settle them. A worker that died between a chunk's result and the
+# settlement that follows it leaves one; so does a retry that had nothing to reopen — a job
+# cancelled while its last chunks were running, whose work all completed, and whose final chunk
+# was left waiting. Each job in flight is looked up in the chunks' index on their job; the jobs
+# table itself is read whole, as no index covers the jobs in flight: 6 ms at 50 000 jobs and
+# 515 000 chunks, measured in review — an index is for when jobs are kept longer, with step 6's
+# retention.
+STRANDED_JOBS = f"""
+SELECT j.id FROM {SCHEMA_NAME}.jobs j
+WHERE j.state IN ('pending', 'running')
+  AND NOT EXISTS (
+      SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
+      WHERE c.job_id = j.id AND c.state IN ('pending', 'running')
+  )
+ORDER BY j.id
+"""
+
 OUTCOME = f"""
 SELECT coalesce(sum(produced), 0)::int, coalesce(sum(skipped), 0)::int,
        (SELECT count(*) FROM {SCHEMA_NAME}.job_items WHERE job_id = %s)::int
@@ -370,10 +389,10 @@ def _plan_and_prepare(
     """Split a job on its dataset reopened, then prepare the dataset: the planning's own work.
 
     The split first, then the preparation: everything that can refuse the job — a model the
-    dataset's embeddings were not computed with, a dataset with nothing to do — refuses it before
-    `prepare` has destroyed anything. The other order would let a `prepare` empty a table for a job
-    its plan then refuses. A planner that dies after `prepare` leaves no chunk, and the next one
-    redoes both — that is why `prepare` must be idempotent.
+    inference does not serve, or the dataset's embeddings were not computed with, a dataset with
+    nothing to do — refuses it before `prepare` has destroyed anything. The other order would let
+    a `prepare` empty a table for a job its plan then refuses. A planner that dies after `prepare`
+    leaves no chunk, and the next one redoes both — that is why `prepare` must be idempotent.
 
     `prepare` may write, so it runs under the dataset's write lock, as a chunk's `write` does:
     this worker's chunks of other jobs may be writing the same dataset meanwhile, in other
@@ -469,13 +488,21 @@ _open_datasets_guard = threading.Lock()
 
 
 def _open_dataset(library: Path, dataset_id: str) -> Dataset:
-    """Open a dataset, once; serve it from the cache afterwards."""
+    """Open a dataset, once; serve it from the cache afterwards, while another process has not changed it.
+
+    A dataset another process changed since — its schema in `info.json`, its embeddings spaces in
+    `embeddings.json`: another worker's job, the application — is opened again (`Dataset.is_stale`,
+    three `stat` calls), as the application's cache does: a chunk must not read a space another
+    worker created, or write into one it deleted, from what this worker read before.
+    """
     key = (library, dataset_id)
     with _open_datasets_guard:
         cached = _open_datasets.get(key)
-        if cached is not None:
-            _open_datasets.move_to_end(key)
-            return cached
+    if cached is not None and not _changed_since_opened(cached):
+        with _open_datasets_guard:
+            if _open_datasets.get(key) is cached:
+                _open_datasets.move_to_end(key)
+        return cached
     opened = Dataset.find(dataset_id, library)
     with _open_datasets_guard:
         _open_datasets[key] = opened
@@ -483,6 +510,20 @@ def _open_dataset(library: Path, dataset_id: str) -> Dataset:
         while len(_open_datasets) > _OPEN_DATASETS_MAX:
             _open_datasets.popitem(last=False)
     return opened
+
+
+def _changed_since_opened(dataset: Dataset) -> bool:
+    """Whether another process changed a cached dataset since it was opened (`Dataset.is_stale`).
+
+    A dataset its files cannot be examined of — a storage that stopped answering a `stat` — is
+    served as it was opened: reopening it would fail the same way, and the chunk would fail on it
+    where the dataset it holds may serve it.
+    """
+    try:
+        return dataset.is_stale()
+    except OSError as error:
+        log.warning("dataset %s: cannot tell whether it changed (%s), served as it was opened", dataset.path, error)
+        return False
 
 
 def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
@@ -502,8 +543,8 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
         fresh: Reopen the dataset bypassing the cache. Planning asks for it: it is a job's
             first look at its dataset, and a dataset recreated under the worker — reimported,
             its embeddings table dropped — was otherwise seen as it was at the previous
-            opening, until the worker restarted. The chunks, for their part, read what
-            planning reopened.
+            opening, until the worker restarted. The chunks, for their part, read what the
+            cache holds, opened again once another process changed the dataset.
     """
 
     def open_dataset() -> Dataset:
@@ -528,17 +569,11 @@ def _writer_for(library: Path | None, dataset_id: str, kind: JobKind, job_id: st
             raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _open_dataset(library, dataset_id)
 
-    def reopen_dataset() -> Dataset:
-        if library is None:
-            raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
-        return _reopen_dataset(library, dataset_id)
-
     return JobWriter(
         open_dataset,
         kind.name,
         job_id,
         kind.source_type,
-        reopen_dataset,
         dataset_id,
         params=kind.provenance_params(params),
         model=kind.model_identity(params),
@@ -649,12 +684,15 @@ async def _loop(
                 async with pool.connection() as conn:
                     recovery = await queue.reclaim_expired(conn)
                     await settle_abandoned(conn, recovery)
+                    stranded = await settle_stranded(conn)
                 if recovery.requeued or recovery.abandoned_jobs:
                     log.info(
                         "expired leases: %d chunk(s) put back in the queue, %d job(s) with a chunk set aside",
                         recovery.requeued,
                         len(recovery.abandoned_jobs),
                     )
+                if stranded:
+                    log.info("%d job(s) left with nothing to run taken up by the recovery pass", stranded)
         except DATABASE_UNAVAILABLE as error:
             delay = OUTAGE_BACKOFF_S[min(outages, len(OUTAGE_BACKOFF_S) - 1)]
             outages += 1
@@ -963,27 +1001,45 @@ async def settle_abandoned(conn: psycopg.AsyncConnection, recovery: queue.Recove
         await settle(conn, job_id)
 
 
-async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
+async def settle_stranded(conn: psycopg.AsyncConnection) -> int:
+    """Settle the jobs in flight that no chunk will settle any more (`STRANDED_JOBS`).
+
+    Run by the recovery pass, beside the expired leases: a job whose final chunk was left waiting
+    has it released, a job whose work is all done is settled.
+
+    Returns:
+        How many jobs it moved on. A job the query found but whose own settlement came first is
+        not counted: there was nothing left to do.
+    """
+    stranded = [str(row[0]) for row in await (await conn.execute(STRANDED_JOBS)).fetchall()]
+    return sum([await settle(conn, job_id) for job_id in stranded])
+
+
+async def settle(conn: psycopg.AsyncConnection, job_id: str) -> bool:
     """Settle a job with nothing left pending or running, saying what it produced.
 
     A job whose kind finalizes is not settled when its last chunk of work is done: its final
     chunk joins the queue instead, and the job is settled once that one is.
+
+    Returns:
+        Whether this call moved the job on: released its final chunk, or settled it.
     """
     # Settlement and event in one transaction: a worker killed between the two left a `done` job
     # whose end the interface only learned on reload.
     async with conn.transaction():
         locked = await (await conn.execute(LOCK_JOB_FOR_SETTLEMENT, (job_id,))).fetchone()
         if locked is None:
-            return
+            return False
         if await queue.release_final(conn, job_id):
-            # The state is unchanged; the event says that the job is now finalizing, so that an
-            # interface shows it rather than a full bar that does not end.
+            # The state is unchanged — `running`, or `pending` for a retried job none of whose
+            # chunks has been claimed since; the event says that the job is now finalizing, so
+            # that an interface shows it rather than a full bar that does not end.
             await queue.record_event(conn, job_id, "state", {"state": locked[0], "finalizing": True})
             log.info("job %s: every chunk done, its final chunk is queued", job_id)
-            return
+            return True
         row = await (await conn.execute(SETTLE, (job_id,))).fetchone()
         if row is None:
-            return
+            return False
         outcome = await job_outcome(conn, job_id)
         await queue.record_event(conn, job_id, "state", {"state": row[0], **outcome})
     log.info(
@@ -994,6 +1050,7 @@ async def settle(conn: psycopg.AsyncConnection, job_id: str) -> None:
         outcome["skipped"],
         outcome["quarantined"],
     )
+    return True
 
 
 async def job_outcome(conn: psycopg.AsyncConnection, job_id: str) -> dict[str, int]:

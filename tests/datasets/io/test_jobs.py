@@ -166,26 +166,37 @@ class _Starter:
     Given the store, it also records what the store held of the import job when it was called.
     """
 
-    def __init__(self, failure: Exception | None = None, store: JobStore | None = None):
+    def __init__(
+        self, failure: Exception | None = None, store: JobStore | None = None, also: tuple[FollowUp, ...] = ()
+    ):
         self.calls: list[tuple[str, list[FollowUp]]] = []
         self.seen: list[tuple[str, list[FollowUp]]] = []
         self.failure = failure
         self.store = store
+        # What each follow-up also becomes, as the embeddings of every model a dataset holds.
+        self.also = also
 
-    def __call__(self, dataset_id: str, follow_ups: list[FollowUp]) -> list[FollowUp]:
+    def __call__(self, dataset_id: str, follow_ups: list[FollowUp]) -> list[list[FollowUp]]:
         self.calls.append((dataset_id, follow_ups))
         if self.store is not None:
             job = self.store.list_jobs()[0]
             self.seen.append((job.status, job.follow_ups))
         if self.failure is not None:
             raise self.failure
-        return [replace(follow_up, job_id=f"job-{rank}") for rank, follow_up in enumerate(follow_ups)]
+        return [
+            [replace(follow_up, job_id=f"job-{rank}")]
+            + [replace(other, job_id=f"job-{rank}-{more}") for more, other in enumerate(self.also, start=1)]
+            for rank, follow_up in enumerate(follow_ups)
+        ]
 
 
 class TestFollowUpsAreKept:
     def test_with_the_job_and_their_outcome_with_them(self, store: JobStore):
         job = store.create_job("import", follow_ups=[EMBEDDINGS])
         assert store.get_job(job.id).follow_ups == [EMBEDDINGS]
+
+        defaulted = replace(EMBEDDINGS, defaulted=("model",))
+        assert store.get_job(store.create_job("import", follow_ups=[defaulted]).id).follow_ups == [defaulted]
 
         queued = replace(EMBEDDINGS, job_id="job-0")
         store.update_job(job.id, follow_ups=[queued])
@@ -245,11 +256,44 @@ class TestQueueingFollowUps:
 
         assert outcome.error == FAILED
 
+    def test_a_follow_up_that_became_nothing_says_so_and_only_it(self):
+        siglip = FollowUp(kind="embeddings", params={"model": "siglip"})
+
+        outcomes = queue_follow_ups(
+            lambda dataset_id, follow_ups: [[], [replace(siglip, job_id="job-1")]], "ds-1", [EMBEDDINGS, siglip]
+        )
+
+        assert outcomes == [replace(EMBEDDINGS, error=NO_OUTCOME), replace(siglip, job_id="job-1")]
+
     def test_a_starter_that_gives_one_back_without_an_outcome_says_so(self):
         """Left pending on a done import, it would stay pending for good."""
-        (outcome,) = queue_follow_ups(lambda dataset_id, follow_ups: follow_ups, "ds-1", [EMBEDDINGS])
+        (outcome,) = queue_follow_ups(
+            lambda dataset_id, follow_ups: [[follow_up] for follow_up in follow_ups], "ds-1", [EMBEDDINGS]
+        )
 
         assert outcome.error == NO_OUTCOME
+
+    def test_a_follow_up_that_became_several_jobs_is_kept_as_all_of_them_in_its_place(self):
+        """The embeddings of each model a dataset holds, say, each with its own outcome."""
+        refused = FollowUp(kind="statistics", error="no worker")
+        siglip = FollowUp(kind="embeddings", params={"model": "siglip"})
+        statistics = FollowUp(kind="statistics")
+
+        outcomes = queue_follow_ups(
+            lambda dataset_id, follow_ups: [
+                [replace(EMBEDDINGS, job_id="job-0"), replace(siglip, job_id="job-1")],
+                [replace(statistics, job_id="job-2")],
+            ],
+            "ds-1",
+            [refused, EMBEDDINGS, statistics],
+        )
+
+        assert outcomes == [
+            refused,
+            replace(EMBEDDINGS, job_id="job-0"),
+            replace(siglip, job_id="job-1"),
+            replace(statistics, job_id="job-2"),
+        ]
 
 
 class TestQueueingAnImportsFollowUps:
@@ -261,6 +305,17 @@ class TestQueueingAnImportsFollowUps:
 
         assert starter.seen == [("pending", [replace(EMBEDDINGS, error=IN_FLIGHT)])]
         assert outcomes == [replace(EMBEDDINGS, job_id="job-0")]
+
+    def test_a_follow_up_that_became_several_jobs_is_recorded_as_all_of_them(self, store: JobStore):
+        """Recorded as being queued as asked, then as what it became."""
+        job = store.create_job("import", follow_ups=[EMBEDDINGS])
+        siglip = FollowUp(kind="embeddings", params={"model": "siglip"})
+        starter = _Starter(store=store, also=(siglip,))
+
+        outcomes = queue_import_follow_ups(store, job.id, starter, "ds-1")
+
+        assert starter.seen == [("pending", [replace(EMBEDDINGS, error=IN_FLIGHT)])]
+        assert outcomes == [replace(EMBEDDINGS, job_id="job-0"), replace(siglip, job_id="job-0-1")]
 
     def test_a_process_that_stops_after_queueing_them_never_queues_them_twice(self, store: JobStore):
         """The import's done is not recorded: a resume finds them being queued, not pending."""
@@ -357,6 +412,19 @@ class TestJobRunner:
         # Queued while the import still read running: whoever sees it done sees the outcome too.
         assert [status for status, _ in starter.seen] == ["running"]
         assert final.follow_ups == [replace(EMBEDDINGS, job_id="job-0")]
+
+    def test_an_import_records_with_it_every_job_a_follow_up_became(self, tmp_path: Path):
+        (tmp_path / "library").mkdir()
+        store = JobStore.for_data_dir(tmp_path)
+        siglip = FollowUp(kind="embeddings", params={"model": "siglip"})
+        runner = JobRunner(store, tmp_path, follow_up_starter=_Starter(store=store, also=(siglip,)))
+
+        job = runner.submit_import(str(_image_source(tmp_path)), IMAGE_SPEC, follow_ups=[EMBEDDINGS])
+        runner.join(timeout=60)
+
+        final = store.get_job(job.id)
+        assert final.status == "done", final.error
+        assert final.follow_ups == [replace(EMBEDDINGS, job_id="job-0"), replace(siglip, job_id="job-0-1")]
 
     def test_a_failed_import_queues_nothing(self, tmp_path: Path):
         (tmp_path / "library").mkdir()

@@ -6,9 +6,12 @@
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import json
 import logging
+import os
+import stat
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import datetime
@@ -24,6 +27,7 @@ import shortuuid
 from lancedb.common import DATA
 from lancedb.pydantic import LanceModel
 from lancedb.table import LanceTable
+from pydantic import create_model
 from s3path import S3Path
 
 from pixano.datasets.queries import TableQueryBuilder
@@ -38,11 +42,13 @@ from pixano.datasets.utils.integrity import (
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
     Conversation,
+    Entity,
     Message,
     Record,
     SchemaGroup,
     ViewEmbedding,
     build_record_embedding_schema,
+    canonical_table_name_for_slot,
     is_entity_annotation,
     is_image,
     is_sequence_frame,
@@ -55,7 +61,17 @@ from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
 from .dataset_info import DatasetInfo
+from .dataset_schema import _serialize_table_schema
 from .dataset_stat import DatasetStatistic, SplitStatusCount
+from .embedding_spaces import (
+    DEFAULT_INDEX_TYPE,
+    DEFAULT_METRIC,
+    DEFAULT_SOURCE_VIEW,
+    AmbiguousModelError,
+    EmbeddingSpace,
+    EmbeddingSpaces,
+    is_embeddings_table,
+)
 from .locking import dataset_mutation_lock, dataset_write
 
 
@@ -101,6 +117,51 @@ def _validate_raise_or_warn(raise_or_warn: str) -> None:
         raise ValueError(f"raise_or_warn must be 'raise', 'warn' or 'none', got '{raise_or_warn}'")
 
 
+#: What a file the dataset writes asks the system for: the process's umask narrows it, as for any new file.
+_NEW_FILE_MODE = 0o666
+#: The stamp of a file an instance could not read: equal to no file's, so that its holder reads it again.
+_UNREAD = object()
+
+
+def _file_stamp(path: Path) -> object:
+    """What tells a file's versions apart — its inode, modification time and size —; None when it does not exist.
+
+    The three together tell apart far more versions than the modification time alone, which a coarse
+    clock gives two writes within one tick. A file that cannot be examined stamps `_UNREAD`.
+    """
+    try:
+        status = path.stat()
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return _UNREAD
+    return (status.st_ino, status.st_mtime_ns, status.st_size)
+
+
+def _replace_file(path: Path, content: str, permissions: int | None = None) -> None:
+    """Write a file of a local disk so that a reader sees its old content or its new one, never half of it.
+
+    The content goes to a temporary file of its own in the same directory — the rename stays within
+    one filesystem, so it is atomic — renamed over `path` once on disk. The file gets `permissions`
+    when given — those it had —, else those of any new file the process writes: the application and a
+    worker may run as two users, and a file narrowed to its owner would be unreadable to the other.
+    """
+    tmp_path = path.with_name(f"{path.name}.{shortuuid.uuid()}.tmp")
+    fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, _NEW_FILE_MODE)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as tmp_file:
+            tmp_file.write(content)
+            # On disk before the rename: a crash between them leaves the old file, never an empty one.
+            tmp_file.flush()
+            os.fsync(tmp_file.fileno())
+        if permissions is not None:
+            tmp_path.chmod(permissions)
+        tmp_path.replace(path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
+
+
 def _is_nested(query: Sequence[float] | Sequence[Sequence[float]]) -> bool:
     """Whether a search query is a list of vectors rather than one vector."""
     return len(query) > 0 and isinstance(query[0], (list, tuple, np.ndarray))
@@ -129,7 +190,6 @@ class Dataset:
     _INFO_FILE: str = "info.json"
     _FEATURES_VALUES_FILE: str = "features_values.json"
     _EMBEDDINGS_FILE: str = "embeddings.json"
-    _RECORD_EMBEDDING_TABLE: str = "embeddings"
     _STAT_FILE: str = "stats.json"
     _THUMB_FILE: str = "preview.png"
 
@@ -150,7 +210,11 @@ class Dataset:
         self._table_handles: dict[str, LanceTable] = {}
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
         self._embeddings_file = self.path / self._EMBEDDINGS_FILE
-        self._record_embedding_space: dict[str, Any] | None = None
+        self._embedding_spaces = EmbeddingSpaces()
+        # A space's schema, built once per table and dimension rather than at every write's refresh.
+        self._embedding_schemas: dict[tuple[str, int], type[LanceModel]] = {}
+        # What `embeddings.json` was when this instance last read or wrote it (`_file_stamp`).
+        self._embeddings_stamp: object = None
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
         self._db_path = self.path / self._DB_PATH
@@ -166,10 +230,10 @@ class Dataset:
         self._write_depth = 0
         self.info = DatasetInfo.from_json(self._info_file)
         validate_canonical_table_map(self.info.tables)
-        # The record-embedding table is internal to the search engine (not part of the public
-        # dataset schema), so it is persisted in a sidecar and re-injected here after the
-        # canonical check — DatasetInfo does not round-trip it.
-        self._load_record_embedding_space()
+        # The embeddings tables are internal to the search engine (not part of the public dataset
+        # schema), so they are described in a sidecar and re-injected here after the canonical
+        # check — DatasetInfo does not round-trip them.
+        self._load_record_embedding_spaces()
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
         self.stats = DatasetStatistic.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.thumbnail = self._thumb_file
@@ -195,6 +259,32 @@ class Dataset:
                 )
         self._num_rows_cache: int | None = None
 
+    def is_stale(self) -> bool:
+        """Whether another process changed this dataset's metadata since it was read here.
+
+        A long-lived holder — the API's cache — asks before serving a request: a job that gives
+        the entities a new field rewrites `info.json`, and reading with the schema read before
+        would leave that field out; a job that adds a model's embeddings rewrites
+        `embeddings.json`. Three `stat` calls; a replaced dataset counts as changed, and so does one
+        whose `embeddings.json` this instance could not read.
+
+        A dataset on S3 is never reported changed: there is no `stat` to compare, so its
+        holder serves the schema it first read until it drops the dataset — when a job ends,
+        for the API (docs/specs/backend-processing.md §20).
+        """
+        if isinstance(self.path, S3Path):
+            return False
+        try:
+            path_stat = self.path.stat()
+            info_mtime = self._info_file.stat().st_mtime_ns
+        except FileNotFoundError:
+            return True
+        return (
+            (path_stat.st_dev, path_stat.st_ino) != self._directory_identity
+            or info_mtime != self._info_mtime_ns
+            or _file_stamp(self._embeddings_file) != self._embeddings_stamp
+        )
+
     @contextmanager
     def write_lock(self):
         """Protect a mutation and refresh cached handles before its integrity reads.
@@ -215,18 +305,18 @@ class Dataset:
                     self.invalidate_caches(self.info.id)
                     raise DatasetReplacedError("Dataset was replaced; reload it before retrying the operation.")
                 current_mtime = self._info_file.stat().st_mtime_ns
+                current_info = self.info
                 if current_mtime != self._info_mtime_ns:
                     current_info = DatasetInfo.from_json(self._info_file)
                     if current_info.id != self.info.id:
                         self.invalidate_caches(self.info.id)
                         raise DatasetReplacedError("Dataset was replaced; reload it before retrying the operation.")
-                    self.info = current_info
                 self._table_handles.clear()
                 self._num_rows_cache = None
                 self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
-                self.info.tables.pop(self._RECORD_EMBEDDING_TABLE, None)
-                self._record_embedding_space = None
-                self._load_record_embedding_space()
+                # The info read replaces the one held only once it declares the embeddings tables: a
+                # search on another thread never finds them gone.
+                self._load_record_embedding_spaces(into=current_info)
             self._write_depth += 1
             try:
                 yield
@@ -259,14 +349,62 @@ class Dataset:
         if self.info.spec_version < 3:
             self._backfill_columns(is_entity_annotation, {"review_status": "''"})
 
-        # Patch the raw JSON rather than re-serializing self.info: from_json drops
-        # views it cannot deserialize, and a re-serialization would persist that loss.
-        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
-        info_json["spec_version"] = self._CURRENT_SPEC_VERSION
-        tmp_file = self._info_file.with_name(self._info_file.name + ".tmp")
-        tmp_file.write_text(json.dumps(info_json, indent=4), encoding="utf-8")
-        tmp_file.replace(self._info_file)
+        self._patch_info_json({"spec_version": self._CURRENT_SPEC_VERSION})
         self.info.spec_version = self._CURRENT_SPEC_VERSION
+
+    @dataset_write
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there.
+
+        For a job that writes a class on the objects it detects, on a dataset whose entities
+        have nowhere to hold one — nuScenes as imported, a dataset of plain images. The schema
+        class gains the field, the table gains the column, and `info.json` is rewritten, so the
+        interface offers the field like any other. Idempotent: a field already declared, with its
+        column, is left as it is and nothing is written — a rewrite of `info.json` would make every
+        other holder of the dataset stale (`is_stale`), and a job calls this once per chunk.
+
+        Args:
+            name: The field to add, typed as text.
+
+        Raises:
+            DatasetAccessError: The dataset declares no entities.
+        """
+        declared = self.info.entity
+        if declared is None:
+            raise DatasetAccessError(f"Dataset {self.id} declares no entities.")
+        schema: type[Entity] = declared
+        table_name = canonical_table_name_for_slot("entity")
+        if name in schema.model_fields and name in self.open_table(table_name).schema.names:
+            return
+        if name not in schema.model_fields:
+            schema = create_model(schema.__name__, __base__=schema, **{name: (str, "")})  # type: ignore[call-overload]
+            self.info.entity = schema
+            self.info.tables[table_name] = schema
+            self._table_handles.pop(table_name, None)
+        self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
+        self._patch_info_json({"entity": _serialize_table_schema(schema)})
+
+    def _patch_info_json(self, fields: dict[str, Any]) -> None:
+        """Set top-level fields of `info.json`, leaving the rest of the document as written.
+
+        Re-serializing `self.info` would persist what `DatasetInfo.from_json` dropped: the views
+        whose schema this build cannot deserialize. The raw document keeps them. On a local
+        disk, the file is replaced whole (`_replace_file`), so a reader never sees a half-written
+        file, and keeps its permissions. Callers hold the write lock, since another writer's
+        read-modify-write would race this one.
+
+        Args:
+            fields: The top-level fields to set, already serialized.
+        """
+        info_json = json.loads(self._info_file.read_text(encoding="utf-8"))
+        info_json.update(fields)
+        content = json.dumps(info_json, indent=4)
+        if isinstance(self._info_file, S3Path):
+            # An object store replaces an object whole, so no reader sees half of it; and it has
+            # neither a directory to hold a temporary file nor permissions to keep.
+            self._info_file.write_text(content, encoding="utf-8")
+            return
+        _replace_file(self._info_file, content, stat.S_IMODE(self._info_file.stat().st_mode))
 
     def _backfill_columns(self, applies_to: Callable[[type], bool], columns: dict[str, str]) -> None:
         """Add the columns missing from every table whose schema ``applies_to`` selects.
@@ -623,8 +761,11 @@ class Dataset:
                 schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
             except TypeError:  # no embedding function
                 pass
-        # Handles read the latest table version per query, so caching is safe;
-        # Dataset-level cache invalidation drops the whole instance anyway.
+        # A cached handle stays on the table version it opened, since the connection sets no
+        # read consistency interval: what another instance or process writes (the worker, the
+        # API) is not seen through it. `write_lock` clears the cache, so this instance's own
+        # writes and the reads made under the lock see the latest version, and Dataset-level
+        # cache invalidation drops the whole instance. Any other read may be stale.
         self._table_handles[name] = table
         return table
 
@@ -1710,42 +1851,190 @@ class Dataset:
     # Record-level embeddings & semantic search
     # ------------------------------------------------------------------
 
-    def _load_record_embedding_space(self) -> None:
-        """Load the record-embedding sidecar and inject its schema into ``info.tables``.
+    def _load_record_embedding_spaces(self, into: DatasetInfo | None = None) -> None:
+        """Read the embedding spaces from `embeddings.json`, and declare each space's table in `info.tables`.
 
-        A corrupt sidecar (unreadable JSON, missing or non-positive ``dim``) degrades to
-        "no embeddings" instead of raising — a broken embeddings file must never make the
-        whole dataset unloadable.
+        A document that cannot be read — not JSON, no space it can read — degrades to "no embeddings"
+        instead of raising: a broken embeddings file must never make the whole dataset unloadable.
+        Neither it nor one read in part (`EmbeddingSpaces.fully_read`) is rewritten by any write but the
+        deletion of every model's embeddings. A file that cannot be opened — a transient error, its
+        permissions — leaves the spaces held as they were, not to be rewritten either, and this instance
+        stale (`is_stale`), so that its holder reads it again.
+
+        Args:
+            into: The info to declare the tables in and then hold — one `write_lock` just read —;
+                the one held when None.
         """
-        if not self._embeddings_file.is_file():
-            self._record_embedding_space = None
-            return
+        remote = isinstance(self._embeddings_file, S3Path)
+        # Stamped before it is read: a file replaced in between leaves this instance stale, not wrong.
+        stamp = None if remote else _file_stamp(self._embeddings_file)
         try:
-            space = json.loads(self._embeddings_file.read_text(encoding="utf-8"))
-            dim = int(space["dim"])
-            schema = build_record_embedding_schema(dim)
-        except (json.JSONDecodeError, KeyError, ValueError, TypeError, OSError) as exc:
-            logger.warning("Dataset %s: ignoring unreadable %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
-            self._record_embedding_space = None
+            content = self._embeddings_file.read_bytes() if self._embeddings_file.is_file() else None
+        except OSError as exc:
+            logger.warning("Dataset %s: cannot read %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
+            self._adopt_embedding_spaces(dataclasses.replace(self._embedding_spaces, fully_read=False), into)
+            self._embeddings_stamp = _UNREAD
             return
-        self._record_embedding_space = space
-        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
+        spaces = EmbeddingSpaces()
+        if content is not None:
+            try:
+                spaces = EmbeddingSpaces.from_document(json.loads(content.decode("utf-8")))
+            except ValueError as exc:  # json.JSONDecodeError and UnicodeDecodeError are ones
+                logger.warning("Dataset %s: ignoring unreadable %s: %s", self.path, self._EMBEDDINGS_FILE, exc)
+                spaces = EmbeddingSpaces(fully_read=False)
+        self._adopt_embedding_spaces(spaces, into)
+        self._embeddings_stamp = stamp
 
-    def has_record_embeddings(self) -> bool:
-        """Whether this dataset has a computed record-embedding table."""
-        return self._record_embedding_space is not None
+    def _adopt_embedding_spaces(self, spaces: EmbeddingSpaces, into: DatasetInfo | None = None) -> None:
+        """Hold these spaces, their tables declared in `info.tables` in place of the previous ones'.
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
-        """Return the record-embedding space descriptor (model, dim, metric), or None."""
-        return dict(self._record_embedding_space) if self._record_embedding_space is not None else None
+        `info.tables` is replaced whole, not changed in place, and an info just read is held only
+        once it declares the tables: a request reading them on another thread sees the tables before
+        or after, never one gone in between.
 
-    def record_embedding_health(self) -> dict[str, Any]:
-        """Health check of the record-embedding storage.
+        Args:
+            spaces: The spaces to hold.
+            into: The info to declare the tables in and then hold; the one held when None.
+        """
+        info = self.info if into is None else into
+        held = {space.table for space in self._embedding_spaces.spaces}
+        tables = {name: schema for name, schema in info.tables.items() if name not in held}
+        for space in spaces.spaces:
+            key = (space.table, space.dim)
+            if key not in self._embedding_schemas:
+                self._embedding_schemas[key] = build_record_embedding_schema(space.dim)
+            tables[space.table] = self._embedding_schemas[key]
+        for gone in held - {space.table for space in spaces.spaces}:
+            self._table_handles.pop(gone, None)
+        info.tables = tables
+        self.info = info
+        self._embedding_spaces = spaces
 
-        The sidecar alone advertises semantic search; the physical LanceDB table is only
+    def _writable_spaces(self) -> EmbeddingSpaces:
+        """The spaces a write of the description starts from: read again on S3, which no lock refreshes.
+
+        Raises:
+            DatasetAccessError: `embeddings.json` could not be read entirely: rewritten, it would lose
+                the spaces this build left out.
+        """
+        if isinstance(self._embeddings_file, S3Path):
+            self._load_record_embedding_spaces()
+        if not self._embedding_spaces.fully_read:
+            raise DatasetAccessError(
+                f"Dataset {self.id}: {self._EMBEDDINGS_FILE} cannot be read entirely, so it is not rewritten. "
+                "Repair it, or delete every model's embeddings to compute them again."
+            )
+        return self._embedding_spaces
+
+    def _save_embedding_spaces(self, spaces: EmbeddingSpaces) -> None:
+        """Write these spaces to `embeddings.json` and hold them; no space left removes the file.
+
+        On a local disk the file is replaced whole (`_replace_file`), so a reader never sees half of
+        it, and keeps its permissions; a new one gets those of any file the process writes, as
+        `embeddings.json` always did. Callers hold the write lock.
+        """
+        remote = isinstance(self._embeddings_file, S3Path)
+        if not spaces.spaces:
+            self._embeddings_file.unlink(missing_ok=True)
+        elif remote:
+            # An object store replaces an object whole, and has no permissions to keep.
+            self._embeddings_file.write_text(json.dumps(spaces.to_document(), indent=4), encoding="utf-8")
+        else:
+            try:
+                permissions: int | None = stat.S_IMODE(self._embeddings_file.stat().st_mode)
+            except FileNotFoundError:
+                permissions = None
+            _replace_file(self._embeddings_file, json.dumps(spaces.to_document(), indent=4), permissions)
+        self._adopt_embedding_spaces(spaces)
+        self._embeddings_stamp = None if remote else _file_stamp(self._embeddings_file)
+
+    def _embedding_space(self, model: str | None) -> EmbeddingSpace:
+        """The space a reader names — its id or its model's name —, the default one when none is named.
+
+        Raises:
+            DatasetAccessError: The dataset has no embeddings, or none of that model.
+        """
+        space = self._embedding_spaces.find(model)
+        if space is None:
+            if model:
+                raise DatasetAccessError(f"Dataset {self.id} has no embeddings of model '{model}'.")
+            raise DatasetAccessError(f"Dataset {self.id} has no record embeddings.")
+        return space
+
+    def _space_written(self, space_id: str | None) -> EmbeddingSpace:
+        """The space a writer names, by its id only — a name two checkpoints share names no single one —;
+        the default one when None.
+
+        Raises:
+            ValueError: The id is empty: the default one is None, not an empty name.
+            DatasetAccessError: The dataset has no space of this id, or none at all.
+        """
+        if space_id is None:
+            return self._embedding_space(None)
+        if not space_id:
+            raise ValueError("An embedding space is named by its id; None names the default one.")
+        space = self._embedding_spaces.get(space_id)
+        if space is None:
+            raise DatasetAccessError(f"Dataset {self.id} has no embedding space '{space_id}'.")
+        return space
+
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        """Every embedding space of the dataset, one per model, in the order they were created — a model
+        recomputed from nothing last.
+
+        Returns:
+            Each space's description (`EmbeddingSpace.as_document`), with `default` saying whether
+            a search uses it when no model is named.
+        """
+        return [
+            {**space.as_document(), "default": space.id == self._embedding_spaces.default}
+            for space in self._embedding_spaces.spaces
+        ]
+
+    def has_record_embeddings(self, model: str | None = None) -> bool:
+        """Whether this dataset has embeddings: of the model named — its space's id or its name —, or any."""
+        return self._embedding_spaces.find(model) is not None
+
+    def record_embeddings_fully_read(self) -> bool:
+        """Whether `embeddings.json` was read entirely; if not, no write but deleting every model's changes it.
+
+        For a caller about to compute embeddings, to refuse before computing what it could not write.
+        """
+        return self._embedding_spaces.fully_read
+
+    def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
+        """One model's embedding space — its id, table, model, checkpoint, dimension, metric —, or None.
+
+        Args:
+            model: The model — its space's id or its name —; the default one when None.
+        """
+        space = self._embedding_spaces.find(model)
+        return space.as_document() if space is not None else None
+
+    def matching_record_embedding_space(
+        self, model_id: str, checkpoint: str = "", dim: int | None = None
+    ) -> dict[str, Any] | None:
+        """The space of a model known by its name and checkpoint (`EmbeddingSpace.is_model`), or None.
+
+        For a writer that knows the model it runs rather than its space: the space to index, or to
+        empty before computing the model again.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            dim: The vectors' dimension, when known: it tells apart two checkpoints a space or the
+                caller does not name.
+        """
+        space = self._embedding_spaces.matching(model_id, checkpoint or "", dim)
+        return space.as_document() if space is not None else None
+
+    def record_embedding_health(self, model: str | None = None, media: int | None = None) -> dict[str, Any]:
+        """Health check of one model's embedding storage.
+
+        The description alone advertises semantic search; the physical LanceDB table is only
         touched at query time, so a crashed job or external deletion can leave the feature
         advertised but broken. This reads no vector, but it is not metadata only: it reads the
-        `view_id` of every row of the embeddings table to count the media embedded, and counts
+        `view_id` of every row of the space's table to count the media embedded, and counts
         the rows of each image table. Its cost grows with the number of vectors, and it runs
         before every semantic search and every request for the explorer's filter schema;
         keeping it cheap is an open question (`docs/OPEN_QUESTIONS.md`).
@@ -1755,32 +2044,44 @@ class Dataset:
         record with one camera embedded out of six, and "partial" forever on a dataset whose
         records hold no image at all, such as nuScenes' lidar sweeps.
 
+        Args:
+            model: The model — its space's id or its name —; the default one when None.
+            media: The still images the dataset holds, when the caller counted them already — for
+                the health of several spaces —; counted when None.
+
         Returns:
-            ``{"status", "model_id", "dim", "rows", "records", "media", "embedded_media",
-            "detail"}`` where status is one of ``absent`` (no sidecar), ``missing_table``,
-            ``empty``, ``dim_mismatch``, ``corrupt``, ``partial`` (fewer media embedded than
+            ``{"status", "id", "model_id", "checkpoint", "dim", "rows", "records", "media",
+            "embedded_media", "detail"}`` where status is one of ``absent`` (no such space),
+            ``missing_table``, ``empty``, ``dim_mismatch``, ``corrupt`` (a table, or `embeddings.json`
+            when it names no such space, that cannot be read), ``partial`` (fewer media embedded than
             media) or ``ready``.
         """
-        space = self._record_embedding_space
+        space = self._embedding_spaces.find(model)
         base: dict[str, Any] = {
             "status": "absent",
+            "id": None,
             "model_id": None,
+            "checkpoint": None,
             "dim": None,
             "rows": 0,
             "records": self.num_rows,
-            "media": self._still_image_count(),
+            "media": self._still_image_count() if media is None else media,
             "embedded_media": 0,
             "detail": None,
         }
         if space is None:
+            if not self._embedding_spaces.fully_read:
+                # Broken rather than absent: a computation would be refused, a recomputation from
+                # nothing repairs it.
+                detail = f"{self._EMBEDDINGS_FILE} cannot be read entirely."
+                return {**base, "status": "corrupt", "detail": detail}
             return base
-        base["model_id"] = space.get("model_id")
-        base["dim"] = space.get("dim")
+        base.update(id=space.id, model_id=space.model_id, checkpoint=space.checkpoint, dim=space.dim)
 
         try:
-            if self._RECORD_EMBEDDING_TABLE not in set(self._db_connection.table_names()):
+            if space.table not in self._db_connection.list_tables().tables:
                 return {**base, "status": "missing_table", "detail": "The embeddings table is missing."}
-            table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+            table = self.open_table(space.table)
         except Exception as exc:  # noqa: BLE001 - corrupt storage must degrade, not raise
             return {**base, "status": "corrupt", "detail": f"The embeddings table cannot be opened: {exc}"}
 
@@ -1794,11 +2095,11 @@ class Dataset:
         base["rows"] = rows
         if rows == 0:
             return {**base, "status": "empty", "detail": "The embeddings table has no vectors."}
-        if stored_dim is not None and int(space.get("dim", 0)) != int(stored_dim):
+        if stored_dim is not None and space.dim != int(stored_dim):
             return {
                 **base,
                 "status": "dim_mismatch",
-                "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.get('dim')}.",
+                "detail": f"Stored vectors have dim {stored_dim} but the descriptor says {space.dim}.",
             }
         # Counted in distinct media rather than rows: a table can hold rows that name no medium
         # (written per record before embeddings were per medium) or two rows for one medium
@@ -1833,31 +2134,211 @@ class Dataset:
         return total
 
     @dataset_write
-    def drop_record_embeddings(self) -> None:
-        """Delete the record-embedding table and its sidecar descriptor.
+    def drop_record_embeddings(self, space_id: str | None = None) -> None:
+        """Delete one model's embeddings — its space and its table —, or every model's.
 
-        Safe on missing/corrupt tables; used by force-recompute to escape states where the
-        sidecar advertises embeddings whose table is broken.
+        Safe on missing or corrupt tables: used to recompute a model from nothing, or to escape
+        a state where the description advertises embeddings whose table is broken. The description
+        is written first, the table dropped next: a drop that fails leaves a table no description
+        names — which the deletion of every model's collects —, never a description naming no table.
+        When the default model goes, the first one left becomes the default.
+
+        Args:
+            space_id: The space's id; every model's when None — the only write a description that
+                cannot be read entirely allows, the tables it no longer names included. A space the
+                dataset does not hold leaves it as it is.
+
+        Raises:
+            ValueError: The id is empty: every model's is None, not an empty name.
+            DatasetAccessError: `embeddings.json` cannot be read entirely, and one space is named.
         """
-        try:
-            self._db_connection.drop_table(self._RECORD_EMBEDDING_TABLE, ignore_missing=True)
-        except Exception as exc:  # noqa: BLE001 - dropping a corrupt table must not block repair
-            logger.warning("Dataset %s: dropping the embeddings table failed: %s", self.path, exc)
-        self._table_handles.pop(self._RECORD_EMBEDDING_TABLE, None)
-        self.info.tables.pop(self._RECORD_EMBEDDING_TABLE, None)
-        self._embeddings_file.unlink(missing_ok=True)
-        self._record_embedding_space = None
+        if space_id is None:
+            held = {space.table for space in self._embedding_spaces.spaces}
+            # A table `info.json` declares is the dataset's, whatever its name.
+            declared = set(self.info.tables) - held
+            listed = set(self._db_connection.list_tables().tables)
+            self._save_embedding_spaces(EmbeddingSpaces())
+            self._drop_embedding_tables({name for name in held | listed if is_embeddings_table(name)} - declared)
+            return
+        if not space_id:
+            raise ValueError("An embedding space is named by its id; every model's is None.")
+        spaces = self._writable_spaces()
+        space = spaces.get(space_id)
+        if space is None:
+            return
+        self._save_embedding_spaces(spaces.without(space.id))
+        self._drop_embedding_tables({space.table})
+
+    @dataset_write
+    def empty_model_record_embeddings(
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None, dim: int | None = None
+    ) -> dict[str, Any] | None:
+        """Empty the embeddings of a model known by its name and checkpoint, keeping its space.
+
+        For a writer about to compute its model again from nothing: before it knows its vectors'
+        dimension — the model's own, unchanged —, or after, its first vectors in hand (`dim`), which
+        repairs a space that records another. The space keeps its id, its place and the default a
+        search uses; its table is created again, empty, and the space records the checkpoint, the
+        vector index and the dimension told. It is looked for and emptied under one lock, the description read
+        again under it, so that a space another process recorded meanwhile is found. The other
+        models' embeddings are left as they are.
+
+        A caller that does not tell its checkpoint empties only a space recorded without one: a
+        space of a checkpoint told may hold another weights' vectors than those the caller runs.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            index_type: The vector index the table is to get once filled; the space's when None.
+            dim: The vectors' dimension, when the caller knows it; the space's when None.
+
+        Returns:
+            The space emptied, or None when the dataset holds none of that model.
+
+        Raises:
+            DatasetAccessError: `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and a space of that name records one; or several
+                spaces match.
+        """
+        checkpoint = checkpoint or ""
+        spaces = self._writable_spaces()
+        if not checkpoint:
+            told = [space.checkpoint for space in spaces.spaces if space.model_id == model_id and space.checkpoint]
+            if told:
+                raise AmbiguousModelError(
+                    f"model '{model_id}' holds the embeddings of the checkpoints {', '.join(told)}: the weights "
+                    "served now must be told, to know whether they are those"
+                )
+        space = spaces.matching(model_id, checkpoint, strict=True)
+        if space is None:
+            return None
+        emptied = dataclasses.replace(
+            space,
+            checkpoint=checkpoint or space.checkpoint,
+            index_type=index_type or space.index_type,
+            dim=int(dim) if dim else space.dim,
+        )
+        self._create_embedding_table(emptied, mode="overwrite")
+        if emptied != space:
+            self._save_embedding_spaces(spaces.replacing(emptied))
+        return emptied.as_document()
+
+    def _drop_embedding_tables(self, names: set[str]) -> None:
+        """Drop these embeddings tables, each as far as it goes: a corrupt one must not block a repair."""
+        for table_name in sorted(names):
+            try:
+                self._db_connection.drop_table(table_name, ignore_missing=True)
+            except Exception as exc:  # noqa: BLE001 - dropping a corrupt table must not block repair
+                logger.warning("Dataset %s: dropping the embeddings table %s failed: %s", self.path, table_name, exc)
+            self._table_handles.pop(table_name, None)
+
+    @dataset_write
+    def ensure_record_embedding_space(
+        self,
+        model_id: str,
+        checkpoint: str,
+        dim: int,
+        metric: str = DEFAULT_METRIC,
+        source_view: str = DEFAULT_SOURCE_VIEW,
+        index_type: str = DEFAULT_INDEX_TYPE,
+    ) -> dict[str, Any]:
+        """The space of a model, created with its table when the dataset holds none of it.
+
+        A model is its name and its checkpoint (`EmbeddingSpace.is_model`): another checkpoint is
+        another space, and so is a space of that name that does not say its checkpoint at another
+        dimension. One that does not say it at this dimension is the model's, and learns it. The
+        first space a dataset holds becomes its default. A space whose table went missing gets an
+        empty one back. Idempotent: a space there already is left as it is.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            dim: The vectors' dimension.
+            metric: The distance a search ranks them by, for a new space.
+            source_view: The views the vectors are computed from, for a new space.
+            index_type: The vector index the table gets once filled, for a new space.
+
+        Returns:
+            The space's description (`EmbeddingSpace.as_document`).
+
+        Raises:
+            DatasetAccessError: The dataset holds that very model — name and checkpoint — at another
+                dimension, or its `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
+        """
+        checkpoint = checkpoint or ""
+        dim = int(dim)
+        spaces = self._writable_spaces()
+        space = spaces.matching(model_id, checkpoint, dim, strict=True)
+        if space is None:
+            space = spaces.new_space(model_id, checkpoint, dim, metric, source_view, index_type)
+            # A table of that name no description names holds nothing to keep: one a run created before
+            # failing to record its space, or one a deletion could not drop.
+            self._create_embedding_table(space, mode="overwrite")
+            self._save_embedding_spaces(spaces.with_space(space))
+            return space.as_document()
+        if space.dim != dim:
+            raise DatasetAccessError(
+                f"Dataset {self.id} holds embeddings of model '{model_id}' ({checkpoint}) of dimension "
+                f"{space.dim}, not {dim}."
+            )
+        if checkpoint and not space.checkpoint:
+            spaces = spaces.with_checkpoint(space, checkpoint)
+            space = spaces.get(space.id) or space
+            self._save_embedding_spaces(spaces)
+        if space.table not in self._db_connection.list_tables().tables:
+            self._create_embedding_table(space, mode="create")
+        return space.as_document()
+
+    def _create_embedding_table(self, space: EmbeddingSpace, mode: str) -> None:
+        """Create a space's table, empty, without rewriting `info.json`: `embeddings.json` declares it."""
+        self._db_connection.create_table(
+            name=space.table, schema=build_record_embedding_schema(space.dim), mode=mode, embedding_functions=None
+        )
+        self._table_handles.pop(space.table, None)
+
+    @dataset_write
+    def set_default_record_embedding_space(self, space_id: str) -> dict[str, Any]:
+        """Make a space the one a search uses when none is named.
+
+        Args:
+            space_id: The space's id.
+
+        Returns:
+            The space's description.
+
+        Raises:
+            ValueError: The id is empty.
+            DatasetAccessError: The dataset has no space of this id, or its `embeddings.json` cannot be
+                read entirely.
+        """
+        if not space_id:
+            raise ValueError("An embedding space is named by its id.")
+        spaces = self._writable_spaces()
+        space = spaces.get(space_id)
+        if space is None:
+            raise DatasetAccessError(f"Dataset {self.id} has no embedding space '{space_id}'.")
+        if spaces.default != space.id:
+            self._save_embedding_spaces(spaces.with_default(space.id))
+        return space.as_document()
 
     @dataset_write
     def create_record_embedding_table(
         self,
         dim: int,
         model_id: str,
-        metric: str = "cosine",
-        source_view: str = "image",
-        index_type: str = "IVF_PQ",
-    ) -> None:
-        """Create (or replace) the record-embedding table and persist its sidecar descriptor.
+        metric: str = DEFAULT_METRIC,
+        source_view: str = DEFAULT_SOURCE_VIEW,
+        index_type: str = DEFAULT_INDEX_TYPE,
+        checkpoint: str = "",
+    ) -> dict[str, Any]:
+        """Create a model's embeddings anew — its table empty —, in place of the space it had.
+
+        The other models' embeddings are left as they are, and so is the default model: the new
+        space is the default if the one it replaces was, or if it is the dataset's first. For a
+        caller that recomputes a model from nothing; `ensure_record_embedding_space` keeps what the
+        model wrote. The description is written once, the new table created before and the old one
+        dropped after.
 
         Args:
             dim: Embedding dimensionality.
@@ -1865,30 +2346,99 @@ class Dataset:
             metric: Distance metric (``cosine``/``l2``/``dot``).
             source_view: Logical view the embeddings were computed from.
             index_type: LanceDB vector index type to build once populated.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+
+        Returns:
+            The new space's description: the table to write the vectors to is its own.
+
+        Raises:
+            DatasetAccessError: The dataset's `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
         """
-        schema = build_record_embedding_schema(dim)
-        self.create_table(self._RECORD_EMBEDDING_TABLE, schema, mode="overwrite")
-        self._record_embedding_space = {
-            "table": self._RECORD_EMBEDDING_TABLE,
-            "model_id": model_id,
-            "dim": int(dim),
-            "metric": metric,
-            "source_view": source_view,
-            "index_type": index_type,
-        }
-        self.info.tables[self._RECORD_EMBEDDING_TABLE] = schema
-        self._embeddings_file.write_text(json.dumps(self._record_embedding_space, indent=4), encoding="utf-8")
+        checkpoint = checkpoint or ""
+        dim = int(dim)
+        spaces = self._writable_spaces()
+        replaced = spaces.matching(model_id, checkpoint, dim, strict=True)
+        kept = spaces.without(replaced.id) if replaced is not None else spaces
+        # A space of its own, not `ensure_record_embedding_space`'s: a caller that does not tell its
+        # checkpoint would be handed the space of another checkpoint of that name, vectors included.
+        space = kept.new_space(model_id, checkpoint, dim, metric, source_view, index_type)
+        updated = kept.with_space(space)
+        if replaced is not None and replaced.id == spaces.default:
+            updated = updated.with_default(space.id)
+        self._create_embedding_table(space, mode="overwrite")
+        self._save_embedding_spaces(updated)
+        if replaced is not None and replaced.table != space.table:
+            self._drop_embedding_tables({replaced.table})
+        return space.as_document()
 
     @dataset_write
-    def add_record_embeddings(self, rows: list[dict[str, Any]]) -> None:
-        """Append rows to the record-embedding table (plain float vectors, no model).
+    def upsert_record_embeddings(
+        self,
+        model_id: str,
+        checkpoint: str,
+        rows: list[dict[str, Any]],
+        metric: str = DEFAULT_METRIC,
+        source_view: str = DEFAULT_SOURCE_VIEW,
+        index_type: str = DEFAULT_INDEX_TYPE,
+    ) -> dict[str, Any]:
+        """Write a model's vectors into its space, created when the dataset holds none, replacing rows by id.
+
+        The space is found or created, and the rows written, under one acquisition of the write
+        lock, which reads the description again: a space another process created meanwhile is
+        found, not created twice, and one it deleted is created again, never written into from
+        what this instance last read.
+
+        Args:
+            model_id: The model's name.
+            checkpoint: The weights loaded under that name; empty when the caller cannot tell.
+            rows: Dicts with ``id``, ``record_id``, ``view_id`` and ``vector``, all of one dimension.
+            metric: The distance a search ranks them by, for a new space.
+            source_view: The views the vectors are computed from, for a new space.
+            index_type: The vector index the table gets once filled, for a new space.
+
+        Returns:
+            The space's description (`EmbeddingSpace.as_document`).
+
+        Raises:
+            ValueError: No row.
+            DatasetAccessError: The dataset holds that very model at another dimension, or its
+                `embeddings.json` cannot be read entirely.
+            AmbiguousModelError: No checkpoint told, and several spaces of that name at that dimension.
+        """
+        if not rows:
+            raise ValueError("No vector to write.")
+        space = self.ensure_record_embedding_space(
+            model_id, checkpoint, len(rows[0]["vector"]), metric, source_view, index_type
+        )
+        schema = self.info.tables[space["table"]]
+        instances = [
+            schema(
+                id=row["id"],
+                record_id=row["record_id"],
+                view_id=row.get("view_id", ""),
+                frame_id=row.get("frame_id", ""),
+                vector=row["vector"],
+            )
+            for row in rows
+        ]
+        self.update_data(space["table"], instances)
+        return space
+
+    @dataset_write
+    def add_record_embeddings(self, rows: list[dict[str, Any]], space_id: str | None = None) -> None:
+        """Append rows to one space's embeddings table (plain float vectors, no model run here).
 
         Args:
             rows: Dicts with at least ``record_id`` and ``vector``; ``id``/``view_id`` optional.
+            space_id: The space's id; the default one when None.
+
+        Raises:
+            ValueError: The id is empty.
+            DatasetAccessError: The dataset has no such space; `ensure_record_embedding_space` makes one.
         """
-        if self._record_embedding_space is None:
-            raise DatasetAccessError("No record-embedding table; call create_record_embedding_table first.")
-        schema = self.info.tables[self._RECORD_EMBEDDING_TABLE]
+        space = self._space_written(space_id)
+        schema = self.info.tables[space.table]
         instances = [
             schema(
                 id=row.get("id") or shortuuid.uuid(),
@@ -1899,29 +2449,33 @@ class Dataset:
             )
             for row in rows
         ]
-        self.add_data(self._RECORD_EMBEDDING_TABLE, instances, raise_or_warn="none")
+        self.add_data(space.table, instances, raise_or_warn="none")
 
     @dataset_write
-    def build_record_embedding_index(self) -> None:
-        """Build the vector + record_id indexes on the record-embedding table.
+    def build_record_embedding_index(self, space_id: str | None = None) -> None:
+        """Build the vector + record_id indexes on one space's embeddings table.
 
         The vector (ANN) index needs enough rows to train; when there are too few, it is skipped
         and search falls back to an exact brute-force scan (still correct).
+
+        Args:
+            space_id: The space's id; the default one when None.
+
+        Raises:
+            ValueError: The id is empty.
+            DatasetAccessError: The dataset has no such space.
         """
-        if self._record_embedding_space is None:
-            raise DatasetAccessError("No record-embedding table to index.")
-        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
+        space = self._space_written(space_id)
+        table = self.open_table(space.table)
         try:
             table.create_scalar_index("record_id", index_type="BTREE")
         except Exception:  # pragma: no cover - already indexed / lancedb quirk
             logger.debug("record_id scalar index already present or unavailable", exc_info=True)
-        index_type = self._record_embedding_space.get("index_type", "IVF_PQ")
-        metric = self._record_embedding_space.get("metric", "cosine")
         try:
-            table.create_index(metric=metric, index_type=index_type, vector_column_name="vector")
+            table.create_index(metric=space.metric, index_type=space.index_type, vector_column_name="vector")
         except Exception as exc:
             # Typically "not enough rows to train IVF"; brute-force search remains exact.
-            logger.info("Skipping record-embedding vector index (%s): %s", index_type, exc)
+            logger.info("Skipping record-embedding vector index (%s): %s", space.index_type, exc)
 
     # How much further a vector search looks when the vectors it found belong to too few
     # records: an embedding belongs to a medium, and a record may hold several — nuScenes has
@@ -1942,32 +2496,36 @@ class Dataset:
         query_vector: Sequence[float] | Sequence[Sequence[float]],
         k: int,
         record_id_filter: list[str] | None = None,
+        model: str | None = None,
     ) -> tuple[list[LanceModel], list[float]]:
-        """Rank records by similarity of their media's embeddings to a query.
+        """Rank records by similarity of their media's embeddings to a query, in one model's space.
 
         An embedding belongs to a medium, not to a record: a record's distance is that of its
         closest medium. The query is one vector — a text, an image — or several: the media of
         a record searched "similar to", each searched and the best match kept per record.
 
         Args:
-            query_vector: The query embedding, or a list of them (same space/dim as the stored
-                vectors).
+            query_vector: The query embedding, or a list of them, computed by that model (same
+                space and dimension as the stored vectors).
             k: Maximum number of records to return.
             record_id_filter: Optional record-id allowlist applied as a vector-search prefilter.
+            model: The model — its space's id or its name —; the default one when None.
 
         Returns:
             A tuple of ``(records, distances)`` ordered by increasing distance.
+
+        Raises:
+            DatasetAccessError: The dataset has no embeddings of that model, or ``k`` is not positive.
         """
-        if self._record_embedding_space is None:
-            raise DatasetAccessError(f"Dataset {self.id} has no record embeddings.")
+        space = self._embedding_space(model)
         if not isinstance(k, int) or k < 1:
             raise DatasetAccessError("k must be a strictly positive integer.")
         if record_id_filter is not None and len(record_id_filter) == 0:
             return [], []
 
         vectors = cast(list[Sequence[float]], list(query_vector) if _is_nested(query_vector) else [query_vector])
-        table = self.open_table(self._RECORD_EMBEDDING_TABLE)
-        metric = self._record_embedding_space.get("metric", "cosine")
+        table = self.open_table(space.table)
+        metric = space.metric
         stored = table.count_rows()
         best: dict[str, float] = {}
         for vector in vectors:
