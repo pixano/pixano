@@ -25,6 +25,7 @@ import hashlib
 import json
 import logging
 import threading
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
@@ -312,6 +313,9 @@ class JobWriter:
         """
         self._open_dataset = open_dataset
         self._dataset_id = dataset_id
+        # What counts this writer's writes: its dataset's, shared with every writer of the dataset,
+        # or a key of its own — not its address, which a freed writer's may have been.
+        self._count_key = dataset_id or f"writer-{uuid.uuid4().hex}"
         self._reopen_dataset = reopen_dataset or open_dataset
         self._dataset: DatasetWriteTarget | None = None
         self.kind = kind
@@ -423,7 +427,7 @@ class JobWriter:
         """Count a write, and compact the table once enough have accumulated."""
         # An identifier rather than the object: a reopened dataset is another object for the
         # same table, and the address of a freed object gets reused.
-        key = (self._dataset_id or f"writer-{id(self)}", table_name)
+        key = (self._count_key, table_name)
         with _writes_guard:
             _writes_since_compaction[key] += 1
             due = _writes_since_compaction[key] >= COMPACT_EVERY_WRITES
