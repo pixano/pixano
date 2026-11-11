@@ -79,6 +79,13 @@ class _FakeDataset:
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)
 
+    def ensure_annotation_table(self, slot: str) -> str:
+        from pixano.schemas import canonical_table_name_for_slot
+
+        table_name = canonical_table_name_for_slot(slot)
+        self.tables.setdefault(table_name, {})
+        return table_name
+
     def checksum(self, table_name: str) -> str:
         """A fingerprint of the content, insensitive to the write order."""
         table = self.tables.get(table_name, {})
@@ -499,6 +506,125 @@ class TestAgainstRealLance:
         reviewer is knowing whether an annotation comes from a model, not which cog wrote it.
         """
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
+
+
+# A mask of two rows and three columns, the left column empty and the two right ones full, as
+# pycocotools encodes it.
+MASK_SIZE = [2, 3]
+MASK_COUNTS = b"24"
+
+
+class TestAnnotationTableForAKind:
+    """A kind writes masks into a dataset built without them, holding boxes only."""
+
+    @pytest.fixture
+    def path(self, tmp_path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas import BBox, Entity, Image, Record
+
+        dataset = Dataset.create(
+            tmp_path / "boxes-only",
+            DatasetInfo(
+                id="boxes-only", name="Boxes only", record=Record, entity=Entity, bbox=BBox, views={"image": Image}
+            ),
+        )
+        dataset.add_records({"records": [Record(id="r1")]})
+        dataset.add_data("entities", [Entity(id="e1", record_id="r1")])
+        return dataset.path
+
+    @staticmethod
+    def _writer(dataset) -> JobWriter:
+        return JobWriter(lambda: dataset, "segmentation", "job-1", "model", model=ModelIdentity("sam"))
+
+    @staticmethod
+    def _add_a_mask(dataset) -> None:
+        from pixano.schemas import CompressedRLE
+
+        mask = CompressedRLE(
+            id="m1",
+            record_id="r1",
+            view_id="v1",
+            entity_id="e1",
+            size=MASK_SIZE,
+            counts=MASK_COUNTS,
+            source_type="human",
+        )
+        dataset.add_data("masks", [mask])
+
+    def test_a_dataset_without_the_slot_gains_its_table(self, path) -> None:
+        from pixano.datasets import Dataset
+
+        dataset = Dataset(path)
+
+        assert self._writer(dataset).ensure_table("mask") == "masks"
+
+        assert "masks" in dataset.info.tables
+        reopened = Dataset(path)
+        assert reopened.info.mask is not None and "masks" in reopened.info.tables
+
+    def test_ensuring_again_changes_nothing(self, path) -> None:
+        """Called by `prepare` and again by every write: the table and what it holds stay as they are."""
+        from pixano.datasets import Dataset
+
+        dataset = Dataset(path)
+        writer = self._writer(dataset)
+        writer.ensure_table("mask")
+        self._add_a_mask(dataset)
+        info_written = (path / "info.json").stat().st_mtime_ns
+
+        assert writer.ensure_table("mask") == "masks"
+
+        assert [mask.id for mask in dataset.get_data("masks", limit=None)] == ["m1"]
+        assert (path / "info.json").stat().st_mtime_ns == info_written
+
+    def test_a_worker_whose_dataset_predates_the_table_finds_it(self, path) -> None:
+        """The worker caches its dataset; the API, or another worker, created the table since."""
+        from pixano.datasets import Dataset
+
+        stale = Dataset(path)
+        elsewhere = Dataset(path)
+        elsewhere.ensure_annotation_table("mask")
+        self._add_a_mask(elsewhere)
+
+        assert self._writer(stale).ensure_table("mask") == "masks"
+
+        assert [mask.id for mask in stale.get_data("masks", limit=None)] == ["m1"]
+
+    def test_a_slot_that_holds_no_annotations_is_refused(self, path) -> None:
+        from pixano.datasets import Dataset
+
+        with pytest.raises(ValueError, match="entity"):
+            self._writer(Dataset(path)).ensure_table("entity")
+
+    def test_a_table_already_there_is_found_while_someone_else_writes_the_dataset(self, path, writing) -> None:
+        """Every job of a kind that writes masks ensures its table at planning. Taking the
+        dataset's write lock for that, which never waits, refused the job whenever a person was
+        saving or another job's chunk writing — and marked the dataset modified for nothing."""
+        from pixano.datasets import Dataset
+        from pixano.datasets.locking import mutation_token
+
+        Dataset(path).ensure_annotation_table("mask")
+        dataset = Dataset(path)
+        modified = mutation_token(path)
+
+        with writing(path):
+            assert self._writer(dataset).ensure_table("mask") == "masks"
+
+        assert mutation_token(path) == modified
+
+    def test_creating_the_table_waits_for_no_one(self, path, writing) -> None:
+        """Only creating the table takes the dataset's lock, and that lock does not wait: met
+        busy, the dataset says so — the runner plans the job again later rather than failing it."""
+        from pixano.datasets import Dataset
+        from pixano.datasets.utils.errors import DatasetBusyError
+
+        dataset = Dataset(path)
+
+        with writing(path), pytest.raises(DatasetBusyError):
+            self._writer(dataset).ensure_table("mask")
+
+        assert "masks" not in Dataset(path).info.tables
 
 
 class TestMediaEmbeddings:

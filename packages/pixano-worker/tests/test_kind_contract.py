@@ -29,7 +29,8 @@ from pixano_worker.media import MediaResolver
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
 
-from pixano.schemas import Image, Record
+from pixano.schemas import Image, Record, SchemaGroup
+from pixano.schemas.table_names import canonical_family_spec_for_slot
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -84,6 +85,13 @@ class _Target:
         prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
         assert prefix is not None, f"unexpected filter in a test double: {where!r}"
         return [row for row_id, row in self.rows.items() if row_id.startswith(prefix.group(1))]
+
+    def ensure_annotation_table(self, slot: str) -> str:
+        family = canonical_family_spec_for_slot(slot)
+        if family.schema_group is not SchemaGroup.ANNOTATION:
+            raise ValueError(f"Slot '{slot}' holds no annotations, so a job cannot add its table.")
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        return family.table_name
 
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""
