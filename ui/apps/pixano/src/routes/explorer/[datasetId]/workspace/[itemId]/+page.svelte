@@ -14,6 +14,7 @@ License: CECILL-C
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { canSave, workspaceSaveQueue } from "$lib/stores/workspaceStores.svelte";
   import { PrimaryButton } from "$lib/ui";
+  import { createReviewReflection } from "$lib/utils/reviewActions";
   import { getExplorerRoute } from "$lib/utils/routes";
 
   let { data }: PageProps = $props();
@@ -37,7 +38,12 @@ License: CECILL-C
   });
 
   async function handleSaveItem() {
-    await persistSaveItems(workspaceSaveQueue, data.dataset.id);
+    const reflection = createReviewReflection(data.dataset.id);
+    try {
+      await persistSaveItems(workspaceSaveQueue, data.dataset.id, reflection.onPersisted);
+    } finally {
+      await reflection.finish();
+    }
   }
 </script>
 
