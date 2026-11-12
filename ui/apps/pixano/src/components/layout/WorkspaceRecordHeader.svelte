@@ -9,6 +9,7 @@ License: CECILL-C
   import { Tooltip } from "bits-ui";
   import {
     ArrowLeft,
+    ArrowRight,
     CaretLeft,
     CaretRight,
     Check,
@@ -30,6 +31,9 @@ License: CECILL-C
     handleReturnToPreviousPage: () => void;
     handleSave: () => void;
     getRecordPosition: () => { position: number | null; total: number | null };
+    /** The review of the dataset, while the review mode is on. */
+    review?: { recordsLeft: string; busy: boolean } | null;
+    handleSaveAndNext?: () => void;
   }
 
   let {
@@ -38,6 +42,8 @@ License: CECILL-C
     handleReturnToPreviousPage,
     handleSave,
     getRecordPosition,
+    review = null,
+    handleSaveAndNext,
   }: Props = $props();
 
   const dirtyCount = $derived(saveData.value.length);
@@ -155,8 +161,31 @@ License: CECILL-C
         {/if}
       </div>
 
-      <!-- RIGHT: save -->
-      <div class="flex items-center justify-end">
+      <!-- RIGHT: review · save -->
+      <div class="flex min-w-0 items-center justify-end gap-2">
+        {#if review}
+          <span role="status" class="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+            {review.recordsLeft}
+          </span>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              type="button"
+              onclick={handleSaveAndNext}
+              disabled={review.busy}
+              class="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3.5 text-xs font-bold uppercase tracking-wider text-primary shadow-sm transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+            >
+              {#if review.busy}
+                <CircleNotch size={14} class="animate-spin" />
+              {:else}
+                <ArrowRight size={14} />
+              {/if}
+              Save & next
+            </Tooltip.Trigger>
+            <TooltipContent>
+              <p>Save, then open the next record to review</p>
+            </TooltipContent>
+          </Tooltip.Root>
+        {/if}
         {#if dirtyCount > 0}
           <Tooltip.Root>
             <Tooltip.Trigger
