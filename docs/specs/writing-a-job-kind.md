@@ -202,7 +202,9 @@ ask it whether it is at fault through one shared helper (`blame_the_server_or_th
 `kinds/inference.py`; backend-processing §8.2). What it can check depends on how each medium
 was designated, which the media resolver says (`ResolvedMedia.designation`: `path`, `url` or
 `bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
-and goes to quarantine with the rest.
+and goes to quarantine with the rest. A kind that sends no media files — texts, for NER — sends
+the server its own witness through the helper's first step, `refuse_unless_the_witness_passes`,
+and quarantines the refused items when the server accepts it.
 
 ### Media types and confirmation
 
