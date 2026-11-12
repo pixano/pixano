@@ -15,6 +15,7 @@ from pixano.datasets.io.formats.pixano_jsonl import PixanoJsonlImporter
 from pixano.datasets.io.formats.pixano_jsonl.media_only import discover_layout, is_media_only_source
 from pixano.datasets.io.plan import PreflightReport
 from pixano.datasets.io.testing import DatasetImporterTestCase
+from pixano.datasets.workspaces import WorkspaceType
 from tests.assets.sample_data.metadata import IMAGE_JPG_ASSET_URL, IMAGE_PNG_ASSET_URL, VIDEO_MP4_ASSET_URL
 
 
@@ -548,6 +549,9 @@ class TestRawText:
         assert plan.report.is_valid
         assert plan.inferred_schema["views"]["text"]["base"] == "Text"
         assert "text_span" in plan.inferred_schema and "classification" in plan.inferred_schema
+        # The workspace that shows texts, whose objects hold a name.
+        assert plan.inferred_schema["workspace"] == "image_text_entity_linking"
+        assert "name" in plan.inferred_schema["entity"]["fields"]
         case = DatasetImporterTestCase(
             importer=PixanoJsonlImporter(), source=source, spec=spec, expected_counts={"records": 2, "texts": 2}
         )
@@ -555,6 +559,40 @@ class TestRawText:
         case.assert_counts(dataset)
         contents = {row.content for row in dataset.get_data("texts")}
         assert contents == {"hello x", "hello y"}
+        assert dataset.info.workspace == WorkspaceType.IMAGE_TEXT_ENTITY_LINKING
+
+    def test_two_text_folders_name_no_workspace(self, tmp_path: Path):
+        """The entity linking workspace shows one text view: two would be told apart by none of it."""
+        source = tmp_path / "notes"
+        for view in ("en", "fr"):
+            (source / view).mkdir(parents=True)
+            (source / view / "a.txt").write_text(f"hello {view}", encoding="utf-8")
+
+        plan = analyze(source, _spec({"dataset": {"name": "notes"}}))
+
+        assert plan.inferred_schema["workspace"] == "undefined"
+
+    def test_text_folder_as_the_wizard_sends_it(self, tmp_path: Path):
+        """The import wizard's Image–text linking task on texts alone: its workspace and slots, no views."""
+        source = tmp_path / "notes"
+        source.mkdir()
+        for stem in ("x", "y"):
+            (source / f"{stem}.txt").write_text(f"hello {stem}", encoding="utf-8")
+        spec = _spec(
+            {
+                "dataset": {"name": "notes", "workspace": "image_text_entity_linking"},
+                "schema": {"annotations": ["text_span", "bbox", "mask"]},
+            }
+        )
+        case = DatasetImporterTestCase(
+            importer=PixanoJsonlImporter(), source=source, spec=spec, expected_counts={"records": 2, "texts": 2}
+        )
+
+        dataset, _ = case.run_import(tmp_path / "data")
+
+        case.assert_counts(dataset)
+        assert dataset.info.workspace == WorkspaceType.IMAGE_TEXT_ENTITY_LINKING
+        assert {"text_spans", "entities"} <= set(dataset.info.tables)
 
     def test_non_utf8_text_fails_analyze(self, tmp_path: Path):
         source = tmp_path / "notes"

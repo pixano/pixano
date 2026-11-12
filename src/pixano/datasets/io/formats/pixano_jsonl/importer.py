@@ -133,6 +133,10 @@ class PixanoJsonlImporter(DatasetImporter):
                 payload.setdefault("dataset", {})["workspace"] = "video"
             elif "image" in file_kinds:
                 payload.setdefault("dataset", {})["workspace"] = "image"
+            elif file_kinds == {"text"} and len(layout.view_kinds) == 1:
+                # The entity linking workspace is the one that shows texts, its image panel empty. It
+                # shows one text view: the legacy annotator tells them apart by table, which they share.
+                payload.setdefault("dataset", {})["workspace"] = "image_text_entity_linking"
         return resolve_dataset_info(ImportSpec.model_validate(payload))
 
     # ------------------------------------------------------------------
