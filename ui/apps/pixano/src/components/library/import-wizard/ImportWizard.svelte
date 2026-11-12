@@ -403,7 +403,7 @@ License: CECILL-C
                         ? "COCO categories map to object attributes; annotations are retained."
                         : selectedIntent === "pixano_jsonl"
                           ? "Views, object attributes, and annotations are preserved."
-                          : "The format and schema are detected from the source. Select Raw media for unannotated images or videos."}
+                          : "The format and schema are detected from the source. Select Raw media for unannotated images, videos or texts."}
                     </p>
                     <p class="imported-schema-next">
                       <CheckCircle size={16} />Review shows the resolved schema.

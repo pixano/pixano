@@ -231,6 +231,16 @@ describe("buildRawSchemaSpec", () => {
     expect(spec.schema.annotations).toEqual(["text_span", "bbox", "mask"]);
   });
 
+  it("declares no view for texts alone, and keeps the MEL workspace", () => {
+    const layout = preflightLayout(entries("a.txt", "b.txt"), "image_text_entity_linking");
+    const spec = buildRawSchemaSpec(
+      raw({ task: "image_text_entity_linking", layout, annotations: ["text_span"] }),
+    );
+    expect(spec.workspace).toBe("image_text_entity_linking");
+    expect(spec.schema.views).toBeUndefined();
+    expect(spec.schema.annotations).toEqual(["text_span"]);
+  });
+
   it("always re-adds locked slots (a non-empty list replaces the preset backend-side)", () => {
     const spec = buildRawSchemaSpec(raw({ task: "image_vqa", annotations: ["bbox"] }));
     expect(spec.schema.annotations).toEqual(["message", "bbox"]);

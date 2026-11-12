@@ -175,7 +175,25 @@ describe("preflightLayout — blocking errors (mirror media_only.py)", () => {
       "image_text_entity_linking",
     );
     expect(layout.ok).toBe(false);
-    expect(codes(layout)).toContain("mel_needs_image_and_text");
+    expect(codes(layout)).toContain("mel_needs_one_text_view");
+  });
+
+  it("MEL with texts alone, flat or in splits", () => {
+    const flat = preflightLayout(entries("a.txt", "b.md"), "image_text_entity_linking");
+    expect(flat.ok).toBe(true);
+    expect(flat.views).toEqual([expect.objectContaining({ kind: "text", fileCount: 2 })]);
+    const split = preflightLayout(entries("train/a.txt", "val/b.txt"), "image_text_entity_linking");
+    expect(split.ok).toBe(true);
+    expect(split.totalRecords).toBe(2);
+  });
+
+  it("MEL with two text folders", () => {
+    const layout = preflightLayout(
+      entries("text/a.txt", "notes/a.txt", "image/a.jpg"),
+      "image_text_entity_linking",
+    );
+    expect(layout.ok).toBe(false);
+    expect(codes(layout)).toContain("mel_needs_one_text_view");
   });
 
   it("nothing importable for the task", () => {
