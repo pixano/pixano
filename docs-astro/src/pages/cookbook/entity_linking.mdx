@@ -60,7 +60,7 @@ Each line in `metadata.jsonl` describes one item with both an image view and a t
 ```
 
 - A text view takes `{"content": …}` for inline text **or** `{"uri": "doc.txt"}` for a file — exactly one, always explicit.
-- A `text_span` carries the `mention` string plus parallel `spans_start`/`spans_end` character offsets (a mention can span several ranges).
+- A `text_span` carries the `mention` string plus parallel `spans_start`/`spans_end` character offsets (a mention can span several ranges), each end left out. Offsets count UTF-16 code units, as the interface does: a character beyond U+FFFF — 🎉, as most emoji — counts two.
 - With two views declared, every annotation names its view: the bbox lives on `image`, the span on `text`.
 
 ### Review the schema
