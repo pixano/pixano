@@ -31,7 +31,7 @@ indication why.
 
 Splits the work. It runs in the worker, not in the application: dividing by video, by image or
 by selection is the kind's business, and kind code only ever runs on that side. The reader is
-how it reads the dataset without opening one; a
+how it reads the dataset without opening one (§1, "What the reader and the writer offer"); a
 kind whose work fits in its parameters ignores it.
 
 Two requirements the suite checks. **Every chunk carries at least one task**, or it consumes a
@@ -184,8 +184,40 @@ not, and the contract suite checks it: an outcome that is quietly wrong would fa
 shown about the job. It exists because progress alone cannot tell the truth — a job over a lidar
 dataset reaches 26 766 / 26 766 having embedded 404 images.
 
-`write` receives a writer, not a dataset: a kind cannot open a dataset itself. That is what
-will let a dataset's writes be serialised across workers one day without touching any kind.
+`write` receives a writer, not a dataset: a kind cannot open a dataset itself, and it reads
+through the writer only. That matters once `write` decides as well as writes: a kind that writes
+objects reads which of them carry a person's work before replacing its rows (§4). Those reads
+must sit in the same serialisation as the write, so the unit serialised is a kind's whole
+`write`, reads included: the runner holds its per-dataset write lock around the call, not
+around each writer call. That is what will let a dataset's writes be serialised across workers
+one day without touching any kind — a writer role that runs each `write` under one lock per
+dataset (backend-processing §20). The runner waits five minutes at most for that lock
+(`CHUNK_WRITE_LOCK_WAIT_S`); past them, the chunk is handed back as after a transient failure.
+
+### What the reader and the writer offer
+
+A kind reaches the dataset through these two only. What a kind needs from the dataset and
+another may need too goes there, named and documented here, for every kind — never in a kind's
+private helpers, which another kind must not import. For a kind that writes objects, the writer
+offers:
+
+- **`writer.replace(table, key, rows, entities, covers)`** — rows with the objects they name,
+  one entity per row (§2). `covers(row, entity)` says which previous rows a write is about: a
+  detection asked for dogs replaces the dogs it found before, not the cars, which keep their
+  rank like an accepted row.
+- **`writer.drop_pending(table, with_entities, covers)`** — deletes every row the kind wrote
+  that is still pending review, whatever its model, for a `prepare` asked on an explicit
+  parameter to replace the previous proposals (§2, §4). With `with_entities`, the objects those
+  rows name go too.
+- **`writer.ensure_label_field()`** — the entity field a class goes into, chosen as the
+  interface reads a class (`category`, `label`, `name`, `class`, else the first text field). A
+  dataset whose entities hold no text field gains `category`, empty for the entities already
+  there; a field already there is answered without writing anything.
+- **`writer.table_schema(table)`** and **`writer.read(table, where)`** — the schema to build a
+  table's rows with, and the rows matching a filter, to check outputs against.
+- **`writer.entities_with_a_persons_work(entity_ids, own_table)`** and
+  **`is_a_persons_work(row)`** — which objects a person worked on, and whether a row is a
+  person's work (§4).
 
 ---
 
@@ -203,6 +235,17 @@ exactly what a previous run of the same model left beyond the current output, fo
 prefix the key's identifiers share. That is the step plain replacement misses: a model that
 detected five objects and now sees two would otherwise strand three rows nothing would ever
 clean up.
+
+Rows can come with the objects they name — a detected box and its entity, which shares the
+box's identifier (`replace(..., entities=...)`). Then one more thing goes: the models' rows
+nobody reviewed that name an object this write rewrites at its rank, or sweeps, whatever their
+kind — a model's pending mask on a detected object (§4). Left, they would name whatever the
+rank holds next, or an object that is gone. They are deleted before the object changes, so a
+crash never leaves a mask on what is now another object, and the replay finishes the rest. An
+object a person worked on keeps its rank, and what names it stays.
+`drop_pending(table, with_entities=True)`, the clearing a kind's `prepare` does on an explicit
+parameter, does the same. Without entities — a kind writing on objects it does not own —
+nothing else is touched.
 
 **Choose the key carefully.** It should be the smallest thing the output is about — usually a
 record id. The `label` kind uses one key per record, so re-labelling one record does not depend
@@ -241,10 +284,12 @@ leaves no row behind. What it means for a kind:
 
 - **Accepted rows are frozen.** `replace` leaves a row a person accepted where it is, rank
   included, and replaces the pending rows only. A model's row with no status —
-  re-imported from JSONL — counts as pending: the writer reads it from the definition the
-  application reads too, `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status
-  either, and is never taken for a pending one: `replace` reaches only the identifiers the kind
-  derived itself.
+  re-imported from JSONL — counts as pending, for `replace` and for `drop_pending` alike: the
+  writer reads it from the definition the application reads too,
+  `pixano.schemas.NOT_REVIEWED_STATUSES`. A person's row has no status either, and is never
+  taken for a pending one: `replace` reaches only the identifiers the kind derived itself,
+  and `drop_pending` only a model's rows (`source_type = 'model'`) under the kind's name — a
+  person's row carrying that name stays, as a test checks (`test_writer.py`).
 - **Fixing what an entity says accepts.** A person who changes an entity a kind wrote or
   annotated — the class of a detected object, for instance — saves an edit of every model
   annotation that names it and is still pending: the API makes them `accepted`, so the next run
@@ -253,6 +298,17 @@ leaves no row behind. What it means for a kind:
   entity gets this without asking — and so does a kind that writes its rows on another kind's
   objects, whose pending rows a person's fix of the object accepts, though nobody looked at them
   (backend-processing §19).
+- **A kind can annotate another kind's objects.** A kind that writes masks on detected objects
+  writes each mask on the object of the box that prompted it, and no object of its own
+  (`replace` without `entities`). Until a person accepts them, its rows hold nothing: only **a
+  person's work** keeps an object where it is (`is_a_persons_work`: a row no model produced, a
+  model's row a person accepted, or a child object; that an accepted row counts is decided,
+  backend-processing §19). When the object's own kind rewrites it at its rank or sweeps it, a
+  model's unreviewed rows that name it go with it, whatever their kind (§2): a rerun of the
+  kind that wrote the objects removes the pending masks of the objects it rewrites, and the
+  masks are to be written again after it. A kind that proposes objects asks
+  `writer.entities_with_a_persons_work` before proposing again one a person worked on, or the
+  same model would write a second object beside it, at the next rank.
 - **Nothing to register — for a kind an interface can review.** Which kinds those are is one
   predicate, `pixano.schemas.is_reviewable_annotation`: every entity annotation but tracklets,
   relations and text spans. The next record to review is found by scanning those tables — for
@@ -297,6 +353,10 @@ kind that calls nothing, as `fake` and `label`, takes no argument. A real kind g
 `demo_kinds` block. That block exists because the demonstration
 kinds write wherever they are told and have no place in a shared deployment; the local compose
 enables them with `PIXANO_WORKER_DEMO_KINDS`.
+
+A kind that needs what the reader or the writer cannot do yet adds it there, for every kind,
+and documents it in §1: a change of this contract, made deliberately, never a helper another
+kind would have to import.
 
 Each worker publishes its registry into `job_kinds` at startup, which is the only bridge
 between the application and the worker — they share no code. The application validates a

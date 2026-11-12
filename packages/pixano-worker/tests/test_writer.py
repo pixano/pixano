@@ -9,6 +9,7 @@
 import hashlib
 import json
 import re
+from collections import defaultdict
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -78,6 +79,9 @@ class _FakeDataset:
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "space", None)
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        self.entity_fields: set[str] = {*getattr(self, "entity_fields", set()), name}
 
     def checksum(self, table_name: str) -> str:
         """A fingerprint of the content, insensitive to the write order."""
@@ -501,6 +505,563 @@ class TestAgainstRealLance:
         assert JobWriter(lambda: dataset, "embeddings", "j", "model").provenance()["source_type"] == "model"
 
 
+# A mask on the scene's image, which is not square, like every image of these fixtures: two rows,
+# three columns, the left column empty and the two right ones full, as pycocotools encodes it.
+MASK_SIZE = [2, 3]
+MASK_COUNTS = b"24"
+
+
+class TestDetectedObjects:
+    """A detected box comes with the object it names, in the entities table.
+
+    Other kinds annotate those objects — a mask on the object of the box that prompted it. Only a
+    person's work on an object holds it; a model's unreviewed rows go with it when the detection
+    rewrites or sweeps it.
+    """
+
+    @pytest.fixture
+    def scene(self, tmp_path):
+        from pixano.datasets import Dataset
+        from pixano.datasets.dataset_info import DatasetInfo
+        from pixano.schemas import BBox, CompressedRLE, Entity, EntityDynamicState, Image, Record, Tracklet
+
+        dataset = Dataset.create(
+            tmp_path / "scene",
+            DatasetInfo(
+                id="scene",
+                name="Scene",
+                record=Record,
+                entity=Entity,
+                entity_dynamic_state=EntityDynamicState,
+                bbox=BBox,
+                mask=CompressedRLE,
+                tracklet=Tracklet,
+                views={"image": Image},
+            ),
+        )
+        dataset.add_records({"records": [Record(id="r1")]})
+        return dataset
+
+    @staticmethod
+    def _detect(scene, classes: list[str], job_id: str = "job-1", covers: Any = None) -> list[str]:
+        from pixano.schemas import BBox
+
+        writer = JobWriter(lambda: scene, "detection", job_id, "model", model=ModelIdentity("yolo"))
+        field = writer.ensure_label_field()
+        boxes = [
+            BBox(
+                id="",
+                record_id="r1",
+                view_id="v1",
+                coords=[0.1, 0.1, 0.2, 0.2],
+                format="xywh",
+                is_normalized=True,
+                **writer.provenance(),
+            )
+            for _ in classes
+        ]
+        entities = [writer.table_schema("entities")(id="", record_id="r1", **{field: name}) for name in classes]
+        return writer.replace("bboxes", "v1", boxes, entities, covers)
+
+    @staticmethod
+    def _objects(scene) -> dict[str, tuple[str, str]]:
+        """Each box's class, through the entity it points to, and its review status."""
+        entities = {entity.id: entity.category for entity in scene.get_data("entities", limit=None)}
+        return {box.id: (entities[box.entity_id], box.review_status) for box in scene.get_data("bboxes", limit=None)}
+
+    @staticmethod
+    def _review(scene, box_id: str, status: str) -> None:
+        box = scene.get_data("bboxes", ids=[box_id])[0]
+        box.review_status = status
+        scene.update_data("bboxes", [box])
+
+    def test_a_dataset_whose_entities_hold_no_class_gains_one(self, scene) -> None:
+        """nuScenes, a dataset imported with boxes only: entities are bare identifiers until a detection names them."""
+        from pixano.schemas import label_field_of
+
+        assert label_field_of(scene.info.entity) is None
+
+        self._detect(scene, ["cat"])
+
+        assert label_field_of(scene.info.entity) == "category"
+
+    def test_each_box_points_to_an_entity_that_names_its_class(self, scene) -> None:
+        written = self._detect(scene, ["cat", "dog"])
+
+        assert self._objects(scene) == {written[0]: ("cat", "pending"), written[1]: ("dog", "pending")}
+
+    def test_a_rerun_leaves_no_orphan_entity(self, scene) -> None:
+        self._detect(scene, ["cat", "dog", "cow"])
+
+        self._detect(scene, ["horse"])
+
+        assert len(scene.get_data("entities", limit=None)) == 1
+        assert list(self._objects(scene).values()) == [("horse", "pending")]
+
+    def test_the_entity_of_a_reviewed_box_stays_with_it(self, scene) -> None:
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[1], "accepted")
+
+        self._detect(scene, [])
+
+        assert self._objects(scene) == {first[1]: ("dog", "accepted")}
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[1]]
+
+    def test_rerunning_is_idempotent(self, scene) -> None:
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[0], "accepted")
+        self._detect(scene, ["x", "y"])
+        once = self._objects(scene)
+
+        self._detect(scene, ["x", "y"], job_id="job-2")
+
+        assert self._objects(scene) == once
+        assert len(scene.get_data("entities", limit=None)) == len(once)
+
+    def test_entities_left_by_a_crash_are_swept_by_the_next_attempt(self, scene) -> None:
+        """The stale boxes were deleted, the worker died before
+        their entities, and the next attempt, looking in bboxes only, never found them."""
+        first = self._detect(scene, ["car", "dog", "cow"])
+        scene.delete_data("bboxes", first[1:])
+
+        self._detect(scene, ["car"])
+
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
+
+    def test_dropping_the_pending_rows_keeps_what_a_person_accepted(self, scene) -> None:
+        """Clearing a kind's previous proposals: what is still pending goes, whatever model wrote it."""
+        first = self._detect(scene, ["cat", "dog"])
+        self._review(scene, first[0], "accepted")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True)
+
+        assert dropped == 1
+        assert self._objects(scene) == {first[0]: ("cat", "accepted")}
+        assert len(scene.get_data("entities", limit=None)) == 1
+
+    def test_dropping_clears_a_model_row_stored_without_a_status(self, scene) -> None:
+        """A model's row re-imported from JSONL comes back without a status (the grammar carries
+        none). Nobody reviewed it, as the application reads it: left behind, the record would end
+        with the old model's boxes and the new one's, all pending."""
+        first = self._detect(scene, ["cat", "dog"])
+        for box_id in first:
+            self._review(scene, box_id, "")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(first)
+        assert self._objects(scene) == {}
+        assert scene.get_data("entities", limit=None) == []
+
+    @pytest.mark.parametrize("source_type", ["human", "ground_truth"])
+    def test_dropping_leaves_a_row_no_model_produced_under_the_kind_name(self, scene, source_type: str) -> None:
+        """Not reviewed covers the empty status, which every row no model produced carries too: only
+        the source keeps such a row out. Its name is free text, which an import's default source can
+        set to the kind's."""
+        from pixano.schemas import BBox
+
+        detected = self._detect(scene, ["cat"])
+        entity_schema = scene.info.tables["entities"]
+        scene.add_data("entities", [entity_schema(id="person-object", record_id="r1", category="person")])
+        scene.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id="person-box",
+                    record_id="r1",
+                    view_id="v2",
+                    entity_id="person-object",
+                    coords=[0.5, 0.5, 0.1, 0.1],
+                    format="xywh",
+                    is_normalized=True,
+                    source_type=source_type,
+                    source_name="detection",
+                    review_status="",
+                )
+            ],
+        )
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(detected)
+        assert [box.id for box in scene.get_data("bboxes", limit=None)] == ["person-box"]
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == ["person-object"]
+
+    def test_dropping_leaves_another_kind_alone(self, scene) -> None:
+        self._detect(scene, ["cat"])
+        writer = JobWriter(lambda: scene, "segmentation", "job-2", "model", model=ModelIdentity("sam"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 0
+        assert len(self._objects(scene)) == 1
+
+    def test_dropping_many_rows_names_them_in_bounded_batches(self, scene, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Clearing a dataset's pending boxes named all of them in one
+        filter — hundreds of thousands on a large dataset."""
+        import pixano_worker.writer as writer_module
+
+        monkeypatch.setattr(writer_module, "IDS_PER_QUERY", 2)
+        self._detect(scene, ["car", "dog", "cow", "cat", "bird"])
+        longest: list[int] = []
+        real_get, real_delete = scene.get_data, scene.delete_data
+
+        def get_data(table_name: str, ids: list[str] | None = None, **kwargs: Any) -> Any:
+            # The identifiers a filter names: those of its lists on an identifier column (id,
+            # entity_id, parent_id). The status list of `drop_pending` names statuses, not rows.
+            named_lists = re.findall(r"\b\w*id IN \(([^)]*)\)", kwargs.get("where") or "")
+            longest.append(len(ids) if ids is not None else sum(names.count("'") // 2 for names in named_lists))
+            return real_get(table_name, ids=ids, **kwargs)
+
+        def delete_data(table_name: str, ids: list[str]) -> Any:
+            longest.append(len(ids))
+            return real_delete(table_name, ids)
+
+        monkeypatch.setattr(scene, "get_data", get_data)
+        monkeypatch.setattr(scene, "delete_data", delete_data)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        dropped = writer.drop_pending("bboxes", with_entities=True, covers=lambda _row, _entity: True)
+
+        assert dropped == 5
+        assert max(longest) <= 2
+        monkeypatch.undo()
+        assert scene.get_data("bboxes", limit=None) == [] and scene.get_data("entities", limit=None) == []
+
+    @staticmethod
+    def _about_dogs(_box: Any, entity: Any) -> bool:
+        return entity is not None and entity.category == "dog"
+
+    def test_a_write_replaces_only_the_rows_it_covers(self, scene) -> None:
+        """A detection asked for dogs finds none: the dog it found before goes, the car stays."""
+        first = self._detect(scene, ["car", "dog"])
+
+        self._detect(scene, [], covers=self._about_dogs)
+
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+
+    def test_a_covered_write_keeps_the_ranks_it_does_not_cover(self, scene) -> None:
+        """The car keeps its rank, so the new dogs take the ranks around it instead of overwriting it."""
+        first = self._detect(scene, ["car", "dog"])
+
+        written = self._detect(scene, ["dog", "dog"], covers=self._about_dogs)
+
+        assert first[0] not in written
+        assert self._objects(scene)[first[0]] == ("car", "pending")
+        assert len(self._objects(scene)) == 3
+
+    def test_dropping_deletes_only_the_rows_it_covers(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True, covers=self._about_dogs) == 1
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+        assert [entity.id for entity in scene.get_data("entities", limit=None)] == [first[0]]
+
+    def test_one_entity_per_box_is_required(self, scene) -> None:
+        writer = JobWriter(lambda: scene, "detection", "job-1", "model", model=ModelIdentity("yolo"))
+
+        with pytest.raises(ValueError, match="1 entities for 0 rows"):
+            writer.replace("bboxes", "v1", [], [SimpleNamespace(id="")])
+
+    @staticmethod
+    def _person_attaches_a_box(scene, entity_id: str) -> None:
+        """Another annotation of the same object, made by a person — on another view here."""
+        from pixano.schemas import BBox
+
+        scene.add_data(
+            "bboxes",
+            [
+                BBox(
+                    id="person-box",
+                    record_id="r1",
+                    view_id="v2",
+                    entity_id=entity_id,
+                    coords=[0.5, 0.5, 0.1, 0.1],
+                    format="xywh",
+                    is_normalized=True,
+                    source_type="human",
+                )
+            ],
+        )
+
+    def _class_of(self, scene, entity_id: str) -> str:
+        found = scene.get_data("entities", ids=[entity_id])
+        return found[0].category if found else "<missing>"
+
+    def test_an_object_a_person_attached_work_to_keeps_its_class(self, scene) -> None:
+        """Without the rule, the rank was reassigned to whatever the model found
+        there next, and the person's box silently became a car."""
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+
+    def test_an_object_a_person_attached_work_to_outlives_its_detection(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+
+        self._detect(scene, ["car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+
+    def test_dropping_the_pending_rows_spares_an_object_a_person_attached_work_to(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._person_attaches_a_box(scene, first[1])
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 1
+        assert self._class_of(scene, first[1]) == "dog"
+
+    # Masks on the detected objects.
+
+    @staticmethod
+    def _segment(scene, entity_ids: list[str], model: str = "sam") -> list[str]:
+        """What a kind that segments writes: one pending mask per object, naming the object's entity."""
+        writer = JobWriter(lambda: scene, "segmentation", "job-seg", "model", model=ModelIdentity(model))
+        schema = writer.table_schema("masks")
+        masks = [
+            schema(
+                id="",
+                record_id="r1",
+                view_id="v1",
+                entity_id=entity_id,
+                size=MASK_SIZE,
+                counts=MASK_COUNTS,
+                **writer.provenance(),
+            )
+            for entity_id in entity_ids
+        ]
+        return writer.replace("masks", "v1", masks)
+
+    @staticmethod
+    def _attach_a_mask(scene, entity_id: str, source_type: str, status: str) -> str:
+        """A mask on an object, as a person left it: drawn, or a model's accepted."""
+        from pixano.schemas import CompressedRLE
+
+        mask_id = f"attached-mask-of-{entity_id}"
+        scene.add_data(
+            "masks",
+            [
+                CompressedRLE(
+                    id=mask_id,
+                    record_id="r1",
+                    view_id="v1",
+                    entity_id=entity_id,
+                    size=MASK_SIZE,
+                    counts=MASK_COUNTS,
+                    source_type=source_type,
+                    source_name="segmentation",
+                    review_status=status,
+                )
+            ],
+        )
+        return mask_id
+
+    @staticmethod
+    def _masks(scene) -> dict[str, str]:
+        """Each mask's object."""
+        return {mask.id: mask.entity_id for mask in scene.get_data("masks", limit=None)}
+
+    def test_a_rerun_over_pending_masks_doubles_no_object(self, scene) -> None:
+        """Held by its pending mask, an object's rank would stay frozen, and the rerun would write
+        its boxes beside the previous ones — two cars and two dogs, all pending."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+
+        self._detect(scene, ["car", "dog"])
+
+        assert len(scene.get_data("bboxes", limit=None)) == 2
+        assert len(scene.get_data("entities", limit=None)) == 2
+
+    def test_the_pending_masks_go_with_the_objects_a_rerun_rewrites(self, scene) -> None:
+        """Rewritten in place, rank 0 is now a dog: the car's mask must not stay on it."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._objects(scene) == {first[0]: ("dog", "pending"), first[1]: ("car", "pending")}
+        assert self._masks(scene) == {}
+
+    def test_a_shrinking_rerun_leaves_no_mask_naming_a_missing_object(self, scene) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+
+        self._detect(scene, ["car"])
+
+        entities = {entity.id for entity in scene.get_data("entities", limit=None)}
+        assert len(scene.get_data("bboxes", limit=None)) == len(entities) == 1
+        assert set(self._masks(scene).values()) <= entities
+
+    # What a person did to an object: a mask drawn by hand, imported as ground truth, or a model's
+    # mask accepted.
+    PERSONS_MASKS = [
+        pytest.param("model", "accepted", id="accepted"),
+        pytest.param("human", "", id="human"),
+        pytest.param("ground_truth", "", id="ground-truth"),
+    ]
+
+    @pytest.mark.parametrize(("source_type", "status"), PERSONS_MASKS)
+    def test_only_a_persons_mask_holds_its_object(self, scene, source_type: str, status: str) -> None:
+        """The person's object keeps its rank, its class and its mask; the pending mask beside it
+        holds nothing, and goes with the object the rerun rewrites."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, [first[0]])
+        kept = self._attach_a_mask(scene, first[1], source_type, status)
+
+        self._detect(scene, ["dog", "car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+        assert self._masks(scene) == {kept: first[1]}
+        assert len(scene.get_data("bboxes", limit=None)) == 3, "one rank held, two written around it"
+
+    def test_no_mask_is_left_on_an_object_a_crash_rewrote(self, scene, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The masks go before their objects change: a worker dying between the two writes leaves
+        no car's mask on what is now a dog, and the next attempt finishes the job."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+        real_update = scene.update_data
+
+        def update_data(table_name: str, data: list[Any], *args: Any, **kwargs: Any) -> Any:
+            if table_name == "bboxes":
+                raise RuntimeError("the worker died")
+            return real_update(table_name, data, *args, **kwargs)
+
+        monkeypatch.setattr(scene, "update_data", update_data)
+        with pytest.raises(RuntimeError, match="the worker died"):
+            self._detect(scene, ["dog"])
+
+        assert self._class_of(scene, first[0]) == "dog", "the object was rewritten before the crash"
+        assert self._masks(scene) == {}, "and the car's mask had gone before it"
+        monkeypatch.undo()
+        self._detect(scene, ["dog"])
+        assert self._objects(scene) == {first[0]: ("dog", "pending")}
+
+    @staticmethod
+    def _attach_a_row(scene, table_name: str, entity_id: str, **fields: str) -> str:
+        """A row of `table_name` naming an object — its parent, for an entity."""
+        row_id = f"attached-{table_name}"
+        schema = scene.info.tables[table_name]
+        if table_name == "entities":
+            row = schema(id=row_id, record_id="r1", parent_id=entity_id)
+        elif table_name == "masks":
+            row = schema(
+                id=row_id,
+                record_id="r1",
+                view_id="v1",
+                entity_id=entity_id,
+                size=MASK_SIZE,
+                counts=MASK_COUNTS,
+                **fields,
+            )
+        else:
+            row = schema(id=row_id, record_id="r1", entity_id=entity_id, **fields)
+        scene.add_data(table_name, [row])
+        return row_id
+
+    # Rows no job of this kind wrote, naming a detected object, each decided and pinned here. A
+    # person's work holds the object: a row no model produced — a dynamic state imported or edited
+    # with no source among them — or a child object.
+    PERSONS_WORK = [
+        pytest.param("tracklets", {"source_type": "human"}, id="person's tracklet"),
+        pytest.param("entity_dynamic_states", {}, id="dynamic state with no source"),
+        pytest.param("entity_dynamic_states", {"source_type": "human"}, id="person's dynamic state"),
+        pytest.param("entities", {}, id="child object"),
+    ]
+
+    # A model's row nobody reviewed goes with the object: it reads as pending everywhere
+    # (`NOT_REVIEWED_STATUSES`), and left behind it would name whatever the rank holds next, or an
+    # entity that is gone. Tracklets and dynamic states are never reviewed, so a model's never holds.
+    MODELS_UNREVIEWED_ROWS = [
+        pytest.param(
+            "masks",
+            {
+                "source_type": "model",
+                "source_name": "smart-segmentation",
+                "source_metadata": '{"provider_name": "sam"}',
+            },
+            id="legacy smart-tracking mask",
+        ),
+        pytest.param(
+            "masks", {"source_type": "model", "source_name": "segmentation"}, id="model mask re-imported from JSONL"
+        ),
+        pytest.param("tracklets", {"source_type": "model", "source_name": "tracking"}, id="model tracklet"),
+        pytest.param(
+            "entity_dynamic_states", {"source_type": "model", "source_name": "tracking"}, id="model dynamic state"
+        ),
+    ]
+
+    @pytest.mark.parametrize(("table_name", "fields"), PERSONS_WORK)
+    def test_a_persons_work_holds_the_object(self, scene, table_name: str, fields: dict[str, str]) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        attached = self._attach_a_row(scene, table_name, first[1], **fields)
+
+        self._detect(scene, ["car"])
+
+        assert self._class_of(scene, first[1]) == "dog"
+        assert attached in {row.id for row in scene.get_data(table_name, limit=None)}
+
+    @pytest.mark.parametrize(("table_name", "fields"), MODELS_UNREVIEWED_ROWS)
+    def test_a_models_unreviewed_row_goes_with_the_object(
+        self, scene, table_name: str, fields: dict[str, str]
+    ) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        attached = self._attach_a_row(scene, table_name, first[1], **fields)
+
+        self._detect(scene, ["car"])
+
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+        assert attached not in {row.id for row in scene.get_data(table_name, limit=None)}
+
+    def test_dropping_the_pending_rows_takes_their_pending_masks_along(self, scene) -> None:
+        """Held by their pending masks, the boxes would stay, and clearing would clear nothing."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("other"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == len(first)
+        assert self._objects(scene) == {}
+        assert scene.get_data("entities", limit=None) == []
+        assert self._masks(scene) == {}
+
+    @pytest.mark.parametrize(("source_type", "status"), PERSONS_MASKS)
+    def test_dropping_spares_an_object_a_person_left_a_mask_on(self, scene, source_type: str, status: str) -> None:
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, [first[0]])
+        kept = self._attach_a_mask(scene, first[1], source_type, status)
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.drop_pending("bboxes", with_entities=True) == 1
+        assert self._objects(scene) == {first[1]: ("dog", "pending")}
+        assert self._masks(scene) == {kept: first[1]}
+
+    def test_clearing_the_pending_masks_leaves_the_objects_they_name(self, scene) -> None:
+        """A kind whose masks own no object clears them without the objects: the objects and their
+        boxes stay, as does a mask a person accepted — whatever model wrote the pending ones."""
+        first = self._detect(scene, ["car", "dog"])
+        self._segment(scene, first, model="sam-tiny")
+        self._segment(scene, first, model="sam-small")
+        kept = self._attach_a_mask(scene, first[1], "model", "accepted")
+        writer = JobWriter(lambda: scene, "segmentation", "job-2", "model", model=ModelIdentity("sam-tiny"))
+
+        assert writer.drop_pending("masks", with_entities=False) == 2 * len(first)
+        assert self._masks(scene) == {kept: first[1]}
+        assert self._objects(scene) == {first[0]: ("car", "pending"), first[1]: ("dog", "pending")}
+
+    def test_tells_which_objects_carry_a_persons_work(self, scene) -> None:
+        """What a kind asks before proposing an object again. A pending mask is
+        not a person's work, and neither is the object's own box, accepted or not: that one is the
+        kind's own to judge."""
+        first = self._detect(scene, ["car", "dog", "cow", "cat"])
+        self._segment(scene, [first[0]])
+        self._attach_a_mask(scene, first[1], "model", "accepted")
+        self._person_attaches_a_box(scene, first[2])
+        self._review(scene, first[3], "accepted")
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.entities_with_a_persons_work(first, own_table="bboxes") == {first[1], first[2]}
+
+
 class TestMediaEmbeddings:
     """An embeddings table accepts only one model."""
 
@@ -562,6 +1123,9 @@ class TestCompaction:
         from pixano_worker import writer as writer_module
 
         monkeypatch.setattr(writer_module, "COMPACT_EVERY_WRITES", 3)
+        # A fresh count: a writer without a dataset identifier counts under its address, which an
+        # earlier test's writer, freed, may have used for the same table.
+        monkeypatch.setattr(writer_module, "_writes_since_compaction", defaultdict(int))
         writer = JobWriter(lambda: dataset, "label", "job-1", "other")
 
         for n in range(7):
