@@ -17,8 +17,9 @@ License: CECILL-C
     VideoCamera,
     X,
   } from "phosphor-svelte";
-  import { onDestroy, tick } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
 
+  import EmbeddingsChoice from "./EmbeddingsChoice.svelte";
   import IntentStep from "./IntentStep.svelte";
   import type { RawTask } from "./layoutPreflight";
   import LerobotSchemaBuilder from "./LerobotSchemaBuilder.svelte";
@@ -28,6 +29,7 @@ License: CECILL-C
   import ReviewStep from "./ReviewStep.svelte";
   import { createWizardSourceState } from "./sourceState";
   import SourceStep from "./SourceStep.svelte";
+  import StatisticsChoice from "./StatisticsChoice.svelte";
   import WizardStepIndicator from "./WizardStepIndicator.svelte";
   import {
     WIZARD_DISCLOSURE_CLASS,
@@ -39,16 +41,33 @@ License: CECILL-C
   } from "./wizardStyles";
   import {
     DEFAULT_FIELDS,
+    embeddingsRequest,
     groupFindings,
     mergeSpec,
+    nextEmbeddingsChoice,
+    nextStatisticsChoice,
+    offersEmbeddingsChoice,
+    offersStatisticsChoice,
     parseAdvancedSpec,
     setupValidationMessage,
     showsLerobotFields,
+    statisticsRequest,
     type ImportIntent,
     type WizardFields,
   } from "./wizardUtils";
-  import { analyzeImportSource, listIoFormats, startIoImport } from "$lib/api/ioApi";
-  import type { ImportPlanResponse, IoFormatResponse } from "$lib/api/restTypes";
+  import {
+    analyzeImportSource,
+    getImportEmbeddingsOffer,
+    getImportStatisticsOffer,
+    listIoFormats,
+    startIoImport,
+  } from "$lib/api/ioApi";
+  import type {
+    ImportEmbeddingsOffer,
+    ImportPlanResponse,
+    ImportStatisticsOffer,
+    IoFormatResponse,
+  } from "$lib/api/restTypes";
   import { BLOCKING_ALERT_OVERLAY_CLASS } from "$lib/constants/modalConstants";
   import { trackImportJob } from "$lib/stores/importJobsStore.svelte";
 
@@ -79,6 +98,19 @@ License: CECILL-C
   let starting = $state(false);
   let startError = $state("");
   let analyzeToken = 0;
+  // Null until the server says whether an import can queue the embeddings job: the choice is not
+  // shown then, and the server's default applies. Read again on the way to Review: the job may run
+  // by then — an inference that finished loading, a worker started meanwhile.
+  let embeddingsOffer = $state<ImportEmbeddingsOffer | null>(null);
+  let computeEmbeddings = $state(false);
+  let embeddingsModel = $state("");
+  let embeddingsDecided = $state(false);
+  let embeddingsOfferToken = 0;
+  // The statistics of the dataset's overview, offered the same way.
+  let statisticsOffer = $state<ImportStatisticsOffer | null>(null);
+  let computeStatistics = $state(false);
+  let statisticsDecided = $state(false);
+  let statisticsOfferToken = 0;
 
   const previouslyFocusedElement =
     typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
@@ -91,6 +123,12 @@ License: CECILL-C
         : setupValidationMessage(fields, advancedJson),
   );
   const canGoAnalyze = $derived(selectedIntent !== null && !setupMessage);
+  const showsEmbeddingsChoice = $derived(
+    !analyzing && !analyzeError && !hasErrors && offersEmbeddingsChoice(embeddingsOffer, plan),
+  );
+  const showsStatisticsChoice = $derived(
+    !analyzing && !analyzeError && !hasErrors && offersStatisticsChoice(statisticsOffer),
+  );
   const isRaw = $derived(selectedIntent === "raw");
   const showLerobot = $derived(selectedIntent !== null && showsLerobotFields(fields));
   const advancedError = $derived(parseAdvancedSpec(advancedJson).error);
@@ -110,8 +148,50 @@ License: CECILL-C
         .then((result) => (formats = result))
         .catch(() => (formats = []));
   });
+  onMount(() => {
+    void loadEmbeddingsOffer();
+    void loadStatisticsOffer();
+  });
+
+  /** Read the statistics offer, as the embeddings one is read. */
+  async function loadStatisticsOffer() {
+    const token = ++statisticsOfferToken;
+    try {
+      const offer = await getImportStatisticsOffer();
+      if (token !== statisticsOfferToken) return;
+      ({ compute: computeStatistics, decided: statisticsDecided } = nextStatisticsChoice(
+        { compute: computeStatistics, decided: statisticsDecided },
+        offer,
+      ));
+      statisticsOffer = offer;
+    } catch {
+      // The choice stays as it was, or unshown: the server's default applies.
+    }
+  }
+
+  /** Read the offer; a read that fails keeps the last one, and a later read wins over an earlier. */
+  async function loadEmbeddingsOffer() {
+    const token = ++embeddingsOfferToken;
+    try {
+      const offer = await getImportEmbeddingsOffer();
+      if (token !== embeddingsOfferToken) return;
+      ({
+        compute: computeEmbeddings,
+        model: embeddingsModel,
+        decided: embeddingsDecided,
+      } = nextEmbeddingsChoice(
+        { compute: computeEmbeddings, model: embeddingsModel, decided: embeddingsDecided },
+        offer,
+      ));
+      embeddingsOffer = offer;
+    } catch {
+      // The choice stays as it was, or unshown: the server's default applies.
+    }
+  }
   onDestroy(() => {
     analyzeToken++;
+    embeddingsOfferToken++;
+    statisticsOfferToken++;
   });
 
   function invalidatePlan() {
@@ -182,6 +262,8 @@ License: CECILL-C
     startError = "";
     plan = null;
     void focusReview();
+    void loadEmbeddingsOffer();
+    void loadStatisticsOffer();
     const token = ++analyzeToken;
     try {
       const result = await analyzeImportSource(
@@ -221,6 +303,15 @@ License: CECILL-C
         plan_id: plan.plan_id,
         source: fields.source.trim(),
         spec: mergeSpec(fields, advancedJson),
+        ...embeddingsRequest(
+          { compute: computeEmbeddings, model: embeddingsModel, decided: embeddingsDecided },
+          embeddingsOffer,
+          plan,
+        ),
+        ...statisticsRequest(
+          { compute: computeStatistics, decided: statisticsDecided },
+          statisticsOffer,
+        ),
       });
       trackImportJob(
         started,
@@ -460,7 +551,21 @@ License: CECILL-C
                 datasetName={fields.name.trim() || fields.sourceLabel.trim()}
                 sourceLabel={fields.sourceLabel ||
                   (sourceState.mode === "hub" ? fields.source.trim() : "")}
-              />
+              >
+                {#snippet afterSummary()}
+                  {#if showsEmbeddingsChoice && embeddingsOffer}<EmbeddingsChoice
+                      offer={embeddingsOffer}
+                      disabled={starting}
+                      bind:compute={computeEmbeddings}
+                      bind:model={embeddingsModel}
+                    />{/if}
+                  {#if showsStatisticsChoice && statisticsOffer}<StatisticsChoice
+                      offer={statisticsOffer}
+                      disabled={starting}
+                      bind:compute={computeStatistics}
+                    />{/if}
+                {/snippet}
+              </ReviewStep>
               {#if startError}<div class="start-error" role="alert">
                   <p class="font-medium">Import failed to start</p>
                   <p class="mt-1 whitespace-pre-wrap">{startError}</p>

@@ -70,11 +70,24 @@ exists for a state the chunks cannot each restore on their own, such as emptying
 before refilling it. Two rules, both checked by the suite:
 
 - **Idempotent.** A planner that dies after `prepare` lets its lease expire and the next one
-  does both again, so twice must leave the dataset as once does.
+  does both again, so twice must leave the dataset as once does. The suite checks it with the
+  default parameters, and with each destructive parameter set (see "Media types and
+  confirmation") on a dataset a previous run wrote into.
 - **Nothing is destroyed unless an explicit parameter asks for it.** A job with default
-  parameters never loses what the dataset holds.
+  parameters never loses what the dataset holds. The suite compares every row of every table,
+  field by field but for `source_metadata` and timestamps, before and after a default
+  `prepare` on a dataset a run wrote into.
 
 What must happen at the end of a job is `finalize`'s, below — not a mirror of `prepare`.
+
+Refusing in `plan` includes the inference's answer. A kind that runs a model asks the server
+whether it serves it (`InferenceServer.require_served`, in `plan`): a model it does not list
+for the kind's capability refuses the job, and so does a server that answers the question can
+never pass — no permission, no route: 401, 403, 404 or 405 —, its status and address named,
+before `prepare` clears anything; otherwise every chunk would fail on the same answer after
+`prepare` had cleared what the job was to replace. A server that cannot be reached, or gives
+any other answer — a 5xx while it restarts, say —, is not a refusal: the chunks wait for it
+like after any outage.
 
 It runs under the worker's write lock of the dataset, as a chunk's `write` does: the worker's
 chunks of other jobs may be writing the same dataset meanwhile, in other threads, and the
@@ -92,7 +105,8 @@ that, on the largest dataset it will meet.
 
 Completes the job once every chunk of it is done: what only makes sense over the whole result,
 such as an index trained on every vector the job wrote. No chunk can do it — each sees its own
-work — and the last chunk to finish does not know it is the last.
+work — and the last chunk to finish does not know it is the last. The embeddings kind is the
+first to override it: it indexes the vectors (`writer.index_embeddings`).
 
 A kind that overrides it gets a **final chunk**, recorded at planning with the others but
 `waiting`, last in rank and without a task. When every other chunk is done — none failed, none
@@ -102,8 +116,9 @@ after a transient failure, retried by `POST /jobs/{id}/retry`. The job reads `do
 it. It never runs when a chunk failed or the job was cancelled; a retry that brings the failed
 chunks through runs it then, and the worker's recovery pass runs it for a retried job that had
 nothing left to reopen — cancelled while its last chunks ran (backend-processing §8.5). Its tasks
-are none, so the job's progress and outcome are those of its work. A kind that does not
-override it has no final chunk, and its jobs settle with their last chunk as before.
+are none, so the job's progress and outcome are those of its work; meanwhile the new interface says
+*finalizing* under the full bar. A kind that does not override it has no final chunk, and its
+jobs settle with their last chunk as before.
 
 It runs in a thread, under the worker's write lock of the dataset, as a chunk's `write` does,
 on the dataset **reopened outside the cache**: it must see what every worker wrote, not what
@@ -115,12 +130,23 @@ suite:
 
 - **Idempotent.** A worker that dies while finalizing lets its lease expire, and the final
   chunk runs again, maybe elsewhere: twice must leave the dataset as once does. The suite runs
-  a whole job with `finalize` once and twice and compares the rows.
+  a whole job with `finalize` once and twice and compares every row.
 - **Deletes no row.** It may rebuild what derives from the rows — an index replaces the
-  previous one — but the rows stay as the chunks left them. The suite compares the rows
+  previous one — but the rows stay as the chunks left them. The suite compares every row
   before and after it.
 - **Reads the dataset, never the chunks.** Their payloads and results are gone, and other
   workers wrote part of them: what the job produced is what the dataset holds.
+
+The embeddings kind's `finalize` brought **`writer.index_embeddings(model)`**, for any kind that
+fills a model's embeddings: for every space of the model's name — each model has a table of its
+own, and the closing step cannot tell which of the name's checkpoints the job wrote —, it
+compacts the table, builds its `record_id` index, and from `VECTOR_INDEX_MIN_ROWS` vectors
+(50,000) the vector index its space declares (`IVF_SQ` for a table the worker created), each
+rebuilt whole. Below the threshold, exact search is fast and an index would only lose results
+(backend-processing §12). It does not take the dataset's own lock, as compaction does not: a
+person's save is never refused for an index. A space that cannot be indexed does not keep the
+others from being; a build that conflicts with another writer of the table raises once all were
+tried, and the embeddings kind hands its final chunk back to try again.
 
 ### `process(reader, payload, params)` then `write(writer, result, payload, params)`
 
@@ -151,7 +177,7 @@ was designated, which the media resolver says (`ResolvedMedia.designation`: `pat
 `bytes`): a path is resent as the bytes this worker reads from its file, a URL is not checked
 and goes to quarantine with the rest.
 
-### Media types
+### Media types and confirmation
 
 A kind that reads media declares `supported_media`, the types it can send to the inference
 (`image`, `video`, `point_cloud`, `text`), and takes the user's choice as a `media`
@@ -159,6 +185,22 @@ parameter. Its `plan` calls `refuse_unsupported_media(params.media)` first: a jo
 type the kind cannot process is refused whole, the types named — never run on part of what
 was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
 identifier with its `record_id` in the detail: the panel shows the record.
+
+A kind whose parameters the generic submission form cannot build — the statistics' definitions,
+which the application sends itself — carries `OWN_FORM_MARKER` (`x-pixano-own-form`) at the root
+of its schema, naming the kind's own way in. The generic form leaves it out.
+
+A parameter that destroys something when set carries `CONFIRM_MARKER`
+(`x-pixano-confirm`) in its `json_schema_extra`, with the text to show: the submission form
+turns Run into a confirmation. Give such a parameter a plain `default`, not a
+`default_factory` — pydantic does not publish a factory's value, and the form starts from
+the published one. The embeddings kind's `replace_existing_embeddings` is one: its `prepare`
+empties the vectors of the job's model (`writer.empty_embeddings`), the other models' kept.
+Make it a boolean flag: the contract suite finds these parameters in the published
+schema and runs `prepare` twice against once with each of them set, after checking that it
+reaches what a previous run left. It knows how to set a flag only, so a confirmed parameter of
+another type fails the suite until the test is told which value sets it — the form, for its
+part, asks for confirmation on any truthy value.
 
 ### `outcome(result, payload, task_count) -> Outcome`
 
@@ -175,6 +217,32 @@ dataset reaches 26 766 / 26 766 having embedded 404 images.
 
 `write` receives a writer, not a dataset: a kind cannot open a dataset itself. That is what
 will let a dataset's writes be serialised across workers one day without touching any kind.
+
+### What the reader and the writer offer the statistics kind
+
+A kind reaches the dataset through these two only. The statistics kind brought
+(backend-processing §22):
+
+- **`reader.read(table, where)`** — the rows of a table matching a filter, for `process`, which
+  runs outside the write lock and has no writer: a chunk's objects and boxes. Not paged, so the
+  filter must bound what it reads — a chunk's records, not a whole table.
+- **`reader.image_size(table, view)`** — an image's `(width, height)` in pixels, as the dataset
+  records it, else from the image's header; `None` when the worker cannot read one.
+- **`writer.ensure_statistics(definitions)`** — the statistics tables of their levels and a
+  nullable column per statistic, added to the dataset where missing. Call it from `prepare`,
+  and again before writing. Columns the dataset holds already are answered from its tables,
+  without its lock.
+- **`writer.write_statistics(level, rows, columns)`** — the values of these columns, one row
+  per record or per object, naming its record, and its object for an object: the dataset makes
+  the row's identifier the record's or the object's. A merge that writes these columns only,
+  the other statistics of each row kept, and leaves out the rows of records and objects deleted
+  since they were measured. Answers the identifiers of the rows written.
+- **`writer.forget_object_statistics(record_ids, kept)`** — deletes the statistics of these
+  records' objects but those kept — the rows the chunk wrote: objects deleted since the last
+  computation, or since the chunk measured them.
+- **`writer.record_computed_statistics(definitions)`** — records in the dataset that this job
+  computed these statistics, now; the explorer names and dates its columns with it. For
+  `finalize`: it changes the dataset's description, never a row.
 
 ---
 

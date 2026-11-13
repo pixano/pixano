@@ -25,12 +25,17 @@ import hashlib
 import json
 import logging
 import threading
+import uuid
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
-from typing import Any, Callable, Protocol, Sequence
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
-from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus
+from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus, statistics_slot
+from pixano.schemas.table_names import canonical_table_name_for_slot
+from pixano.statistics.computed import ComputedStatistic
+from pixano.statistics.definitions import StatisticDefinition, StatisticLevel
+from pixano.utils.python import IDS_PER_QUERY, to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
@@ -67,10 +72,43 @@ COMPACT_EVERY_WRITES = 64
 # risk failing reads in progress; longer only costs disk, until the old versions are erased.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
+# Below this many vectors, a dataset's embeddings get no vector index: LanceDB's exact search
+# answers fast enough there, and an index would only make the results approximate. A "similar
+# to" runs one search per medium of the record — six on a nuScenes record —, so the line is drawn
+# where six exact searches stay well inside the API's 500 ms p99 target: 25 ms each at 50,000
+# vectors of 512 dimensions, 61 ms at 100,000, 162 ms at 300,000 (scripts/measure_vector_index.py,
+# backend-processing §12). LanceDB's own guidance, for a single search, is twice as high.
+VECTOR_INDEX_MIN_ROWS = 50_000
+
+# The vector index the worker declares for the embeddings tables it creates. Measured on 100,000
+# and 300,000 vectors of 512 dimensions (backend-processing §12): with the search's re-ranking
+# (`Dataset._SEARCH_REFINE_FACTOR`), every type tried brings back 99.9% to 100% of the exact
+# nearest records, in 8 to 17 ms; IVF_SQ trains in 2 to 3 s, where IVF_PQ takes 28 s and
+# IVF_HNSW_SQ 35 to 89 s. A model's table created earlier keeps the type its space names — IVF_PQ,
+# `Dataset`'s default — until that model is recomputed with `replace_existing_embeddings`: it trains
+# slower, and finds 97% to 100% of the exact nearest records re-ranked, where IVF_SQ finds all of
+# them at 50,000 vectors.
+EMBEDDING_INDEX_TYPE = "IVF_SQ"
+
 # The write count per table, per dataset. The runner serialises a dataset's writes, so the
 # lock here only protects the counter itself.
 _writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
 _writes_guard = threading.Lock()
+
+
+def columns_by_level(definitions: Iterable[StatisticDefinition]) -> dict[StatisticLevel, dict[str, str]]:
+    """The columns statistics write, with the type of their values, by level."""
+    columns: dict[StatisticLevel, dict[str, str]] = {}
+    for definition in definitions:
+        columns.setdefault(definition.level, {})[definition.name] = definition.value_type
+    return columns
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
 
 
 @dataclass(frozen=True)
@@ -122,8 +160,16 @@ class DatasetReadSource(Protocol):
         """The bytes of an embedded view, and their type."""
         ...
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
-        """The model and dimension of the embeddings already computed, or None if there are none."""
+    def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
+        """One model's embeddings, by its space's id or its name — the default ones when None —, or None."""
+        ...
+
+    def record_embeddings_fully_read(self) -> bool:
+        """Whether the description of the embeddings was read entirely: if not, no job may change it."""
+        ...
+
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        """Every embeddings space of the dataset, one per model and checkpoint."""
         ...
 
 
@@ -147,53 +193,44 @@ class DatasetWriteTarget(Protocol):
         """Read the rows carrying these identifiers, or those matching a filter."""
         ...
 
-    def has_record_embeddings(self) -> bool:
-        """Whether a record embeddings table already exists."""
+    def record_embedding_spaces(self) -> list[dict[str, Any]]:
+        """Every embeddings space of the dataset, one per model and checkpoint."""
         ...
 
-    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
-        """Create the embeddings table for a given vector width."""
+    def upsert_record_embeddings(
+        self, model_id: str, checkpoint: str, rows: list[dict[str, Any]], *, index_type: str = ...
+    ) -> dict[str, Any]:
+        """Write a model's vectors into its space, created — with its vector index — if there is none."""
         ...
 
-    def record_embedding_space(self) -> dict[str, Any] | None:
-        """The model and dimension of the embeddings already computed, or None if there are none."""
+    def empty_model_record_embeddings(
+        self, model_id: str, checkpoint: str = "", index_type: str | None = None
+    ) -> dict[str, Any] | None:
+        """Empty a model's embeddings, keeping its space, the other models' left as they are."""
+        ...
+
+    def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
+        """Give the dataset the statistics table of a level, with these columns; the table's name."""
+        ...
+
+    def write_statistic_values(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """Write the values of these columns, the other statistics of each row kept; the rows written."""
+        ...
+
+    def record_computed_statistics(self, computed: list[ComputedStatistic]) -> None:
+        """Keep what a job computed, each statistic replacing the one of the same level and name."""
         ...
 
     def open_table(self, name: str) -> Any:
-        """The LanceDB table itself, to compact it."""
+        """The LanceDB table itself, to compact it, or to read which columns it holds."""
         ...
 
     @property
     def info(self) -> Any:
         """The dataset's metadata, including the table schemas."""
         ...
-
-
-def check_embedding_space(space: dict[str, Any] | None, model: str, dim: int | None = None) -> None:
-    """Refuse to add vectors from another model to an embeddings table.
-
-    Args:
-        space: What the dataset declares about its table, or None if it has none.
-        model: The job's model.
-        dim: The dimension of the vectors, when known.
-
-    Raises:
-        ValueError: The table carries another model or another dimension.
-    """
-    if space is None:
-        return
-    existing_model = space.get("model_id")
-    if existing_model != model:
-        raise ValueError(
-            f"this dataset already carries embeddings from model '{existing_model}': adding those of "
-            f"'{model}' would mix two models in a single table and skew the search. "
-            "Delete the existing embeddings table, or rerun the job with that model."
-        )
-    existing_dim = space.get("dim")
-    if dim is not None and existing_dim is not None and int(existing_dim) != dim:
-        raise ValueError(
-            f"model '{model}' returns vectors of dimension {dim}, the existing table has dimension {existing_dim}"
-        )
 
 
 def derive_prefix(kind: str, key: str, model: str | None = None) -> str:
@@ -264,7 +301,6 @@ class JobWriter:
         kind: str,
         job_id: str,
         source_type: str = "model",
-        reopen_dataset: Callable[[], DatasetWriteTarget] | None = None,
         dataset_id: str | None = None,
         *,
         params: dict[str, Any] | None = None,
@@ -281,9 +317,6 @@ class JobWriter:
             kind: The job kind that writes.
             job_id: The job, kept as provenance.
             source_type: What the kind declares it produces.
-            reopen_dataset: Reopens the dataset **bypassing any cache**, to reread what another
-                process may have created in it meanwhile. Without it, `open_dataset` is
-                authoritative.
             dataset_id: The dataset's identifier, key of the write count that decides
                 compactions. Without it, the writer counts for itself alone.
             params: The job's validated parameters, as the provenance records them — those that
@@ -292,7 +325,9 @@ class JobWriter:
         """
         self._open_dataset = open_dataset
         self._dataset_id = dataset_id
-        self._reopen_dataset = reopen_dataset or open_dataset
+        # What counts this writer's writes: its dataset's, shared with every writer of the dataset,
+        # or a key of its own — not its address, which a freed writer's may have been.
+        self._count_key = dataset_id or f"writer-{uuid.uuid4().hex}"
         self._dataset: DatasetWriteTarget | None = None
         self.kind = kind
         self.job_id = job_id
@@ -403,7 +438,7 @@ class JobWriter:
         """Count a write, and compact the table once enough have accumulated."""
         # An identifier rather than the object: a reopened dataset is another object for the
         # same table, and the address of a freed object gets reused.
-        key = (self._dataset_id or f"writer-{id(self)}", table_name)
+        key = (self._count_key, table_name)
         with _writes_guard:
             _writes_since_compaction[key] += 1
             due = _writes_since_compaction[key] >= COMPACT_EVERY_WRITES
@@ -411,6 +446,79 @@ class JobWriter:
                 _writes_since_compaction[key] = 0
         if due:
             self.compact(table_name)
+
+    def ensure_statistics(self, definitions: Sequence[StatisticDefinition]) -> None:
+        """The tables and columns these statistics write into, added to the dataset where missing.
+
+        Called from `prepare`, and again before writing: a worker whose cached dataset predates the
+        tables holds metadata without them. Columns the dataset holds already are answered from its
+        tables, without its write lock, which never waits and would refuse the job whenever someone
+        else writes the dataset: only adding them takes it.
+
+        Args:
+            definitions: The statistics.
+        """
+        for level, columns in columns_by_level(definitions).items():
+            table_name = canonical_table_name_for_slot(statistics_slot(level.value))
+            if table_name in self.dataset.info.tables:
+                present = set(self.dataset.open_table(table_name).schema.names)
+                if set(columns) <= present:
+                    continue
+            self.dataset.ensure_statistic_columns(level, columns)
+
+    def write_statistics(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """Write the values of statistics, one row per record or per object.
+
+        Only these columns are written: the other statistics of a row keep their values. Written
+        twice, the rows are the same: the dataset makes a row's identifier its record's, or its
+        object's (`Dataset.write_statistic_values`).
+
+        Args:
+            level: The level of the statistics.
+            rows: The rows: the record's identifier, plus the object's for an object, with the value
+                of each column.
+            columns: The columns written, with the type of their values.
+        """
+        if not rows:
+            return []
+        written = self.dataset.write_statistic_values(level, rows, columns)
+        self._count_write(canonical_table_name_for_slot(statistics_slot(level.value)))
+        return written
+
+    def forget_object_statistics(self, record_ids: Sequence[str], kept: set[str]) -> None:
+        """Delete the statistics of these records' objects but those kept: objects deleted since.
+
+        Args:
+            record_ids: The records whose objects were measured.
+            kept: The objects measured, whose rows stay.
+        """
+        table_name = canonical_table_name_for_slot(statistics_slot(StatisticLevel.ENTITY.value))
+        if table_name not in self.dataset.info.tables:
+            return
+        gone = [
+            row.id
+            for batch in _batched(record_ids)
+            for row in self.dataset.get_data(table_name, where=f"record_id IN {to_sql_list(batch)}")
+            if row.id not in kept
+        ]
+        for batch in _batched(gone):
+            self.dataset.delete_data(table_name, batch)
+
+    def record_computed_statistics(self, definitions: Sequence[StatisticDefinition]) -> None:
+        """Record in the dataset that this job computed these statistics, now.
+
+        Args:
+            definitions: The statistics, as the job computed them.
+        """
+        computed_at = datetime.now(timezone.utc)
+        self.dataset.record_computed_statistics(
+            [
+                ComputedStatistic(definition=definition, job_id=self.job_id, computed_at=computed_at)
+                for definition in definitions
+            ]
+        )
 
     def compact(self, table_name: str) -> None:
         """Merge a table's fragments and erase its old versions.
@@ -423,53 +531,163 @@ class JobWriter:
         except Exception as error:
             logger.warning("job %s: cannot compact %s (%s)", self.job_id, table_name, error)
 
-    # The canonical name of the record embeddings table in Pixano.
-    EMBEDDING_TABLE = "embeddings"
+    def empty_embeddings(self, model: str, checkpoint: str = "") -> None:
+        """Empty the embeddings of the job's model, so that it computes them again from nothing.
+
+        Only for a kind's `prepare`, and only on an explicit parameter: this destroys every vector
+        this model — this checkpoint of it — computed on the dataset. Its space keeps its place
+        and the default; it gets the vector index this worker builds. The other models' vectors
+        are left as they are. Harmless when the dataset holds none.
+
+        Raises:
+            AmbiguousModelError: Which of the model's spaces is this one's cannot be told.
+        """
+        emptied = self.dataset.empty_model_record_embeddings(model, checkpoint, index_type=EMBEDDING_INDEX_TYPE)
+        if emptied is not None:
+            logger.info("job %s: embeddings %s emptied before recomputing", self.job_id, emptied["id"])
 
     def write_media_embeddings(
-        self, record_ids: Sequence[str], view_ids: Sequence[str], vectors: Sequence[Any], model: str
-    ) -> None:
-        """Write one vector per medium, replacing the previous one.
+        self,
+        record_ids: Sequence[str],
+        view_ids: Sequence[str],
+        vectors: Sequence[Any],
+        model: str,
+        checkpoint: str = "",
+    ) -> dict[str, Any] | None:
+        """Write one vector per medium into its model's embeddings, replacing the previous one.
 
         An embedding belongs to a medium — one camera of a nuScenes record, not the record: a
         record with six images has six vectors, each carrying its `view_id`, and a search that
         finds a medium returns its record. The medium is the replacement key.
 
-        The table is not an ordinary one: its width depends on the model, so it can only be
-        created once a first vector is known. Creating on the first pass avoids requiring the
-        job kind to know its model's dimension.
+        Each model has a table of its own, a model being its name and its checkpoint: two models
+        never share a table, which would skew every search silently when their dimensions
+        coincide. The table's width depends on the model, so it is created with the first vectors:
+        a kind need not know its model's dimension. The space is found or created, and the
+        vectors written, under one acquisition of the dataset's write lock, which reads the
+        dataset's description again (`Dataset.upsert_record_embeddings`): a space another worker
+        created meanwhile is found, one it deleted is created again, never written into from what
+        this worker read before.
 
-        An existing table only accepts vectors of the model and dimension it declares. Mixing
-        two models in a single table raises no error on write when their dimensions coincide —
-        and silently skews every similarity search, since the table keeps announcing the old
-        model.
+        Args:
+            record_ids: Each vector's record.
+            view_ids: Each vector's medium.
+            vectors: The vectors, all of one dimension.
+            model: The model's name, as the inference serves it.
+            checkpoint: The weights the inference loaded under that name; empty when it could not
+                tell.
+
+        Returns:
+            The space written into; None without vectors.
 
         Raises:
-            ValueError: The vectors do not match the media, or the existing table was
-                computed with another model or another dimension.
+            ValueError: The vectors do not match the media, the dataset holds this very model at
+                another dimension, or its description of the embeddings cannot be read entirely.
+            AmbiguousModelError: The checkpoint is not told, and the dataset holds several of the
+                model's at that dimension.
         """
         if not len(record_ids) == len(view_ids) == len(vectors):
             raise ValueError(f"{len(record_ids)} records, {len(view_ids)} media for {len(vectors)} vectors")
         if not vectors:
-            return
+            return None
 
-        dataset = self.dataset
-        dim = len(vectors[0])
-        if not dataset.has_record_embeddings():
-            # Reread the dataset bypassing the cache before creating: creation overwrites a
-            # table that would already exist, and another worker may have created it since this
-            # one opened the dataset. Two workers creating at the same instant are not covered —
-            # that is the per-dataset writer role that step 4 must decide.
-            dataset = self._dataset = self._reopen_dataset()
-        if not dataset.has_record_embeddings():
-            dataset.create_record_embedding_table(dim=dim, model_id=model)
-        else:
-            check_embedding_space(dataset.record_embedding_space(), model, dim)
-
-        schema = dataset.info.tables[self.EMBEDDING_TABLE]
         rows = [
-            schema(id=derive_id(self.kind, view_id, 0), record_id=record_id, view_id=view_id, vector=list(vector))
+            {
+                "id": derive_id(self.kind, view_id, 0),
+                "record_id": record_id,
+                "view_id": view_id,
+                "vector": list(vector),
+            }
             for record_id, view_id, vector in zip(record_ids, view_ids, vectors)
         ]
-        dataset.update_data(self.EMBEDDING_TABLE, rows)
-        self._count_write(self.EMBEDDING_TABLE)
+        space = self.dataset.upsert_record_embeddings(model, checkpoint, rows, index_type=EMBEDDING_INDEX_TYPE)
+        self._count_write(space["table"])
+        return space
+
+    def index_embeddings(self, model: str, min_rows: int | None = None) -> list[str]:
+        """Index a model's embeddings for search, once a job has filled them.
+
+        For a kind's `finalize`: an index is trained on every vector, so it is built once the job
+        wrote them all, not chunk by chunk. The closing step has no chunk to tell it which of the
+        model's checkpoints the job wrote — the weights may even have changed during the job —, so
+        every space of the model's name is indexed: the job's among them. Two checkpoints of one
+        name are rare, and indexing another one again costs time, never a vector.
+
+        For each:
+
+        - The last writes are compacted first, so that the index is trained on one tidy table.
+        - The `record_id` index is always built: a search restricted to some records, and the
+          lookup of a record's vectors for "similar to", filter on it.
+        - The vector index only from `min_rows` vectors: below, exact search is fast enough, and
+          an index would only make the results approximate. Its type and metric are those the
+          space declares.
+
+        Every index is rebuilt whole, never extended: one trained on the previous run's vectors
+        would partition this run's badly. Training is random, so a rebuild gives an equivalent
+        index rather than the same one, and a final chunk replayed after its worker died leaves
+        the table as one run would. A table that shrank below `min_rows` keeps the vector index
+        it had: still valid, and the search re-ranks what it finds. A space that cannot be indexed
+        does not keep the others from being: its failure is raised once they all were tried.
+
+        Not under the dataset's own write lock, as compaction is not: building an index changes
+        no row, Lance commits it as a version of its own, and a person's save is never refused
+        for its sake. A commit that conflicts with another writer of the table — the
+        application's computation, a recompute, a rollback, another worker — fails the build,
+        and the kind tries again later. The runner's lock still keeps this worker's other writes
+        to the dataset out of the way. The runner reopens the dataset past the worker's cache
+        before the closing step: the chunks may have created the model's space in another worker.
+
+        Args:
+            model: The model's name, as the inference serves it.
+            min_rows: The table size from which a vector index is built; `VECTOR_INDEX_MIN_ROWS`
+                by default, read at call time.
+
+        Returns:
+            The types of the vector indexes built: none when the model's spaces hold too few vectors.
+
+        Raises:
+            Exception: The first failure of a space's indexing, once every space was tried.
+        """
+        min_rows = VECTOR_INDEX_MIN_ROWS if min_rows is None else min_rows
+        spaces = [space for space in self.dataset.record_embedding_spaces() if space["model_id"] == model]
+        if not spaces:
+            logger.warning("job %s: no embeddings of %s to index", self.job_id, model)
+        built: list[str] = []
+        failure: Exception | None = None
+        for space in spaces:
+            try:
+                index_type = self._index_space(space, min_rows)
+            except Exception as error:  # noqa: BLE001 — the model's other spaces are indexed all the same
+                logger.warning("job %s: the embeddings %s could not be indexed: %s", self.job_id, space["id"], error)
+                failure = failure or error
+                continue
+            if index_type is not None:
+                built.append(index_type)
+        if failure is not None:
+            raise failure
+        return built
+
+    def _index_space(self, space: dict[str, Any], min_rows: int) -> str | None:
+        """Index one space's table; the vector index built, if it holds enough vectors for one."""
+        table_name = space["table"]
+        self.compact(table_name)
+        table = self.dataset.open_table(table_name)
+        table.create_scalar_index("record_id", index_type="BTREE", replace=True)
+        rows = table.count_rows()
+        if rows < min_rows:
+            logger.info(
+                "job %s: %d vector(s) of %s, under the %d that call for a vector index: exact search",
+                self.job_id,
+                rows,
+                space["id"],
+                min_rows,
+            )
+            return None
+        index_type = space.get("index_type", EMBEDDING_INDEX_TYPE)
+        table.create_index(
+            metric=space.get("metric", "cosine"), index_type=index_type, vector_column_name="vector", replace=True
+        )
+        logger.info(
+            "job %s: %s vector index built over %d vector(s) of %s", self.job_id, index_type, rows, space["id"]
+        )
+        return index_type

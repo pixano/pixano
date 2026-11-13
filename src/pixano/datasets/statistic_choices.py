@@ -8,7 +8,8 @@
 
 The choices come from the dataset, never from a fixed list: a dataset of masks offers no box, a
 dataset whose objects have no class offers no class to filter on. A statistic of the library
-applies to a dataset that holds what it measures and what it filters on (backend-processing §22).
+applies to a dataset that holds what it measures and what it filters on (backend-processing §22),
+and so do the default statistics every dataset gets for its overview (§22.7).
 
 Both read the dataset's tables and their schemas (`info.tables`) and nothing else, so that the
 worker, which sees a dataset through its reader, can decide as the application does.
@@ -26,16 +27,20 @@ from s3path import S3Path
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_schema import serialize_all_fields
 from pixano.schemas import Entity, ReviewStatus, canonical_table_name_for_slot
+from pixano.statistics.defaults import DEFAULT_STATISTIC_CHOICES
 from pixano.statistics.definitions import (
     ELEMENT_NAMES,
     ELEMENTS_WITH_AREA,
     ENTITY_ELEMENT,
     AnnotationOrigin,
     StatisticChoices,
+    StatisticDefinition,
     StatisticLevel,
     StatisticMeasure,
+    define_statistic,
     is_reviewable_element,
 )
+from pixano.statistics.registry import StatisticRegistry
 
 
 #: The attribute types a statistic can filter objects on, with the values a yes-or-no field takes.
@@ -186,6 +191,64 @@ def statistic_applies(choices: StatisticChoices, dataset: Any) -> bool:
     if field_type is None:
         return False
     return field_type == _TEXT_TYPE or choices.attribute.value in _BOOL_VALUES
+
+
+def default_statistics(dataset: Dataset, registry: StatisticRegistry | None = None) -> list[StatisticDefinition]:
+    """The default statistics of this dataset, in the order the overview shows them.
+
+    A default statistic is a dataset's when it applies to it (`statistic_applies`) and the table of
+    what it counts holds a row: an import of images alone declares a table of objects and one of
+    boxes, both empty, and there is nothing to count yet. Unlike `statistic_applies`, this reads the
+    tables' rows, not only their schemas: the application's own rule, never the worker's.
+
+    Each is the statistic as the dataset or its library holds it when either composed the same
+    choices, so that the label a person gave it stays — the dataset's first, whose column the explorer
+    names with it; otherwise the default composition.
+
+    Args:
+        dataset: The dataset.
+        registry: The library's statistics; None to read the dataset's alone.
+
+    Returns:
+        The default statistics of the dataset.
+    """
+    held = [computed.definition for computed in dataset.info.statistics if computed.definition.is_current]
+    composed = registry.definitions() if registry is not None else []
+    statistics: list[StatisticDefinition] = []
+    for choices in DEFAULT_STATISTIC_CHOICES:
+        if not statistic_applies(choices, dataset) or not _holds_rows(dataset, choices.element):
+            continue
+        as_held: StatisticDefinition | None = next((d for d in held if d.choices == choices), None)
+        as_composed: StatisticDefinition | None = next(
+            (d for d in composed if d.choices == choices and d.is_current), None
+        )
+        statistics.append(as_held or as_composed or define_statistic(choices))
+    return statistics
+
+
+def default_statistics_to_compute(
+    dataset: Dataset, registry: StatisticRegistry | None = None
+) -> list[StatisticDefinition]:
+    """The default statistics of this dataset whose values it does not hold.
+
+    A statistic whose measure is computed otherwise since its values were is to compute again: its
+    values are those of the previous computation.
+
+    Args:
+        dataset: The dataset.
+        registry: The library's statistics, whose labels the statistics keep (`default_statistics`).
+
+    Returns:
+        The default statistics to compute, in the order the overview shows them.
+    """
+    held = [computed.definition.choices for computed in dataset.info.statistics if computed.definition.is_current]
+    return [statistic for statistic in default_statistics(dataset, registry) if statistic.choices not in held]
+
+
+def _holds_rows(dataset: Dataset, element: str) -> bool:
+    """Whether the dataset's table of an element — its objects, or an annotation kind — holds a row."""
+    table_name = canonical_table_name_for_slot(element)
+    return table_name in dataset.info.tables and dataset.open_table(table_name).count_rows() > 0
 
 
 def _holds(tables: Mapping[str, Any], element: str) -> bool:

@@ -6,7 +6,7 @@
 
 """Tests for recording job requests on the queue."""
 
-import os
+from collections.abc import Iterator
 
 import psycopg
 import pytest
@@ -15,8 +15,6 @@ from psycopg.types.json import Jsonb
 from pixano.api import jobs
 from pixano.api.jobs import SCHEMA_NAME, enqueue
 
-
-TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
 
 # The shape a worker publishes for a kind, reduced to what these tests need.
 FAKE_SCHEMA = {
@@ -28,22 +26,10 @@ FAKE_SCHEMA = {
 
 
 @pytest.fixture
-def queue() -> psycopg.Connection:
-    """A connection to a throwaway queue, emptied around each test.
-
-    Keyed on a dedicated variable, never PIXANO_DATABASE_URL: a developer running the stack
-    has that one exported, and these tests delete rows.
-    """
-    url = os.environ.get(TEST_DATABASE_URL, "")
-    if not url:
-        pytest.skip(f"{TEST_DATABASE_URL} not set")
-    with psycopg.connect(url, autocommit=True) as conn:
-        exists = conn.execute(f"SELECT to_regclass('{SCHEMA_NAME}.jobs')").fetchone()
-        if exists is None or exists[0] is None:
-            pytest.skip("the queue schema is absent — pixano-worker installs it")
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
+def queue(queue_url: str) -> Iterator[psycopg.Connection]:
+    """A connection to a throwaway queue, emptied around each test (`tests.fixtures.job_queue`)."""
+    with psycopg.connect(queue_url, autocommit=True) as conn:
         yield conn
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
 
 
 @pytest.fixture
@@ -457,3 +443,82 @@ class TestRetry:
     def test_an_unknown_job_is_reported_as_missing(self, declared: psycopg.Connection) -> None:
         with pytest.raises(jobs.JobNotFoundError):
             jobs.retry(declared, "not-a-uuid")
+
+
+class TestFinalizing:
+    """A job whose work is done and whose kind's closing step runs says so."""
+
+    @staticmethod
+    def _work_done_and_closing_step(queue: psycopg.Connection, final_state: str) -> str:
+        """A running job: its one chunk of work done, its final chunk in `final_state`, as the worker leaves them."""
+        job = jobs.submit(queue, kind="fake", dataset_id="ds", params={"task_count": 5})
+        queue.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running', total_tasks = 5, done_tasks = 5 WHERE id = %s",
+            (job.id,),
+        )
+        queue.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, produced, skipped) "
+            "VALUES (%s, 0, 5, 'done', 5, 0)",
+            (job.id,),
+        )
+        lease = "now() + interval '1 minute'" if final_state == "running" else "NULL"
+        queue.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, final, state, lease_until) "
+            f"VALUES (%s, 1, 0, true, %s, {lease})",
+            (job.id, final_state),
+        )
+        return job.id
+
+    @pytest.mark.parametrize("final_state", ["pending", "running"])
+    def test_a_job_whose_closing_step_is_queued_or_running_is_finalizing(
+        self, declared: psycopg.Connection, final_state: str
+    ) -> None:
+        job_id = self._work_done_and_closing_step(declared, final_state)
+
+        assert jobs.get(declared, job_id).finalizing
+        assert jobs.list_jobs(declared)[0].finalizing
+
+    def test_a_closing_step_still_waiting_for_the_work_is_not_finalizing(self, declared: psycopg.Connection) -> None:
+        job_id = self._work_done_and_closing_step(declared, "waiting")
+
+        assert not jobs.get(declared, job_id).finalizing
+
+    def test_a_job_cancelled_as_its_closing_step_was_queued_is_not_finalizing(
+        self, declared: psycopg.Connection
+    ) -> None:
+        """A final chunk handed back as a cancel settled the job stays queued until a worker drops it.
+
+        The job has ended all the same: nothing is finalizing.
+        """
+        job_id = self._work_done_and_closing_step(declared, "pending")
+        declared.execute(f"UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled' WHERE id = %s", (job_id,))
+
+        assert not jobs.get(declared, job_id).finalizing
+
+    def test_a_retry_that_reopens_the_closing_step_alone_says_the_job_is_finalizing(
+        self, declared: psycopg.Connection
+    ) -> None:
+        """Cancelled once its closing step was queued, the job is retried on that step alone."""
+        job_id = self._work_done_and_closing_step(declared, "cancelled")
+        declared.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET state = 'cancelled', cancel_requested_at = now() WHERE id = %s", (job_id,)
+        )
+
+        retried = jobs.retry(declared, job_id)
+
+        assert (retried.state, retried.finalizing) == ("pending", True)
+        event = declared.execute(
+            f"SELECT payload FROM {SCHEMA_NAME}.job_events WHERE job_id = %s ORDER BY id DESC LIMIT 1", (job_id,)
+        ).fetchone()
+        assert event is not None and event[0] == {"state": "pending", "cancel_requested": False, "finalizing": True}
+
+    def test_a_new_job_is_not_finalizing(self, declared: psycopg.Connection) -> None:
+        assert not jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5}).finalizing
+
+    def test_its_outcome_is_its_works(self, declared: psycopg.Connection) -> None:
+        """The final chunk carries no task: the job produced what its work produced."""
+        job_id = self._work_done_and_closing_step(declared, "running")
+
+        read = jobs.get(declared, job_id)
+
+        assert (read.done_tasks, read.total_tasks, read.produced) == (5, 5, 5)

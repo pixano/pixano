@@ -23,6 +23,12 @@ const api = vi.hoisted(() => ({
   listJobs: vi.fn(),
   listJobKinds: vi.fn(),
   openJobStream: vi.fn(),
+  listInferenceModels: vi.fn(),
+}));
+
+vi.mock("$lib/api/inference", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("$lib/api/inference")>()),
+  listInferenceModels: api.listInferenceModels,
 }));
 
 vi.mock("$lib/api/jobs", async (importOriginal) => ({
@@ -37,6 +43,10 @@ const NO_QUEUE_REASON =
   "no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker";
 const DATASET = { id: "ds", name: "Dataset" };
 const EMBEDDINGS_KIND = { name: "embeddings", params_schema: { type: "object", properties: {} } };
+const STATISTICS_KIND = {
+  name: "statistics",
+  params_schema: { type: "object", properties: {}, "x-pixano-own-form": "statistics" },
+};
 
 /** What the jobs endpoints answer on an installation without a job queue. */
 function queueUnavailable(): ApiError {
@@ -50,6 +60,7 @@ function queueUnavailable(): ApiError {
 beforeEach(() => {
   vi.stubGlobal("EventSource", SilentStream);
   api.openJobStream.mockReset().mockReturnValue(new SilentStream());
+  api.listInferenceModels.mockReset().mockResolvedValue([]);
   api.listJobs.mockReset().mockRejectedValue(queueUnavailable());
   api.listJobKinds.mockReset().mockRejectedValue(queueUnavailable());
 });
@@ -87,5 +98,20 @@ describe("JobsPanel on an installation without a job queue", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Run" })).toBeTruthy());
     expect(screen.queryByText(NOTICE_TITLE)).toBeNull();
+  });
+});
+
+describe("JobsPanel where its form can build no kind's parameters", () => {
+  it("launches nothing, and says where the statistics come from", async () => {
+    api.listJobs.mockResolvedValue([]);
+    api.listJobKinds.mockResolvedValue([STATISTICS_KIND]);
+
+    render(JobsPanel, { props: { dataset: DATASET } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/the statistics are computed after an import/)).toBeTruthy(),
+    );
+    expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
+    expect(screen.queryByText(/No worker is running/)).toBeNull();
   });
 });

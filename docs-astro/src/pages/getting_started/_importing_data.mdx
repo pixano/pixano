@@ -110,6 +110,24 @@ data and opens Review without starting the import.
 schema (views, record, entity, annotations), warnings and errors with their locations, and a
 few sample records. **Start import** stays disabled while the plan has errors.
 
+When a job queue is configured and the source holds still images (not video frames),
+**Compute embeddings after the import**, right after the dataset summary, queues the embeddings
+job of the dataset once the import is done, for semantic search and *similar to*. It is checked
+when the server can run the job, unless its administrator turned that default off, and offers
+the models the inference serves; when the job cannot run — no worker for it, no model — the box
+is disabled and says why. On a dataset that already has embeddings, every model it holds is
+computed again, one job per model, each over the whole dataset: the media an add import brings are
+in none of them yet. A model you choose is computed beside them; left to the server, its model is
+used only for a dataset without embeddings. The tray says whether each job was queued, or why not.
+
+When a job queue is configured, **Compute statistics after the import**, below it, queues the job
+of the dataset's default statistics once the import is done: how many objects, boxes and masks each
+record holds and the share of its image each object's boxes cover. It is checked when the job can
+run, unless the server's administrator turned that default off (`PIXANO_STATISTICS_AFTER_IMPORT`);
+when the job cannot run — no worker for it, a queue that does not answer — the box is disabled and
+says why. A dataset with nothing to count, images alone, needs no job: the tray says the
+statistics were not needed.
+
 **Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
 options, and annotation settings preserved. Adjust the setup and analyze again to review the
 updated plan; you do not need to upload the same folder again.
@@ -183,6 +201,9 @@ builds on; add a `dataset.yaml` when you need custom attributes or other annotat
 | `--media` | `embed` (default, self-contained) or `uri` (store datalake URIs verbatim). |
 | `--dry-run` | Validate and print the plan without creating the dataset. |
 | `--yes`, `-y` | Skip the confirmation prompt — use this in scripts and CI. |
+| `--embeddings`, `--no-embeddings` | Queue, or not, the embeddings job of the dataset imported into, once the import is done. By default it is queued where the job can run — a job queue (`PIXANO_DATABASE_URL`) where `pixano-worker` runs it, and a model — unless `PIXANO_EMBEDDINGS_AFTER_IMPORT` is false or the source holds no still image. On a dataset that already has embeddings, as with `--mode add`, every model it holds is computed again too, one job per model, each over the whole dataset. |
+| `--embeddings-model` | The model the embeddings job runs, beside the models the dataset already holds; naming one asks for the job. Default: `PIXANO_EMBEDDINGS_MODEL`, used only for a dataset without embeddings. The command asks no inference: without either, it queues no embeddings. |
+| `--statistics`, `--no-statistics` | Queue, or not, the statistics job of the dataset's default statistics — how many objects, boxes and masks each record holds, the share of its image each object's boxes cover — once the import is done. By default it is queued where `pixano-worker` runs it, unless `PIXANO_STATISTICS_AFTER_IMPORT` is false; a dataset with nothing to count needs none. With `--mode add`, every default statistic is computed again over the whole dataset, and the import's rollback is refused once the job has run, as once the embeddings job has: pass `--no-statistics` and `--no-embeddings` to keep the rollback. |
 
 ### The line format (JSONL v2)
 
@@ -574,7 +595,9 @@ Two properties make this safe to interrupt:
 
 - **Resume** picks up from the last committed checkpoint rather than starting over.
 - **Rollback** restores the versions from before a completed `--mode add` import, provided
-  the dataset has not changed since. It refuses to run after later edits or a resumed import.
+  the dataset has not changed since. It refuses to run after later edits or a resumed import —
+  and after the embeddings or statistics job an import queues by default, which write the
+  dataset: pass `--no-embeddings --no-statistics` to an import you may want to roll back.
   Writes to the same dataset are rejected with a retryable conflict while an add import or
   rollback is in progress.
 

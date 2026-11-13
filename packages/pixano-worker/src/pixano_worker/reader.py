@@ -19,6 +19,8 @@ import logging
 import os
 from typing import Any, BinaryIO, Callable, Iterator, Sequence
 
+from PIL import Image, UnidentifiedImageError
+
 from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
 
 from .media import MediaResolver, ResolvedMedia
@@ -82,6 +84,41 @@ class JobReader:
     def rows(self, table_name: str, ids: Sequence[str]) -> list[Any]:
         """Read specific rows, by identifier."""
         return self.dataset.get_data(table_name, ids=list(ids))
+
+    def read(self, table_name: str, where: str) -> list[Any]:
+        """Rows of a table matching a filter: what a kind reads beside the media it was given.
+
+        For `process`, which runs outside the write lock and has no writer: the boxes already on a
+        chunk's views, for instance. Not paged, so the filter must bound what it reads — a chunk's
+        views, not a whole table; `ids` enumerates a table by pages.
+        """
+        return self.dataset.get_data(table_name, where=where)
+
+    def image_size(self, table_name: str, view: Any) -> tuple[int, int] | None:
+        """An image's width and height, in pixels: as the dataset records them, else from its header.
+
+        A dataset imported by URI records no size, and a kind that places or checks geometry
+        against the image cannot work without one. Reading the header opens the file — or the
+        bytes of an embedded view — without decoding the pixels.
+
+        Returns:
+            (width, height), or None when the dataset records no size and this worker cannot read
+            one: the media is out of reach, or is not an image Pillow reads.
+        """
+        width, height = getattr(view, "width", 0) or 0, getattr(view, "height", 0) or 0
+        if width > 0 and height > 0:
+            return width, height
+        media = self.open_media(table_name, view)
+        if media is None:
+            return None
+        try:
+            with media, Image.open(media) as image:
+                return image.size
+        # An image with more pixels than Pillow's guard allows raises an error that is not an
+        # OSError. Uncaught, it would fail a whole chunk for one image the inference could not
+        # read either.
+        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+            return None
 
     def resolve_media(self, table_name: str, view: Any) -> ResolvedMedia | None:
         """Designate a media for the inference — a path if possible, the bytes otherwise."""

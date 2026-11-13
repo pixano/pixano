@@ -220,6 +220,47 @@ export interface ImportPlanResponse {
   plan_id?: string;
 }
 
+/** A processing job an import queues once it is done, and what became of it. */
+export interface IoFollowUp {
+  /** The processing job kind: `embeddings`, `statistics`. */
+  kind: string;
+  params: Record<string, unknown>;
+  /** The queued job's identifier; empty until queued. */
+  job_id: string;
+  /** Why it was not queued; empty otherwise. */
+  error: string;
+  /** Why it needed no job — nothing to do, nothing failed —; empty or absent otherwise. */
+  skipped?: string;
+  /** The parameters the request did not name, which the server's defaults chose. */
+  defaulted?: string[];
+}
+
+/** Whether an import can queue the embeddings job of what it imports (`GET /io/imports/embeddings`). */
+export interface ImportEmbeddingsOffer {
+  /** A job queue is configured: without one, the import offers no embeddings at all. */
+  queue_configured: boolean;
+  /** A job queue is reachable, a worker declared the job, and a model can be named. */
+  available: boolean;
+  /** Why the job cannot run, when it cannot. */
+  reason: string | null;
+  /** The server's default for an import (PIXANO_EMBEDDINGS_AFTER_IMPORT). */
+  enabled_by_default: boolean;
+  models: string[];
+  default_model: string | null;
+}
+
+/** Whether an import can queue the statistics job of its default statistics (`GET /io/imports/statistics`). */
+export interface ImportStatisticsOffer {
+  /** A job queue is configured: without one, the import offers no statistics at all. */
+  queue_configured: boolean;
+  /** A job queue is reachable, and a worker declared the job. */
+  available: boolean;
+  /** Why the job cannot run, when it cannot. */
+  reason: string | null;
+  /** The server's default for an import (PIXANO_STATISTICS_AFTER_IMPORT). */
+  enabled_by_default: boolean;
+}
+
 /** One durable import/export job as stored. */
 export interface IoJobResponse {
   job_id: string;
@@ -236,6 +277,8 @@ export interface IoJobResponse {
   error: { type?: string; message?: string };
   created_at: number;
   updated_at: number;
+  /** What the import queues once done; absent from a server that predates them. */
+  follow_ups?: IoFollowUp[];
 }
 
 /** GET /app/ui — which UIs the deployment exposes. */

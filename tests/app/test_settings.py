@@ -25,6 +25,15 @@ class TestSettings:
         assert settings.library_dir == Path.cwd() / "library"
         assert settings.models_dir == Path.cwd() / "models"
 
+    def test_an_empty_embeddings_variable_means_its_default(self, monkeypatch: pytest.MonkeyPatch):
+        """A deployment file that leaves them empty — `PIXANO_EMBEDDINGS_MODEL=` — must not stop the server."""
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_AFTER_IMPORT", "")
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "")
+
+        settings = Settings()
+
+        assert (settings.embeddings_after_import, settings.embeddings_model) == (True, None)
+
     def test_init_data_dir(self):
         settings = Settings(data_dir="/home/user/data")
         assert settings.data_dir == Path("/home/user/data")

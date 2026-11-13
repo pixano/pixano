@@ -12,14 +12,19 @@ import RightPanel from "../../shell/RightPanel.svelte";
 import ImageWidget from "../image/ImageWidget.svelte";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
-import { entityOf, humanBox, openManager } from "$lib/workspace/__tests__/workspaceHarness.js";
+import {
+  entityOf,
+  humanBox,
+  modelBox,
+  openManager,
+} from "$lib/workspace/__tests__/workspaceHarness.js";
 import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
-// The image widget as a person meets it: rendered on the real Konva, next to
+// The image widget as a reviewer meets it: rendered on the real Konva, next to
 // the right panel, over the real manager and queue — only HTTP is faked. What
 // is checked is what the person sees and presses: the toolbar's count and
-// Discard, the entity button's words, what the trash button lets go of, and
-// where a key typed in a form goes.
+// Discard, the trash button's and the entity button's words, what the trash
+// button lets go of, and where a key typed in a form goes.
 vi.mock("konva", async () => ({
   default: (await vi.importActual<{ default: unknown }>("konva/lib/index.js")).default,
 }));
@@ -28,19 +33,35 @@ installSilentCanvas();
 
 const REC = "rec-1";
 
-const ENTITIES = [entityOf(REC, "ent-h1", { category: "tree" })];
+const ENTITIES = [
+  entityOf(REC, "ent-b1", { category: "car" }),
+  entityOf(REC, "ent-b2", { category: "bus" }),
+  entityOf(REC, "ent-h1", { category: "tree" }),
+];
 
 const DISCARD_TITLE = "Discard unsaved changes and restore this record's saved annotations";
+const REJECT_TITLE = "Reject selected (Del)";
+/** What the trash button's tooltip says of a Reject, beyond its name. */
+const REJECT_TOOLTIP = "Reject selected (Del): rejecting deletes it";
 const DELETE_TITLE = "Delete selected (Del)";
+const NOTHING_SELECTED_TITLE = "Select an annotation to delete or reject it";
 const REASSIGN_TITLE = "Change the entity this annotation belongs to (E)";
 const REASSIGN_NOTHING_SELECTED_TITLE = "Select an annotation to change its entity";
 
 afterEach(() => cleanup());
 
-/** A record with a person's box, shown in an image widget beside the right panel. */
+/** A record with a pending model box, an accepted one and a person's box, shown in an image widget. */
 async function openImageWidget() {
   const opened = await openManager(
-    { [REC]: { [BBOX_RESOURCE]: [humanBox(REC, "h1")] } },
+    {
+      [REC]: {
+        [BBOX_RESOURCE]: [
+          modelBox(REC, "b1"),
+          modelBox(REC, "b2", "accepted"),
+          humanBox(REC, "h1"),
+        ],
+      },
+    },
     { entities: ENTITIES },
   );
   const widget = opened.manager.widgets[0];
@@ -56,6 +77,13 @@ function toolbar(): HTMLElement {
   return screen.getByRole("toolbar", { name: "Image annotation tools" });
 }
 
+/** The toolbar's trash button, found by its name: what it does, rejecting or deleting. */
+function trashButton(): HTMLButtonElement {
+  return within(toolbar()).getByRole<HTMLButtonElement>("button", {
+    name: /^(Reject|Delete) selected \(Del\)$/,
+  });
+}
+
 /** What assistive tech reads after a button's name: the text its `aria-describedby` points at. */
 function descriptionOf(element: HTMLElement): string | null {
   const id = element.getAttribute("aria-describedby");
@@ -68,6 +96,47 @@ function select(manager: WorkspaceManager, id: string): void {
 }
 
 describe("ImageWidget toolbar", () => {
+  it("says the trash button rejects a model's box, and rejects it", async () => {
+    const { manager } = await openImageWidget();
+    expect(trashButton().disabled).toBe(true);
+
+    for (const id of ["b1", "b2"]) {
+      select(manager, id);
+      expect(trashButton().getAttribute("aria-label")).toBe(REJECT_TITLE);
+      expect(trashButton().title).toBe(REJECT_TOOLTIP);
+      expect(descriptionOf(trashButton())).toBeNull();
+      expect(trashButton().disabled).toBe(false);
+    }
+
+    select(manager, "b1");
+    await fireEvent.click(trashButton());
+
+    // Rejecting a model's box deletes it.
+    expect(manager.annotations.find("b1")).toBeUndefined();
+    expect(manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
+  });
+
+  it("says the trash button deletes a person's box, and deletes it", async () => {
+    const { manager } = await openImageWidget();
+    select(manager, "h1");
+
+    expect(trashButton().getAttribute("aria-label")).toBe(DELETE_TITLE);
+    expect(trashButton().title).toBe(DELETE_TITLE);
+    await fireEvent.click(trashButton());
+
+    expect(manager.annotations.find("h1")).toBeUndefined();
+    expect(manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
+  });
+
+  it("names the trash button by what it does with nothing selected, and says what it waits for", async () => {
+    await openImageWidget();
+
+    expect(trashButton().getAttribute("aria-label")).toBe(DELETE_TITLE);
+    expect(trashButton().title).toBe(NOTHING_SELECTED_TITLE);
+    expect(descriptionOf(trashButton())).toBe(NOTHING_SELECTED_TITLE);
+    expect(trashButton().disabled).toBe(true);
+  });
+
   it("names the entity button by what it does, and says what it waits for", async () => {
     const { manager } = await openImageWidget();
     const reassign = () =>
@@ -83,7 +152,7 @@ describe("ImageWidget toolbar", () => {
     expect(descriptionOf(reassign())).toBeNull();
   });
 
-  it("lets go of a resize or a drag under way before it deletes, as the Delete key does", async () => {
+  it("lets go of a resize or a drag under way before it rejects, as the Delete key does", async () => {
     const { manager, widgetId } = await openImageWidget();
     // What an editor of this widget raises while a box is resized or dragged.
     let dropped = 0;
@@ -92,12 +161,12 @@ describe("ImageWidget toolbar", () => {
       gesture.set(false);
     });
     gesture.set(true);
-    select(manager, "h1");
+    select(manager, "b1");
 
-    await fireEvent.click(within(toolbar()).getByTitle(DELETE_TITLE));
+    await fireEvent.click(trashButton());
 
     expect(dropped).toBe(1);
-    expect(manager.annotations.find("h1")).toBeUndefined();
+    expect(manager.annotations.find("b1")).toBeUndefined();
     expect(manager.unsavedCount).toBe(1);
   });
 
@@ -107,13 +176,13 @@ describe("ImageWidget toolbar", () => {
     // What the polygon tool raises once a point is placed.
     let dropped = 0;
     manager.claimStagedWork(widgetId, () => (dropped += 1)).set(true);
-    select(manager, "h1");
+    select(manager, "b1");
 
-    await fireEvent.click(within(toolbar()).getByTitle(DELETE_TITLE));
+    await fireEvent.click(trashButton());
 
     expect(dropped).toBe(0);
-    expect(manager.annotations.find("h1")).toBeUndefined();
-    // The delete, and the points still held.
+    expect(manager.annotations.find("b1")).toBeUndefined();
+    // The box's delete, and the points still held.
     expect(manager.unsavedCount).toBe(2);
   });
 
@@ -199,5 +268,16 @@ describe("ImageWidget keyboard", () => {
     expect(manager.pendingAnnotation).toBe(reassignment);
     expect(manager.annotations.find("h1")?.entityId).toBe("ent-h1");
     expect(manager.pendingCount).toBe(0);
+  });
+
+  it("still acts on the selection for a key pressed outside any form field", async () => {
+    const { manager } = await openImageWidget();
+    select(manager, "b1");
+
+    press(document.body, "Backspace");
+
+    // Backspace on a model's box is its reject: it deletes it.
+    expect(manager.annotations.find("b1")).toBeUndefined();
+    expect(manager.pendingMutations.map((m) => m.op)).toEqual(["delete"]);
   });
 });

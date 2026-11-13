@@ -125,6 +125,22 @@ Open <http://localhost:7492> and switch to the new UI with the button in the hea
 panel shows the worker's kinds; a job submitted there is picked up by the worker started in
 step 3.
 
+An import then queues the embeddings job of the dataset it imported into, unless it says
+otherwise; into a dataset that already holds embeddings, it queues one job per model the dataset
+holds, beside the model it names, each computing the whole dataset again. Set
+`PIXANO_EMBEDDINGS_AFTER_IMPORT=false` to stop that by default, and
+`PIXANO_EMBEDDINGS_MODEL` to name the model rather than take the first embeddings model the
+inference serves. The command line reads them too, but asks no inference: without
+`PIXANO_EMBEDDINGS_MODEL` or `--embeddings-model`, `pixano data import` queues no embeddings. The
+worker must serve the library the import wrote into: a command-line import into another data
+directory queues a job the worker cannot find, and that job fails.
+
+An import also queues the statistics job of the dataset's default statistics — how many
+objects, boxes and masks each record holds, and the share of its image each object's boxes
+cover —, where the worker runs that job; a dataset with nothing to count needs none. Set
+`PIXANO_STATISTICS_AFTER_IMPORT=false` to stop that by default, or pass `--no-statistics` to
+`pixano data import`.
+
 ## The demo, by hand
 
 `docs/demo-etape1.md` prepares its datasets with a script that references the damaged images

@@ -12,18 +12,24 @@ API process and the CLI to share). Jobs progress through
 mid-run is flipped to ``interrupted`` at the next boot. Analyze plans persist
 alongside jobs so ``POST /io/imports {plan_id}`` executes exactly what was
 previewed — a changed source fingerprint is a ``PlanMismatchError``.
+
+An import job also keeps its follow-ups: the processing jobs to queue once it is
+done, such as the embeddings of what it imported. This module knows nothing of
+the processing queue: whoever runs the import hands it a starter, which queues
+them, and the outcome of each is kept with the job.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import sqlite3
 import threading
 import time
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
@@ -36,6 +42,8 @@ from .errors import JobStateError, PixanoDataError
 from .plan import ImportPlan
 from .progress import ProgressEvent, ProgressSink, ThrottledSink
 
+
+logger = logging.getLogger(__name__)
 
 JOB_STATES = ("pending", "running", "interrupted", "done", "error", "cancelled", "rolled_back")
 _TERMINAL_STATES = frozenset({"done", "error", "cancelled", "rolled_back"})
@@ -55,7 +63,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     pid INTEGER NOT NULL DEFAULT 0,
     heartbeat REAL NOT NULL DEFAULT 0,
     created_at REAL NOT NULL,
-    updated_at REAL NOT NULL
+    updated_at REAL NOT NULL,
+    follow_ups_json TEXT NOT NULL DEFAULT '[]'
 );
 CREATE TABLE IF NOT EXISTS plans (
     id TEXT PRIMARY KEY,
@@ -65,6 +74,172 @@ CREATE TABLE IF NOT EXISTS plans (
     expires_at REAL NOT NULL DEFAULT 0
 );
 """
+
+# The columns of `jobs` added after its first release, and their definitions. `CREATE TABLE IF
+# NOT EXISTS` leaves an existing store's table as it was, so a store made by an earlier version
+# gets them when it is opened; its rows take the default.
+_ADDED_COLUMNS = {"follow_ups_json": "TEXT NOT NULL DEFAULT '[]'"}
+
+
+def _add_missing_columns(db: sqlite3.Connection) -> None:
+    """Bring a store made by an earlier version up to the current table."""
+    present = {row["name"] for row in db.execute("PRAGMA table_info(jobs)")}
+    for name, definition in _ADDED_COLUMNS.items():
+        if name in present:
+            continue
+        try:
+            db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {definition}")
+        except sqlite3.OperationalError as error:
+            # The API and the CLI share the store: the other one, opening it at the same time,
+            # added the column first.
+            if "duplicate column" not in str(error):
+                raise
+
+
+@dataclass(frozen=True)
+class FollowUp:
+    """A processing job an import queues once it is done, and what became of it.
+
+    Kept with the import job from its start, so that an import resumed after its process died
+    still queues it. None of `job_id`, `error` and `skipped` is set until the import is done.
+
+    Attributes:
+        kind: The processing job kind, as a worker declares it: `embeddings`, `statistics`.
+        params: The job's parameters.
+        job_id: The queued job's identifier, once queued.
+        error: Why it was not queued.
+        defaulted: The parameters the request did not name, which the deployment's defaults chose:
+            fitting the follow-up to the dataset written may choose otherwise.
+        skipped: Why it needed no job: the dataset written left it nothing to do, and nothing failed.
+    """
+
+    kind: str
+    params: dict[str, Any] = field(default_factory=dict)
+    job_id: str = ""
+    error: str = ""
+    defaulted: tuple[str, ...] = ()
+    skipped: str = ""
+
+    @property
+    def pending(self) -> bool:
+        """Neither queued, refused nor found needless yet."""
+        return not self.job_id and not self.error and not self.skipped
+
+    def to_json(self) -> dict[str, Any]:
+        """The follow-up as the store keeps it, in JSON's own types."""
+        return {**asdict(self), "defaulted": list(self.defaulted)}
+
+    @classmethod
+    def from_json(cls, payload: dict[str, Any]) -> FollowUp:
+        """Read a follow-up back from the store."""
+        return cls(
+            kind=str(payload.get("kind", "")),
+            params=dict(payload.get("params") or {}),
+            job_id=str(payload.get("job_id") or ""),
+            error=str(payload.get("error") or ""),
+            defaulted=tuple(str(name) for name in payload.get("defaulted") or ()),
+            skipped=str(payload.get("skipped") or ""),
+        )
+
+
+FollowUpStarter = Callable[[str, list[FollowUp]], list[list[FollowUp]]]
+"""Queues an import's pending follow-ups: given the imported dataset's identifier and them, returns
+what each became, in the same order — itself, or the several jobs it stands for on that dataset,
+such as the embeddings of each model the dataset holds —, each with its job identifier or the
+reason it was not queued."""
+
+# What a pending follow-up records when the process that ran its import has no starter to queue it.
+NO_STARTER = "not queued: the import ran without a job queue to queue it on"
+
+# What a follow-up records while it is being queued, and keeps if the process stops before its
+# outcome is recorded. Queueing is at most once: a resumed import never queues it again, since the
+# job may be queued already, and a job missing is one a person can still start by hand.
+IN_FLIGHT = "not recorded: being queued, or the import stopped while queueing it — see the dataset's Jobs panel"
+
+# What a follow-up records when its import was cancelled too late to stop: the data is in, but the
+# person asked for nothing more.
+CANCELLED = "not queued: the import was cancelled"
+
+# What a follow-up records when the starter gave it back without an outcome.
+NO_OUTCOME = "not queued: no outcome was given for it"
+
+# What a follow-up records when queueing it failed unexpectedly: the details, which may name a path
+# or a host, go to the log of the process that ran the import.
+FAILED = "not queued: queueing it failed — the log of the process that ran the import says why"
+
+
+def queue_follow_ups(
+    starter: FollowUpStarter | None, dataset_id: str, follow_ups: Sequence[FollowUp]
+) -> list[FollowUp]:
+    """Queue an import's pending follow-ups once it is done; return them all, each pending one as what it became.
+
+    A follow-up that cannot be queued says why, and the import stays done: the data is in, and a
+    job missing is a job one can still start by hand.
+
+    Args:
+        starter: What queues them, or None when nothing can.
+        dataset_id: The imported dataset.
+        follow_ups: The import's follow-ups, as kept with its job.
+
+    Returns:
+        The follow-ups, in their order, each pending one in place of what it became, with its outcome.
+    """
+    pending = [follow_up for follow_up in follow_ups if follow_up.pending]
+    if not pending:
+        return list(follow_ups)
+    if starter is None:
+        became = [[replace(follow_up, error=NO_STARTER)] for follow_up in pending]
+    else:
+        try:
+            became = starter(dataset_id, pending)
+            if len(became) != len(pending):
+                raise RuntimeError(f"{len(pending)} follow-up(s) asked, {len(became)} answered")
+            became = [
+                [replace(outcome, error=NO_OUTCOME) if outcome.pending else outcome for outcome in outcomes]
+                or [replace(follow_up, error=NO_OUTCOME)]
+                for follow_up, outcomes in zip(pending, became, strict=True)
+            ]
+        except Exception as error:  # noqa: BLE001 - an import is never failed by its follow-ups
+            logger.warning("the follow-ups of an import into %s could not be queued: %s", dataset_id, error)
+            logger.debug("the follow-ups' failure", exc_info=True)
+            became = [[replace(follow_up, error=FAILED)] for follow_up in pending]
+    answered = iter(became)
+    return [outcome for follow_up in follow_ups for outcome in (next(answered) if follow_up.pending else [follow_up])]
+
+
+def queue_import_follow_ups(
+    store: JobStore, job_id: str, starter: FollowUpStarter | None, dataset_id: str
+) -> list[FollowUp]:
+    """Queue what an import job asked for once its data is in; return its follow-ups with their outcomes.
+
+    The follow-ups are read from the store, so that a resumed import queues what its first run was
+    asked for. The caller records them with the job's `done`, in one update. Before the starter is
+    called, the pending ones are recorded as being queued (`IN_FLIGHT`): a process that stops after
+    queueing them, before that update, leaves them saying so rather than pending, and a resume does
+    not queue them a second time.
+
+    Args:
+        store: The job store.
+        job_id: The import job, whose data is in.
+        starter: What queues them, or None when nothing can.
+        dataset_id: The imported dataset.
+
+    Returns:
+        The job's follow-ups, each pending one in place of what it became, with its outcome.
+    """
+    job = store.get_job(job_id)
+    follow_ups = list(job.follow_ups) if job else []
+    if not any(follow_up.pending for follow_up in follow_ups):
+        return follow_ups
+    if store.cancel_requested(job_id):
+        return [replace(follow_up, error=CANCELLED) if follow_up.pending else follow_up for follow_up in follow_ups]
+    store.update_job(
+        job_id,
+        follow_ups=[
+            replace(follow_up, error=IN_FLIGHT) if follow_up.pending else follow_up for follow_up in follow_ups
+        ],
+    )
+    return queue_follow_ups(starter, dataset_id, follow_ups)
 
 
 @dataclass
@@ -85,6 +260,7 @@ class JobRecord:
     heartbeat: float = 0.0
     created_at: float = 0.0
     updated_at: float = 0.0
+    follow_ups: list[FollowUp] = field(default_factory=list)
 
 
 def _decode(row: sqlite3.Row) -> JobRecord:
@@ -103,7 +279,12 @@ def _decode(row: sqlite3.Row) -> JobRecord:
         heartbeat=row["heartbeat"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+        follow_ups=[FollowUp.from_json(item) for item in json.loads(row["follow_ups_json"] or "[]")],
     )
+
+
+def _encode_follow_ups(follow_ups: Sequence[FollowUp]) -> str:
+    return json.dumps([follow_up.to_json() for follow_up in follow_ups])
 
 
 def _pid_alive(pid: int) -> bool:
@@ -128,6 +309,7 @@ class JobStore:
         self._local = threading.local()
         with self._connect() as db:
             db.executescript(_SCHEMA)
+            _add_missing_columns(db)
 
     @classmethod
     def for_data_dir(cls, data_dir: Path) -> "JobStore":
@@ -148,15 +330,32 @@ class JobStore:
     # Jobs
     # ------------------------------------------------------------------
 
-    def create_job(self, kind: str, dataset: str = "", spec: dict | None = None, plan_id: str = "") -> JobRecord:
+    def create_job(
+        self,
+        kind: str,
+        dataset: str = "",
+        spec: dict | None = None,
+        plan_id: str = "",
+        follow_ups: Sequence[FollowUp] = (),
+    ) -> JobRecord:
         """Insert a pending job and return it."""
         job_id = shortuuid.uuid()
         now = time.time()
         with self._connect() as db:
             db.execute(
-                "INSERT INTO jobs (id, kind, dataset, status, spec_json, plan_id, pid, created_at, updated_at)"
-                " VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?)",
-                (job_id, kind, dataset, json.dumps(spec or {}), plan_id, os.getpid(), now, now),
+                "INSERT INTO jobs (id, kind, dataset, status, spec_json, plan_id, pid, created_at, updated_at,"
+                " follow_ups_json) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)",
+                (
+                    job_id,
+                    kind,
+                    dataset,
+                    json.dumps(spec or {}),
+                    plan_id,
+                    os.getpid(),
+                    now,
+                    now,
+                    _encode_follow_ups(follow_ups),
+                ),
             )
         job = self.get_job(job_id)
         assert job is not None
@@ -190,6 +389,9 @@ class JobStore:
             if name in ("spec", "progress", "cursor", "error"):
                 columns.append(f"{name if name != 'spec' else 'spec'}_json = ?")
                 values.append(json.dumps(value))
+            elif name == "follow_ups":
+                columns.append("follow_ups_json = ?")
+                values.append(_encode_follow_ups(value))
             else:
                 columns.append(f"{name} = ?")
                 values.append(value)
@@ -292,10 +494,18 @@ class _CallbackSink(ProgressSink):
 class JobRunner:
     """Single-worker job executor: one import/export at a time, cooperatively cancellable."""
 
-    def __init__(self, store: JobStore, data_dir: Path):
-        """Bind the runner to a store and data directory."""
+    def __init__(self, store: JobStore, data_dir: Path, follow_up_starter: FollowUpStarter | None = None):
+        """Bind the runner to a store and data directory.
+
+        Args:
+            store: Where the jobs are kept.
+            data_dir: The Pixano data directory imports write into.
+            follow_up_starter: What queues an import's follow-ups once it is done. Without it, they
+                are recorded as not queued.
+        """
         self.store = store
         self.data_dir = Path(data_dir)
+        self._follow_up_starter = follow_up_starter
         self._lock = threading.Lock()
         self._threads: list[threading.Thread] = []
 
@@ -305,6 +515,7 @@ class JobRunner:
         spec_payload: dict[str, Any],
         plan_id: str = "",
         prepare: Callable[[], tuple[str, dict[str, Any]]] | None = None,
+        follow_ups: Sequence[FollowUp] = (),
     ) -> JobRecord:
         """Create a pending import job and start it on the worker thread.
 
@@ -312,12 +523,15 @@ class JobRunner:
         real (source, dataset-extras) pair — heavy source arrangement (e.g.
         the legacy alias's frame extraction) must never run on a request
         thread. A prepare failure marks the job errored.
+
+        ``follow_ups`` are kept with the job and queued once the import is done.
         """
         job = self.store.create_job(
             "import",
             dataset=str(spec_payload.get("dataset", {}).get("name", "")),
             spec={**spec_payload, "__source": source},  # resume needs the source; stripped before validation
             plan_id=plan_id,
+            follow_ups=follow_ups,
         )
 
         def run() -> None:
@@ -412,12 +626,16 @@ class JobRunner:
                     resume_cursor=resume_cursor,
                 )
                 sink.close()
+                # Queued before the job reads done, and recorded with it, so that whoever sees the
+                # import done also sees what became of its follow-ups.
+                follow_ups = queue_import_follow_ups(self.store, job_id, self._follow_up_starter, result.dataset_id)
                 self.store.update_job(
                     job_id,
                     status="done",
                     dataset=result.dataset_id,
                     manifest_path=str(result.manifest_path or ""),
                     progress={"phase": "done", "table_counts": result.table_counts, "final": True},
+                    follow_ups=follow_ups,
                 )
                 self._discard_upload_source(source)
             except PixanoDataError as error:
