@@ -474,13 +474,28 @@ class PixanoInferenceProvider(InferenceProvider):
         input_data: DetectionInput,
         timeout: float = 60.0,
     ) -> DetectionResult:
-        """Detect objects in an image using zero-shot detection."""
+        """Detect objects in an image using zero-shot detection, or by exemplar boxes."""
+        exemplars: dict[str, Any] = {}
+        if input_data.exemplar_boxes:
+            # A request schema ignores fields it does not know, so an older client library would
+            # drop the exemplars and run a text-only detection without saying so.
+            if "exemplar_boxes" not in DetectionRequest.model_fields:
+                raise InferenceRequestError(
+                    400,
+                    "exemplars_unsupported",
+                    "The installed pixano-inference client cannot send exemplar boxes; upgrade pixano-inference.",
+                )
+            exemplars = {
+                "exemplar_boxes": input_data.exemplar_boxes,
+                "negative_exemplar_boxes": input_data.negative_exemplar_boxes or None,
+            }
         request = DetectionRequest(
             model=input_data.model,
             image=_frame_to_str(input_data.image),
             classes=input_data.classes,
             box_threshold=input_data.box_threshold,
             text_threshold=input_data.text_threshold,
+            **exemplars,
         )
         try:
             response = await self._client.detection(request, timeout=timeout)
