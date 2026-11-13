@@ -36,6 +36,25 @@ export const OPERATOR_LABELS: Record<string, string> = {
   between: "between",
 };
 
+/**
+ * Whether a filter being edited can be applied: a column, an operator, a value — two for a range.
+ *
+ * Values are the text the inputs hold; a number input's emptied value may come back as nothing.
+ */
+export function canApplyFilter(
+  col: string,
+  op: string,
+  values: ReadonlyArray<string | number | null | undefined>,
+): boolean {
+  const texts = values.map((value) => (value === null || value === undefined ? "" : String(value)));
+  return (
+    col !== "" &&
+    op !== "" &&
+    texts.some((text) => text.trim() !== "") &&
+    (op !== "between" || texts.every((text) => text.trim() !== ""))
+  );
+}
+
 export function isListOperator(op: string): boolean {
   return LIST_OPERATORS.has(op);
 }

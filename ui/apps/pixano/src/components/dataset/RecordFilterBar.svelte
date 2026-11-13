@@ -18,6 +18,7 @@ License: CECILL-C
     Rows,
     SortAscending,
     SortDescending,
+    Sparkle,
     SquaresFour,
     Warning,
     X,
@@ -31,8 +32,9 @@ License: CECILL-C
     IoJobResponse,
   } from "$lib/api/restTypes";
   import type { SplitStatusCount } from "$lib/types/dataset";
-  import { Select } from "$lib/ui";
-  import { formatColumnLabel } from "$lib/utils/columns";
+  import { ConfirmModal, Select } from "$lib/ui";
+  import { columnLabel, columnLabelOf } from "$lib/utils/columns";
+  import type { EmbeddingsView } from "$lib/utils/embeddingSpaces";
   import {
     isListOperator,
     OPERATOR_LABELS,
@@ -52,9 +54,18 @@ License: CECILL-C
     semanticActive?: boolean;
     /** Record id the current ranked view is "similar to" (find-similar mode). */
     similarTo?: string;
+    /** The dataset's embeddings, those of the model a search reads first. */
+    embeddings: EmbeddingsView;
+    /** Why the default model could not be changed. */
+    spaceError?: string;
+    /** A model is being made the default. */
+    settingDefault?: boolean;
+    /** What the explorer did of a URL it could not follow as it is. */
+    searchNotice?: string;
     computing?: boolean;
     /** Live progress of the embedding-compute job (while `computing`). */
     computeProgress?: IoJobResponse["progress"] | null;
+    /** Why the embeddings were not computed, in a sentence. */
     computeError?: string;
     searchError?: string;
     view?: "grid" | "table";
@@ -62,6 +73,10 @@ License: CECILL-C
     onSortChange?: (sort: string | undefined, order: string | undefined) => void;
     onCompute?: (force?: boolean) => void;
     onClearSimilar?: () => void;
+    /** Search with another model, by its id. */
+    onSelectSpace?: (spaceId: string) => void;
+    /** Make a model, by its id, the one a search naming none reads. */
+    onSetDefaultSpace?: (spaceId: string) => void;
     onViewChange?: (view: "grid" | "table") => void;
   }
 
@@ -75,6 +90,10 @@ License: CECILL-C
     order = "asc",
     semanticActive = false,
     similarTo = "",
+    embeddings,
+    spaceError = "",
+    settingDefault = false,
+    searchNotice = "",
     computing = false,
     computeProgress = null,
     computeError = "",
@@ -84,29 +103,37 @@ License: CECILL-C
     onSortChange,
     onCompute,
     onClearSimilar,
+    onSelectSpace,
+    onSetDefaultSpace,
     onViewChange,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
-  const embeddingsStatus = $derived(filterSchema.search?.status ?? "absent");
-  const embeddingsDetail = $derived(filterSchema.search?.detail ?? "");
-  const embeddingsDegraded = $derived(
-    ["missing_table", "empty", "dim_mismatch", "corrupt"].includes(embeddingsStatus),
+  // The embeddings of the model a search reads.
+  const embeddingsStatus = $derived(embeddings.status);
+  const embeddingsDetail = $derived(embeddings.detail);
+  const embeddingsDegraded = $derived(embeddings.degraded);
+  const embeddedRows = $derived(embeddings.embeddedMedia);
+  const totalMedia = $derived(embeddings.totalMedia);
+  const descriptionReadable = $derived(embeddings.descriptionReadable);
+  // Something to act on: the model searched to repair, or a description read in part.
+  const needsAttention = $derived(embeddingsDegraded || !descriptionReadable);
+  const selectorItems = $derived(
+    embeddings.choices.map((choice) => ({ value: choice.id, label: choice.label })),
   );
-  const embeddedRows = $derived(filterSchema.search?.embedded_rows ?? 0);
-  const totalMedia = $derived(filterSchema.search?.total_media ?? 0);
-  const embeddingModelId = $derived(filterSchema.search?.models?.[0] ?? "");
   // The search bar is semantic-only; exact matching is the filters' job.
-  const searchReady = $derived(embeddingsStatus === "ready" || embeddingsStatus === "partial");
+  const searchReady = $derived(embeddings.searchReady);
   const sortableColumns = $derived(columns.filter((c) => c.sortable));
   const ranked = $derived(semanticActive || similarTo !== "");
   const sortItems = $derived([
     { value: "", label: "Default order" },
-    ...sortableColumns.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) })),
+    ...sortableColumns.map((c) => ({ value: c.name, label: columnLabel(c) })),
   ]);
 
   // Embedding-tools popover (grouped inside the search bar).
   let toolsOpen = $state(false);
+  // Starting again from nothing deletes every model's embeddings: asked first.
+  let confirmingStartAgain = $state(false);
 
   // Active filters, parsed from the URL-sourced tokens.
   const activeFilters = $derived(parseFilters(filters));
@@ -198,10 +225,20 @@ License: CECILL-C
     onCompute?.(force);
   }
 
+  function askToStartAgain() {
+    toolsOpen = false;
+    confirmingStartAgain = true;
+  }
+
+  function startAgain() {
+    confirmingStartAgain = false;
+    onCompute?.(true);
+  }
+
   function chipLabel(filter: RecordFilter): string {
     const op = OPERATOR_LABELS[filter.op] ?? filter.op;
     const value = isListOperator(filter.op) ? filter.values.join(", ") : (filter.values[0] ?? "");
-    return `${formatColumnLabel(filter.col)} ${op} ${value}`;
+    return `${columnLabelOf(columns, filter.col)} ${op} ${value}`;
   }
 
   // ---- Compute progress ----
@@ -217,8 +254,11 @@ License: CECILL-C
   <!-- Row 1 — search, mode, facets, filters · sort, count -->
   <div class="flex items-center justify-between gap-4 flex-wrap">
     <div class="flex items-center gap-3 flex-1 min-w-0 flex-wrap">
-      <!-- Semantic search bar — every embedding tool lives inside it. -->
-      <div class="relative group flex-1 min-w-[240px] max-w-md">
+      <!--
+        Semantic search bar — every embedding tool lives inside it. Wide enough for its placeholder
+        beside the buttons inside it.
+      -->
+      <div class="relative group flex-1 min-w-[280px] max-w-md">
         <MagnifyingGlass
           size={16}
           class="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors {ranked
@@ -260,36 +300,36 @@ License: CECILL-C
               <CircleNotch size={13} class="animate-spin" />
               {computePercent !== null ? `${computePercent}%` : ""}
             </span>
-          {:else if embeddingsDegraded && onCompute}
-            <button
-              type="button"
-              onclick={() => runCompute(true)}
-              title={embeddingsDetail ||
-                "The embedding store is broken; recompute it from scratch."}
-              class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-warning/50 bg-warning/10 text-[11px] font-bold uppercase tracking-wider text-warning hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ArrowsClockwise size={12} />
-              Repair
-            </button>
-          {:else if embeddingsStatus === "absent" && onCompute}
-            <button
-              type="button"
-              onclick={() => runCompute(false)}
-              title="Compute embeddings to enable semantic search"
-              class="inline-flex items-center h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Enable
-            </button>
-          {:else if searchReady && onCompute}
+          {:else if embeddings.rows.length === 0}
+            {#if onCompute}
+              <button
+                type="button"
+                onclick={() => runCompute(false)}
+                title="Compute embeddings to enable semantic search"
+                class="inline-flex items-center h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Enable
+              </button>
+            {/if}
+          {:else}
+            <!-- Every model of the dataset, its health, and what can be done with it. -->
             <Popover.Root bind:open={toolsOpen}>
               <Popover.Trigger
-                aria-label="Embedding options"
-                title="Embedding options"
-                class={embeddingsStatus === "partial"
+                aria-label={needsAttention
+                  ? "Semantic search needs repair: embedding options"
+                  : "Embedding options"}
+                title={needsAttention
+                  ? embeddingsDetail || "Semantic search needs repair"
+                  : "Embedding options"}
+                class={needsAttention || embeddingsStatus === "partial"
                   ? "inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-warning/50 bg-warning/10 text-[11px] font-bold text-warning tabular-nums hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   : "inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"}
               >
-                {#if embeddingsStatus === "partial"}
+                {#if needsAttention}
+                  <Warning size={12} />
+                  <span class="uppercase tracking-wider">Repair</span>
+                  <CaretDown size={10} />
+                {:else if embeddingsStatus === "partial"}
                   {embeddedRows.toLocaleString()}/{totalMedia.toLocaleString()}
                   <CaretDown size={10} />
                 {:else}
@@ -300,47 +340,186 @@ License: CECILL-C
                 <Popover.Content
                   align="end"
                   sideOffset={10}
-                  class="z-50 w-72 rounded-2xl border border-border/50 bg-popover/95 p-3 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
+                  class="z-50 w-80 rounded-2xl border border-border/50 bg-popover/95 p-3 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
                 >
                   <p class="text-label mb-2 text-left">Semantic search</p>
-                  <div class="space-y-1 mb-3 text-left">
-                    {#if embeddingModelId}
-                      <p class="text-xs text-muted-foreground">
-                        Model <span class="font-mono text-foreground">{embeddingModelId}</span>
-                      </p>
-                    {/if}
-                    <p class="text-xs text-muted-foreground tabular-nums">
-                      {embeddedRows.toLocaleString()} of {totalMedia.toLocaleString()} media embedded
+                  <ul class="mb-3 space-y-1.5 text-left">
+                    {#each embeddings.rows as row (row.id)}
+                      <li
+                        aria-current={row.isSearched ? "true" : undefined}
+                        class="rounded-lg border px-2.5 py-1.5 {row.isSearched
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border/50'}"
+                      >
+                        <div class="flex items-center gap-1.5">
+                          <span
+                            class="flex-1 truncate font-mono text-xs text-foreground"
+                            title={row.label}
+                          >
+                            {row.label}
+                          </span>
+                          {#if row.isSearched && embeddings.rows.length > 1}
+                            <span
+                              class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                            >
+                              Searched
+                            </span>
+                          {/if}
+                          {#if row.isDefault}
+                            <span
+                              class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary"
+                            >
+                              Default
+                            </span>
+                          {/if}
+                        </div>
+                        <div
+                          class="flex items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums"
+                        >
+                          <span class={row.broken ? "text-warning" : ""}>{row.health}</span>
+                          <span>
+                            · {row.embeddedMedia.toLocaleString()} of {totalMedia.toLocaleString()} media
+                          </span>
+                          {#if row.canBecomeDefault && onSetDefaultSpace}
+                            <button
+                              type="button"
+                              onclick={() => onSetDefaultSpace(row.id)}
+                              disabled={settingDefault}
+                              aria-label={`Set ${row.label} as default`}
+                              title="Search with this model when none is picked"
+                              class="ml-auto shrink-0 rounded-sm font-medium text-primary hover:underline disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              Set as default
+                            </button>
+                          {/if}
+                        </div>
+                        {#if row.detail}
+                          <p class="mt-0.5 text-[11px] text-warning">{row.detail}</p>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ul>
+                  {#if spaceError}
+                    <p class="mb-3 text-left text-xs text-destructive" role="alert">{spaceError}</p>
+                  {/if}
+                  {#if !descriptionReadable}
+                    <!--
+                      No change of the description is allowed, the job's included, but starting
+                      again from nothing: the only way out the server leaves.
+                    -->
+                    <p class="mb-3 text-left text-xs text-warning">
+                      The description of this dataset's embeddings cannot be read entirely, so no
+                      model can be computed nor made the default. Starting again from nothing
+                      deletes every model's embeddings, then computes one model's again.
                     </p>
-                    {#if embeddingsDetail}
-                      <p class="text-xs text-warning">{embeddingsDetail}</p>
-                    {/if}
-                  </div>
-                  <div class="flex flex-col gap-1.5">
-                    {#if embeddingsStatus === "partial"}
+                    {#if onCompute}
                       <button
                         type="button"
-                        onclick={() => runCompute(false)}
-                        class="h-9 w-full rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onclick={askToStartAgain}
+                        class="h-9 w-full rounded-lg border border-destructive/50 bg-destructive/10 text-xs font-bold uppercase tracking-wider text-destructive hover:bg-destructive/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        Update embeddings
+                        Start again from nothing
                       </button>
                     {/if}
-                    <button
-                      type="button"
-                      onclick={() => runCompute(true)}
-                      title="Drop and rebuild the whole embedding space"
-                      class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      Recompute
-                    </button>
-                  </div>
+                  {:else}
+                    <p class="mb-3 text-left text-xs text-muted-foreground">
+                      These buttons compute the model searched, one image per record.
+                    </p>
+                    {#if onCompute}
+                      <div class="flex flex-col gap-1.5">
+                        {#if embeddingsDegraded}
+                          <button
+                            type="button"
+                            onclick={() => runCompute(true)}
+                            title="Empty this model's embeddings and compute them again"
+                            class="h-9 w-full rounded-lg border border-warning/50 bg-warning/10 text-xs font-bold uppercase tracking-wider text-warning hover:bg-warning/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Repair
+                          </button>
+                        {:else}
+                          {#if embeddingsStatus === "partial"}
+                            <button
+                              type="button"
+                              onclick={() => runCompute(false)}
+                              class="h-9 w-full rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              Update embeddings
+                            </button>
+                          {/if}
+                          <button
+                            type="button"
+                            onclick={() => runCompute(true)}
+                            title="Compute this model's embeddings again from nothing"
+                            class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            Recompute
+                          </button>
+                        {/if}
+                      </div>
+                    {/if}
+                  {/if}
                 </Popover.Content>
               </Popover.Portal>
             </Popover.Root>
           {/if}
         </div>
       </div>
+
+      {#if selectorItems.length > 0 && onSelectSpace}
+        <!-- The model a search reads, and More like this: the URL keeps the choice. -->
+        <Select.Root
+          type="single"
+          value={embeddings.searchedId}
+          items={selectorItems}
+          disabled={computing}
+          onValueChange={(value) => value && onSelectSpace(value)}
+        >
+          <Select.Trigger
+            aria-label={`Embeddings model: ${embeddings.searchedLabel}`}
+            title={embeddings.searchedLabel}
+            class="inline-flex h-10 items-center gap-2 px-3.5 rounded-xl border border-border bg-background text-xs font-bold text-muted-foreground hover:text-foreground shadow-sm transition-colors shrink-0 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {#snippet children()}
+              <Sparkle size={14} />
+              <span class="max-w-[160px] truncate font-mono">{embeddings.searchedLabel}</span>
+              <CaretDown size={12} />
+            {/snippet}
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content
+              sideOffset={8}
+              class="z-50 min-w-[14rem] max-h-72 overflow-y-auto rounded-2xl border border-border/50 bg-popover/95 p-1.5 text-popover-foreground shadow-elevation-2 backdrop-blur-md"
+            >
+              {#each embeddings.choices as choice (choice.id)}
+                <Select.Item
+                  value={choice.id}
+                  label={choice.label}
+                  class="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm outline-none transition-colors data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground {embeddings.searchedId ===
+                  choice.id
+                    ? 'font-semibold text-primary'
+                    : ''}"
+                >
+                  <span class="flex-1 truncate font-mono" title={choice.label}>{choice.label}</span>
+                  {#if !choice.searchable}
+                    <span
+                      class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-warning"
+                    >
+                      {choice.health}
+                    </span>
+                  {/if}
+                  {#if choice.isDefault}
+                    <span
+                      class="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                    >
+                      Default
+                    </span>
+                  {/if}
+                </Select.Item>
+              {/each}
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
+      {/if}
 
       {#if splitFacet.length > 0}
         <FacetSelect
@@ -425,7 +604,7 @@ License: CECILL-C
               {#snippet children()}
                 <ArrowsDownUp size={14} />
                 <span class="max-w-[120px] truncate">
-                  {sort ? formatColumnLabel(sort) : "Sort"}
+                  {sort ? columnLabelOf(columns, sort) : "Sort"}
                 </span>
               {/snippet}
             </Select.Trigger>
@@ -565,7 +744,11 @@ License: CECILL-C
   {/if}
 
   {#if computeError}
-    <p class="text-xs text-destructive">Embedding computation failed: {computeError}</p>
+    <p class="text-xs text-destructive" role="alert">{computeError}</p>
+  {/if}
+
+  {#if searchNotice}
+    <p class="text-xs text-warning">{searchNotice}</p>
   {/if}
 
   {#if searchError && !searchErrorDismissed}
@@ -598,3 +781,13 @@ License: CECILL-C
     {/key}
   {/if}
 </div>
+
+{#if confirmingStartAgain}
+  <ConfirmModal
+    message="Delete every model's embeddings?"
+    details="The description of this dataset's embeddings cannot be read entirely. Starting again from nothing deletes the embeddings of every model it holds, then computes the embeddings of the model searched — or of the first model the inference serves. This cannot be undone."
+    confirm="Delete and compute again"
+    onCancel={() => (confirmingStartAgain = false)}
+    onConfirm={startAgain}
+  />
+{/if}

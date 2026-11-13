@@ -178,3 +178,48 @@ describe("toDatasetBrowser card_data", () => {
     expect(browser.card_data?.[0].attrs).toEqual({});
   });
 });
+
+describe("toDatasetBrowser statistics", () => {
+  it("gives each statistic the dataset computed a column, named as the explorer names it", () => {
+    const browser = toDatasetBrowser(
+      "ds",
+      paginated([
+        {
+          id: "a",
+          computed_values: {
+            "record_statistics.bbox_count": 3,
+            "record_statistics.bbox_area_mean_px": 10.5,
+          },
+        },
+        {
+          id: "b",
+          computed_values: {
+            "record_statistics.bbox_count": 0,
+            "record_statistics.bbox_area_mean_px": null,
+          },
+        },
+      ]),
+    );
+
+    expect(
+      browser.table_data.rows.map((row) => row["record_statistics.bbox_area_mean_px"]),
+    ).toEqual([10.5, ""]);
+    expect(columnType(browser, "record_statistics.bbox_count")).toBe("statistic");
+    expect(columnType(browser, "computed_values")).toBeUndefined();
+    expect(browser.card_data?.[0].attrs).not.toHaveProperty("computed_values");
+  });
+});
+
+describe("toDatasetBrowser without statistics", () => {
+  it("shows no statistic column for a page whose records carry none", () => {
+    const browser = toDatasetBrowser(
+      "ds",
+      paginated([{ id: "a", computed_values: null }, { id: "b" }]),
+    );
+
+    expect(browser.table_data.columns.map((column) => column.name)).not.toContain(
+      "computed_values",
+    );
+    expect(browser.table_data.columns.some((column) => column.type === "statistic")).toBe(false);
+  });
+});

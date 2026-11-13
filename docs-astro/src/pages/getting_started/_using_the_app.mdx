@@ -14,7 +14,7 @@ A tour of the three screens you work in: the **Library**, the **Explorer**, and 
 <Callout type="info" title="What you'll learn">
 
 - How to find a dataset in the Library and flag the ones you care about
-- How to filter, sort and browse records in the Explorer
+- How to filter, sort and browse records in the Explorer, on their statistics too
 - How the annotation Workspace is laid out, and how to create an entity
 - Every keyboard shortcut
 
@@ -79,6 +79,22 @@ Toggle between **gallery** and **table**:
 
 Both views let you choose how many records to show per page. Clicking a record opens it in the
 Workspace.
+
+### Statistics
+
+A statistic is a value computed from the dataset's annotations, for each record — how many
+objects, boxes and masks it holds — or for each object — the share of its image its box covers.
+Once a dataset is imported, a job computes them in the background, where `pixano-worker` runs it
+— unless the box asking for it was unchecked in the import form.
+
+Once the job is done, each statistic per record is a column of the table, named by its label, to
+sort and filter the records on like any other — the next page you open brings the new columns in.
+The gallery sorts and filters on them too, without showing their values. A record without a value
+— one imported since the job ran — shows a dash, and comes last in a sort whichever the
+direction.
+
+Statistics per object are computed and kept, not shown yet. No export carries statistics: they
+are computed again on another dataset.
 
 ## Workspace
 
