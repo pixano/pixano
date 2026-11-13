@@ -165,16 +165,42 @@ dataset. A mode of the embeddings job that skips the media a model's table alrea
 holds would make the recomputation cost what the import added; skipping a model whose
 job is still pending would remove the duplicates.
 
+## The overview reads whole tables at each request
+
+**Status:** open (an accepted cost of the first version; not measured at scale).
+
+A dataset's overview (`GET /datasets/{id}/overview`, backend-processing §22.7) reads, at
+each request, the records' columns it counts, every image's size and every object's class
+from their tables, and the statistics tables, then DuckDB counts them. A filter added from
+a card reads them all again. It answers at once on the VOC sample (60 records, 225
+objects); a dataset of a million records and ten million objects was not tried.
+
+Options, once a dataset shows the cost:
+
+- **Cache a reading** per dataset and table version, the filters applied on it: the tables
+  change only when a job or a person writes them.
+- **Count in the statistics job** what the overview reads from the tables as they are —
+  an image's size per record, the classes of a record's objects — so that a request reads
+  the statistics tables alone.
+
 ## The overview and its default statistics: choices made while implementing
 
-**Status:** decided, but for one point that stands for now. The user answered on 2026-11-13;
-each point below says whether it is decided, standing for now, or changed.
+**Status:** partly open. The user answered on 2026-11-13; each point below says whether it is
+decided, open, standing for now, or changed.
 
 The overview of statistics v1 (backend-processing §22.7) follows the plan validated on
 2026-11-09 — as close as can be to Know Your Data, default statistics computed after each
 import, nothing read from the pixels. These points were chosen while implementing it,
 without being asked:
 
+- **Decided.** **The overview follows the explorer's filters**, the free text and a raw
+  clause included, and a card of a column filtered counts what the other filters keep (Know
+  Your Data's way). A semantic search's text is ignored: the overview counts every record
+  the filters keep, unranked.
+- **Open, to think about.** **A card per image or per object filters nothing**: the
+  explorer's filters are on the records, and "the records holding an image of 640 pixels" or
+  "an object of that class" are no column of theirs. The cards of the records' own fields
+  and statistics filter.
 - **Changed.** **The default statistics are queued by default after every import**, where a
   worker declared the statistics job (`PIXANO_STATISTICS_AFTER_IMPORT=true`); the request
   (`compute_statistics`) and the command line (`--statistics`, `--no-statistics`) can say
@@ -188,6 +214,8 @@ without being asked:
 - **Decided.** **A dataset with nothing to count needs no job, which is not a refusal**: the
   import says the statistics were not needed (`FollowUp.skipped`), in the tray's plain
   color.
+- **Decided.** **The base `comment` field has no card**, like the identifier and the
+  timestamps: it is an annotator's note on a record, not data.
 - **Decided.** **An add import's rollback is refused once the statistics job has run**, as
   it already was once the embeddings job had: the statistics job writes its tables and
   `info.json`, the embeddings job its tables and `embeddings.json`, which the rollback refuses
