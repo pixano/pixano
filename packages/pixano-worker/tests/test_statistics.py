@@ -203,7 +203,10 @@ class TestRerun:
         _run(library, [DOG_COUNT], job_id="job-2")
 
         rows = _rows(library, "record_statistics")
-        assert (rows["r1"]["bbox_count"], rows["r1"]["entity_count_category_dog"]) == (3, 1)
+        assert {record: (row["bbox_count"], row["entity_count_category_dog"]) for record, row in rows.items()} == {
+            "r1": (3, 1),
+            "r2": (0, 0),
+        }
         dataset = Dataset.find(DATASET_ID, library)
         assert [(computed.definition.name, computed.job_id) for computed in dataset.info.statistics] == [
             ("bbox_count", "job-1"),
