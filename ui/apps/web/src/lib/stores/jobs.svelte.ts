@@ -289,6 +289,16 @@ export function recordOf(item: QuarantinedItem): string | null {
   return typeof recordId === "string" && recordId ? recordId : null;
 }
 
+/**
+ * The jobs a panel opened on a dataset lists: that dataset's own, among the library's most recent
+ * the store keeps — every dataset's. A row names only its job's kind: another dataset's job read as
+ * this one's, its progress counting another dataset's records, and its Cancel stopped another
+ * dataset's work. Without a dataset, every job.
+ */
+export function jobsOfDataset(jobs: readonly Job[], datasetId: string | null): Job[] {
+  return datasetId === null ? [...jobs] : jobs.filter((job) => job.dataset === datasetId);
+}
+
 /** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */
 export function canCancel(job: Job): boolean {
   return !isTerminal(job.state) && !job.cancel_requested;

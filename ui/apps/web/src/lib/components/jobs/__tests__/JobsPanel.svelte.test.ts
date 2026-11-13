@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import JobsPanel from "../JobsPanel.svelte";
 import { ApiError } from "$lib/api/apiClient";
+import type { Job } from "$lib/api/jobs";
 import { jobsStore } from "$lib/stores/jobs.svelte";
 
 /** A stream that stays silent: these tests are about what the panel shows before any event. */
@@ -37,6 +38,25 @@ const NO_QUEUE_REASON =
   "no job queue is configured — set PIXANO_DATABASE_URL and start pixano-worker";
 const DATASET = { id: "ds", name: "Dataset" };
 const EMBEDDINGS_KIND = { name: "embeddings", params_schema: { type: "object", properties: {} } };
+
+function finishedJob(overrides: Partial<Job>): Job {
+  return {
+    id: "j1",
+    kind: "embeddings",
+    dataset: DATASET.id,
+    state: "done",
+    total_tasks: 10,
+    done_tasks: 10,
+    produced: 10,
+    skipped: 0,
+    quarantined: 0,
+    cancel_requested: false,
+    error: null,
+    created_at: "2026-01-01T00:00:00Z",
+    finalizing: false,
+    ...overrides,
+  };
+}
 
 /** What the jobs endpoints answer on an installation without a job queue. */
 function queueUnavailable(): ApiError {
@@ -87,5 +107,31 @@ describe("JobsPanel on an installation without a job queue", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Run" })).toBeTruthy());
     expect(screen.queryByText(NOTICE_TITLE)).toBeNull();
+  });
+});
+
+describe("JobsPanel opened on a dataset", () => {
+  // Kinds the form does not offer, so that their names on screen can only come from the list.
+  const OURS = finishedJob({ id: "ours", kind: "detection" });
+  const THEIRS = finishedJob({ id: "theirs", kind: "ner", dataset: "other" });
+
+  beforeEach(() => {
+    api.listJobKinds.mockResolvedValue([EMBEDDINGS_KIND]);
+  });
+
+  it("lists that dataset's jobs, not another dataset's", async () => {
+    api.listJobs.mockResolvedValue([THEIRS, OURS]);
+    render(JobsPanel, { props: { dataset: DATASET } });
+
+    await waitFor(() => expect(screen.getByText("detection")).toBeTruthy());
+    expect(screen.queryByText("ner")).toBeNull();
+  });
+
+  it("says when none of the recent jobs ran on it, whatever ran elsewhere", async () => {
+    api.listJobs.mockResolvedValue([THEIRS]);
+    render(JobsPanel, { props: { dataset: DATASET } });
+
+    await waitFor(() => expect(screen.getByText("No recent job on this dataset.")).toBeTruthy());
+    expect(screen.queryByText("ner")).toBeNull();
   });
 });

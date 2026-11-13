@@ -15,6 +15,7 @@ License: CECILL-C
   import {
     canCancel,
     failureOf,
+    jobsOfDataset,
     jobsStore,
     outcomeOf,
     stateLabelOf,
@@ -22,6 +23,8 @@ License: CECILL-C
 
   type Props = { dataset: JobTarget | null };
   let { dataset }: Props = $props();
+
+  const shownJobs = $derived(jobsOfDataset(jobsStore.jobs, dataset?.id ?? null));
 
   onMount(() => {
     void jobsStore.start();
@@ -73,11 +76,13 @@ License: CECILL-C
     <div class="min-h-0 flex-1 overflow-y-auto">
       {#if jobsStore.loading}
         <p class="p-3 text-xs text-muted-foreground">Loading…</p>
-      {:else if jobsStore.jobs.length === 0}
-        <p class="p-3 text-xs text-muted-foreground">No job has been run yet.</p>
+      {:else if shownJobs.length === 0}
+        <p class="p-3 text-xs text-muted-foreground">
+          {dataset ? "No recent job on this dataset." : "No job has been run yet."}
+        </p>
       {:else}
         <ul class="flex flex-col">
-          {#each jobsStore.jobs as job (job.id)}
+          {#each shownJobs as job (job.id)}
             <li class="flex flex-col gap-2 border-b border-border p-3">
               <div class="flex items-baseline justify-between gap-2">
                 <span class="truncate text-sm font-medium">{job.kind}</span>
