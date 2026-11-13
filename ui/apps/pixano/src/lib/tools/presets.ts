@@ -28,6 +28,16 @@ export const rectangleTool: SelectionTool = {
   isSmart: false,
 };
 
+/** Boxes drawn as detection examples: each saved as soon as drawn, with the detection panel's class. */
+export const detectionExampleTool: SelectionTool = {
+  name: "Box detection examples",
+  type: ToolType.Rectangle,
+  cursor: "crosshair",
+  isSmart: false,
+  autoConfirm: true,
+  keepsAnnotationsVisible: true,
+};
+
 export const interactiveSegmenterTool: InteractiveSegmenterSelectionTool = {
   name: "Interactive smart segmentation",
   type: ToolType.InteractiveSegmenter,

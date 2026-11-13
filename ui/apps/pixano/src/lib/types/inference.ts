@@ -75,6 +75,10 @@ export interface InferenceModelInterface {
   class_names?: string[] | null;
   thresholds?: string[];
   outputs?: string[];
+  /** A detection model that reads `exemplar_boxes` ("more like these"). */
+  exemplars?: boolean;
+  /** A detection model that also reads `negative_exemplar_boxes`. */
+  negative_exemplars?: boolean;
   [key: string]: unknown;
 }
 
@@ -102,6 +106,51 @@ export function supportsPromptedTracking(model: InferenceModel): boolean {
 export function supportsTrackingByDetection(model: InferenceModel): boolean {
   if (model.task !== VideoTask.TRACKING) return false;
   return model.interface?.prompt_free === true;
+}
+
+/** A model that detects objects in an image, by class names (and, see below, by exemplars). */
+export function supportsDetection(model: InferenceModel): boolean {
+  return model.task === ImageTask.DETECTION;
+}
+
+/**
+ * A detection model that finds more objects like boxed ones. Only a model whose interface says so
+ * qualifies: any other ignores exemplar boxes without saying so.
+ */
+export function supportsExemplars(model: InferenceModel | null | undefined): boolean {
+  return !!model && supportsDetection(model) && model.interface?.exemplars === true;
+}
+
+/** A detection model that also takes boxes around look-alikes not to find. */
+export function supportsNegativeExemplars(model: InferenceModel | null | undefined): boolean {
+  return supportsExemplars(model) && model?.interface?.negative_exemplars === true;
+}
+
+/** `POST /inference/detection`, on the image of a dataset view. Boxes are pixel `[x1, y1, x2, y2]`. */
+export interface DetectionTaskInput {
+  model: string;
+  provider_name?: string | null;
+  dataset_id: string;
+  view_id: string;
+  classes?: string[] | null;
+  box_threshold?: number;
+  exemplar_boxes?: number[][] | null;
+  negative_exemplar_boxes?: number[][] | null;
+}
+
+export interface DetectionTaskOutput {
+  boxes: number[][];
+  scores: number[];
+  classes: string[];
+}
+
+export interface DetectionTaskResult {
+  data: DetectionTaskOutput;
+  timestamp?: string;
+  processing_time?: number;
+  metadata?: Record<string, unknown>;
+  id?: string;
+  status?: string;
 }
 
 export type InferenceLoadStatus = "idle" | "loading" | "loaded" | "error";

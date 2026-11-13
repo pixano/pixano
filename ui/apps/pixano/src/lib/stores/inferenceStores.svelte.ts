@@ -17,6 +17,7 @@ import {
   ImageTask,
   isSameInferenceModel,
   MultimodalImageNLPTask,
+  supportsDetection,
   supportsPromptedTracking,
   supportsTrackingByDetection,
   type InferenceModel,
@@ -37,6 +38,7 @@ export const inferenceServerStore = reactiveStore<InferenceServerState>({
 const STATIC_SEGMENTATION_MODEL_STORAGE_KEY = "pixano-static-segmentation-model";
 const VIDEO_SEGMENTATION_MODEL_STORAGE_KEY = "pixano-video-segmentation-model";
 const TRACKING_BY_DETECTION_MODEL_STORAGE_KEY = "pixano-tracking-by-detection-model";
+const DETECTION_MODEL_STORAGE_KEY = "pixano-detection-model";
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
@@ -128,6 +130,12 @@ export const trackingByDetectionModels = {
   },
 };
 
+export const detectionModels = {
+  get value() {
+    return inferenceServerStore.value.models.filter(supportsDetection);
+  },
+};
+
 export const vqaModels = {
   get value() {
     return inferenceServerStore.value.models.filter((m) => m.task === MultimodalImageNLPTask.VLM);
@@ -144,6 +152,10 @@ export const selectedVqaModel = reactiveStore<InferenceModelSelection | null>(nu
 // Its own store: changing `selectedVideoSegmentationModel` resets the VOS session.
 export const selectedTrackingByDetectionModel = reactiveStore<InferenceModelSelection | null>(
   readStoredSelection(TRACKING_BY_DETECTION_MODEL_STORAGE_KEY),
+);
+
+export const selectedDetectionModel = reactiveStore<InferenceModelSelection | null>(
+  readStoredSelection(DETECTION_MODEL_STORAGE_KEY),
 );
 
 export const currentSegmentationModels = {
@@ -205,6 +217,19 @@ $effect.root(() => {
       return;
     }
     writeStoredSelection(TRACKING_BY_DETECTION_MODEL_STORAGE_KEY, nextSelection);
+  });
+});
+
+$effect.root(() => {
+  $effect(() => {
+    const availableModels = detectionModels.value;
+    const currentSelection = selectedDetectionModel.value;
+    const nextSelection = reconcileSegmentationSelection(availableModels, currentSelection);
+    if (!hasSameSelection(currentSelection, nextSelection)) {
+      selectedDetectionModel.value = nextSelection;
+      return;
+    }
+    writeStoredSelection(DETECTION_MODEL_STORAGE_KEY, nextSelection);
   });
 });
 

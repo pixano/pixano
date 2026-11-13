@@ -39,6 +39,7 @@ export { ToolType } from "$lib/types/tools";
 export {
   brushDrawTool,
   brushEraseTool,
+  detectionExampleTool,
   fusionTool,
   interactiveSegmenterTool,
   vosTool,
