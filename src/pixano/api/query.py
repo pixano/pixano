@@ -292,9 +292,14 @@ def _computed_column(descriptor: ColumnDescriptor) -> str:
     return descriptor.name.removeprefix(STATISTICS_COLUMN_PREFIX)
 
 
+def _is_computed(descriptor: ColumnDescriptor) -> bool:
+    """Whether a column was computed from the records, in a table of its own: a statistic's."""
+    return descriptor.table == RECORD_STATISTICS_TABLE
+
+
 def _sql_column(descriptor: ColumnDescriptor) -> str:
     """How a condition names the column: a record's as is, a computed one as the join reads it."""
-    if descriptor.table == RECORD_STATISTICS_TABLE:
+    if _is_computed(descriptor):
         return computed_sql_column(_computed_column(descriptor))
     return descriptor.name
 
@@ -324,8 +329,14 @@ def _unescape_list(raw: str) -> list[str]:
     return items
 
 
-def _coerce_scalar(value: str, col_type: str, column: str) -> str:
-    """Coerce a raw string value to a SQL literal for a scalar column."""
+def _coerce_scalar(value: str, col_type: str, column: str, through_duckdb: bool = False) -> str:
+    """Coerce a raw string value to a SQL literal for a scalar column.
+
+    A condition on a computed column is read by DuckDB (`through_duckdb`), which reads a number
+    written with a decimal point as a DECIMAL: turned into a double, one of seventeen digits can miss
+    the double it was written from by its last bit — a filter on a bar's start would then leave out
+    the very value the bar starts at. Written as text, the number is read back exactly.
+    """
     if len(value) > MAX_VALUE_LENGTH:
         raise FilterCompileError(f"Value for '{column}' exceeds {MAX_VALUE_LENGTH} characters.")
     if col_type == "str":
@@ -346,7 +357,7 @@ def _coerce_scalar(value: str, col_type: str, column: str) -> str:
         # SQL has no literal for these: `nan` would be read as the name of a column.
         if not math.isfinite(decimal):
             raise FilterCompileError(f"'{value}' is not a finite number for column '{column}'.")
-        return repr(decimal)
+        return f"CAST({quote_sql_string(repr(decimal))} AS DOUBLE)" if through_duckdb else repr(decimal)
     if col_type == "bool":
         lowered = value.strip().lower()
         if lowered in {"true", "1"}:
@@ -405,6 +416,7 @@ def _compile_datetime_clause(column: str, op: str, raw: str) -> str:
 def _compile_clause(descriptor: ColumnDescriptor, op: str, raw: str) -> str:
     # The SQL names the column as the query reading it does; a message names it as the catalogue does.
     column, name, col_type = _sql_column(descriptor), descriptor.name, descriptor.type
+    through_duckdb = _is_computed(descriptor)
 
     if col_type == "datetime":
         return _compile_datetime_clause(column, op, raw)
@@ -413,7 +425,7 @@ def _compile_clause(descriptor: ColumnDescriptor, op: str, raw: str) -> str:
         values = [v for v in _unescape_list(raw) if v != ""]
         if not values:
             raise FilterCompileError(f"'{op}' on '{name}' needs at least one value.")
-        literals = ", ".join(_coerce_scalar(v, col_type, name) for v in values)
+        literals = ", ".join(_coerce_scalar(v, col_type, name, through_duckdb) for v in values)
         keyword = "IN" if op == "in" else "NOT IN"
         return f"{column} {keyword} ({literals})"
 
@@ -425,7 +437,7 @@ def _compile_clause(descriptor: ColumnDescriptor, op: str, raw: str) -> str:
         pattern = quote_sql_string(f"%{_escape_like(raw)}%")
         return f"{column} LIKE {pattern} ESCAPE '\\'"
 
-    literal = _coerce_scalar(raw, col_type, name)
+    literal = _coerce_scalar(raw, col_type, name, through_duckdb)
     sql_op = {"eq": "=", "ne": "!=", "lt": "<", "lte": "<=", "gt": ">", "gte": ">="}[op]
     return f"{column} {sql_op} {literal}"
 

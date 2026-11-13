@@ -6,6 +6,7 @@
 
 """Unit tests for the pure explorer filter/sort compiler (`pixano.api.query`)."""
 
+import duckdb
 import pytest
 
 from pixano.api.query import (
@@ -251,9 +252,31 @@ class TestStatistics:
         )
 
         assert compiled == ComputedFilter(
-            sql='c."bbox_count" >= 2 AND c."bbox_area_mean_px" < 10.5 AND c."bbox_count" NOT IN (3, 4)',
+            sql=(
+                'c."bbox_count" >= 2 AND c."bbox_area_mean_px" < CAST(\'10.5\' AS DOUBLE) '
+                'AND c."bbox_count" NOT IN (3, 4)'
+            ),
             columns=("bbox_count", "bbox_area_mean_px"),
         )
+
+    def test_a_number_of_seventeen_digits_is_read_by_the_join_as_the_double_it_was_written_from(self):
+        """DuckDB reads a number with a decimal point as a DECIMAL, which can miss it by its last bit."""
+        share = 0.17151709517771863
+        compiled = compile_computed_filters(
+            STATISTICS_CATALOGUE, [f"record_statistics.bbox_area_mean_px:gte:{share!r}"]
+        )
+        assert compiled is not None
+
+        with duckdb.connect() as connection:
+            connection.execute("CREATE TABLE c AS SELECT ?::DOUBLE AS bbox_area_mean_px", [share])
+            kept = connection.execute(f"SELECT count(*) FROM c WHERE {compiled.sql}").fetchone()
+
+        assert kept == (1,)
+
+    def test_a_number_on_the_records_own_columns_stays_a_plain_literal_for_lancedb(self):
+        where, _referenced, _servable = compile_filters(STATISTICS_CATALOGUE, ["score:gte:0.5"])
+
+        assert where == "score >= 0.5"
 
     def test_no_filter_on_statistics(self):
         assert compile_computed_filters(STATISTICS_CATALOGUE, []) is None
