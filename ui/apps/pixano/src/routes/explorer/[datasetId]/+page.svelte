@@ -62,6 +62,9 @@ License: CECILL-C
     similarTo={data.semantic?.similarTo ?? ""}
     model={data.semantic?.model ?? ""}
     searchNotice={data.searchNotice ?? ""}
+    overview={data.overview ?? null}
+    overviewError={data.overviewError ?? ""}
+    bySplit={data.bySplit ?? false}
     searchError={data.searchError ?? ""}
     view={data.view ?? "table"}
     onSelectItem={handleSelectItem}

@@ -40,9 +40,10 @@ export const getReviewRoute = (datasetId: string, itemId: string): string =>
 /**
  * Query-param keys that describe the explorer's active result set and its
  * presentation (filter, sort, search, page size, the embeddings model a search
- * reads). `page` is intentionally excluded — an item's page is derived from its
- * position within the filtered set (`getPageFromPosition`), not carried around;
- * `size` IS carried so that derivation matches the explorer's pagination.
+ * reads, whether the overview compares the splits). `page` is intentionally
+ * excluded — an item's page is derived from its position within the filtered
+ * set (`getPageFromPosition`), not carried around; `size` IS carried so that
+ * derivation matches the explorer's pagination.
  */
 export const EXPLORER_QUERY_KEYS = [
   "filter",
@@ -53,6 +54,7 @@ export const EXPLORER_QUERY_KEYS = [
   "size",
   "view",
   "model",
+  "by_split",
 ] as const;
 
 /** Keep only the result-set-defining params (filter/sort/search) from a set. */

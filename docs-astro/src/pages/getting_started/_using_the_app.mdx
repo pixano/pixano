@@ -14,7 +14,8 @@ A tour of the three screens you work in: the **Library**, the **Explorer**, and 
 <Callout type="info" title="What you'll learn">
 
 - How to find a dataset in the Library and flag the ones you care about
-- How to filter, sort and browse records in the Explorer, on their statistics too
+- How to filter, sort and browse records in the Explorer, on their statistics too, and how they
+  spread in its Overview
 - How the annotation Workspace is laid out, and how to create an entity
 - Every keyboard shortcut
 
@@ -70,19 +71,54 @@ Use **Clear all** to drop every filter at once.
 
 ### Views
 
-Toggle between **gallery** and **table**:
+Toggle between **gallery**, **table** and **overview**:
 
 - **Gallery** shows one card per record, built from whatever previews it carries — a single
   image, a multi-view mosaic, a video frame, or a text excerpt.
 - **Table** shows one row per record. The **column settings** popover lets you show, hide and
   reorder columns.
+- **Overview** shows how the records spread — see [Overview](#overview).
 
-Both views let you choose how many records to show per page. Clicking a record opens it in the
-Workspace.
+The gallery and the table let you choose how many records to show per page. Clicking a record
+opens it in the Workspace.
 
 When a model's annotations wait for review on an image dataset, **Review** shows how many
 records hold some, and opens the first of them in review — see
 [Reviewing what a model proposed](#reviewing-what-a-model-proposed).
+
+### Overview
+
+The **overview** shows a dataset at a glance, as [Know Your Data](https://knowyourdata.withgoogle.com/)
+does: a card per thing measured, each a histogram of its numbers or the count of each value.
+
+- **Records** — the split, the status and the dataset's own fields.
+- **Media** — the width, height, aspect ratio and format of the images, read from their
+  metadata, and how many images each record holds. A video dataset has no media card.
+- **Annotations** — how many objects, boxes and masks each record holds, how many objects of
+  each class, the share of its image each object's boxes cover, and every other statistic the
+  dataset computed. A statistic's card says when it was computed: annotations edited since are
+  not in it until it is computed again.
+
+The overview counts the records the filters keep. Click a bar of a card of the records' own values
+— a field, or a statistic per record — and it becomes a filter, one chip for a value, two for a
+range: every other card, and the records' list, show the records left. The card you clicked keeps
+all its bars, counted over what the other filters keep, the bars its filter keeps standing out;
+click another bar to keep that one instead, the same bar again or **Clear** to keep them all. Each
+card's **Values** lists its bars or values — with a **Keep only** button on each where the card
+filters, for the keyboard. A card counted per image or per object filters nothing.
+
+With records in more than one split, **Compare splits** draws each split as the share of its own
+values each bar holds, so that splits of any size compare, each split in the same color on every
+card, and outlines the bars where two splits differ by ten points or more, or a value one split
+holds and another none — the card's **Values** says which: a class missing from the validation
+split shows at once.
+
+The counts per record and the share of its image each object's boxes cover are statistics: once a
+dataset is imported, a job computes them in the background, where `pixano-worker` runs it — unless
+the box asking for it was unchecked in the import form. Until then, the overview says which are not
+computed yet and, where the job can run, offers **Read again** to bring their cards in once it is
+done. This interface does not start the job yet: a dataset imported without it keeps them
+uncomputed. Nothing is read from the pixels: brightness or sharpness are not computed.
 
 ### Statistics
 
@@ -97,8 +133,8 @@ The gallery sorts and filters on them too, without showing their values. A recor
 — one imported since the job ran — shows a dash, and comes last in a sort whichever the
 direction.
 
-Statistics per object are computed and kept, not shown yet. No export carries statistics: they
-are computed again on another dataset.
+Statistics per object are not columns of the table, which lists records: the overview shows them.
+No export carries statistics: they are computed again on another dataset.
 
 ## Workspace
 
