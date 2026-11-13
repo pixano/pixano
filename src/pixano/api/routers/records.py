@@ -15,14 +15,14 @@ from pixano.api.query import (
     FilterCompileError,
     build_column_catalogue,
     compile_record_query,
-    statistic_columns_by_name,
+    computed_columns_by_name,
 )
 from pixano.api.record_reads import read_page
 from pixano.api.resources import RECORD_RESOURCE
 from pixano.api.routers._deps import PaginationParams, RecordQueryParams, get_dataset_dep
 from pixano.api.service import BaseService
 from pixano.datasets import Dataset, TableQueryBuilder
-from pixano.datasets.queries.record_statistics import statistic_values
+from pixano.datasets.queries.computed_columns import computed_values
 from pixano.datasets.utils import DatasetAccessError
 from pixano.utils.python import to_sql_list
 
@@ -221,15 +221,15 @@ def list_records(
     )
     # Each statistic the dataset computed per record, named as the catalogue names it; a record no
     # value was computed for shows none.
-    statistic_columns = statistic_columns_by_name(catalogue)
-    values = statistic_values(dataset, record_ids, list(statistic_columns.values()))
+    computed_columns = computed_columns_by_name(catalogue)
+    values = computed_values(dataset, record_ids, list(computed_columns.values()))
 
     items = []
     for record in records_page.items:
         item: dict[str, Any] = {**record.model_dump(), "view_previews": previews_by_record.get(record.id) or None}
-        if statistic_columns:
+        if computed_columns:
             held = values.get(record.id, {})
-            item["statistic_values"] = {name: held.get(column) for name, column in statistic_columns.items()}
+            item["computed_values"] = {name: held.get(column) for name, column in computed_columns.items()}
         items.append(RecordListResponse.model_validate(item))
     return PaginatedResponse(
         items=items, total=records_page.total, limit=records_page.limit, offset=records_page.offset

@@ -13,14 +13,14 @@ from pixano.api.query import (
     STATISTICS_COLUMN_PREFIX,
     ColumnDescriptor,
     FilterCompileError,
+    compile_computed_filters,
     compile_filters,
     compile_record_query,
-    compile_statistics_filters,
+    computed_columns_by_name,
     split_filters,
-    statistic_columns_by_name,
     validate_sort,
 )
-from pixano.datasets.queries.record_statistics import RECORD_STATISTICS_TABLE, RecordOrder, StatisticsFilter
+from pixano.datasets.queries.computed_columns import RECORD_STATISTICS_TABLE, ComputedFilter, RecordOrder
 
 
 def _col(name: str, type_: str, *, source: str = "base", searchable: bool = False, indexed: bool = False):
@@ -223,15 +223,15 @@ STATISTICS_CATALOGUE = [*CATALOGUE, _statistic("bbox_count", "int"), _statistic(
 
 class TestStatistics:
     def test_the_filters_on_statistics_are_told_apart(self):
-        own, on_statistics = split_filters(
+        own, on_computed = split_filters(
             ["split:eq:train", "record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
         )
 
         assert own == ["split:eq:train"]
-        assert on_statistics == ["record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
+        assert on_computed == ["record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
 
     def test_a_filter_on_statistics_reads_their_columns_as_the_join_does(self):
-        compiled = compile_statistics_filters(
+        compiled = compile_computed_filters(
             STATISTICS_CATALOGUE,
             [
                 "record_statistics.bbox_count:gte:2",
@@ -240,13 +240,13 @@ class TestStatistics:
             ],
         )
 
-        assert compiled == StatisticsFilter(
-            sql='s."bbox_count" >= 2 AND s."bbox_area_mean_px" < 10.5 AND s."bbox_count" NOT IN (3, 4)',
+        assert compiled == ComputedFilter(
+            sql='c."bbox_count" >= 2 AND c."bbox_area_mean_px" < 10.5 AND c."bbox_count" NOT IN (3, 4)',
             columns=("bbox_count", "bbox_area_mean_px"),
         )
 
     def test_no_filter_on_statistics(self):
-        assert compile_statistics_filters(STATISTICS_CATALOGUE, []) is None
+        assert compile_computed_filters(STATISTICS_CATALOGUE, []) is None
 
     @pytest.mark.parametrize(
         "token,message",
@@ -272,23 +272,23 @@ class TestStatistics:
 
         assert query.where.startswith("split = 'train' AND (") and query.where.endswith(") AND (n > 1)")
         assert query.index_servable is False
-        assert query.statistics_filter == StatisticsFilter(sql='s."bbox_count" >= 2', columns=("bbox_count",))
-        assert query.order == RecordOrder(column="bbox_area_mean_px", descending=True, on_statistics=True)
-        assert query.through_statistics
+        assert query.computed_filter == ComputedFilter(sql='c."bbox_count" >= 2', columns=("bbox_count",))
+        assert query.order == RecordOrder(column="bbox_area_mean_px", descending=True, on_computed=True)
+        assert query.through_computed
 
     def test_a_request_on_the_records_alone(self):
         query = compile_record_query(STATISTICS_CATALOGUE, ["split:eq:train"], sort="score", order="desc")
 
-        assert query.order == RecordOrder(column="score", descending=True, on_statistics=False)
+        assert query.order == RecordOrder(column="score", descending=True, on_computed=False)
         assert query.order.direction == "desc"
-        assert not query.through_statistics
+        assert not query.through_computed
 
     def test_the_columns_a_page_shows(self):
-        assert statistic_columns_by_name(STATISTICS_CATALOGUE) == {
+        assert computed_columns_by_name(STATISTICS_CATALOGUE) == {
             "record_statistics.bbox_count": "bbox_count",
             "record_statistics.bbox_area_mean_px": "bbox_area_mean_px",
         }
-        assert statistic_columns_by_name(CATALOGUE) == {}
+        assert computed_columns_by_name(CATALOGUE) == {}
 
     def test_a_refusal_names_the_statistic_as_the_catalogue_does(self):
         with pytest.raises(FilterCompileError, match="column 'record_statistics.bbox_count'"):

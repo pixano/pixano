@@ -26,11 +26,11 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from pixano.datasets.dataset_schema import serialize_all_fields
-from pixano.datasets.queries.record_statistics import (
+from pixano.datasets.queries.computed_columns import (
     RECORD_STATISTICS_TABLE,
+    ComputedFilter,
     RecordOrder,
-    StatisticsFilter,
-    statistic_sql_column,
+    computed_sql_column,
 )
 from pixano.schemas import SchemaGroup
 from pixano.schemas.records import Record
@@ -271,26 +271,26 @@ def _statistic_descriptors(dataset: "Dataset") -> list[ColumnDescriptor]:
     return sorted(columns, key=lambda column: (column.label or column.name, column.name))
 
 
-def statistic_columns_by_name(catalogue: list[ColumnDescriptor]) -> dict[str, str]:
-    """The statistics the catalogue offers, for the values a page shows: their column in the
-    statistics table, by the name the catalogue gives them.
+def computed_columns_by_name(catalogue: list[ColumnDescriptor]) -> dict[str, str]:
+    """The computed columns the catalogue offers, for the values a page shows: their column in the
+    join, by the name the catalogue gives them.
     """
     return {
-        descriptor.name: _statistic_column(descriptor)
+        descriptor.name: _computed_column(descriptor)
         for descriptor in catalogue
         if descriptor.table == RECORD_STATISTICS_TABLE
     }
 
 
-def _statistic_column(descriptor: ColumnDescriptor) -> str:
-    """The column of the statistics table a statistic's descriptor names."""
+def _computed_column(descriptor: ColumnDescriptor) -> str:
+    """The column of the join a computed column's descriptor names: a statistic's column of its table."""
     return descriptor.name.removeprefix(STATISTICS_COLUMN_PREFIX)
 
 
 def _sql_column(descriptor: ColumnDescriptor) -> str:
-    """How a condition names the column: a record's as is, a statistic's as the join reads it."""
+    """How a condition names the column: a record's as is, a computed one as the join reads it."""
     if descriptor.table == RECORD_STATISTICS_TABLE:
-        return statistic_sql_column(_statistic_column(descriptor))
+        return computed_sql_column(_computed_column(descriptor))
     return descriptor.name
 
 
@@ -500,17 +500,17 @@ def compile_filters(
 
 
 def split_filters(filters: list[str] | None) -> tuple[list[str], list[str]]:
-    """Tell the filters on the records' own columns from those on their statistics.
+    """Tell the filters on the records' own columns from those on the columns computed from them.
 
-    A statistic is named after its table (`STATISTICS_COLUMN_PREFIX`), so that one the dataset did
-    not compute is told apart too, and refused as such.
+    A computed column is named after its table (`STATISTICS_COLUMN_PREFIX`), so that one the dataset
+    did not compute is told apart too, and refused as such.
 
     Args:
         filters: ``col:op:value`` tokens.
 
     Returns:
-        The tokens on the records' columns, for `compile_filters`, and those on their statistics,
-        for `compile_statistics_filters`.
+        The tokens on the records' columns, for `compile_filters`, and those on their computed
+        columns, for `compile_computed_filters`.
 
     Raises:
         FilterCompileError: On more filters than allowed, or a token not of the form
@@ -520,26 +520,26 @@ def split_filters(filters: list[str] | None) -> tuple[list[str], list[str]]:
     if len(filters) > MAX_FILTERS:
         raise FilterCompileError(f"At most {MAX_FILTERS} filters are allowed (got {len(filters)}).")
     own: list[str] = []
-    on_statistics: list[str] = []
+    on_computed: list[str] = []
     for token in filters:
         column, _op, _raw = _split_filter(token)
-        (on_statistics if column.startswith(STATISTICS_COLUMN_PREFIX) else own).append(token)
-    return own, on_statistics
+        (on_computed if column.startswith(STATISTICS_COLUMN_PREFIX) else own).append(token)
+    return own, on_computed
 
 
-def compile_statistics_filters(catalogue: list[ColumnDescriptor], filters: list[str]) -> StatisticsFilter | None:
-    """Compile filters on the records' statistics into a condition the join reads.
+def compile_computed_filters(catalogue: list[ColumnDescriptor], filters: list[str]) -> ComputedFilter | None:
+    """Compile filters on the columns computed from the records into a condition the join reads.
 
     Args:
         catalogue: The column catalogue for the records.
-        filters: ``col:op:value`` tokens on statistics (`split_filters`), AND-composed.
+        filters: ``col:op:value`` tokens on computed columns (`split_filters`), AND-composed.
 
     Returns:
-        The condition and the statistic columns it reads; None when there is nothing to filter.
+        The condition and the computed columns it reads; None when there is nothing to filter.
 
     Raises:
-        FilterCompileError: On a column that is no statistic of the dataset, an operator its type
-            does not take, or a value it cannot hold.
+        FilterCompileError: On a column the dataset did not compute, an operator its type does not
+            take, or a value it cannot hold.
     """
     by_name = {descriptor.name: descriptor for descriptor in catalogue if descriptor.table == RECORD_STATISTICS_TABLE}
     clauses: list[str] = []
@@ -553,33 +553,34 @@ def compile_statistics_filters(catalogue: list[ColumnDescriptor], filters: list[
             allowed = ", ".join(descriptor.operators)
             raise FilterCompileError(f"Operator '{op}' is not valid for '{column}' (allowed: {allowed}).")
         clauses.append(_compile_clause(descriptor, op, raw))
-        columns.append(_statistic_column(descriptor))
+        columns.append(_computed_column(descriptor))
     if not clauses:
         return None
-    return StatisticsFilter(sql=" AND ".join(clauses), columns=tuple(dict.fromkeys(columns)))
+    return ComputedFilter(sql=" AND ".join(clauses), columns=tuple(dict.fromkeys(columns)))
 
 
 @dataclass(frozen=True)
 class RecordQuery:
-    """A request on the records, compiled: what LanceDB filters, and what the join with statistics does.
+    """A request on the records, compiled: what LanceDB filters, and what the join with the columns
+    computed from them does.
 
     Attributes:
         where: The condition on the records' own columns, a deprecated raw clause included; None
             for every record.
         index_servable: Whether a scalar index can serve `where`.
-        statistics_filter: The condition on their statistics; None for none.
+        computed_filter: The condition on their computed columns; None for none.
         order: How they are ordered.
     """
 
     where: str | None
     index_servable: bool
-    statistics_filter: StatisticsFilter | None
+    computed_filter: ComputedFilter | None
     order: RecordOrder
 
     @property
-    def through_statistics(self) -> bool:
-        """Whether the records' statistics take part, filtered or sorted on: the join decides."""
-        return self.statistics_filter is not None or self.order.on_statistics
+    def through_computed(self) -> bool:
+        """Whether columns computed from the records take part, filtered or sorted on: the join decides."""
+        return self.computed_filter is not None or self.order.on_computed
 
 
 def compile_record_query(
@@ -594,9 +595,9 @@ def compile_record_query(
 
     Args:
         catalogue: The column catalogue for the records.
-        filters: ``col:op:value`` tokens, on the records' columns or on their statistics.
+        filters: ``col:op:value`` tokens, on the records' columns or on columns computed from them.
         q: Free-text search over searchable string columns.
-        sort: The column to sort on, a record's or a statistic's; ``id`` by default.
+        sort: The column to sort on, a record's or a computed one; ``id`` by default.
         order: ``asc`` (by default) or ``desc``.
         raw_where: A deprecated raw where clause on the records, added as is.
 
@@ -606,7 +607,7 @@ def compile_record_query(
     Raises:
         FilterCompileError: On any filter or sort the catalogue refuses.
     """
-    own, on_statistics = split_filters(filters)
+    own, on_computed = split_filters(filters)
     where, _referenced, index_servable = compile_filters(catalogue, own, q)
     sortcol, normalized_order = validate_sort(catalogue, sort, order)
     if raw_where:
@@ -614,7 +615,7 @@ def compile_record_query(
     return RecordQuery(
         where=where,
         index_servable=index_servable,
-        statistics_filter=compile_statistics_filters(catalogue, on_statistics),
+        computed_filter=compile_computed_filters(catalogue, on_computed),
         order=record_order(catalogue, sortcol, normalized_order),
     )
 
@@ -624,16 +625,16 @@ def record_order(catalogue: list[ColumnDescriptor], sortcol: str, order: str) ->
 
     Args:
         catalogue: The column catalogue for the records.
-        sortcol: The column sorted on, a record's or a statistic's.
+        sortcol: The column sorted on, a record's or a computed one.
         order: ``asc`` or ``desc``.
 
     Returns:
-        The order, on a record's column or on a statistic's.
+        The order, on a record's column or on a computed one.
     """
     descriptor = next((d for d in catalogue if d.name == sortcol), None)
     if descriptor is not None and descriptor.table == RECORD_STATISTICS_TABLE:
-        return RecordOrder(column=_statistic_column(descriptor), descending=order == "desc", on_statistics=True)
-    return RecordOrder(column=sortcol, descending=order == "desc", on_statistics=False)
+        return RecordOrder(column=_computed_column(descriptor), descending=order == "desc", on_computed=True)
+    return RecordOrder(column=sortcol, descending=order == "desc", on_computed=False)
 
 
 def validate_sort(

@@ -149,7 +149,7 @@ class TestColumns:
     def test_a_page_shows_the_values_of_each_record_named_as_the_columns(self, client: TestClient) -> None:
         page = _records(client)
 
-        assert {item["id"]: item["statistic_values"] for item in page["items"]} == {
+        assert {item["id"]: item["computed_values"] for item in page["items"]} == {
             "r1": {COUNT: 3, AREA: 10.5},
             "r2": {COUNT: 1, AREA: 4.0},
             "r3": {COUNT: 2, AREA: None},
@@ -165,7 +165,7 @@ class TestColumns:
         columns = client.get(f"/datasets/{DATASET_ID}/filters").json()["columns"]
 
         assert f"record_statistics.{MODEL_BOX_COUNT.name}" not in {column["name"] for column in columns}
-        assert set(_records(client)["items"][0]["statistic_values"]) == {COUNT, AREA}
+        assert set(_records(client)["items"][0]["computed_values"]) == {COUNT, AREA}
 
     def test_a_statistics_table_that_cannot_be_read_offers_nothing_and_fails_nothing(
         self, library: Path, client: TestClient
@@ -183,7 +183,7 @@ class TestBeforeAnyComputation:
         columns = client.get(f"/datasets/{DATASET_ID}/filters").json()["columns"]
 
         assert [column for column in columns if column["table"] != "records"] == []
-        assert all("statistic_values" not in item for item in _records(client)["items"])
+        assert all("computed_values" not in item for item in _records(client)["items"])
 
     def test_a_filter_on_a_statistic_is_refused(self, client: TestClient) -> None:
         response = client.get(f"/datasets/{DATASET_ID}/records", params={"filter": f"{COUNT}:gte:1"})

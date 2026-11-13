@@ -7,7 +7,7 @@
 """Reading the explorer's records under one request: a page, a record's neighbors, those a search keeps.
 
 Each read goes through the join of the records with their statistics when a statistic is filtered or
-sorted on (`pixano.datasets.queries.record_statistics`, backend-processing §22.5), as before
+sorted on (`pixano.datasets.queries.computed_columns`, backend-processing §22.5), as before
 otherwise. This module makes that choice, once for the three reads.
 
 A deprecated raw `where` clause is the only condition that can be malformed: the reads answer it
@@ -22,7 +22,7 @@ from pixano.api.models import PaginatedResponse
 from pixano.api.query import RecordQuery
 from pixano.api.service import MAX_QUERY_LIMIT, BaseService
 from pixano.datasets import Dataset
-from pixano.datasets.queries.record_statistics import (
+from pixano.datasets.queries.computed_columns import (
     InvalidRecordFilter,
     matching_record_ids,
     ordered_record_ids,
@@ -50,7 +50,7 @@ def read_page(
     Returns:
         The page, with how many records the request matches.
     """
-    if not query.through_statistics:
+    if not query.through_computed:
         return service.list(
             where=query.where,
             limit=limit,
@@ -62,9 +62,7 @@ def read_page(
         )
     limit = min(limit, MAX_QUERY_LIMIT)
     try:
-        record_ids, total = ordered_record_ids(
-            dataset, query.where, query.statistics_filter, query.order, limit, offset
-        )
+        record_ids, total = ordered_record_ids(dataset, query.where, query.computed_filter, query.order, limit, offset)
     except InvalidRecordFilter as error:
         raise _refused(error, raw_where) from None
     return PaginatedResponse(items=service.get_many(record_ids), total=total, limit=limit, offset=offset)
@@ -77,11 +75,11 @@ def read_neighbors(dataset: Dataset, query: RecordQuery, record_id: str, raw_whe
         ``{"prev", "next", "position", "total"}``; a record the request does not match has no
         previous, next nor position.
     """
-    if query.through_statistics:
+    if query.through_computed:
         # The join says when LanceDB refused the condition on the records; any other failure is
         # the server's.
         try:
-            return record_neighbors(dataset, query.where, query.statistics_filter, query.order, record_id)
+            return record_neighbors(dataset, query.where, query.computed_filter, query.order, record_id)
         except InvalidRecordFilter as error:
             raise _refused(error, raw_where) from None
     try:
@@ -98,9 +96,9 @@ def read_neighbors(dataset: Dataset, query: RecordQuery, record_id: str, raw_whe
 
 def read_matching_ids(dataset: Dataset, query: RecordQuery, raw_where: bool) -> list[str]:
     """The records the request matches, in no particular order: those a semantic search is narrowed to."""
-    if query.statistics_filter is not None:
+    if query.computed_filter is not None:
         try:
-            return matching_record_ids(dataset, query.where, query.statistics_filter)
+            return matching_record_ids(dataset, query.where, query.computed_filter)
         except InvalidRecordFilter as error:
             raise _refused(error, raw_where) from None
     try:

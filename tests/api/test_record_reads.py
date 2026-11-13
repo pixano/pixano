@@ -11,14 +11,14 @@ from fastapi import HTTPException
 
 from pixano.api import record_reads
 from pixano.api.query import RecordQuery
-from pixano.datasets.queries.record_statistics import InvalidRecordFilter, RecordOrder, StatisticsFilter
+from pixano.datasets.queries.computed_columns import ComputedFilter, InvalidRecordFilter, RecordOrder
 
 
 SORTED_ON_A_STATISTIC = RecordQuery(
     where="(split = = 'x')",
     index_servable=True,
-    statistics_filter=StatisticsFilter(sql='s."bbox_count" >= 1', columns=("bbox_count",)),
-    order=RecordOrder(column="bbox_count", descending=True, on_statistics=True),
+    computed_filter=ComputedFilter(sql='c."bbox_count" >= 1', columns=("bbox_count",)),
+    order=RecordOrder(column="bbox_count", descending=True, on_computed=True),
 )
 
 

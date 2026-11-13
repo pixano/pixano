@@ -4,15 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-"""Records ordered and filtered through their statistics (backend-processing §22.5).
+"""Records ordered and filtered through the columns computed from them (backend-processing §22.5).
 
-The explorer sorts and filters records on the columns of their statistics, which live in a table of
-their own, `record_statistics`, keyed by record. DuckDB joins the two: LanceDB reads the
-identifiers of the records matching their own conditions, and the record column sorted on if any;
-the statistics table gives the columns a condition or the order reads. The join orders and counts
-the records; the page's records are then read by their identifiers.
+The explorer sorts and filters records on columns a job computed from them, which live in tables of
+their own: their statistics, in `record_statistics`, keyed by record. DuckDB joins them to the
+records: LanceDB reads the identifiers of the records matching their own conditions, and the record
+column sorted on if any; the computed tables give the columns a condition or the order reads. The
+join orders and counts the records; the page's records are then read by their identifiers.
 
-The statistics table is read through a handle of its own at each call, never one a `Dataset` keeps:
+A computed table is read through a handle of its own at each call, never one a `Dataset` keeps:
 another process may write and compact it meanwhile, and the files of the version a kept handle
 stands on may be gone.
 """
@@ -40,16 +40,16 @@ logger = logging.getLogger(__name__)
 #: The table of the records' statistics.
 RECORD_STATISTICS_TABLE = canonical_table_name_for_slot("record_statistics")
 
-#: How the join names the records, and their statistics: a condition on the statistics names
-#: their columns `s."column"` (`statistic_sql_column`).
+#: How the join names the records, and the columns computed from them: a condition on a computed
+#: column names it `c."column"` (`computed_sql_column`).
 RECORDS_ALIAS = "r"
-STATISTICS_ALIAS = "s"
+COMPUTED_ALIAS = "c"
 
 _RECORDS_TABLE = SchemaGroup.RECORD.value
 
-#: How many times the statistics table is read before it counts as unreadable: once again, after a
+#: How many times a computed table is read before it counts as unreadable: once again, after a
 #: compaction took the files of the version first read away.
-_STATISTICS_READ_ATTEMPTS = 2
+_READ_ATTEMPTS = 2
 
 
 class InvalidRecordFilter(ValueError):
@@ -57,13 +57,13 @@ class InvalidRecordFilter(ValueError):
 
 
 @dataclass(frozen=True)
-class StatisticsFilter:
-    """A condition on the records' statistics.
+class ComputedFilter:
+    """A condition on the columns computed from the records.
 
     Attributes:
-        sql: The condition, in DuckDB's SQL, on the columns of the statistics table as
-            `statistic_sql_column` names them.
-        columns: The statistic columns it reads.
+        sql: The condition, in DuckDB's SQL, on the computed columns as `computed_sql_column` names
+            them.
+        columns: The computed columns it reads.
     """
 
     sql: str
@@ -72,17 +72,17 @@ class StatisticsFilter:
 
 @dataclass(frozen=True)
 class RecordOrder:
-    """How records are ordered: on one of their columns, or on one of their statistics.
+    """How records are ordered: on one of their columns, or on a column computed from them.
 
     Attributes:
-        column: The column: a record's, or a statistic's column of the statistics table.
+        column: The column: a record's, or a computed one.
         descending: Whether the largest value comes first.
-        on_statistics: Whether the column is a statistic's.
+        on_computed: Whether the column is a computed one.
     """
 
     column: str
     descending: bool
-    on_statistics: bool
+    on_computed: bool
 
     @property
     def direction(self) -> str:
@@ -91,7 +91,7 @@ class RecordOrder:
 
 
 #: Records in the order of their identifiers: what reading them with no other order means.
-BY_ID = RecordOrder(column="id", descending=False, on_statistics=False)
+BY_ID = RecordOrder(column="id", descending=False, on_computed=False)
 
 
 def quote_identifier(name: str) -> str:
@@ -99,29 +99,29 @@ def quote_identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
-def statistic_sql_column(name: str) -> str:
-    """How a condition of the join names a statistic's column."""
-    return f"{STATISTICS_ALIAS}.{quote_identifier(name)}"
+def computed_sql_column(name: str) -> str:
+    """How a condition of the join names a computed column."""
+    return f"{COMPUTED_ALIAS}.{quote_identifier(name)}"
 
 
 def ordered_record_ids(
     dataset: Dataset,
     where: str | None,
-    statistics_filter: StatisticsFilter | None,
+    computed_filter: ComputedFilter | None,
     order: RecordOrder,
     limit: int | None = None,
     offset: int = 0,
 ) -> tuple[list[str], int]:
     """The records matching both conditions, in order: a page of their identifiers, and their number.
 
-    A record without the statistic sorted on — none computed for it, or a value that is none — comes
-    last, whatever the direction. Records equal on the column sorted on keep the order of their
-    identifiers, so that pages do not overlap.
+    A record without a value in the computed column sorted on — none computed for it, or a value that
+    is none — comes last, whatever the direction. Records equal on the column sorted on keep the order
+    of their identifiers, so that pages do not overlap.
 
     Args:
         dataset: The dataset.
         where: A condition on the records' columns, as LanceDB reads it; None for every record.
-        statistics_filter: A condition on their statistics; None for none.
+        computed_filter: A condition on their computed columns; None for none.
         order: How to order them.
         limit: The page's size; None for every record matching.
         offset: How many records the page skips.
@@ -132,16 +132,16 @@ def ordered_record_ids(
     Raises:
         InvalidRecordFilter: LanceDB refused `where`.
     """
-    record_rows, statistic_rows = _rows(dataset, where, statistics_filter, order)
+    record_rows, computed_rows = _rows(dataset, where, computed_filter, order)
     with duckdb.connect() as connection:
-        joined = _joined(connection, record_rows, statistic_rows, statistics_filter)
+        joined = _joined(connection, record_rows, computed_rows, computed_filter)
         page = f"SELECT {RECORDS_ALIAS}.id {joined} ORDER BY {_order_by(order)}"
         if limit is not None:
             page += f" LIMIT {int(limit)}"
         if offset:
             page += f" OFFSET {int(offset)}"
         ids = [row[0] for row in connection.execute(page).fetchall()]
-        if statistics_filter is None:
+        if computed_filter is None:
             # Joined with no condition, every record stays once: the records read are the total.
             return ids, record_rows.num_rows
         total_row = connection.execute(f"SELECT COUNT(*) {joined}").fetchone()
@@ -151,7 +151,7 @@ def ordered_record_ids(
 def record_neighbors(
     dataset: Dataset,
     where: str | None,
-    statistics_filter: StatisticsFilter | None,
+    computed_filter: ComputedFilter | None,
     order: RecordOrder,
     record_id: str,
 ) -> dict[str, Any]:
@@ -164,7 +164,7 @@ def record_neighbors(
     Args:
         dataset: The dataset.
         where: A condition on the records' columns, as LanceDB reads it; None for every record.
-        statistics_filter: A condition on their statistics; None for none.
+        computed_filter: A condition on their computed columns; None for none.
         order: How they are ordered.
         record_id: The record to locate.
 
@@ -176,8 +176,8 @@ def record_neighbors(
     Raises:
         InvalidRecordFilter: LanceDB refused `where`.
     """
-    record_rows, statistic_rows = _rows(dataset, where, statistics_filter, order)
-    alias = STATISTICS_ALIAS if order.on_statistics else RECORDS_ALIAS
+    record_rows, computed_rows = _rows(dataset, where, computed_filter, order)
+    alias = COMPUTED_ALIAS if order.on_computed else RECORDS_ALIAS
     # Before the record in the order: a value, where it has none; a value further in the
     # direction; or the same value — none included — and a smaller identifier.
     further = "<" if order.direction == "asc" else ">"
@@ -187,7 +187,7 @@ def record_neighbors(
     )
     backwards = "desc" if order.direction == "asc" else "asc"
     with duckdb.connect() as connection:
-        joined = _joined(connection, record_rows, statistic_rows, statistics_filter)
+        joined = _joined(connection, record_rows, computed_rows, computed_filter)
         located = connection.execute(
             f"WITH ordered AS MATERIALIZED "
             f"(SELECT {RECORDS_ALIAS}.id AS id, {alias}.{quote_identifier(order.column)} AS v {joined}), "
@@ -208,31 +208,31 @@ def record_neighbors(
     return {"prev": None, "next": None, "position": None, "total": int(total_row[0]) if total_row else 0}
 
 
-def matching_record_ids(dataset: Dataset, where: str | None, statistics_filter: StatisticsFilter | None) -> list[str]:
+def matching_record_ids(dataset: Dataset, where: str | None, computed_filter: ComputedFilter | None) -> list[str]:
     """The records matching both conditions, in no particular order.
 
     Raises:
         InvalidRecordFilter: LanceDB refused `where`.
     """
-    record_rows, statistic_rows = _rows(dataset, where, statistics_filter, BY_ID)
+    record_rows, computed_rows = _rows(dataset, where, computed_filter, BY_ID)
     with duckdb.connect() as connection:
-        joined = _joined(connection, record_rows, statistic_rows, statistics_filter)
+        joined = _joined(connection, record_rows, computed_rows, computed_filter)
         return [row[0] for row in connection.execute(f"SELECT {RECORDS_ALIAS}.id {joined}").fetchall()]
 
 
-def statistic_values(dataset: Dataset, record_ids: Sequence[str], columns: Sequence[str]) -> dict[str, dict[str, Any]]:
-    """The values of some statistics for some records.
+def computed_values(dataset: Dataset, record_ids: Sequence[str], columns: Sequence[str]) -> dict[str, dict[str, Any]]:
+    """The values of some computed columns for some records.
 
-    A statistics table that cannot be read is logged and answers none, as before any computation:
-    a page of records shows no statistic rather than failing.
+    A computed table that cannot be read is logged and answers none, as before any computation: a
+    page of records shows no value of its columns rather than failing.
 
     Args:
         dataset: The dataset.
         record_ids: The records.
-        columns: The statistic columns.
+        columns: The computed columns.
 
     Returns:
-        For each record that has a row of statistics, the value of each column it holds.
+        For each record that has a value computed, the value of each column it holds.
     """
     if not record_ids or not columns:
         return {}
@@ -248,51 +248,52 @@ def statistic_values(dataset: Dataset, record_ids: Sequence[str], columns: Seque
 
 
 def _rows(
-    dataset: Dataset, where: str | None, statistics_filter: StatisticsFilter | None, order: RecordOrder
+    dataset: Dataset, where: str | None, computed_filter: ComputedFilter | None, order: RecordOrder
 ) -> tuple[pa.Table, pa.Table]:
     """The records' identifiers matching `where`, with the record column sorted on, and the
-    statistic columns the filter or the order reads.
+    computed columns the filter or the order reads.
     """
     record_columns = ["id"]
-    if not order.on_statistics and order.column != "id":
+    if not order.on_computed and order.column != "id":
         record_columns.append(order.column)
     try:
         record_rows = _read(dataset.open_table(_RECORDS_TABLE), record_columns, where)
     except RuntimeError as error:
         # The compiled conditions are allowlisted and cannot be malformed: only a raw clause is.
         raise InvalidRecordFilter(str(error)) from error
-    statistic_columns = list(statistics_filter.columns) if statistics_filter is not None else []
-    if order.on_statistics and order.column not in statistic_columns:
-        statistic_columns.append(order.column)
-    return record_rows, _statistics(dataset, statistic_columns)
+    computed_columns = list(computed_filter.columns) if computed_filter is not None else []
+    if order.on_computed and order.column not in computed_columns:
+        computed_columns.append(order.column)
+    return record_rows, _computed(dataset, computed_columns)
 
 
 def _joined(
     connection: duckdb.DuckDBPyConnection,
     record_rows: pa.Table,
-    statistic_rows: pa.Table,
-    statistics_filter: StatisticsFilter | None,
+    computed_rows: pa.Table,
+    computed_filter: ComputedFilter | None,
 ) -> str:
-    """The records joined with their statistics, as the FROM clause of a query, the filter applied.
+    """The records joined with the columns computed from them, as the FROM clause of a query, the
+    filter applied.
 
-    A record has one row of statistics: should two be stored — two merges on S3, where no lock holds
-    them apart — one of them is kept, so that no record shows twice.
+    A record has one row of computed columns: should two be stored — two merges on S3, where no lock
+    holds them apart — one of them is kept, so that no record shows twice.
     """
     connection.register("record_rows", record_rows)
-    connection.register("statistic_rows", statistic_rows)
+    connection.register("computed_rows", computed_rows)
     joined = (
         f"FROM record_rows {RECORDS_ALIAS} LEFT JOIN "
-        f"(SELECT * FROM statistic_rows QUALIFY ROW_NUMBER() OVER (PARTITION BY record_id) = 1) "
-        f"{STATISTICS_ALIAS} ON {RECORDS_ALIAS}.id = {STATISTICS_ALIAS}.record_id"
+        f"(SELECT * FROM computed_rows QUALIFY ROW_NUMBER() OVER (PARTITION BY record_id) = 1) "
+        f"{COMPUTED_ALIAS} ON {RECORDS_ALIAS}.id = {COMPUTED_ALIAS}.record_id"
     )
-    if statistics_filter is not None:
-        joined += f" WHERE {statistics_filter.sql}"
+    if computed_filter is not None:
+        joined += f" WHERE {computed_filter.sql}"
     return joined
 
 
 def _order_by(order: RecordOrder) -> str:
     """The order of the join: the column asked, those without a value last, then the identifiers."""
-    alias = STATISTICS_ALIAS if order.on_statistics else RECORDS_ALIAS
+    alias = COMPUTED_ALIAS if order.on_computed else RECORDS_ALIAS
     return f"{alias}.{quote_identifier(order.column)} {order.direction} NULLS LAST, {RECORDS_ALIAS}.id ASC"
 
 
@@ -315,7 +316,7 @@ def _read_statistics(dataset: Dataset, columns: list[str], where: str | None) ->
     if RECORD_STATISTICS_TABLE not in dataset.info.tables:
         return None
     failure: Exception | None = None
-    for _attempt in range(_STATISTICS_READ_ATTEMPTS):
+    for _attempt in range(_READ_ATTEMPTS):
         try:
             table = dataset.open_latest_table(RECORD_STATISTICS_TABLE)
             present = [column for column in columns if column in table.schema.names]
@@ -326,9 +327,9 @@ def _read_statistics(dataset: Dataset, columns: list[str], where: str | None) ->
     return None
 
 
-def _statistics(dataset: Dataset, columns: list[str]) -> pa.Table:
-    """The records' statistics: their record and these columns, none where the table holds none —
-    before any computation, or when it cannot be read.
+def _computed(dataset: Dataset, columns: list[str]) -> pa.Table:
+    """The records' computed columns: their record and these columns, none where no table holds
+    them — before any computation, or when one cannot be read.
     """
     rows = _read_statistics(dataset, columns, None)
     if rows is None:

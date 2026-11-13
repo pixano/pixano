@@ -15,15 +15,15 @@ import pytest
 from pydantic import create_model
 
 from pixano.datasets import Dataset, DatasetInfo
-from pixano.datasets.queries.record_statistics import (
+from pixano.datasets.queries.computed_columns import (
+    ComputedFilter,
     InvalidRecordFilter,
     RecordOrder,
-    StatisticsFilter,
+    computed_values,
     matching_record_ids,
     ordered_record_ids,
     quote_identifier,
     record_neighbors,
-    statistic_values,
 )
 from pixano.schemas import Image, Record
 from pixano.statistics.definitions import StatisticLevel
@@ -62,7 +62,7 @@ def _dataset(folder: Path, with_statistics: bool = True) -> Dataset:
 
 
 def _by(column: str, descending: bool = False) -> RecordOrder:
-    return RecordOrder(column=column, descending=descending, on_statistics=column in COLUMNS)
+    return RecordOrder(column=column, descending=descending, on_computed=column in COLUMNS)
 
 
 class TestOrder:
@@ -100,12 +100,12 @@ class TestOrder:
 
 class TestFilter:
     def test_on_a_statistic(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" >= 3', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 3', columns=("bbox_count",))
 
         assert ordered_record_ids(_dataset(folder), None, condition, _by("id")) == (["r1", "r3", "r6"], 3)
 
     def test_on_a_statistic_and_on_the_records(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" >= 3', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 3', columns=("bbox_count",))
 
         assert ordered_record_ids(
             _dataset(folder), "rank >= 2", condition, _by("bbox_area_mean_px", descending=True)
@@ -115,7 +115,7 @@ class TestFilter:
         )
 
     def test_a_record_without_the_value_matches_no_comparison(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" != 3', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" != 3', columns=("bbox_count",))
 
         assert ordered_record_ids(_dataset(folder), None, condition, _by("id"))[0] == ["r2", "r6"]
 
@@ -128,34 +128,34 @@ class TestBeforeAnyComputation:
         )
 
     def test_no_record_matches_a_condition_on_them(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" >= 0', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 0', columns=("bbox_count",))
 
         assert ordered_record_ids(_dataset(folder, with_statistics=False), None, condition, _by("id")) == ([], 0)
 
     def test_nor_on_a_column_not_computed_yet(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."mask_count" >= 0', columns=("mask_count",))
+        condition = ComputedFilter(sql='c."mask_count" >= 0', columns=("mask_count",))
 
         assert ordered_record_ids(_dataset(folder), None, condition, _by("id")) == ([], 0)
 
 
 class TestValues:
     def test_of_the_records_asked(self, folder: Path) -> None:
-        assert statistic_values(_dataset(folder), ["r1", "r4", "r5"], ["bbox_count", "bbox_area_mean_px"]) == {
+        assert computed_values(_dataset(folder), ["r1", "r4", "r5"], ["bbox_count", "bbox_area_mean_px"]) == {
             "r1": {"bbox_count": 3, "bbox_area_mean_px": 10.5},
             "r4": {"bbox_count": None, "bbox_area_mean_px": None},
         }
 
     def test_of_the_columns_there(self, folder: Path) -> None:
-        assert statistic_values(_dataset(folder), ["r2"], ["bbox_count", "mask_count"]) == {"r2": {"bbox_count": 1}}
+        assert computed_values(_dataset(folder), ["r2"], ["bbox_count", "mask_count"]) == {"r2": {"bbox_count": 1}}
 
     @pytest.mark.parametrize("with_statistics", [True, False])
     def test_none_to_read(self, folder: Path, with_statistics: bool) -> None:
         dataset = _dataset(folder, with_statistics)
 
-        assert statistic_values(dataset, [], ["bbox_count"]) == {}
-        assert statistic_values(dataset, ["r1"], []) == {}
+        assert computed_values(dataset, [], ["bbox_count"]) == {}
+        assert computed_values(dataset, ["r1"], []) == {}
         if not with_statistics:
-            assert statistic_values(dataset, ["r1"], ["bbox_count"]) == {}
+            assert computed_values(dataset, ["r1"], ["bbox_count"]) == {}
 
 
 class TestNeighbors:
@@ -185,7 +185,7 @@ class TestNeighbors:
         assert record_neighbors(_dataset(folder), None, None, _by("bbox_count", descending=True), record) == expected
 
     def test_of_a_record_the_conditions_leave_out(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" >= 3', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 3', columns=("bbox_count",))
 
         assert record_neighbors(_dataset(folder), None, condition, _by("id"), "r2") == {
             "prev": None,
@@ -205,7 +205,7 @@ class TestNeighbors:
 
 class TestMatching:
     def test_the_records_both_conditions_keep(self, folder: Path) -> None:
-        condition = StatisticsFilter(sql='s."bbox_count" >= 3', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 3', columns=("bbox_count",))
 
         assert sorted(matching_record_ids(_dataset(folder), "rank < 6", condition)) == ["r1", "r3"]
 
@@ -240,7 +240,7 @@ class TestRobustness:
         writer.open_table("record_statistics").optimize(cleanup_older_than=timedelta(0))
 
         assert ordered_record_ids(dataset, None, None, _by("bbox_count"))[0][:2] == ["r1", "r3"]
-        assert statistic_values(dataset, ["r2"], ["bbox_count"]) == {"r2": {"bbox_count": 9}}
+        assert computed_values(dataset, ["r2"], ["bbox_count"]) == {"r2": {"bbox_count": 9}}
 
     def test_a_statistics_table_that_cannot_be_read_shows_no_value(self, folder: Path, monkeypatch) -> None:
         dataset = _dataset(folder)
@@ -250,7 +250,7 @@ class TestRobustness:
 
         monkeypatch.setattr(dataset, "open_latest_table", broken)
 
-        assert statistic_values(dataset, ["r1"], ["bbox_count"]) == {}
+        assert computed_values(dataset, ["r1"], ["bbox_count"]) == {}
 
     def test_a_column_name_holding_a_quote_stays_a_name(self) -> None:
         assert quote_identifier('odd"name') == '"odd""name"'
@@ -281,8 +281,8 @@ def test_neighbors_agree_with_the_order_of_the_pages(
 ) -> None:
     """Counted rather than sorted, a record's neighbors are its neighbors in the pages' order."""
     dataset = _random_dataset(tmp_path / "ds", seed)
-    order = RecordOrder(column=column, descending=descending, on_statistics=column == "bbox_count")
-    condition = StatisticsFilter(sql='s."bbox_count" >= 1', columns=("bbox_count",)) if filtered else None
+    order = RecordOrder(column=column, descending=descending, on_computed=column == "bbox_count")
+    condition = ComputedFilter(sql='c."bbox_count" >= 1', columns=("bbox_count",)) if filtered else None
     ordered, total = ordered_record_ids(dataset, None, condition, order)
 
     for position, record in enumerate(ordered):
@@ -309,7 +309,7 @@ class TestUnreadableStatistics:
 
         monkeypatch.setattr(dataset, "open_latest_table", compacted_once)
 
-        assert statistic_values(dataset, ["r1"], ["bbox_count"]) == {"r1": {"bbox_count": 3}}
+        assert computed_values(dataset, ["r1"], ["bbox_count"]) == {"r1": {"bbox_count": 3}}
 
     def test_the_join_finds_no_value_where_the_table_cannot_be_read(self, folder: Path, monkeypatch) -> None:
         dataset = _dataset(folder)
@@ -318,7 +318,7 @@ class TestUnreadableStatistics:
             raise OSError("the table is gone")
 
         monkeypatch.setattr(dataset, "open_latest_table", broken)
-        condition = StatisticsFilter(sql='s."bbox_count" >= 0', columns=("bbox_count",))
+        condition = ComputedFilter(sql='c."bbox_count" >= 0', columns=("bbox_count",))
 
         assert ordered_record_ids(dataset, None, condition, _by("id")) == ([], 0)
         assert ordered_record_ids(dataset, None, None, _by("bbox_count"))[0] == ["r1", "r2", "r3", "r4", "r5", "r6"]
