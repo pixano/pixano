@@ -7,6 +7,8 @@
 """The job kinds this worker knows how to run."""
 
 from .base import (
+    CONFIRM_MARKER,
+    MODEL_TASK_MARKER,
     OWN_FORM_MARKER,
     Chunk,
     JobKind,
@@ -46,6 +48,8 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
 
 
 __all__ = [
+    "CONFIRM_MARKER",
+    "MODEL_TASK_MARKER",
     "OWN_FORM_MARKER",
     "Chunk",
     "FakeKind",

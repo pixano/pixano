@@ -76,6 +76,16 @@ class JobParams(BaseModel):
 
 ParamsT = TypeVar("ParamsT", bound=JobParams)
 
+#: A key a parameter's JSON schema may carry to make the submission form ask for confirmation
+#: before the job starts, with this text. For a parameter that destroys something when set.
+CONFIRM_MARKER = "x-pixano-confirm"
+
+#: A key a model parameter's JSON schema carries to name the inference task it belongs to, as a
+#: Pixano `InferenceTask` value (`detection`, `embedding`, `image_mask_generation`): the
+#: submission form asks the application for the models served for that task, and no model name
+#: is written into a kind. Not pixano-inference's capability name, which differs for some tasks.
+MODEL_TASK_MARKER = "x-pixano-model-task"
+
 #: A key the root of a kind's parameter schema carries when the generic form cannot build its
 #: parameters — the statistics' definitions, which the application sends itself. The value names
 #: the kind's own way in; the generic form leaves the kind out.

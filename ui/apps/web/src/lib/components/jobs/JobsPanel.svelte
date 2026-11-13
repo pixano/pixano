@@ -56,7 +56,12 @@ License: CECILL-C
       parameters the form cannot build is left out of it.
     -->
     <div class="max-h-[60%] shrink-0 overflow-y-auto border-b border-border">
-      <SubmitJobForm kinds={jobsStore.formKinds} {dataset} onSubmit={run} />
+      <SubmitJobForm
+        kinds={jobsStore.formKinds}
+        {dataset}
+        servedModels={jobsStore.servedModels}
+        onSubmit={run}
+      />
     </div>
   {:else if !jobsStore.loading && !jobsStore.runnable}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">

@@ -23,6 +23,12 @@ const api = vi.hoisted(() => ({
   listJobs: vi.fn(),
   listJobKinds: vi.fn(),
   openJobStream: vi.fn(),
+  listInferenceModels: vi.fn(),
+}));
+
+vi.mock("$lib/api/inference", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("$lib/api/inference")>()),
+  listInferenceModels: api.listInferenceModels,
 }));
 
 vi.mock("$lib/api/jobs", async (importOriginal) => ({
@@ -54,6 +60,7 @@ function queueUnavailable(): ApiError {
 beforeEach(() => {
   vi.stubGlobal("EventSource", SilentStream);
   api.openJobStream.mockReset().mockReturnValue(new SilentStream());
+  api.listInferenceModels.mockReset().mockResolvedValue([]);
   api.listJobs.mockReset().mockRejectedValue(queueUnavailable());
   api.listJobKinds.mockReset().mockRejectedValue(queueUnavailable());
 });

@@ -7,6 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import SchemaPanel from "$components/dataset/SchemaPanel.svelte";
   import { CircleNotch, Warning, WarningCircle } from "phosphor-svelte";
+  import type { Snippet } from "svelte";
 
   import { ANNOTATION_TOOLS, ATTR_TYPE_LABELS } from "./rawSchema";
   import { formatBytes, groupFindings, sampleLocation } from "./wizardUtils";
@@ -20,6 +21,8 @@ License: CECILL-C
     sourceLabel?: string;
     /** Resolved Video views store references; these clips do not play in-app yet. */
     referenceMode?: boolean;
+    /** What the import does once done, chosen here: shown right after the dataset summary. */
+    afterSummary?: Snippet;
   }
 
   let {
@@ -29,6 +32,7 @@ License: CECILL-C
     datasetName = "",
     sourceLabel = "",
     referenceMode = false,
+    afterSummary,
   }: Props = $props();
 
   const annotationLabels: Record<string, string> = {
@@ -203,6 +207,8 @@ License: CECILL-C
         </div>
       {/if}
     </section>
+
+    {@render afterSummary?.()}
 
     {#if referenceMode}
       <div class="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">

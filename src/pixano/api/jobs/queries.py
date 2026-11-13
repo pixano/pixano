@@ -42,10 +42,12 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 
 # The job is recorded without chunks: the worker splits it, because splitting is
 # kind-specific logic and kind code only runs on that side.
+# Stamped by the clock, not by the transaction's start: the jobs queued together — an import's
+# embeddings, one per model — are then planned and listed in the order they were queued.
 INSERT_JOB = f"""
-INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
-VALUES (%s, %s, %s, 'planning')
-RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb
+INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state, created_at)
+VALUES (%s, %s, %s, 'planning', clock_timestamp())
+RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb, false
 """
 
 # What a job's tasks became, next to how many were attempted. Aggregated on read from the
@@ -70,7 +72,16 @@ SELECT j.id, j.kind, j.dataset, j.state, j.total_tasks, j.done_tasks, j.created_
             coalesce(j.error, (SELECT c.error FROM {SCHEMA_NAME}.job_chunks c
                                WHERE c.job_id = j.id AND c.state = 'error' ORDER BY c.seq LIMIT 1))
             - 'trace'
-       END
+       END,
+       -- The job's work is done and its kind's closing step — the final chunk — is queued or
+       -- running: an interface says so, rather than leave a full bar that does not end. Only
+       -- for a job in flight: a cancelled job's final chunk can stay queued — handed back to the
+       -- queue, after a transient failure, an expired lease or a worker's stop, between a
+       -- cancel's dropping of the pending chunks and its settlement — until a worker drops it.
+       -- One lookup in the partial index of final chunks.
+       j.state IN ('pending', 'running') AND EXISTS (
+           SELECT 1 FROM {SCHEMA_NAME}.job_chunks c
+           WHERE c.job_id = j.id AND c.final AND c.state IN ('pending', 'running'))
 FROM {SCHEMA_NAME}.jobs j
 """
 

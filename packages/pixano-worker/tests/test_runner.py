@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import threading
+from collections import OrderedDict
 from datetime import timedelta
 from pathlib import Path
 
@@ -161,6 +162,34 @@ class TestPlanning:
         assert row is not None and row[0] == 0
 
 
+class _Opened(str):
+    """A dataset as the worker's cache holds it, named by what it was opened as; no other process changes it."""
+
+    def is_stale(self) -> bool:
+        return False
+
+
+class TestTheDatasetCache:
+    """The worker serves a dataset from its cache, while no other process changed it."""
+
+    def test_a_dataset_whose_files_cannot_be_examined_is_served_as_it_was_opened(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reopening it would fail the same way: the chunk may still be served by what the cache holds."""
+
+        class _Unreadable(str):
+            path = tmp_path / "ds"
+
+            def is_stale(self) -> bool:
+                raise PermissionError("the storage stopped answering")
+
+        monkeypatch.setattr(runner, "_open_datasets", OrderedDict())
+        monkeypatch.setattr(runner.Dataset, "find", lambda _id, _library: _Unreadable("as opened"))
+        opened = runner._open_dataset(tmp_path, "ds")
+
+        assert runner._open_dataset(tmp_path, "ds") is opened
+
+
 class TestPlanningSeesTheDatasetAsItIs:
     """Planning reopens the dataset outside the worker's cache.
 
@@ -191,7 +220,7 @@ class TestPlanningSeesTheDatasetAsItIs:
         registry.declare(db, "worker-test")
         job = _submit(db, kind=kind.name)
 
-        versions = iter(["as first opened", "as it is now"])
+        versions = iter([_Opened("as first opened"), _Opened("as it is now")])
         monkeypatch.setattr(runner.Dataset, "find", lambda _id, _library: next(versions))
         # What the worker held of it before: opened by a previous job, left in the cache.
         stale = runner._open_dataset(tmp_path, "ds")

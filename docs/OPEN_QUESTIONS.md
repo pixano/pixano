@@ -107,11 +107,12 @@ Two things to watch:
 **Status:** open (an accepted cost; a cache is the proposed fix).
 
 `Dataset.record_embedding_health` (`src/pixano/datasets/dataset.py`) reads no
-vector, but it reads the `view_id` of every row of the embeddings table to count
-the media embedded, and counts the rows of each image table. The explorer calls
-it before every semantic search and every request for its filter schema
-(`src/pixano/api/routers/explorer.py`), so its cost grows with the number of
-vectors — six per record on a six-camera dataset.
+vector, but it reads the `view_id` of every row of a model's embeddings table to
+count the media embedded, and counts the rows of each image table. The explorer
+calls it before every semantic search, and for every model the dataset holds on
+every request for its filter schema (`src/pixano/api/routers/explorer.py`) — the
+media counted once for all —, so its cost grows with the number of vectors of
+every model — six per record and model on a six-camera dataset.
 
 It was accepted because counting distinct media is what makes the answer right:
 counting rows said "complete" with one camera of six embedded. No measurement of
@@ -128,3 +129,38 @@ Options:
   but a counter can drift from what it counts, and every writer of the table
   must keep it.
 - **Keep the scan**, and measure it at scale first.
+
+## Embeddings after an import: which models, and at what cost
+
+**Status:** which models is decided (2026-11-10); the cost is open.
+
+Since a dataset keeps one table per embeddings model, an import computes again every
+model the dataset holds, as decided with that rework (2026-11-06): the media it
+added are in none of their embeddings (`src/pixano/api/jobs/follow_ups.py`,
+`_fit_embeddings`; data-import-export spec, amendment of 2026-11-02). How was chosen
+while implementing, and decided on 2026-11-10:
+
+- **The model the import names is computed beside the ones held; a model the
+  deployment chose is not.** `PIXANO_EMBEDDINGS_MODEL`, or the first model the
+  inference serves, stands in only for a dataset without embeddings: by default, an
+  add import into a dataset that holds SigLIP computes SigLIP, and adds no CLIP.
+- **One job per model name.** A job computes the checkpoint the inference serves
+  under the name, into that checkpoint's table: a held checkpoint no longer served is
+  not computed again — its table keeps lacking the new media — and the served one gets
+  a table of its own.
+- **A held model the inference no longer serves is queued anyway**, and refused at its
+  job's planning, on every add import until its embeddings are deleted
+  (`DELETE /datasets/{id}/embedding-spaces/{space_id}`). The application cannot know
+  what the worker's inference serves, and the command line asks no inference.
+- **An explicit request without a model to name queues nothing**, the dataset's own
+  models included: `--embeddings` without `--embeddings-model` nor
+  `PIXANO_EMBEDDINGS_MODEL` says so at once, as before.
+
+The cost is the open part. Each job computes the whole dataset again, since the
+embeddings job has no way to compute only what is missing: on the CPU stack measured
+for step 1, about four images a second, an add import of a few images into a dataset of
+10,000 holding three models runs about two hours of inference. Two add imports in a row
+queue the same jobs twice: nothing checks for a job of that model still to run on the
+dataset. A mode of the embeddings job that skips the media a model's table already
+holds would make the recomputation cost what the import added; skipping a model whose
+job is still pending would remove the duplicates.
