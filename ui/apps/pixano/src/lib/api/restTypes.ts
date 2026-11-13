@@ -63,6 +63,12 @@ export interface ColumnDescriptorResponse {
   operators: string[];
   values?: string[] | null;
   values_complete: boolean;
+  /** The table the column is read from: the records', or their statistics' (`record_statistics`). */
+  table?: string;
+  /** What a person reads in place of the name: a statistic's label. */
+  label?: string | null;
+  /** The unit of a statistic's values, if they have one. */
+  unit?: string | null;
 }
 
 /** One embeddings model of a dataset — its space —, as a search can use it. */
@@ -132,6 +138,11 @@ export interface RecordResponse {
   created_at?: string;
   updated_at?: string;
   view_previews?: Record<string, PreviewDescriptor>;
+  /**
+   * The values of the columns the dataset computed for the record — its statistics —, by the name
+   * the explorer's columns give them (`record_statistics.<name>`).
+   */
+  computed_values?: Record<string, number | null> | null;
   [key: string]: unknown;
 }
 

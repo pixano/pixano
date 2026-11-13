@@ -33,7 +33,7 @@ License: CECILL-C
   } from "$lib/api/restTypes";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { ConfirmModal, Select } from "$lib/ui";
-  import { formatColumnLabel } from "$lib/utils/columns";
+  import { columnLabel, columnLabelOf } from "$lib/utils/columns";
   import type { EmbeddingsView } from "$lib/utils/embeddingSpaces";
   import {
     isListOperator,
@@ -127,7 +127,7 @@ License: CECILL-C
   const ranked = $derived(semanticActive || similarTo !== "");
   const sortItems = $derived([
     { value: "", label: "Default order" },
-    ...sortableColumns.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) })),
+    ...sortableColumns.map((c) => ({ value: c.name, label: columnLabel(c) })),
   ]);
 
   // Embedding-tools popover (grouped inside the search bar).
@@ -238,7 +238,7 @@ License: CECILL-C
   function chipLabel(filter: RecordFilter): string {
     const op = OPERATOR_LABELS[filter.op] ?? filter.op;
     const value = isListOperator(filter.op) ? filter.values.join(", ") : (filter.values[0] ?? "");
-    return `${formatColumnLabel(filter.col)} ${op} ${value}`;
+    return `${columnLabelOf(columns, filter.col)} ${op} ${value}`;
   }
 
   // ---- Compute progress ----
@@ -604,7 +604,7 @@ License: CECILL-C
               {#snippet children()}
                 <ArrowsDownUp size={14} />
                 <span class="max-w-[120px] truncate">
-                  {sort ? formatColumnLabel(sort) : "Sort"}
+                  {sort ? columnLabelOf(columns, sort) : "Sort"}
                 </span>
               {/snippet}
             </Select.Trigger>

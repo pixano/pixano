@@ -14,7 +14,7 @@ License: CECILL-C
   import RecordGrid from "./RecordGrid.svelte";
   import { Table } from "./table";
   import TableSkeleton from "./TableSkeleton.svelte";
-  import { invalidateAll } from "$app/navigation";
+  import { invalidate, invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import {
     computeEmbeddings,
@@ -28,12 +28,14 @@ License: CECILL-C
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
+  import { describeTableColumns, undescribedStatisticColumns } from "$lib/utils/columns";
   import {
     embeddingsView,
     modelToCompute,
     orderedSpaces,
     selectedSpace,
   } from "$lib/utils/embeddingSpaces";
+  import { EXPLORER_COLUMNS_DEPENDENCY } from "$lib/utils/explorerData";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
 
   /** The status of an answer about a model the dataset holds no more. */
@@ -157,11 +159,35 @@ License: CECILL-C
     return true;
   }
 
+  // The page's columns named as the explorer names them: a statistic by its label and unit.
+  const tableItems = $derived(
+    describeTableColumns(selectedDataset.table_data, filterSchema.columns),
+  );
+
+  // A page can carry a statistic the explorer's columns, read before it was computed, do not
+  // describe — a statistics job that ended after they were read: they are read again, once per such
+  // column.
+  let columnsAskedFor = "";
+  $effect(() => {
+    const undescribed = undescribedStatisticColumns(
+      selectedDataset.table_data,
+      filterSchema.columns,
+    ).join(",");
+    if (undescribed === "" || undescribed === columnsAskedFor) return;
+    columnsAskedFor = undescribed;
+    void invalidate(EXPLORER_COLUMNS_DEPENDENCY);
+  });
+
   // Remount the table only when the dataset or its column set changes — the
   // table builds its column defs once at mount. Sorting is prop-driven and
   // re-renders in place (no remount, no scroll reset).
+  // A column's label is part of it: the headers are built at mount, and a statistic gets its label
+  // once the explorer's columns describe it.
   const tableKey = $derived(
-    [selectedDataset.id, selectedDataset.table_data.columns.map((c) => c.name).join(",")].join("|"),
+    [
+      selectedDataset.id,
+      tableItems.columns.map((c) => `${c.name}\u0000${c.label ?? ""}`).join(","),
+    ].join("|"),
   );
 
   function handleSelectItem(itemId: string) {
@@ -363,7 +389,7 @@ License: CECILL-C
         <div class="flex-1 min-h-0">
           {#key tableKey}
             <Table
-              items={selectedDataset.table_data}
+              items={tableItems}
               activeSort={{ col: pagination.sort, order: pagination.order }}
               onSelectItem={handleSelectItem}
               onColsort={handleColSort}

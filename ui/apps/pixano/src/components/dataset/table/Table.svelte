@@ -28,7 +28,7 @@ License: CECILL-C
   import FlexRender from "./FlexRender.svelte";
   import { TableCell } from "./TableCell";
   import type { TableData, TableRow } from "$lib/types/dataset";
-  import { formatColumnLabel } from "$lib/utils/columns";
+  import { columnNameLabel } from "$lib/utils/columns";
   import { isScalarValue } from "$lib/utils/coreUtils";
 
   interface Props {
@@ -47,8 +47,10 @@ License: CECILL-C
   const buildColumns = (): ColumnDef<TableRow>[] => {
     return items.columns.map((col) => ({
       id: col.name,
-      accessorKey: col.name,
-      header: formatColumnLabel(col.name),
+      // Read by name, not by key: a key with a dot is a path to TanStack, and a statistic's
+      // column is named after its table (`record_statistics.bbox_count`).
+      accessorFn: (row) => row[col.name],
+      header: col.label ?? columnNameLabel(col.name),
       cell: (info) => {
         const cellRenderer = TableCell[col.type];
         if (cellRenderer) {
@@ -79,6 +81,11 @@ License: CECILL-C
   };
 
   const initialColumnOrder = buildInitialColumnOrder();
+  // What each column is called, for the headers and the column settings.
+  const labelOf = (id: string): string => {
+    const column = items.columns.find((col) => col.name === id);
+    return column?.label ?? columnNameLabel(id);
+  };
   let columnOrder = $state<ColumnOrderState>(initialColumnOrder);
   let columnVisibility = $state<VisibilityState>({});
 
@@ -175,7 +182,7 @@ License: CECILL-C
                 <button
                   type="button"
                   onclick={() => handleSort(header.column.id)}
-                  aria-label="Sort by {formatColumnLabel(header.column.id)}"
+                  aria-label="Sort by {labelOf(header.column.id)}"
                   class="group w-full py-3 px-1 text-label whitespace-nowrap flex items-center gap-1 justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {#if !header.isPlaceholder}
@@ -252,11 +259,11 @@ License: CECILL-C
                           for={item}
                           class="text-sm font-normal normal-case tracking-normal select-none grow cursor-pointer text-left truncate"
                         >
-                          {formatColumnLabel(item)}
+                          {labelOf(item)}
                         </label>
                         <button
                           type="button"
-                          aria-label="Move {formatColumnLabel(item)} up"
+                          aria-label="Move {labelOf(item)} up"
                           disabled={index === 0}
                           onclick={() => moveColumn(index, -1)}
                           class="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-25 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -265,7 +272,7 @@ License: CECILL-C
                         </button>
                         <button
                           type="button"
-                          aria-label="Move {formatColumnLabel(item)} down"
+                          aria-label="Move {labelOf(item)} down"
                           disabled={index === columnOrder.length - 1}
                           onclick={() => moveColumn(index, 1)}
                           class="p-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-25 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -30,6 +30,7 @@ import {
   type TableColumn,
   type TableRow,
 } from "$lib/types/dataset";
+import { STATISTIC_CELL_TYPE } from "$lib/utils/columns";
 
 const BASE_SCHEMA_BY_NAME: Record<string, BaseSchema> = {
   Record: BaseSchema.Item,
@@ -200,6 +201,15 @@ export function toDatasetBrowser(
     const row: TableRow = {};
     const attrs: RecordCard["attrs"] = {};
     for (const [key, value] of Object.entries(record)) {
+      if (key === "computed_values") {
+        // The statistics the dataset computed: a column each, named as the explorer's filters and
+        // sorts name it. A record without a value shows none.
+        for (const [name, statistic] of Object.entries((value ?? {}) as Record<string, unknown>)) {
+          row[name] = typeof statistic === "number" ? statistic : "";
+          if (!columnsMap.has(name)) columnsMap.set(name, STATISTIC_CELL_TYPE);
+        }
+        continue;
+      }
       if (Array.isArray(value)) {
         // List attributes (e.g. LeRobot `tasks`) render as a joined string —
         // the table can only show primitives, and an instruction reads best

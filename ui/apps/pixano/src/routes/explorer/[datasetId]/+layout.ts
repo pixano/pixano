@@ -8,8 +8,10 @@ import { error } from "@sveltejs/kit";
 
 import type { LayoutLoad } from "./$types";
 import * as api from "$lib/api";
+import { EXPLORER_COLUMNS_DEPENDENCY } from "$lib/utils/explorerData";
 
-export const load: LayoutLoad = async ({ params, parent }) => {
+export const load: LayoutLoad = async ({ params, parent, depends }) => {
+  depends(EXPLORER_COLUMNS_DEPENDENCY);
   const { datasets } = await parent();
   const dataset = datasets.find((d) => d.id === params.datasetId);
   // eslint-disable-next-line @typescript-eslint/only-throw-error

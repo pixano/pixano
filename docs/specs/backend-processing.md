@@ -556,6 +556,10 @@ The statistics table is read at its latest version at each request, through a ha
 
 Measured on a laptop, sorted or filtered on a statistic: a page of a dataset of 100,000 records takes 0.05 s, of a million 0.3 to 0.4 s; a record's neighbors among a million, 0.35 s. Every page of a dataset holding statistics reads its records' values, sorted on one or not: 0.03 s for 20 records among a million, the table carrying no index of its own.
 
+### 22.6 The legacy explorer's columns
+
+The legacy explorer's table shows each statistic computed per record as a column, named by its label and unit, sortable and filterable like any other, offered in the Sort menu and the filter editor. It shows a decimal value with at most two decimals from one up and three significant digits below, and a dash where a record has no value. A page carrying a statistic its columns do not describe yet — computed after they were read — has them read again. No interface composes a statistic: a person's own statistics come with a dashboard of their own, a later version (§22.7).
+
 ### 22.7 The overview
 
 Decided 2026-11-09: a dataset gets an overview as soon as it is imported, as close as can be to the statistics of Know Your Data; statistics a person composes in a dashboard of their own are a later version. It revises §22.1 on one point: a few default statistics are computed for every dataset.
