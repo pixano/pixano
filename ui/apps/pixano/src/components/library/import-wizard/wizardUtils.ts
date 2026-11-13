@@ -19,6 +19,7 @@ import {
 import type {
   ImportEmbeddingsOffer,
   ImportPlanResponse,
+  ImportStatisticsOffer,
   InferredSchemaResponse,
   IoFinding,
   IoFollowUp,
@@ -422,6 +423,50 @@ export function embeddingsRequest(
   if (!choice.decided) return {};
   if (!choice.compute || !choice.model) return { compute_embeddings: false };
   return { compute_embeddings: true, embeddings_model: choice.model };
+}
+
+/** What the wizard asks of the statistics job: queue it once the import is done. */
+export interface StatisticsChoice {
+  compute: boolean;
+  /** Shown on an offer the user could use, the choice is theirs: it is sent as it stands. */
+  decided: boolean;
+}
+
+/**
+ * Whether the Review step offers the choice: a job queue configured. A dataset written with nothing
+ * to count — no object, box nor mask — needs no job, which the import says once done.
+ */
+export function offersStatisticsChoice(offer: ImportStatisticsOffer | null): boolean {
+  return offer !== null && offer.queue_configured;
+}
+
+/** The choice the wizard opens with: on where the job can run and the server's default says so. */
+export function initialStatisticsChoice(offer: ImportStatisticsOffer): StatisticsChoice {
+  return { compute: offer.available && offer.enabled_by_default, decided: offer.available };
+}
+
+/**
+ * The choice once the offer is read again, on the way to Review: a choice the user made stands,
+ * whatever the offer says now; one they never could make starts from the server's default.
+ */
+export function nextStatisticsChoice(
+  choice: StatisticsChoice,
+  offer: ImportStatisticsOffer,
+): StatisticsChoice {
+  return choice.decided ? choice : initialStatisticsChoice(offer);
+}
+
+/**
+ * The import request's statistics field: the user's choice once they made one. Until then the
+ * wizard says nothing, and the server, which checks again when the import starts, applies its
+ * default.
+ */
+export function statisticsRequest(
+  choice: StatisticsChoice,
+  offer: ImportStatisticsOffer | null,
+): { compute_statistics?: boolean } {
+  if (offer === null || !choice.decided) return {};
+  return { compute_statistics: choice.compute };
 }
 
 /** One line of the jobs tray about a job an import queued once done. */

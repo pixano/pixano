@@ -237,6 +237,23 @@ class ImportEmbeddingsOffer(BaseModel):
     default_model: str | None = None
 
 
+class ImportStatisticsOffer(BaseModel):
+    """Whether an import can queue the statistics job of its default statistics, as the import form asks.
+
+    Attributes:
+        queue_configured: A job queue is configured (PIXANO_DATABASE_URL). Without one, the import
+            form does not offer the statistics at all.
+        available: The job can run now: a job queue reachable, and a worker that declared the job.
+        reason: Why it cannot, when it cannot.
+        enabled_by_default: The server's default for an import (PIXANO_STATISTICS_AFTER_IMPORT).
+    """
+
+    queue_configured: bool
+    available: bool
+    reason: str | None = None
+    enabled_by_default: bool
+
+
 def _job_response(job: JobRecord) -> JobResponse:
     return JobResponse(
         job_id=job.id,
@@ -387,6 +404,18 @@ async def import_embeddings_offer(settings: Annotated[Settings, Depends(get_sett
         enabled_by_default=settings.embeddings_after_import,
         models=models,
         default_model=default_model,
+    )
+
+
+@router.get("/imports/statistics", operation_id="get_import_statistics_offer")
+async def import_statistics_offer(settings: Annotated[Settings, Depends(get_settings)]) -> ImportStatisticsOffer:
+    """Whether an import can queue the statistics job of its default statistics."""
+    reason = await run_in_threadpool(QueueProbe(settings.database_url).unavailable, STATISTICS_KIND)
+    return ImportStatisticsOffer(
+        queue_configured=bool(settings.database_url),
+        available=reason is None,
+        reason=reason,
+        enabled_by_default=settings.statistics_after_import,
     )
 
 

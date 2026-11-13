@@ -249,6 +249,18 @@ export interface ImportEmbeddingsOffer {
   default_model: string | null;
 }
 
+/** Whether an import can queue the statistics job of its default statistics (`GET /io/imports/statistics`). */
+export interface ImportStatisticsOffer {
+  /** A job queue is configured: without one, the import offers no statistics at all. */
+  queue_configured: boolean;
+  /** A job queue is reachable, and a worker declared the job. */
+  available: boolean;
+  /** Why the job cannot run, when it cannot. */
+  reason: string | null;
+  /** The server's default for an import (PIXANO_STATISTICS_AFTER_IMPORT). */
+  enabled_by_default: boolean;
+}
+
 /** One durable import/export job as stored. */
 export interface IoJobResponse {
   job_id: string;

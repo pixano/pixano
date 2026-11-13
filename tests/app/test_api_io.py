@@ -21,6 +21,7 @@ from pixano.api.jobs.follow_ups import (
     EMBEDDINGS_KIND,
     NO_MODEL,
     NO_MODEL_SERVED,
+    NO_WORKER_FOR_KIND,
     NOTHING_TO_COUNT,
     QUEUE_UNREADABLE,
     STATISTICS_KIND,
@@ -236,6 +237,31 @@ class TestEmbeddingsAfterAnImport:
             {"kind": EMBEDDINGS_KIND, "params": {}, "job_id": "", "error": f"not queued: {NO_MODEL}", "skipped": ""}
         ]
         assert final["follow_ups"] == started.json()["follow_ups"]
+
+    def test_the_statistics_offer_says_why_their_job_cannot_run(self, tmp_path: Path):
+        offer = _embeddings_client(tmp_path).get("/io/imports/statistics").json()
+
+        assert (offer["queue_configured"], offer["available"], offer["enabled_by_default"]) == (False, False, True)
+        assert "PIXANO_DATABASE_URL" in offer["reason"]
+
+    def test_the_statistics_offer_follows_the_deployments_default(self, tmp_path: Path):
+        client = _embeddings_client(tmp_path, PIXANO_STATISTICS_AFTER_IMPORT=False)
+
+        assert client.get("/io/imports/statistics").json()["enabled_by_default"] is False
+
+    def test_the_statistics_offer_where_their_job_can_run(self, tmp_path: Path, statistics_declared: str):
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=statistics_declared)
+
+        offer = client.get("/io/imports/statistics").json()
+
+        assert (offer["queue_configured"], offer["available"], offer["reason"]) == (True, True, None)
+
+    def test_the_statistics_offer_where_no_worker_runs_their_job(self, tmp_path: Path, embeddings_declared: str):
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared)
+
+        offer = client.get("/io/imports/statistics").json()
+
+        assert (offer["available"], offer["reason"]) == (False, NO_WORKER_FOR_KIND.format(kind=STATISTICS_KIND))
 
     def test_asked_for_the_default_statistics_the_import_says_they_were_not_needed(self, tmp_path: Path):
         """Fitted to the dataset first: images and no object, nothing to count, whatever the queue."""

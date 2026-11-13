@@ -15,22 +15,27 @@ import {
   formatBytes,
   groupFindings,
   initialEmbeddingsChoice,
+  initialStatisticsChoice,
   intentToFormat,
   isHubId,
   mergeSpec,
   nextEmbeddingsChoice,
+  nextStatisticsChoice,
   offersEmbeddingsChoice,
+  offersStatisticsChoice,
   parseAdvancedSpec,
   parseEpisodeSelection,
   planHasImages,
   schemaSections,
   setupValidationMessage,
   showsLerobotFields,
+  statisticsRequest,
   type WizardFields,
 } from "../wizardUtils";
 import type {
   ImportEmbeddingsOffer,
   ImportPlanResponse,
+  ImportStatisticsOffer,
   InferredSchemaResponse,
   IoJobResponse,
 } from "$lib/api/restTypes";
@@ -761,5 +766,76 @@ describe("embeddings after the import", () => {
       { text: "Embeddings (clip) queued.", notQueued: false },
       { text: "Embeddings (siglip) not queued: the job queue cannot be read", notQueued: true },
     ]);
+  });
+});
+
+describe("statistics after the import", () => {
+  const offer = (overrides: Partial<ImportStatisticsOffer> = {}): ImportStatisticsOffer => ({
+    queue_configured: true,
+    available: true,
+    reason: null,
+    enabled_by_default: true,
+    ...overrides,
+  });
+
+  it("offers the choice where a job queue is configured", () => {
+    expect(offersStatisticsChoice(offer())).toBe(true);
+    // Unavailable, it is shown with its reason: no worker runs the job.
+    expect(offersStatisticsChoice(offer({ available: false }))).toBe(true);
+    // An installation without jobs never reads a refusal.
+    expect(offersStatisticsChoice(offer({ queue_configured: false }))).toBe(false);
+    expect(offersStatisticsChoice(null)).toBe(false);
+  });
+
+  it("opens on where the job can run and the server's default says so", () => {
+    expect(initialStatisticsChoice(offer())).toEqual({ compute: true, decided: true });
+    expect(initialStatisticsChoice(offer({ enabled_by_default: false }))).toEqual({
+      compute: false,
+      decided: true,
+    });
+    expect(initialStatisticsChoice(offer({ available: false }))).toEqual({
+      compute: false,
+      decided: false,
+    });
+  });
+
+  it("read again, the offer keeps what the user chose, and starts an unmade choice anew", () => {
+    const chosen = { compute: false, decided: true };
+
+    expect(nextStatisticsChoice(chosen, offer())).toEqual(chosen);
+    expect(nextStatisticsChoice(chosen, offer({ available: false, reason: "busy" }))).toEqual(
+      chosen,
+    );
+    expect(nextStatisticsChoice({ compute: false, decided: false }, offer())).toEqual({
+      compute: true,
+      decided: true,
+    });
+  });
+
+  it("sends the user's choice once they made one", () => {
+    expect(statisticsRequest({ compute: true, decided: true }, offer())).toEqual({
+      compute_statistics: true,
+    });
+    expect(statisticsRequest({ compute: false, decided: true }, offer())).toEqual({
+      compute_statistics: false,
+    });
+  });
+
+  it("sends the user's no even when the job could not run when read again", () => {
+    // Unchecked on a usable offer, then Edit setup and Review: the offer is unavailable now.
+    const unavailable = offer({ available: false, reason: "busy" });
+    const choice = nextStatisticsChoice(
+      { ...initialStatisticsChoice(offer()), compute: false },
+      unavailable,
+    );
+
+    expect(statisticsRequest(choice, unavailable)).toEqual({ compute_statistics: false });
+  });
+
+  it("leaves the server to decide until the user could choose", () => {
+    // The server checks again when the import starts: the job may run by then.
+    const unavailable = offer({ available: false });
+    expect(statisticsRequest(initialStatisticsChoice(unavailable), unavailable)).toEqual({});
+    expect(statisticsRequest({ compute: true, decided: true }, null)).toEqual({});
   });
 });

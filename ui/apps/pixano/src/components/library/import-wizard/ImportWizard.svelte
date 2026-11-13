@@ -29,6 +29,7 @@ License: CECILL-C
   import ReviewStep from "./ReviewStep.svelte";
   import { createWizardSourceState } from "./sourceState";
   import SourceStep from "./SourceStep.svelte";
+  import StatisticsChoice from "./StatisticsChoice.svelte";
   import WizardStepIndicator from "./WizardStepIndicator.svelte";
   import {
     WIZARD_DISCLOSURE_CLASS,
@@ -44,22 +45,27 @@ License: CECILL-C
     groupFindings,
     mergeSpec,
     nextEmbeddingsChoice,
+    nextStatisticsChoice,
     offersEmbeddingsChoice,
+    offersStatisticsChoice,
     parseAdvancedSpec,
     setupValidationMessage,
     showsLerobotFields,
+    statisticsRequest,
     type ImportIntent,
     type WizardFields,
   } from "./wizardUtils";
   import {
     analyzeImportSource,
     getImportEmbeddingsOffer,
+    getImportStatisticsOffer,
     listIoFormats,
     startIoImport,
   } from "$lib/api/ioApi";
   import type {
     ImportEmbeddingsOffer,
     ImportPlanResponse,
+    ImportStatisticsOffer,
     IoFormatResponse,
   } from "$lib/api/restTypes";
   import { BLOCKING_ALERT_OVERLAY_CLASS } from "$lib/constants/modalConstants";
@@ -100,6 +106,11 @@ License: CECILL-C
   let embeddingsModel = $state("");
   let embeddingsDecided = $state(false);
   let embeddingsOfferToken = 0;
+  // The statistics of the dataset's overview, offered the same way.
+  let statisticsOffer = $state<ImportStatisticsOffer | null>(null);
+  let computeStatistics = $state(false);
+  let statisticsDecided = $state(false);
+  let statisticsOfferToken = 0;
 
   const previouslyFocusedElement =
     typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
@@ -114,6 +125,9 @@ License: CECILL-C
   const canGoAnalyze = $derived(selectedIntent !== null && !setupMessage);
   const showsEmbeddingsChoice = $derived(
     !analyzing && !analyzeError && !hasErrors && offersEmbeddingsChoice(embeddingsOffer, plan),
+  );
+  const showsStatisticsChoice = $derived(
+    !analyzing && !analyzeError && !hasErrors && offersStatisticsChoice(statisticsOffer),
   );
   const isRaw = $derived(selectedIntent === "raw");
   const showLerobot = $derived(selectedIntent !== null && showsLerobotFields(fields));
@@ -134,7 +148,26 @@ License: CECILL-C
         .then((result) => (formats = result))
         .catch(() => (formats = []));
   });
-  onMount(() => void loadEmbeddingsOffer());
+  onMount(() => {
+    void loadEmbeddingsOffer();
+    void loadStatisticsOffer();
+  });
+
+  /** Read the statistics offer, as the embeddings one is read. */
+  async function loadStatisticsOffer() {
+    const token = ++statisticsOfferToken;
+    try {
+      const offer = await getImportStatisticsOffer();
+      if (token !== statisticsOfferToken) return;
+      ({ compute: computeStatistics, decided: statisticsDecided } = nextStatisticsChoice(
+        { compute: computeStatistics, decided: statisticsDecided },
+        offer,
+      ));
+      statisticsOffer = offer;
+    } catch {
+      // The choice stays as it was, or unshown: the server's default applies.
+    }
+  }
 
   /** Read the offer; a read that fails keeps the last one, and a later read wins over an earlier. */
   async function loadEmbeddingsOffer() {
@@ -158,6 +191,7 @@ License: CECILL-C
   onDestroy(() => {
     analyzeToken++;
     embeddingsOfferToken++;
+    statisticsOfferToken++;
   });
 
   function invalidatePlan() {
@@ -229,6 +263,7 @@ License: CECILL-C
     plan = null;
     void focusReview();
     void loadEmbeddingsOffer();
+    void loadStatisticsOffer();
     const token = ++analyzeToken;
     try {
       const result = await analyzeImportSource(
@@ -272,6 +307,10 @@ License: CECILL-C
           { compute: computeEmbeddings, model: embeddingsModel, decided: embeddingsDecided },
           embeddingsOffer,
           plan,
+        ),
+        ...statisticsRequest(
+          { compute: computeStatistics, decided: statisticsDecided },
+          statisticsOffer,
         ),
       });
       trackImportJob(
@@ -519,6 +558,11 @@ License: CECILL-C
                       disabled={starting}
                       bind:compute={computeEmbeddings}
                       bind:model={embeddingsModel}
+                    />{/if}
+                  {#if showsStatisticsChoice && statisticsOffer}<StatisticsChoice
+                      offer={statisticsOffer}
+                      disabled={starting}
+                      bind:compute={computeStatistics}
                     />{/if}
                 {/snippet}
               </ReviewStep>

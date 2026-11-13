@@ -120,6 +120,14 @@ computed again, one job per model, each over the whole dataset: the media an add
 in none of them yet. A model you choose is computed beside them; left to the server, its model is
 used only for a dataset without embeddings. The tray says whether each job was queued, or why not.
 
+When a job queue is configured, **Compute statistics after the import**, below it, queues the job
+of the dataset's default statistics once the import is done: how many objects, boxes and masks each
+record holds and the share of its image each object's boxes cover. It is checked when the job can
+run, unless the server's administrator turned that default off (`PIXANO_STATISTICS_AFTER_IMPORT`);
+when the job cannot run — no worker for it, a queue that does not answer — the box is disabled and
+says why. A dataset with nothing to count, images alone, needs no job: the tray says the
+statistics were not needed.
+
 **Edit setup** returns to the Source and Annotation panels with the uploaded source, name,
 options, and annotation settings preserved. Adjust the setup and analyze again to review the
 updated plan; you do not need to upload the same folder again.

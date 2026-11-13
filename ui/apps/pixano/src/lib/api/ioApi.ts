@@ -8,6 +8,7 @@ import { JSON_HEADERS, requestJson } from "./apiClient";
 import type {
   ImportEmbeddingsOffer,
   ImportPlanResponse,
+  ImportStatisticsOffer,
   IoFormatResponse,
   IoJobResponse,
   UploadSessionResponse,
@@ -50,8 +51,8 @@ export async function analyzeImportSource(
 /**
  * Queue an import job (202) from a saved plan_id and/or a spec+source pair.
  *
- * `compute_embeddings` left out follows the server's default, which only applies where the job can
- * run; `embeddings_model` left out is the server's.
+ * `compute_embeddings` and `compute_statistics` left out follow the server's defaults, which only
+ * apply where their jobs can run; `embeddings_model` left out is the server's.
  */
 export async function startIoImport(request: {
   plan_id?: string;
@@ -59,6 +60,7 @@ export async function startIoImport(request: {
   spec?: Record<string, unknown>;
   compute_embeddings?: boolean;
   embeddings_model?: string;
+  compute_statistics?: boolean;
 }): Promise<IoJobResponse> {
   return requestJson<IoJobResponse>(
     "/io/imports",
@@ -71,6 +73,7 @@ export async function startIoImport(request: {
         spec: request.spec ?? {},
         compute_embeddings: request.compute_embeddings,
         embeddings_model: request.embeddings_model,
+        compute_statistics: request.compute_statistics,
       }),
     },
     "startIoImport",
@@ -83,6 +86,15 @@ export async function getImportEmbeddingsOffer(): Promise<ImportEmbeddingsOffer>
     "/io/imports/embeddings",
     {},
     "getImportEmbeddingsOffer",
+  );
+}
+
+/** Whether an import can queue the statistics job of its default statistics, for the dataset's overview. */
+export async function getImportStatisticsOffer(): Promise<ImportStatisticsOffer> {
+  return requestJson<ImportStatisticsOffer>(
+    "/io/imports/statistics",
+    {},
+    "getImportStatisticsOffer",
   );
 }
 
