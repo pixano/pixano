@@ -11,7 +11,12 @@ License: CECILL-C
   import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
   import { Select } from "$lib/ui";
   import { formatColumnLabel } from "$lib/utils/columns";
-  import { isListOperator, OPERATOR_LABELS, type RecordFilter } from "$lib/utils/recordFilters";
+  import {
+    canApplyFilter,
+    isListOperator,
+    OPERATOR_LABELS,
+    type RecordFilter,
+  } from "$lib/utils/recordFilters";
 
   interface Props {
     columns: ColumnDescriptorResponse[];
@@ -51,12 +56,10 @@ License: CECILL-C
     else if (listMode && !isBetween && values.length < 1) values = [""];
   });
 
-  const canSave = $derived(
-    col !== "" &&
-      op !== "" &&
-      values.some((v) => v.trim() !== "") &&
-      (!isBetween || values.every((v) => v !== "")),
-  );
+  const canSave = $derived(canApplyFilter(col, op, values));
+
+  // A whole number steps by one; a decimal, a score between 0 and 1 say, takes any value.
+  const inputStep = $derived(column?.type === "float" ? "any" : undefined);
 
   function inputType(): "text" | "number" | "date" {
     if (column?.type === "datetime") return "date";
@@ -201,9 +204,27 @@ License: CECILL-C
       </Select.Portal>
     </Select.Root>
   {:else if isBetween}
-    <input type={inputType()} bind:value={values[0]} placeholder="from" class="{inputClass} w-36" />
+    <!--
+      The value as typed, never as a number input converts it: the filter carries text, and a
+      number would rewrite what was typed (1e21, integers past 2^53).
+    -->
+    <input
+      type={inputType()}
+      step={inputStep}
+      value={values[0]}
+      oninput={(e) => (values[0] = e.currentTarget.value)}
+      placeholder="from"
+      class="{inputClass} w-36"
+    />
     <span class="text-muted-foreground text-sm">and</span>
-    <input type={inputType()} bind:value={values[1]} placeholder="to" class="{inputClass} w-36" />
+    <input
+      type={inputType()}
+      step={inputStep}
+      value={values[1]}
+      oninput={(e) => (values[1] = e.currentTarget.value)}
+      placeholder="to"
+      class="{inputClass} w-36"
+    />
   {:else if listMode}
     <div class="flex flex-wrap items-center gap-1.5">
       {#each values as value, i (i)}
@@ -241,6 +262,7 @@ License: CECILL-C
           {:else}
             <input
               type={inputType()}
+              step={inputStep}
               {value}
               oninput={(e) => (values[i] = e.currentTarget.value)}
               placeholder="value"
@@ -271,7 +293,9 @@ License: CECILL-C
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type={inputType()}
-      bind:value={values[0]}
+      step={inputStep}
+      value={values[0]}
+      oninput={(e) => (values[0] = e.currentTarget.value)}
       placeholder="value"
       autofocus
       class="{inputClass} w-44"
