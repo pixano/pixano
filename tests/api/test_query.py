@@ -11,17 +11,24 @@ import pytest
 
 from pixano.api.query import (
     FILTER_OPERATORS,
+    MAX_FILTERS,
     STATISTICS_COLUMN_PREFIX,
     ColumnDescriptor,
     FilterCompileError,
     compile_computed_filters,
+    compile_cross_filter,
     compile_filters,
     compile_record_query,
     computed_columns_by_name,
     split_filters,
     validate_sort,
 )
-from pixano.datasets.queries.computed_columns import RECORD_STATISTICS_TABLE, ComputedFilter, RecordOrder
+from pixano.datasets.queries.computed_columns import (
+    RECORD_STATISTICS_TABLE,
+    ComputedFilter,
+    CrossFilter,
+    RecordOrder,
+)
 
 
 def _col(name: str, type_: str, *, source: str = "base", searchable: bool = False, indexed: bool = False):
@@ -326,3 +333,44 @@ class TestStatistics:
     def test_a_refusal_names_the_statistic_as_the_catalogue_does(self):
         with pytest.raises(FilterCompileError, match="column 'record_statistics.bbox_count'"):
             compile_record_query(STATISTICS_CATALOGUE, ["record_statistics.bbox_count:gt:many"])
+
+
+class TestCrossFilter:
+    def test_each_column_filtered_gets_the_condition_of_its_own_filters(self):
+        compiled = compile_cross_filter(
+            STATISTICS_CATALOGUE,
+            [
+                "split:eq:train",
+                "score:gte:0.5",
+                "record_statistics.bbox_count:gte:2",
+                "score:lt:0.9",
+                "record_statistics.bbox_count:lte:4",
+            ],
+        )
+
+        assert compiled == CrossFilter(
+            where=None,
+            on_records={"split": "split = 'train'", "score": "score >= 0.5 AND score < 0.9"},
+            on_computed={
+                "record_statistics.bbox_count": ComputedFilter(
+                    sql='c."bbox_count" >= 2 AND c."bbox_count" <= 4', columns=("bbox_count",)
+                )
+            },
+        )
+        assert compiled.columns == ["split", "score", "record_statistics.bbox_count"]
+
+    def test_the_free_text_and_a_raw_clause_apply_to_every_column(self):
+        compiled = compile_cross_filter(STATISTICS_CATALOGUE, ["split:eq:train"], q="dog", raw_where="n > 1")
+
+        assert compiled.where is not None and compiled.where.endswith(") AND (n > 1)")
+        assert "split" not in compiled.where
+        assert compiled.on_records == {"split": "split = 'train'"}
+
+    @pytest.mark.parametrize(
+        "filters",
+        [["nowhere:eq:1"], ["record_statistics.unknown:eq:1"], ["split:eq:train"] * (MAX_FILTERS + 1)],
+        ids=["unknown column", "unknown statistic", "too many filters"],
+    )
+    def test_refuses_what_the_records_list_refuses(self, filters: list[str]):
+        with pytest.raises(FilterCompileError):
+            compile_cross_filter(STATISTICS_CATALOGUE, filters)
