@@ -456,7 +456,7 @@ Questions raised by step 1's review, and the rules step 2 settles for them; each
 - **An export can keep only the model annotations of chosen statuses**: `review_statuses` in `POST /io/exports`, `--review-status` on the command line, and `ExportSpec.review_statuses`, which `export_dataset` takes. Every annotation no model produced is kept, and only the reviewable kinds are filtered: relations and text spans are kept whatever their status — kept by the reader, `RecordBundleReader`; no export format writes a relation (`pixano_jsonl` reserves the kind, `coco` has none), so an entity a kept relation protects is exported with no annotation by `pixano_jsonl`, and is absent from `coco`, whose entries come from boxes, masks and keypoints. Tracklets are never filtered by their status. A tracklet no model produced keeps its entity, like every annotation no model produced. A model's tracklet is structure: it goes with its entity, like the entity's dynamic states, and does not keep it. A kept relation naming a tracklet keeps that tracklet's entity, and so the tracklet: otherwise a person's tracklet would go with an entity the selection emptied, and a relation could be left naming a tracklet dropped. See the amendment of 2026-10-05 in [the import/export spec](./data-import-export.md).
 - **Compaction** stays as it is until a compaction outlasts a chunk; then it moves out of the write lock. Measure at 500 k rows once a kind produces that volume.
 - **Chunks are unchanged.** Video tracking is on hold; when it comes, a chunk is a video, with an internal progress and a weight per chunk deciding its time limit.
-- **Statistics are composed by people** (step 2's second version, decided 2026-11-04): none is built in, a person composes them from fixed choices, and the library keeps them for every dataset they apply to (§22).
+- **Statistics are composed by people** (step 2's second version, decided 2026-11-04): a person composes them from fixed choices, and the library keeps them for every dataset they apply to (§22). None was built in until a dataset's overview (decided 2026-11-09): a few default statistics, composed the same way, are to be computed for every dataset they apply to (§22.7).
 - Deferred to a second version of the step: NER, statistics and partial writes, vector indexing, clustering, video.
 
 ## 20. What steps 3 and 4 open
@@ -489,9 +489,9 @@ Step 3 brings several sources of media and datasets, object storage among them; 
 
 Step 2's second version (decided 2026-11-02 and 2026-11-04). A statistic is a value computed for each record, or each object, of a dataset from its annotations — how many boxes a record holds, the mean area of an object's masks — meant to sort and filter the explorer on.
 
-### 22.1 Composed by people, never built in
+### 22.1 Composed by people, from fixed choices
 
-No statistic is built into Pixano: a dataset of masks has nothing to do with a box count. A person composes the statistics they want from fixed choices, never a formula nor code (`pixano.statistics.definitions`):
+Statistics are no fixed list: a dataset of masks has nothing to do with a box count. A person composes the statistics they want from fixed choices, never a formula nor code (`pixano.statistics.definitions`). Revised on 2026-11-09 for a dataset's overview: a few default statistics, composed the same way, are to be computed for every dataset they apply to (§22.7).
 
 - the **level**: one value per record, or per object;
 - the **element** measured: an annotation kind the dataset declares, by its `DatasetInfo` slot (`bbox`, `mask`, `keypoint`, `multi_path`, `text_span`, `classification`, `tracklet`, `bbox3d`), or, per record, its objects (`entity`);
@@ -547,3 +547,9 @@ A filter or a sort on a statistic is answered by a join (`pixano.datasets.querie
 The statistics table is read at its latest version at each request, through a handle of its own (`Dataset.open_latest_table`): another process may write and compact it meanwhile — the statistics job, or `pixano data optimize` —, and a handle kept on an earlier version could lose its files. A compaction can still take the files of the version a read just opened, when that version is older than the hour old versions are kept: the read is tried again once. A page shows a column's values as the table holds them when it is read, and a statistic only once the dataset records it as computed (`Dataset.record_computed_statistics`): values written to a column no recorded statistic names are not shown.
 
 Measured on a laptop, sorted or filtered on a statistic: a page of a dataset of 100,000 records takes 0.05 s, of a million 0.3 to 0.4 s; a record's neighbors among a million, 0.35 s. Every page of a dataset holding statistics reads its records' values, sorted on one or not: 0.03 s for 20 records among a million, the table carrying no index of its own.
+
+### 22.7 The overview
+
+Decided 2026-11-09: a dataset gets an overview as soon as it is imported, as close as can be to the statistics of Know Your Data; statistics a person composes in a dashboard of their own are a later version. It revises §22.1 on one point: a few default statistics are to be computed for every dataset.
+
+**The default statistics.** What a table does not hold as it is — how many objects, boxes and masks each record holds, the share of its image each object's box covers, the mean over its boxes — is computed by the statistics job (§22.4), as composed statistics (`pixano.statistics.defaults`): they are columns of the explorer like any other, and a person composing the same choices gets the same column. A default statistic is a dataset's when it applies to it and the table of what it counts holds a row (`default_statistics`) — an import of images alone declares a table of objects and one of boxes, both empty. Each is the statistic as the dataset computed it, else as the library holds it, when either holds its choices: the label a person gave it stays.

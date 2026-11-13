@@ -22,6 +22,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.schemas import BBox, Entity, Image, Record, SequenceFrame
 from pixano.statistics import definitions as definitions_module
+from pixano.statistics.defaults import DEFAULT_STATISTIC_CHOICES
 from pixano.statistics.definitions import (
     AttributeFilter,
     StatisticAggregation,
@@ -284,6 +285,16 @@ class TestRefused:
 
     def test_by_the_generic_form_which_cannot_build_its_parameters(self) -> None:
         assert StatisticsKind().params_schema()[OWN_FORM_MARKER] == "statistics"
+
+
+class TestTheDefaultStatistics:
+    def test_the_default_statistics_are_taken_as_they_come(self) -> None:
+        """The application is to send every default statistic, as JSON, in the job's parameters."""
+        defaults = [define_statistic(choices) for choices in DEFAULT_STATISTIC_CHOICES]
+
+        params = StatisticsKind().validate_params({"statistics": [d.model_dump(mode="json") for d in defaults]})
+
+        assert params.statistics == defaults
 
 
 class TestVideo:
