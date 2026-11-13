@@ -350,18 +350,24 @@ class DetectionInput:
     """Input for zero-shot object detection.
 
     Attributes:
-        image: Image as base64 string or URL.
+        image: Image as base64 string, URL, or raw bytes.
         model: Model name to use.
-        classes: List of class names to detect.
+        classes: List of class names to detect. With exemplars, at most one: the exemplars' class.
         box_threshold: Confidence threshold for boxes.
         text_threshold: Confidence threshold for text matching.
+        exemplar_boxes: Pixel ``[x1, y1, x2, y2]`` boxes around objects to find more of. Only for a
+            model whose interface sets ``exemplars``.
+        negative_exemplar_boxes: Pixel boxes around look-alikes not to find. Only with
+            ``exemplar_boxes``, and for a model whose interface sets ``negative_exemplars``.
     """
 
-    image: str
+    image: str | bytes
     model: str
-    classes: list[str] | str
+    classes: list[str] | str | None
     box_threshold: float = 0.5
     text_threshold: float = 0.5
+    exemplar_boxes: list[list[int]] | None = None
+    negative_exemplar_boxes: list[list[int]] | None = None
 
 
 @dataclass
