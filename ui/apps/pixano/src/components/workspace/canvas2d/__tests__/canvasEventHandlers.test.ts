@@ -57,6 +57,7 @@ describe("canvasEventHandlers", () => {
     expect(shouldHideAnnotationsForToolMode(true, false)).toBe(true);
     expect(shouldHideAnnotationsForToolMode(true, true)).toBe(false);
     expect(shouldHideAnnotationsForToolMode(false, false)).toBe(false);
+    expect(shouldHideAnnotationsForToolMode(true, false, true)).toBe(false);
   });
 
   it("clears highlighting only for a left click on blank canvas while Pan is active", () => {

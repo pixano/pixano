@@ -16,6 +16,7 @@ License: CECILL-C
     PaintBucket,
     PencilSimple,
     Polygon,
+    Sparkle,
     Square,
   } from "phosphor-svelte";
 
@@ -25,7 +26,14 @@ License: CECILL-C
   import { page } from "$app/state";
   import { ensureInferenceRegistryLoaded } from "$lib/services/inferenceService.svelte";
   import {
+    closeDetectionSession,
+    isDetectionActive,
+    openDetectionSetup,
+    resolveDetectionImages,
+  } from "$lib/stores/detectionStore.svelte";
+  import {
     currentSegmentationModels,
+    detectionModels,
     inferenceServerStore,
     selectedStaticSegmentationModel,
     selectedVideoSegmentationModel,
@@ -63,6 +71,18 @@ License: CECILL-C
     const viewName = videoViewNames.value[0];
     if (!datasetId || !recordId || !viewName) return;
     openTrackingByDetectionSetup({ datasetId, recordId }, viewName);
+  };
+
+  const toggleDetection = () => {
+    if (isDetectionActive.value) {
+      closeDetectionSession();
+      return;
+    }
+    const datasetId = page.params.datasetId;
+    const recordId = itemMetas.value?.item.id;
+    const viewName = resolveDetectionImages()[0]?.viewName;
+    if (!datasetId || !recordId || !viewName) return;
+    openDetectionSetup({ datasetId, recordId }, viewName);
   };
 
   const selectPanTool = () => {
@@ -177,6 +197,10 @@ License: CECILL-C
   let drawingDisabled = $derived(smartInferencePending || trackingByDetectionActive);
   let trackingByDetectionUnavailable = $derived(
     !inferenceServerStore.value.connected || trackingByDetectionModels.value.length === 0,
+  );
+  let detectionActive = $derived(isDetectionActive.value);
+  let detectionUnavailable = $derived(
+    !inferenceServerStore.value.connected || detectionModels.value.length === 0,
   );
   let currentWorkspaceType = $derived(itemMetas.value?.type ?? WorkspaceType.IMAGE);
   let compatibleSegmentationModels = $derived(currentSegmentationModels.value);
@@ -422,6 +446,21 @@ License: CECILL-C
     {/if}
   </div>
   <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+
+  {#if currentWorkspaceType === WorkspaceType.IMAGE}
+    <IconButton
+      tooltipContent={detectionUnavailable
+        ? "No detection model is served"
+        : "Detect objects, or find more like the boxed ones"}
+      onclick={toggleDetection}
+      selected={detectionActive}
+      disabled={smartInferencePending || detectionUnavailable}
+      class="h-8 w-8 hover:bg-accent/60 transition-all duration-200"
+    >
+      <Sparkle weight="regular" class="h-4.5 w-4.5" />
+    </IconButton>
+    <div class="mx-0.5 h-4 w-px bg-border/30"></div>
+  {/if}
 
   {#if currentWorkspaceType === WorkspaceType.VIDEO}
     <IconButton

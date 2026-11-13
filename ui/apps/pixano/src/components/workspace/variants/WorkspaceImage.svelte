@@ -19,6 +19,11 @@ License: CECILL-C
     createIdleSmartSegmentationUiState,
     createPendingSmartSegmentationUiState,
   } from "$lib/segmentation/smartInferenceStatus";
+  import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
+  import {
+    addDetectionExample,
+    isAddingDetectionExamples,
+  } from "$lib/stores/detectionStore.svelte";
   import { selectedStaticSegmentationModel } from "$lib/stores/inferenceStores.svelte";
   import {
     annotationColors,
@@ -49,6 +54,7 @@ License: CECILL-C
   import { editModeBlockedReason, enterEditMode, exitEditMode } from "$lib/utils/editMode";
   import { applyNewShapeEditing } from "$lib/utils/entityAnnotationEditing";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
+  import { getWorkspaceContext } from "$lib/workspace/context";
 
   interface Props {
     // Attributes
@@ -74,9 +80,31 @@ License: CECILL-C
   const interactiveSegmenter = new InteractiveSegmenter();
   let smartPreviewMasks = $state<Record<string, SaveMaskShape | null>>({});
 
+  const workspace = getWorkspaceContext();
+
   const handleCanvasShapeChange = (shape: Shape) => {
     // Draft creation now stays local in Canvas2D and should not trigger store churn.
     if (shape.status === "creating") return;
+    // Detection examples: saved at once with the panel's class, no creation form.
+    if (
+      shape.status === "saving" &&
+      shape.type === ShapeType.bbox &&
+      isAddingDetectionExamples.value
+    ) {
+      const added = addDetectionExample(shape, {
+        manifest: workspace.manifest,
+        featureValues: workspace.featureValues,
+      });
+      newShape.value = {
+        status: "none",
+        shouldReset: true,
+        resetReason: "save-confirmed",
+        resetShapeType: shape.type,
+        resetViewRef: shape.viewRef,
+      };
+      if (added) void currentItemSaveCoordinator.requestSave();
+      return;
+    }
 
     if (
       selectedTool.value?.type === ToolType.Brush &&

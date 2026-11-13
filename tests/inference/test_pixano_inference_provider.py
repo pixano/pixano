@@ -20,6 +20,7 @@ from pixano_inference.client import PixanoInferenceClient
 from pixano.inference.exceptions import InferenceRequestError
 from pixano.inference.providers.pixano_inference import PixanoInferenceProvider
 from pixano.inference.types import (
+    DetectionInput,
     EmbeddingInput,
     ImageMaskGenerationInput,
     InferenceTask,
@@ -447,5 +448,50 @@ async def test_embedding_returns_vector():
         assert result.data.dim == 512
         assert result.data.embedding.shape == [1, 512]
         assert len(result.data.embedding.values) == 512
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_detection_sends_exemplar_boxes():
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json=_envelope({"boxes": [[1, 2, 3, 4]], "scores": [0.7], "classes": ["screw"]}))
+
+    provider = _provider_with_transport(handler)
+    try:
+        result = await provider.detection(
+            DetectionInput(
+                image=b"\x89PNG\r\n\x1a\n" + b"0" * 16,
+                model="sam3",
+                classes=["screw"],
+                box_threshold=0.4,
+                exemplar_boxes=[[10, 20, 30, 40]],
+                negative_exemplar_boxes=[[50, 60, 70, 80]],
+            )
+        )
+        body = captured["body"]
+        assert body["exemplarBoxes"] == [[10, 20, 30, 40]]
+        assert body["negativeExemplarBoxes"] == [[50, 60, 70, 80]]
+        assert body["image"].startswith("data:image/png;base64,")
+        assert result.data.boxes == [[1, 2, 3, 4]]
+    finally:
+        await provider.close()
+
+
+@pytest.mark.asyncio
+async def test_detection_without_exemplars_sends_none():
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json=_envelope({"boxes": [], "scores": [], "classes": []}))
+
+    provider = _provider_with_transport(handler)
+    try:
+        await provider.detection(DetectionInput(image="http://example.com/a.jpg", model="gdino", classes=["cat"]))
+        assert captured["body"].get("exemplarBoxes") is None
     finally:
         await provider.close()

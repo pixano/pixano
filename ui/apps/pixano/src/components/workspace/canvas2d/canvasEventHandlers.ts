@@ -32,7 +32,7 @@ export function getToolSwitchSignature(tool: SelectionTool): string {
     return `${tool.type}:${tool.outputMode}`;
   }
   if (tool.type === ToolType.Rectangle) {
-    return `${tool.type}:${tool.isSmart ? "smart" : "regular"}`;
+    return `${tool.type}:${tool.isSmart ? "smart" : "regular"}${tool.autoConfirm ? ":auto" : ""}`;
   }
   if (tool.type === ToolType.InteractiveSegmenter || tool.type === ToolType.VOS) {
     return tool.type;
@@ -151,13 +151,15 @@ export interface NeutralPeekPresentation {
 const DEFAULT_NEUTRAL_MASK_OVERLAY_ALPHA = 0.2;
 
 /**
- * Existing annotations are hidden while a drawing tool is active unless the user is peeking.
+ * Existing annotations are hidden while a drawing tool is active unless the user is peeking, or
+ * the tool keeps them visible (`keepsAnnotationsVisible`).
  */
 export function shouldHideAnnotationsForToolMode(
   isDrawingTool: boolean,
   isPeeking: boolean,
+  keepsAnnotationsVisible = false,
 ): boolean {
-  return isDrawingTool && !isPeeking;
+  return isDrawingTool && !isPeeking && !keepsAnnotationsVisible;
 }
 
 /**

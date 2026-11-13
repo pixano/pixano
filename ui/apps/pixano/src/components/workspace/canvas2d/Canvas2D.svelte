@@ -1672,7 +1672,13 @@ License: CECILL-C
   });
 
   // Whether store-backed annotations should be hidden right now.
-  let shouldHideShapes = $derived(shouldHideAnnotationsForToolMode(isDrawingTool, isPeeking));
+  let shouldHideShapes = $derived(
+    shouldHideAnnotationsForToolMode(
+      isDrawingTool,
+      isPeeking,
+      selectedTool?.keepsAnnotationsVisible === true,
+    ),
+  );
 
   // Canvas box edit mode (click, hover, E): with the Pan tool, outside playback, while no
   // AI request or shape save is pending and shapes are shown.

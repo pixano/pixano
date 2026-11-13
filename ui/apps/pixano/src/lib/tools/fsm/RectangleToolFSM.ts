@@ -18,6 +18,7 @@ import type { ToolContext, ToolEvent, ToolFSM, ToolState, ToolTransition } from 
  * On pointerUp (area = 0): back to idle
  * On confirm (Enter) in editingNew: emit requestSave with bbox geometry, back to idle
  * On cancel (Escape) in editingNew: clear preview, back to idle
+ * With `autoConfirm`, pointerUp (area > 0, non-smart) emits requestSave at once, back to idle
  */
 export class RectangleToolFSM implements ToolFSM {
   readonly id = "rectangle";
@@ -28,8 +29,12 @@ export class RectangleToolFSM implements ToolFSM {
   /** If true, this rectangle is a smart tool that triggers AI post-processing. */
   readonly isSmart: boolean;
 
-  constructor(options?: { isSmart?: boolean }) {
+  /** If true, a drawn rectangle is saved at once, with no editing step. */
+  readonly autoConfirm: boolean;
+
+  constructor(options?: { isSmart?: boolean; autoConfirm?: boolean }) {
     this.isSmart = options?.isSmart ?? false;
+    this.autoConfirm = options?.autoConfirm ?? false;
   }
 
   getInitialState(): ToolState {
@@ -107,6 +112,25 @@ export class RectangleToolFSM implements ToolFSM {
                         y2: Math.max(state.origin.y, event.position.y),
                       },
                     },
+                  },
+                },
+              ],
+            };
+          }
+
+          if (this.autoConfirm) {
+            return {
+              newState: { phase: "idle" },
+              sideEffects: [
+                { type: "updatePreview", preview: null },
+                {
+                  type: "requestSave",
+                  shapeType: "bbox",
+                  geometry: {
+                    x: Math.min(state.origin.x, event.position.x),
+                    y: Math.min(state.origin.y, event.position.y),
+                    width: dx,
+                    height: dy,
                   },
                 },
               ],
