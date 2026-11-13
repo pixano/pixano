@@ -29,6 +29,7 @@ from pixano.schemas import (
     Record,
     RecordStatistics,
     Relation,
+    SchemaGroup,
     TextSpan,
     TimeSeries,
     Tracklet,
@@ -145,6 +146,10 @@ class PreviewDescriptor(ResponseModel):
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
+    # The values of the columns the dataset computed per record — its statistics —, by the name the
+    # explorer's catalogue gives them, `record_statistics.<name>` (backend-processing §22.5). Named
+    # apart from a record's own fields.
+    computed_values: dict[str, int | float | None] | None = None
 
 
 class ColumnDescriptorResponse(ResponseModel):
@@ -161,6 +166,9 @@ class ColumnDescriptorResponse(ResponseModel):
     operators: list[str]
     values: list[str] | None = None
     values_complete: bool = True
+    table: str = SchemaGroup.RECORD.value
+    label: str | None = None
+    unit: str | None = None
 
 
 class SearchCapabilities(ResponseModel):

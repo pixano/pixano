@@ -951,6 +951,23 @@ class Dataset:
         self._table_handles[name] = table
         return table
 
+    def open_latest_table(self, name: str) -> LanceTable:
+        """Open a dataset table at its latest version, through a handle of its own, never kept.
+
+        For a table another process writes and compacts while this instance reads it — the
+        statistics (backend-processing §22.5): a kept handle stays on the version it opened, and a
+        compaction may since have removed that version's files.
+
+        Args:
+            name: Name of the table to open.
+
+        Returns:
+            Dataset table.
+        """
+        if name not in self.info.tables:
+            raise DatasetAccessError(f"Table {name} not found in dataset")
+        return self._db_connection.open_table(name)
+
     @overload
     def get_data(
         self,

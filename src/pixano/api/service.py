@@ -6,7 +6,9 @@
 
 """Generic CRUD service for the API."""
 
+import builtins
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any
@@ -289,6 +291,22 @@ class BaseService:
 
         items = [self._response(row) for row in (rows or [])]
         return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
+
+    # `list` names the method above in the class: the type is the builtin's.
+    def get_many(self, ids: Sequence[str]) -> builtins.list[BaseModel]:
+        """Fetch resources by ID, in the order given; an ID no row holds is left out.
+
+        Args:
+            ids: The resources' identifiers, in the order to answer them in.
+
+        Returns:
+            The resources found.
+        """
+        if not ids:
+            return []
+        rows = self.dataset.get_data(self.resolve_table(), ids=builtins.list(ids)) or []
+        by_id = {row.id: row for row in rows}
+        return [self._response(by_id[resource_id]) for resource_id in ids if resource_id in by_id]
 
     def get(self, id: str) -> BaseModel:
         """Fetch one resource by ID."""

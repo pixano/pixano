@@ -6,15 +6,22 @@
 
 """Unit tests for the pure explorer filter/sort compiler (`pixano.api.query`)."""
 
+import duckdb
 import pytest
 
 from pixano.api.query import (
     FILTER_OPERATORS,
+    STATISTICS_COLUMN_PREFIX,
     ColumnDescriptor,
     FilterCompileError,
+    compile_computed_filters,
     compile_filters,
+    compile_record_query,
+    computed_columns_by_name,
+    split_filters,
     validate_sort,
 )
+from pixano.datasets.queries.computed_columns import RECORD_STATISTICS_TABLE, ComputedFilter, RecordOrder
 
 
 def _col(name: str, type_: str, *, source: str = "base", searchable: bool = False, indexed: bool = False):
@@ -137,6 +144,16 @@ class TestRejections:
         with pytest.raises(FilterCompileError, match="not a valid integer"):
             compile_filters(CATALOGUE, ["n:eq:abc"])
 
+    def test_an_integer_beyond_what_a_column_holds(self):
+        with pytest.raises(FilterCompileError, match="beyond the integers"):
+            compile_filters(CATALOGUE, [f"n:gt:{2**63}"])
+
+    @pytest.mark.parametrize("value", ["nan", "inf", "-Infinity"])
+    def test_a_number_that_is_not_finite(self, value: str):
+        # SQL has no literal for it: `nan` would be read as a column's name.
+        with pytest.raises(FilterCompileError, match="not a finite number"):
+            compile_filters(CATALOGUE, [f"score:gt:{value}"])
+
     def test_non_float_value(self):
         with pytest.raises(FilterCompileError, match="not a valid number"):
             compile_filters(CATALOGUE, ["score:eq:abc"])
@@ -192,3 +209,120 @@ class TestEmpty:
 
     def test_empty_query_string_is_ignored(self):
         assert compile_filters(CATALOGUE, [], q="") == (None, set(), True)
+
+
+def _statistic(name: str, type_: str) -> ColumnDescriptor:
+    return ColumnDescriptor(
+        name=f"{STATISTICS_COLUMN_PREFIX}{name}",
+        type=type_,
+        collection=False,
+        source="statistics",
+        filterable=True,
+        sortable=True,
+        searchable=False,
+        indexed=False,
+        operators=FILTER_OPERATORS[type_],
+        values=None,
+        values_complete=True,
+        table=RECORD_STATISTICS_TABLE,
+        label=name,
+    )
+
+
+STATISTICS_CATALOGUE = [*CATALOGUE, _statistic("bbox_count", "int"), _statistic("bbox_area_mean_px", "float")]
+
+
+class TestStatistics:
+    def test_the_filters_on_statistics_are_told_apart(self):
+        own, on_computed = split_filters(
+            ["split:eq:train", "record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
+        )
+
+        assert own == ["split:eq:train"]
+        assert on_computed == ["record_statistics.bbox_count:gte:2", "record_statistics.unknown:eq:1"]
+
+    def test_a_filter_on_statistics_reads_their_columns_as_the_join_does(self):
+        compiled = compile_computed_filters(
+            STATISTICS_CATALOGUE,
+            [
+                "record_statistics.bbox_count:gte:2",
+                "record_statistics.bbox_area_mean_px:lt:10.5",
+                "record_statistics.bbox_count:nin:3,4",
+            ],
+        )
+
+        assert compiled == ComputedFilter(
+            sql=(
+                'c."bbox_count" >= 2 AND c."bbox_area_mean_px" < CAST(\'10.5\' AS DOUBLE) '
+                'AND c."bbox_count" NOT IN (3, 4)'
+            ),
+            columns=("bbox_count", "bbox_area_mean_px"),
+        )
+
+    def test_a_number_of_seventeen_digits_is_read_by_the_join_as_the_double_it_was_written_from(self):
+        """DuckDB reads a number with a decimal point as a DECIMAL, which can miss it by its last bit."""
+        share = 0.17151709517771863
+        compiled = compile_computed_filters(
+            STATISTICS_CATALOGUE, [f"record_statistics.bbox_area_mean_px:gte:{share!r}"]
+        )
+        assert compiled is not None
+
+        with duckdb.connect() as connection:
+            connection.execute("CREATE TABLE c AS SELECT ?::DOUBLE AS bbox_area_mean_px", [share])
+            kept = connection.execute(f"SELECT count(*) FROM c WHERE {compiled.sql}").fetchone()
+
+        assert kept == (1,)
+
+    def test_a_number_on_the_records_own_columns_stays_a_plain_literal_for_lancedb(self):
+        where, _referenced, _servable = compile_filters(STATISTICS_CATALOGUE, ["score:gte:0.5"])
+
+        assert where == "score >= 0.5"
+
+    def test_no_filter_on_statistics(self):
+        assert compile_computed_filters(STATISTICS_CATALOGUE, []) is None
+
+    @pytest.mark.parametrize(
+        "token,message",
+        [
+            ("record_statistics.unknown:eq:1", "Unknown statistic"),
+            ("record_statistics.bbox_count:contains:1", "not valid"),
+            ("record_statistics.bbox_count:gt:many", "not a valid integer"),
+        ],
+    )
+    def test_a_filter_on_statistics_refused(self, token: str, message: str):
+        with pytest.raises(FilterCompileError, match=message):
+            compile_record_query(STATISTICS_CATALOGUE, [token])
+
+    def test_the_whole_request(self):
+        query = compile_record_query(
+            STATISTICS_CATALOGUE,
+            ["split:eq:train", "record_statistics.bbox_count:gte:2"],
+            q="dog",
+            sort="record_statistics.bbox_area_mean_px",
+            order="desc",
+            raw_where="n > 1",
+        )
+
+        assert query.where.startswith("split = 'train' AND (") and query.where.endswith(") AND (n > 1)")
+        assert query.index_servable is False
+        assert query.computed_filter == ComputedFilter(sql='c."bbox_count" >= 2', columns=("bbox_count",))
+        assert query.order == RecordOrder(column="bbox_area_mean_px", descending=True, on_computed=True)
+        assert query.through_computed
+
+    def test_a_request_on_the_records_alone(self):
+        query = compile_record_query(STATISTICS_CATALOGUE, ["split:eq:train"], sort="score", order="desc")
+
+        assert query.order == RecordOrder(column="score", descending=True, on_computed=False)
+        assert query.order.direction == "desc"
+        assert not query.through_computed
+
+    def test_the_columns_a_page_shows(self):
+        assert computed_columns_by_name(STATISTICS_CATALOGUE) == {
+            "record_statistics.bbox_count": "bbox_count",
+            "record_statistics.bbox_area_mean_px": "bbox_area_mean_px",
+        }
+        assert computed_columns_by_name(CATALOGUE) == {}
+
+    def test_a_refusal_names_the_statistic_as_the_catalogue_does(self):
+        with pytest.raises(FilterCompileError, match="column 'record_statistics.bbox_count'"):
+            compile_record_query(STATISTICS_CATALOGUE, ["record_statistics.bbox_count:gt:many"])
