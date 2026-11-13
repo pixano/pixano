@@ -49,17 +49,22 @@ License: CECILL-C
         onCheckAgain={() => void jobsStore.start()}
       />
     </div>
-  {:else if jobsStore.runnable}
+  {:else if jobsStore.formKinds.length > 0}
     <!--
       The form scrolls on its own, within a share of the panel: a kind with many parameters
-      used to push the Run button out of sight and leave the job list no room at all.
+      used to push the Run button out of sight and leave the job list no room at all. A kind whose
+      parameters the form cannot build is left out of it.
     -->
     <div class="max-h-[60%] shrink-0 overflow-y-auto border-b border-border">
-      <SubmitJobForm kinds={jobsStore.kinds} {dataset} onSubmit={run} />
+      <SubmitJobForm kinds={jobsStore.formKinds} {dataset} onSubmit={run} />
     </div>
-  {:else if !jobsStore.loading}
+  {:else if !jobsStore.loading && !jobsStore.runnable}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
       No worker is running, so nothing can be launched. Start pixano-worker and reopen this panel.
+    </p>
+  {:else if !jobsStore.loading}
+    <p class="border-b border-border p-3 text-xs text-muted-foreground">
+      No processing the workers run here is launched from this panel.
     </p>
   {/if}
 

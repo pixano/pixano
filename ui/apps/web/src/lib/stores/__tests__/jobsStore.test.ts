@@ -330,3 +330,16 @@ describe("jobsStore hearing a failure", () => {
     expect(store.jobs[0].error).toEqual({ reason: "planning failed", detail: "boom" });
   });
 });
+
+describe("the kinds the Jobs form launches", () => {
+  it("leave out a kind whose parameters it cannot build", async () => {
+    api.listJobKinds.mockResolvedValue([
+      { name: "embeddings", params_schema: {} },
+      { name: "statistics", params_schema: { "x-pixano-own-form": "statistics" } },
+    ]);
+
+    const { store } = await startedStore();
+
+    expect(store.formKinds.map((kind) => kind.name)).toEqual(["embeddings"]);
+  });
+});

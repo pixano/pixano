@@ -536,7 +536,7 @@ A chunk holds every annotation of its records in memory, whatever they number: o
 
 Preparing gives the dataset the tables and columns missing (§22.3); every chunk writes the values of its columns, and drops the rows of objects its records no longer hold — those it did not write, an object deleted after it was measured included: an object deleted keeps its row until statistics per object are computed again on its record. The closing step records in the dataset what the job computed. A replay writes the same values over the same rows: the identifier of a row is its record's or its object's. Rows carry no provenance: the dataset says which job computed each column last.
 
-The generic Jobs form cannot build the definitions, which the application sends itself: the kind's parameter schema says so (`x-pixano-own-form`, `OWN_FORM_MARKER`), and the form is to leave it out.
+The generic Jobs form cannot build the definitions, which the application sends itself: the kind's parameter schema says so (`x-pixano-own-form`, `OWN_FORM_MARKER`), and the form leaves it out.
 
 ### 22.5 The explorer sorts and filters on them
 

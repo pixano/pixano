@@ -98,6 +98,14 @@ class JobsStore {
     return this.kinds.length > 0;
   }
 
+  /**
+   * The kinds the Jobs panel's form launches: all but those whose parameters it cannot build
+   * (`x-pixano-own-form`).
+   */
+  get formKinds(): JobKind[] {
+    return this.kinds.filter((kind) => !kind.params_schema["x-pixano-own-form"]);
+  }
+
   async submit(kind: string, datasetId: string, params: Record<string, unknown>): Promise<boolean> {
     try {
       const job = await submitJob({ kind, dataset_id: datasetId, params });

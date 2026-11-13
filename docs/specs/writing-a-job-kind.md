@@ -162,7 +162,7 @@ identifier with its `record_id` in the detail: the panel shows the record.
 
 A kind whose parameters the generic submission form cannot build — the statistics' definitions,
 which the application sends itself — carries `OWN_FORM_MARKER` (`x-pixano-own-form`) at the root
-of its schema, naming the kind's own way in. The generic form is to leave it out.
+of its schema, naming the kind's own way in. The generic form leaves it out.
 
 ### `outcome(result, payload, task_count) -> Outcome`
 

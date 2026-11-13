@@ -67,6 +67,11 @@ export type JsonSchema = {
   minItems?: number;
   /** Set on a parameter that destroys something when set: the form asks before running. */
   "x-pixano-confirm"?: string;
+  /**
+   * Set on the parameters of a kind the generic form cannot build: the statistics, whose
+   * definitions the application sends itself.
+   */
+  "x-pixano-own-form"?: string;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */
