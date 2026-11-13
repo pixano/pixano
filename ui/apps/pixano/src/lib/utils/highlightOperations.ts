@@ -203,6 +203,11 @@ export function highlightTrackletChildren(tracklet: Tracklet): void {
   highlightAnnotationIds(ids, true);
 }
 
+/** Focus no entity; an edit mode, which belongs to the focused entity, ends with it. */
+export function clearFocusedEntity(): void {
+  setFocusedEntity(null);
+}
+
 export const clearHighlighting = () => {
   fusionHighlightedEntityId = null;
   highlightedEntity.value = null;

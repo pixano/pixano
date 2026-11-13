@@ -12,6 +12,7 @@ export * from "./workspace";
 export * from "./schemaApi";
 export * from "./inferenceApi";
 export * from "./ioApi";
+export * from "./reviewApi";
 export * from "./viewsApi";
 export * from "./saveOrchestration";
 export * from "./uiOptions";

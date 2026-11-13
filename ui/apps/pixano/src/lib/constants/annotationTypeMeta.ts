@@ -43,6 +43,11 @@ export function getSourceStyle(sourceName: string): SourceStyle {
   }
 }
 
+/** A model confidence score as a percentage, to one decimal. */
+export function formatConfidence(confidence: number): string {
+  return `${(confidence * 100).toFixed(1)}%`;
+}
+
 /** Badge style for a model confidence score. */
 export function getConfidenceStyle(confidence: number): string {
   if (confidence >= 0.8) return "bg-success/15 text-success";

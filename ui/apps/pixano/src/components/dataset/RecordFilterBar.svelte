@@ -10,6 +10,8 @@ License: CECILL-C
     ArrowsClockwise,
     ArrowsDownUp,
     CaretDown,
+    ChartBarHorizontal,
+    CheckSquareOffset,
     CircleNotch,
     FunnelSimple,
     Images,
@@ -35,6 +37,7 @@ License: CECILL-C
   import { ConfirmModal, Select } from "$lib/ui";
   import { columnLabel, columnLabelOf } from "$lib/utils/columns";
   import type { EmbeddingsView } from "$lib/utils/embeddingSpaces";
+  import type { ExplorerView } from "$lib/utils/explorerSearch";
   import {
     isListOperator,
     OPERATOR_LABELS,
@@ -68,7 +71,7 @@ License: CECILL-C
     /** Why the embeddings were not computed, in a sentence. */
     computeError?: string;
     searchError?: string;
-    view?: "grid" | "table";
+    view?: ExplorerView;
     onApply: (updates: { filter?: string[]; q?: string; semantic?: boolean }) => void;
     onSortChange?: (sort: string | undefined, order: string | undefined) => void;
     onCompute?: (force?: boolean) => void;
@@ -77,7 +80,11 @@ License: CECILL-C
     onSelectSpace?: (spaceId: string) => void;
     /** Make a model, by its id, the one a search naming none reads. */
     onSetDefaultSpace?: (spaceId: string) => void;
-    onViewChange?: (view: "grid" | "table") => void;
+    onViewChange?: (view: ExplorerView) => void;
+    /** How many records hold a model's annotation still to review. */
+    recordsToReview?: number;
+    /** Open the first record to review, in review. */
+    onReview?: () => void;
   }
 
   let {
@@ -106,6 +113,8 @@ License: CECILL-C
     onSelectSpace,
     onSetDefaultSpace,
     onViewChange,
+    recordsToReview = 0,
+    onReview,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -582,10 +591,24 @@ License: CECILL-C
           >
             <Rows size={16} weight={view === "table" ? "fill" : "regular"} />
           </button>
+          <button
+            type="button"
+            title="Overview: how the records, their images and their objects spread"
+            aria-label="Overview"
+            aria-pressed={view === "overview"}
+            class="px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {view ===
+            'overview'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => onViewChange("overview")}
+          >
+            <ChartBarHorizontal size={16} weight={view === "overview" ? "fill" : "regular"} />
+          </button>
         </div>
       {/if}
 
-      {#if onSortChange && sortableColumns.length > 0}
+      <!-- The overview orders nothing: its cards count every record the filters keep. -->
+      {#if onSortChange && sortableColumns.length > 0 && view !== "overview"}
         <div
           class="flex items-center gap-1"
           title={ranked ? "Results are ranked by similarity" : undefined}
@@ -647,6 +670,24 @@ License: CECILL-C
         </div>
       {/if}
 
+      {#if onReview && recordsToReview > 0}
+        <button
+          type="button"
+          onclick={onReview}
+          title="Review what a model proposed, record after record"
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-warning/40 bg-warning/10 text-xs font-bold uppercase tracking-wider text-warning hover:bg-warning/20 shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <CheckSquareOffset size={15} />
+          Review
+          <span
+            class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warning/20 px-1.5 text-[10px] tabular-nums"
+            title="Records to review"
+          >
+            {recordsToReview.toLocaleString()}
+          </span>
+        </button>
+      {/if}
+
       <!-- Records count -->
       <div
         class="px-3.5 py-1.5 rounded-xl bg-background border border-border flex items-center gap-2.5 shadow-sm"
@@ -654,7 +695,8 @@ License: CECILL-C
         <span
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1"
         >
-          {#if ranked}
+          <!-- The overview counts the records the filters keep, unranked. -->
+          {#if ranked && view !== "overview"}
             Ranked
           {:else}
             Records

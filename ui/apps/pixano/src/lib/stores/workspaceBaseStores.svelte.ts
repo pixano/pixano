@@ -40,6 +40,12 @@ export const interactiveSegmenterModel = reactiveRawStore<InteractiveImageSegmen
 );
 export const itemMetas = reactiveStore<ItemsMeta | undefined>(undefined);
 export const preAnnotationIsActive = reactiveStore<boolean>(false);
+// Review mode: what a model proposed and is still to review stays in view, the rest fades
+// (`getEffectiveHighlight`). It lasts while the workspace stays open, from record to record.
+export const reviewModeIsActive = reactiveStore<boolean>(false);
+// The record "Save & next" is leaving: a decision taken on it while it saves and the next one
+// opens would land on a record being left (`canTakeReviewDecision`).
+export const reviewDecisionsLockedOn = reactiveStore<string | null>(null);
 export const modelsUiStore = reactiveStore<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",

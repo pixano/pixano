@@ -9,6 +9,7 @@ import {
   annotations,
   clearTrackEditing,
   entities,
+  highlightedEntity,
   itemMetas,
   views,
   workspaceSaveQueue,
@@ -42,6 +43,16 @@ export function commitNormalizedWorkspaceRuntime(
 }
 
 /**
+ * Takes off the screen an annotation the dataset no longer holds, as a save found it: deleted
+ * since the record opened, or replaced by a model's run. Nothing is staged: it is gone already.
+ */
+export function forgetGoneAnnotation(id: string): void {
+  const kept = annotations.value.filter((annotation) => annotation.id !== id);
+  if (kept.length === annotations.value.length) return;
+  commitNormalizedWorkspaceRuntime(kept, entities.value);
+}
+
+/**
  * Puts a record, as the workspace loader returns it, in the workspace stores, in place of the
  * previous record and of the changes not saved yet.
  */
@@ -49,8 +60,10 @@ export function commitLoadedWorkspace(
   workspaceData: WorkspaceData,
   featureValues: FeaturesValues,
 ): void {
-  // Another item: nothing of the previous one stays in edit mode.
+  // Another item: nothing of the previous one stays in edit mode, nor focused — naming no object
+  // here, its focus would fade every annotation of the record opened.
   clearTrackEditing();
+  highlightedEntity.value = null;
   workspaceSaveQueue.reset();
   views.value = workspaceData.views;
 
