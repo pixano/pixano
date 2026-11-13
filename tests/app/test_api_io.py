@@ -17,7 +17,14 @@ from fastapi.testclient import TestClient
 from httpx import Response
 from s3path import S3Path
 
-from pixano.api.jobs.follow_ups import EMBEDDINGS_KIND, NO_MODEL, NO_MODEL_SERVED, QUEUE_UNREADABLE
+from pixano.api.jobs.follow_ups import (
+    EMBEDDINGS_KIND,
+    NO_MODEL,
+    NO_MODEL_SERVED,
+    NOTHING_TO_COUNT,
+    QUEUE_UNREADABLE,
+    STATISTICS_KIND,
+)
 from pixano.api.main import create_app
 from pixano.api.routers import data_io as data_io_router
 from pixano.api.settings import Settings, get_settings
@@ -226,9 +233,36 @@ class TestEmbeddingsAfterAnImport:
 
         assert started.status_code == 202
         assert started.json()["follow_ups"] == [
-            {"kind": EMBEDDINGS_KIND, "params": {}, "job_id": "", "error": f"not queued: {NO_MODEL}"}
+            {"kind": EMBEDDINGS_KIND, "params": {}, "job_id": "", "error": f"not queued: {NO_MODEL}", "skipped": ""}
         ]
         assert final["follow_ups"] == started.json()["follow_ups"]
+
+    def test_asked_for_the_default_statistics_the_import_says_they_were_not_needed(self, tmp_path: Path):
+        """Fitted to the dataset first: images and no object, nothing to count, whatever the queue."""
+        client = _embeddings_client(tmp_path)
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path)), "compute_statistics": True})
+        final = _wait_done(client, started.json()["job_id"])
+
+        (follow_up,) = final["follow_ups"]
+        assert (follow_up["kind"], follow_up["skipped"], follow_up["error"]) == (STATISTICS_KIND, NOTHING_TO_COUNT, "")
+
+    def test_by_default_the_statistics_follow_where_their_job_can_run_and_say_when_nothing_counts(
+        self, tmp_path: Path, statistics_declared: str
+    ):
+        """Images and no object: the embeddings are queued, the statistics have nothing to count."""
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=statistics_declared)
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path))})
+        final = _wait_done(client, started.json()["job_id"])
+
+        embeddings, statistics = final["follow_ups"]
+        assert (embeddings["kind"], bool(embeddings["job_id"])) == (EMBEDDINGS_KIND, True)
+        assert (statistics["kind"], statistics["skipped"], statistics["error"]) == (
+            STATISTICS_KIND,
+            NOTHING_TO_COUNT,
+            "",
+        )
 
     def test_a_model_named_asks_for_the_job(self, tmp_path: Path):
         """Without saying whether to compute them: naming the model is asking."""

@@ -6,10 +6,11 @@
 
 """A job kind that computes statistics on a dataset, per record and per object (backend-processing §22).
 
-The statistics are those a person composed and chose to compute: the job receives their definitions
-in its parameters, and computes them as they were composed, whatever the library's became since. It
-calls no inference: a chunk is a batch of records, whose objects and annotations it reads, measures
-and writes back as the values of one column per statistic.
+The statistics are those a person composed and chose to compute, or the default ones an import
+queues for a dataset's overview (§22.7): the job receives their definitions in its parameters, and
+computes them as they were composed, whatever the library's became since. It calls no inference: a
+chunk is a batch of records, whose objects and annotations it reads, measures and writes back as the
+values of one column per statistic.
 
 A replay writes the same values over the same rows: a row's identifier is its record's, or its
 object's. Only the job's columns are written, so that the other statistics of a row keep theirs.
@@ -61,8 +62,8 @@ _ENTITY_TABLE = canonical_table_name_for_slot("entity")
 class StatisticsParams(JobParams):
     """Parameters of the statistics job.
 
-    The application submits it with the definitions of the statistics to compute, which the
-    generic form cannot build (`OWN_FORM_MARKER`).
+    The application submits it with the definitions of the statistics to compute — the dataset's
+    default ones after an import —, which the generic form cannot build (`OWN_FORM_MARKER`).
 
     Attributes:
         statistics: The statistics to compute, as they were composed.

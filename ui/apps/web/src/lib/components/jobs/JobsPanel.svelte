@@ -69,7 +69,8 @@ License: CECILL-C
     </p>
   {:else if !jobsStore.loading}
     <p class="border-b border-border p-3 text-xs text-muted-foreground">
-      No processing the workers run here is launched from this panel.
+      No processing the workers run here is launched from this panel: the statistics are computed
+      after an import.
     </p>
   {/if}
 

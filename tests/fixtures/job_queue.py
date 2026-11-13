@@ -14,7 +14,7 @@ import pytest
 from psycopg.types.json import Jsonb
 
 from pixano.api.jobs import SCHEMA_NAME
-from pixano.api.jobs.follow_ups import EMBEDDINGS_KIND
+from pixano.api.jobs.follow_ups import EMBEDDINGS_KIND, STATISTICS_KIND
 
 
 # Never PIXANO_DATABASE_URL: a developer running the stack has that one exported, and these tests
@@ -26,6 +26,13 @@ EMBEDDINGS_SCHEMA = {
     "type": "object",
     "properties": {"model": {"type": "string", "minLength": 1}},
     "required": ["model"],
+}
+
+
+STATISTICS_SCHEMA = {
+    "type": "object",
+    "properties": {"statistics": {"type": "array", "minItems": 1}},
+    "required": ["statistics"],
 }
 
 
@@ -53,6 +60,17 @@ def embeddings_declared(queue_url: str) -> str:
             (EMBEDDINGS_KIND, Jsonb(EMBEDDINGS_SCHEMA), "worker-test"),
         )
     return queue_url
+
+
+@pytest.fixture
+def statistics_declared(embeddings_declared: str) -> str:
+    """The URL of a queue where a worker has declared the embeddings job and the statistics job."""
+    with psycopg.connect(embeddings_declared, autocommit=True) as conn:
+        conn.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_kinds (name, params_schema, declared_by) VALUES (%s, %s, %s)",
+            (STATISTICS_KIND, Jsonb(STATISTICS_SCHEMA), "worker-test"),
+        )
+    return embeddings_declared
 
 
 def queued_jobs(url: str) -> list[tuple]:

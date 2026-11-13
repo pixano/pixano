@@ -427,7 +427,7 @@ export function embeddingsRequest(
 /** One line of the jobs tray about a job an import queued once done. */
 export interface FollowUpLine {
   text: string;
-  /** It was not queued: the import is done, the job is not. */
+  /** It was not queued, though it had something to do: the import is done, the job is not. */
   notQueued: boolean;
 }
 
@@ -436,7 +436,7 @@ export function followUpLines(job: IoJobResponse): FollowUpLine[] {
   if (job.status !== "done") return [];
   return (job.follow_ups ?? []).map((followUp) => ({
     text: describeFollowUp(followUp),
-    notQueued: !followUp.job_id,
+    notQueued: !followUp.job_id && !followUp.skipped,
   }));
 }
 
@@ -444,5 +444,6 @@ function describeFollowUp(followUp: IoFollowUp): string {
   const model = typeof followUp.params.model === "string" ? ` (${followUp.params.model})` : "";
   const name = `${followUp.kind.charAt(0).toUpperCase()}${followUp.kind.slice(1)}${model}`;
   if (followUp.job_id) return `${name} queued.`;
+  if (followUp.skipped) return `${name} not needed: ${followUp.skipped}.`;
   return `${name} ${followUp.error || "not queued."}`;
 }

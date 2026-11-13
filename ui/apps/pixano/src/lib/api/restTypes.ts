@@ -222,13 +222,15 @@ export interface ImportPlanResponse {
 
 /** A processing job an import queues once it is done, and what became of it. */
 export interface IoFollowUp {
-  /** The processing job kind: `embeddings`. */
+  /** The processing job kind: `embeddings`, `statistics`. */
   kind: string;
   params: Record<string, unknown>;
   /** The queued job's identifier; empty until queued. */
   job_id: string;
   /** Why it was not queued; empty otherwise. */
   error: string;
+  /** Why it needed no job — nothing to do, nothing failed —; empty or absent otherwise. */
+  skipped?: string;
   /** The parameters the request did not name, which the server's defaults chose. */
   defaulted?: string[];
 }

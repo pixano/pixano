@@ -727,6 +727,20 @@ describe("embeddings after the import", () => {
     expect(followUpLines(job("done", [pending]))).toEqual([
       { text: "Embeddings (clip) not queued.", notQueued: true },
     ]);
+    // Nothing to do is no refusal: the statistics of a dataset that holds nothing to count.
+    const needless = {
+      kind: "statistics",
+      params: {},
+      job_id: "",
+      error: "",
+      skipped: "the dataset holds no objects, boxes nor masks to count",
+    };
+    expect(followUpLines(job("done", [needless]))).toEqual([
+      {
+        text: "Statistics not needed: the dataset holds no objects, boxes nor masks to count.",
+        notQueued: false,
+      },
+    ]);
     // Nothing until the import is done, and nothing from a server that predates follow-ups.
     expect(followUpLines(job("running", [refused]))).toEqual([]);
     expect(followUpLines(job("done", undefined))).toEqual([]);

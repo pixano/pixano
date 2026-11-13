@@ -43,6 +43,10 @@ class Settings(BaseSettings):
         embeddings_model: The model the embeddings job runs after an import whose request names
             none. Unset, the first embeddings model the inference serves. Set it with
             PIXANO_EMBEDDINGS_MODEL.
+        statistics_after_import: Whether an import queues the statistics job of the default
+            statistics, for the dataset's overview, when the request does not say, where the job can
+            run: a job queue reachable, and a worker that declared the job. Set it with
+            PIXANO_STATISTICS_AFTER_IMPORT.
         cors_origins: Explicit list of origins allowed to make cross-origin requests. Defaults to an
             empty list, which disables CORS entirely (the app is same-origin in both development,
             via the Vite dev proxy, and production, where the UI is bundled into this app). Set it
@@ -69,12 +73,13 @@ class Settings(BaseSettings):
     # With the PIXANO_ prefix of the deployment's other variables (`.env.example`), as the queue's URL.
     embeddings_after_import: bool = Field(default=True, validation_alias="PIXANO_EMBEDDINGS_AFTER_IMPORT")
     embeddings_model: str | None = Field(default=None, validation_alias="PIXANO_EMBEDDINGS_MODEL")
+    statistics_after_import: bool = Field(default=True, validation_alias="PIXANO_STATISTICS_AFTER_IMPORT")
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
     cors_origins: list[str] = []
     activate_ui_v1_0: bool = False
 
-    @field_validator("embeddings_after_import", "embeddings_model", mode="before")
+    @field_validator("embeddings_after_import", "embeddings_model", "statistics_after_import", mode="before")
     @classmethod
     def _empty_is_unset(cls, value: Any, info: ValidationInfo) -> Any:
         # A deployment file that leaves a variable empty — `PIXANO_EMBEDDINGS_MODEL=` — means its

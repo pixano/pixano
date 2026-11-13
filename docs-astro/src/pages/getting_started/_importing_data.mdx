@@ -195,6 +195,7 @@ builds on; add a `dataset.yaml` when you need custom attributes or other annotat
 | `--yes`, `-y` | Skip the confirmation prompt — use this in scripts and CI. |
 | `--embeddings`, `--no-embeddings` | Queue, or not, the embeddings job of the dataset imported into, once the import is done. By default it is queued where the job can run — a job queue (`PIXANO_DATABASE_URL`) where `pixano-worker` runs it, and a model — unless `PIXANO_EMBEDDINGS_AFTER_IMPORT` is false or the source holds no still image. On a dataset that already has embeddings, as with `--mode add`, every model it holds is computed again too, one job per model, each over the whole dataset. |
 | `--embeddings-model` | The model the embeddings job runs, beside the models the dataset already holds; naming one asks for the job. Default: `PIXANO_EMBEDDINGS_MODEL`, used only for a dataset without embeddings. The command asks no inference: without either, it queues no embeddings. |
+| `--statistics`, `--no-statistics` | Queue, or not, the statistics job of the dataset's default statistics — how many objects, boxes and masks each record holds, the share of its image each object's boxes cover — once the import is done. By default it is queued where `pixano-worker` runs it, unless `PIXANO_STATISTICS_AFTER_IMPORT` is false; a dataset with nothing to count needs none. With `--mode add`, every default statistic is computed again over the whole dataset, and the import's rollback is refused once the job has run, as once the embeddings job has: pass `--no-statistics` and `--no-embeddings` to keep the rollback. |
 
 ### The line format (JSONL v2)
 
@@ -586,7 +587,9 @@ Two properties make this safe to interrupt:
 
 - **Resume** picks up from the last committed checkpoint rather than starting over.
 - **Rollback** restores the versions from before a completed `--mode add` import, provided
-  the dataset has not changed since. It refuses to run after later edits or a resumed import.
+  the dataset has not changed since. It refuses to run after later edits or a resumed import —
+  and after the embeddings or statistics job an import queues by default, which write the
+  dataset: pass `--no-embeddings --no-statistics` to an import you may want to roll back.
   Writes to the same dataset are rejected with a retryable conflict while an add import or
   rollback is in progress.
 

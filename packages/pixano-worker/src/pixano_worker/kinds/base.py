@@ -87,8 +87,8 @@ CONFIRM_MARKER = "x-pixano-confirm"
 MODEL_TASK_MARKER = "x-pixano-model-task"
 
 #: A key the root of a kind's parameter schema carries when the generic form cannot build its
-#: parameters — the statistics' definitions, which the application sends itself. The value names
-#: the kind's own way in; the generic form leaves the kind out.
+#: parameters — the statistics' definitions, which the application sends itself after an import. The
+#: value names the kind's own way in; the generic form leaves the kind out.
 OWN_FORM_MARKER = "x-pixano-own-form"
 
 

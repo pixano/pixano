@@ -102,16 +102,14 @@ describe("JobsPanel on an installation without a job queue", () => {
 });
 
 describe("JobsPanel where its form can build no kind's parameters", () => {
-  it("launches nothing, and says so", async () => {
+  it("launches nothing, and says where the statistics come from", async () => {
     api.listJobs.mockResolvedValue([]);
     api.listJobKinds.mockResolvedValue([STATISTICS_KIND]);
 
     render(JobsPanel, { props: { dataset: DATASET } });
 
     await waitFor(() =>
-      expect(
-        screen.getByText(/No processing the workers run here is launched from this panel/),
-      ).toBeTruthy(),
+      expect(screen.getByText(/the statistics are computed after an import/)).toBeTruthy(),
     );
     expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
     expect(screen.queryByText(/No worker is running/)).toBeNull();

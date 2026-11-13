@@ -14,7 +14,12 @@ import pytest
 # A developer running the stack has these exported. Read from the environment by every `Settings`,
 # they would have an import queue real jobs on the stack's queue: the tests that need a queue reach
 # it through PIXANO_TEST_DATABASE_URL, and set what they need.
-DEPLOYMENT_VARIABLES = ("PIXANO_DATABASE_URL", "PIXANO_EMBEDDINGS_AFTER_IMPORT", "PIXANO_EMBEDDINGS_MODEL")
+DEPLOYMENT_VARIABLES = (
+    "PIXANO_DATABASE_URL",
+    "PIXANO_EMBEDDINGS_AFTER_IMPORT",
+    "PIXANO_EMBEDDINGS_MODEL",
+    "PIXANO_STATISTICS_AFTER_IMPORT",
+)
 
 # Removed as the test session loads, before any plugin imports the application — whose module builds
 # a `Settings` when imported — and before fixtures of any scope run.

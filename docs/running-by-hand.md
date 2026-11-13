@@ -135,6 +135,12 @@ inference serves. The command line reads them too, but asks no inference: withou
 worker must serve the library the import wrote into: a command-line import into another data
 directory queues a job the worker cannot find, and that job fails.
 
+An import also queues the statistics job of the dataset's default statistics — how many
+objects, boxes and masks each record holds, and the share of its image each object's boxes
+cover —, where the worker runs that job; a dataset with nothing to count needs none. Set
+`PIXANO_STATISTICS_AFTER_IMPORT=false` to stop that by default, or pass `--no-statistics` to
+`pixano data import`.
+
 ## The demo, by hand
 
 `docs/demo-etape1.md` prepares its datasets with a script that references the damaged images

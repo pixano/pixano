@@ -288,8 +288,8 @@ class TestRefused:
 
 
 class TestTheDefaultStatistics:
-    def test_the_default_statistics_are_taken_as_they_come(self) -> None:
-        """The application is to send every default statistic, as JSON, in the job's parameters."""
+    def test_the_parameters_an_import_queues_are_taken_as_they_come(self) -> None:
+        """The application queues every default statistic after an import, as JSON (`_fit_statistics`)."""
         defaults = [define_statistic(choices) for choices in DEFAULT_STATISTIC_CHOICES]
 
         params = StatisticsKind().validate_params({"statistics": [d.model_dump(mode="json") for d in defaults]})

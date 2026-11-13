@@ -4,10 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-"""The embeddings job an import queues once it is done."""
+"""The jobs an import queues once it is done: the embeddings, and the default statistics."""
 
+import asyncio
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import psycopg
 import pytest
@@ -16,13 +18,19 @@ from pixano.api.jobs import follow_ups as follow_ups_module
 from pixano.api.jobs.follow_ups import (
     EMBEDDINGS_KIND,
     EMBEDDINGS_UNREADABLE,
+    FITTING_FAILED,
     NO_IMAGE,
     NO_MODEL,
+    NO_STATISTICS_WORKER,
     NO_WORKER,
+    NOTHING_TO_COUNT,
     QUEUE_UNREADABLE,
+    STATISTICS_KIND,
+    QueueProbe,
     asks_for_embeddings,
     considers_embeddings,
     decide_embeddings,
+    decide_statistics,
     embeddings_unavailable,
     plan_has_still_images,
     submit_follow_ups,
@@ -30,7 +38,11 @@ from pixano.api.jobs.follow_ups import (
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.io.jobs import FollowUp
-from pixano.schemas import Image, Record, SequenceFrame, Text, Video
+from pixano.datasets.statistic_choices import default_statistics
+from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record, SequenceFrame, Text, Video
+from pixano.statistics.computed import ComputedStatistic
+from pixano.statistics.definitions import define_statistic
+from pixano.statistics.registry import StatisticRegistry
 from tests.fixtures.job_queue import queued_jobs
 
 
@@ -352,3 +364,187 @@ class TestStartingTheEmbeddings:
         [(outcome,)] = submit_follow_ups(None, tmp_path, "photos", [EMBEDDINGS])
 
         assert outcome.error.startswith("not queued: no job queue is configured")
+
+
+STATISTICS = FollowUp(kind=STATISTICS_KIND)
+
+
+def _annotated(library: Path) -> Dataset:
+    """A dataset as an import leaves it, an object and its box in it, and a table of masks without any."""
+    info = DatasetInfo(
+        id="photos",
+        name="Photos",
+        record=Record,
+        entity=Entity,
+        bbox=BBox,
+        mask=CompressedRLE,
+        views={"image": Image},
+    )
+    dataset = Dataset.create(library / "photos", info)
+    dataset.add_records({"records": [Record(id="r1")]})
+    dataset.add_data("entities", [Entity(id="e1", record_id="r1")], raise_or_warn="none")
+    box = BBox(id="b1", record_id="r1", entity_id="e1", coords=[0, 0, 1, 1], format="xywh", is_normalized=True)
+    dataset.add_data("bboxes", [box], raise_or_warn="none")
+    return dataset
+
+
+def _queued_statistics(url: str) -> dict[str, str]:
+    """The statistics the queued statistics job computes, by name, with their labels."""
+    [(_kind, _dataset, params)] = [job for job in queued_jobs(url) if job[0] == STATISTICS_KIND]
+    return {statistic["name"]: statistic["label"] for statistic in params["statistics"]}
+
+
+class TestDecidingStatistics:
+    def test_asked_off_none(self) -> None:
+        assert decide_statistics(False, default_on=True, unavailable=None) == []
+
+    def test_by_default_where_the_job_can_run(self) -> None:
+        assert decide_statistics(None, default_on=True, unavailable=None) == [STATISTICS]
+
+    @pytest.mark.parametrize(("default_on", "unavailable"), [(False, None), (True, NO_STATISTICS_WORKER)])
+    def test_the_default_asks_nothing_where_the_job_cannot_run(
+        self, default_on: bool, unavailable: str | None
+    ) -> None:
+        assert decide_statistics(None, default_on=default_on, unavailable=unavailable) == []
+
+    def test_asked_for_it_is_kept_whatever_the_queue_says(self) -> None:
+        assert decide_statistics(True, default_on=False, unavailable=NO_STATISTICS_WORKER) == [STATISTICS]
+
+    def test_a_queue_without_the_job_says_so(self, embeddings_declared: str) -> None:
+        assert QueueProbe(embeddings_declared).unavailable(STATISTICS_KIND) == NO_STATISTICS_WORKER
+
+    def test_a_queue_with_the_job_can_run_it(self, statistics_declared: str) -> None:
+        assert QueueProbe(statistics_declared).unavailable(STATISTICS_KIND) is None
+
+    def test_the_queue_is_asked_once_for_every_follow_up(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A queue that does not answer would make each follow-up wait out its timeout."""
+        asked: list[str | None] = []
+
+        def unreachable(database_url: str | None) -> str:
+            asked.append(database_url)
+            return QUEUE_UNREADABLE
+
+        monkeypatch.setattr(follow_ups_module, "_declared_kinds", unreachable)
+        probe = QueueProbe("postgresql://nowhere")
+
+        assert [probe.unavailable(kind) for kind in (EMBEDDINGS_KIND, STATISTICS_KIND)] == [QUEUE_UNREADABLE] * 2
+        assert asked == ["postgresql://nowhere"]
+
+
+class TestStartingTheStatistics:
+    def test_the_default_statistics_that_count_something_are_queued(
+        self, statistics_declared: str, tmp_path: Path
+    ) -> None:
+        """Objects and boxes, the share of its image a box covers: its table of masks holds none to count."""
+        _annotated(tmp_path)
+
+        [(outcome,)] = submit_follow_ups(statistics_declared, tmp_path, "photos", [STATISTICS])
+
+        assert outcome.job_id and not outcome.error
+        [(kind, dataset, params)] = queued_jobs(statistics_declared)
+        assert (kind, dataset) == (STATISTICS_KIND, "photos")
+        assert [(statistic["level"], statistic["name"]) for statistic in params["statistics"]] == [
+            ("record", "entity_count"),
+            ("record", "bbox_count"),
+            ("entity", "bbox_to_image_ratio_mean"),
+        ]
+
+    def test_a_dataset_of_no_object_box_nor_mask_needs_no_job_which_is_no_refusal(
+        self, statistics_declared: str, tmp_path: Path
+    ) -> None:
+        _dataset(tmp_path, {"image": Image})
+
+        [(outcome,)] = submit_follow_ups(statistics_declared, tmp_path, "photos", [STATISTICS])
+
+        assert (outcome.skipped, outcome.error, outcome.pending) == (NOTHING_TO_COUNT, "", False)
+        assert queued_jobs(statistics_declared) == []
+
+    def test_a_label_the_dataset_gave_a_default_statistic_stays(
+        self, statistics_declared: str, tmp_path: Path
+    ) -> None:
+        dataset = _annotated(tmp_path)
+        objects = next(statistic for statistic in default_statistics(dataset) if statistic.name == "entity_count")
+        relabelled = objects.model_copy(update={"label": "Objects on the photo"})
+        dataset.ensure_statistic_columns(objects.level, {objects.name: "int"})
+        dataset.record_computed_statistics(
+            [ComputedStatistic(definition=relabelled, job_id="job-0", computed_at=relabelled.created_at)]
+        )
+
+        submit_follow_ups(statistics_declared, tmp_path, "photos", [STATISTICS])
+
+        assert _queued_statistics(statistics_declared)["entity_count"] == "Objects on the photo"
+
+    def test_a_label_the_library_gave_a_default_statistic_stays(
+        self, statistics_declared: str, tmp_path: Path
+    ) -> None:
+        dataset = _annotated(tmp_path)
+        boxes = next(statistic for statistic in default_statistics(dataset) if statistic.name == "bbox_count")
+        StatisticRegistry(tmp_path).add(define_statistic(boxes.choices, label="Boxes drawn"))
+
+        submit_follow_ups(statistics_declared, tmp_path, "photos", [STATISTICS])
+
+        assert _queued_statistics(statistics_declared)["bbox_count"] == "Boxes drawn"
+
+    def test_a_follow_up_whose_fitting_fails_stops_no_other(
+        self, statistics_declared: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _annotated(tmp_path)
+
+        def broken(*_args: object, **_kwargs: object) -> list[FollowUp]:
+            raise OSError("the disk went away")
+
+        monkeypatch.setattr(follow_ups_module, "_fit_statistics", broken)
+
+        [(embeddings,), (statistics,)] = submit_follow_ups(
+            statistics_declared, tmp_path, "photos", [EMBEDDINGS, STATISTICS]
+        )
+
+        assert embeddings.job_id and statistics.error == f"not queued: {FITTING_FAILED}"
+        assert [kind for kind, _dataset, _params in queued_jobs(statistics_declared)] == [EMBEDDINGS_KIND]
+
+    def test_queued_beside_the_embeddings_of_the_same_import(self, statistics_declared: str, tmp_path: Path) -> None:
+        _annotated(tmp_path)
+
+        outcomes = submit_follow_ups(statistics_declared, tmp_path, "photos", [EMBEDDINGS, STATISTICS])
+
+        assert [[outcome.kind for outcome in became] for became in outcomes] == [[EMBEDDINGS_KIND], [STATISTICS_KIND]]
+        kinds = [kind for kind, _dataset, _params in queued_jobs(statistics_declared)]
+        assert kinds == [EMBEDDINGS_KIND, STATISTICS_KIND]
+
+
+class TestAnImportAsksTheQueueOnce:
+    """A queue that does not answer would otherwise make each follow-up wait out its timeout."""
+
+    @staticmethod
+    def _counted(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
+        asked: list[str | None] = []
+
+        def unreachable(database_url: str | None) -> str:
+            asked.append(database_url)
+            return QUEUE_UNREADABLE
+
+        monkeypatch.setattr(follow_ups_module, "_declared_kinds", unreachable)
+        return asked
+
+    def test_through_the_route(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        from pixano.api.routers import data_io
+        from pixano.api.settings import Settings
+
+        asked = self._counted(monkeypatch)
+        settings = Settings(library_dir=str(tmp_path), PIXANO_DATABASE_URL="postgresql://nowhere")
+
+        follow_ups = asyncio.run(data_io._import_follow_ups(data_io.ImportRequestIO(), settings, has_images=True))
+
+        assert (follow_ups, asked) == ([], ["postgresql://nowhere"])
+
+    def test_through_the_command_line(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        from pixano.cli import data as cli_data
+
+        asked = self._counted(monkeypatch)
+        monkeypatch.setenv("PIXANO_DATABASE_URL", "postgresql://nowhere")
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_MODEL", "clip")
+        plan = SimpleNamespace(inferred_schema=None)
+
+        follow_ups = cli_data._import_follow_ups(tmp_path, None, None, None, plan)  # type: ignore[arg-type]
+
+        assert (follow_ups, asked) == ([], ["postgresql://nowhere"])

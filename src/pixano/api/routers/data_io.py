@@ -13,8 +13,9 @@ SQLite store (the CLI sees them too), and the legacy `POST /datasets/import` +
 wizard cutover (removed in 0.9). The REST surface never executes user Python —
 the `--importer`/`--info-py` escape hatches are CLI-only (spec Goal 2).
 
-An import can queue the embeddings job of what it imported once it is done, on
-the job queue shared with pixano-worker (`pixano.api.jobs.follow_ups`).
+An import can queue the embeddings job of what it imported, and the statistics
+job of its default statistics, once it is done, on the job queue shared with
+pixano-worker (`pixano.api.jobs.follow_ups`).
 """
 
 import asyncio
@@ -33,10 +34,14 @@ from pydantic import BaseModel, Field, ValidationError
 from s3path import S3Path
 
 from pixano.api.jobs.follow_ups import (
+    EMBEDDINGS_KIND,
     NO_MODEL_SERVED,
+    STATISTICS_KIND,
+    QueueProbe,
     asks_for_embeddings,
     considers_embeddings,
     decide_embeddings,
+    decide_statistics,
     embeddings_unavailable,
     plan_has_still_images,
     submit_follow_ups,
@@ -155,6 +160,12 @@ class ImportRequestIO(BaseModel):
         "is the server's (PIXANO_EMBEDDINGS_MODEL), else the first embeddings model the inference serves, "
         "used only for a dataset without embeddings.",
     )
+    compute_statistics: bool | None = Field(
+        default=None,
+        description="Queue the statistics job of the default statistics of what is imported once the import "
+        "is done. Unset follows the server's default (PIXANO_STATISTICS_AFTER_IMPORT), which only applies "
+        "where the job can run.",
+    )
 
 
 class ExportRequestIO(BaseModel):
@@ -176,16 +187,18 @@ class FollowUpResponse(BaseModel):
     """A processing job an import queues once it is done, and what became of it.
 
     Attributes:
-        kind: The processing job kind: `embeddings`.
-        params: Its parameters, the model among them.
+        kind: The processing job kind: `embeddings`, `statistics`.
+        params: Its parameters: the embeddings' model, the statistics computed.
         job_id: The queued job, followed in the jobs panel; empty until queued.
         error: Why it was not queued; empty otherwise.
+        skipped: Why it needed no job — nothing to do, nothing failed —; empty otherwise.
     """
 
     kind: str
     params: dict[str, Any] = Field(default_factory=dict)
     job_id: str = ""
     error: str = ""
+    skipped: str = ""
 
 
 class JobResponse(BaseModel):
@@ -421,7 +434,29 @@ def _checked_import(
 
 
 async def _import_follow_ups(request: ImportRequestIO, settings: Settings, has_images: bool | None) -> list[FollowUp]:
-    """What the import queues once done: the embeddings job, as asked or by the server's default.
+    """What the import queues once done: the embeddings job and the default statistics' job, each as asked
+    or by the server's default. The queue is asked at most once whether their jobs can run.
+    """
+    probe = QueueProbe(settings.database_url)
+    return [
+        *await _embeddings_follow_ups(request, settings, has_images, probe),
+        *await _statistics_follow_ups(request, settings, probe),
+    ]
+
+
+async def _statistics_follow_ups(request: ImportRequestIO, settings: Settings, probe: QueueProbe) -> list[FollowUp]:
+    """The default statistics' job, as asked or by the server's default, which only applies where it can run."""
+    wanted = request.compute_statistics
+    if wanted is None and not settings.statistics_after_import:
+        return []
+    unavailable = await run_in_threadpool(probe.unavailable, STATISTICS_KIND) if wanted is None else None
+    return decide_statistics(wanted, default_on=settings.statistics_after_import, unavailable=unavailable)
+
+
+async def _embeddings_follow_ups(
+    request: ImportRequestIO, settings: Settings, has_images: bool | None, probe: QueueProbe
+) -> list[FollowUp]:
+    """The embeddings job, as asked or by the server's default.
 
     The default only applies where the job can run, which the queue is asked first: an installation
     without one never waits for the inference. Nor does it apply to an import whose plan holds no
@@ -431,7 +466,7 @@ async def _import_follow_ups(request: ImportRequestIO, settings: Settings, has_i
     wanted = asks_for_embeddings(request.compute_embeddings, request.embeddings_model)
     if not considers_embeddings(wanted, default_on=settings.embeddings_after_import, has_images=has_images):
         return []
-    unavailable = await run_in_threadpool(embeddings_unavailable, settings.database_url) if wanted is None else None
+    unavailable = await run_in_threadpool(probe.unavailable, EMBEDDINGS_KIND) if wanted is None else None
     if unavailable is not None:
         return []
     # The request's model, the deployment's, then the first the inference serves: asked last, only if needed.

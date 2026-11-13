@@ -4,7 +4,8 @@
 # License: CECILL-C
 # =====================================
 
-"""The processing jobs an import queues once it is done: the embeddings of the dataset it imported into.
+"""The processing jobs an import queues once it is done: the embeddings of the dataset it imported into,
+and the default statistics of its overview.
 
 An import runs in the application, or in the CLI that started it; processing jobs run in
 pixano-worker. Whoever starts an import decides here what it asks for, and the import engine keeps
@@ -19,12 +20,20 @@ The embeddings are asked for by default only where they can run — a queue reac
 declared the job, and a model to name — and on an import not known to hold no still image, so that
 an installation without jobs, or an import of text or video, never reads a refusal. Asked for
 explicitly, they are kept whatever the queue says, and the import says why they were not queued.
+
+The default statistics are asked for by default where their job can run too, and kept whatever the
+queue says when asked for. Nothing in a request tells whether the dataset written will hold
+anything to count — an import adds to a dataset that may hold objects already —: fitted to the
+dataset, they are every default statistic it holds rows to count for, computed again over the whole
+dataset since the records added have no value of them, and none when it holds nothing to count, which
+the import tells as not needed rather than refused (backend-processing §22.7).
 """
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +41,9 @@ import psycopg
 
 from pixano.datasets import Dataset
 from pixano.datasets.io.jobs import FollowUp
+from pixano.datasets.statistic_choices import default_statistics
 from pixano.schemas import media_type_of
+from pixano.statistics.registry import StatisticRegistry
 
 from .enqueue import InvalidParamsError, QueueUnavailableError, UnknownKindError, available_kinds, connect, submit
 
@@ -40,6 +51,7 @@ from .enqueue import InvalidParamsError, QueueUnavailableError, UnknownKindError
 logger = logging.getLogger(__name__)
 
 EMBEDDINGS_KIND = "embeddings"
+STATISTICS_KIND = "statistics"
 
 # The media type the embeddings job computes by default, and its name in an import plan's views: a
 # frame belongs to its video, not to the still images.
@@ -51,11 +63,15 @@ EMBEDDED_VIEW_BASE = "Image"
 # so rather than wait — it holds the import runner meanwhile.
 QUEUE_STATEMENT_TIMEOUT_MS = 5_000
 
-NO_WORKER = "no worker runs the embeddings job — start pixano-worker"
+#: What the import says when no worker declared a kind: what to start.
+NO_WORKER_FOR_KIND = "no worker runs the {kind} job — start pixano-worker"
+NO_WORKER = NO_WORKER_FOR_KIND.format(kind=EMBEDDINGS_KIND)
 NO_MODEL = "no embeddings model — name one, set PIXANO_EMBEDDINGS_MODEL, or serve one from the inference"
 # The import form names none: it offers what the deployment and the inference give.
 NO_MODEL_SERVED = "no embeddings model — set PIXANO_EMBEDDINGS_MODEL, or serve one from the inference"
 NO_IMAGE = "the dataset has no image to embed"
+NO_STATISTICS_WORKER = NO_WORKER_FOR_KIND.format(kind=STATISTICS_KIND)
+NOTHING_TO_COUNT = "the dataset holds no objects, boxes nor masks to count"
 # As the worker words its own refusal of such a dataset, at a job's planning.
 EMBEDDINGS_UNREADABLE = (
     "this dataset's description of its embeddings (embeddings.json) cannot be read entirely, so no job may "
@@ -63,6 +79,7 @@ EMBEDDINGS_UNREADABLE = (
     "every model's embeddings again from nothing from the explorer"
 )
 QUEUE_UNREADABLE = "the job queue cannot be read — the log of the process that asked says why"
+FITTING_FAILED = "it could not be fitted to the dataset written — the log of the process that asked says why"
 
 
 def asks_for_embeddings(compute: bool | None, model: str | None) -> bool | None:
@@ -98,18 +115,54 @@ def plan_has_still_images(inferred_schema: dict[str, Any] | None) -> bool | None
     return any(isinstance(view, dict) and view.get("base") == EMBEDDED_VIEW_BASE for view in views.values())
 
 
-def embeddings_unavailable(database_url: str | None) -> str | None:
-    """Why no embeddings job can be queued now, or None when one can.
+class QueueProbe:
+    """What the job queue answers of the kinds its workers declared, asked once at most.
 
-    One can when a job queue is configured and readable, and a worker declared the job on it. Never
-    raises: a queue that fails says so, and the import goes on.
+    An import's follow-ups each ask whether their job can run: a queue that does not answer would
+    otherwise make each wait out its timeout before the import starts.
     """
+
+    def __init__(self, database_url: str | None) -> None:
+        """Ask nothing yet.
+
+        Args:
+            database_url: The job queue's database.
+        """
+        self._database_url = database_url
+        # The kinds declared, or why the queue could not tell; None until asked.
+        self._answer: frozenset[str] | str | None = None
+
+    def unavailable(self, kind: str) -> str | None:
+        """Why no job of a kind can be queued now, or None when one can.
+
+        One can when a job queue is configured and readable, and a worker declared the kind on it.
+        Never raises: a queue that fails says so, and the import goes on.
+
+        Args:
+            kind: The job kind, as a worker declares it.
+
+        Returns:
+            Why the queue cannot take a job of it, for a person to read; None when it can.
+        """
+        if self._answer is None:
+            self._answer = _declared_kinds(self._database_url)
+        if isinstance(self._answer, str):
+            return self._answer
+        return None if kind in self._answer else NO_WORKER_FOR_KIND.format(kind=kind)
+
+
+def _declared_kinds(database_url: str | None) -> frozenset[str] | str:
+    """The kinds the queue's workers declared, or why the queue could not tell."""
     try:
         with _queue_connection(database_url) as conn:
-            kinds = available_kinds(conn)
+            return frozenset(available_kinds(conn))
     except (QueueUnavailableError, psycopg.Error) as error:
         return _public_reason(error)
-    return None if EMBEDDINGS_KIND in kinds else NO_WORKER
+
+
+def embeddings_unavailable(database_url: str | None) -> str | None:
+    """Why no embeddings job can be queued now, or None when one can (`QueueProbe.unavailable`)."""
+    return QueueProbe(database_url).unavailable(EMBEDDINGS_KIND)
 
 
 def decide_embeddings(
@@ -148,13 +201,34 @@ def decide_embeddings(
     return [FollowUp(kind=EMBEDDINGS_KIND, params={"model": model}, defaulted=() if named else ("model",))]
 
 
+def decide_statistics(wanted: bool | None, *, default_on: bool, unavailable: str | None) -> list[FollowUp]:
+    """The default statistics' follow-up an import asks for, if any: one at most.
+
+    Args:
+        wanted: What the request says. None follows the deployment's default, which only applies
+            where the job can run.
+        default_on: The deployment's default (`PIXANO_STATISTICS_AFTER_IMPORT`).
+        unavailable: Why the job cannot run now, or None; only read for the default.
+
+    Returns:
+        No follow-up, or one, pending: the statistics it computes are the dataset's default ones,
+        once written (`submit_follow_ups`).
+    """
+    if wanted is False:
+        return []
+    if wanted is None and (not default_on or unavailable is not None):
+        return []
+    return [FollowUp(kind=STATISTICS_KIND)]
+
+
 def submit_follow_ups(
     database_url: str | None, library_dir: Path, dataset_id: str, follow_ups: list[FollowUp]
 ) -> list[list[FollowUp]]:
     """Queue an import's pending follow-ups on the job queue; bound to a deployment, its `FollowUpStarter`.
 
-    Each is fitted to the dataset first — the embeddings into one job per model to compute —, so
-    that one with nothing to do says so whatever the queue's state. All are queued in one
+    Each is fitted to the dataset first — the embeddings into one job per model to compute, the
+    statistics into the job of the dataset's default ones —, so that one with nothing to do says so
+    whatever the queue's state; one whose fitting fails says so alone. All are queued in one
     transaction: a database error rolls them all back, and each says the queue could not be read.
 
     Args:
@@ -171,30 +245,48 @@ def submit_follow_ups(
         FileNotFoundError: The dataset is not in the library; `queue_follow_ups` turns it into a
             reason for each.
     """
-    dataset = Dataset.find(dataset_id, library_dir) if any(f.kind == EMBEDDINGS_KIND for f in follow_ups) else None
+    fitters: dict[str, Callable[[Dataset, FollowUp], list[FollowUp]]] = {
+        EMBEDDINGS_KIND: _fit_embeddings,
+        STATISTICS_KIND: partial(_fit_statistics, registry=StatisticRegistry(library_dir)),
+    }
+    dataset = Dataset.find(dataset_id, library_dir) if any(f.kind in fitters for f in follow_ups) else None
     fitted = [
-        _fit_embeddings(dataset, follow_up)
-        if dataset is not None and follow_up.kind == EMBEDDINGS_KIND
+        _fitted(fitters[follow_up.kind], dataset, follow_up)
+        if dataset is not None and follow_up.kind in fitters
         else [follow_up]
         for follow_up in follow_ups
     ]
-    if all(follow_up.error for became in fitted for follow_up in became):
+    if not any(follow_up.pending for became in fitted for follow_up in became):
         return fitted
     try:
         with _queue_connection(database_url) as conn:
             return [
-                [follow_up if follow_up.error else _submit(conn, dataset_id, follow_up) for follow_up in became]
+                [_submit(conn, dataset_id, follow_up) if follow_up.pending else follow_up for follow_up in became]
                 for became in fitted
             ]
     except (QueueUnavailableError, psycopg.Error) as error:
         reason = _public_reason(error)
         return [
             [
-                follow_up if follow_up.error else replace(follow_up, error=f"not queued: {reason}")
+                replace(follow_up, error=f"not queued: {reason}") if follow_up.pending else follow_up
                 for follow_up in became
             ]
             for became in fitted
         ]
+
+
+def _fitted(
+    fit: Callable[[Dataset, FollowUp], list[FollowUp]], dataset: Dataset, follow_up: FollowUp
+) -> list[FollowUp]:
+    """A follow-up fitted to the dataset; one whose fitting fails says so, and the others are queued still."""
+    try:
+        return fit(dataset, follow_up)
+    except Exception as error:  # noqa: BLE001 - a follow-up's failure is told on it, it stops none other
+        logger.warning(
+            "the %s follow-up of an import into %s could not be fitted: %s", follow_up.kind, dataset.info.id, error
+        )
+        logger.debug("the follow-up's failure", exc_info=True)
+        return [replace(follow_up, error=f"not queued: {FITTING_FAILED}")]
 
 
 def _submit(conn: psycopg.Connection, dataset_id: str, follow_up: FollowUp) -> FollowUp:
@@ -238,6 +330,21 @@ def _fit_embeddings(dataset: Dataset, follow_up: FollowUp) -> list[FollowUp]:
     return [replace(follow_up, params={**follow_up.params, "model": model}) for model in models]
 
 
+def _fit_statistics(dataset: Dataset, follow_up: FollowUp, registry: StatisticRegistry) -> list[FollowUp]:
+    """The default statistics' follow-up fitted to the dataset the import wrote: the job of its default ones.
+
+    Every default statistic of the dataset (`default_statistics`), those it computed already
+    included: the records an import added have no value of them, and the job computes every record.
+    Each keeps the label the dataset or the library gave it. A dataset with nothing to count needs no
+    job: not a refusal, nothing failed.
+    """
+    statistics = default_statistics(dataset, registry)
+    if not statistics:
+        return [replace(follow_up, skipped=NOTHING_TO_COUNT)]
+    definitions = [statistic.model_dump(mode="json") for statistic in statistics]
+    return [replace(follow_up, params={**follow_up.params, "statistics": definitions})]
+
+
 @contextmanager
 def _queue_connection(database_url: str | None) -> Iterator[psycopg.Connection]:
     """A connection to the queue whose statements, and the locks they wait for, are bounded.
@@ -259,6 +366,6 @@ def _public_reason(error: Exception) -> str:
     """
     if isinstance(error, QueueUnavailableError) and error.__cause__ is None:
         return str(error)
-    logger.warning("the job queue could not be read for the embeddings after an import: %s", error)
+    logger.warning("the job queue could not be read for an import's follow-up jobs: %s", error)
     logger.debug("the job queue's failure", exc_info=error)
     return QUEUE_UNREADABLE
