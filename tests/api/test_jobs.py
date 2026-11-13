@@ -284,6 +284,38 @@ class TestOutcome:
             jobs.quarantine(declared, "00000000-0000-0000-0000-000000000000", limit=10)
 
 
+class TestProgressOfARunningChunk:
+    """A long chunk moves its job's bar before it ends, as the worker counts it."""
+
+    @staticmethod
+    def _halfway(queue: psycopg.Connection, job_id: str, state: str) -> None:
+        """Ten tasks of the job done, and a chunk of twenty in this state that had got to seven."""
+        queue.execute(
+            f"UPDATE {SCHEMA_NAME}.jobs SET state = 'running', total_tasks = 30, done_tasks = 10 WHERE id = %s",
+            (job_id,),
+        )
+        lease = "now() + interval '1 minute'" if state == "running" else "NULL"
+        queue.execute(
+            f"INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, task_count, state, attempts, lease_until, progress) "
+            f"VALUES (%s, 0, 20, %s, 1, {lease}, 7)",
+            (job_id, state),
+        )
+
+    def test_a_running_chunk_counts_as_far_as_it_got(self, declared: psycopg.Connection) -> None:
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        self._halfway(declared, job.id, "running")
+
+        assert jobs.get(declared, job.id).done_tasks == 17
+        assert jobs.list_jobs(declared)[0].done_tasks == 17
+
+    def test_a_chunk_handed_back_counts_nothing_of_its_attempt(self, declared: psycopg.Connection) -> None:
+        """Claimed again, it is redone whole: the bar steps back to what is finished."""
+        job = jobs.submit(declared, kind="fake", dataset_id="ds", params={"task_count": 5})
+        self._halfway(declared, job.id, "pending")
+
+        assert jobs.get(declared, job.id).done_tasks == 10
+
+
 class TestCancellationIsAnnounced:
     """Independent review, D3: the application's cancellation rang no bell."""
 

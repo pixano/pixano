@@ -10,8 +10,9 @@ Two duties, in this order on every turn: split the jobs waiting to be split, the
 Planning goes first because a job that has not been split has no chunk to claim — otherwise a
 lone worker could sleep in front of pending work.
 
-Cancellation is checked **before each chunk**, never in the middle: a chunk is the atomic unit,
-and interrupting it would leave half-done work nobody knows anything about.
+Cancellation is checked before each chunk, and heard by a running one through its keeper: a kind
+whose chunk runs long — many calls one after the other — stops between two steps of its work, before writing
+anything (`ChunkCancelled`). A chunk is still the atomic unit: nothing it computed is kept.
 
 The loop is asynchronous, the job kinds' code is not. `plan`, `process`, `write` and `finalize`
 are ordinary functions — that is the published contract, and LanceDB reads and writes are
@@ -22,6 +23,7 @@ asynchronous: the database, the delays and the lease.
 import asyncio
 import logging
 import threading
+import time
 import traceback
 from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
@@ -42,6 +44,7 @@ from pixano.datasets.utils.errors import DatasetBusyError
 from . import queue
 from .kinds import Chunk, JobKind, JobParams, Outcome, Registry, TransientError
 from .media import MediaResolver
+from .progress import JOB_CANCELLED, NOT_AWAITED, TAKEN_OVER, ChunkCancelled, ChunkProgress
 from .reader import JobReader
 from .schema import SCHEMA_NAME
 from .threads import TimeLimitExceeded, WorkerThreads
@@ -192,9 +195,9 @@ WHERE id = %s AND state = 'planning'
 """
 
 INSERT_CHUNKS = f"""
-INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, payload, task_count)
-SELECT %s, chunk.seq, chunk.payload, chunk.task_count
-FROM unnest(%s::int[], %s::jsonb[], %s::int[]) AS chunk(seq, payload, task_count)
+INSERT INTO {SCHEMA_NAME}.job_chunks (job_id, seq, payload, task_count, weight)
+SELECT %s, chunk.seq, chunk.payload, chunk.task_count, chunk.weight
+FROM unnest(%s::int[], %s::jsonb[], %s::int[], %s::float8[]) AS chunk(seq, payload, task_count, weight)
 """
 
 # The final chunk of a kind that finalizes, recorded with the others but waiting: it joins the
@@ -462,6 +465,7 @@ async def record_plan(conn: psycopg.AsyncConnection, job_id: str, chunks: list[C
                 list(range(len(chunks))),
                 [Jsonb(chunk.payload) for chunk in chunks],
                 [chunk.task_count for chunk in chunks],
+                [chunk.weight for chunk in chunks],
             ),
         )
         if final:
@@ -510,7 +514,13 @@ def _reopen_dataset(library: Path, dataset_id: str) -> Dataset:
     return _open_dataset(library, dataset_id)
 
 
-def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | None, fresh: bool = False) -> JobReader:
+def _reader_for(
+    library: Path | None,
+    dataset_id: str,
+    media: MediaResolver | None,
+    fresh: bool = False,
+    progress: ChunkProgress | None = None,
+) -> JobReader:
     """Bind a reader to a job's dataset, opened only if the kind uses it.
 
     Args:
@@ -522,6 +532,8 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
             its embeddings table dropped — was otherwise seen as it was at the previous
             opening, until the worker restarted. The chunks, for their part, read what
             planning reopened.
+        progress: The running chunk's progress, for a long chunk to report and to stop on a
+            cancellation; none when planning.
     """
 
     def open_dataset() -> Dataset:
@@ -529,7 +541,7 @@ def _reader_for(library: Path | None, dataset_id: str, media: MediaResolver | No
             raise RuntimeError("no dataset library configured: PIXANO_LIBRARY_DIR is empty")
         return _reopen_dataset(library, dataset_id) if fresh else _open_dataset(library, dataset_id)
 
-    return JobReader(open_dataset, media or MediaResolver.unconfigured())
+    return JobReader(open_dataset, media or MediaResolver.unconfigured(), progress)
 
 
 def _writer_for(library: Path | None, dataset_id: str, kind: JobKind, job_id: str, params: JobParams) -> JobWriter:
@@ -809,8 +821,9 @@ async def run_chunk(
         chunk: The claimed chunk.
         library: The dataset library.
         media: The media resolver.
-        timeout_s: Maximum duration of the chunk. Beyond it, it is handed back to the queue as
-            after a transient failure. None: no limit.
+        timeout_s: Maximum duration of a chunk of weight one; this chunk gets its weight times
+            it. Beyond it, it is handed back to the queue as after a transient failure. None: no
+            limit.
         threads: The pool where the job kind's code runs.
     """
     await _execute(conn, registry, chunk, library, media, timeout_s, threads or default_threads())
@@ -838,10 +851,14 @@ async def _execute(
         await queue.fail(conn, chunk, {"reason": "unknown job kind"})
         return
     kind_name, raw_params, dataset_id = row
+    progress = ChunkProgress(chunk.task_count)
+    if chunk.previous_progress:
+        # Claimed again, the chunk is redone whole: its job's bar steps back now, not at its next report.
+        await queue.announce_progress(conn, chunk.job_id)
 
     def work() -> Outcome:
         params = kind.validate_params(raw_params)
-        result = kind.process(_reader_for(library, dataset_id, media), chunk.payload, params)
+        result = kind.process(_reader_for(library, dataset_id, media, progress=progress), chunk.payload, params)
         outcome = kind.outcome(result, chunk.payload, chunk.task_count)
         if outcome.total != chunk.task_count:
             # A wrong outcome would distort everything displayed about the job; better a failed
@@ -879,15 +896,31 @@ async def _execute(
         # No task: the job's outcome is its work's.
         return Outcome(produced=0)
 
+    # The limit follows the work: a chunk weighing several calls gets as many limits.
+    limit_s = timeout_s * chunk.weight if timeout_s is not None else None
     try:
-        async with _kept_alive(lambda: queue.refresh_lease(conn, chunk), f"chunk {chunk.seq} of job {chunk.job_id}"):
-            outcome = await threads.run(finalize if chunk.final else work, timeout_s)
+        async with _chunk_kept_alive(conn, chunk, progress, f"chunk {chunk.seq} of job {chunk.job_id}"):
+            try:
+                outcome = await threads.run(finalize if chunk.final else work, limit_s)
+            except (TimeoutError, asyncio.CancelledError):
+                # Nobody waits for the thread any more — past its limit, or the worker stopping: a kind
+                # that heeds its progress stops at its next step, instead of running on to its end
+                # beside the attempt that takes it over.
+                progress.cancel(NOT_AWAITED)
+                raise
+    except ChunkCancelled:
+        # The kind stopped between two steps, and has written nothing. A chunk whose job was cancelled
+        # leaves the queue as one it had not started; one taken over by another worker is that one's.
+        if progress.why == JOB_CANCELLED:
+            await queue.cancel_chunk(conn, chunk)
+        log.info("chunk %s of job %s stopped: %s", chunk.seq, chunk.job_id, progress.why)
+        return
     except TimeoutError:
         # The thread does not stop: a blocked call cannot be interrupted from the outside. The
         # chunk is handed back, and if the thread eventually completes, its result will be
         # refused by the fencing token — and its write, idempotent, will have doubled nothing. The
         # pool counts this thread as stuck; if there are too many, the loop will stop the worker.
-        await _retry_later(conn, chunk, {"reason": "time limit exceeded", "timeout_s": timeout_s})
+        await _retry_later(conn, chunk, {"reason": "time limit exceeded", "timeout_s": limit_s})
         return
     except TransientError as error:
         await _retry_later(conn, chunk, {"reason": "transient failure", "detail": str(error)})
@@ -965,6 +998,66 @@ async def _kept_alive(refresh: Callable[[], Awaitable[bool]], label: str) -> Asy
                 if not kept:
                     log.warning("%s: lease lost while running", label)
                     return
+
+    keeper = asyncio.create_task(keep())
+    try:
+        yield
+    finally:
+        stop.set()
+        await keeper
+
+
+#: How often a running chunk's progress is recorded and its job's cancellation looked up: often
+#: enough for a bar that moves and a Cancel heard within seconds, seldom enough to cost nothing.
+PROGRESS_INTERVAL_S = 2.0
+
+
+@asynccontextmanager
+async def _chunk_kept_alive(
+    conn: psycopg.AsyncConnection, chunk: queue.Chunk, progress: ChunkProgress, label: str
+) -> AsyncIterator[None]:
+    """Keep a running chunk's lease, record its progress, and pass its job's cancellation on to it.
+
+    The kind's code runs in a thread with no connection: what it says of its progress, and what it
+    must hear of a cancellation, go through this keeper, which holds the chunk's. As `_kept_alive`,
+    it stops on a signal, never by a cancellation that could leave the connection unusable, and a
+    database unreachable at one of its rounds is no error of the chunk: the next round tries again.
+
+    Args:
+        conn: The chunk's connection.
+        chunk: The running chunk.
+        progress: Where its kind reports its progress and reads a cancellation.
+        label: What the keeper serves, for the log.
+    """
+    stop = asyncio.Event()
+
+    async def keep() -> None:
+        lease_every = queue.LEASE_REFRESH_INTERVAL.total_seconds()
+        # Woken as often as the shorter of the two asks: the lease must never wait for a progress round.
+        tick = min(PROGRESS_INTERVAL_S, lease_every)
+        last_lease = time.monotonic()
+        recorded = 0
+        while not stop.is_set():
+            try:
+                await asyncio.wait_for(stop.wait(), tick)
+                continue
+            except TimeoutError:
+                pass
+            try:
+                if time.monotonic() - last_lease >= lease_every:
+                    last_lease = time.monotonic()
+                    if not await queue.refresh_lease(conn, chunk):
+                        log.warning("%s: lease lost while running", label)
+                        # Another worker has it, or will: this one's thread stops at its next step.
+                        progress.cancel(TAKEN_OVER)
+                        return
+                done = progress.done
+                if done != recorded and await queue.record_progress(conn, chunk, done):
+                    recorded = done
+                if not progress.cancelled and await queue.is_cancelled(conn, chunk.job_id):
+                    progress.cancel(JOB_CANCELLED)
+            except DATABASE_UNAVAILABLE as error:
+                log.warning("%s: progress not recorded, database unreachable (%s)", label, error)
 
     keeper = asyncio.create_task(keep())
     try:

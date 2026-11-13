@@ -85,6 +85,14 @@ CREATE TABLE IF NOT EXISTS pixano_jobs.job_chunks (
     payload     jsonb       NOT NULL DEFAULT '{}'::jsonb
                                     CHECK (jsonb_typeof(payload) = 'object'),
     task_count  integer     NOT NULL CHECK (task_count >= 0),
+    -- How far a running chunk got, in its own tasks: what a long chunk — many inference calls one
+    -- after the other — shows of its work before it ends. A job's progress adds it to the tasks of
+    -- its finished chunks. A chunk claimed again starts over from zero: it is redone whole.
+    progress    integer     NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= task_count),
+    -- What the chunk weighs, as its kind sets it at planning: its time limit is that many times
+    -- the worker's, which is set for a chunk of one inference call. The limit follows the work: a
+    -- chunk of several calls one after the other weighs their number.
+    weight      double precision NOT NULL DEFAULT 1 CHECK (weight > 0),
     -- The chunk that runs the kind's `finalize`, once every other chunk of its job is done — an
     -- index built over every vector the job wrote, for instance. A chunk rather than a step the
     -- last chunk would run: it inherits the lease, the attempts, the time limit, the cancellation
