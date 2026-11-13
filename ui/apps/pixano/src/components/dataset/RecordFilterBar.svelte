@@ -10,6 +10,7 @@ License: CECILL-C
     ArrowsClockwise,
     ArrowsDownUp,
     CaretDown,
+    CheckSquareOffset,
     CircleNotch,
     FunnelSimple,
     Images,
@@ -78,6 +79,10 @@ License: CECILL-C
     /** Make a model, by its id, the one a search naming none reads. */
     onSetDefaultSpace?: (spaceId: string) => void;
     onViewChange?: (view: "grid" | "table") => void;
+    /** How many records hold a model's annotation still to review. */
+    recordsToReview?: number;
+    /** Open the first record to review, in review. */
+    onReview?: () => void;
   }
 
   let {
@@ -106,6 +111,8 @@ License: CECILL-C
     onSelectSpace,
     onSetDefaultSpace,
     onViewChange,
+    recordsToReview = 0,
+    onReview,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -645,6 +652,24 @@ License: CECILL-C
             </button>
           {/if}
         </div>
+      {/if}
+
+      {#if onReview && recordsToReview > 0}
+        <button
+          type="button"
+          onclick={onReview}
+          title="Review what a model proposed, record after record"
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-warning/40 bg-warning/10 text-xs font-bold uppercase tracking-wider text-warning hover:bg-warning/20 shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <CheckSquareOffset size={15} />
+          Review
+          <span
+            class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warning/20 px-1.5 text-[10px] tabular-nums"
+            title="Records to review"
+          >
+            {recordsToReview.toLocaleString()}
+          </span>
+        </button>
       {/if}
 
       <!-- Records count -->

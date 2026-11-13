@@ -80,6 +80,10 @@ Toggle between **gallery** and **table**:
 Both views let you choose how many records to show per page. Clicking a record opens it in the
 Workspace.
 
+When a model's annotations wait for review on an image dataset, **Review** shows how many
+records hold some, and opens the first of them in review — see
+[Reviewing what a model proposed](#reviewing-what-a-model-proposed).
+
 ### Statistics
 
 A statistic is a value computed from the dataset's annotations, for each record — how many
@@ -153,6 +157,29 @@ Draw a shape and press `Enter`. The creation form opens:
    before, and offer an explicit `Create "…"` row for a genuinely new value.
 3. **Confirm** — the annotation is staged. Nothing is written until you press **Save** in the
    header. `Esc` cancels.
+
+### Reviewing what a model proposed
+
+A model's annotations — predictions imported with the dataset, for instance — are *pending
+review* until a person decides on them. On an image record, the **Entities** tab shows, on each entity and on each annotation a model proposed,
+**Pending review** with the model and, for a box, its confidence:
+
+- **Accept** keeps it as the model proposed it.
+- **Reject** deletes it, and the entity too once nothing else is left on it.
+
+On an entity, both act on what it shows: an annotation hidden, with its eye or by a filter, stays
+to review. Saving an edit of a model's annotation, or of its entity, accepts it too.
+
+The **Review** switch at the top of the **Entities** tab puts the record in review: what is still
+to review stays in view on the image and the rest fades. It says how much is left on the record,
+and **Accept all** accepts the entities shown — an entity with a hidden annotation, with its eye or
+the confidence filter, stays to review whole, its mask with its box.
+
+Decisions are staged like any change: **Save** writes them, and leaving the record without
+saving drops them. In review, the header offers **Save & next**, which saves and opens the next
+record to review, and says how many records are left. The next record follows the order of the
+records' ids over the whole dataset, whatever the Explorer's filters and sort; on the last record
+to review, it saves and stays. Video and 3D records are not reviewed.
 
 ## Keyboard shortcuts
 
