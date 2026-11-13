@@ -27,10 +27,14 @@ import logging
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
-from typing import Any, Callable, Protocol, Sequence
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
-from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus
+from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus, statistics_slot
+from pixano.schemas.table_names import canonical_table_name_for_slot
+from pixano.statistics.computed import ComputedStatistic
+from pixano.statistics.definitions import StatisticDefinition, StatisticLevel
+from pixano.utils.python import IDS_PER_QUERY, to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
@@ -71,6 +75,21 @@ KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 # lock here only protects the counter itself.
 _writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
 _writes_guard = threading.Lock()
+
+
+def columns_by_level(definitions: Iterable[StatisticDefinition]) -> dict[StatisticLevel, dict[str, str]]:
+    """The columns statistics write, with the type of their values, by level."""
+    columns: dict[StatisticLevel, dict[str, str]] = {}
+    for definition in definitions:
+        columns.setdefault(definition.level, {})[definition.name] = definition.value_type
+    return columns
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
 
 
 @dataclass(frozen=True)
@@ -159,8 +178,22 @@ class DatasetWriteTarget(Protocol):
         """The model and dimension of the embeddings already computed, or None if there are none."""
         ...
 
+    def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
+        """Give the dataset the statistics table of a level, with these columns; the table's name."""
+        ...
+
+    def write_statistic_values(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """Write the values of these columns, the other statistics of each row kept; the rows written."""
+        ...
+
+    def record_computed_statistics(self, computed: list[ComputedStatistic]) -> None:
+        """Keep what a job computed, each statistic replacing the one of the same level and name."""
+        ...
+
     def open_table(self, name: str) -> Any:
-        """The LanceDB table itself, to compact it."""
+        """The LanceDB table itself, to compact it, or to read which columns it holds."""
         ...
 
     @property
@@ -411,6 +444,79 @@ class JobWriter:
                 _writes_since_compaction[key] = 0
         if due:
             self.compact(table_name)
+
+    def ensure_statistics(self, definitions: Sequence[StatisticDefinition]) -> None:
+        """The tables and columns these statistics write into, added to the dataset where missing.
+
+        Called from `prepare`, and again before writing: a worker whose cached dataset predates the
+        tables holds metadata without them. Columns the dataset holds already are answered from its
+        tables, without its write lock, which never waits and would refuse the job whenever someone
+        else writes the dataset: only adding them takes it.
+
+        Args:
+            definitions: The statistics.
+        """
+        for level, columns in columns_by_level(definitions).items():
+            table_name = canonical_table_name_for_slot(statistics_slot(level.value))
+            if table_name in self.dataset.info.tables:
+                present = set(self.dataset.open_table(table_name).schema.names)
+                if set(columns) <= present:
+                    continue
+            self.dataset.ensure_statistic_columns(level, columns)
+
+    def write_statistics(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """Write the values of statistics, one row per record or per object.
+
+        Only these columns are written: the other statistics of a row keep their values. Written
+        twice, the rows are the same: the dataset makes a row's identifier its record's, or its
+        object's (`Dataset.write_statistic_values`).
+
+        Args:
+            level: The level of the statistics.
+            rows: The rows: the record's identifier, plus the object's for an object, with the value
+                of each column.
+            columns: The columns written, with the type of their values.
+        """
+        if not rows:
+            return []
+        written = self.dataset.write_statistic_values(level, rows, columns)
+        self._count_write(canonical_table_name_for_slot(statistics_slot(level.value)))
+        return written
+
+    def forget_object_statistics(self, record_ids: Sequence[str], kept: set[str]) -> None:
+        """Delete the statistics of these records' objects but those kept: objects deleted since.
+
+        Args:
+            record_ids: The records whose objects were measured.
+            kept: The objects measured, whose rows stay.
+        """
+        table_name = canonical_table_name_for_slot(statistics_slot(StatisticLevel.ENTITY.value))
+        if table_name not in self.dataset.info.tables:
+            return
+        gone = [
+            row.id
+            for batch in _batched(record_ids)
+            for row in self.dataset.get_data(table_name, where=f"record_id IN {to_sql_list(batch)}")
+            if row.id not in kept
+        ]
+        for batch in _batched(gone):
+            self.dataset.delete_data(table_name, batch)
+
+    def record_computed_statistics(self, definitions: Sequence[StatisticDefinition]) -> None:
+        """Record in the dataset that this job computed these statistics, now.
+
+        Args:
+            definitions: The statistics, as the job computed them.
+        """
+        computed_at = datetime.now(timezone.utc)
+        self.dataset.record_computed_statistics(
+            [
+                ComputedStatistic(definition=definition, job_id=self.job_id, computed_at=computed_at)
+                for definition in definitions
+            ]
+        )
 
     def compact(self, table_name: str) -> None:
         """Merge a table's fragments and erase its old versions.

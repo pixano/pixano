@@ -76,6 +76,11 @@ class JobParams(BaseModel):
 
 ParamsT = TypeVar("ParamsT", bound=JobParams)
 
+#: A key the root of a kind's parameter schema carries when the generic form cannot build its
+#: parameters — the statistics' definitions, which the application sends itself. The value names
+#: the kind's own way in; the generic form is to leave the kind out.
+OWN_FORM_MARKER = "x-pixano-own-form"
+
 
 class Chunk(BaseModel):
     """A batch of tasks as a planner produces it.

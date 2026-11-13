@@ -68,6 +68,17 @@ class _FakeDataset:
         self.compactions.append(table_name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
+    # The statistics the writer writes are tested on a real dataset (test_statistics.py): these
+    # stand in for the protocol only.
+    def ensure_statistic_columns(self, level: Any, columns: dict[str, str]) -> str:
+        raise NotImplementedError
+
+    def write_statistic_values(self, level: Any, rows: list[dict[str, Any]], columns: dict[str, str]) -> list[str]:
+        raise NotImplementedError
+
+    def record_computed_statistics(self, computed: list[Any]) -> None:
+        raise NotImplementedError
+
     def has_record_embeddings(self) -> bool:
         return "embeddings" in self.tables
 
