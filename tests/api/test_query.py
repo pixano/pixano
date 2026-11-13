@@ -143,6 +143,16 @@ class TestRejections:
         with pytest.raises(FilterCompileError, match="not a valid integer"):
             compile_filters(CATALOGUE, ["n:eq:abc"])
 
+    def test_an_integer_beyond_what_a_column_holds(self):
+        with pytest.raises(FilterCompileError, match="beyond the integers"):
+            compile_filters(CATALOGUE, [f"n:gt:{2**63}"])
+
+    @pytest.mark.parametrize("value", ["nan", "inf", "-Infinity"])
+    def test_a_number_that_is_not_finite(self, value: str):
+        # SQL has no literal for it: `nan` would be read as a column's name.
+        with pytest.raises(FilterCompileError, match="not a finite number"):
+            compile_filters(CATALOGUE, [f"score:gt:{value}"])
+
     def test_non_float_value(self):
         with pytest.raises(FilterCompileError, match="not a valid number"):
             compile_filters(CATALOGUE, ["score:eq:abc"])

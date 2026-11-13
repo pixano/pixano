@@ -21,6 +21,7 @@ will accept — no more reverse-engineering columns from page rows.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
@@ -79,6 +80,10 @@ _SCALAR_TYPES = frozenset(FILTER_OPERATORS.keys())
 #: statistic apart from a record's own column of the same name (backend-processing §22).
 STATISTICS_COLUMN_PREFIX = f"{RECORD_STATISTICS_TABLE}."
 _STATISTICS_SOURCE = "statistics"
+
+# The integers a column holds, 64-bit: a literal beyond them fails the query rather than compare.
+_MIN_INT64 = -(2**63)
+_MAX_INT64 = 2**63 - 1
 
 
 class FilterCompileError(ValueError):
@@ -327,14 +332,21 @@ def _coerce_scalar(value: str, col_type: str, column: str) -> str:
         return quote_sql_string(value)
     if col_type == "int":
         try:
-            return str(int(value))
+            number = int(value)
         except ValueError:
             raise FilterCompileError(f"'{value}' is not a valid integer for column '{column}'.") from None
+        if not _MIN_INT64 <= number <= _MAX_INT64:
+            raise FilterCompileError(f"'{value}' is beyond the integers column '{column}' holds.")
+        return str(number)
     if col_type == "float":
         try:
-            return repr(float(value))
+            decimal = float(value)
         except ValueError:
             raise FilterCompileError(f"'{value}' is not a valid number for column '{column}'.") from None
+        # SQL has no literal for these: `nan` would be read as the name of a column.
+        if not math.isfinite(decimal):
+            raise FilterCompileError(f"'{value}' is not a finite number for column '{column}'.")
+        return repr(decimal)
     if col_type == "bool":
         lowered = value.strip().lower()
         if lowered in {"true", "1"}:
