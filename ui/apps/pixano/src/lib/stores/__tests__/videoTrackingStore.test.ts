@@ -87,6 +87,7 @@ beforeEach(() => {
   jobs.unavailable = null;
   videoTracking.jobs = {};
   videoTracking.refusals = {};
+  videoTracking.startFrames = {};
 });
 
 describe("videoTracking", () => {
@@ -171,6 +172,25 @@ describe("videoTracking", () => {
     await videoTracking.cancel("car");
 
     expect(jobs.cancel).toHaveBeenCalledWith("j1");
+  });
+
+  it("knows the frame after the one an object is tracked from, until its job's end is shown", async () => {
+    jobs.launch.mockResolvedValue(job("j1"));
+
+    await videoTracking.track("ds", "record-1", "car", 3, "sam-video");
+
+    expect(videoTracking.firstTrackedFrame("car")).toBe(4);
+    expect(videoTracking.firstTrackedFrame("van")).toBeNull();
+    videoTracking.dismiss("car");
+    expect(videoTracking.firstTrackedFrame("car")).toBeNull();
+  });
+
+  it("knows no first frame for an object whose job the server refused", async () => {
+    jobs.launch.mockResolvedValue(null);
+
+    await videoTracking.track("ds", "record-1", "car", 3, "sam-video");
+
+    expect(videoTracking.firstTrackedFrame("car")).toBeNull();
   });
 
   it("forgets an object's job once its card has shown its end", () => {

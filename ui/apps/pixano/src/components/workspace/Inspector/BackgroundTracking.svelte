@@ -23,8 +23,8 @@ License: CECILL-C
     starting: boolean;
     /** Why the server refused the last job submitted; null when it did not. */
     refusal: string | null;
-    /** Whether the record can be read again now: nothing unsaved would be lost. */
-    canShow: boolean;
+    /** Why the masks cannot be shown now; or null. */
+    showBlocker: string | null;
     onTrack: () => void;
     onCancel: () => void;
     onShow: () => void;
@@ -36,7 +36,7 @@ License: CECILL-C
     blocker,
     starting,
     refusal,
-    canShow,
+    showBlocker,
     onTrack,
     onCancel,
     onShow,
@@ -92,13 +92,13 @@ License: CECILL-C
       <button
         type="button"
         class="self-start rounded bg-primary px-2 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
-        disabled={!canShow}
+        disabled={showBlocker !== null}
         onclick={onShow}
       >
         Show the masks
       </button>
-      {#if !canShow}
-        <p class="text-[11px] text-muted-foreground">Save your changes first, then show them.</p>
+      {#if showBlocker !== null}
+        <p class="text-[11px] text-muted-foreground">{showBlocker}</p>
       {/if}
     {:else if failureOf(job)}
       <p class="text-[11px] text-destructive">{failureOf(job)}</p>

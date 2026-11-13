@@ -59,6 +59,23 @@ export function trackingBlocker(state: {
   return null;
 }
 
+/**
+ * Why "Show the masks" cannot read the record again now, as the card says it; null when it can.
+ * Reading it again drops what is not saved, and leaves the objects the Fusion tool picked pointing at
+ * objects no longer shown; leaving the drawing tool, for the masks to show, ends a box or mask
+ * tracking session.
+ */
+export function showMasksBlocker(state: {
+  /** The workspace holds changes not saved yet. */
+  unsaved: boolean;
+  /** Why the edit mode is blocked — a tracking session, Fusion —; or null. */
+  session: string | null;
+}): string | null {
+  if (state.unsaved) return "Save your changes first, then show them.";
+  if (state.session !== null) return `${state.session}.`;
+  return null;
+}
+
 /** What the tracking job takes to follow one object of a video from one of its frames. */
 export function trackingParams(
   model: string,

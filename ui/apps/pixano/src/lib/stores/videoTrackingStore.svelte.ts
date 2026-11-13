@@ -26,6 +26,8 @@ class VideoTrackingState {
   starting = $state<string[]>([]);
   /** Why the server refused the last job submitted for an object, by the object's identifier. */
   refusals = $state<Record<string, string>>({});
+  /** The frame each object's job tracks it from, by the object's identifier. */
+  startFrames = $state<Record<string, number>>({});
   /** The open video's follow, until it closes: a follow closed while it asked stops there. */
   #following: symbol | null = null;
 
@@ -74,6 +76,15 @@ class VideoTrackingState {
   }
 
   /**
+   * The frame after the one an object's job tracks it from, where the object was drawn: the first its
+   * masks can be on. Null when no job of this page follows the object.
+   */
+  firstTrackedFrame(entityId: string): number | null {
+    const start = this.startFrames[entityId];
+    return start === undefined ? null : start + 1;
+  }
+
+  /**
    * Follow an object of a video from a frame where it is annotated, to the video's end.
    *
    * @returns Whether the job was accepted.
@@ -102,6 +113,7 @@ class VideoTrackingState {
         return false;
       }
       this.jobs = { ...this.jobs, [entityId]: job };
+      this.startFrames = { ...this.startFrames, [entityId]: frameIndex };
       return true;
     } finally {
       this.starting = this.starting.filter((starting) => starting !== entityId);
@@ -117,6 +129,7 @@ class VideoTrackingState {
   /** Forget an object's job, once its card has shown its end. */
   dismiss(entityId: string): void {
     this.jobs = withoutKey(this.jobs, entityId);
+    this.startFrames = withoutKey(this.startFrames, entityId);
   }
 }
 

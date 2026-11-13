@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import type { Job } from "$lib/api/jobsApi";
 import {
   canTrackFrom,
+  showMasksBlocker,
   trackingBlocker,
   trackingModel,
   trackingParams,
@@ -200,6 +201,36 @@ describe("trackingBlocker", () => {
 
   it("has nothing to follow on the video's last frame", () => {
     expect(trackingBlocker({ ...free, lastFrame: true })).toMatch(/last frame/);
+  });
+});
+
+describe("showMasksBlocker", () => {
+  const free = { unsaved: false, session: null };
+
+  it("lets the masks be shown when reading the record again drops nothing", () => {
+    expect(showMasksBlocker(free)).toBeNull();
+  });
+
+  it("asks for a save first, which reading the record again would drop", () => {
+    expect(showMasksBlocker({ ...free, unsaved: true })).toBe(
+      "Save your changes first, then show them.",
+    );
+  });
+
+  it("gives the session's own reason: leaving the drawing tool would end it", () => {
+    // A mask tracking session holds its masks unsaved until its form is confirmed.
+    const session = "Finish or cancel the mask tracking session first";
+
+    expect(showMasksBlocker({ ...free, session })).toBe(`${session}.`);
+  });
+
+  it("names what is unsaved before a session", () => {
+    expect(
+      showMasksBlocker({
+        unsaved: true,
+        session: "Finish or cancel the tracking session first",
+      }),
+    ).toBe("Save your changes first, then show them.");
   });
 });
 
