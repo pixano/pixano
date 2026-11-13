@@ -164,3 +164,33 @@ queue the same jobs twice: nothing checks for a job of that model still to run o
 dataset. A mode of the embeddings job that skips the media a model's table already
 holds would make the recomputation cost what the import added; skipping a model whose
 job is still pending would remove the duplicates.
+
+## The overview and its default statistics: choices made while implementing
+
+**Status:** decided, but for one point that stands for now. The user answered on 2026-11-13;
+each point below says whether it is decided, standing for now, or changed.
+
+The overview of statistics v1 (backend-processing §22.7) follows the plan validated on
+2026-11-09 — as close as can be to Know Your Data, default statistics computed after each
+import, nothing read from the pixels. These points were chosen while implementing it,
+without being asked:
+
+- **Changed.** **The default statistics are queued by default after every import**, where a
+  worker declared the statistics job (`PIXANO_STATISTICS_AFTER_IMPORT=true`); the request
+  (`compute_statistics`) and the command line (`--statistics`, `--no-statistics`) can say
+  otherwise. The import form offered no box for it; it now has one, "Compute statistics
+  after the import", opened on that default as the embeddings' box is
+  (`GET /io/imports/statistics`).
+- **Stands for now, to revisit.** **Every default statistic is computed again after an add
+  import**, the whole dataset over: the statistics job has no way to compute only the
+  records added. It calls no inference and measured 60 records in about a second, but a
+  large dataset was not tried, and two add imports in a row queue two jobs.
+- **Decided.** **A dataset with nothing to count needs no job, which is not a refusal**: the
+  import says the statistics were not needed (`FollowUp.skipped`), in the tray's plain
+  color.
+- **Decided.** **An add import's rollback is refused once the statistics job has run**, as
+  it already was once the embeddings job had: the statistics job writes its tables and
+  `info.json`, the embeddings job its tables and `embeddings.json`, which the rollback refuses
+  to undo over (data-import-export spec, amendment of 2026-11-10).
+  Leaving the tables a job derives from the data out of that check would keep the rollback;
+  it was not done.
