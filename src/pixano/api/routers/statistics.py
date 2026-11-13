@@ -16,6 +16,7 @@ from pixano.api.routers._deps import get_dataset_dep
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
 from pixano.datasets.statistic_choices import DatasetStatisticChoices, choices_for, statistic_applies
+from pixano.statistics.computed import ComputedStatistic
 from pixano.statistics.definitions import (
     MAX_DESCRIPTION_LENGTH,
     MAX_LABEL_LENGTH,
@@ -113,6 +114,21 @@ def compose_statistic(
     if not added:
         response.status_code = 200
     return stored
+
+
+@dataset_router.get(
+    "",
+    response_model=list[ComputedStatistic],
+    operation_id="list_dataset_statistics",
+    summary="List the statistics a dataset holds the values of",
+    description=(
+        "Each statistic whose values the dataset holds, as it was composed when they were computed, "
+        "with the job that computed them last and when."
+    ),
+)
+def list_dataset_statistics(dataset: Dataset = Depends(get_dataset_dep)) -> list[ComputedStatistic]:
+    """Return the statistics the dataset holds the values of."""
+    return list(dataset.info.statistics)
 
 
 @dataset_router.get(

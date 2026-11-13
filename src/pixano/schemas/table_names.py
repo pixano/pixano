@@ -26,6 +26,7 @@ from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
 from .schema_group import SchemaGroup
+from .statistics import EntityStatistics, RecordStatistics
 from .timeseries import TimeSeries
 from .views import PDF, CalibratedImage, Image, PointCloud, SequenceFrame, Text, Video, View
 
@@ -82,7 +83,28 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
     CanonicalResourceFamily("pdf", "pdfs", "pdfs", SchemaGroup.VIEW, PDF, public_api=False),
     CanonicalResourceFamily("timeseries", "timeseries", "timeseries", SchemaGroup.TIMESERIES, TimeSeries),
     CanonicalResourceFamily("embedding", "embeddings", "embeddings", SchemaGroup.EMBEDDING, Embedding),
+    # Statistics are never a resource of their own (backend-processing §22).
+    CanonicalResourceFamily(
+        "record_statistics",
+        "record-statistics",
+        "record_statistics",
+        SchemaGroup.STATISTICS,
+        RecordStatistics,
+        public_api=False,
+    ),
+    CanonicalResourceFamily(
+        "entity_statistics",
+        "entity-statistics",
+        "entity_statistics",
+        SchemaGroup.STATISTICS,
+        EntityStatistics,
+        public_api=False,
+    ),
 )
+
+#: The `DatasetInfo` slots of the statistics tables, which no import or export carries: statistics
+#: are computed from a dataset, and computed again on another.
+STATISTICS_SLOTS: tuple[str, ...] = ("record_statistics", "entity_statistics")
 
 _SLOT_TO_FAMILY = {family.slot_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
 _RESOURCE_TO_FAMILY = {family.resource_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
@@ -114,6 +136,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "message",
             "timeseries",
             "text_span",
+            *STATISTICS_SLOTS,
         }
     )
 
@@ -214,6 +237,7 @@ def validate_canonical_table_map(tables: dict[str, type[LanceModel]]) -> None:
 
 
 __all__ = [
+    "STATISTICS_SLOTS",
     "CanonicalResourceFamily",
     "canonical_base_schema_for_schema",
     "canonical_family_spec_for_resource",

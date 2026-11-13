@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import (
+    STATISTICS_SLOTS,
     BBox,
     CompressedRLE,
     Entity,
@@ -43,6 +44,12 @@ from pixano.schemas import (
 
 from .errors import SpecValidationError
 from .plan import Provenance, fingerprint
+
+
+# The slots no import declares as annotations: the record, the objects and their states, which the
+# spec declares apart, and the statistics, computed from a dataset and computed again on another
+# (backend-processing §22).
+_NOT_ANNOTATION_SLOTS = frozenset({"record", "entity", "entity_dynamic_state", *STATISTICS_SLOTS})
 
 
 class MediaPolicy(BaseModel):
@@ -181,7 +188,7 @@ class SchemaSpec(BaseModel):
             "views": dict(info.views),
         }
         for slot in supported_dataset_info_slots():
-            if slot in ("record", "entity", "entity_dynamic_state"):
+            if slot in _NOT_ANNOTATION_SLOTS:
                 continue
             payload[slot] = getattr(info, slot)
 
@@ -201,7 +208,7 @@ class SchemaSpec(BaseModel):
             slot_specs = (
                 {slot: {} for slot in self.annotations} if isinstance(self.annotations, list) else self.annotations
             )
-            annotation_slots = set(supported_dataset_info_slots()) - {"record", "entity", "entity_dynamic_state"}
+            annotation_slots = set(supported_dataset_info_slots()) - _NOT_ANNOTATION_SLOTS
             for slot in annotation_slots:
                 payload[slot] = None  # the spec's annotation list replaces the preset's
             for slot, slot_spec in slot_specs.items():
@@ -259,7 +266,7 @@ class SchemaSpec(BaseModel):
 
         annotations: dict[str, Any] = {}
         for slot in supported_dataset_info_slots():
-            if slot in ("record", "entity", "entity_dynamic_state"):
+            if slot in _NOT_ANNOTATION_SLOTS:
                 continue
             schema_cls = getattr(info, slot)
             if schema_cls is None:
@@ -432,16 +439,20 @@ def resolve_dataset_info(spec: ImportSpec) -> DatasetInfo:
     if spec.schema_manifest is not None:
         from pixano.datasets.dataset_schema import _deserialize_table_schema
 
+        statistics = sorted(set(spec.schema_manifest) & set(STATISTICS_SLOTS))
+        if statistics:
+            # Computed from a dataset, and computed again on another (backend-processing §22.3).
+            raise SpecValidationError(f"Invalid schema_manifest: an import takes no statistics table ({statistics}).")
         payload: dict[str, Any] = {"workspace": spec.dataset.workspace}
-        for slot_name, manifest in spec.schema_manifest.items():
-            if slot_name == "views":
-                payload["views"] = {
-                    logical_name: _deserialize_table_schema(view_manifest)
-                    for logical_name, view_manifest in manifest.items()
-                }
-            else:
-                payload[slot_name] = _deserialize_table_schema(manifest)
         try:
+            for slot_name, manifest in spec.schema_manifest.items():
+                if slot_name == "views":
+                    payload["views"] = {
+                        logical_name: _deserialize_table_schema(view_manifest)
+                        for logical_name, view_manifest in manifest.items()
+                    }
+                else:
+                    payload[slot_name] = _deserialize_table_schema(manifest)
             return DatasetInfo.model_validate(payload)
         except Exception as exc:
             raise SpecValidationError(f"Invalid schema_manifest: {exc}") from None
