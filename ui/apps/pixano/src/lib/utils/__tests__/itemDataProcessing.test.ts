@@ -6,8 +6,17 @@ License: CECILL-C
 
 import { describe, expect, it, vi } from "vitest";
 
-import { BaseSchema, SequenceFrame } from "$lib/types/dataset";
+import { toRawAnnotation } from "$lib/api/adapters";
 import {
+  Annotation,
+  BaseSchema,
+  initDisplayControl,
+  SequenceFrame,
+  WorkspaceType,
+  type Item,
+} from "$lib/types/dataset";
+import {
+  buildWorkspaceRuntimeData,
   computeWorkspaceVideoFps,
   computeWorkspaceVideoSpeed,
 } from "$lib/utils/itemDataProcessing";
@@ -118,5 +127,68 @@ describe("computeWorkspaceVideoFps", () => {
     expect(computeWorkspaceVideoFps(sequence([0, 0, 0]))).toBeUndefined();
     expect(computeWorkspaceVideoFps(sequence([0]))).toBeUndefined();
     expect(computeWorkspaceVideoFps({})).toBeUndefined();
+  });
+});
+
+/** Boxes as the API answers them, made into annotations. */
+function boxes(...ids: string[]): Annotation[] {
+  const raws = ids.map((id) =>
+    toRawAnnotation(
+      {
+        id,
+        record_id: "item-1",
+        view_id: "view-1",
+        entity_id: `entity-${id}`,
+        coords: [0.1, 0.1, 0.2, 0.2],
+        format: "xywh",
+        is_normalized: true,
+        confidence: 1,
+        source_type: "other",
+        source_name: "Pixano",
+        source_metadata: "{}",
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      new Map([["view-1", "image"]]),
+      "bboxes",
+    ),
+  );
+  return Annotation.deepCreateInstanceArray({ bboxes: raws }).bboxes;
+}
+
+/** A record read, as the workspace reads one it opens or reads again. */
+function readRecord(annotations: Annotation[]): Annotation[] {
+  return buildWorkspaceRuntimeData(
+    {
+      item: { id: "item-1" } as Item,
+      views: {},
+      ui: { datasetId: "dataset-1", type: WorkspaceType.IMAGE },
+      entities: {},
+      annotations: { bboxes: annotations },
+    },
+    { main: {}, objects: {} },
+  ).annotations;
+}
+
+describe("the display state of the annotations read", () => {
+  it("is each annotation's own", () => {
+    const [first, second] = readRecord(boxes("a", "b"));
+
+    first.ui.displayControl.highlighted = "none";
+
+    expect(second.ui.displayControl.highlighted).toBe("all");
+  });
+
+  it("starts as usual on the record read after a pick dimmed the previous one's", () => {
+    // The Fusion tool dims the objects it cannot merge by writing their display state in place: it
+    // reached the default every annotation read shared, and every record opened afterwards was dimmed.
+    for (const annotation of readRecord(boxes("a", "b"))) {
+      annotation.ui.displayControl.highlighted = "none";
+    }
+
+    const [readAgain] = readRecord(boxes("c"));
+
+    expect(readAgain.ui.displayControl.highlighted).toBe("all");
+    expect(initDisplayControl.highlighted).toBe("all");
   });
 });
