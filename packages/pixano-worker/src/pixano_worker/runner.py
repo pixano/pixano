@@ -22,6 +22,7 @@ asynchronous: the database, the delays and the lease.
 import asyncio
 import logging
 import threading
+import time
 import traceback
 from collections import OrderedDict, defaultdict
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
@@ -37,7 +38,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import AsyncConnectionPool
 
 from pixano.datasets import Dataset
-from pixano.datasets.utils.errors import DatasetBusyError
+from pixano.datasets.utils.errors import DatasetBusyError, DatasetReplacedError
 
 from . import queue
 from .kinds import Chunk, JobKind, JobParams, Outcome, Registry, TransientError
@@ -105,7 +106,9 @@ _write_locks_guard = threading.Lock()
 # claim, no recovery of expired leases meanwhile —, so the wait is short: giving up costs only
 # the postponement, `PLANNING_RETRY_DELAY`, after which the job is planned again. Ten seconds
 # outlast a chunk's write for each of the default four chunks in flight (`DEFAULT_CONCURRENCY`),
-# and a compaction, under a second at 30,000 rows (backend-processing §12).
+# and a compaction, under a second at 30,000 rows (backend-processing §12). A write waiting out a
+# person's save holds the lock up to half a minute (`CHUNK_DATASET_BUSY_WAIT_S`): the planning is
+# postponed then, and tried again.
 PLANNING_WRITE_LOCK_WAIT_S = 10.0
 
 # How long a chunk waits for this worker's other writes to its dataset before it is handed back
@@ -116,6 +119,16 @@ PLANNING_WRITE_LOCK_WAIT_S = 10.0
 # and its thread freed, instead of waiting that whole limit out, five times, and staying stuck on
 # the lock for good.
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
+
+# How long a chunk's write waits for another process writing its dataset — a person's save, a
+# few tenths of a second, which the dataset's own lock refuses rather than queues — before the
+# chunk is handed back as after a transient failure. Its result is in memory, and its inference
+# is the costly part: thrown away for a save, it would be computed again. Past half a minute, the
+# dataset is held by something longer — an import —, and the chunk waits its turn in the queue
+# rather than in one of the worker's slots.
+CHUNK_DATASET_BUSY_WAIT_S = 30.0
+# How often the write is tried again meanwhile.
+CHUNK_DATASET_BUSY_RETRY_S = 1.0
 
 # How long the loop waits for a planning — the split, then the preparation — before it fails the
 # job. Planning reads the identifiers it splits, asks the kind which model it runs — a question
@@ -164,6 +177,28 @@ def _holding_write_lock(dataset_id: str, wait_s: float, busy: Callable[[str], Ex
         yield
     finally:
         lock.release()
+
+
+def _write_past_saves(write: Callable[[], None]) -> None:
+    """Write, trying again while another process writes the dataset; past the wait, hand the chunk back.
+
+    A kind's `write` is idempotent, so trying it again after a refusal halfway is a replay.
+
+    Raises:
+        TransientError: The dataset stayed busy past `CHUNK_DATASET_BUSY_WAIT_S`.
+    """
+    deadline = time.monotonic() + CHUNK_DATASET_BUSY_WAIT_S
+    while True:
+        try:
+            write()
+            return
+        except DatasetReplacedError:
+            # Written through a dataset recreated underneath: waiting changes nothing.
+            raise
+        except DatasetBusyError as error:
+            if time.monotonic() >= deadline:
+                raise TransientError(str(error)) from error
+            time.sleep(CHUNK_DATASET_BUSY_RETRY_S)
 
 
 class PlanningAbandoned(RuntimeError):
@@ -856,7 +891,7 @@ async def _execute(
         # chunk: handed back as transient, it is written once that write is over — or set aside
         # after its last attempt, if that write hangs for good.
         with _holding_write_lock(dataset_id, CHUNK_WRITE_LOCK_WAIT_S, busy=TransientError):
-            kind.write(writer, result, chunk.payload, params)
+            _write_past_saves(lambda: kind.write(writer, result, chunk.payload, params))
         return outcome
 
     def finalize() -> Outcome:
