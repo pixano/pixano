@@ -13,6 +13,7 @@ import {
 import { planFittedLayouts, type Viewport } from "./layoutPlanner.js";
 import { MutationQueue } from "./mutationQueue.svelte.js";
 import { RecordLoader } from "./recordLoader.js";
+import { ReviewController } from "./reviewController.svelte.js";
 import { countUnsavedWork } from "./unsavedWork.js";
 import { WorkspaceSession, type StagedWorkHolder } from "./workspaceSession.svelte.js";
 import type {
@@ -21,7 +22,7 @@ import type {
   PersistedContent,
 } from "$lib/annotations/annotationCollection.svelte.js";
 import { deleteLocalAnnotation } from "$lib/annotations/payloadBuilders.js";
-import { carriesContent, isShownByReviewFilter } from "$lib/annotations/reviewStatus.js";
+import { carriesContent } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import type {
   PendingAnnotation,
@@ -50,6 +51,7 @@ import type { FieldInfo } from "$lib/types/dataset.js";
  *    `queueMutation`, `flushSave`,
  *    `dropMutationsForLocalAnnotation`
  *  - `selectRecordInDataset`         → `RecordLoader`
+ *  - `review`                        → `ReviewController`
  *
  * The single public surface keeps consumers (LeftPanel, Toolbar,
  * StatusBar, ImageWidget, GridWorkspace, RightPanel) reaching through
@@ -100,6 +102,9 @@ export class WorkspaceManager {
    */
   private stagedFlags = new Map<string, StagedWorkHolder>();
 
+  /** The review of the open record: list, status chips, decisions. */
+  readonly review: ReviewController;
+
   /**
    * How many items of the open record are unsaved (`countUnsavedWork`): each
    * annotation with a change queued or on the wire, each draft, an entity form
@@ -140,6 +145,20 @@ export class WorkspaceManager {
       gateway,
       session: this.session,
       layoutRepository,
+    });
+
+    // Narrow dependencies rather than `this`: the controller sees the queue as
+    // the same `MutationSink` tools see, and the manager only as a way to save
+    // and to discard.
+    this.review = new ReviewController({
+      session: this.session,
+      sink: this.mutations,
+      navigator: {
+        save: () => this.flushSave(),
+        unsavedCount: () => this.unsavedCount,
+        hasUnsavedWork: () => this.hasUnsavedWork,
+        discardChanges: () => this.discardChanges(),
+      },
     });
   }
 
@@ -194,8 +213,7 @@ export class WorkspaceManager {
 
   /** Whether an entity's persisted annotations should be shown right now. */
   isEntityVisible(entityId: string): boolean {
-    const visible = this.session.visibleEntityIds;
-    return visible === null || visible.has(entityId);
+    return this.session.isEntityVisible(entityId);
   }
 
   /** Isolate a single entity, or — if it is already the sole isolated one — show all. */
@@ -244,9 +262,9 @@ export class WorkspaceManager {
   // (`buildSeam`), so a kind added later is filtered without a line of its own.
   // Display-only all the same — `find`, drafts and save are never filtered.
 
-  /** Whether the review status filter lets this annotation show (drafts always do). */
+  /** Whether the review status chips let this annotation show (drafts always do). */
   isShownByReview(annotation: LocalAnnotation): boolean {
-    return isShownByReviewFilter(annotation, this.session.hiddenReviewStatuses);
+    return this.review.isShown(annotation);
   }
 
   // ─── Pending annotation (entity assignment) ───────────────────────────────

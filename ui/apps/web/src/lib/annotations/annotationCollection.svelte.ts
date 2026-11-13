@@ -10,6 +10,7 @@ import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
 import {
   storedStatusAfterWrite,
+  storedStatusOf,
   type AnnotationReview,
   type ReviewStatus,
 } from "./reviewStatus.js";
@@ -146,6 +147,8 @@ export interface AnnotationStore {
   setGeometry<G>(id: string, geometry: G): void;
   /** Assign the annotation's parent entity (id + optional label snapshot). */
   setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void;
+  /** Replace the annotation's review state (an Accept taken, not yet saved). */
+  setReview(id: string, review: AnnotationReview): void;
 }
 
 /**
@@ -205,6 +208,18 @@ export class AnnotationCollection implements AnnotationStore {
   }
 
   /**
+   * Show a new review state. The stored status stays what it was: only a write
+   * of the row moves it (`recordWrite`), so an Accept still unsaved is never
+   * mistaken for one the server holds.
+   */
+  setReview(id: string, review: AnnotationReview): void {
+    const annotation = this.find(id);
+    if (!annotation) return;
+    const stored = annotation.review?.storedStatus;
+    annotation.review = stored === undefined ? review : { ...review, storedStatus: stored };
+  }
+
+  /**
    * The annotation's content as it is now, as a detached copy: what a body
    * queued for it now carries. A copy, because the collection's objects are
    * reactive proxies that a later edit may change in place. Undefined when the
@@ -225,21 +240,24 @@ export class AnnotationCollection implements AnnotationStore {
    * Record, as a write of this annotation leaves for the backend, what the
    * dataset holds once it lands: the content the write carries, and, for an
    * update, the status the server stores for that body
-   * (`storedStatusAfterWrite`). So an edit of a model's row reads accepted as
-   * its write leaves, without waiting for anything to be read back.
+   * (`storedStatusAfterWrite`). The status shown moves with the stored one when
+   * it showed the stored one — no unsaved Accept — so an edit of a model's row
+   * reads accepted as its write leaves, without waiting for anything to be read
+   * back; an unsaved Accept already shows it.
    *
-   * That content is the one taken when the body was queued (`contentOf`), not
+   * The content is the one taken when the body was queued (`contentOf`), not
    * the annotation's content now: a write retried after a failure leaves with
    * newer edits queued behind it, which it does not carry. A write that carries
-   * no content leaves the content recorded as it was.
+   * no content — an Accept alone — leaves the content recorded as it was.
    *
    * Recorded when the write leaves rather than when it lands, so that work
    * begun while it is in flight is measured against what the dataset will hold
    * once it lands: an edit taken back to the content on the wire sends nothing
    * (the content compared is `persistedContent`), and a row whose edit is on
-   * the wire already reads accepted. Returns how to put the previous record
-   * back if the write fails — the status included, unless something has moved
-   * it since; nothing when the annotation is not in this collection.
+   * the wire already reads accepted, and is not offered Accept again. Returns
+   * how to put the previous record back if the write fails — the status shown
+   * included, when it moved and nothing has moved it since; nothing when the
+   * annotation is not in this collection.
    *
    * @param id The annotation the write is about.
    * @param write `content`: what the write carries, if any; `updateBody`: the
@@ -252,25 +270,30 @@ export class AnnotationCollection implements AnnotationStore {
     const annotation = this.find(id);
     if (!annotation) return undefined;
     const previousContent = annotation.persistedContent;
-    const previousStatus = annotation.review?.status;
-    let statusMovedTo: ReviewStatus | "" | undefined;
+    const previousStored = annotation.review?.storedStatus;
+    const previousShown = annotation.review?.status;
+    let shownMovedTo: ReviewStatus | "" | undefined;
 
     if (write.content) annotation.persistedContent = write.content;
     const review = annotation.review;
     if (review && write.updateBody) {
+      const showedStored = review.status === storedStatusOf(review);
       const stored = storedStatusAfterWrite(review, write.updateBody);
-      if (review.status !== stored) {
+      review.storedStatus = stored;
+      if (showedStored && review.status !== stored) {
         review.status = stored;
-        statusMovedTo = stored;
+        shownMovedTo = stored;
       }
     }
 
     return () => {
       annotation.persistedContent = previousContent;
       const current = annotation.review;
+      if (!current) return;
+      current.storedStatus = previousStored;
       // Put back only a status nothing has moved since the write left.
-      const untouched = statusMovedTo !== undefined && current?.status === statusMovedTo;
-      if (current && untouched && previousStatus !== undefined) current.status = previousStatus;
+      const untouched = shownMovedTo !== undefined && current.status === shownMovedTo;
+      if (untouched && previousShown !== undefined) current.status = previousShown;
     };
   }
 }
@@ -354,5 +377,9 @@ export class ViewScopedAnnotations implements AnnotationStore {
 
   setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void {
     this.getParent().setEntity(id, entityId, entity);
+  }
+
+  setReview(id: string, review: AnnotationReview): void {
+    this.getParent().setReview(id, review);
   }
 }
