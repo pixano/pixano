@@ -12,6 +12,9 @@ License: CECILL-C
  * `between`) join their values with commas, escaping literal commas as `\,`.
  */
 
+import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
+import { columnLabelOf, valueLabel } from "$lib/utils/columns";
+
 export interface RecordFilter {
   col: string;
   op: string;
@@ -57,6 +60,18 @@ export function canApplyFilter(
 
 export function isListOperator(op: string): boolean {
   return LIST_OPERATORS.has(op);
+}
+
+/**
+ * What a person reads for a filter: its column, its operator and its values as the explorer's
+ * columns name them — "Clusters — K-Means, 8 groups, … is Noise".
+ */
+export function filterLabel(columns: ColumnDescriptorResponse[], filter: RecordFilter): string {
+  const op = OPERATOR_LABELS[filter.op] ?? filter.op;
+  const column = columns.find((candidate) => candidate.name === filter.col);
+  const values = filter.values.map((value) => valueLabel(column, value));
+  const value = isListOperator(filter.op) ? values.join(", ") : (values[0] ?? "");
+  return `${columnLabelOf(columns, filter.col)} ${op} ${value}`;
 }
 
 function escapeListValue(value: string): string {

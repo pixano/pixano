@@ -37,8 +37,7 @@ License: CECILL-C
   import { columnLabel, columnLabelOf } from "$lib/utils/columns";
   import type { EmbeddingsView } from "$lib/utils/embeddingSpaces";
   import {
-    isListOperator,
-    OPERATOR_LABELS,
+    filterLabel,
     parseFilters,
     serializeFilters,
     type RecordFilter,
@@ -240,12 +239,6 @@ License: CECILL-C
   function startAgain() {
     confirmingStartAgain = false;
     onCompute?.(true);
-  }
-
-  function chipLabel(filter: RecordFilter): string {
-    const op = OPERATOR_LABELS[filter.op] ?? filter.op;
-    const value = isListOperator(filter.op) ? filter.values.join(", ") : (filter.values[0] ?? "");
-    return `${columnLabelOf(columns, filter.col)} ${op} ${value}`;
   }
 
   // ---- Compute progress ----
@@ -720,7 +713,7 @@ License: CECILL-C
             onclick={() => (editorIndex = editorIndex === i ? null : i)}
             class="font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
           >
-            {chipLabel(filter)}
+            {filterLabel(columns, filter)}
           </button>
           <button
             type="button"

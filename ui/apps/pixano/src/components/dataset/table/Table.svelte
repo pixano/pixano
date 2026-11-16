@@ -28,7 +28,7 @@ License: CECILL-C
   import FlexRender from "./FlexRender.svelte";
   import { TableCell } from "./TableCell";
   import type { TableData, TableRow } from "$lib/types/dataset";
-  import { columnNameLabel } from "$lib/utils/columns";
+  import { columnNameLabel, shownValue } from "$lib/utils/columns";
   import { isScalarValue } from "$lib/utils/coreUtils";
 
   interface Props {
@@ -52,11 +52,12 @@ License: CECILL-C
       accessorFn: (row) => row[col.name],
       header: col.label ?? columnNameLabel(col.name),
       cell: (info) => {
+        // A value its column gives a label — a clustering's noise — shows as its label.
+        const val = shownValue(col, info.getValue());
         const cellRenderer = TableCell[col.type];
         if (cellRenderer) {
-          return cellRenderer(info.getValue() as never);
+          return cellRenderer(val as never);
         }
-        const val = info.getValue();
         if (val === null || val === undefined) return "";
         if (typeof val === "object") return JSON.stringify(val);
         if (!isScalarValue(val)) return "";

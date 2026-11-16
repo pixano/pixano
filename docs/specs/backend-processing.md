@@ -647,6 +647,8 @@ Each run recorded is a column of the records, `record_clusters.<run>`, of whole 
 
 The join of §22.5 reads the clusters as it reads the statistics, the two tables being the columns computed from the records (`pixano.datasets.queries.computed_columns`): the rows of the runs a sort, a filter or a page reads are read at the table's latest version, filtered on their runs — and on the page's records for a page —, one run's rows being its column already, several runs' turned by DuckDB into a column each, and joined to the statistics by record. A record without a group in the run sorted on comes last, as one without a statistic. A page counts its records in the same pass of the join as it reads them, rather than running the join again. A clusters table that becomes unreadable meanwhile is logged, and shows no group rather than failing the page; the statistics are still shown. The overview (§22.7) counts, on every card, the records a filter on a run keeps; a run has no card of its own.
 
+The legacy explorer shows a run's column by its label, and its groups as they are, never formatted as numbers; a value its column names — noise — by its name, in the table, in the filter's list of values and on the filter's chip.
+
 Measured on a laptop on 2026-11-06, on a million records and three runs of a million rows each: a page of 20 sorted on a run takes 0.33 s; filtered on a group, 0.30 s; a record's neighbors in that order, 0.34 s; a page's groups in every run, 0.012 s.
 
 ### 24.4 Known limits
