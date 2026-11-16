@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { MODEL_SOURCE_TYPE } from "$lib/constants/reviewConstants";
 import { annotations, clearTrackEditing, newShape } from "$lib/stores/workspaceStores.svelte";
 import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
@@ -102,7 +103,9 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
       return ann;
     }
 
-    applyPixanoSourceFields(ann);
+    // A model's row keeps its source: the server keeps it through a person's edit, which accepts
+    // the row (`_as_human_edit_of` in src/pixano/api/service.py), and the review reads it.
+    if (ann.data.source_type !== MODEL_SOURCE_TYPE) applyPixanoSourceFields(ann);
     saveTo("update", ann);
     return ann;
   });

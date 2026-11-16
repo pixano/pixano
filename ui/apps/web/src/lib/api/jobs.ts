@@ -26,6 +26,8 @@ export type Job = {
   /** Why the job failed, when it did — at least a `reason`. Null otherwise. */
   error: Record<string, unknown> | null;
   created_at: string;
+  /** Its work is done and its closing step runs — an index being built. Full bar, not done yet. */
+  finalizing: boolean;
 };
 
 /** An item a job could not process, and why. */
@@ -155,6 +157,7 @@ export type JobEvent = {
   skipped?: number;
   quarantined?: number;
   cancel_requested?: boolean;
+  finalizing?: boolean;
 };
 
 /**

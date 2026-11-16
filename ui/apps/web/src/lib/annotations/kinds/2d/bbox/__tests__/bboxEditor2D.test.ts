@@ -614,8 +614,8 @@ describe("bboxEditor2D, a box stored with no width", () => {
 
 describe("bboxEditor2D, Delete pressed while a gesture runs", () => {
   // The key reaches the select tool while the mouse still holds the box: the
-  // gesture is let go of first, so the delete applies to the box as stored, and
-  // the release that follows commits nothing over it.
+  // gesture is let go of first, so the delete — a model's box's reject — applies
+  // to the box as stored, and the release that follows commits nothing over it.
 
   /** Delete pressed on the canvas, as the image widget hands it to the select tool. */
   function pressDelete(scene: OnCanvas): void {
@@ -631,6 +631,41 @@ describe("bboxEditor2D, Delete pressed while a gesture runs", () => {
     expect(scene.flagSets.filter((staged) => staged)).toEqual([true]);
     expect(scene.flagSets.at(-1)).toBe(false);
   }
+
+  it("deletes a model's box being resized as stored, and Konva throws nothing after", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    pressDelete(scene);
+    expect(() => grabbed.moveTo(20, 20)).not.toThrow();
+    expect(() => grabbed.release()).not.toThrow();
+
+    expect(scene.manager.annotations.find("b1")).toBeUndefined();
+    expect(queuedBodies(scene)).toEqual(["delete"]);
+    // The resize is no longer work of its own: the delete is all that is unsaved.
+    expectFlagLowered(scene);
+    expect(scene.manager.unsavedCount).toBe(1);
+    await scene.manager.flushSave();
+    expect(scene.backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "b1" }]);
+  });
+
+  it("deletes a model's box being dragged as stored", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+
+    pressDelete(scene);
+    grabbed.moveTo(20, 0);
+    grabbed.release();
+
+    expect(scene.manager.annotations.find("b1")).toBeUndefined();
+    expect(queuedBodies(scene)).toEqual(["delete"]);
+    expectFlagLowered(scene);
+    expect(scene.manager.unsavedCount).toBe(1);
+  });
 
   it("deletes a person's box being resized, and Konva throws nothing after", async () => {
     const scene = await openOnCanvas(humanBox(REC, "h1"));

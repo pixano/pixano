@@ -65,6 +65,24 @@ COMPACT_EVERY_WRITES = 64
 # failing a read in progress; longer only costs disk, until the old versions are erased.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
 
+# Below this many vectors, a dataset's embeddings get no vector index: LanceDB's exact search
+# answers fast enough there, and an index would only make the results approximate. A "similar
+# to" runs one search per medium of the record — six on a nuScenes record —, so the line is drawn
+# where six exact searches stay well inside the API's 500 ms p99 target: 25 ms each at 50,000
+# vectors of 512 dimensions, 61 ms at 100,000, 162 ms at 300,000 (scripts/measure_vector_index.py,
+# backend-processing §12). LanceDB's own guidance, for a single search, is twice as high.
+VECTOR_INDEX_MIN_ROWS = 50_000
+
+# The vector index the worker declares for the embeddings tables it creates. Measured on 100,000
+# and 300,000 vectors of 512 dimensions (backend-processing §12): with the search's re-ranking
+# (`Dataset._SEARCH_REFINE_FACTOR`), every type tried brings back 99.9% to 100% of the exact
+# nearest records, in 8 to 17 ms; IVF_SQ trains in 2 to 3 s, where IVF_PQ takes 28 s and
+# IVF_HNSW_SQ 35 to 89 s. A table created earlier keeps the type its descriptor names — IVF_PQ,
+# `Dataset.create_record_embedding_table`'s default — until the table is dropped and a worker
+# creates it anew: it trains slower, and finds 97% to 100% of the exact nearest records
+# re-ranked, where IVF_SQ finds all of them at 50,000 vectors.
+EMBEDDING_INDEX_TYPE = "IVF_SQ"
+
 # The write count per table, per dataset. The runner serialises a dataset's writes, so the
 # lock here only protects the counter itself.
 _writes_since_compaction: defaultdict[tuple[str, str], int] = defaultdict(int)
@@ -149,8 +167,8 @@ class DatasetWriteTarget(Protocol):
         """Whether a record embeddings table already exists."""
         ...
 
-    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
-        """Create the embeddings table for a given vector width."""
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = ...) -> None:
+        """Create the embeddings table for a given vector width, declaring the vector index it will get."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
@@ -460,7 +478,7 @@ class JobWriter:
             # that is the per-dataset writer role that step 4 must decide.
             dataset = self._dataset = self._reopen_dataset()
         if not dataset.has_record_embeddings():
-            dataset.create_record_embedding_table(dim=dim, model_id=model)
+            dataset.create_record_embedding_table(dim=dim, model_id=model, index_type=EMBEDDING_INDEX_TYPE)
         else:
             check_embedding_space(dataset.record_embedding_space(), model, dim)
 
@@ -471,3 +489,60 @@ class JobWriter:
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
         self._count_write(self.EMBEDDING_TABLE)
+
+    def index_embeddings(self, min_rows: int | None = None) -> str | None:
+        """Index the dataset's embeddings for search, once a job has filled them.
+
+        For a kind's `finalize`: an index is trained on every vector, so it is built once the job
+        wrote them all, not chunk by chunk.
+
+        - The last writes are compacted first, so that the index is trained on one tidy table.
+        - The `record_id` index is always built: a search restricted to some records, and the
+          lookup of a record's vectors for "similar to", filter on it.
+        - The vector index only from `min_rows` vectors: below, exact search is fast enough, and
+          an index would only make the results approximate. Its type and metric are those the
+          table's descriptor declares.
+
+        Every index is rebuilt whole, never extended: one trained on the previous run's vectors
+        would partition this run's badly. Training is random, so a rebuild gives an equivalent
+        index rather than the same one, and a final chunk replayed after its worker died leaves
+        the table as one run would. A table that shrank below `min_rows` keeps the vector index
+        it had: still valid, and the search re-ranks what it finds.
+
+        Not under the dataset's own write lock, as compaction is not: building an index changes
+        no row, Lance commits it as a version of its own, and a person's save is never refused
+        for its sake. A commit that conflicts with another writer of the table — the
+        application's computation, a recompute, a rollback, another worker — fails the build,
+        and the kind tries again later. The runner's lock still keeps this worker's other writes
+        to the dataset out of the way.
+
+        Args:
+            min_rows: The table size from which a vector index is built; `VECTOR_INDEX_MIN_ROWS`
+                by default, read at call time.
+
+        Returns:
+            The type of the vector index built, or None when there is no table or too few vectors.
+        """
+        min_rows = VECTOR_INDEX_MIN_ROWS if min_rows is None else min_rows
+        dataset = self.dataset
+        if not dataset.has_record_embeddings():
+            return None
+        self.compact(self.EMBEDDING_TABLE)
+        table = dataset.open_table(self.EMBEDDING_TABLE)
+        table.create_scalar_index("record_id", index_type="BTREE", replace=True)
+        rows = table.count_rows()
+        if rows < min_rows:
+            logger.info(
+                "job %s: %d vector(s), under the %d that call for a vector index: exact search",
+                self.job_id,
+                rows,
+                min_rows,
+            )
+            return None
+        space = dataset.record_embedding_space() or {}
+        index_type = space.get("index_type", EMBEDDING_INDEX_TYPE)
+        table.create_index(
+            metric=space.get("metric", "cosine"), index_type=index_type, vector_column_name="vector", replace=True
+        )
+        logger.info("job %s: %s vector index built over %d vector(s)", self.job_id, index_type, rows)
+        return index_type
