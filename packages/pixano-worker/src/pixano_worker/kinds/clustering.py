@@ -59,17 +59,23 @@ MAX_MIN_CLUSTER_SIZE = 100_000
 #: The dimensions HDBSCAN reads the vectors in. Its density estimates lose their meaning over many
 #: dimensions, and its time grows with them: the vectors are projected on their main directions first.
 HDBSCAN_DIMENSIONS = 50
-#: The neighbours HDBSCAN reads a record's density from, at most. scikit-learn takes as many as the
-#: fewest records a group holds, and keeps their distances for every record, 16 bytes each: 16 GB
-#: over a million records asked for groups of a thousand. Fifty keep them under 800 MB there, and
-#: leave groups of fifty records or fewer — the default among them — as scikit-learn finds them.
-HDBSCAN_MAX_NEIGHBOURS = 50
+#: The neighbours HDBSCAN reads a record's density from, at most: how cautious it is before it calls
+#: a record part of a group. scikit-learn takes as many as the fewest records a group holds, so that
+#: the group size asked also set that caution, and a larger size left more records out of every group.
+#: Measured on 2026-11-12 with CLIP's embeddings, groups of 10 or more: of nuScenes mini's 404 samples,
+#: 11 groups and 33 left out with 10 neighbours, 12 groups and 4 left out with five; of 400 synthetic
+#: images of a few flat shapes on a plain background, no group with 10, three with five. Groups of 20
+#: or more: of the samples, 8 groups, one of 121, with 20 neighbours, ten of 39 to 41 with five; of the
+#: synthetic images, none either way. Their distances are kept for every record, 16 bytes each: 80 MB
+#: over a million records.
+HDBSCAN_NEIGHBOURS = 5
 #: The seed of every random choice, so that a run replayed groups the records alike.
 SEED = 0
 #: The records a chunk of weight one groups; its weight grows as the square of its records over that.
 #: Measured on 2026-11-06 on a laptop, on vectors of 512 dimensions gathered around a hundred
 #: directions (`scripts/measure_clustering.py`): HDBSCAN grouped 50,000 records in 100 s and 100,000
-#: in 336 s, as their number to the power 1.75; K-Means grouped 200,000 in 2.7 s. A chunk of weight
+#: in 336 s, as their number to the power 1.75, reading 10 neighbours — 103 s for 50,000 with five, on
+#: 2026-11-12; K-Means grouped 200,000 in 2.7 s. A chunk of weight
 #: one is given `PIXANO_WORKER_CHUNK_TIMEOUT_S`, half an hour by default: the square keeps about
 #: three times the time HDBSCAN was measured to need, from 150,000 records on, for a slower machine.
 RECORDS_OF_UNIT_WEIGHT = 150_000
@@ -360,7 +366,7 @@ def _grouped(places: np.ndarray, params: ClusteringParams, between_steps: Callab
         between_steps()
         groups = HDBSCAN(
             min_cluster_size=params.min_cluster_size,
-            min_samples=min(params.min_cluster_size, HDBSCAN_MAX_NEIGHBOURS),
+            min_samples=min(params.min_cluster_size, HDBSCAN_NEIGHBOURS),
             copy=False,
         ).fit_predict(reduced)
     return _numbered_by_size(np.asarray(groups))

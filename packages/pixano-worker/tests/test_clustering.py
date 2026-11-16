@@ -20,7 +20,7 @@ from pixano_worker.kinds import ClusteringKind
 from pixano_worker.kinds import clustering as clustering_module
 from pixano_worker.kinds.base import Outcome
 from pixano_worker.kinds.clustering import (
-    HDBSCAN_MAX_NEIGHBOURS,
+    HDBSCAN_NEIGHBOURS,
     NO_EMBEDDINGS,
     NO_RECORDS,
     NO_VECTORS,
@@ -175,11 +175,17 @@ class TestGroups:
 
         assert set(twins) in _groups(_clusters(library))
 
-    def test_hdbscan_reads_no_more_neighbours_than_its_bound(self, tmp_path: Path, monkeypatch) -> None:
+    @pytest.mark.parametrize(
+        ("min_cluster_size", "neighbours"),
+        [(HDBSCAN_NEIGHBOURS + 15, HDBSCAN_NEIGHBOURS), (HDBSCAN_NEIGHBOURS - 2, HDBSCAN_NEIGHBOURS - 2)],
+    )
+    def test_hdbscan_reads_a_few_neighbours_whatever_the_size_of_a_group(
+        self, tmp_path: Path, monkeypatch, min_cluster_size: int, neighbours: int
+    ) -> None:
         import sklearn.cluster
 
-        # More records than a group of more than the bound: HDBSCAN runs.
-        directions = np.random.default_rng(0).normal(size=(HDBSCAN_MAX_NEIGHBOURS + 10, DIM))
+        # More records than the fewest a group holds: HDBSCAN runs.
+        directions = np.random.default_rng(0).normal(size=(min_cluster_size + 10, DIM))
         library = _library(tmp_path, {f"r{n}": [list(vector)] for n, vector in enumerate(directions)})
 
         asked: dict[str, Any] = {}
@@ -191,12 +197,9 @@ class TestGroups:
 
         monkeypatch.setattr(sklearn.cluster, "HDBSCAN", spying)
 
-        _run(library, {"algorithm": "hdbscan", "min_cluster_size": HDBSCAN_MAX_NEIGHBOURS + 5})
+        _run(library, {"algorithm": "hdbscan", "min_cluster_size": min_cluster_size})
 
-        assert (asked["min_cluster_size"], asked["min_samples"]) == (
-            HDBSCAN_MAX_NEIGHBOURS + 5,
-            HDBSCAN_MAX_NEIGHBOURS,
-        )
+        assert (asked["min_cluster_size"], asked["min_samples"]) == (min_cluster_size, neighbours)
 
     def test_a_record_without_an_embedding_gets_no_row_and_is_skipped(self, library: Path) -> None:
         outcome = _run(library, {"algorithm": "kmeans", "clusters": 2})
