@@ -15,7 +15,7 @@ import pyarrow as pa
 import tqdm
 from lancedb.pydantic import LanceModel
 
-from pixano.schemas import SchemaGroup, is_statistics
+from pixano.schemas import SchemaGroup, is_clusters, is_statistics
 
 from ..dataset import Dataset
 from ..dataset_info import DatasetInfo
@@ -95,8 +95,8 @@ class DatasetExporter(ABC):
         """
         data: dict[str, LanceModel | list[LanceModel] | None] = {}
         for table_name, schema_cls in self.dataset.info.tables.items():
-            if is_statistics(schema_cls):
-                # Computed from a dataset, and computed again on another (backend-processing §22).
+            if is_statistics(schema_cls) or is_clusters(schema_cls):
+                # Computed from a dataset, and computed again on another (backend-processing §22, §24).
                 continue
             if table_name == SchemaGroup.RECORD.value:
                 # Record table — single row

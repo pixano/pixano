@@ -22,6 +22,7 @@ from .annotations import (
     TextSpan,
     Tracklet,
 )
+from .clusters import RecordClusters
 from .embeddings import Embedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
@@ -100,11 +101,25 @@ _CANONICAL_RESOURCE_FAMILIES: tuple[CanonicalResourceFamily, ...] = (
         EntityStatistics,
         public_api=False,
     ),
+    # Clusters are never a resource of their own either (backend-processing §24).
+    CanonicalResourceFamily(
+        "record_clusters",
+        "record-clusters",
+        "record_clusters",
+        SchemaGroup.CLUSTERS,
+        RecordClusters,
+        public_api=False,
+    ),
 )
 
 #: The `DatasetInfo` slots of the statistics tables, which no import or export carries: statistics
 #: are computed from a dataset, and computed again on another.
 STATISTICS_SLOTS: tuple[str, ...] = ("record_statistics", "entity_statistics")
+#: The `DatasetInfo` slot of the records' clusters: computed from a dataset's embeddings, as statistics are.
+CLUSTER_SLOT = "record_clusters"
+CLUSTER_SLOTS: tuple[str, ...] = (CLUSTER_SLOT,)
+#: The slots of what a dataset computes from itself, which no import or export carries.
+COMPUTED_SLOTS: tuple[str, ...] = (*STATISTICS_SLOTS, *CLUSTER_SLOTS)
 
 _SLOT_TO_FAMILY = {family.slot_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
 _RESOURCE_TO_FAMILY = {family.resource_name: family for family in _CANONICAL_RESOURCE_FAMILIES}
@@ -136,7 +151,7 @@ def supported_dataset_info_slots() -> tuple[str, ...]:
             "message",
             "timeseries",
             "text_span",
-            *STATISTICS_SLOTS,
+            *COMPUTED_SLOTS,
         }
     )
 
@@ -237,6 +252,9 @@ def validate_canonical_table_map(tables: dict[str, type[LanceModel]]) -> None:
 
 
 __all__ = [
+    "CLUSTER_SLOT",
+    "CLUSTER_SLOTS",
+    "COMPUTED_SLOTS",
     "STATISTICS_SLOTS",
     "CanonicalResourceFamily",
     "canonical_base_schema_for_schema",
