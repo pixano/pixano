@@ -57,6 +57,7 @@ from pixano.schemas import (
     media_type_of,
     validate_canonical_table_map,
 )
+from pixano.schemas.table_names import canonical_family_spec_for_slot
 from pixano.utils.python import to_sql_list, unique_list
 
 from .dataset_features_values import Constraint, ConstraintDict, DatasetFeaturesValues, TableName
@@ -320,6 +321,45 @@ class Dataset:
             self._table_handles.pop(table_name, None)
         self._backfill_columns(lambda candidate: candidate is schema, {name: "''"})
         self._patch_info_json({"entity": _serialize_table_schema(schema)})
+
+    @dataset_write
+    def ensure_annotation_table(self, slot: str) -> str:
+        """Give the dataset the annotation table of a slot it does not declare yet.
+
+        For a job that writes a kind of annotation the dataset was not built with — masks on a
+        dataset of boxes. The table is created empty, with the slot's base schema, and the slot
+        is declared in `info.json`, so the interface and the next opener see it like any other.
+        Idempotent: a slot already declared, whatever its schema, is left as it is and
+        `info.json` is not rewritten, so a holder of the dataset is not made to reopen it.
+
+        Under the write lock, `info.json` is read again when another instance changed it: a
+        table that the API created meanwhile is found, not created twice.
+
+        Args:
+            slot: The `DatasetInfo` slot of an annotation family, such as `mask`.
+
+        Returns:
+            The table's name.
+
+        Raises:
+            ValueError: The slot names no annotation family.
+        """
+        family = canonical_family_spec_for_slot(slot)
+        if family.schema_group is not SchemaGroup.ANNOTATION:
+            raise ValueError(f"Slot '{slot}' holds no annotations, so a job cannot add its table.")
+        table_name = family.table_name
+        if table_name in self.info.tables:
+            return table_name
+
+        schema = family.base_schema
+        # The table before its declaration: a crash in between leaves an undeclared table, which
+        # the next call opens through `exist_ok`, rather than a declared table that is missing.
+        self._db_connection.create_table(name=table_name, schema=schema, exist_ok=True, embedding_functions=None)
+        setattr(self.info, slot, schema)
+        self.info.tables[table_name] = schema
+        self._patch_info_json({slot: _serialize_table_schema(schema)})
+        logger.info("Dataset %s: created the '%s' table for the '%s' slot", self.id, table_name, slot)
+        return table_name
 
     def _patch_info_json(self, fields: dict[str, Any]) -> None:
         """Set top-level fields of `info.json`, leaving the rest of the document as written.

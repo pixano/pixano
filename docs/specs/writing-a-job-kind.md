@@ -208,6 +208,20 @@ offers:
   **`is_a_persons_work(row)`** — which objects a person worked on, and whether a row is a
   person's work (§4).
 
+### What the reader and the writer offer
+
+A kind reaches the dataset through these two only. What a kind needs from the dataset and
+another may need too goes there, named and documented here, for every kind — never in a kind's
+private helpers, which another kind must not import.
+
+- **`writer.ensure_table(slot)`** — the canonical table of an annotation slot (`mask` gives
+  `masks`), added to the dataset if it has none, and its name. Call it from `prepare`, and
+  again before writing: a worker whose cached dataset predates the table does not see it. It
+  is idempotent, and refuses a slot that holds no annotations. A table the dataset already
+  declares is answered from its metadata, with no lock and without marking the dataset
+  modified; only creating the table takes the dataset's lock. A kind may instead refuse a
+  dataset without its table.
+
 ---
 
 ## 2. Writing, and why it must be idempotent
