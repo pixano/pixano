@@ -173,6 +173,11 @@ short chunk ignores both, and its progress jumps to its tasks when it finishes. 
 to `plan` has no chunk: its progress counts nothing and is never cancelled. The demonstration kind
 `fake` (`kinds/fake.py`) does both, a task at a time.
 
+**A write refused for a person's save is tried again.** The dataset's lock refuses a write
+while another process writes the dataset; the runner tries a chunk's `write` again every second
+for half a minute, then hands the chunk back as after a transient failure. That is one more reason
+`write` must be idempotent: it may run again after stopping halfway.
+
 **Blame an item only on an answer, never on a silence.** A server that refused a request has
 told you something about its content; a server that did not answer has told you nothing. The
 embeddings kind learnt this on the real stack: during an inference restart, one call went
