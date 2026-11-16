@@ -23,6 +23,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
+import pyarrow as pa
 import pytest
 from pixano_worker.kinds import CONFIRM_MARKER, JobParams, default_registry
 from pixano_worker.kinds.base import Chunk, JobKind
@@ -32,8 +33,8 @@ from pixano_worker.writer import JobWriter
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import Entity, Image, Record, SchemaGroup
-from pixano.schemas.table_names import canonical_family_spec_for_slot
+from pixano.schemas import CLUSTER_SLOT, Entity, Image, Record, RecordClusters, SchemaGroup, record_cluster_id
+from pixano.schemas.table_names import canonical_family_spec_for_slot, canonical_table_name_for_slot
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -52,7 +53,18 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
         "chunk_size": 10,
         "write_to": "toy",
     },
+    # Groups the records by the vectors of their images (`_Source.read_record_vectors`).
+    "clustering": {"algorithm": "kmeans", "clusters": 2},
 }
+
+#: The kinds whose every job is a run of its own, kept beside the others: a clustering's groups,
+#: versioned by run (backend-processing §24). A resubmission adds its run, and leaves the earlier
+#: ones as they were, rather than replacing what the same work wrote.
+RUNS_KEPT = frozenset({"clustering"})
+
+#: The kinds that read the dataset's embeddings: the contract's dataset holds some for them only, so
+#: that the embeddings kind meets a dataset without any, as a first computation does.
+EMBEDDINGS_READ_BY = frozenset({"clustering"})
 
 #: The kinds that know how to write nothing, and how to ask them to.
 QUIET_EXAMPLES: dict[str, dict[str, Any]] = {
@@ -94,6 +106,8 @@ class _Target:
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={})
+        # The clustering runs the dataset records it holds the clusters of, by run.
+        self.clusterings: dict[str, Any] = {}
 
     @property
     def rows(self) -> dict[str, Any]:
@@ -101,13 +115,17 @@ class _Target:
         return {f"{table}/{row_id}": row for table, rows in self.tables.items() for row_id, row in rows.items()}
 
     def snapshot(self) -> list[tuple[str, str, str]]:
-        """What the dataset holds: every row of every table, by content.
+        """What the dataset holds: every row of every table, by content, and the clustering runs it
+        records, but for when each was recorded.
 
         A list rather than a digest, so that a failed comparison names the rows that differ.
         """
-        return sorted(
-            (table, row_id, _content(row)) for table, rows in self.tables.items() for row_id, row in rows.items()
-        )
+        rows = [(table, row_id, _content(row)) for table, rows in self.tables.items() for row_id, row in rows.items()]
+        runs = [
+            ("info.json", f"clusterings/{run_id}", repr(sorted(run.model_dump(exclude={"computed_at"}).items())))
+            for run_id, run in self.clusterings.items()
+        ]
+        return sorted(rows + runs)
 
     def update_data(self, table_name: str, data: list[Any]) -> None:
         for row in data:
@@ -132,6 +150,24 @@ class _Target:
             raise ValueError(f"Slot '{slot}' holds no annotations, so a job cannot add its table.")
         self.info.tables.setdefault(family.table_name, family.base_schema)
         return family.table_name
+
+    def ensure_record_clusters(self) -> str:
+        family = canonical_family_spec_for_slot(CLUSTER_SLOT)
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        return family.table_name
+
+    def write_clustering(self, run: Any, clusters: dict[str, int]) -> Any:
+        """The run's rows replaced, as the dataset's — one per record, keyed by the run and the record —,
+        then its entry, kept beside the tables as `info.json` holds it beside the dataset's rows."""
+        table = self.tables.setdefault(canonical_table_name_for_slot(CLUSTER_SLOT), {})
+        for row_id in [row_id for row_id, row in table.items() if row.run_id == run.run_id]:
+            del table[row_id]
+        for record_id, cluster in clusters.items():
+            row_id = record_cluster_id(run.run_id, record_id)
+            table[row_id] = RecordClusters(id=row_id, record_id=record_id, run_id=run.run_id, cluster=cluster)
+        recorded = run.counted(clusters)
+        self.clusterings[run.run_id] = recorded
+        return recorded
 
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""
@@ -222,6 +258,8 @@ def _confirmed(kind: JobKind, parameter: str) -> JobParams:
 #: The dataset the contract sees. Non-empty, because a data-driven kind produces nothing on an
 #: empty dataset — and the contract must exercise those kinds too.
 CONTRACT_RECORDS = 25
+#: The dimension of the contract's embeddings.
+CONTRACT_VECTOR_DIM = 4
 
 
 class _Vector:
@@ -250,19 +288,54 @@ class _Source:
     """
 
     # The real schemas: the reader finds a dataset's media by looking at them.
-    info = SimpleNamespace(tables={"records": Record, "images": Image})
+    info = SimpleNamespace(id="contract", tables={"records": Record, "images": Image})
+
+    # The one space of the dataset's embeddings, when it holds some.
+    _SPACE = EmbeddingSpaces().new_space(CONTRACT_EXAMPLES["embeddings"]["model"], "", CONTRACT_VECTOR_DIM)
+
+    def __init__(self, embedded: bool = False) -> None:
+        """A dataset of twenty-five records.
+
+        Args:
+            embedded: Whether the dataset holds embeddings: for the kinds that read them.
+        """
+        self._embedded = embedded
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
 
     def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
-        return None
+        # Embeddings of the model the embeddings example runs, as a dataset computed them before.
+        if not self._embedded or model not in (None, self._SPACE.id, self._SPACE.model_id):
+            return None
+        return self._SPACE.as_document()
 
     def record_embeddings_fully_read(self) -> bool:
         return True
 
     def record_embedding_spaces(self) -> list[dict[str, Any]]:
-        return []
+        return [self._SPACE.as_document()] if self._embedded else []
+
+    def read_record_vectors(self, model: str | None = None) -> pa.Table | None:
+        """A vector per image: the even records near one direction, the odd ones near another."""
+        if not self._embedded:
+            return None
+        record_ids = [f"rec-{n}" for n in range(CONTRACT_RECORDS)]
+        vectors = [
+            [1.0, 0.1 * (n % 3), 0.0, 0.0] if n % 2 == 0 else [0.0, 0.0, 1.0, 0.1 * (n % 3)]
+            for n in range(CONTRACT_RECORDS)
+        ]
+        return pa.table(
+            {
+                "record_id": record_ids,
+                "view_id": [f"img-{n}" for n in range(CONTRACT_RECORDS)],
+                "vector": pa.array(vectors, pa.list_(pa.float32(), CONTRACT_VECTOR_DIM)),
+            }
+        )
+
+    def get_all_ids(self, table_name: str = "records") -> list[str]:
+        assert table_name == "records", table_name
+        return [f"rec-{n}" for n in range(CONTRACT_RECORDS)]
 
     def get_data(
         self,
@@ -285,8 +358,8 @@ class _Source:
         return None
 
 
-def _reader() -> JobReader:
-    return JobReader(lambda: _Source(), MediaResolver("/medias", "/medias"))
+def _reader(kind: JobKind) -> JobReader:
+    return JobReader(lambda: _Source(embedded=kind.name in EMBEDDINGS_READ_BY), MediaResolver("/medias", "/medias"))
 
 
 def _writer(kind: JobKind, target: _Target, job_id: str, params: JobParams | None = None) -> JobWriter:
@@ -307,7 +380,7 @@ def _plan_and_prepare(kind: JobKind, target: _Target, job_id: str, params: JobPa
 
     `times` above one is a planner that died after `prepare`, and the next one starting over.
     """
-    chunks = list(kind.plan(_reader(), params))
+    chunks = list(kind.plan(_reader(kind), params))
     for _ in range(times):
         kind.prepare(_writer(kind, target, job_id, params), params)
     return chunks
@@ -330,12 +403,12 @@ def _execute(
     for chunk in _plan_and_prepare(kind, target, job_id, params, prepare_times):
         kind.write(
             _writer(kind, target, job_id, params),
-            kind.process(_reader(), chunk.payload, params),
+            kind.process(_reader(kind), chunk.payload, params),
             chunk.payload,
             params,
         )
     for _ in range(finalize_times if kind.finalizes else 0):
-        kind.finalize(_reader(), _writer(kind, target, job_id, params), params)
+        kind.finalize(_reader(kind), _writer(kind, target, job_id, params), params)
 
 
 #: Width of the vectors the simulated inference returns.
@@ -491,7 +564,7 @@ class TestFinalization:
         before = target.snapshot()
 
         if kind.finalizes:
-            kind.finalize(_reader(), _writer(kind, target, "job-1"), _params(kind))
+            kind.finalize(_reader(kind), _writer(kind, target, "job-1"), _params(kind))
 
         assert target.snapshot() == before
 
@@ -506,38 +579,38 @@ class TestFinalization:
 
 class TestPlanning:
     def test_it_produces_work(self, kind: JobKind) -> None:
-        assert list(kind.plan(_reader(), _params(kind)))
+        assert list(kind.plan(_reader(kind), _params(kind)))
 
     def test_every_chunk_carries_at_least_one_task(self, kind: JobKind) -> None:
         """An empty chunk would block progress: it would consume a turn without advancing."""
-        assert all(chunk.task_count > 0 for chunk in kind.plan(_reader(), _params(kind)))
+        assert all(chunk.task_count > 0 for chunk in kind.plan(_reader(kind), _params(kind)))
 
     def test_planning_twice_gives_the_same_work(self, kind: JobKind) -> None:
         """Planning must be reproducible: a job replanned after an outage must not describe
         work different from the one already partly executed."""
-        first = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
-        second = [(c.payload, c.task_count) for c in kind.plan(_reader(), _params(kind))]
+        first = [(c.payload, c.task_count) for c in kind.plan(_reader(kind), _params(kind))]
+        second = [(c.payload, c.task_count) for c in kind.plan(_reader(kind), _params(kind))]
 
         assert first == second
 
     def test_the_payload_is_an_object(self, kind: JobKind) -> None:
         """The schema constrains payloads to objects; a scalar would be refused by the database."""
-        assert all(isinstance(chunk.payload, dict) for chunk in kind.plan(_reader(), _params(kind)))
+        assert all(isinstance(chunk.payload, dict) for chunk in kind.plan(_reader(kind), _params(kind)))
 
 
 class TestExecution:
     def test_it_processes_every_chunk(self, kind: JobKind) -> None:
         params = _params(kind)
 
-        for chunk in kind.plan(_reader(), params):
-            kind.process(_reader(), chunk.payload, params)
+        for chunk in kind.plan(_reader(kind), params):
+            kind.process(_reader(kind), chunk.payload, params)
 
     def test_its_outcome_accounts_for_every_task(self, kind: JobKind) -> None:
         """The engine refuses an outcome that does not add up; better to learn it here than in production."""
         params = _params(kind)
 
-        for chunk in kind.plan(_reader(), params):
-            result = kind.process(_reader(), chunk.payload, params)
+        for chunk in kind.plan(_reader(kind), params):
+            result = kind.process(_reader(kind), chunk.payload, params)
             assert kind.outcome(result, chunk.payload, chunk.task_count).total == chunk.task_count
 
     def test_writing_twice_changes_nothing(self, kind: JobKind) -> None:
@@ -552,6 +625,8 @@ class TestExecution:
         assert (len(target.rows), target.snapshot()) == first
 
     def test_a_resubmission_does_not_duplicate(self, kind: JobKind) -> None:
+        if kind.name in RUNS_KEPT:
+            pytest.skip(f"every '{kind.name}' job is a run of its own, kept beside the others")
         target = _Target()
         _execute(kind, target, "job-1")
         first = (len(target.rows), target.snapshot())
@@ -559,6 +634,17 @@ class TestExecution:
         _execute(kind, target, "job-2")
 
         assert (len(target.rows), target.snapshot()) == first
+
+    def test_a_resubmission_of_a_kind_that_keeps_its_runs_leaves_the_earlier_one(self, kind: JobKind) -> None:
+        if kind.name not in RUNS_KEPT:
+            pytest.skip(f"a '{kind.name}' job replaces what the same work wrote")
+        target = _Target()
+        _execute(kind, target, "job-1")
+        first = target.snapshot()
+
+        _execute(kind, target, "job-2")
+
+        assert set(first) < set(target.snapshot()), "the second run replaced or changed the first"
 
     def test_every_annotation_says_where_it_came_from(self, kind: JobKind) -> None:
         """Provenance is required of annotations, not of every output.
@@ -586,9 +672,9 @@ class TestExecution:
         params = kind.validate_params(QUIET_EXAMPLES[kind.name])
         target = _Target()
 
-        for chunk in kind.plan(_reader(), params):
+        for chunk in kind.plan(_reader(kind), params):
             writer = JobWriter(lambda: target, kind.name, "job-1", kind.source_type)
-            kind.write(writer, kind.process(_reader(), chunk.payload, params), chunk.payload, params)
+            kind.write(writer, kind.process(_reader(kind), chunk.payload, params), chunk.payload, params)
 
         assert target.rows == {}
 

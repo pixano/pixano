@@ -50,7 +50,8 @@ two writes cannot share a transaction, so a worker that dies between the two wil
 chunk. The writer makes the replay harmless by deriving each row's identifier from the work —
 the kind, the model, the key, the rank — and never from the job: an identifier that carried
 the job would mint new rows at every submission instead of replacing the previous run's
-(`JobWriter.replace`).
+(`JobWriter.replace`). One kind keeps every run on purpose, a clustering, whose rows carry their
+run, the job: a replay of the job still writes the same rows (`JobWriter.write_clustering`).
 """
 
 from abc import ABC, abstractmethod

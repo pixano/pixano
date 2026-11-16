@@ -124,6 +124,14 @@ class _FakeDataset:
         self.tables.setdefault(table_name, {})
         return table_name
 
+    # The clusters the writer writes are tested on a real dataset (test_clustering.py): these stand in
+    # for the protocol only.
+    def ensure_record_clusters(self) -> str:
+        raise NotImplementedError
+
+    def write_clustering(self, run: Any, clusters: dict[str, int]) -> Any:
+        raise NotImplementedError
+
     def checksum(self, table_name: str) -> str:
         """A fingerprint of the content, insensitive to the write order."""
         table = self.tables.get(table_name, {})

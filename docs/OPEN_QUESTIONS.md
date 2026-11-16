@@ -139,9 +139,12 @@ into a limit was left open. A kind now weighs a chunk in inference calls, and
 the worker gives it that many times `PIXANO_WORKER_CHUNK_TIMEOUT_S`, which stays
 the limit of a chunk of one call (`Chunk.weight` in
 `packages/pixano-worker/src/pixano_worker/kinds/base.py`, `_execute` in
-`runner.py`). The setting then binds every call a weighed chunk makes: a
-deployment that lowers it to fit its fast kinds sends back long chunks the
-inference server would still have answered, and the kind cannot say so.
+`runner.py`). The clustering kind, which calls no inference, weighs its one
+chunk by the square of its records over 150,000, from the time it was measured
+to take (backend-processing §24.2). The setting then binds every call a
+weighed chunk makes: a deployment that lowers it to fit its fast kinds sends
+back long chunks the inference server would still have answered, and the kind
+cannot say so.
 
 Options:
 
@@ -151,3 +154,22 @@ Options:
 - **The kind gives the chunk a duration of its own**, computed from its own
   timeouts: exact for each kind, but out of the deployment's hands, and every
   kind must know its worst case.
+
+## Forgetting a run of a clustering, and a run older than its embeddings
+
+**Status:** open (lot 6 of step 2's second version, 2026-11-06).
+
+Every run of a clustering is kept (backend-processing §24). Nothing forgets one:
+`Dataset.drop_clustering` takes a run's rows and its entry, but no route nor
+interface calls it, so the runs pile up. Nor does a run say that its model's
+embeddings were computed again since, or for more media.
+
+Options:
+
+- **A route that forgets a run**, `DELETE /datasets/{id}/clusterings/{run}`, and
+  a way to call it wherever a run is shown.
+- **Keep the latest runs only**, a number of them per dataset, the oldest
+  forgotten when a job records a new one: nothing to click, but a run someone
+  still reads may go.
+- **Mark a run stale** when its model's embeddings are written after it: what
+  shows the run could say so, or hide it.
