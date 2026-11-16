@@ -646,6 +646,16 @@ describe("Staged work — each holder's own flag", () => {
     return { ...opened, pointCloud, image };
   }
 
+  it("discards the record's unsaved work from the tab", async () => {
+    const { manager } = await openManager(twoRecords());
+    manager.review.accept("b1");
+
+    await manager.review.discard();
+
+    expect(manager.pendingCount).toBe(0);
+    expect(manager.annotations.find("b1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+  });
+
   it("Discard asks every holder to drop its work, and is offered with nothing queued", async () => {
     const { manager, pointCloud, image } = await twoWidgets();
     const dropped: string[] = [];

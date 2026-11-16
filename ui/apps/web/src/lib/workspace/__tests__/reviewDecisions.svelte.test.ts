@@ -777,6 +777,45 @@ describe("Delete on a model's annotation is its reject", () => {
     );
   });
 
+  function dragUnderWay(seam: SeamContext, id: string) {
+    let held = true;
+    const flag = seam.claimStagedWork!(() => {
+      held = false;
+      flag.set(false);
+    });
+    flag.set(true);
+    return {
+      letGo: () => {
+        if (held) drag(seam, id);
+        held = false;
+        flag.set(false);
+      },
+    };
+  }
+
+  it("cancels a gesture under way first, so the delete applies to the stored row", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    const dragging = dragUnderWay(seam, "b1");
+    let queuedWhenCancelled: number | undefined;
+
+    deleteLocalAnnotation(
+      manager.annotations.find("b1")!,
+      seam.collection,
+      seam.mutations,
+      seam.widgetId,
+      () => {
+        queuedWhenCancelled = manager.pendingCount;
+        manager.discardStagedWork(seam.widgetId);
+      },
+    );
+    dragging.letGo();
+
+    expect(queuedWhenCancelled).toBe(0);
+    expect(manager.unsavedCount).toBe(1);
+    await manager.flushSave();
+    expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "b1" }]);
+  });
+
   it("cancels no gesture when it does nothing", async () => {
     const { manager, seam } = await openWithBoxes(modelBox(REC, "b1"));
     let cancelled = 0;
