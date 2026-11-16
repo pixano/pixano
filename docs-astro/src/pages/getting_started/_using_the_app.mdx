@@ -113,7 +113,8 @@ with `ACTIVATE_UI_V1_0=true` —, and pick how to group; the job runs in the bac
 - **kmeans** makes as many groups as you ask for (**Clusters**, 8 by default) and puts every
   record in one;
 - **hdbscan** finds as many groups as the embeddings hold, each of at least **Min Cluster Size**
-  records (10 by default), and puts the records between them in none: they show as **Noise**.
+  records (10 by default), and puts the records between them in none: they show as **Noise**. A
+  run that found no group says so in its column's name: try a smaller size, or kmeans.
 
 **Model** names the embeddings to group by; left empty, the dataset's default ones.
 

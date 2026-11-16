@@ -35,6 +35,8 @@ class ClusteringAlgorithm(str, Enum):
 
 #: How a run's name calls each algorithm.
 ALGORITHM_NAMES = {ClusteringAlgorithm.KMEANS: "K-Means", ClusteringAlgorithm.HDBSCAN: "HDBSCAN"}
+#: What the name of a run that found no group says of it.
+NO_GROUP_FOUND = "no group found"
 
 
 class Clustering(BaseModel):
@@ -79,13 +81,19 @@ class Clustering(BaseModel):
 
     @property
     def label(self) -> str:
-        """How a person reads the run: its algorithm, what it was asked, and when, in UTC — the server
-        does not know the reader's time zone.
+        """How a person reads the run: its algorithm, what it was asked, whether it found no group, and
+        when, in UTC — the server does not know the reader's time zone.
+
+        A run of HDBSCAN can find no group: every record is then noise, which its column alone would
+        show as a column of Noise, and no more.
         """
+        found: str | None = None
         if self.algorithm is ClusteringAlgorithm.KMEANS:
             asked: str | None = f"{self.parameters.get('clusters', self.clusters)} groups"
         else:
             size = self.parameters.get("min_cluster_size")
             asked = f"groups of {size} or more" if size is not None else None
+            found = NO_GROUP_FOUND if self.clusters == 0 else None
         when = f"{self.computed_at.astimezone(timezone.utc):%Y-%m-%d %H:%M} UTC"
-        return ", ".join(part for part in (f"Clusters — {ALGORITHM_NAMES[self.algorithm]}", asked, when) if part)
+        parts = (f"Clusters — {ALGORITHM_NAMES[self.algorithm]}", asked, found, when)
+        return ", ".join(part for part in parts if part)
