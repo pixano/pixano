@@ -4,28 +4,34 @@
 # License: CECILL-C
 # =====================================
 
-"""Records ordered and filtered through their statistics, joined with DuckDB on a real dataset."""
+"""Records ordered and filtered through the columns computed from them — their statistics, their
+clusters —, joined with DuckDB on a real dataset."""
 
 import random
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pyarrow as pa
 import pytest
 from pydantic import create_model
 
+from pixano.clustering.runs import Clustering, ClusteringAlgorithm
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets.queries.computed_columns import (
+    RECORD_CLUSTERS_TABLE,
     ComputedFilter,
     InvalidRecordFilter,
     RecordOrder,
+    clusters_column,
+    computed_sql_column,
     computed_values,
     matching_record_ids,
     ordered_record_ids,
     quote_identifier,
     record_neighbors,
 )
-from pixano.schemas import Image, Record
+from pixano.schemas import NOISE_CLUSTER, Image, Record
 from pixano.statistics.definitions import StatisticLevel
 
 
@@ -61,8 +67,36 @@ def _dataset(folder: Path, with_statistics: bool = True) -> Dataset:
     return dataset
 
 
+#: Two runs of a clustering: the first grouped every record but r5, r4 in none of its groups; the
+#: second grouped r1 and r2 only.
+FIRST_RUN = {"r1": 0, "r2": 1, "r3": 0, "r4": NOISE_CLUSTER, "r6": 1}
+SECOND_RUN = {"r1": 1, "r2": 0}
+FIRST, SECOND = clusters_column("job-1"), clusters_column("job-2")
+
+
+def _clustering(run_id: str) -> Clustering:
+    return Clustering(
+        run_id=run_id,
+        algorithm=ClusteringAlgorithm.HDBSCAN,
+        parameters={"min_cluster_size": 2},
+        model="clip",
+        clusters=0,
+        noise=0,
+        records=0,
+        computed_at=datetime(2026, 11, 6, tzinfo=timezone.utc),
+    )
+
+
+def _clustered(folder: Path, with_statistics: bool = True) -> Dataset:
+    dataset = _dataset(folder, with_statistics)
+    for run_id, groups in (("job-1", FIRST_RUN), ("job-2", SECOND_RUN)):
+        dataset.write_clustering(_clustering(run_id), groups)
+    return dataset
+
+
 def _by(column: str, descending: bool = False) -> RecordOrder:
-    return RecordOrder(column=column, descending=descending, on_computed=column in COLUMNS)
+    computed = column in COLUMNS or column in (FIRST, SECOND)
+    return RecordOrder(column=column, descending=descending, on_computed=computed)
 
 
 class TestOrder:
@@ -256,8 +290,13 @@ class TestRobustness:
         assert quote_identifier('odd"name') == '"odd""name"'
 
 
+#: A run of a clustering over the random dataset: noise, groups of a few records, records without one.
+RANDOM_RUN = clusters_column("job-r")
+
+
 def _random_dataset(folder: Path, seed: int) -> Dataset:
-    """Forty records, ranked at random among few ranks; their statistic among few values, or none."""
+    """Forty records, ranked at random among few ranks; their statistic among few values, or none;
+    their group in a run among few groups, noise included, or none."""
     generator = random.Random(seed)
     dataset = Dataset.create(folder, DatasetInfo(id="ds", name="ds", record=SplitRecord, views={"image": Image}))
     records = [SplitRecord(id=f"r{index:02d}", rank=generator.randint(0, 3)) for index in range(40)]
@@ -269,11 +308,15 @@ def _random_dataset(folder: Path, seed: int) -> Dataset:
         if generator.random() > 0.1
     ]
     dataset.write_statistic_values(StatisticLevel.RECORD, rows, {"bbox_count": "int"})
+    groups = {
+        record.id: generator.choice([NOISE_CLUSTER, 0, 0, 1, 2]) for record in records if generator.random() > 0.1
+    }
+    dataset.write_clustering(_clustering("job-r"), groups)
     return dataset
 
 
 @pytest.mark.parametrize("seed", [1, 2])
-@pytest.mark.parametrize("column", ["bbox_count", "rank", "id"])
+@pytest.mark.parametrize("column", ["bbox_count", "rank", "id", RANDOM_RUN])
 @pytest.mark.parametrize("descending", [False, True])
 @pytest.mark.parametrize("filtered", [False, True])
 def test_neighbors_agree_with_the_order_of_the_pages(
@@ -281,7 +324,7 @@ def test_neighbors_agree_with_the_order_of_the_pages(
 ) -> None:
     """Counted rather than sorted, a record's neighbors are its neighbors in the pages' order."""
     dataset = _random_dataset(tmp_path / "ds", seed)
-    order = RecordOrder(column=column, descending=descending, on_computed=column == "bbox_count")
+    order = RecordOrder(column=column, descending=descending, on_computed=column in ("bbox_count", RANDOM_RUN))
     condition = ComputedFilter(sql='c."bbox_count" >= 1', columns=("bbox_count",)) if filtered else None
     ordered, total = ordered_record_ids(dataset, None, condition, order)
 
@@ -339,3 +382,110 @@ class TestUnreadableStatistics:
 
         assert computed_values(dataset, ["r1"], ["bbox_count"]) == {}
         assert len(calls) == 1
+
+
+class TestClusters:
+    def test_ordered_on_a_runs_groups_noise_first_and_the_records_it_did_not_group_last(self, folder: Path) -> None:
+        assert ordered_record_ids(_clustered(folder), None, None, _by(FIRST)) == (
+            ["r4", "r1", "r3", "r2", "r6", "r5"],
+            6,
+        )
+
+    def test_filtered_on_a_group(self, folder: Path) -> None:
+        condition = ComputedFilter(sql=f"{computed_sql_column(FIRST)} = 0", columns=(FIRST,))
+
+        assert ordered_record_ids(_clustered(folder), None, condition, _by("id")) == (["r1", "r3"], 2)
+
+    def test_filtered_on_a_group_and_on_a_statistic(self, folder: Path) -> None:
+        condition = ComputedFilter(
+            sql=f'{computed_sql_column(FIRST)} = 1 AND c."bbox_count" >= 3', columns=(FIRST, "bbox_count")
+        )
+
+        assert matching_record_ids(_clustered(folder), None, condition) == ["r6"]
+
+    def test_filtered_on_two_runs(self, folder: Path) -> None:
+        condition = ComputedFilter(
+            sql=f"{computed_sql_column(FIRST)} = 0 AND {computed_sql_column(SECOND)} = 1", columns=(FIRST, SECOND)
+        )
+
+        assert matching_record_ids(_clustered(folder), None, condition) == ["r1"]
+
+    def test_neighbors_in_an_order_on_a_runs_groups(self, folder: Path) -> None:
+        assert record_neighbors(_clustered(folder), None, None, _by(FIRST), "r1") == {
+            "prev": "r4",
+            "next": "r3",
+            "position": 2,
+            "total": 6,
+        }
+
+    def test_values_of_two_runs_beside_a_statistic(self, folder: Path) -> None:
+        assert computed_values(_clustered(folder), ["r1", "r4", "r5"], ["bbox_count", FIRST, SECOND]) == {
+            "r1": {"bbox_count": 3, FIRST: 0, SECOND: 1},
+            "r4": {"bbox_count": None, FIRST: NOISE_CLUSTER, SECOND: None},
+        }
+
+    def test_values_of_a_run_on_a_dataset_without_statistics(self, folder: Path) -> None:
+        assert computed_values(_clustered(folder, with_statistics=False), ["r3"], ["bbox_count", FIRST]) == {
+            "r3": {FIRST: 0}
+        }
+
+    def test_a_run_that_wrote_no_row_has_no_value(self, folder: Path) -> None:
+        assert computed_values(_clustered(folder), ["r1"], [clusters_column("job-9")]) == {}
+
+    def test_before_any_clustering_no_record_has_a_group(self, folder: Path) -> None:
+        dataset = _dataset(folder)
+
+        assert computed_values(dataset, ["r1"], [FIRST]) == {}
+        assert ordered_record_ids(dataset, None, None, _by(FIRST))[0] == ["r1", "r2", "r3", "r4", "r5", "r6"]
+
+    def test_a_filtered_page_counts_every_record_it_keeps_whatever_its_offset(self, folder: Path) -> None:
+        dataset = _clustered(folder)
+        condition = ComputedFilter(sql=f"{computed_sql_column(FIRST)} >= 0", columns=(FIRST,))
+
+        pages = [
+            ordered_record_ids(dataset, None, condition, _by(FIRST), limit=2, offset=offset) for offset in (0, 2, 10)
+        ]
+
+        assert pages == [(["r1", "r3"], 4), (["r2", "r6"], 4), ([], 4)]
+
+    def test_the_join_finds_no_group_where_the_table_cannot_be_read(self, folder: Path, monkeypatch) -> None:
+        dataset = _clustered(folder)
+        opened = dataset.open_latest_table
+
+        def clusters_broken(name: str):
+            if name == RECORD_CLUSTERS_TABLE:
+                raise OSError("the clusters table is gone")
+            return opened(name)
+
+        monkeypatch.setattr(dataset, "open_latest_table", clusters_broken)
+        condition = ComputedFilter(sql=f"{computed_sql_column(FIRST)} = 0", columns=(FIRST,))
+
+        assert ordered_record_ids(dataset, None, condition, _by("id")) == ([], 0)
+        assert ordered_record_ids(dataset, None, None, _by(FIRST))[0] == ["r1", "r2", "r3", "r4", "r5", "r6"]
+
+    def test_a_table_without_its_groups_shows_none_and_fails_nothing(self, folder: Path, monkeypatch) -> None:
+        dataset = _clustered(folder)
+        opened = dataset.open_latest_table
+
+        def without_groups(name: str):
+            table = opened(name)
+            if name != RECORD_CLUSTERS_TABLE:
+                return table
+            return SimpleNamespace(schema=SimpleNamespace(names=["id", "record_id", "run_id"]))
+
+        monkeypatch.setattr(dataset, "open_latest_table", without_groups)
+
+        assert computed_values(dataset, ["r1"], [FIRST, SECOND]) == {}
+
+    def test_clusters_that_cannot_be_read_leave_the_statistics_shown(self, folder: Path, monkeypatch) -> None:
+        dataset = _clustered(folder)
+        opened = dataset.open_latest_table
+
+        def clusters_broken(name: str):
+            if name == RECORD_CLUSTERS_TABLE:
+                raise OSError("the clusters table is gone")
+            return opened(name)
+
+        monkeypatch.setattr(dataset, "open_latest_table", clusters_broken)
+
+        assert computed_values(dataset, ["r1"], ["bbox_count", FIRST]) == {"r1": {"bbox_count": 3}}

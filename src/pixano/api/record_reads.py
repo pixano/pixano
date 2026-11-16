@@ -6,9 +6,10 @@
 
 """Reading the explorer's records under one request: a page, a record's neighbors, those a search keeps.
 
-Each read goes through the join of the records with their statistics when a statistic is filtered or
-sorted on (`pixano.datasets.queries.computed_columns`, backend-processing §22.5), as before
-otherwise. This module makes that choice, once for the three reads.
+Each read goes through the join of the records with the columns computed from them when one is
+filtered or sorted on — a statistic, a run of a clustering — (`pixano.datasets.queries.computed_columns`,
+backend-processing §22.5, §24.3), as before otherwise. This module makes that choice, once for the
+three reads.
 
 A deprecated raw `where` clause is the only condition that can be malformed: the reads answer it
 400 when LanceDB refuses it, and let any other failure through.

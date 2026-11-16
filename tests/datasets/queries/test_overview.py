@@ -6,13 +6,15 @@
 
 """A dataset's overview: its cards, over the records a request keeps, counted per split if asked."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 from pydantic import create_model
 
+from pixano.clustering.runs import Clustering, ClusteringAlgorithm
 from pixano.datasets import Dataset, DatasetInfo
-from pixano.datasets.queries.computed_columns import ComputedFilter, CrossFilter
+from pixano.datasets.queries.computed_columns import ComputedFilter, CrossFilter, clusters_column
 from pixano.datasets.queries.overview import BARS, OverviewCard, dataset_overview
 from pixano.datasets.statistic_choices import default_statistics
 from pixano.schemas import BBox, Image, Record
@@ -317,6 +319,28 @@ class TestCrossFiltering:
 
         # r1 is left out by the free text, whatever its weather: r2 sun, r3 rain, r4 none.
         assert (weather.population, _values(weather)) == (3, {"rain": 1, "sun": 1})
+
+    def test_a_filter_on_a_clustering_run_applies_to_every_card_none_of_its_own(self, dataset: Dataset) -> None:
+        run = Clustering(
+            run_id="job-1",
+            algorithm=ClusteringAlgorithm.HDBSCAN,
+            parameters={"min_cluster_size": 2},
+            model="clip",
+            clusters=0,
+            noise=0,
+            records=0,
+            computed_at=datetime(2026, 11, 6, tzinfo=timezone.utc),
+        )
+        dataset.write_clustering(run, {"r1": 0, "r2": 0, "r3": 1})
+        group = clusters_column("job-1")
+        in_group = ComputedFilter(sql=f'c."{group}" = 0', columns=(group,))
+
+        overview = dataset_overview(dataset, CrossFilter(on_computed={"record_clusters.job-1": in_group}))
+        cards = _cards(overview)
+
+        assert overview.records == 2
+        assert (cards["field:weather"].population, cards["field:weather"].filtered) == (2, False)
+        assert _values(cards["object:class"]) == {"dog": 2, "cat": 1}
 
     def test_a_card_of_a_column_filtered_counts_the_records_its_filters_leave_and_tells_those_they_keep(
         self, dataset: Dataset
