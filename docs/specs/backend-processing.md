@@ -592,6 +592,8 @@ HDBSCAN grows as the records to the power 1.75; the square keeps about three tim
 
 **What it writes.** `prepare` gives the dataset its clusters table if it has none; `write` writes the run (§24.1), recorded at the job's end — never if the job fails before writing it, or is cancelled before its groups are found. A replay writes the same rows over the run's own. The rows carry no provenance — the dataset says how the run was made. The contract every kind meets has one exception for it: a resubmission adds a run rather than leaving the dataset as it was, and the suite checks instead that it leaves the first run as it was (`RUNS_KEPT` in `tests/test_kind_contract.py`).
 
+The generic Jobs form launches it. A parameter chosen from an enumeration, `algorithm`, would have reached the forms as a reference to the schema's definitions, which they cannot fill: a kind's published schema now carries the choices wherever such a parameter stands — the parameter, the branches of an optional one, the items of a list — with the title the other parameters get (`JobKind.params_schema`).
+
 ### 24.4 Known limits
 
 - **Every vector is in memory at once**, and the places beside them for a moment: 4 GB for a million records of 512 dimensions, from the 0.83 GB measured at 200,000. Two clusterings of two datasets in one worker each hold theirs.

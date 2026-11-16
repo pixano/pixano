@@ -27,6 +27,10 @@ is what lets a misspelled parameter be refused at submission. Without it, `thres
 validation and is silently ignored — the user gets a job running on defaults with no
 indication why.
 
+A parameter typed as an enumeration reaches the forms with its choices where it stands
+(`JobKind.params_schema` takes them out of the schema's definitions): the generic form offers them
+in a list.
+
 ### `plan(reader, params) -> Iterable[Chunk]`
 
 Splits the work. It runs in the worker, not in the application: dividing by video, by image or

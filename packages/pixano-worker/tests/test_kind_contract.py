@@ -358,6 +358,16 @@ class _Source:
         return None
 
 
+def _references(schema: Any) -> set[str]:
+    """Every reference a part of a JSON schema holds, however deep."""
+    if isinstance(schema, dict):
+        own = {schema["$ref"]} if "$ref" in schema else set()
+        return own.union(*(_references(value) for value in schema.values()))
+    if isinstance(schema, list):
+        return set().union(*(_references(value) for value in schema))
+    return set()
+
+
 def _reader(kind: JobKind) -> JobReader:
     return JobReader(lambda: _Source(embedded=kind.name in EMBEDDINGS_READ_BY), MediaResolver("/medias", "/medias"))
 
@@ -470,6 +480,17 @@ class TestDeclaration:
 
     def test_its_parameter_example_is_valid(self, kind: JobKind) -> None:
         assert isinstance(_params(kind), JobParams)
+
+    def test_a_parameter_chosen_from_a_list_shows_its_choices_where_it_stands(self, kind: JobKind) -> None:
+        """The forms read each parameter by itself: a reference to an enumeration among the schema's
+        definitions — the parameter, a branch of an optional one, the items of a list — was shown as
+        a parameter they cannot fill."""
+        schema = kind.params_schema()
+        enumerations = {
+            f"#/$defs/{name}" for name, definition in schema.get("$defs", {}).items() if "enum" in definition
+        }
+        for name, field in schema["properties"].items():
+            assert enumerations.isdisjoint(_references(field)), name
 
     def test_a_model_parameter_names_a_task_the_application_knows(self, kind: JobKind) -> None:
         """The form sends the marker to the application, which refuses a pixano-inference

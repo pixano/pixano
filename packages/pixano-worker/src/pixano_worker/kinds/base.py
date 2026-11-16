@@ -87,6 +87,9 @@ CONFIRM_MARKER = "x-pixano-confirm"
 #: is written into a kind. Not pixano-inference's capability name, which differs for some tasks.
 MODEL_TASK_MARKER = "x-pixano-model-task"
 
+#: Where a JSON schema's references point: to its definitions, by name.
+_DEFINITION_REFERENCE = "#/$defs/"
+
 
 class Chunk(BaseModel):
     """A batch of tasks as a planner produces it.
@@ -355,12 +358,53 @@ class JobKind(ABC, Generic[ParamsT]):
         return Outcome(produced=task_count)
 
     def params_schema(self) -> dict[str, Any]:
-        """The JSON schema of the parameters, published for the application."""
-        return self.params_model.model_json_schema()
+        """The JSON schema of the parameters, published for the application.
+
+        A parameter chosen from an enumeration carries its choices where it stands — the parameter
+        itself, the branches of an optional one, the items of a list —, not behind a reference to
+        the schema's definitions, where pydantic puts an enumeration: the forms that build a job's
+        parameters read each parameter by itself. A parameter that was such a reference gets the
+        title pydantic gives the others, which it leaves out behind a reference.
+        """
+        schema = self.params_model.model_json_schema()
+        definitions = schema.get("$defs", {})
+        for name, field in schema.get("properties", {}).items():
+            inlined = _enumerations_inlined(field, definitions)
+            if "$ref" in field and "$ref" not in inlined:
+                inlined.setdefault("title", name.replace("_", " ").title())
+            schema["properties"][name] = inlined
+        return schema
 
     def validate_params(self, raw: dict[str, Any]) -> ParamsT:
         """Re-read the parameters stored in the database."""
         return self.params_model.model_validate(raw)
+
+
+def _enumerations_inlined(schema: dict[str, Any], definitions: dict[str, Any]) -> dict[str, Any]:
+    """A parameter's schema, its references to an enumeration replaced by the enumeration's choices
+    wherever they stand. A reference to anything else — a nested model, say — stays.
+
+    Args:
+        schema: The parameter's schema, or a part of it.
+        definitions: The definitions of the parameters' schema, by name.
+
+    Returns:
+        The schema, a new one where a reference was replaced, the one given otherwise.
+    """
+    reference = schema.get("$ref")
+    if reference is not None:
+        definition = definitions.get(reference.removeprefix(_DEFINITION_REFERENCE))
+        if definition is None or "enum" not in definition:
+            return schema
+        choices = {key: definition[key] for key in ("type", "enum") if key in definition}
+        return {**choices, **{key: value for key, value in schema.items() if key != "$ref"}}
+    inlined = dict(schema)
+    for branches in ("anyOf", "oneOf", "allOf"):
+        if branches in schema:
+            inlined[branches] = [_enumerations_inlined(branch, definitions) for branch in schema[branches]]
+    if isinstance(schema.get("items"), dict):
+        inlined["items"] = _enumerations_inlined(schema["items"], definitions)
+    return inlined
 
 
 def media_chunks(reader: "JobReader", media: Iterable[str], chunk_size: int) -> Iterator[Chunk]:
