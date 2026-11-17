@@ -8,6 +8,8 @@ import { JSON_HEADERS, requestJson } from "./apiClient";
 import type {
   CondititionalGenerationTextImageInput,
   ConnectedProvider,
+  DetectionTaskInput,
+  DetectionTaskResult,
   ImageSegmentationTaskInput,
   ImageSegmentationTaskResult,
   InferenceModel,
@@ -147,6 +149,18 @@ export async function segmentImage(
       body: JSON.stringify(input),
     },
     "segmentImage",
+  );
+}
+
+export async function detectObjects(input: DetectionTaskInput): Promise<DetectionTaskResult> {
+  return requestJson<DetectionTaskResult>(
+    "/inference/detection",
+    {
+      headers: JSON_HEADERS,
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+    "detectObjects",
   );
 }
 

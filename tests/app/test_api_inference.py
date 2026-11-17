@@ -1013,3 +1013,113 @@ class TestDetection:
             "classes": ["cat"],
         }
         provider.detection.assert_called_once()
+
+    @staticmethod
+    def _sam3_provider(interface: dict | None) -> MagicMock:
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        provider.list_models = AsyncMock(
+            return_value=[ModelInfo(name="sam3", task="detection", interface=interface)],
+        )
+        provider.detection = AsyncMock(
+            return_value=DetectionResult(
+                data=DetectionOutput(boxes=[[1, 1, 4, 4]], scores=[0.8], classes=["screw"]),
+                timestamp=datetime.fromisoformat("2026-11-12T10:00:00"),
+                processing_time=0.2,
+                metadata={},
+                id="det-2",
+                status="SUCCESS",
+            )
+        )
+        return provider
+
+    def test_detection_reads_the_image_of_a_view_and_passes_exemplars(self):
+        provider = self._sam3_provider({"capability": "detection", "exemplars": True, "negative_exemplars": True})
+        client, settings = _make_client(
+            inference_providers={provider.name: provider}, default_inference_provider=provider.name
+        )
+        dataset_id, _, view_id, expected_image_bytes = _create_dataset_with_embedded_views(settings.library_dir)
+
+        response = client.post(
+            "/inference/detection",
+            json={
+                "model": "sam3",
+                "dataset_id": dataset_id,
+                "view_id": view_id,
+                "classes": ["screw"],
+                "box_threshold": 0.4,
+                "exemplar_boxes": [[0, 0, 2, 2]],
+                "negative_exemplar_boxes": [[5, 5, 7, 7]],
+            },
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["boxes"] == [[1, 1, 4, 4]]
+        input_data = provider.detection.await_args.kwargs["input_data"]
+        assert input_data.image == expected_image_bytes
+        assert input_data.classes == ["screw"]
+        assert input_data.box_threshold == 0.4
+        assert input_data.exemplar_boxes == [[0, 0, 2, 2]]
+        assert input_data.negative_exemplar_boxes == [[5, 5, 7, 7]]
+
+    def test_detection_refuses_exemplars_for_a_model_that_ignores_them(self):
+        # Grounding DINO, or a server older than the flag: the exemplars would be dropped silently.
+        provider = self._sam3_provider({"capability": "detection", "classes": "open"})
+        client, _ = _make_client(
+            inference_providers={provider.name: provider}, default_inference_provider=provider.name
+        )
+
+        response = client.post(
+            "/inference/detection",
+            json={"model": "sam3", "image": "http://example.com/a.jpg", "exemplar_boxes": [[0, 0, 2, 2]]},
+        )
+
+        assert response.status_code == 400
+        assert "exemplar" in response.json()["detail"]
+        provider.detection.assert_not_called()
+
+    def test_detection_refuses_negatives_for_a_model_that_ignores_them(self):
+        provider = self._sam3_provider({"capability": "detection", "exemplars": True})
+        client, _ = _make_client(
+            inference_providers={provider.name: provider}, default_inference_provider=provider.name
+        )
+
+        response = client.post(
+            "/inference/detection",
+            json={
+                "model": "sam3",
+                "image": "http://example.com/a.jpg",
+                "exemplar_boxes": [[0, 0, 2, 2]],
+                "negative_exemplar_boxes": [[5, 5, 7, 7]],
+            },
+        )
+
+        assert response.status_code == 400
+        provider.detection.assert_not_called()
+
+    def test_detection_rejects_a_segmentation_model(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        client, _ = _make_client(
+            inference_providers={provider.name: provider}, default_inference_provider=provider.name
+        )
+
+        response = client.post(
+            "/inference/detection", json={"model": "sam2", "image": "http://example.com/a.jpg", "classes": ["cat"]}
+        )
+
+        assert response.status_code == 400
+        provider.detection.assert_not_called()
+
+    def test_detection_needs_exactly_one_image_source(self):
+        provider = _make_mock_provider("pixano-inference@127.0.0.1:7463", "http://127.0.0.1:7463")
+        client, _ = _make_client(
+            inference_providers={provider.name: provider}, default_inference_provider=provider.name
+        )
+
+        for body in (
+            {"model": "m", "classes": ["cat"]},
+            {"model": "m", "classes": ["cat"], "image": "http://example.com/a.jpg", "dataset_id": "d", "view_id": "v"},
+            {"model": "m", "classes": ["cat"], "dataset_id": "d"},
+            {"model": "m", "image": "http://example.com/a.jpg", "negative_exemplar_boxes": [[0, 0, 2, 2]]},
+        ):
+            assert client.post("/inference/detection", json=body).status_code == 422, body
+        provider.detection.assert_not_called()

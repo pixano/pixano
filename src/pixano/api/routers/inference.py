@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
@@ -125,14 +125,38 @@ class VLMRequest(BaseModel):
 
 
 class DetectionRequest(BaseModel):
-    """Request schema for object detection inference."""
+    """Request schema for object detection inference.
+
+    The image is either given (``image``: URL or data URI) or read from a dataset view
+    (``dataset_id`` + ``view_id``), as ``/image_mask_generation`` does.
+
+    ``exemplar_boxes`` asks for "more like these": pixel ``[x1, y1, x2, y2]`` boxes around a few
+    instances, optionally with ``negative_exemplar_boxes`` around look-alikes not to find. Only a model
+    whose interface sets ``exemplars`` (``negative_exemplars``) reads them; ``classes`` then names at
+    most one class, the exemplars'.
+    """
 
     model: str
     provider_name: str | None = None
-    image: str
-    classes: list[str] | str
+    image: str | None = None
+    dataset_id: str | None = None
+    view_id: str | None = None
+    classes: list[str] | str | None = None
     box_threshold: float = 0.5
     text_threshold: float = 0.5
+    exemplar_boxes: list[list[int]] | None = None
+    negative_exemplar_boxes: list[list[int]] | None = None
+
+    @model_validator(mode="after")
+    def _one_image_source(self) -> "DetectionRequest":
+        from_view = self.dataset_id is not None or self.view_id is not None
+        if from_view and (self.dataset_id is None or self.view_id is None):
+            raise ValueError("dataset_id and view_id go together.")
+        if (self.image is None) == (not from_view):
+            raise ValueError("Give either image, or dataset_id and view_id.")
+        if self.negative_exemplar_boxes and not self.exemplar_boxes:
+            raise ValueError("negative_exemplar_boxes needs exemplar_boxes.")
+        return self
 
 
 class EmbeddingRequest(BaseModel):
@@ -465,6 +489,28 @@ async def _get_model_task(provider: InferenceProvider, model_name: str) -> str |
     return server_info.models_to_task.get(model_name)
 
 
+async def _get_model_interface(provider: InferenceProvider, model_name: str) -> dict[str, Any] | None:
+    try:
+        models = await provider.list_models()
+    except Exception:
+        return None
+    for model in models:
+        if getattr(model, "name", None) == model_name:
+            return getattr(model, "interface", None)
+    return None
+
+
+async def _ensure_model_reads_exemplars(provider: InferenceProvider, request: DetectionRequest) -> None:
+    """Refuse exemplars for a model that does not declare it reads them: it would silently ignore them."""
+    if not request.exemplar_boxes:
+        return
+    interface = await _get_model_interface(provider, request.model) or {}
+    if interface.get("exemplars") is not True:
+        raise HTTPException(status_code=400, detail=f"Model '{request.model}' does not take exemplar boxes.")
+    if request.negative_exemplar_boxes and interface.get("negative_exemplars") is not True:
+        raise HTTPException(status_code=400, detail=f"Model '{request.model}' does not take negative exemplar boxes.")
+
+
 async def _ensure_model_task(provider: InferenceProvider, model_name: str, expected_task: InferenceTask) -> None:
     actual_task = await _get_model_task(provider, model_name)
     if actual_task is None or actual_task == expected_task.value:
@@ -760,14 +806,24 @@ async def vlm(request: VLMRequest, settings: Annotated[Settings, Depends(get_set
 
 @router.post("/detection", operation_id="detect")
 async def detect(request: DetectionRequest, settings: Annotated[Settings, Depends(get_settings)]) -> dict[str, Any]:
-    """Run object detection inference."""
+    """Run object detection inference, by class names and/or exemplar boxes."""
     provider = _get_provider(settings, request.provider_name)
+    await _ensure_model_task(provider, request.model, InferenceTask.DETECTION)
+    await _ensure_model_reads_exemplars(provider, request)
+    image: str | bytes
+    if request.image is not None:
+        image = request.image
+    else:
+        assert request.dataset_id is not None and request.view_id is not None  # the request's validator
+        image = _resolve_view_binary(_get_dataset(request.dataset_id, settings), request.view_id)
     input_data = DetectionInput(
         model=request.model,
-        image=request.image,
+        image=image,
         classes=request.classes,
         box_threshold=request.box_threshold,
         text_threshold=request.text_threshold,
+        exemplar_boxes=request.exemplar_boxes,
+        negative_exemplar_boxes=request.negative_exemplar_boxes,
     )
     try:
         result = await provider.detection(input_data=input_data)

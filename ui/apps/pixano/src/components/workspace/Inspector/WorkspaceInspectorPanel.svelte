@@ -8,10 +8,12 @@ License: CECILL-C
   // Imports
   import { ClipboardText, Cube } from "phosphor-svelte";
 
+  import DetectionPanel from "../Detection/DetectionPanel.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import TrackingByDetectionPanel from "../TrackingByDetection/TrackingByDetectionPanel.svelte";
   import EntitiesInspector from "./EntitiesInspector.svelte";
   import SceneInspector from "./SceneInspector.svelte";
+  import { isDetectionActive } from "$lib/stores/detectionStore.svelte";
   import { isTrackingByDetectionActive } from "$lib/stores/trackingByDetectionStore.svelte";
   import { newShape } from "$lib/stores/workspaceStores.svelte";
   import { Skeleton, Tabs } from "$lib/ui";
@@ -33,6 +35,8 @@ License: CECILL-C
     <SaveShapeForm bind:currentTab />
   {:else if isTrackingByDetectionActive.value}
     <TrackingByDetectionPanel />
+  {:else if isDetectionActive.value}
+    <DetectionPanel />
   {:else}
     <Tabs.Root bind:value={currentTab} class="flex flex-col h-full">
       <div class="shrink-0 border-b border-border/50 bg-card px-2.5 py-2">

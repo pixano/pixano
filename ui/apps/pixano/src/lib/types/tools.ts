@@ -269,6 +269,13 @@ type BaseTool<T extends ToolType> = {
   cursor: string;
   type: T;
   isSmart?: boolean;
+  /** Rectangle: save the box as soon as it is drawn, without Enter (examples for detection). */
+  autoConfirm?: boolean;
+  /**
+   * Keep the annotations on screen while the tool is active. Drawing tools hide them by default
+   * (Alt shows them); a tool that adds many boxes in a row needs to see those already drawn.
+   */
+  keepsAnnotationsVisible?: boolean;
   postProcessor?: ToolPostProcessor;
 };
 

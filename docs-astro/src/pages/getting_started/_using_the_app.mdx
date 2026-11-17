@@ -111,6 +111,7 @@ Navigating away with unsaved changes prompts you to save, discard, or stay.
 | Polyline | `L` | `N` finishes a sub-path |
 | Brush | `B` | `X` toggles pencil/eraser; `Q`/`E` resize |
 | Smart segmentation | `W` | Needs a connected model — see [Inference](/pixano/getting_started/inference/) |
+| Detection | — | Opens the detection panel; needs a connected detection model |
 
 Two more controls sit at the end of the toolbar: **Display settings** (image smoothing,
 histogram equalization, brightness, contrast, RGB channels, and the 16-bit range) — these
@@ -137,6 +138,20 @@ Draw a shape and press `Enter`. The creation form opens:
    before, and offer an explicit `Create "…"` row for a genuinely new value.
 3. **Confirm** — the annotation is staged. Nothing is written until you press **Save** in the
    header. `Esc` cancels.
+
+### Detecting objects
+
+On an image record, the **Detection** button of the toolbar opens a panel in place of the side
+panel's tabs. Pick a detection model and a class, then:
+
+- **Detect** finds the objects of that class by its name.
+- With a model that takes examples (SAM 3, for instance), box a few objects of the class first:
+  the panel counts them, and **Find more like these** looks for others like them. A proposal you
+  rejected since is sent back as a counter-example, and is not proposed again.
+
+Each detection becomes a new entity, with the class as its label, and a box carrying the model's
+score as confidence. A box over one already on the image is left out. The proposals are pending
+review: close the panel to accept or reject them (below), then open it again for more.
 
 ### Reviewing what a model proposed
 
