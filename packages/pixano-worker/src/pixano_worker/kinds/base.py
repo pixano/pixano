@@ -311,8 +311,12 @@ class JobKind(ABC, Generic[ParamsT]):
         """Write the result, idempotently.
 
         The kind does not know how to open a dataset: it receives a writer, which is the
-        system's single point of writing. This is what will make it possible, later, to
-        serialise a dataset's writes across several workers without touching a single job kind.
+        system's single point of writing, and reads through it only. A kind may read, decide,
+        then write here — which objects carry a person's work, what a previous run left — and
+        those reads belong to the same serialisation as the write: the runner holds its
+        per-dataset write lock around the whole call. A writer role that serialises whole
+        `write` calls across workers, as the runner does within one, will need no change to a
+        single job kind (backend-processing §20).
 
         Args:
             writer: Where to write through, already bound to the dataset and the job.
