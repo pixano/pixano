@@ -111,10 +111,11 @@ PLANNING_WRITE_LOCK_WAIT_S = 10.0
 # How long a chunk waits for this worker's other writes to its dataset before it is handed back
 # as after a transient failure. Far longer than planning's wait: giving up spends one of the
 # chunk's attempts (`queue.MAX_ATTEMPTS`), and the chunk holds no lock while it waits, only its own
-# slot. Five minutes outlast every write queued ahead of it, and stay far below the chunk's time
-# limit (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write that hangs is handed back,
-# and its thread freed, instead of waiting that whole limit out, five times, and staying stuck on
-# the lock for good.
+# slot. Five minutes outlast every write queued ahead of it and a `prepare` that clears the
+# pending rows of a large dataset (`JobWriter.drop_pending`, one pass over them), and stay far
+# below the chunk's time limit (`DEFAULT_CHUNK_TIMEOUT_S`, half an hour): a chunk behind a write
+# that hangs is handed back, and its thread freed, instead of waiting that whole limit out, five
+# times, and staying stuck on the lock for good.
 CHUNK_WRITE_LOCK_WAIT_S = 300.0
 
 # How long the loop waits for a planning — the split, then the preparation — before it fails the

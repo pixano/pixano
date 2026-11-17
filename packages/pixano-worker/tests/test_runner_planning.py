@@ -6,11 +6,12 @@
 
 """Planning beside the other writers of its dataset, without PostgreSQL.
 
-A job's `prepare` may write into its dataset — a table emptied before it is refilled — while this
-worker's chunks of other jobs, a person's save or another worker may be writing it too. The
-dataset is a real one, and the planning is `runner.plan_one` itself, with the runner's writer; only
-PostgreSQL's part is scripted: one job waiting to be planned, and what the planning tells the queue
-about it. The same behaviour against a live PostgreSQL is in test_runner.py (`TestPreparation`).
+A job's `prepare` may write into its dataset — a table added, or emptied before it is refilled —
+while this worker's chunks of other jobs, a person's save or another worker may be writing it too.
+The dataset is a real one, and the planning is `runner.plan_one` itself, with the runner's
+writer; only PostgreSQL's part is scripted: one job waiting to be planned, and what the planning
+tells the queue about it. The same behaviour against a live PostgreSQL is in test_runner.py
+(`TestPreparation`).
 
 The wait for this worker's write lock of a dataset is bounded, at planning and for a chunk's
 write alike, and so is the planning itself: a write that never returns holds the lock for good.
@@ -48,8 +49,6 @@ JOB_ID = "job-1"
 DATASET_ID = "boxes-only"
 # One chunk of one task, done at once: the job's work is not what these tests look at.
 ONE_TASK = {"task_count": 1, "chunk_size": 1, "seconds_per_task": 0.0}
-# The embeddings table the stand-in kind's `prepare` resets: any model, any width will do.
-EMBEDDING_MODEL, EMBEDDING_DIM = "stand-in", 4
 # How long another job's chunk goes on writing while the planning waits for it: far longer than
 # planning takes to reach `prepare` here, so that a `prepare` that did not wait would have run.
 CHUNK_WRITE_S = 0.3
@@ -156,18 +155,18 @@ class _ChunksJob:
         return _Answer(("pending",))
 
 
-class _ResetsTheEmbeddings(FakeKind):
-    """A kind whose `prepare` writes, through a call that takes the dataset's lock: it creates the
-    dataset's embeddings table, emptying any it had, and notes each time it starts."""
+class _AddsTheMasksTable(FakeKind):
+    """A kind whose `prepare` gives the dataset the masks table its chunks will write into, and
+    notes each time it starts."""
 
-    name = "resets-embeddings"
+    name = "adds-masks"
 
     def __init__(self) -> None:
         self.prepared: list[str] = []
 
     def prepare(self, writer: JobWriter, params: FakeParams) -> None:
         self.prepared.append(writer.job_id)
-        writer.dataset.create_record_embedding_table(dim=EMBEDDING_DIM, model_id=EMBEDDING_MODEL)
+        writer.ensure_table("mask")
 
 
 class _RefusesItsDataset(FakeKind):
@@ -179,7 +178,7 @@ class _RefusesItsDataset(FakeKind):
         raise ValueError("this dataset cannot hold what the job writes")
 
 
-class _SplitsOnSilentStorage(_ResetsTheEmbeddings):
+class _SplitsOnSilentStorage(_AddsTheMasksTable):
     """A kind whose split reads a dataset on storage that stopped answering, until it answers.
 
     Attributes:
@@ -207,7 +206,7 @@ class _SplitTimesOut(FakeKind):
 
 
 def _boxes_dataset(library: Path, dataset_id: str) -> None:
-    """A dataset of boxes, with no embeddings table, as a dataset imported with boxes only has."""
+    """A dataset of boxes, with no masks table, as a dataset imported with boxes only has."""
     Dataset.create(
         library / dataset_id,
         DatasetInfo(id=dataset_id, name="Boxes only", record=Record, entity=Entity, bbox=BBox, views={"image": Image}),
@@ -216,7 +215,7 @@ def _boxes_dataset(library: Path, dataset_id: str) -> None:
 
 @pytest.fixture
 def library(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A library holding a dataset of boxes, with no embeddings table, as one imported with boxes only."""
+    """A library holding a dataset of boxes, with no masks table, as one imported with boxes only."""
     # The runner keeps the datasets it opened in a module-level cache: empty, the tests stay
     # independent of each other.
     monkeypatch.setattr(runner, "_open_datasets", OrderedDict())
@@ -248,18 +247,18 @@ def _planning(kind: FakeKind) -> tuple[Registry, _JobsTable]:
     return registry, _JobsTable(kind.name, ONE_TASK)
 
 
-def _has_embeddings(library: Path) -> bool:
-    """Whether the dataset has an embeddings table, as an instance opened now reads it."""
-    return Dataset(library / DATASET_ID).has_record_embeddings()
+def _tables(library: Path) -> set[str]:
+    """The tables the dataset declares, as an instance opened now reads them."""
+    return set(Dataset(library / DATASET_ID).info.tables)
 
 
 async def test_prepare_waits_for_a_chunk_of_another_job_writing_the_same_dataset(
     library: Path, writing: Writing
 ) -> None:
-    """A `prepare` that writes, run beside another job's chunk writing the same dataset, met the
-    dataset's lock, which never waits, and the job failed. It now waits for the chunk's write, as
-    another chunk's write does."""
-    kind = _ResetsTheEmbeddings()
+    """A job that adds a table, submitted while another job's chunk writes the same dataset:
+    `prepare` ran beside the chunk, met the dataset's lock, which never waits, and the job failed.
+    It now waits for the chunk's write, as another chunk's write does."""
+    kind = _AddsTheMasksTable()
     registry, jobs = _planning(kind)
 
     with writing(library / DATASET_ID, DATASET_ID) as write_done:
@@ -271,13 +270,27 @@ async def test_prepare_waits_for_a_chunk_of_another_job_writing_the_same_dataset
 
     assert jobs.state == "pending"
     assert kind.prepared == [JOB_ID]
-    assert _has_embeddings(library)
+    assert "masks" in _tables(library)
+
+
+async def test_a_table_already_there_is_ensured_while_a_person_saves(library: Path, writing: Writing) -> None:
+    """A second job writing masks, planned while a person saves: the table is already there,
+    nothing to create, so nothing to wait for, and the job is planned at once."""
+    Dataset(library / DATASET_ID).ensure_annotation_table("mask")
+    kind = _AddsTheMasksTable()
+    registry, jobs = _planning(kind)
+
+    with writing(library / DATASET_ID):
+        assert await runner.plan_one(jobs, registry, library) == JOB_ID  # type: ignore[arg-type]
+
+        assert jobs.state == "pending"
+        assert runner.REFRESH_PLANNING not in jobs.sent
 
 
 async def test_a_dataset_busy_at_planning_leaves_the_job_to_be_planned_again(library: Path, writing: Writing) -> None:
-    """The embeddings table must be reset while a person saves: the dataset refuses, and that says
-    nothing about the job. It stays to be planned, after a delay, instead of failing."""
-    kind = _ResetsTheEmbeddings()
+    """The table must be created while a person saves: the dataset refuses, and that says nothing
+    about the job. It stays to be planned, after a delay, instead of failing."""
+    kind = _AddsTheMasksTable()
     registry, jobs = _planning(kind)
 
     with writing(library / DATASET_ID):
@@ -285,13 +298,13 @@ async def test_a_dataset_busy_at_planning_leaves_the_job_to_be_planned_again(lib
 
         assert (jobs.state, jobs.lease) == ("planning", runner.PLANNING_RETRY_DELAY)
         assert runner.FAIL_JOB not in jobs.sent
-        assert not _has_embeddings(library)
+        assert "masks" not in _tables(library)
 
     jobs.lease_expires()
     assert await runner.plan_one(jobs, registry, library) == JOB_ID  # type: ignore[arg-type]
 
     assert jobs.state == "pending"
-    assert _has_embeddings(library)
+    assert "masks" in _tables(library)
     assert kind.prepared == [JOB_ID, JOB_ID], "the second planning prepared again"
 
 
@@ -315,7 +328,7 @@ async def test_a_write_of_this_worker_that_hangs_postpones_the_planning_of_its_d
     loop's next turn plans a job of another dataset."""
     monkeypatch.setattr(runner, "PLANNING_WRITE_LOCK_WAIT_S", SHORT_WAIT_S)
     _boxes_dataset(library, OTHER_DATASET_ID)
-    kind = _ResetsTheEmbeddings()
+    kind = _AddsTheMasksTable()
     registry, jobs = _planning(kind)
     other = _JobsTable(kind.name, ONE_TASK, job_id=OTHER_JOB_ID, dataset_id=OTHER_DATASET_ID)
 
@@ -361,7 +374,7 @@ async def test_a_planning_that_never_ends_fails_its_job_and_prepares_nothing_aft
     await _until_free(threads)
 
     assert kind.prepared == []
-    assert not _has_embeddings(library)
+    assert "masks" not in _tables(library)
 
 
 async def test_a_timeout_the_planning_meets_itself_is_its_failure_not_the_limit(

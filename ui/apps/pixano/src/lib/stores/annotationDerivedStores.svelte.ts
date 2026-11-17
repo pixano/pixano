@@ -10,6 +10,7 @@ import {
   annotations,
   entities,
   highlightedEntity,
+  reviewModeIsActive,
   selectedTool,
   views,
 } from "./workspaceBaseStores.svelte";
@@ -71,6 +72,7 @@ export const itemBboxes = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
+  const reviewing = reviewModeIsActive.value;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.BBox)) {
@@ -78,7 +80,7 @@ export const itemBboxes = reactiveDerived(() => {
       const box = mapBBoxForDisplay(
         bbox,
         mViews,
-        getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, eById),
+        getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (box) bboxes.push(box);
     }
@@ -91,13 +93,14 @@ export const itemMasks = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
+  const reviewing = reviewModeIsActive.value;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Mask)) {
       const rawMask = ann as Mask;
       const mask = mapMaskForDisplay(
         rawMask,
-        getEffectiveHighlight(rawMask, focusedEntityId, selectedToolType, eById),
+        getEffectiveHighlight(rawMask, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (mask) masks.push(mask);
     }
@@ -111,6 +114,7 @@ export const itemKeypoints = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
+  const reviewing = reviewModeIsActive.value;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Keypoints)) {
@@ -118,7 +122,7 @@ export const itemKeypoints = reactiveDerived(() => {
       const kpt = mapKeypointsForDisplay(
         keypoint,
         mViews,
-        getEffectiveHighlight(keypoint, focusedEntityId, selectedToolType, eById),
+        getEffectiveHighlight(keypoint, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (kpt) m_keypoints.push(kpt);
     }
@@ -131,6 +135,7 @@ export const itemMultiPaths = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
+  const reviewing = reviewModeIsActive.value;
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.MultiPath)) {
@@ -140,6 +145,7 @@ export const itemMultiPaths = reactiveDerived(() => {
         focusedEntityId,
         selectedToolType,
         eById,
+        reviewing,
       );
       const mapped = {
         ...mp,
@@ -168,6 +174,7 @@ export const textSpans = reactiveDerived(() => {
   const selectedToolType = selectedTool.value?.type ?? ToolType.Pan;
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
+  const reviewing = reviewModeIsActive.value;
 
   const spans = annotations.value.filter((annotation) =>
     annotation.is_type(BaseSchema.TextSpan),
@@ -179,6 +186,7 @@ export const textSpans = reactiveDerived(() => {
       focusedEntityId,
       selectedToolType,
       eById,
+      reviewing,
     );
     if (effectiveHighlight === span.ui.displayControl.highlighted) return span;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

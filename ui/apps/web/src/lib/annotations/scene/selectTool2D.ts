@@ -48,7 +48,8 @@ class SelectHandler2D implements ToolHandler2D {
       if (!annotation) return false;
       // The key reaches this tool while the mouse may still hold a resize or a
       // drag: that gesture is let go of first, or its half-done shape would be
-      // committed over the delete as the mouse is released.
+      // committed over the delete — a model's shape's Reject — as the mouse is
+      // released.
       deleteLocalAnnotation(
         annotation,
         this.ctx.collection,
