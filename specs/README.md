@@ -188,4 +188,4 @@ Two things enforce them:
 
 ## Decision log
 
-- 2026-11-18: first version, with the rules about specs, the template and the index.
+- 2026-11-18: first version, with the rules about specs, the template and the index ([#862](https://github.com/pixano/pixano/pull/862)).
