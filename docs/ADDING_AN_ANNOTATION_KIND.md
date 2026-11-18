@@ -31,6 +31,7 @@ for the rules.
   Without the flag, the count reads 0 over the work, and Discard leaves it in place.
   - A box being resized is such work too, held by its editor.
   - So is a shape being dragged, held by its editor.
+  - So is a 3D box staged under its HUD or under a gizmo drag, held by its session.
   - A delete pressed in the middle of a gesture calls `discard` too, before it deletes.
 - **Keys typed in a form field belong to it.** A key listener on `window` — a tool's
   shortcut, an editor's Escape — returns early when `isFormFieldTarget(event.target)`
@@ -86,10 +87,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   `persistedAnnotation(row, { kind, viewId, geometry, scoreFields }, ctx)`,
   as `bbox3dSeedLoader.ts` does, so its rows carry their review state.
   **A failed fetch rejects**, in either case: never catch it into an empty list. An
-  empty list reads as a table holding nothing, and a reload would take every
+  empty list reads as a table holding nothing, and a save's read-back would take every
   annotation of the kind off the screen after one failed request. What a failure means
   is the caller's to decide (`loadEveryKind`, `seedLoaders.ts`): a record opening seeds
-  nothing for the kind, a reload keeps what the kind shows. `seedLoaders.test.ts`
+  nothing for the kind, a read-back keeps what the kind shows. `seedLoaders.test.ts`
   fails every registered loader in turn, so a loader that swallows its failure fails it.
   **`scoreFields`** names the columns of the kind's rows that hold a model's score: the
   ones its backend schema declares in `MODEL_SCORE_FIELDS` (`src/pixano/schemas`), kept as
@@ -162,6 +163,10 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   select tool's Delete/Backspace and the image widget's trash button call the widget's
   `discardStagedWork` — so the delete applies to the shape as stored, and the gesture's
   end commits nothing over it; the kind writes nothing more for it.
+
+  A save ending under a held gesture reads the record back and takes the shape's row into
+  the collection, in place: the stamped node stays where the gesture has it, and the commit
+  lands by id on the row read.
 - `draw<Kind>Tool.ts` — a `Tool2D` (`createHandler(ctx): ToolHandler2D`) for the creation
   gesture; on finish, `commitNewAnnotation(ctx, "<kind>", geometry)` then hand back to `select`.
   A handler that holds work not in the collection yet — points placed, strokes painted, a
@@ -181,10 +186,40 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   → register `{ kind, component }` in `RENDERER_FACTORIES_3D` (`registry3d.ts`).
 - `<Kind>Tool.svelte` — the `Tool3D.overlay`: constructs the editor (its `$effect`s need a
   component scope), renders the transient preview/gizmos, and reports a `ToolHandle3D`
-  (`activeDragging`, `editingId`) via `reportHandle`.
+  (`activeDragging`, `editingId`) via `reportHandle`. It wires the editor's reports into the
+  session — a box ready, a draw canceled, and a gizmo drag begun, the editor's last
+  callback (`() => session.reportDragStarted()`) — and on mount gives the session the
+  editor's reset (`BBox3DTool.svelte`). The editor reports a drag as it starts, never per
+  pointer move (`BoxEditor._beginDrag`, one place for every gizmo); its end is the box it
+  reports or the draw canceled.
 - `<kind>Session.svelte.ts` (if it needs a confirm step) — a class holding the transient
   confirm state + tool-UI state, with `save()`/`cancel()` that call the commit helpers. It
-  lives in the kind so the widget stays kind-agnostic.
+  lives in the kind so the widget stays kind-agnostic. An edit it holds before the person
+  confirms it is in no mutation, so it reports it: it claims a flag in its constructor,
+  `seam.claimStagedWork?.(() => this.cancel())`, raises it once the staged geometry differs
+  from the annotation (or for a new one) — never for a click that only opens the HUD — and
+  while a gizmo drag runs, from its start to its end, whatever the HUD held: a box a click
+  only opened is work under way once a gizmo moves it. One flag for the HUD and its drags,
+  since both are the one box, so a drag counts one unsaved item (`updateStaged`). It
+  lowers it on every way out (save, cancel, delete, entity change, the editor's reset), each
+  of which drops a drag under way too, so the release that follows stages nothing.
+  Without it the record's unsaved count reads 0 over the edit; the record's Discard calls
+  the `cancel()` it was given. A HUD left open with no work of its own — a box a click
+  opened — has its flag down, out of Discard's reach: it closes once the box it shows is
+  no longer the box the record holds (Discard put it back, a Reject or a delete took the
+  box away), so it never shows, nor saves again, a geometry the record no longer has
+  (`letGoOfChangedBox`, run in an `$effect` of the HUD). A box taken away closes the HUD
+  even when it holds a move: that move has no box left. Judge the change as the no-op
+  rule judges an edit, numbers within a float32 round trip (`sameValue`, from
+  `payloadBuilders.ts`): a save reads the box back rounded to the float32 the dataset
+  stores, which is no change. And never close the HUD while a gizmo drag runs — it would
+  drop the editor to idle under the pointer: let the drag end, and judge the box it
+  reports then (the session's reactive `dragging`, which the drag's reports set, so the
+  effect runs again as it ends). A `save()` of a box nobody moved commits nothing:
+  compare the staged geometry with what the editor stages for the untouched annotation,
+  within that same tolerance, so the editor's own conversions (a quaternion, corners to
+  centre and size) are not taken for an edit (`bbox3dSession.svelte.ts`,
+  `asStagedUntouched`, `sameAsStored`).
 - `<Kind>Hud.svelte` — the `Tool3D.hud`: the DOM confirm/secondary UI, driven by the session.
   A delete button calls `deleteLocalAnnotation` through the session; name it from
   `deleteGestureFor(annotation)` (`reject` on a model's annotation, `delete` otherwise), as
@@ -204,13 +239,21 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     `widgetSeam` come from `workspace/__tests__/workspaceHarness.ts`): a mocked Konva
     answers whatever the mock says, and can pass while a resize goes unsaved.
   - An editable 2D kind drags a shape across a save there (`multiPathDrag.test.ts`): the
-    flag is raised once for the drag, the save leaves the shape where it is dragged, the
-    release saves it, and Discard drops the drag. Send a window `mouseup` after each test:
+    flag is raised once for the drag, the save's read-back leaves the shape where it is
+    dragged — the collection stays the same object — the release saves it, and Discard
+    drops the drag. Send a window `mouseup` after each test:
     Konva's drags are global, and one a failed test left running moves with the next
     test's pointer.
   - It also presses Delete during each of its gestures, through the real select tool's
     `onKeyDown`: every shape is deleted as stored — on a model's shape, that delete is its
     Reject — and no flag stays raised once saved.
+  - A 3D session can be tested on the real workspace too, with the real box editor driving
+    it (`bbox3dSession.test.ts`, `__tests__/realBoxEditor.svelte.ts`): a test that rebuilds
+    what the editor reports passes whatever the editor does. Press each gizmo through it
+    (`grab`, `grabRing`): the flag is raised from the press to the release, and Discard,
+    Escape and the HUD's Cancel drop the drag. Store what a save writes as the dataset does
+    — a 3D box's numbers rounded to float32 (`storeAsFloat32` in `BBox3DHud.svelte.test.ts`):
+    a fake that hands back the exact numbers hides what the rounding does to a HUD.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the
@@ -238,7 +281,7 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
 - [ ] seed loader + `SEED_LOADERS`, built on `persistedAnnotation`, with its `scoreFields` if the schema has a score, rejecting on a failed fetch; fixture in `recordLoader.test.ts`
 - [ ] renderer + `RENDERER_FACTORIES_2D|3D`
 - [ ] editor (2D `createEditor`) / overlay+session+hud (3D) if editable
-- [ ] every holder of unconfirmed work (2D tool handler, editor gesture) claims a staged-work flag, lowers it on every way out, and drops its work on discard; window key listeners ask `isFormFieldTarget`
+- [ ] every holder of unconfirmed work (2D tool handler, editor gesture, 3D session) claims a staged-work flag, lowers it on every way out, and drops its work on discard; window key listeners ask `isFormFieldTarget`
 - [ ] tool + `TOOLS_2D|3D`
 - [ ] write path uses `commitNewAnnotation` / `commitGeometryEdit` / `deleteLocalAnnotation` only
 - [ ] shared literals extracted (no cross-file magic strings)
