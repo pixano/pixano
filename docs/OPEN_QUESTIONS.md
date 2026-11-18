@@ -128,3 +128,26 @@ Options:
   but a counter can drift from what it counts, and every writer of the table
   must keep it.
 - **Keep the scan**, and measure it at scale first.
+
+## A chunk's weight multiplies the worker's time limit
+
+**Status:** open (chosen while implementing, not decided).
+
+The review decided that a chunk's time limit follows its work, through a weight
+its kind declares at planning (backend-processing §9). How the weight turns
+into a limit was left open. A kind now weighs a chunk in inference calls, and
+the worker gives it that many times `PIXANO_WORKER_CHUNK_TIMEOUT_S`, which stays
+the limit of a chunk of one call (`Chunk.weight` in
+`packages/pixano-worker/src/pixano_worker/kinds/base.py`, `_execute` in
+`runner.py`). The setting then binds every call a weighed chunk makes: a
+deployment that lowers it to fit its fast kinds sends back long chunks the
+inference server would still have answered, and the kind cannot say so.
+
+Options:
+
+- **The weight multiplies the deployment's limit**, as today: a slower
+  deployment raises one number for every kind, and a kind says nothing of
+  durations.
+- **The kind gives the chunk a duration of its own**, computed from its own
+  timeouts: exact for each kind, but out of the deployment's hands, and every
+  kind must know its worst case.

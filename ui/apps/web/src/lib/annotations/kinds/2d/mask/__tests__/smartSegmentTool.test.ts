@@ -388,9 +388,9 @@ describe("prompts placed are the record's unsaved work", () => {
   it("is dropped by Discard: Enter then asks the model nothing", async () => {
     const { manager, h } = await onTheRecord();
     clickAt(h, PROMPTS);
-    expect(manager.hasUnsavedWork).toBe(true);
+    expect(manager.review.canDiscard).toBe(true);
 
-    await manager.discardChanges();
+    await manager.review.discard();
     h.handler.onKeyDown(key("Enter"));
     await flush();
 

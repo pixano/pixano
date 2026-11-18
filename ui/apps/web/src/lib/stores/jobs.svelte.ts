@@ -203,6 +203,9 @@ class JobsStore {
       skipped: event.skipped ?? current.skipped,
       quarantined: event.quarantined ?? current.quarantined,
       cancel_requested: event.cancel_requested ?? current.cancel_requested,
+      // Said by state events only, so each of them says it: the one releasing the closing step
+      // carries it, and any later one — done, cancelled, retried — clears it.
+      finalizing: event.state === undefined ? current.finalizing : event.finalizing === true,
       error: event.reason ? { reason: event.reason, detail: event.detail } : current.error,
     };
   }
@@ -253,10 +256,14 @@ export function progressOf(job: Job): number {
  * The state to show for a job.
  *
  * A cancelled job keeps running for a few seconds while its chunks in flight finish — nothing is
- * interrupted mid-chunk. Showing "running" meanwhile makes the click look lost.
+ * interrupted mid-chunk. Showing "running" meanwhile makes the click look lost. A job whose work
+ * is done may still run its closing step — an index built over its results: its bar is full, and
+ * "running" under it would look stuck.
  */
 export function stateLabelOf(job: Job): string {
-  if (job.cancel_requested && !isTerminal(job.state)) return "cancelling";
+  if (isTerminal(job.state)) return job.state;
+  if (job.cancel_requested) return "cancelling";
+  if (job.finalizing) return "finalizing";
   return job.state;
 }
 

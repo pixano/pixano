@@ -21,6 +21,7 @@ import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHap
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
+  MODEL_METADATA,
   openManager,
   viewIdOf,
   widgetSeam,
@@ -64,6 +65,17 @@ function humanPath(id: string): Row {
     source_type: "other",
     source_name: "Pixano",
     source_metadata: "{}",
+  };
+}
+
+/** A path a model proposed, the same triangle, pending review. */
+function modelPath(id: string): Row {
+  return {
+    ...humanPath(id),
+    source_type: "model",
+    source_name: "segmentation",
+    source_metadata: MODEL_METADATA,
+    review_status: "pending",
   };
 }
 
@@ -356,9 +368,9 @@ describe("multi_path on the shared flatCoordsEditor2D, a drag still running when
 
 describe("multi_path on the shared flatCoordsEditor2D, Delete pressed while a drag runs", () => {
   // The key reaches the select tool while the mouse still holds the path: the
-  // drag is let go of first, so the delete applies to the path as stored — and
-  // the drag's end, which no longer reaches the editor once the path's group is
-  // gone, leaves no flag raised behind it.
+  // drag is let go of first, so the delete — a model's path's reject — applies
+  // to the path as stored — and the drag's end, which no longer reaches the editor
+  // once the path's group is gone, leaves no flag raised behind it.
 
   const DRAGGED: [string, (scene: OnCanvas) => Konva.Node][] = [
     ["a vertex", (scene) => vertexOf(scene, "p1", 0)],
@@ -374,6 +386,27 @@ describe("multi_path on the shared flatCoordsEditor2D, Delete pressed while a dr
     grabbed.moveTo(20, 0);
     grabbed.release();
   }
+
+  it.each(DRAGGED)(
+    "dragging %s of a model's path: deleted as stored, and nothing left unsaved once saved",
+    async (_, nodeOf) => {
+      const scene = await openOnCanvas(modelPath("p1"));
+
+      deleteWhileDragging(scene, nodeOf);
+
+      expect(scene.manager.annotations.find("p1")).toBeUndefined();
+      expect(
+        scene.manager.pendingMutations.map((m) => (m.op === "update" ? m.body : m.op)),
+      ).toEqual(["delete"]);
+      expect(scene.flagSets.at(-1)).toBe(false);
+      expect(scene.manager.unsavedCount).toBe(1);
+      await scene.manager.flushSave();
+      expect(scene.backend.writes).toEqual([
+        { op: "delete", resource: MULTI_PATH_RESOURCE, id: "p1" },
+      ]);
+      expect(scene.manager.hasUnsavedWork).toBe(false);
+    },
+  );
 
   it.each(DRAGGED)(
     "dragging %s of a person's path: deleted, and nothing left unsaved once saved",

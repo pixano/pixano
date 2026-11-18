@@ -327,9 +327,9 @@ describe("a skeleton begun is the record's unsaved work", () => {
   it("is dropped by Discard: the next clicks start a new skeleton", async () => {
     const { manager, handler, setPointer } = await onTheRecord();
     placePoints(handler, setPointer, FACE_CLICKS.slice(0, 2));
-    expect(manager.hasUnsavedWork).toBe(true);
+    expect(manager.review.canDiscard).toBe(true);
 
-    await manager.discardChanges();
+    await manager.review.discard();
     expect(manager.hasUnsavedWork).toBe(false);
     // Two more clicks would have completed the skeleton begun before Discard.
     placePoints(handler, setPointer, FACE_CLICKS.slice(2));
