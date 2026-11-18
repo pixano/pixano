@@ -31,6 +31,7 @@ function job(overrides: Partial<Job> = {}): Job {
     cancel_requested: false,
     error: null,
     created_at: "2026-01-01T00:00:00Z",
+    finalizing: false,
     ...overrides,
   };
 }
@@ -105,6 +106,23 @@ describe("stateLabelOf", () => {
 
   it("shows the final state once the job has settled", () => {
     expect(stateLabelOf(job({ state: "cancelled", cancel_requested: true }))).toBe("cancelled");
+  });
+
+  it("says finalizing while the job's closing step runs under a full bar", () => {
+    // An embeddings job builds its index once every vector is written: "running" at 100% looked stuck.
+    expect(
+      stateLabelOf(job({ state: "running", done_tasks: 200, total_tasks: 200, finalizing: true })),
+    ).toBe("finalizing");
+  });
+
+  it("says cancelling rather than finalizing once a cancel is asked", () => {
+    expect(stateLabelOf(job({ state: "running", finalizing: true, cancel_requested: true }))).toBe(
+      "cancelling",
+    );
+  });
+
+  it("shows the final state once the closing step has run", () => {
+    expect(stateLabelOf(job({ state: "done", finalizing: true }))).toBe("done");
   });
 });
 

@@ -49,6 +49,7 @@ from .annotations import (
     is_per_frame_annotation,
     is_relation,
     is_reviewable_annotation,
+    is_reviewable_view,
     is_text_span,
     is_tracklet,
     model_score_alignment,
@@ -64,10 +65,20 @@ from .embeddings import (
     is_embedding,
     is_view_embedding,
 )
-from .entities import Entity, EntityDynamicState, is_entity, is_entity_dynamic_state
+from .entities import (
+    DEFAULT_LABEL_FIELD,
+    LABEL_FIELD_PRIORITY,
+    Entity,
+    EntityDynamicState,
+    is_entity,
+    is_entity_dynamic_state,
+    label_field_of,
+)
 from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
+from .statistics import EntityStatistics, RecordStatistics, is_statistics, statistics_slot
 from .table_names import (
+    STATISTICS_SLOTS,
     canonical_base_schema_for_schema,
     canonical_family_spec_for_resource,
     canonical_family_spec_for_schema,
@@ -133,6 +144,9 @@ __all__ = [
     "Image",
     "Record",
     "RecordComponent",
+    "RecordStatistics",
+    "EntityStatistics",
+    "STATISTICS_SLOTS",
     "KeyPoints",
     "KeyPoints3D",
     "Message",
@@ -191,9 +205,14 @@ __all__ = [
     "is_entity_dynamic_state",
     "is_embedding",
     "is_entity",
+    "DEFAULT_LABEL_FIELD",
+    "LABEL_FIELD_PRIORITY",
+    "label_field_of",
     "is_image",
     "is_record",
     "is_record_component",
+    "is_statistics",
+    "statistics_slot",
     "is_supported_view_schema",
     "is_keypoints",
     "is_keypoints3d",
@@ -205,6 +224,7 @@ __all__ = [
     "is_point_cloud_frame",
     "is_relation",
     "is_reviewable_annotation",
+    "is_reviewable_view",
     "is_sequence_frame",
     "MEDIA_TYPES",
     "MediaType",

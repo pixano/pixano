@@ -63,6 +63,7 @@ function job(overrides: Partial<Job> = {}): Job {
     cancel_requested: false,
     error: null,
     created_at: "2026-01-01T00:00:00Z",
+    finalizing: false,
     ...overrides,
   };
 }
@@ -313,6 +314,51 @@ describe("jobsStore hearing a cancellation made elsewhere", () => {
 
     expect(store.jobs[0].cancel_requested).toBe(true);
     expect(store.jobs[0].state).toBe("running");
+  });
+});
+
+describe("jobsStore hearing a job finalize", () => {
+  it("shows the job finalizing from the event alone, then done", async () => {
+    const { store, stream } = await startedStore();
+    const { stateLabelOf } = await import("../jobs.svelte");
+
+    stream.emit("state", { job_id: "j1", state: "running", finalizing: true });
+
+    expect(stateLabelOf(store.jobs[0])).toBe("finalizing");
+
+    stream.emit("state", {
+      job_id: "j1",
+      state: "done",
+      produced: 400,
+      skipped: 0,
+      quarantined: 0,
+    });
+
+    expect(stateLabelOf(store.jobs[0])).toBe("done");
+  });
+});
+
+describe("jobsStore hearing a job leave its closing step", () => {
+  it("drops the finalizing flag at the next state event that does not carry it", async () => {
+    const { store, stream } = await startedStore();
+    const { stateLabelOf } = await import("../jobs.svelte");
+    stream.emit("state", { job_id: "j1", state: "running", finalizing: true });
+
+    stream.emit("state", { job_id: "j1", state: "running", cancel_requested: true });
+    stream.emit("state", { job_id: "j1", state: "cancelled", cancel_requested: true });
+    stream.emit("state", { job_id: "j1", state: "pending", cancel_requested: false });
+
+    expect(store.jobs[0].finalizing).toBe(false);
+    expect(stateLabelOf(store.jobs[0])).toBe("pending");
+  });
+
+  it("keeps it through a progress event, which carries no state", async () => {
+    const { store, stream } = await startedStore();
+    stream.emit("state", { job_id: "j1", state: "running", finalizing: true });
+
+    stream.emit("progress", { job_id: "j1", done_tasks: 400, total_tasks: 400 });
+
+    expect(store.jobs[0].finalizing).toBe(true);
   });
 });
 

@@ -18,7 +18,10 @@ same item write to the same rows.
 **The single writer, later.** LanceDB does not have PostgreSQL's concurrency control, and
 coordinating several workers writing to the same dataset is an open question. Having every
 write go through one place is what will make that coordination possible without touching a
-single job kind.
+single job kind — provided the unit coordinated is a kind's whole `write`, not each call made
+here. A kind reads through this writer, decides, then writes, within one `write`; the runner
+serialises that whole call per dataset, and a writer role across workers is to do the same
+(backend-processing §12 and §20).
 """
 
 import hashlib
@@ -28,9 +31,18 @@ import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable, Protocol, Sequence
+from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
-from pixano.schemas import NOT_REVIEWED_STATUSES, AnnotationSourceKind, ReviewStatus
+from pixano.schemas import (
+    DEFAULT_LABEL_FIELD,
+    NOT_REVIEWED_STATUSES,
+    AnnotationSourceKind,
+    ReviewStatus,
+    SchemaGroup,
+    label_field_of,
+)
+from pixano.schemas.table_names import canonical_family_spec_for_slot
+from pixano.utils.python import to_sql_list
 
 
 logger = logging.getLogger("pixano-worker")
@@ -41,6 +53,25 @@ logger = logging.getLogger("pixano-worker")
 # and both must read a row the same way.
 MODEL_SOURCE = AnnotationSourceKind.MODEL.value
 PENDING_REVIEW = ReviewStatus.PENDING.value
+
+# The canonical table of a dataset's entities.
+ENTITY_TABLE = "entities"
+
+#: Which previous rows a write is about, given each with its entity (None when it has none).
+Coverage = Callable[[Any, Any | None], bool]
+
+# How many identifiers one filter or deletion names at most. Clearing a dataset's pending boxes
+# names every one of them — hundreds of thousands on a large dataset — and a filter that long
+# is slow to parse, when it is accepted at all.
+IDS_PER_QUERY = 1_000
+
+
+def _batched(ids: Iterable[str]) -> Iterator[list[str]]:
+    """Identifiers in groups of at most `IDS_PER_QUERY`, in a stable order."""
+    ordered = sorted(ids)
+    for start in range(0, len(ordered), IDS_PER_QUERY):
+        yield ordered[start : start + IDS_PER_QUERY]
+
 
 # Length of the digest that opens a derived identifier. Long enough that a collision is out of
 # reach, short enough to stay readable in a table; the rank follows it, so that everything a
@@ -64,6 +95,24 @@ COMPACT_EVERY_WRITES = 64
 # export — so that no reader sees the version it is reading disappear. Shorter would risk
 # failing a read in progress; longer only costs disk, until the old versions are erased.
 KEEP_OLD_VERSIONS_FOR = timedelta(hours=1)
+
+# Below this many vectors, a dataset's embeddings get no vector index: LanceDB's exact search
+# answers fast enough there, and an index would only make the results approximate. A "similar
+# to" runs one search per medium of the record — six on a nuScenes record —, so the line is drawn
+# where six exact searches stay well inside the API's 500 ms p99 target: 25 ms each at 50,000
+# vectors of 512 dimensions, 61 ms at 100,000, 162 ms at 300,000 (scripts/measure_vector_index.py,
+# backend-processing §12). LanceDB's own guidance, for a single search, is twice as high.
+VECTOR_INDEX_MIN_ROWS = 50_000
+
+# The vector index the worker declares for the embeddings tables it creates. Measured on 100,000
+# and 300,000 vectors of 512 dimensions (backend-processing §12): with the search's re-ranking
+# (`Dataset._SEARCH_REFINE_FACTOR`), every type tried brings back 99.9% to 100% of the exact
+# nearest records, in 8 to 17 ms; IVF_SQ trains in 2 to 3 s, where IVF_PQ takes 28 s and
+# IVF_HNSW_SQ 35 to 89 s. A table created earlier keeps the type its descriptor names — IVF_PQ,
+# `Dataset.create_record_embedding_table`'s default — until the table is dropped and a worker
+# creates it anew: it trains slower, and finds 97% to 100% of the exact nearest records
+# re-ranked, where IVF_SQ finds all of them at 50,000 vectors.
+EMBEDDING_INDEX_TYPE = "IVF_SQ"
 
 # The write count per table, per dataset. The runner serialises a dataset's writes, so the
 # lock here only protects the counter itself.
@@ -149,12 +198,20 @@ class DatasetWriteTarget(Protocol):
         """Whether a record embeddings table already exists."""
         ...
 
-    def create_record_embedding_table(self, dim: int, model_id: str) -> None:
-        """Create the embeddings table for a given vector width."""
+    def create_record_embedding_table(self, dim: int, model_id: str, *, index_type: str = ...) -> None:
+        """Create the embeddings table for a given vector width, declaring the vector index it will get."""
+        ...
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        """Give the dataset's entities a text field, empty for the entities already there."""
         ...
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         """The model and dimension of the embeddings already computed, or None if there are none."""
+        ...
+
+    def ensure_annotation_table(self, slot: str) -> str:
+        """Give the dataset the canonical table of an annotation slot it lacks; the table's name."""
         ...
 
     def open_table(self, name: str) -> Any:
@@ -245,6 +302,40 @@ def is_reviewed(row: Any) -> bool:
     without a status, re-imported from JSONL, was never reviewed.
     """
     return getattr(row, "review_status", "") not in NOT_REVIEWED_STATUSES
+
+
+def is_a_persons_work(row: Any) -> bool:
+    """Whether this row is a person's work: a row no model produced, or a model's row a person accepted.
+
+    A row with no source at all — an entity dynamic state imported or edited without one — is no
+    model's. A model's row nobody reviewed is not a person's work, whoever started the model — a
+    mask of the legacy smart tracking included: it reads as pending everywhere (`is_reviewed`).
+    Neither is a model's tracklet or dynamic state, which no one can review.
+    """
+    return getattr(row, "source_type", "") != MODEL_SOURCE or is_reviewed(row)
+
+
+@dataclass(frozen=True)
+class _AttachedWork:
+    """What the rest of the dataset attaches to a set of entities.
+
+    Attributes:
+        held: The entities a person's work names (`is_a_persons_work`), or that have a child
+            entity: they keep their object, whatever a model reruns.
+        derived: Per table, the models' unreviewed rows that name one of the entities, other than
+            its own annotation, each with the entity it names: they go with their object.
+    """
+
+    held: set[str]
+    derived: dict[str, dict[str, str]]
+
+    def derived_from(self, entity_ids: set[str]) -> dict[str, list[str]]:
+        """Per table, the derived rows that name one of these entities."""
+        rows = {
+            table_name: [row_id for row_id, entity_id in named.items() if entity_id in entity_ids]
+            for table_name, named in self.derived.items()
+        }
+        return {table_name: row_ids for table_name, row_ids in rows.items() if row_ids}
 
 
 class JobWriter:
@@ -345,7 +436,14 @@ class JobWriter:
     def _model_name(self) -> str | None:
         return self.model.name if self.model is not None else None
 
-    def replace(self, table_name: str, key: str, rows: Sequence[Any]) -> list[str]:
+    def replace(
+        self,
+        table_name: str,
+        key: str,
+        rows: Sequence[Any],
+        entities: Sequence[Any] | None = None,
+        covers: Coverage | None = None,
+    ) -> list[str]:
         """Write a key's outputs, fully replacing the previous ones.
 
         Three steps. What a previous run wrote for this (kind, model, key) is read by the
@@ -359,16 +457,45 @@ class JobWriter:
 
         The replacement is exact: scoped by (kind, model, key), which is what the prefix
         encodes, so another model's rows for the same key are left alone, and no output
-        shrinks past what is cleaned.
+        shrinks past what is cleaned — with one exception, the rows that name the objects it
+        replaces, below.
+
+        An annotation can come with its entity — a detected box and the object it names. The
+        entity shares its annotation's identifier, in the entities table, and follows it: written
+        before it, since the annotation references it; kept when the annotation is frozen;
+        deleted with it when it is stale. A rank is also frozen when **a person's work** names
+        its entity (`is_a_persons_work`) — a box or a mask a person drew, a model's mask a person
+        accepted, a child object: reassigning that object to whatever the model finds at the same
+        rank would contradict them silently. Stale entities are looked up by the prefix too, in
+        their own table, so that a crash between the two writes leaves none behind for good.
+
+        Other kinds annotate these objects too — a model's mask or keypoint on a detected object.
+        **A model's rows nobody reviewed hold nothing**: they would double the boxes of every
+        rerun, written beside the ranks they froze. They go with their object instead, whatever
+        kind or model wrote them, when this write rewrites it at its rank or sweeps it: left
+        behind, they would name whatever the rank holds next, or an entity that is gone. They are
+        deleted first, so a crash never leaves one on an object that changed under it; the next
+        attempt finishes the rest (backend-processing §19).
 
         Args:
             table_name: The target table.
             key: What these outputs are about, typically an item identifier.
             rows: The rows to write. Their `id` field is overwritten.
+            entities: One entity per row, when the rows are annotations of new objects. Their
+                `id` is overwritten, and each row's `entity_id` set to it.
+            covers: Which of the previous rows this write is about, given each with its entity
+                (None without `entities`). The others are left as they are and keep their rank,
+                like an accepted row — a detection asked for dogs replaces the dogs it found
+                before, not the cars. Every row by default.
 
         Returns:
             The identifiers written.
+
+        Raises:
+            ValueError: There is not one entity per row.
         """
+        if entities is not None and len(entities) != len(rows):
+            raise ValueError(f"{len(entities)} entities for {len(rows)} rows")
         prefix = derive_prefix(self.kind, key, self._model_name)
         previous = [
             row
@@ -376,6 +503,27 @@ class JobWriter:
             if _rank_of(row.id) is not None
         ]
         frozen = {_rank_of(row.id) for row in previous if is_reviewed(row)}
+        previous_entities: list[Any] = []
+        candidates: set[str] = set()
+        attached = _AttachedWork(held=set(), derived={})
+        if entities is not None:
+            previous_entities = [
+                entity
+                for entity in self.dataset.get_data(ENTITY_TABLE, where=f"id LIKE '{prefix}-%'")
+                if _rank_of(entity.id) is not None
+            ]
+            candidates = {row.id for row in previous} | {entity.id for entity in previous_entities}
+            attached = self._attached_work(candidates, table_name)
+            frozen |= {_rank_of(entity_id) for entity_id in attached.held}
+        if covers is not None:
+            entity_of = {entity.id: entity for entity in previous_entities}
+            frozen |= {_rank_of(row.id) for row in previous if not covers(row, entity_of.get(row.entity_id))}
+
+        # Every object at a free rank is rewritten or swept below: what models left on it goes first.
+        replaced_objects = {entity_id for entity_id in candidates if _rank_of(entity_id) not in frozen}
+        cascaded = self._delete_derived(attached.derived_from(replaced_objects))
+        if cascaded:
+            logger.debug("job %s: %d unreviewed row(s) went with their object for %s", self.job_id, cascaded, key)
 
         written: list[str] = []
         rank = 0
@@ -386,6 +534,12 @@ class JobWriter:
             written.append(row.id)
             rank += 1
 
+        if entities:
+            for entity, row in zip(entities, rows, strict=True):
+                entity.id = row.id
+                row.entity_id = entity.id
+            self.dataset.update_data(ENTITY_TABLE, list(entities))
+            self._count_write(ENTITY_TABLE)
         if rows:
             self.dataset.update_data(table_name, list(rows))
             self._count_write(table_name)
@@ -395,7 +549,192 @@ class JobWriter:
         if stale:
             self.dataset.delete_data(table_name, stale)
             logger.debug("job %s: %d stale row(s) removed for %s", self.job_id, len(stale), key)
+        stale_entities = [
+            entity.id
+            for entity in previous_entities
+            if entity.id not in replaced and _rank_of(entity.id) not in frozen
+        ]
+        if stale_entities:
+            self.dataset.delete_data(ENTITY_TABLE, stale_entities)
         return written
+
+    def drop_pending(self, table_name: str, with_entities: bool = False, covers: Coverage | None = None) -> int:
+        """Delete every row this kind wrote that is still pending review, whatever its model.
+
+        For a kind's `prepare`, on an explicit parameter: "replace the previous pre-annotations"
+        means the pending ones — a row a person accepted stays, and so does one whose entity a
+        person's work names (`is_a_persons_work`). With the entities, the models' unreviewed
+        rows that name them go first, as in `replace`: a pending mask on a detected object goes
+        with it.
+
+        Args:
+            table_name: The kind's annotation table.
+            with_entities: Delete the entities those rows name too — the kind's own objects,
+                sharing their annotation's identifier.
+            covers: Which of those rows to delete, given each with its entity, as for `replace`.
+                Every row by default.
+
+        Returns:
+            How many rows were deleted.
+        """
+        # Not reviewed as the application reads it (`pixano.schemas.NOT_REVIEWED_STATUSES`): a
+        # model's row re-imported from JSONL comes back without a status, and is pending all the same.
+        rows = self.dataset.get_data(
+            table_name,
+            where=(
+                f"source_type = '{MODEL_SOURCE}' AND source_name = '{self.kind}' "
+                f"AND review_status IN {to_sql_list(NOT_REVIEWED_STATUSES)}"
+            ),
+        )
+        if covers is not None:
+            named = {row.entity_id for row in rows if row.entity_id}
+            entity_of = (
+                {
+                    entity.id: entity
+                    for batch in _batched(named)
+                    for entity in self.dataset.get_data(ENTITY_TABLE, ids=batch)
+                }
+                if ENTITY_TABLE in self.dataset.info.tables
+                else {}
+            )
+            rows = [row for row in rows if covers(row, entity_of.get(row.entity_id))]
+        pending = [row.id for row in rows]
+        cascaded = 0
+        if pending and with_entities:
+            attached = self._attached_work(set(pending), table_name)
+            pending = [row_id for row_id in pending if row_id not in attached.held]
+            # What models left on the objects before the objects themselves, as in `replace`.
+            cascaded = self._delete_derived(attached.derived_from(set(pending)))
+        if pending:
+            # The entities first: a crash between the two leaves boxes pointing at nothing, which
+            # the next attempt finds again as pending and finishes; the other order would leave
+            # entities nothing refers to, which no attempt would find.
+            if with_entities:
+                self._delete_existing(ENTITY_TABLE, pending)
+            for batch in _batched(pending):
+                self.dataset.delete_data(table_name, batch)
+            logger.info(
+                "job %s: %d pending row(s) of %s dropped before rerunning", self.job_id, len(pending), self.kind
+            )
+        if cascaded:
+            logger.info("job %s: %d unreviewed row(s) naming those objects went with them", self.job_id, cascaded)
+        return len(pending)
+
+    def entities_with_a_persons_work(self, entity_ids: Iterable[str], own_table: str) -> set[str]:
+        """Those of these entities a person's work names, in any table, or that have a child entity.
+
+        A person's work is a row no model produced, or a model's row a person accepted, whatever
+        its kind (`is_a_persons_work`). Such an object keeps its rank in `replace` and survives
+        `drop_pending`; a kind asks it before proposing again an object a person worked on.
+
+        Each entity's own annotation — the row of `own_table` sharing its identifier — is not
+        counted: it is the object's, not work attached to it, and whether a person accepted it
+        is the kind's own rule.
+
+        Args:
+            entity_ids: The entities to look at.
+            own_table: The table of the annotations these entities share their identifier with.
+
+        Returns:
+            The entities, among these, a person's work names.
+        """
+        return self._attached_work(set(entity_ids), own_table).held
+
+    def ensure_table(self, slot: str) -> str:
+        """The canonical table of an annotation slot, added to the dataset if it has none.
+
+        For a kind that writes annotations the dataset was not built with — masks on a dataset
+        of boxes. Called from `prepare`, and again before writing: a worker whose cached dataset
+        predates the table holds metadata without it.
+
+        A table the dataset already declares is answered from its metadata, without its write
+        lock. That lock never waits: taken by every job for nothing, it refused the job whenever
+        someone else was writing the dataset — a person's save, another job's chunk —, and marked
+        the dataset modified. Planning has just reopened the dataset, so what it declares is
+        current; and a table is never undeclared short of the dataset being replaced, which its
+        next write detects. Only creating the table takes the lock, under which the dataset
+        rereads its metadata before deciding, so a table another process created meanwhile is
+        found, not created twice.
+
+        Args:
+            slot: The `DatasetInfo` slot of an annotation family, such as `mask`.
+
+        Returns:
+            The table's name, as `replace` takes it.
+
+        Raises:
+            ValueError: The slot holds no annotations.
+        """
+        family = canonical_family_spec_for_slot(slot)
+        if family.schema_group is SchemaGroup.ANNOTATION and family.table_name in self.dataset.info.tables:
+            return family.table_name
+        # Creating it, or refusing a slot that holds no annotations, is the dataset's to decide.
+        return self.dataset.ensure_annotation_table(slot)
+
+    def ensure_label_field(self) -> str:
+        """The entity field this job writes a class into, added to the dataset if there is none.
+
+        Chosen with the rule the annotation interface uses to read a class. A dataset whose
+        entities hold no text field gets one, `category`, empty for the entities already there.
+
+        Returns:
+            The field name.
+        """
+        entity = self.dataset.info.entity
+        field = label_field_of(entity) if entity is not None else None
+        if field is None:
+            self.dataset.ensure_entity_text_field(DEFAULT_LABEL_FIELD)
+            field = DEFAULT_LABEL_FIELD
+            logger.info("job %s: the dataset's entities gained a '%s' field", self.job_id, field)
+        return field
+
+    def table_schema(self, table_name: str) -> Any:
+        """The schema of one of the dataset's tables, to build the rows a job writes into it."""
+        return self.dataset.info.tables[table_name]
+
+    def read(self, table_name: str, where: str) -> list[Any]:
+        """Rows of a table matching a filter — what a kind checks its outputs against."""
+        return self.dataset.get_data(table_name, where=where)
+
+    def _attached_work(self, entity_ids: set[str], own_table: str) -> _AttachedWork:
+        """What the rest of the dataset attaches to these entities, sorted by who did it.
+
+        Every row of any table that names one of them — an annotation, a tracklet, a dynamic
+        state — apart from the row of `own_table` sharing its identifier, and every entity whose
+        parent one of them is. A person's work and a child entity hold the entity; a model's
+        unreviewed row is derived from it.
+        """
+        held: set[str] = set()
+        derived: defaultdict[str, dict[str, str]] = defaultdict(dict)
+        for batch in _batched(entity_ids):
+            listed = to_sql_list(batch)
+            for name, schema in self.dataset.info.tables.items():
+                if "entity_id" not in getattr(schema, "model_fields", {}):
+                    continue
+                for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
+                    if name == own_table and row.id == row.entity_id:
+                        continue
+                    if is_a_persons_work(row):
+                        held.add(row.entity_id)
+                    else:
+                        derived[name][row.id] = row.entity_id
+            if ENTITY_TABLE in self.dataset.info.tables:
+                children = self.dataset.get_data(ENTITY_TABLE, where=f"parent_id IN {listed}")
+                held |= {entity.parent_id for entity in children}
+        return _AttachedWork(held=held & entity_ids, derived=dict(derived))
+
+    def _delete_derived(self, rows: dict[str, list[str]]) -> int:
+        """Delete, per table, the models' unreviewed rows that go with their object; how many."""
+        for table_name, row_ids in rows.items():
+            for batch in _batched(row_ids):
+                self.dataset.delete_data(table_name, batch)
+        return sum(len(row_ids) for row_ids in rows.values())
+
+    def _delete_existing(self, table_name: str, ids: list[str]) -> None:
+        for batch in _batched(ids):
+            existing = [row.id for row in self.dataset.get_data(table_name, ids=batch)]
+            if existing:
+                self.dataset.delete_data(table_name, existing)
 
     def _count_write(self, table_name: str) -> None:
         """Count a write, and compact the table once enough have accumulated."""
@@ -460,7 +799,7 @@ class JobWriter:
             # that is the per-dataset writer role that step 4 must decide.
             dataset = self._dataset = self._reopen_dataset()
         if not dataset.has_record_embeddings():
-            dataset.create_record_embedding_table(dim=dim, model_id=model)
+            dataset.create_record_embedding_table(dim=dim, model_id=model, index_type=EMBEDDING_INDEX_TYPE)
         else:
             check_embedding_space(dataset.record_embedding_space(), model, dim)
 
@@ -471,3 +810,60 @@ class JobWriter:
         ]
         dataset.update_data(self.EMBEDDING_TABLE, rows)
         self._count_write(self.EMBEDDING_TABLE)
+
+    def index_embeddings(self, min_rows: int | None = None) -> str | None:
+        """Index the dataset's embeddings for search, once a job has filled them.
+
+        For a kind's `finalize`: an index is trained on every vector, so it is built once the job
+        wrote them all, not chunk by chunk.
+
+        - The last writes are compacted first, so that the index is trained on one tidy table.
+        - The `record_id` index is always built: a search restricted to some records, and the
+          lookup of a record's vectors for "similar to", filter on it.
+        - The vector index only from `min_rows` vectors: below, exact search is fast enough, and
+          an index would only make the results approximate. Its type and metric are those the
+          table's descriptor declares.
+
+        Every index is rebuilt whole, never extended: one trained on the previous run's vectors
+        would partition this run's badly. Training is random, so a rebuild gives an equivalent
+        index rather than the same one, and a final chunk replayed after its worker died leaves
+        the table as one run would. A table that shrank below `min_rows` keeps the vector index
+        it had: still valid, and the search re-ranks what it finds.
+
+        Not under the dataset's own write lock, as compaction is not: building an index changes
+        no row, Lance commits it as a version of its own, and a person's save is never refused
+        for its sake. A commit that conflicts with another writer of the table — the
+        application's computation, a recompute, a rollback, another worker — fails the build,
+        and the kind tries again later. The runner's lock still keeps this worker's other writes
+        to the dataset out of the way.
+
+        Args:
+            min_rows: The table size from which a vector index is built; `VECTOR_INDEX_MIN_ROWS`
+                by default, read at call time.
+
+        Returns:
+            The type of the vector index built, or None when there is no table or too few vectors.
+        """
+        min_rows = VECTOR_INDEX_MIN_ROWS if min_rows is None else min_rows
+        dataset = self.dataset
+        if not dataset.has_record_embeddings():
+            return None
+        self.compact(self.EMBEDDING_TABLE)
+        table = dataset.open_table(self.EMBEDDING_TABLE)
+        table.create_scalar_index("record_id", index_type="BTREE", replace=True)
+        rows = table.count_rows()
+        if rows < min_rows:
+            logger.info(
+                "job %s: %d vector(s), under the %d that call for a vector index: exact search",
+                self.job_id,
+                rows,
+                min_rows,
+            )
+            return None
+        space = dataset.record_embedding_space() or {}
+        index_type = space.get("index_type", EMBEDDING_INDEX_TYPE)
+        table.create_index(
+            metric=space.get("metric", "cosine"), index_type=index_type, vector_column_name="vector", replace=True
+        )
+        logger.info("job %s: %s vector index built over %d vector(s)", self.job_id, index_type, rows)
+        return index_type

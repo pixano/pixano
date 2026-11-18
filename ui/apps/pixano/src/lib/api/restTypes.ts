@@ -83,6 +83,17 @@ export interface FilterSchemaResponse {
   search: SearchCapabilitiesResponse;
 }
 
+/** The next record to review, as `GET /datasets/{id}/review/next` answers. */
+export interface NextRecordToReview {
+  /**
+   * The first record after the one left, in record id order, wrapping round to the first. Null
+   * when no record holds a model's annotation still to review.
+   */
+  record_id: string | null;
+  /** How many records hold one, the record being left included when it still holds one. */
+  remaining: number;
+}
+
 export interface NeighborsResponse {
   prev?: string | null;
   next?: string | null;

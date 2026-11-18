@@ -11,9 +11,16 @@ License: CECILL-C
   import WorkspaceRecordHeader from "./WorkspaceRecordHeader.svelte";
   import { navigating, page } from "$app/state";
   import * as api from "$lib/api";
-  import type { NeighborsResponse } from "$lib/api/restTypes";
+  import type { NeighborsResponse, NextRecordToReview } from "$lib/api/restTypes";
   import { currentDatasetStore, currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
+  import {
+    movingToNextRecord,
+    saveAndOpenNextRecord,
+    unreadableQueueRecord,
+  } from "$lib/stores/reviewNavigationStore.svelte";
+  import { reviewModeIsActive } from "$lib/stores/workspaceStores.svelte";
   import { navigateToRoute } from "$lib/utils/navigation";
+  import { QUEUE_UNREADABLE_TEXT, recordsLeftText } from "$lib/utils/reviewNavigation";
   import {
     getExplorerRoute,
     getPageFromPosition,
@@ -92,6 +99,53 @@ License: CECILL-C
     void currentItemSaveCoordinator.requestSave();
   };
 
+  // ─── Review: the records left, and "Save & next" ──────────────────────────────
+  const isReviewing = $derived(isWorkspaceRoute && reviewModeIsActive.value);
+  const reviewContext = $derived(JSON.stringify([currentDatasetStore.value?.id, currentItemId]));
+  // Read through a derived boolean: the coordinator's state changes at each step of a save, and
+  // the records left are asked again only when the record goes from unsaved to saved.
+  const recordIsDirty = $derived(currentItemSaveCoordinator.value.isDirty);
+  let reviewQueue = $state<{ context: string; data: NextRecordToReview } | null>(null);
+  // Only the last question's answer counts; an earlier one landing late is dropped. A question
+  // asked is not called off when the record changes since: its answer is still the record's.
+  let lastQueueQuestion = 0;
+
+  $effect(() => {
+    const context = reviewContext;
+    const datasetId = currentDatasetStore.value?.id;
+    const itemId = currentItemId;
+    // Asked again once the record is saved: a save can take it out of the queue. Changes not
+    // saved yet change nothing the queue knows of.
+    if (!isReviewing || !datasetId || !itemId || recordIsDirty) return;
+    const question = ++lastQueueQuestion;
+    void api
+      .getNextRecordToReview(datasetId, itemId)
+      .then((data) => {
+        if (question !== lastQueueQuestion) return;
+        reviewQueue = { context, data };
+        if (unreadableQueueRecord.value === itemId) unreadableQueueRecord.value = null;
+      })
+      .catch(() => {
+        if (question === lastQueueQuestion) unreadableQueueRecord.value = itemId;
+      });
+  });
+
+  const review = $derived.by(() => {
+    if (!isReviewing || !currentItemId) return null;
+    const queue = reviewQueue?.context === reviewContext ? reviewQueue.data : null;
+    return {
+      recordsLeft:
+        unreadableQueueRecord.value === currentItemId
+          ? QUEUE_UNREADABLE_TEXT
+          : recordsLeftText(queue, currentItemId),
+      busy: movingToNextRecord.value,
+    };
+  });
+
+  const handleSaveAndNext = () => {
+    void saveAndOpenNextRecord();
+  };
+
   // Return to the explorer, landing on the page that contains this item within
   // the active filter/sort (derived from its position in the result set).
   const handleReturnToPreviousPage = async () => {
@@ -114,6 +168,8 @@ License: CECILL-C
       {goToNeighborItem}
       {handleReturnToPreviousPage}
       {getRecordPosition}
+      {review}
+      {handleSaveAndNext}
     />
   {:else}
     <!-- Breadcrumb: Library / dataset name -->

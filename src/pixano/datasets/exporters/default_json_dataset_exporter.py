@@ -35,7 +35,7 @@ class DefaultJSONDatasetExporter(DatasetExporter):
         export_data: dict[str, Any] = {"info": info.json_info_dump()}
 
         for group, table_names in info.groups.items():
-            if group == SchemaGroup.EMBEDDING:
+            if group in (SchemaGroup.EMBEDDING, SchemaGroup.STATISTICS):
                 continue
             elif group == SchemaGroup.RECORD:
                 export_data[group_to_str(group, plural=True)] = []

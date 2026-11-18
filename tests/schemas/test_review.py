@@ -5,7 +5,7 @@
 # =====================================
 
 """The review status a model's annotation carries, how a stored status reads, which fields hold
-the model's score, and which kinds a person can review."""
+the model's score, and which kinds and views a person can review."""
 
 import typing
 
@@ -14,20 +14,31 @@ import pytest
 from pixano import schemas
 from pixano.schemas import (
     NOT_REVIEWED_STATUSES,
+    PDF,
     BBox,
     BBox3D,
+    CalibratedImage,
+    CalibratedPointCloud,
     Classification,
     CompressedRLE,
     Entity,
+    Image,
     KeyPoints,
     KeyPoints3D,
     MultiPath,
+    PointCloud,
+    PointCloudFrame,
     Relation,
     ReviewStatus,
+    SequenceFrame,
+    Text,
     TextSpan,
     Tracklet,
+    Video,
+    View,
     is_entity_annotation,
     is_reviewable_annotation,
+    is_reviewable_view,
     model_score_alignment,
     model_score_fields,
     review_status_of,
@@ -168,3 +179,25 @@ class TestReviewableKinds:
 
     def test_what_is_not_an_annotation_cannot(self):
         assert not is_reviewable_annotation(Entity)
+
+
+class TestReviewableViews:
+    """The views the review interface has a widget for: the queue leaves out a row on any other."""
+
+    @pytest.mark.parametrize("schema", [Image, CalibratedImage, PointCloud, CalibratedPointCloud, Text])
+    def test_a_view_the_review_interface_shows(self, schema: type):
+        assert is_reviewable_view(schema)
+
+    @pytest.mark.parametrize("schema", [SequenceFrame, Video, PointCloudFrame, PDF, View])
+    def test_a_video_its_frames_and_views_it_has_no_widget_for(self, schema: type):
+        assert not is_reviewable_view(schema)
+
+    def test_a_schema_of_a_dataset_reads_as_the_view_it_derives_from(self):
+        class Camera(Image):
+            exposure: float = 0.0
+
+        class Clip(SequenceFrame):
+            camera: str = ""
+
+        assert is_reviewable_view(Camera)
+        assert not is_reviewable_view(Clip)

@@ -15,6 +15,7 @@ from pixano.datasets.io import ImportSpec, import_dataset
 from pixano.datasets.io.engine import ImportEngine
 from pixano.datasets.io.errors import JobStateError
 from pixano.datasets.utils.errors import DatasetBusyError
+from pixano.statistics.definitions import StatisticLevel
 from tests.datasets.io._toy_importer import ToyImporter
 
 
@@ -229,3 +230,54 @@ class TestRollback:
 
         ImportEngine(tmp_path / "data").rollback(result.dataset_path, "mixjob")
         assert Dataset(result.dataset_path).info.storage_mode == "embedded"
+
+
+class TestRollbackWithStatistics:
+    """A dataset's statistics live in tables of its own (backend-processing §22.3): an add import
+    leaves them as they are, and so does its rollback."""
+
+    @staticmethod
+    def _compute(dataset: Dataset, values: dict[str, int]) -> None:
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, {"bbox_count": "int"})
+        dataset.write_statistic_values(
+            StatisticLevel.RECORD,
+            [{"record_id": record_id, "bbox_count": count} for record_id, count in values.items()],
+            {"bbox_count": "int"},
+        )
+
+    @staticmethod
+    def _values(dataset: Dataset) -> dict[str, int]:
+        return {row["id"]: row["bbox_count"] for row in dataset.open_table("record_statistics").to_arrow().to_pylist()}
+
+    def _add(self, tmp_path: Path, job_id: str):
+        return import_dataset(
+            tmp_path / "src2",
+            tmp_path / "data",
+            _spec("ds", mode="add", namespace="added"),
+            importer=ToyImporter(num_records=3),
+            job_id=job_id,
+        )
+
+    def test_statistics_computed_before_an_add_are_as_they_were_after_its_rollback(self, base_dataset):
+        tmp_path, _before = base_dataset
+        dataset = Dataset(tmp_path / "data" / "library" / "ds")
+        first = dataset.get_data("records", limit=2)
+        self._compute(dataset, {first[0].id: 1, first[1].id: 2})
+        computed = self._values(dataset)
+
+        result = self._add(tmp_path, "statsadd")
+        assert self._values(Dataset(result.dataset_path)) == computed
+        ImportEngine(tmp_path / "data").rollback(result.dataset_path, "statsadd")
+
+        assert self._values(Dataset(result.dataset_path)) == computed
+
+    def test_statistics_computed_after_an_add_keep_it_from_being_rolled_back(self, base_dataset):
+        tmp_path, _before = base_dataset
+        result = self._add(tmp_path, "statsadd2")
+        dataset = Dataset(result.dataset_path)
+
+        self._compute(dataset, {record.id: 4 for record in dataset.get_data("records", limit=3)})
+
+        with pytest.raises(JobStateError, match="changed since"):
+            ImportEngine(tmp_path / "data").rollback(result.dataset_path, "statsadd2")
+        assert set(self._values(Dataset(result.dataset_path)).values()) == {4}

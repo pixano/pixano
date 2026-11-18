@@ -305,6 +305,11 @@ draft/edit/delete lifecycle so no tool, renderer or widget reaches into payload 
   and so does the image widget's trash button while the select tool is active —
   so the delete applies to the row as stored, and the gesture's end commits
   nothing over it.
+- `commitAccept(annotation, ctx)` — accept, if `canAccept` allows it: a model's
+  stored row shown pending. It queues `review_status: "accepted"` in the row's
+  one update — the status alone, or added to the row's unsaved edit — and marks
+  the annotation at once with `setReview`. The resource is the only thing it
+  takes from the kind's builder.
 
 The first two take a `CommitContext` (`{ buildContext, collection, mutations, widgetId }`)
 which both `Scene2DContext` and the widgets' seam satisfy.
