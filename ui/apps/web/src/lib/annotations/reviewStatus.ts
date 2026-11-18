@@ -14,7 +14,10 @@ import type { EntityAnnotationColumns } from "$lib/api/annotations.js";
  * This module holds the vocabulary and the pure rules only, and imports nothing
  * but types: seed loaders and the shared label renderer read it, and a module a
  * kind can reach must never import a registry back (the cycle
- * `viewScopedSeedLoader.ts` explains).
+ * `viewScopedSeedLoader.ts` explains). The Accept that writes a status goes
+ * through the mutation queue, so it lives in `payloadBuilders.ts`
+ * (`commitAccept`), with the reject, which deletes the row
+ * (`deleteLocalAnnotation`).
  *
  * No display text here: each place that shows a status writes its own words.
  */
@@ -32,8 +35,8 @@ export const REVIEW_STATUSES: readonly ReviewStatus[] = [
 ];
 
 /**
- * The column holding a row's review status: the only key of an update body
- * that changes the status and nothing else.
+ * The column an Accept writes, and the only key of the update body of an
+ * Accept taken alone.
  */
 export const REVIEW_STATUS_FIELD = "review_status";
 
@@ -46,10 +49,10 @@ export const MODEL_SOURCE_TYPE = "model";
  */
 export const HUMAN_REVIEW_FILTER = "human";
 
-/** What the review status filter hides on: a model row's status, or "made by a person". */
+/** What a status chip filters on: a model row's status, or "made by a person". */
 export type ReviewFilterKey = ReviewStatus | typeof HUMAN_REVIEW_FILTER;
 
-/** Every filter key, in the order a reviewer meets them. */
+/** Every filter key, in the order the chips show them. */
 export const REVIEW_FILTER_KEYS: readonly ReviewFilterKey[] = [
   ...REVIEW_STATUSES,
   HUMAN_REVIEW_FILTER,
@@ -63,11 +66,18 @@ export const REVIEW_FILTER_KEYS: readonly ReviewFilterKey[] = [
  */
 export interface AnnotationReview {
   /**
-   * A model row's status: what the dataset holds, or will hold once the write
-   * of the row on its way lands (`AnnotationCollection.recordWrite`). An
+   * A model row's status as the screen shows it: an unsaved Accept included; an
    * unsaved edit leaves it as stored. Empty on a row no model produced.
    */
   status: ReviewStatus | "";
+  /**
+   * The status the dataset holds for the row — what Discard puts back, and
+   * what tells an unsaved Accept from a stored one. Read with the row, then
+   * moved only by a write of it (`AnnotationCollection.recordWrite`), never by
+   * an Accept still unsaved. Absent on a review built by hand rather than read
+   * from a row: `status` is then what is stored (`storedStatusOf`).
+   */
+  storedStatus?: ReviewStatus | "";
   sourceType: string;
   sourceName: string;
   /** The model's name, from `source_metadata`, when the worker recorded it. */
@@ -186,8 +196,10 @@ export function reviewOf(
 ): AnnotationReview {
   const sourceType = typeof row.source_type === "string" ? row.source_type : "";
   const metadata = parseSourceMetadata(row.source_metadata);
+  const status = statusOf(row.review_status, sourceType === MODEL_SOURCE_TYPE);
   return {
-    status: statusOf(row.review_status, sourceType === MODEL_SOURCE_TYPE),
+    status,
+    storedStatus: status,
     sourceType,
     sourceName: typeof row.source_name === "string" ? row.source_name : "",
     model: nonEmptyString(metadata[METADATA_MODEL_KEY]),
@@ -197,8 +209,24 @@ export function reviewOf(
   };
 }
 
+/** The status the dataset holds for the row (see `AnnotationReview.storedStatus`). */
+export function storedStatusOf(review: AnnotationReview): ReviewStatus | "" {
+  return review.storedStatus ?? review.status;
+}
+
 /**
- * Whether the annotation is a model's, under review: it is stored, and a model
+ * Whether the row shows an Accept the dataset does not hold yet: shown
+ * accepted, stored otherwise. Such an Accept rides on every update of the row
+ * queued until it is saved.
+ */
+export function isAcceptUnsaved(review: AnnotationReview): boolean {
+  return (
+    review.status === REVIEW_STATUS.ACCEPTED && storedStatusOf(review) !== REVIEW_STATUS.ACCEPTED
+  );
+}
+
+/**
+ * Whether a reviewer decides on this annotation: it is stored, and a model
  * produced it. A draft or a person's annotation has nothing to review.
  */
 export function isReviewable(annotation: LocalAnnotation): annotation is ReviewableAnnotation {
@@ -211,15 +239,15 @@ export function isReviewable(annotation: LocalAnnotation): annotation is Reviewa
   );
 }
 
-/** The filter key an annotation falls under: its status for a model's row, "human" otherwise. */
+/** The chip an annotation falls under: its status for a model's row, "human" otherwise. */
 export function reviewFilterKeyOf(annotation: LocalAnnotation): ReviewFilterKey {
   return isReviewable(annotation) ? annotation.review.status : HUMAN_REVIEW_FILTER;
 }
 
 /**
- * Whether the review status filter lets this annotation show. A draft always
- * shows: it is being drawn, and hiding it would hide the gesture from the
- * person making it.
+ * Whether the status filter lets this annotation show. A draft always shows:
+ * it is being drawn, and hiding it would hide the gesture from the person
+ * making it.
  */
 export function isShownByReviewFilter(
   annotation: LocalAnnotation,
@@ -229,11 +257,29 @@ export function isShownByReviewFilter(
 }
 
 /**
+ * Whether a reviewer may accept a model's row now, by what the screen shows:
+ * only a row shown pending is offered Accept — the one rule every control that
+ * offers it reads.
+ *
+ * A row shown pending is stored pending: nothing but the worker sets the
+ * status, and no update takes a row back from accepted. An unsaved edit does
+ * not stand in the way: it leaves the row in review until it is saved or
+ * accepted, and an Accept rides on it (`commitAccept`). A row shown accepted —
+ * stored so, accepted and not saved yet, or its edit on the wire — has nothing
+ * left to accept.
+ *
+ * @param review The row's review state.
+ */
+export function mayAccept(review: AnnotationReview): boolean {
+  return review.status === REVIEW_STATUS.PENDING;
+}
+
+/**
  * The status the dataset holds for a model's row once a write of it with this
  * body has landed — what the server's rules store (`_as_human_edit_of` in
  * src/pixano/api/service.py):
  *
- * - a body asking for `accepted` stores `accepted`;
+ * - an Accept stores `accepted`;
  * - a change to the row's content stores `accepted` too: a person who saves an
  *   edit of a model's row chooses to keep it. The interface queues no edit
  *   that leaves the content as stored, so a body carrying content is a change;
@@ -242,21 +288,23 @@ export function isShownByReviewFilter(
  *
  * A row no model produced has no status to move.
  *
- * @param review The row's review state, its status the one the dataset holds.
+ * @param review The row's review state.
  * @param body The body of the update.
  */
 export function storedStatusAfterWrite(
   review: AnnotationReview,
   body: Readonly<Record<string, unknown>>,
 ): ReviewStatus | "" {
-  if (review.sourceType !== MODEL_SOURCE_TYPE) return review.status;
+  const stored = storedStatusOf(review);
+  if (review.sourceType !== MODEL_SOURCE_TYPE) return stored;
   const accepts = body[REVIEW_STATUS_FIELD] === REVIEW_STATUS.ACCEPTED;
-  return accepts || carriesContent(body) ? REVIEW_STATUS.ACCEPTED : review.status;
+  return accepts || carriesContent(body) ? REVIEW_STATUS.ACCEPTED : stored;
 }
 
 /**
  * Whether an update body changes the row's content — its geometry, its entity
- * — rather than carrying its status alone.
+ * — rather than carrying an Accept alone, whose body is the status and
+ * nothing else.
  */
 export function carriesContent(body: Readonly<Record<string, unknown>>): boolean {
   return Object.keys(body).some((key) => key !== REVIEW_STATUS_FIELD);
