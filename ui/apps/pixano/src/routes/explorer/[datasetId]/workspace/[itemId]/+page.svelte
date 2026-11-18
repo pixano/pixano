@@ -9,13 +9,19 @@ License: CECILL-C
   import WorkspaceShell from "../../../../../components/workspace/WorkspaceShell.svelte";
   import type { PageProps } from "./$types";
   import { goto } from "$app/navigation";
-  import { navigating } from "$app/state";
+  import { navigating, page } from "$app/state";
   import { persistSaveItems } from "$lib/api";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
-  import { canSave, workspaceSaveQueue } from "$lib/stores/workspaceStores.svelte";
+  import {
+    canSave,
+    reviewModeIsActive,
+    workspaceSaveQueue,
+  } from "$lib/stores/workspaceStores.svelte";
   import { PrimaryButton } from "$lib/ui";
   import { createReviewReflection } from "$lib/utils/reviewActions";
-  import { getExplorerRoute } from "$lib/utils/routes";
+  import { isReviewedWorkspace } from "$lib/utils/reviewStatus";
+  import { getExplorerRoute, isReviewRoute } from "$lib/utils/routes";
+  import { forgetGoneAnnotation } from "$lib/utils/workspaceRuntimeMutations";
 
   let { data }: PageProps = $props();
 
@@ -37,10 +43,25 @@ License: CECILL-C
     currentItemSaveCoordinator.resetForItemChange();
   });
 
+  // A record opened in review, from the explorer's Review or by "Save & next", turns the review
+  // mode on, where this interface reviews the record's annotations. The mode then lasts from
+  // record to record until it is turned off.
+  $effect(() => {
+    const workspace = data.workspaceData?.ui.type;
+    if (isReviewRoute(page.url) && workspace && isReviewedWorkspace(workspace)) {
+      reviewModeIsActive.value = true;
+    }
+  });
+
   async function handleSaveItem() {
     const reflection = createReviewReflection(data.dataset.id);
     try {
-      await persistSaveItems(workspaceSaveQueue, data.dataset.id, reflection.onPersisted);
+      await persistSaveItems(
+        workspaceSaveQueue,
+        data.dataset.id,
+        reflection.onPersisted,
+        (mutation) => forgetGoneAnnotation(mutation.target.id),
+      );
     } finally {
       await reflection.finish();
     }

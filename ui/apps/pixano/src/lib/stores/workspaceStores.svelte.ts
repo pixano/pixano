@@ -36,6 +36,7 @@ import {
   modelsUiStore,
   newShape,
   preAnnotationIsActive,
+  reviewDecisionsLockedOn,
   reviewModeIsActive,
   saveData,
   selectedKeypointsTemplate,
@@ -74,6 +75,7 @@ export {
   modelsUiStore,
   newShape,
   preAnnotationIsActive,
+  reviewDecisionsLockedOn,
   reviewModeIsActive,
   saveData,
   selectedKeypointsTemplate,
@@ -137,6 +139,7 @@ export function resetWorkspaceStores() {
   itemMetas.value = undefined;
   preAnnotationIsActive.value = false;
   reviewModeIsActive.value = false;
+  reviewDecisionsLockedOn.value = null;
   smartSegmentationUiState.value = {
     phase: "idle",
     requestId: null,

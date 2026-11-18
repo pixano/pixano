@@ -9,11 +9,16 @@ import type { ResourceMutation } from "./resourcePayloads";
 import { createResource, deleteResource, updateResource, type StoredRow } from "./schemaApi";
 import type { SaveQueue } from "$lib/stores/saveQueue";
 
+const NOT_FOUND = 404;
+
 /**
  * Called with each mutation once the server stored it, and the row it answered with: none for a
  * delete. It runs between two writes, so it only notes what it needs.
  */
 export type OnPersisted = (mutation: ResourceMutation, stored: StoredRow | undefined) => void;
+
+/** Called with an update dropped because its row is gone: the screen still shows the row. */
+export type OnGone = (mutation: ResourceMutation) => void;
 
 function errorDetail(error: ApiError): { code?: string; message?: string } {
   try {
@@ -39,6 +44,19 @@ export function saveErrorMessage(error: unknown): string {
       return `Saving failed: ${detail.message} Your remaining changes are still staged.`;
   }
   return "Saving failed — your remaining changes are still staged. Try again.";
+}
+
+/**
+ * Whether the row an update was for no longer exists: deleted since it was read, or replaced by a
+ * model's run. The update cannot land anywhere; queued again, it would block every later write.
+ * The server names the row it did not find: a 404 that names none, as for a dataset gone, is not
+ * one.
+ */
+function updatesARowGone(mutation: ResourceMutation, error: unknown): boolean {
+  if (mutation.op !== "update" || !(error instanceof ApiError) || error.status !== NOT_FOUND) {
+    return false;
+  }
+  return errorDetail(error).message?.includes(`'${mutation.target.id}'`) ?? false;
 }
 
 /**
@@ -84,11 +102,13 @@ async function persistMutation(
  *
  * @param onPersisted Told of each mutation once it is stored and acknowledged; never of one the
  *   queue no longer holds, as after leaving the record (`SaveQueue.reset`).
+ * @param onGone Told of each update dropped because its row is gone.
  */
 export async function persistSaveItems(
   queue: SaveQueue,
   datasetId: string,
   onPersisted?: OnPersisted,
+  onGone?: OnGone,
 ): Promise<void> {
   const generation = queue.generation;
   while (queue.generation === generation) {
@@ -98,6 +118,12 @@ export async function persistSaveItems(
     try {
       stored = await persistMutation(attempt.mutation, datasetId);
     } catch (error) {
+      if (updatesARowGone(attempt.mutation, error)) {
+        // Dropped, as a delete of a row already gone is: the rest of the record is saved.
+        if (!queue.acknowledge(attempt)) return;
+        tellCaller(() => onGone?.(attempt.mutation));
+        continue;
+      }
       queue.fail(attempt, knownNotWritten(error) ? "unchanged" : "unknown");
       throw error;
     }
