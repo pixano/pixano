@@ -9,8 +9,10 @@ import { describe, expect, it } from "vitest";
 import type { LocalAnnotation } from "../annotationCollection.svelte.js";
 import {
   HUMAN_REVIEW_FILTER,
+  isAcceptUnsaved,
   isReviewable,
   isShownByReviewFilter,
+  mayAccept,
   REVIEW_STATUS,
   reviewFilterKeyOf,
   reviewOf,
@@ -65,6 +67,7 @@ describe("reviewOf", () => {
   it("reads a model's row: status, provenance, model and score", () => {
     expect(reviewOf(MODEL_ROW, OWN_SCORE)).toEqual({
       status: "pending",
+      storedStatus: "pending",
       sourceType: "model",
       sourceName: "detection",
       model: "yolo",
@@ -102,6 +105,7 @@ describe("reviewOf", () => {
     }
     expect(reviewOf({})).toEqual({
       status: "",
+      storedStatus: "",
       sourceType: "",
       sourceName: "",
       model: undefined,
@@ -182,6 +186,42 @@ describe("isShownByReviewFilter", () => {
   });
 });
 
+describe("mayAccept", () => {
+  /** A model's row stored at `stored`, showing `shown`. */
+  const at = (stored: ReviewStatus, shown: ReviewStatus = stored): AnnotationReview => ({
+    ...reviewOf({ ...MODEL_ROW, review_status: stored }),
+    status: shown,
+  });
+
+  it("offers Accept on a row shown pending", () => {
+    expect(mayAccept(at("pending"))).toBe(true);
+  });
+
+  it("offers nothing on a row shown accepted, saved or not", () => {
+    expect(mayAccept(at("accepted"))).toBe(false);
+    expect(mayAccept(at("pending", "accepted"))).toBe(false);
+  });
+
+  it("takes the shown status on a review built by hand", () => {
+    const handBuilt: AnnotationReview = { status: "accepted", sourceType: "model", sourceName: "" };
+    expect(mayAccept(handBuilt)).toBe(false);
+    expect(mayAccept({ ...handBuilt, status: "pending" })).toBe(true);
+  });
+});
+
+describe("isAcceptUnsaved", () => {
+  const at = (stored: ReviewStatus, shown: ReviewStatus): AnnotationReview => ({
+    ...reviewOf({ ...MODEL_ROW, review_status: stored }),
+    status: shown,
+  });
+
+  it("tells an Accept shown but not stored", () => {
+    expect(isAcceptUnsaved(at("pending", "accepted"))).toBe(true);
+    expect(isAcceptUnsaved(at("accepted", "accepted"))).toBe(false);
+    expect(isAcceptUnsaved(at("pending", "pending"))).toBe(false);
+  });
+});
+
 describe("storedStatusAfterWrite", () => {
   const stored = (status: ReviewStatus): AnnotationReview =>
     reviewOf({ ...MODEL_ROW, review_status: status });
@@ -206,6 +246,13 @@ describe("storedStatusAfterWrite", () => {
       "accepted",
     );
     expect(storedStatusAfterWrite(stored("pending"), { review_status: "pending" })).toBe("pending");
+    // An edit carrying the Accept stores both: the row is accepted.
+    expect(
+      storedStatusAfterWrite(stored("pending"), {
+        review_status: "accepted",
+        coords: [0, 0, 1, 1],
+      }),
+    ).toBe("accepted");
   });
 
   it("moves no status on a person's row", () => {

@@ -185,8 +185,10 @@ export class MutationQueue {
 
   /**
    * Drop every queued mutation that references the given local annotation id.
-   * Used when an annotation is deleted locally before it has been persisted,
-   * so we don't POST-then-DELETE it for nothing.
+   * Used when an annotation is deleted locally: a draft, so we don't
+   * POST-then-DELETE it for nothing, and a stored row before its delete is
+   * queued, whose update — and the create of an entity a reassignment queued
+   * for it — would only be sent to be undone.
    *
    * What has already left cannot be called back. A draft's create on the wire:
    * the row it makes is deleted once it lands. So dropping a draft while its
