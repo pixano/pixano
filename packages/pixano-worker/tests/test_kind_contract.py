@@ -111,12 +111,22 @@ class _Target:
 
     One store per table, as in LanceDB: a dropped table takes its rows with it, and the suite
     compares every row of every table. A detected box and the object it names share an identifier.
+    It starts with what a person drew (`_seeded_prompts`), which a kind may read but did not write:
+    those rows are no kind's output, so `rows` leaves them out unless a kind replaced them. They are
+    what a kind must least destroy, so `snapshot` keeps them, and `altered_seeds` compares them with
+    what was drawn.
     """
 
     def __init__(self) -> None:
         self.compactions: list[str] = []
         self.indexes: list[tuple[str, str]] = []
-        self.tables: dict[str, dict[str, Any]] = {}
+        self._seeded = _seeded_prompts()
+        self.tables: dict[str, dict[str, Any]] = {table: dict(rows) for table, rows in self._seeded.items()}
+        # Taken now, not compared with the seeded objects later: the store holds those very
+        # objects, so a row changed in place would still equal itself.
+        self._drawn = {
+            (table, row_id): _content(row) for table, rows in self._seeded.items() for row_id, row in rows.items()
+        }
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
@@ -124,16 +134,29 @@ class _Target:
     @property
     def rows(self) -> dict[str, Any]:
         """Every row a kind wrote, whatever its table."""
-        return {f"{table}/{row_id}": row for table, rows in self.tables.items() for row_id, row in rows.items()}
+        return {
+            f"{table}/{row_id}": row
+            for table, rows in self.tables.items()
+            for row_id, row in rows.items()
+            if row is not self._seeded.get(table, {}).get(row_id)
+        }
 
     def snapshot(self) -> list[tuple[str, str, str]]:
-        """What the dataset holds: every row of every table, by content.
+        """What the dataset holds: every row of every table, a person's included, by content.
 
         A list rather than a digest, so that a failed comparison names the rows that differ.
         """
         return sorted(
             (table, row_id, _content(row)) for table, rows in self.tables.items() for row_id, row in rows.items()
         )
+
+    def altered_seeds(self) -> list[str]:
+        """The rows a person drew that are gone, or no longer hold what they held."""
+        return [
+            f"{table}/{row_id}"
+            for (table, row_id), drawn in sorted(self._drawn.items())
+            if row_id not in self.tables.get(table, {}) or _content(self.tables[table][row_id]) != drawn
+        ]
 
     def update_data(self, table_name: str, data: list[Any]) -> None:
         for row in data:
@@ -258,6 +281,38 @@ class _Vector:
 #: The size of every image of the contract's dataset, in pixels. Not square, so that a kind that
 #: swapped width and height would place its output elsewhere.
 IMAGE_WIDTH, IMAGE_HEIGHT = 100, 60
+
+#: Where a person drew a box on each image, in pixels: left, top, right, bottom. Clear of the box
+#: the simulated detection finds, so that the person's box does not hold the detection back.
+PERSONS_BOX_PX = (60, 10, 90, 50)
+
+
+def _seeded_prompts() -> dict[str, dict[str, Any]]:
+    """The box a person drew on each image of the contract's dataset, and the object it names.
+
+    What a kind must leave as it was. Built anew for each holder, so that no test sees another's rows.
+    """
+    left, top, right, bottom = PERSONS_BOX_PX
+    boxes, entities = {}, {}
+    for n in range(CONTRACT_RECORDS):
+        entity = Entity(id=f"person-{n}", record_id=f"rec-{n}")
+        box = BBox(
+            id=f"drawn-{n}",
+            record_id=f"rec-{n}",
+            view_id=f"img-{n}",
+            entity_id=entity.id,
+            coords=[
+                left / IMAGE_WIDTH,
+                top / IMAGE_HEIGHT,
+                (right - left) / IMAGE_WIDTH,
+                (bottom - top) / IMAGE_HEIGHT,
+            ],
+            format="xywh",
+            is_normalized=True,
+            source_type="human",
+        )
+        boxes[box.id], entities[entity.id] = box, entity
+    return {"bboxes": boxes, "entities": entities}
 
 
 class _Row:
@@ -476,6 +531,16 @@ class TestPreparation:
     """The `prepare` hook: nothing by default, and never two different states for two calls."""
 
     def test_preparing_with_default_parameters_destroys_nothing(self, kind: JobKind) -> None:
+        """Neither what a person drew nor what a previous run wrote.
+
+        A person's rows are checked on a dataset no job has touched: a `prepare` that deleted one
+        did so in the first run too, so comparing the dataset before and after the second cannot
+        see it go.
+        """
+        untouched = _Target()
+        _plan_and_prepare(kind, untouched, "job-1", _params(kind))
+        assert untouched.altered_seeds() == []
+
         target = _Target()
         _execute(kind, target, "job-1")
         before = target.snapshot()
@@ -592,6 +657,18 @@ class TestExecution:
 
         assert (len(target.rows), target.snapshot()) == first
 
+    def test_a_job_with_default_parameters_leaves_a_persons_rows_as_they_were(self, kind: JobKind) -> None:
+        """A kind may read what a person drew, never delete or rewrite it.
+
+        Compared with what was drawn, not with a previous run: every run would delete a person's
+        row alike, so two runs would agree.
+        """
+        target = _Target()
+
+        _execute(kind, target, "job-1")
+
+        assert target.altered_seeds() == []
+
     def test_every_annotation_says_where_it_came_from(self, kind: JobKind) -> None:
         """Provenance is required of annotations, not of every output.
 
@@ -640,6 +717,15 @@ class TestTheDoubles:
         _plan_and_prepare(kind, target, "job-2", _confirmed(kind, parameter))
 
         assert target.snapshot() != left
+
+    def test_a_row_a_kind_writes_over_a_persons_counts_as_written(self) -> None:
+        """Only the seeded rows themselves are left out, not whatever later takes their place."""
+        target = _Target()
+        drawn = next(iter(target.tables["bboxes"].values()))
+
+        target.update_data("bboxes", [drawn.model_copy(update={"source_type": "model"})])
+
+        assert list(target.rows) == [f"bboxes/{drawn.id}"]
 
 
 class TestRegistry:
