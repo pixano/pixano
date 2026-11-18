@@ -5,12 +5,13 @@ License: CECILL-C
 -------------------------------------*/
 
 import { flushSync } from "svelte";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { WorkspaceManager } from "../workspaceManager.svelte.js";
 import type { WorkspaceSession } from "../workspaceSession.svelte.js";
 import {
   DATASET_ID,
+  deferred,
   drag,
   entityOf,
   geometryOf,
@@ -386,7 +387,6 @@ describe("An edit leaves the row in review until it is saved", () => {
     drag(seam, "b1");
     expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.PENDING);
     expect(rowOf(manager, "b1")).toMatchObject({ canAccept: true, canReject: true });
-    backend.log.length = 0;
     expect(await manager.flushSave()).toBe(true);
 
     // Saving the edit is the person's choice to keep the row: the server stores it accepted,
@@ -397,8 +397,7 @@ describe("An edit leaves the row in review until it is saved", () => {
       source_type: "model",
       confidence: 0.87,
     });
-    // The row reads so without the annotations being read back, and is not offered Accept.
-    expect(backend.log).not.toContain(`list ${BBOX_RESOURCE}`);
+    // The row reads so, and is not offered Accept.
     expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.ACCEPTED);
     expect(rowOf(manager, "b1")?.canAccept).toBe(false);
     expect(manager.review.accept("b1")).toBe(false);
@@ -409,6 +408,7 @@ describe("An edit leaves the row in review until it is saved", () => {
       { [REC]: { [BBOX_RESOURCE]: [modelBox(REC, "b1")] } },
       { entities: [entityOf(REC, "ent-b1"), entityOf(REC, "ent-x")] },
     );
+    serveLikeTheApi(backend, REC);
 
     reassignEntity(
       manager.annotations.find("b1")!,
@@ -441,6 +441,25 @@ describe("An edit leaves the row in review until it is saved", () => {
       id: "b1",
       body: { coords: MOVED, review_status: "accepted" },
     });
+  });
+
+  it("an edit saved reads accepted before any read-back, and is not offered Accept", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    const read = deferred();
+    backend.holdListings = read.promise;
+
+    drag(seam, "b1");
+    backend.log.length = 0;
+    const saving = manager.flushSave();
+    // The write has landed; the rows read back are still on their way.
+    await vi.waitFor(() => expect(backend.log).toContain(`list ${BBOX_RESOURCE}`));
+
+    // The server stores the moved box accepted; the row knows it without a read.
+    expect(statusOf(manager, "b1")).toBe(REVIEW_STATUS.ACCEPTED);
+    expect(rowOf(manager, "b1")?.canAccept).toBe(false);
+    expect(manager.review.accept("b1")).toBe(false);
+    read.resolve();
+    await saving;
   });
 
   it("a save that fails leaves the stored status as it was", async () => {
@@ -552,6 +571,29 @@ describe("An edit that leaves the content as stored is not an edit", () => {
     expect(backend.writes).toEqual([
       { op: "update", resource: BBOX_RESOURCE, id: "b1", body: { review_status: "accepted" } },
     ]);
+  });
+
+  it("a 3D box saved from its HUD turned less than storage can tell queues nothing", async () => {
+    const box3d: Row = {
+      ...modelBox(REC, "box-1"),
+      view_id: "",
+      coords: [0, 0, 0, 1, 1, 1],
+      format: "xyzwhd",
+      rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    };
+    const { manager } = await openManager({ [REC]: { [BBOX3D_RESOURCE]: [box3d] } });
+    const session = new BBox3DSession(widgetSeam(manager, "point-cloud-widget"));
+    session.setResetEditor(() => {});
+    // A turn a hair away from the stored one, closer than float32 storage tells
+    // apart: the edit rule's tolerance, not the HUD's own untouched check — a
+    // box the real editor opens and saves untouched is in bbox3dSession.test.ts.
+    const barelyTurned: Rotation3x3 = [1 - 1e-8, 1e-9, 0, -1e-9, 1 - 1e-8, 0, 0, 0, 1];
+
+    session.reportReady([0, 0, 0, 1, 1, 1], barelyTurned, "box-1");
+    session.save();
+
+    expect(manager.pendingCount).toBe(0);
+    expect(statusOf(manager, "box-1")).toBe(REVIEW_STATUS.PENDING);
   });
 
   it("a model's classification moved onto the entity it has keeps its score and status", async () => {
