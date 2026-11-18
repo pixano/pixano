@@ -32,7 +32,7 @@ from pixano_worker.writer import JobWriter
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import Entity, Image, Record, SchemaGroup
+from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup
 from pixano.schemas.table_names import canonical_family_spec_for_slot
 
 
@@ -46,6 +46,7 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     # the inference — which is the point: the contract exercises the shape, not the model. The
     # real path is checked end to end on the stack, in the demo (docs/demo-etape1.md).
     "embeddings": {"model": "clip", "chunk_size": 8},
+    "detection": {"model": "yolo", "chunk_size": 8},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
@@ -80,11 +81,36 @@ def _confirmed_parameters(kind: JobKind) -> list[str]:
 CONFIRMED = [(name, parameter) for name in REGISTRY.names() for parameter in _confirmed_parameters(_registered(name))]
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The reads the writers make: by identifiers, or by a filter — the prefix of a cleanup, a
+    list of values of one field (a detection's look at the boxes already on a medium), or several
+    such conditions joined by AND (the pending rows a `replace_previous` clears)."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    assert where, "a read with neither identifiers nor a filter in a test double"
+    conditions = [_condition(clause) for clause in where.split(" AND ")]
+    return [row for row in rows.values() if all(condition(row) for condition in conditions)]
+
+
+def _condition(clause: str) -> Any:
+    """One condition of a filter, as a test on a row."""
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", clause)
+    if prefix is not None:
+        return lambda row: row.id.startswith(prefix.group(1))
+    equal = re.fullmatch(r"(\w+) = '([^']*)'", clause)
+    if equal is not None:
+        return lambda row: getattr(row, equal.group(1)) == equal.group(2)
+    among = re.fullmatch(r"(\w+) IN \((.*)\)", clause)
+    assert among is not None, f"unexpected filter in a test double: {clause!r}"
+    values = set(re.findall(r"'([^']*)'", among.group(2)))
+    return lambda row: getattr(row, among.group(1), None) in values
+
+
 class _Target:
     """A write target that behaves like LanceDB on the three operations used.
 
     One store per table, as in LanceDB: a dropped table takes its rows with it, and the suite
-    compares every row of every table.
+    compares every row of every table. A detected box and the object it names share an identifier.
     """
 
     def __init__(self) -> None:
@@ -93,7 +119,7 @@ class _Target:
         self.tables: dict[str, dict[str, Any]] = {}
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
-        self.info = SimpleNamespace(tables={})
+        self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
 
     @property
     def rows(self) -> dict[str, Any]:
@@ -118,13 +144,7 @@ class _Target:
             self.tables.get(table_name, {}).pop(row_id, None)
 
     def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
-        """By identifiers, or by the prefix filter of a cleanup."""
-        rows = self.tables.get(table_name, {})
-        if ids is not None:
-            return [rows[i] for i in ids if i in rows]
-        prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
-        assert prefix is not None, f"unexpected filter in a test double: {where!r}"
-        return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+        return _matching(self.tables.get(table_name, {}), ids, where)
 
     def ensure_annotation_table(self, slot: str) -> str:
         family = canonical_family_spec_for_slot(slot)
@@ -235,11 +255,17 @@ class _Vector:
         self.id, self.record_id, self.view_id, self.vector = id, record_id, view_id, vector
 
 
+#: The size of every image of the contract's dataset, in pixels. Not square, so that a kind that
+#: swapped width and height would place its output elsewhere.
+IMAGE_WIDTH, IMAGE_HEIGHT = 100, 60
+
+
 class _Row:
     def __init__(self, row_id: str, record_id: str = "", uri: str = "") -> None:
         self.id = row_id
         self.record_id = record_id
         self.uri = uri
+        self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
 
 
 class _Source:
@@ -250,7 +276,7 @@ class _Source:
     """
 
     # The real schemas: the reader finds a dataset's media by looking at them.
-    info = SimpleNamespace(tables={"records": Record, "images": Image})
+    info = SimpleNamespace(tables={"records": Record, "images": Image, "bboxes": BBox, "entities": Entity})
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
@@ -362,7 +388,13 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def list_models(self) -> list[Any]:
-            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
+            return [
+                SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
+                SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
+            ]
+
+        def detection(self, request: Any, **_kwargs: Any) -> Any:
+            return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
