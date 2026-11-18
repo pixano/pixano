@@ -110,8 +110,8 @@ const METADATA_MODEL_VERSION_KEY = "model_version";
 /** A score below this is the backend's "not predicted" sentinel (-1), not a score. */
 const MIN_CONFIDENCE = 0;
 
-/** Whether a value read from a row is a review status. */
-function isReviewStatus(value: unknown): value is ReviewStatus {
+/** Whether a value read from outside — a row, a form control — is a review status. */
+export function isReviewStatus(value: unknown): value is ReviewStatus {
   return typeof value === "string" && KNOWN_STATUSES.has(value);
 }
 

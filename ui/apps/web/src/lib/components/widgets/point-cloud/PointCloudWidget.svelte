@@ -54,9 +54,9 @@ License: CECILL-C
     buildContext: { datasetId, recordId, viewId },
     storage,
   });
-  // A tool's session can hold an edit staged for the person to confirm; it goes
-  // with the widget, so the record must stop counting it as unsaved work — a
-  // closed widget can never confirm it.
+  // A tool's session can hold an edit staged for the person to confirm (the 3D
+  // box HUD); it goes with the widget, so the record must stop counting it as
+  // unsaved work — a closed widget can never confirm it.
   onDestroy(() => seam.releaseStagedWork?.());
 
   let cameraMode = $state<"orbit" | "first-person">("orbit");
@@ -127,7 +127,7 @@ License: CECILL-C
 
 <div class="relative flex h-full w-full flex-col bg-card">
   <!-- Toolbar. Its unsaved count is the record's — per annotation, plus each piece
-       of work a tool holds — the number the image widgets show. -->
+       of work a tool holds — the number the image widgets and the Review tab show. -->
   <AnnotationToolbar
     tools={TOOLS_3D}
     activeToolId={storage.activeToolId}

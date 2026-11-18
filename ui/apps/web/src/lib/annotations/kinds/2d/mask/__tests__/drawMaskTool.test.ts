@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { drawMaskTool } from "../drawMaskTool.js";
 import { AnnotationCollection } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
-import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
+import { openManager, VIEWPORT, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds a preview Image and
 // a cursor Circle, and moves them around. Mock both with accessor objects.
@@ -487,6 +487,7 @@ describe("drawMaskTool brush cursor", () => {
 
 describe("strokes painted are the record's unsaved work", () => {
   const REC_1 = "rec-1";
+  const REC_2 = "rec-2";
   const STROKE = [
     { x: 10, y: 10 },
     { x: 30, y: 30 },
@@ -494,7 +495,10 @@ describe("strokes painted are the record's unsaved work", () => {
 
   /** The brush in an image widget of a record open in the real workspace. */
   async function onTheRecord() {
-    const opened = await openManager({ [REC_1]: {} });
+    const opened = await openManager(
+      { [REC_1]: {}, [REC_2]: {} },
+      { next: { recordId: REC_2, remaining: 1 } },
+    );
     const harness = makeHarness();
     const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
     const handler = drawMaskTool.createHandler(ctx);
@@ -504,13 +508,17 @@ describe("strokes painted are the record's unsaved work", () => {
 
   const key = (k: string) => new KeyboardEvent("keydown", { key: k });
 
-  it("holds it once a stroke is painted, and lets go of it once Escape drops it", async () => {
+  it("keeps Save & next on the record once a stroke is painted, and lets it move once it is gone", async () => {
     const { manager, handler, setPointer } = await onTheRecord();
     paintStroke(handler, setPointer, STROKE);
-    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_1);
+    expect(manager.review.outcome).toEqual({ kind: "not-saved" });
 
     handler.onKeyDown?.(key("Escape"));
-    expect(manager.hasUnsavedWork).toBe(false);
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_2);
   });
 
   it("holds it until the tool is left or the mask is committed", async () => {

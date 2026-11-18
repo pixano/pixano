@@ -89,6 +89,20 @@ License: CECILL-C
     ],
   };
 
+  // A video's frames are not reviewed: the review's keys are for image records.
+  const reviewShortcuts: ShortcutCategory = {
+    title: "Review mode",
+    shortcuts: [
+      { keys: ["Enter"], action: "Accept the annotation under review, then review the next" },
+      {
+        keys: ["Delete", "Backspace"],
+        action: "Reject the annotation under review, then review the next",
+      },
+      // One key pressed twice, not two keys to choose from.
+      { keys: ["Enter, Enter"], action: "Nothing left: save and go to the next record" },
+    ],
+  };
+
   const navigationShortcuts: ShortcutCategory = {
     title: "Navigation",
     shortcuts: [
@@ -101,7 +115,7 @@ License: CECILL-C
   let leftColumn = $derived([
     generalShortcuts,
     navigationShortcuts,
-    ...(isVideo ? [videoShortcuts] : []),
+    ...(isVideo ? [videoShortcuts] : [reviewShortcuts]),
   ]);
   let centerColumn = $derived([bboxShortcuts, polygonShortcuts]);
   let rightColumn = $derived([
