@@ -32,7 +32,7 @@ from pixano_worker.writer import JobWriter
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import Entity, Image, Record, SchemaGroup
+from pixano.schemas import Entity, Image, Record, SchemaGroup, Text
 from pixano.schemas.table_names import canonical_family_spec_for_slot
 
 
@@ -46,6 +46,8 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     # the inference — which is the point: the contract exercises the shape, not the model. The
     # real path is checked end to end on the stack, in the demo (docs/demo-etape1.md).
     "embeddings": {"model": "clip", "chunk_size": 8},
+    # Recognizes the one name each record's text starts with (`_Client.ner`).
+    "ner": {"model": "fake-ner", "chunk_size": 8},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
@@ -80,6 +82,41 @@ def _confirmed_parameters(kind: JobKind) -> list[str]:
 CONFIRMED = [(name, parameter) for name in REGISTRY.names() for parameter in _confirmed_parameters(_registered(name))]
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The reads the writers make: by identifiers, or by a filter — the prefix of a cleanup, a
+    list of values of one field (a NER's look at the spans already on its texts), or several such
+    conditions joined by AND (the pending rows a `replace_previous` clears)."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    assert where, "a read with neither identifiers nor a filter in a test double"
+    conditions = [_condition(clause) for clause in where.split(" AND ")]
+    return [row for row in rows.values() if all(condition(row) for condition in conditions)]
+
+
+def _condition(clause: str) -> Any:
+    """One condition of a filter, as a test on a row — or several joined by OR, in parentheses."""
+    either = re.fullmatch(r"\((.*)\)", clause)
+    if either is not None:
+        alternatives = [_condition(alternative) for alternative in either.group(1).split(" OR ")]
+        return lambda row: any(alternative(row) for alternative in alternatives)
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", clause)
+    if prefix is not None:
+        return lambda row: row.id.startswith(prefix.group(1))
+    equal = re.fullmatch(r"(\w+) = '([^']*)'", clause)
+    if equal is not None:
+        return lambda row: getattr(row, equal.group(1)) == equal.group(2)
+    compared = re.fullmatch(r"(\w+) (>=|>|<=|<) (-?\d+)", clause)
+    if compared is not None:
+        name, operator, bound = compared.group(1), compared.group(2), int(compared.group(3))
+        tests = {">=": bound.__le__, ">": bound.__lt__, "<=": bound.__ge__, "<": bound.__gt__}
+        return lambda row: tests[operator](getattr(row, name))
+    among = re.fullmatch(r"(\w+) IN \((.*)\)", clause)
+    assert among is not None, f"unexpected filter in a test double: {clause!r}"
+    quoted = re.findall(r"'([^']*)'", among.group(2))
+    values: set[Any] = set(quoted) if quoted else {int(value) for value in among.group(2).split(", ")}
+    return lambda row: getattr(row, among.group(1), None) in values
+
+
 class _Target:
     """A write target that behaves like LanceDB on the three operations used.
 
@@ -93,7 +130,8 @@ class _Target:
         self.tables: dict[str, dict[str, Any]] = {}
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
-        self.info = SimpleNamespace(tables={})
+        # The entities every dataset holds, with no text field: a kind writing a class adds one.
+        self.info = SimpleNamespace(tables={"entities": Entity}, entity=Entity)
 
     @property
     def rows(self) -> dict[str, Any]:
@@ -118,13 +156,7 @@ class _Target:
             self.tables.get(table_name, {}).pop(row_id, None)
 
     def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
-        """By identifiers, or by the prefix filter of a cleanup."""
-        rows = self.tables.get(table_name, {})
-        if ids is not None:
-            return [rows[i] for i in ids if i in rows]
-        prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
-        assert prefix is not None, f"unexpected filter in a test double: {where!r}"
-        return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+        return _matching(self.tables.get(table_name, {}), ids, where)
 
     def ensure_annotation_table(self, slot: str) -> str:
         family = canonical_family_spec_for_slot(slot)
@@ -223,6 +255,11 @@ def _confirmed(kind: JobKind, parameter: str) -> JobParams:
 #: empty dataset — and the contract must exercise those kinds too.
 CONTRACT_RECORDS = 25
 
+#: The text of each record of the contract's dataset: a name, then words, for a NER kind to find.
+CONTRACT_TEXT = "Ada met nobody."
+#: The name it starts with, where it starts and ends.
+CONTRACT_NAME = (0, 3)
+
 
 class _Vector:
     """An embedding row: no provenance, only a vector.
@@ -236,10 +273,12 @@ class _Vector:
 
 
 class _Row:
-    def __init__(self, row_id: str, record_id: str = "", uri: str = "") -> None:
+    def __init__(self, row_id: str, record_id: str = "", uri: str = "", content: str = "") -> None:
         self.id = row_id
         self.record_id = record_id
         self.uri = uri
+        # A text's content; an image's, none.
+        self.content = content
 
 
 class _Source:
@@ -250,7 +289,7 @@ class _Source:
     """
 
     # The real schemas: the reader finds a dataset's media by looking at them.
-    info = SimpleNamespace(tables={"records": Record, "images": Image})
+    info = SimpleNamespace(tables={"records": Record, "images": Image, "texts": Text, "entities": Entity})
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
@@ -278,6 +317,11 @@ class _Source:
                 end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
                 ids = [f"img-{n}" for n in range(skip, end)]
             return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
+        if table_name == "texts":
+            if ids is None:
+                end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+                ids = [f"txt-{n}" for n in range(skip, end)]
+            return [_Row(i, record_id=f"rec-{i.removeprefix('txt-')}", content=CONTRACT_TEXT) for i in ids]
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 
@@ -362,7 +406,16 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def list_models(self) -> list[Any]:
-            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
+            return [
+                SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
+                SimpleNamespace(name="fake-ner", model_path="", capability="ner"),
+            ]
+
+        def ner(self, request: Any, **_kwargs: Any) -> Any:
+            """The name the text starts with, a person."""
+            start, end = CONTRACT_NAME
+            name = SimpleNamespace(text=request.text[start:end], label="PER", start=start, end=end, score=0.9)
+            return SimpleNamespace(data=SimpleNamespace(entities=[name]))
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1

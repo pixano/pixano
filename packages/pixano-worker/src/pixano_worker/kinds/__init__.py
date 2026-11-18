@@ -20,6 +20,7 @@ from .base import (
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
+from .ner import NerKind, NerParams
 from .registry import Registry
 
 
@@ -41,6 +42,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
+    registry.register(NerKind(inference_url, api_key))
     return registry
 
 
@@ -56,6 +58,8 @@ __all__ = [
     "JobParams",
     "LabelKind",
     "LabelParams",
+    "NerKind",
+    "NerParams",
     "Outcome",
     "QuarantinedItem",
     "Registry",
