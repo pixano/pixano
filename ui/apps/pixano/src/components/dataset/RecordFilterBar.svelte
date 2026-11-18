@@ -14,6 +14,7 @@ License: CECILL-C
     CircleNotch,
     FunnelSimple,
     Images,
+    ListChecks,
     MagnifyingGlass,
     Plus,
     Rows,
@@ -54,6 +55,12 @@ License: CECILL-C
     /** Record id the current ranked view is "similar to" (find-similar mode). */
     similarTo?: string;
     computing?: boolean;
+    /**
+     * Embeddings are computed by the embeddings job, from the Jobs panel: a worker runs it on this
+     * installation. The search bar's own computation, one image per record, then gives way to it:
+     * its buttons point to the Jobs panel instead.
+     */
+    embeddingsByJob?: boolean;
     /** Live progress of the embedding-compute job (while `computing`). */
     computeProgress?: IoJobResponse["progress"] | null;
     computeError?: string;
@@ -68,6 +75,8 @@ License: CECILL-C
     recordsToReview?: number;
     /** Open the first record to review, in review. */
     onReview?: () => void;
+    /** Open the jobs of this dataset: launch one, follow the ones running. */
+    onOpenJobs?: () => void;
   }
 
   let {
@@ -81,6 +90,7 @@ License: CECILL-C
     semanticActive = false,
     similarTo = "",
     computing = false,
+    embeddingsByJob = false,
     computeProgress = null,
     computeError = "",
     searchError = "",
@@ -92,6 +102,7 @@ License: CECILL-C
     onViewChange,
     recordsToReview = 0,
     onReview,
+    onOpenJobs,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -205,6 +216,11 @@ License: CECILL-C
     onCompute?.(force);
   }
 
+  function openJobs() {
+    toolsOpen = false;
+    onOpenJobs?.();
+  }
+
   function chipLabel(filter: RecordFilter): string {
     const op = OPERATOR_LABELS[filter.op] ?? filter.op;
     const value = isListOperator(filter.op) ? filter.values.join(", ") : (filter.values[0] ?? "");
@@ -267,6 +283,25 @@ License: CECILL-C
               <CircleNotch size={13} class="animate-spin" />
               {computePercent !== null ? `${computePercent}%` : ""}
             </span>
+          {:else if (embeddingsDegraded || embeddingsStatus === "absent") && embeddingsByJob}
+            <!--
+              Enabling or repairing the embeddings is the embeddings job's work wherever it runs:
+              it embeds every image of a record, the search bar's own computation one.
+            -->
+            {#if onOpenJobs}
+              <button
+                type="button"
+                onclick={openJobs}
+                title={embeddingsDegraded
+                  ? `${embeddingsDetail || "The embedding store is broken."} Rebuild it with the embeddings job, from Jobs, with Replace Existing Embeddings ticked.`
+                  : "Compute embeddings with the embeddings job, from Jobs, to enable semantic search."}
+                class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {embeddingsDegraded
+                  ? 'border border-warning/50 bg-warning/10 text-warning hover:bg-warning/20'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'}"
+              >
+                Jobs
+              </button>
+            {/if}
           {:else if embeddingsDegraded && onCompute}
             <button
               type="button"
@@ -322,25 +357,54 @@ License: CECILL-C
                     {#if embeddingsDetail}
                       <p class="text-xs text-warning">{embeddingsDetail}</p>
                     {/if}
+                    {#if embeddingsByJob}
+                      <!--
+                        The search bar's own computation embeds one image per record: on records
+                        of several images, the count above would never fill up, whichever button
+                        is pressed. The job embeds every image, so the buttons give way to it
+                        wherever a worker runs it.
+                      -->
+                      <p class="text-xs text-muted-foreground">
+                        To compute them, run the embeddings job from Jobs: it embeds every image of
+                        a record. To recompute them all, tick Replace Existing Embeddings.
+                      </p>
+                    {:else}
+                      <p class="text-xs text-muted-foreground">
+                        These buttons embed one image per record. A dataset with several images per
+                        record needs the embeddings job: see Jobs.
+                      </p>
+                    {/if}
                   </div>
                   <div class="flex flex-col gap-1.5">
-                    {#if embeddingsStatus === "partial"}
+                    {#if embeddingsByJob}
+                      {#if onOpenJobs}
+                        <button
+                          type="button"
+                          onclick={openJobs}
+                          class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          Open Jobs
+                        </button>
+                      {/if}
+                    {:else}
+                      {#if embeddingsStatus === "partial"}
+                        <button
+                          type="button"
+                          onclick={() => runCompute(false)}
+                          class="h-9 w-full rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          Update embeddings
+                        </button>
+                      {/if}
                       <button
                         type="button"
-                        onclick={() => runCompute(false)}
-                        class="h-9 w-full rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onclick={() => runCompute(true)}
+                        title="Drop and rebuild the whole embedding space"
+                        class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        Update embeddings
+                        Recompute
                       </button>
                     {/if}
-                    <button
-                      type="button"
-                      onclick={() => runCompute(true)}
-                      title="Drop and rebuild the whole embedding space"
-                      class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      Recompute
-                    </button>
                   </div>
                 </Popover.Content>
               </Popover.Portal>
@@ -490,6 +554,17 @@ License: CECILL-C
           >
             {recordsToReview.toLocaleString()}
           </span>
+        </button>
+      {/if}
+
+      {#if onOpenJobs}
+        <button
+          type="button"
+          onclick={onOpenJobs}
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ListChecks size={15} />
+          Jobs
         </button>
       {/if}
 

@@ -218,6 +218,86 @@ describe("jobsStore on an installation without a job queue", () => {
   });
 });
 
+describe("jobsStore asked, outside the panel, whether the embeddings job can run", () => {
+  // The explorer asks, to offer its own embeddings computation only where that job cannot run.
+  it("says it can when a worker declared it, and follows nothing", async () => {
+    api.probeJobKinds.mockResolvedValue([kindWithModel("embeddings", "embedding")]);
+    const { store } = await freshStore();
+
+    await store.probe();
+
+    expect(store.offersEmbeddingsJob).toBe(true);
+    expect(store.unavailable).toBeNull();
+    expect(api.listJobs).not.toHaveBeenCalled();
+    expect(api.openJobStream).not.toHaveBeenCalled();
+  });
+
+  it("says it cannot on a queue no worker declared it on", async () => {
+    // A schema installed by hand, or workers running other kinds only: a pointer to the Jobs
+    // panel would lead to a form that cannot compute embeddings.
+    api.probeJobKinds.mockResolvedValue([]);
+    const { store } = await freshStore();
+    await store.probe();
+    expect(store.offersEmbeddingsJob).toBe(false);
+
+    api.probeJobKinds.mockResolvedValue([kindWithModel("detection", "detection")]);
+    await store.probe();
+    expect(store.offersEmbeddingsJob).toBe(false);
+    expect(store.unavailable).toBeNull();
+  });
+
+  it("says it cannot, and why, when the server says the queue is missing", async () => {
+    api.probeJobKinds.mockRejectedValue(queueUnavailable());
+    const { store } = await freshStore();
+
+    await store.probe();
+
+    expect(store.offersEmbeddingsJob).toBe(false);
+    expect(store.unavailable).toBe(NO_QUEUE_REASON);
+  });
+
+  it("says neither when the answer is about something else", async () => {
+    api.probeJobKinds.mockRejectedValue(refusal(500, "boom"));
+    const { store } = await freshStore();
+
+    await store.probe();
+
+    expect(store.offersEmbeddingsJob).toBe(false);
+    expect(store.unavailable).toBeNull();
+  });
+
+  it("follows what the panel finds out since", async () => {
+    // Opened on an installation whose database then went down: the explorer must offer its own
+    // computation again, since no job can run.
+    api.probeJobKinds.mockResolvedValue([kindWithModel("embeddings", "embedding")]);
+    api.listJobKinds.mockResolvedValue([kindWithModel("embeddings", "embedding")]);
+    const { store } = await freshStore();
+    await store.probe();
+    await store.start();
+    api.submitJob.mockRejectedValue(queueUnavailable("the job queue is unreachable"));
+
+    await store.submit("embeddings", "ds", {});
+
+    expect(store.offersEmbeddingsJob).toBe(false);
+  });
+
+  it("leaves the answer of a panel open meanwhile, which follows what it heard", async () => {
+    let answerProbe: (kinds: unknown[]) => void = () => {};
+    api.probeJobKinds.mockReturnValueOnce(new Promise((resolve) => (answerProbe = resolve)));
+    const { store } = await freshStore();
+    const probing = store.probe();
+    refuseListsForWantOfAQueue();
+    await store.start();
+
+    answerProbe([kindWithModel("embeddings", "embedding")]);
+    await probing;
+
+    expect(store.unavailable).toBe(NO_QUEUE_REASON);
+    expect(store.offersEmbeddingsJob).toBe(false);
+    expect(store.runnable).toBe(false);
+  });
+});
+
 describe("jobsStore closed while its lists load", () => {
   it("opens no stream and asks for no models once stopped before the lists arrive", async () => {
     // Escape right after opening the panel: stop() runs while start() still awaits.

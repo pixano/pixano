@@ -14,6 +14,7 @@ import {
   listJobQuarantine,
   listJobs,
   openJobStream,
+  probeJobKinds,
   queueUnavailableReason,
   submitJob,
   type Job,
@@ -21,6 +22,9 @@ import {
   type JobKind,
   type QuarantinedItem,
 } from "$lib/api/jobsApi";
+
+/** The kind pixano-worker's embeddings job declares (`EmbeddingsKind.name`). */
+const EMBEDDINGS_KIND = "embeddings";
 
 /**
  * The jobs a user can see, kept current by one event stream.
@@ -44,7 +48,7 @@ class JobsStore {
    * Set when the server answers that it has no job queue: no PostgreSQL database configured,
    * pixano-worker never started on it, or the database out of reach. That lasts until someone
    * sets it up, so the panel says it in place of a form whose Run could only fail. Cleared by
-   * the next start that finds the queue.
+   * the next `start()` or `probe()` that finds the queue.
    */
   unavailable = $state<string | null>(null);
   /** True once the stream is carrying events. */
@@ -91,6 +95,37 @@ class JobsStore {
     if (this.#opening !== opening || this.unavailable !== null) return;
     this.#follow();
     await this.#loadServedModels();
+  }
+
+  /**
+   * Find out which kinds this installation's jobs can run, without following its jobs.
+   *
+   * For what shows outside the panel: the explorer offers its own embeddings computation only
+   * where the embeddings job cannot compute them (`offersEmbeddingsJob`). It reads the kinds, as
+   * `start()` does, into the same state, so the explorer and the panel never disagree. A panel
+   * open when the answer lands has asked the server itself, and follows what it heard: its
+   * answer stands. Nothing is logged: a missing queue is an expected answer here.
+   */
+  async probe(): Promise<void> {
+    let kinds: JobKind[];
+    try {
+      kinds = await probeJobKinds();
+    } catch (cause) {
+      if (this.#opening === null) this.#fail(cause);
+      return;
+    }
+    if (this.#opening !== null) return;
+    this.kinds = kinds;
+    this.unavailable = null;
+  }
+
+  /**
+   * Whether the embeddings job can be launched here: the server answered with its kinds, and a
+   * worker declared that one. False while nothing is known, on a queue no worker declared it on,
+   * and once the server answers that the queue is missing, which empties the kinds.
+   */
+  get offersEmbeddingsJob(): boolean {
+    return this.kinds.some((kind) => kind.name === EMBEDDINGS_KIND);
   }
 
   /**

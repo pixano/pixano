@@ -88,6 +88,13 @@ The embedding tools live in a popover next to the search bar:
   table, or a vector dimension that no longer matches the model). It drops the store and
   rebuilds it.
 
+These buttons embed one image per record. Where `pixano-worker` runs the **embeddings job**, they
+give way to it: the search bar shows a **Jobs** button in place of **Enable** or **Repair**, and
+the popover points to the explorer's **Jobs** panel. The job embeds every image of a record, so
+a record holding several images gets a vector for each; to rebuild the store, tick **Replace
+Existing Embeddings** in its form. Without a worker, the buttons stay, and a dataset with several
+images per record keeps a partial count.
+
 Pixano refuses to silently mix embedding spaces: if you point a dataset at a different model
 without forcing a recompute, the request is rejected with an explanation rather than producing
 meaningless neighbours.
