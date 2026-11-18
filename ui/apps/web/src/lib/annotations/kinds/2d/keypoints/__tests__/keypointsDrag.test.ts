@@ -20,8 +20,10 @@ import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHap
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
+  deferred,
   openManager,
   viewIdOf,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
@@ -250,15 +252,19 @@ describe("keypoints on the shared flatCoordsEditor2D, a drag still running when 
     );
   });
 
-  it("a point is not cut short by the save: it is saved once let go", async () => {
+  it("a point is not cut short by the save's read-back: it is saved once let go", async () => {
     const scene = await openOnCanvas(humanSkeleton("k2"));
-    // Something for the save to send.
+    // Something for the save to send, so that it reads the record back.
     editOtherSkeleton(scene);
     select(scene, "k1");
     const grabbed = grab(scene, vertexOf(scene, "k1", 0));
     grabbed.moveTo(10, 0);
+    const annotations = scene.manager.annotations;
 
     expect(await scene.manager.flushSave()).toBe(false);
+    // The rows read back were merged into the collection every widget holds,
+    // the skeleton being dragged left where the pointer has it.
+    expect(scene.manager.annotations).toBe(annotations);
     // A save ends by clearing the selection, and the widget syncs its scene then.
     scene.redraw();
     grabbed.moveTo(20, 0);
@@ -268,6 +274,40 @@ describe("keypoints on the shared flatCoordsEditor2D, a drag still running when 
     const expected = [0.3, 0.1, 0.3, 0.1, 0.2, 0.2, 0.2, 0.3];
     expectCoords(coordsOf(scene, "k1"), expected);
     expectCoords(queuedCoords(scene), expected);
+  });
+
+  it("keeps a read-back already on its way from landing over it", async () => {
+    const scene = await openOnCanvas(humanSkeleton("k2"));
+    editOtherSkeleton(scene);
+    const listing = deferred();
+    scene.backend.holdListings = listing.promise;
+    scene.backend.log.length = 0;
+    const saved = scene.manager.flushSave();
+    await vi.waitFor(() => expect(scene.backend.log).toContain(`list ${KEYPOINTS_RESOURCE}`));
+    const annotations = scene.manager.annotations;
+
+    const grabbed = grab(scene, groupOf(scene, "k1"));
+    grabbed.moveTo(10, 0);
+    listing.resolve();
+    expect(await saved).toBe(false);
+
+    expect(scene.manager.annotations).toBe(annotations);
+    scene.redraw();
+    grabbed.release();
+    expectCoords(coordsOf(scene, "k1"), FACE_MOVED_10);
+  });
+
+  it("holds Save & next on the record while it runs", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "k1");
+    const grabbed = grab(scene, vertexOf(scene, "k1", 1));
+    grabbed.moveTo(0, 10);
+
+    await scene.manager.review.saveAndNext(VIEWPORT);
+
+    expect(scene.manager.review.outcome).toEqual({ kind: "not-saved" });
+    grabbed.release();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
   });
 
   it("a skeleton dragged whole and let go right as the save ends is saved where it stood", async () => {

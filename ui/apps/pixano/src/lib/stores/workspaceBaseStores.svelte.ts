@@ -46,6 +46,12 @@ export const reviewModeIsActive = reactiveStore<boolean>(false);
 // The record "Save & next" is leaving: a decision taken on it while it saves and the next one
 // opens would land on a record being left (`canTakeReviewDecision`).
 export const reviewDecisionsLockedOn = reactiveStore<string | null>(null);
+// The annotation the review's keys act on, shown alone on the canvas (`isHiddenByReview`).
+export const reviewedAnnotation = reactiveStore<string | null>(null);
+// The record the review started on: its first annotation to review comes under review once a
+// record, as it opens in review with the Pan tool, whatever remounts the inspector meanwhile — a
+// shape's form, the record's loading.
+export const reviewStartedOnRecord = reactiveStore<string | null>(null);
 export const modelsUiStore = reactiveStore<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",

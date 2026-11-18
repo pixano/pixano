@@ -20,19 +20,20 @@ export interface UnsavedWorkSources {
 
 /**
  * How many items of the open record are unsaved — the one number every unsaved
- * counter shows, and the one `flushSave` reads: the record is all saved only
- * when it is zero.
+ * counter shows, and the one "Save & next" reads: the record is all saved only
+ * when it is zero, so the screen never says "0 unsaved" while the reviewer is
+ * kept on the record.
  *
- * - **An annotation counts once**, whatever it holds: an edit, a new entity
- *   and the update naming it, a draft not stored yet.
+ * - **An annotation counts once**, whatever it holds: a decision, an edit, a
+ *   new entity and the update naming it, a draft not stored yet.
  * - **A change that names no annotation** counts on its own.
  * - **An open entity form** counts once. A draft's form is its draft, already
  *   counted: a draft the queue holds no change for is one whose entity is still
  *   being chosen, its create queued only once the choice is made. Otherwise the
  *   form is a stored annotation's reassignment, which nothing else counts.
  * - **Each raised holder of staged work** counts once: what it holds — points
- *   before Enter, a box being resized — is in no change yet, and may concern an
- *   annotation already counted for another one.
+ *   before Enter, a box being resized, a box held in the 3D HUD — is in no
+ *   change yet, and may concern an annotation already counted for another one.
  */
 export function countUnsavedWork(sources: UnsavedWorkSources): number {
   const items = new Set<unknown>();
