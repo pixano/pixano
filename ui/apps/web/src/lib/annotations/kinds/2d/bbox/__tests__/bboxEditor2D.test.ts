@@ -22,6 +22,7 @@ import {
   modelBox,
   openManager,
   serveLikeTheApi,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
@@ -372,6 +373,19 @@ describe("bboxEditor2D, a handle dragged past the opposite edge", () => {
 });
 
 describe("bboxEditor2D, a resize still running when a save ends", () => {
+  it("holds Save & next on the record while it runs", async () => {
+    const scene = await openOnCanvas();
+    select(scene, "b1");
+    const grabbed = grabHandle(scene, "bottom-right");
+    grabbed.moveTo(10, 10);
+
+    await scene.manager.review.saveAndNext(VIEWPORT);
+
+    expect(scene.manager.review.outcome).toEqual({ kind: "not-saved" });
+    grabbed.release();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
+  });
+
   it("is not put back by the save: it is saved once the handle is let go", async () => {
     const scene = await openOnCanvas(BOX, OTHER_BOX);
     // Something for the save to send.
@@ -498,6 +512,18 @@ describe("bboxEditor2D, a drag still running when a save ends", () => {
     scene.redraw();
     grabbed.release();
     expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.2, 0.1, 0.2, 0.2]);
+  });
+
+  it("holds Save & next on the record while it runs", async () => {
+    const scene = await openOnCanvas();
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+
+    await scene.manager.review.saveAndNext(VIEWPORT);
+
+    expect(scene.manager.review.outcome).toEqual({ kind: "not-saved" });
+    grabbed.release();
+    expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
   });
 
   it("is saved where it stood when let go right as the save ends", async () => {

@@ -35,12 +35,12 @@ const MIN_BBOX_PIXELS = 1;
  *
  * A resize or a drag is work of its own until it ends: the new size or place
  * sits on the node, not in the collection. So the editor raises its staged-work
- * flag while one runs — the record counts it as one unsaved item, and Discard
- * or a delete pressed mid-gesture drops it — and stamps the node so that the
- * renderer's sync leaves it alone. A save's read-back may meanwhile take the
- * box's row into the collection, in place; the gesture commits onto that row,
- * by its id, when it ends. A resize also keeps hold of the box it began on,
- * whatever the selection does meanwhile.
+ * flag while one runs — the record counts it as one unsaved item, "Save & next"
+ * stays on the record, and Discard or a delete pressed mid-gesture drops it —
+ * and stamps the node so that the renderer's sync leaves it alone. A save's
+ * read-back may meanwhile take the box's row into the collection, in place;
+ * the gesture commits onto that row, by its id, when it ends. A resize also
+ * keeps hold of the box it began on, whatever the selection does meanwhile.
  *
  * A box is committed inside the image, which the server requires: dragged past
  * an edge, it stops against it, whole; resized past one, it is cut at it

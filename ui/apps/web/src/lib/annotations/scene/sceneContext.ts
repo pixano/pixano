@@ -89,6 +89,15 @@ export interface MutationSink {
    * pending geometry update, which a reassignment has no business undoing.
    */
   dropPendingEntityCreate(localAnnotationId: string): void;
+  /**
+   * True while the workspace takes no review decision: "Save & next" is saving
+   * and moving to another record, and a decision would land on the record the
+   * reviewer is being taken away from. The one lock every decision path reads —
+   * the shared helpers (`canAccept`, `commitAccept`, `deleteGestureFor`)
+   * consult it, so no control has to. Absent on a sink that never takes part in
+   * "Save & next", which reads as unlocked.
+   */
+  readonly decisionsLocked?: boolean;
 }
 
 /**
@@ -165,8 +174,9 @@ export interface SceneContextBase {
  * person has begun and not confirmed yet: a polygon's points before Enter,
  * mask strokes, keypoints partly placed, a box being drawn or resized, a shape
  * being dragged, the 3D box HUD's "Apply this 3D box?" holding a moved box. While
- * any flag is raised, the workspace reads the record as not all saved, and
- * Discard has work to drop. Each raised flag counts as one unsaved item
+ * any flag is raised, the workspace reads the record as not all saved, so "Save
+ * & next" stays on it instead of dropping the work with the record, and Discard
+ * has work to drop. Each raised flag counts as one unsaved item
  * (`countUnsavedWork`, `workspace/unsavedWork.ts`).
  *
  * Several pieces of one widget can hold work at once — a tool and an editor —

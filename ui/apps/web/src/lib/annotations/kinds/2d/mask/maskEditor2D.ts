@@ -28,11 +28,11 @@ import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/scen
  *
  * A drag is work of its own until it ends: the new place sits on the node, not
  * in the collection. So the editor raises its staged-work flag while one runs —
- * the record counts it as one unsaved item, and Discard or a delete pressed
- * mid-drag drops it — and stamps the node (`MASK_DRAGGING_ATTR`) so that the
- * renderer's sync leaves it alone. A save's read-back may meanwhile take the
- * mask's row into the collection, in place; the drag commits onto that row, by
- * its id, when it ends.
+ * the record counts it as one unsaved item, "Save & next" stays on the record,
+ * and Discard or a delete pressed mid-drag drops it — and stamps the node
+ * (`MASK_DRAGGING_ATTR`) so that the renderer's sync leaves it alone. A save's
+ * read-back may meanwhile take the mask's row into the collection, in place;
+ * the drag commits onto that row, by its id, when it ends.
  *
  * Like the other editors it never creates nodes (the renderer owns those, D4)
  * and listens at the **layer**, namespaced so `destroy()` removes exactly its
