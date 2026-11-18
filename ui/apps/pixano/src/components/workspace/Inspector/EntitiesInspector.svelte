@@ -11,6 +11,7 @@ License: CECILL-C
   import { untrack } from "svelte";
 
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
+  import ReviewBar from "../Review/ReviewBar.svelte";
   import EntitiesSection from "./EntitiesSection.svelte";
   import EntityCard from "./EntityCard.svelte";
   import {
@@ -31,6 +32,7 @@ License: CECILL-C
     itemMetas,
     mediaViews,
     preAnnotationIsActive,
+    reviewModeIsActive,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { ToolType } from "$lib/tools";
@@ -41,6 +43,8 @@ License: CECILL-C
     getTopEntity,
     sortEntities,
   } from "$lib/utils/entityLookupUtils";
+  import { acceptAnnotations, canTakeReviewDecision } from "$lib/utils/reviewActions";
+  import { isReviewedHere, pendingReviewOf, shownPendingReviewOf } from "$lib/utils/reviewStatus";
 
   let filteredEntities = $state<Entity[]>([]);
   let hasAppliedAdvancedFilter = $state(false);
@@ -48,6 +52,15 @@ License: CECILL-C
   let wasVisibilityFilterActive = $state(false);
 
   const globalSourceLabel = { name: "All", kind: "global" };
+
+  // ─── Review of the record ───────────────────────────────────────────────────
+  const recordHasReview = $derived(annotations.value.some(isReviewedHere));
+  const pendingOnRecord = $derived(pendingReviewOf(annotations.value));
+  const shownPendingOnRecord = $derived(shownPendingReviewOf(annotations.value));
+
+  function setReviewMode(active: boolean): void {
+    reviewModeIsActive.value = active;
+  }
 
   const parsedSearchQuery = $derived.by(() => parseSearchQuery(searchQuery));
   const hasSearchQuery = $derived.by(() => !isSearchQueryEmpty(parsedSearchQuery));
@@ -328,6 +341,20 @@ License: CECILL-C
 <div class="flex flex-col h-full bg-card overflow-hidden">
   <div class="shrink-0 p-3 pb-2 space-y-3 border-b border-border/40 bg-card/95">
     <PreAnnotation />
+
+    <!-- The old pre-annotation mode replaces the list of objects: no review meanwhile. -->
+    {#if !preAnnotationIsActive.value}
+      {#if reviewModeIsActive.value || recordHasReview}
+        <ReviewBar
+          active={reviewModeIsActive.value}
+          pendingCount={pendingOnRecord.length}
+          shownPendingCount={shownPendingOnRecord.length}
+          canDecide={canTakeReviewDecision()}
+          onActiveChange={setReviewMode}
+          onAcceptAll={() => acceptAnnotations(shownPendingOnRecord)}
+        />
+      {/if}
+    {/if}
 
     <!-- Preview Area -->
     <div>

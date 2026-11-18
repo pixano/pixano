@@ -83,10 +83,14 @@ class Chunk(BaseModel):
     Attributes:
         payload: What the kind will have to process. Opaque to the engine.
         task_count: Number of tasks, for progress.
+        weight: What the chunk weighs against a chunk of one inference call, which the worker's
+            time limit is set for: the chunk may run that many times the limit. A chunk that
+            sends several calls one after the other weighs their number.
     """
 
     payload: dict[str, Any]
     task_count: int
+    weight: float = Field(default=1.0, gt=0)
 
 
 class TransientError(Exception):
@@ -240,7 +244,8 @@ class JobKind(ABC, Generic[ParamsT]):
         when every other chunk is done: claimed by any worker, under a lease, with the chunk
         time limit, cancelled with the job, retried after a transient failure. It never runs
         when a chunk failed or the job was cancelled; a retry that brings the failed chunks
-        through runs it then. The job reads `done` only once it has run. A kind that does not
+        through runs it then, and the worker's recovery pass runs it for a retried job that had
+        nothing left to reopen. The job reads `done` only once it has run. A kind that does not
         override this method has no final chunk.
 
         It runs in a thread, under the runner's per-dataset write lock, as a chunk's `write`
@@ -310,8 +315,12 @@ class JobKind(ABC, Generic[ParamsT]):
         """Write the result, idempotently.
 
         The kind does not know how to open a dataset: it receives a writer, which is the
-        system's single point of writing. This is what will make it possible, later, to
-        serialise a dataset's writes across several workers without touching a single job kind.
+        system's single point of writing, and reads through it only. A kind may read, decide,
+        then write here — which objects carry a person's work, what a previous run left — and
+        those reads belong to the same serialisation as the write: the runner holds its
+        per-dataset write lock around the whole call. A writer role that serialises whole
+        `write` calls across workers, as the runner does within one, will need no change to a
+        single job kind (backend-processing §20).
 
         Args:
             writer: Where to write through, already bound to the dataset and the job.

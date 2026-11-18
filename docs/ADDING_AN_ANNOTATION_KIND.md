@@ -18,7 +18,7 @@ for the rules.
 - **Never hand-build mutations.** Use the helpers of `payloadBuilders.ts` — they own
   the draft→queue→persist lifecycle for every kind: `commitNewAnnotation` /
   `commitGeometryEdit` to create and edit, `deleteLocalAnnotation` to delete — a
-  model's annotation as well, which is its reject.
+  model's annotation as well, which is its reject —, `commitAccept` to accept.
 - **Never hand-build the `LocalAnnotation` envelope.** A seed loader wraps each row
   with `persistedAnnotation` (`persistedAnnotation.ts`), which reads its provenance
   and review status. A hand-built one loads a model's rows as a person's: no status,

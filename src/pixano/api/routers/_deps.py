@@ -47,8 +47,11 @@ def get_dataset_dep(
         The dataset.
     """
     cache_key = f"{dataset_id}:{settings.library_dir}"
-    if cache_key in _dataset_cache:
-        return _dataset_cache[cache_key]
+    cached = _dataset_cache.get(cache_key)
+    # A worker changes a dataset from another process, which no invalidation hook reaches: a job
+    # gives the entities a new field while this one is open. Reopened then.
+    if cached is not None and not cached.is_stale():
+        return cached
     try:
         dataset = Dataset.find(dataset_id, settings.library_dir)
     except FileNotFoundError:
@@ -60,18 +63,22 @@ def get_dataset_dep(
     return dataset
 
 
+# The largest offset the query engines take, 64-bit: past it, a query fails rather than skip.
+MAX_OFFSET = 2**63 - 1
+
+
 class PaginationParams:
     """Pagination query parameters.
 
     Attributes:
         limit: Maximum resources per page (1-1000, default 100).
-        offset: Number of resources to skip (default 0).
+        offset: Number of resources to skip (default 0, at most `MAX_OFFSET`).
     """
 
     def __init__(
         self,
         limit: Annotated[int, Query(ge=1, le=1000)] = 100,
-        offset: Annotated[int, Query(ge=0)] = 0,
+        offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
     ):
         self.limit = limit
         self.offset = offset

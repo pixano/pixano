@@ -74,6 +74,7 @@ class JobRecord:
     quarantined: int = 0
     cancel_requested: bool = False
     error: dict[str, Any] | None = None
+    finalizing: bool = False
 
     @classmethod
     def from_row(cls, row: Sequence[Any]) -> "JobRecord":
@@ -91,6 +92,7 @@ class JobRecord:
             quarantined=row[9],
             cancel_requested=row[10],
             error=row[11],
+            finalizing=row[12],
         )
 
 
@@ -258,6 +260,9 @@ def retry(conn: psycopg.Connection, job_id: str) -> JobRecord:
         reopened = conn.execute(queries.RETRY_JOB, (job.id,)).fetchone()
         if reopened is None:
             raise JobNotRetryableError(f"job {job.id} is {job.state}, only a job in error or cancelled can be retried")
-        payload = {"state": reopened[0], "cancel_requested": False}
+        # A retry that reopened the closing step alone resumes a finalizing job: said, so that an
+        # interface following the stream shows what a reload would.
+        finalizing = get(conn, job.id).finalizing
+        payload = {"state": reopened[0], "cancel_requested": False, **({"finalizing": True} if finalizing else {})}
         conn.execute(queries.RECORD_EVENT, (job.id, "state", Jsonb(payload), queries.NOTIFY_CHANNEL))
     return get(conn, job_id)

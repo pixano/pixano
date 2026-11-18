@@ -18,6 +18,7 @@ from .relation import Relation, create_relation, is_relation
 from .review import (
     NOT_REVIEWED_STATUSES,
     is_reviewable_annotation,
+    is_reviewable_view,
     model_score_alignment,
     model_score_fields,
     review_status_of,
@@ -61,6 +62,7 @@ __all__ = [
     "is_multi_path",
     "is_relation",
     "is_reviewable_annotation",
+    "is_reviewable_view",
     "model_score_alignment",
     "model_score_fields",
     "review_status_of",
