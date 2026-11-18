@@ -166,7 +166,7 @@ def test_remote_dataset_does_not_use_local_stat_or_lock_paths(mocker):
     mocker.patch.object(DatasetInfo, "from_json", return_value=DatasetInfo(id="remote", record=Record))
     mocker.patch.object(DatasetFeaturesValues, "from_json", return_value=DatasetFeaturesValues())
     mocker.patch.object(Dataset, "_connect")
-    mocker.patch.object(Dataset, "_load_record_embedding_space")
+    mocker.patch.object(Dataset, "_load_record_embedding_spaces")
     dataset = Dataset(path)
     with dataset_mutation_lock(path), dataset.write_lock():
         mark_dataset_mutated(path)

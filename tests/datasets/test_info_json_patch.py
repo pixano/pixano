@@ -109,7 +109,7 @@ class TestStorageMigrationPatch:
         )
         mocker.patch.object(DatasetFeaturesValues, "from_json", return_value=DatasetFeaturesValues())
         mocker.patch.object(Dataset, "_connect")
-        mocker.patch.object(Dataset, "_load_record_embedding_space")
+        mocker.patch.object(Dataset, "_load_record_embedding_spaces")
 
         dataset = Dataset(S3Path("/bucket/dataset"))
 

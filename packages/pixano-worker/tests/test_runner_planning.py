@@ -26,7 +26,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractContextManager, asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pixano_worker import queue, runner
