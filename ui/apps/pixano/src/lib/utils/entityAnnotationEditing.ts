@@ -4,12 +4,14 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { MODEL_SOURCE_TYPE } from "$lib/constants/reviewConstants";
 import { annotations, clearTrackEditing, newShape } from "$lib/stores/workspaceStores.svelte";
 import { Annotation, WorkspaceType } from "$lib/types/dataset";
 import { ShapeType, type EditShape, type Shape } from "$lib/types/shapeTypes";
 import { applyPixanoSourceFields, getTopEntity } from "$lib/utils/entityLookupUtils";
 import { applyEditedShapeDataToAnnotation } from "$lib/utils/entityOperations";
 import { highlightEntity } from "$lib/utils/highlightOperations";
+import { selectForReview } from "$lib/utils/reviewKeyboard";
 import { saveTo } from "$lib/utils/saveItemUtils";
 
 type SelectionShape = {
@@ -28,14 +30,16 @@ export const tryHighlightSelectionShape = (
     shape.status === "editing" && shape.type === ShapeType.none && shape.highlighted === "self";
   if (!isSelectionOnlyHighlight) return false;
 
+  const selectedAnnotation = shape.shapeId
+    ? objects.find((ann) => ann.id === shape.shapeId)
+    : undefined;
   let targetEntityId = shape.top_entity_id ?? "";
-  if (!targetEntityId && shape.shapeId) {
-    const selectedAnnotation = objects.find((ann) => ann.id === shape.shapeId);
-    if (selectedAnnotation) {
-      targetEntityId = getTopEntity(selectedAnnotation).id;
-    }
+  if (!targetEntityId && selectedAnnotation) {
+    targetEntityId = getTopEntity(selectedAnnotation).id;
   }
   if (targetEntityId) {
+    // In review, the shape selected is the one to review, before its entity is focused.
+    if (selectedAnnotation) selectForReview(selectedAnnotation);
     highlightEntity(targetEntityId, false);
   }
   return true;
@@ -102,7 +106,9 @@ export const updateExistingAnnotation = (objects: Annotation[], shape: EditShape
       return ann;
     }
 
-    applyPixanoSourceFields(ann);
+    // A model's row keeps its source: the server keeps it through a person's edit, which accepts
+    // the row (`_as_human_edit_of` in src/pixano/api/service.py), and the review reads it.
+    if (ann.data.source_type !== MODEL_SOURCE_TYPE) applyPixanoSourceFields(ann);
     saveTo("update", ann);
     return ann;
   });

@@ -22,15 +22,20 @@ from pixano.schemas import (
     Embedding,
     Entity,
     EntityDynamicState,
+    EntityStatistics,
     KeyPoints,
     Message,
     MultiPath,
     Record,
+    RecordStatistics,
     Relation,
+    SchemaGroup,
     TextSpan,
     TimeSeries,
     Tracklet,
+    is_statistics,
 )
+from pixano.statistics.computed import ComputedStatistic
 
 
 T = TypeVar("T")
@@ -141,6 +146,10 @@ class PreviewDescriptor(ResponseModel):
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
+    # The values of the columns the dataset computed per record — its statistics —, by the name the
+    # explorer's catalogue gives them, `record_statistics.<name>` (backend-processing §22.5). Named
+    # apart from a record's own fields.
+    computed_values: dict[str, int | float | None] | None = None
 
 
 class ColumnDescriptorResponse(ResponseModel):
@@ -157,6 +166,9 @@ class ColumnDescriptorResponse(ResponseModel):
     operators: list[str]
     values: list[str] | None = None
     values_complete: bool = True
+    table: str = SchemaGroup.RECORD.value
+    label: str | None = None
+    unit: str | None = None
 
 
 class EmbeddingSpaceStatus(ResponseModel):
@@ -509,9 +521,16 @@ TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
 
 
 class DatasetInfoResponse(DatasetInfo):
-    """Dataset info plus the number of records."""
+    """Dataset info plus the number of records.
+
+    The statistics are left out: their tables are no table a client reads rows of, and what the
+    dataset computed is answered apart (`GET /datasets/{id}/statistics`, backend-processing §22.3).
+    """
 
     num_records: int
+    record_statistics: type[RecordStatistics] | None = Field(default=None, exclude=True)
+    entity_statistics: type[EntityStatistics] | None = Field(default=None, exclude=True)
+    statistics: list[ComputedStatistic] = Field(default_factory=list, exclude=True)
 
     @field_serializer(
         "record",
@@ -560,13 +579,18 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
-        """Build a full dataset response from a Dataset instance, its embeddings tables left out.
+        """Build a full dataset response from a Dataset instance, its statistics and embeddings tables left out.
 
         A search reads a model's embeddings, through `embeddings.json`, and no client reads the rows of
         their tables; nor does a client tell such a table, which bears no schema of its own, from a view's.
+        Nor does a client read rows of statistics, which are columns of the records.
         """
         embeddings = {space["table"] for space in dataset.record_embedding_spaces()}
-        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items() if name not in embeddings}
+        tables = {
+            name: schema.__name__
+            for name, schema in dataset.info.tables.items()
+            if name not in embeddings and not is_statistics(schema)
+        }
         return cls(
             id=dataset.info.id,
             path=dataset.path,

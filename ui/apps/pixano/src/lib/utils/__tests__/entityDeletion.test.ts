@@ -22,9 +22,14 @@ import {
   type Entity,
   type Tracklet,
 } from "$lib/types/dataset";
+import { deleteEntity } from "$lib/utils/entityDeletion";
 import { OVERLAPIDS_SEPARATOR, relink } from "$lib/utils/entityRelink";
 import { commitLoadedWorkspace } from "$lib/utils/workspaceRuntimeMutations";
 import { buildWorkspaceManifest } from "$lib/workspace/manifest";
+
+// The workspace's gestures that delete or move what it shows — a delete, a relink — replayed
+// through the real stores: what each queues for the next save, and what the next load shows once
+// it is saved.
 
 const DATASET_ID = "ds";
 const RECORD_ID = "record-1";
@@ -132,6 +137,8 @@ const shownAnnotation = (id: string): Annotation => {
   return annotation;
 };
 
+const shownAnnotationIds = (): string[] => annotations.value.map((annotation) => annotation.id);
+
 const shownTrack = (id: string): Tracklet => {
   const track = shownAnnotation(id);
   if (!track.is_type(BaseSchema.Tracklet)) throw new Error(`${id} is not a track.`);
@@ -200,8 +207,15 @@ const DRAWN_BY_A_PERSON = {
   source_name: "Pixano",
   source_metadata: "{}",
 };
+const PROPOSED_BY_A_MODEL = {
+  source_type: "model",
+  source_name: "detection",
+  source_metadata: "{}",
+  review_status: "pending",
+};
+const ACCEPTED_FROM_A_MODEL = { ...PROPOSED_BY_A_MODEL, review_status: "accepted" };
 
-/** A detection dataset's schema: one entity table and one box table. */
+/** A detection dataset's schema: an entity table, a box table and a track table. */
 function detectionManifest(workspaceType: WorkspaceType) {
   const dataset: DatasetResponse = {
     id: DATASET_ID,
@@ -293,11 +307,62 @@ describe("a relink that merges a person's tracks", () => {
     saveQueued();
     await openRecord(WorkspaceType.VIDEO);
     expect(storedIds("tracklets")).toEqual(["track-car-early"]);
+    expect(datasetRows.bboxes.map((row) => [row.id, row.tracklet_id])).toEqual([
+      ["box-car-0", "track-car-early"],
+      ["box-car-1", "track-car-early"],
+      ["box-car-3", "track-car-early"],
+      ["box-car-4", "track-car-early"],
+      ["box-truck-2", "track-car-early"],
+    ]);
     expect(shownEntityIds()).toEqual(["car"]);
     expect(shownSpan("track-car-early")).toEqual({
       start: 0,
       end: 4,
       boxes: ["box-car-0", "box-car-1", "box-truck-2", "box-car-3", "box-car-4"],
     });
+  });
+});
+
+describe("a model's annotation", () => {
+  // Outside the review mode, the workspace shows a model's annotations as it shows a person's,
+  // and its Delete deletes them alike. On a model's annotation, that delete is the reject: a
+  // rejected annotation leaves no row in the dataset.
+  beforeEach(() => {
+    // A model found a car and a truck. A person accepted the truck, and drew a second box of it.
+    datasetRows = {
+      entities: [entityRow("car"), entityRow("truck")],
+      bboxes: [
+        boxRow("box-pending", "car", PROPOSED_BY_A_MODEL),
+        boxRow("box-accepted", "truck", ACCEPTED_FROM_A_MODEL),
+        boxRow("box-drawn", "truck", DRAWN_BY_A_PERSON),
+      ],
+    };
+  });
+
+  it("is shown whatever its review status, beside a person's", async () => {
+    await openRecord(WorkspaceType.IMAGE);
+
+    expect(shownEntityIds()).toEqual(["car", "truck"]);
+    expect(shownAnnotationIds()).toEqual(["box-pending", "box-accepted", "box-drawn"]);
+  });
+
+  it("is deleted, pending or accepted, with its object when nothing else names it", async () => {
+    await openRecord(WorkspaceType.IMAGE);
+
+    deleteEntity(shownEntity("car"), shownAnnotation("box-pending"));
+    deleteEntity(shownEntity("truck"), shownAnnotation("box-accepted"));
+
+    expect(queued()).toEqual([
+      "delete bboxes/box-accepted",
+      "delete bboxes/box-pending",
+      "delete entities/car",
+    ]);
+
+    saveQueued();
+    await openRecord(WorkspaceType.IMAGE);
+    expect(storedIds("bboxes")).toEqual(["box-drawn"]);
+    expect(storedIds("entities")).toEqual(["truck"]);
+    expect(shownEntityIds()).toEqual(["truck"]);
+    expect(shownAnnotationIds()).toEqual(["box-drawn"]);
   });
 });

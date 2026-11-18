@@ -22,6 +22,7 @@ from typing import Any, BinaryIO, Callable, Iterator, Sequence
 from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
 
 from .media import MediaResolver, ResolvedMedia
+from .progress import ChunkProgress
 from .writer import DatasetReadSource
 
 
@@ -40,13 +41,22 @@ class JobReader:
 
     Attributes:
         media: How to designate a media for the inference.
+        progress: The running chunk's progress: a long chunk says here how far it got, and stops
+            between two of its steps when its job was cancelled. Planning has no chunk: its
+            progress counts nothing.
     """
 
-    def __init__(self, open_dataset: Callable[[], DatasetReadSource], media: MediaResolver) -> None:
-        """Bind a reader to a dataset and to the way its media are resolved."""
+    def __init__(
+        self,
+        open_dataset: Callable[[], DatasetReadSource],
+        media: MediaResolver,
+        progress: ChunkProgress | None = None,
+    ) -> None:
+        """Bind a reader to a dataset, to the way its media are resolved, and to a running chunk."""
         self._open_dataset = open_dataset
         self._dataset: DatasetReadSource | None = None
         self.media = media
+        self.progress = progress if progress is not None else ChunkProgress(0)
 
     @property
     def dataset(self) -> DatasetReadSource:
