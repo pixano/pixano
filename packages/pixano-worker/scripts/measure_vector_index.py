@@ -97,8 +97,8 @@ def filled_table(root: Path, vectors: np.ndarray) -> Any:
     dataset = Dataset.create(
         root / f"index-{rows}", DatasetInfo(id=f"index-{rows}", name="Vector index", record=Record)
     )
-    dataset.create_record_embedding_table(dim=DIMENSION, model_id="synthetic")
-    table = dataset.open_table("embeddings")
+    space = dataset.create_record_embedding_table(dim=DIMENSION, model_id="synthetic")
+    table = dataset.open_table(space["table"])
     for start in range(0, rows, FILL_BATCH):
         table.add(
             [

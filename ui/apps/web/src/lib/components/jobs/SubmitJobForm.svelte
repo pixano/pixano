@@ -5,23 +5,30 @@ License: CECILL-C
 -------------------------------------->
 
 <script lang="ts">
+  import { untrack } from "svelte";
+
   import SchemaField from "./SchemaField.svelte";
   import {
     confirmationsFor,
     initialValues,
     missingRequired,
+    modelTaskOf,
+    proposeModels,
     requiredNames,
     toParams,
+    type ServedModels,
   } from "./schemaForm";
   import type { JobKind, JobTarget } from "$lib/api/jobs";
 
   type Props = {
     kinds: JobKind[];
     dataset: JobTarget | null;
+    /** The models the inference serves, by task, for the model fields to offer. */
+    servedModels: ServedModels;
     onSubmit: (kind: string, params: Record<string, unknown>) => Promise<boolean>;
   };
 
-  let { kinds, dataset, onSubmit }: Props = $props();
+  let { kinds, dataset, servedModels, onSubmit }: Props = $props();
 
   let selectedName = $state("");
   let values = $state<Record<string, unknown>>({});
@@ -49,8 +56,27 @@ License: CECILL-C
   // the same, and a stale one would be refused by the schema it does not belong to.
   $effect(() => {
     const schema = selected?.params_schema;
-    values = schema ? initialValues(schema) : {};
+    values = schema
+      ? proposeModels(
+          schema,
+          initialValues(schema),
+          untrack(() => servedModels),
+        )
+      : {};
     confirming = false;
+  });
+
+  // The served models arrive after the form is drawn: fill the model fields still empty then,
+  // without touching one the user already set.
+  $effect(() => {
+    const schema = untrack(() => selected?.params_schema);
+    const served = servedModels;
+    if (schema)
+      values = proposeModels(
+        schema,
+        untrack(() => values),
+        served,
+      );
   });
 
   async function handleSubmit(event: SubmitEvent) {
@@ -64,7 +90,12 @@ License: CECILL-C
     submitting = true;
     const accepted = await onSubmit(selected.name, toParams(selected.params_schema, values));
     submitting = false;
-    if (accepted) values = initialValues(selected.params_schema);
+    if (accepted)
+      values = proposeModels(
+        selected.params_schema,
+        initialValues(selected.params_schema),
+        servedModels,
+      );
   }
 </script>
 
@@ -103,6 +134,7 @@ License: CECILL-C
       {schema}
       required={required.has(name)}
       value={values[name]}
+      models={servedModels[modelTaskOf(schema) ?? ""]}
       onChange={(value: unknown) => {
         values = { ...values, [name]: value };
         confirming = false;

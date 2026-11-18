@@ -19,6 +19,12 @@ from pixano.statistics.definitions import StatisticLevel
 from tests.datasets.io._toy_importer import ToyImporter
 
 
+# How many tables LanceDB's `table_names()` lists unless told otherwise.
+LISTING_PAGE = 10
+# The vectors' dimension of the embeddings models a test gives a dataset: any, they hold none.
+EMBEDDING_DIM = 4
+
+
 def _spec(name: str, mode: str = "create", namespace: str = "") -> ImportSpec:
     payload: dict = {"dataset": {"name": name, "workspace": "image"}, "mode": mode}
     if namespace:
@@ -56,6 +62,27 @@ class TestRollback:
         assert removed == {}  # fast path: version restore
         assert _counts(Dataset(result.dataset_path)) == before
         assert not (result.dataset_path / "imports" / "addjob.manifest.json").exists()
+
+    def test_rollback_of_a_dataset_of_more_tables_than_a_listing_page(self, base_dataset):
+        """LanceDB lists ten tables unless told otherwise; a dataset of more must still roll back."""
+        tmp_path, _ = base_dataset
+        dataset = Dataset(tmp_path / "data" / "library" / "ds")
+        # A table per embeddings model, until the dataset holds more tables than a listing page.
+        for model in range(LISTING_PAGE + 1 - len(dataset.info.tables)):
+            dataset.ensure_record_embedding_space(f"model-{model}", "", dim=EMBEDDING_DIM)
+        before = _counts(Dataset(dataset.path))
+        assert len(before) > LISTING_PAGE
+        result = import_dataset(
+            tmp_path / "src2",
+            tmp_path / "data",
+            _spec("ds", mode="add", namespace="added"),
+            importer=ToyImporter(num_records=7),
+            job_id="addjob",
+        )
+
+        ImportEngine(tmp_path / "data").rollback(result.dataset_path, "addjob")
+
+        assert _counts(Dataset(result.dataset_path)) == before
 
     def test_rollback_after_concurrent_edit_refuses_without_changes(self, base_dataset):
         tmp_path, before = base_dataset
