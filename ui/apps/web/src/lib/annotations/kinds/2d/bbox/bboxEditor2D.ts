@@ -37,8 +37,9 @@ const MIN_BBOX_PIXELS = 1;
  * sits on the node, not in the collection. So the editor raises its staged-work
  * flag while one runs — the record counts it as one unsaved item, and Discard
  * or a delete pressed mid-gesture drops it — and stamps the node so that the
- * renderer's sync leaves it alone. The gesture commits onto the box's row, by
- * its id, when it ends. A resize also keeps hold of the box it began on,
+ * renderer's sync leaves it alone. A save's read-back may meanwhile take the
+ * box's row into the collection, in place; the gesture commits onto that row,
+ * by its id, when it ends. A resize also keeps hold of the box it began on,
  * whatever the selection does meanwhile.
  *
  * A box is committed inside the image, which the server requires: dragged past

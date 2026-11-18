@@ -40,6 +40,7 @@ License: CECILL-C
     editedTrackletId,
     interpolate,
     mediaViews,
+    reviewedAnnotation,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { ToolType } from "$lib/tools";
@@ -139,6 +140,8 @@ License: CECILL-C
     void annotations.value;
     return reviewSummaryOf([child]);
   });
+  // The annotation the review's keys act on, the one shown alone on the canvas.
+  const isUnderReview = $derived(reviewedAnnotation.value === child.id);
 
   const isMultiView = Object.keys(mediaViews.value).length > 1;
 
@@ -296,7 +299,10 @@ License: CECILL-C
 <!-- CHILD ANNOTATION CARD                                                      -->
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
 <div
-  class="rounded-lg border border-border/40 bg-background/60 overflow-hidden transition-all duration-200 hover:border-border/70 hover:shadow-sm group/child"
+  class={cn(
+    "rounded-lg border border-border/40 bg-background/60 overflow-hidden transition-all duration-200 hover:border-border/70 hover:shadow-sm group/child",
+    { "ring-2 ring-primary/60": isUnderReview },
+  )}
 >
   <!-- ─── Header row: type icon + label + view_name + actions ──────────────── -->
   <div class="flex items-center justify-between px-2 py-1.5 gap-1">

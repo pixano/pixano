@@ -17,6 +17,7 @@ import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHap
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
 import {
+  deferred,
   humanBox,
   modelBox,
   openManager,
@@ -455,14 +456,18 @@ describe("bboxEditor2D, a drag still running when a save ends", () => {
     expect(scene.manager.pendingMutations.map((m) => m.op)).toEqual(["update"]);
   });
 
-  it("is not put back by the save: it is saved once let go", async () => {
+  it("is not put back by the save's read-back: it is saved once let go", async () => {
     const scene = await openOnCanvas(BOX, OTHER_BOX);
-    // Something for the save to send.
+    // Something for the save to send, so that it reads the record back.
     editOtherBox(scene);
     const grabbed = grab(scene, rectOf(scene, "b1"));
     grabbed.moveTo(10, 0);
+    const annotations = scene.manager.annotations;
 
     expect(await scene.manager.flushSave()).toBe(false);
+    // The rows read back were merged into the collection every widget holds,
+    // the box being dragged left where the pointer has it.
+    expect(scene.manager.annotations).toBe(annotations);
     // A save ends by clearing the selection, and the widget syncs its scene then.
     scene.redraw();
     expect(rectOf(scene, "b1").x()).toBeCloseTo(20, COORDS_DIGITS);
@@ -472,6 +477,27 @@ describe("bboxEditor2D, a drag still running when a save ends", () => {
     expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.3, 0.1, 0.2, 0.2]);
     const update = scene.manager.pendingMutations.find((m) => m.op === "update");
     expectCoords(update?.op === "update" ? update.body.coords : undefined, [0.3, 0.1, 0.2, 0.2]);
+  });
+
+  it("keeps a read-back already on its way from landing over it", async () => {
+    const scene = await openOnCanvas(BOX, OTHER_BOX);
+    editOtherBox(scene);
+    const listing = deferred();
+    scene.backend.holdListings = listing.promise;
+    scene.backend.log.length = 0;
+    const saved = scene.manager.flushSave();
+    await vi.waitFor(() => expect(scene.backend.log).toContain(`list ${BBOX_RESOURCE}`));
+    const annotations = scene.manager.annotations;
+
+    const grabbed = grab(scene, rectOf(scene, "b1"));
+    grabbed.moveTo(10, 0);
+    listing.resolve();
+    expect(await saved).toBe(false);
+
+    expect(scene.manager.annotations).toBe(annotations);
+    scene.redraw();
+    grabbed.release();
+    expectCoords(scene.ctx.collection.find("b1")?.geometry, [0.2, 0.1, 0.2, 0.2]);
   });
 
   it("is saved where it stood when let go right as the save ends", async () => {
