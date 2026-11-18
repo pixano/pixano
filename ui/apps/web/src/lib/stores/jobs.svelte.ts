@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { listInferenceModels } from "$lib/api/inference";
 import {
   cancelJob,
   isTerminal,
@@ -18,6 +19,7 @@ import {
   type JobKind,
   type QuarantinedItem,
 } from "$lib/api/jobs";
+import { modelTasks, type ServedModels } from "$lib/components/jobs/schemaForm";
 
 /**
  * The jobs a user can see, kept current by one event stream.
@@ -30,6 +32,8 @@ import {
 class JobsStore {
   jobs = $state<Job[]>([]);
   kinds = $state<JobKind[]>([]);
+  /** The models the inference serves, by task, for the kinds that run one. */
+  servedModels = $state<ServedModels>({});
   loading = $state(false);
   /** What went wrong last, for the panel to show. Null when all is well. */
   error = $state<string | null>(null);
@@ -82,9 +86,26 @@ class JobsStore {
       if (this.#opening === opening || this.#opening === null) this.loading = false;
     }
     // Stopped while the lists loaded, or superseded by a later start that follows in its place.
-    // Without a queue, there is nothing to follow.
+    // Without a queue, there is nothing to follow and no model to ask about.
     if (this.#opening !== opening || this.unavailable !== null) return;
     this.#follow();
+    await this.#loadServedModels();
+  }
+
+  /**
+   * Ask the inference which models it serves for each task the kinds need.
+   *
+   * A task it cannot answer for is left out: its field is then typed, and the worker, which
+   * asks its own inference, refuses a wrong name with the models it does serve.
+   */
+  async #loadServedModels(): Promise<void> {
+    const tasks = modelTasks(this.kinds.map((kind) => kind.params_schema));
+    const answers = await Promise.all(tasks.map((task) => servedNames(task)));
+    const served: ServedModels = {};
+    tasks.forEach((task, index) => {
+      if (answers[index].length > 0) served[task] = answers[index];
+    });
+    this.servedModels = served;
   }
 
   /** Stop following, including a `start()` still loading. Safe to call twice. */
@@ -244,6 +265,15 @@ class JobsStore {
 function describe(cause: unknown): string {
   if (cause instanceof Error) return cause.message;
   return String(cause);
+}
+
+/** The names of the models served for a task; none when the inference cannot say. */
+async function servedNames(task: string): Promise<string[]> {
+  try {
+    return (await listInferenceModels(task)).map((model) => model.name);
+  } catch {
+    return [];
+  }
 }
 
 /** How far along a job is, between 0 and 1. Zero total means nothing to show yet. */
