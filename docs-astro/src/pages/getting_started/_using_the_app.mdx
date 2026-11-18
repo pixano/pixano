@@ -88,20 +88,22 @@ records hold some, and opens the first of them in review — see
 
 On a dataset of texts, the `ner` job proposes the named entities a model recognizes in them —
 people, places, organizations. Open the dataset's **Jobs** tab in the new interface (**Switch to
-new UI** in the header), choose `ner` and the model; **Entity Types** keeps only the classes you
-name, as the model names them (`PER`, `LOC`), and **Score Threshold** (0.5 by default) leaves out
-the entities the model is less sure of. It needs `pixano-worker` running, and a NER model served by
-your inference: pixano-inference ships none, so the form offers a model once yours serves one. A
-text the job cannot read — stored at a web or S3 address, or a file it cannot open — goes to
-quarantine, which **Show quarantine** lists with the reason.
+new UI** in the header, shown when the app runs with `ACTIVATE_UI_V1_0=true`), choose `ner` and the
+model; **Entity Types** keeps only the classes you name, as the model names them (`PER`, `LOC`),
+and **Score Threshold** (0.5 by default) leaves out the entities the model is less sure of. It
+needs `pixano-worker` running, and a NER model served by your inference: pixano-inference ships
+none, so the form offers a model once yours serves one — [Named Entity
+Recognition](/pixano/cookbook/named_entities/) serves spaCy's. A text the job cannot read — stored
+at a web or S3 address, or a file it cannot open — goes to quarantine, which **Show quarantine**
+lists with the reason.
 
 Each entity found becomes an object, its class in a text field of the object — `category` when
 the objects have one, `name` on an entity linking dataset —, and the stretch of the text that
 mentions it. The mentions show in the record's text in the
 [entity linking](/pixano/cookbook/entity_linking/) workspace only; the new interface shows the text
-without them. A folder of texts opens there when imported with
-`--workspace image_text_entity_linking`. Color the objects by the field that holds their class to
-see the classes in the text.
+without them. A folder of texts alone opens there: from the app, with the **Image–text linking**
+task, and from the command line by default. Color the objects by the field that holds their class
+to see the classes in the text.
 
 Running the job again replaces what the same model proposed — of the classes in **Entity Types**
 only, when you set some —, and never touches a mention you marked or edited: no mention over one of
