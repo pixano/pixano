@@ -28,8 +28,10 @@ from pixano_worker.kinds.base import JobKind
 from pixano_worker.media import MediaResolver
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
+from pydantic import create_model
 
-from pixano.schemas import Image, Record
+from pixano.schemas import Entity, Image, Record, SchemaGroup
+from pixano.schemas.table_names import canonical_family_spec_for_slot
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -85,6 +87,13 @@ class _Target:
         assert prefix is not None, f"unexpected filter in a test double: {where!r}"
         return [row for row_id, row in self.rows.items() if row_id.startswith(prefix.group(1))]
 
+    def ensure_annotation_table(self, slot: str) -> str:
+        family = canonical_family_spec_for_slot(slot)
+        if family.schema_group is not SchemaGroup.ANNOTATION:
+            raise ValueError(f"Slot '{slot}' holds no annotations, so a job cannot add its table.")
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        return family.table_name
+
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""
         return SimpleNamespace(
@@ -107,6 +116,10 @@ class _Target:
 
     def record_embedding_space(self) -> dict[str, Any] | None:
         return getattr(self, "_space", None)
+
+    def ensure_entity_text_field(self, name: str) -> None:
+        self.info.entity = create_model("ContractEntity", __base__=Entity, **{name: (str, "")})
+        self.info.tables["entities"] = self.info.entity
 
     def fingerprint(self) -> str:
         material = sorted(

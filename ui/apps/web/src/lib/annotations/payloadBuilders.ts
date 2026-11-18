@@ -17,7 +17,15 @@ import { keypointsPayloadBuilder } from "./kinds/2d/keypoints/keypointsPayloadBu
 import { maskPayloadBuilder } from "./kinds/2d/mask/maskPayloadBuilder.js";
 import { multiPathPayloadBuilder } from "./kinds/2d/multi-path/multiPathPayloadBuilder.js";
 import { bbox3dPayloadBuilder } from "./kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
-import { carriesContent, isReviewable, MODEL_SOURCE_TYPE } from "./reviewStatus.js";
+import {
+  carriesContent,
+  isAcceptUnsaved,
+  isReviewable,
+  mayAccept,
+  MODEL_SOURCE_TYPE,
+  REVIEW_STATUS,
+  REVIEW_STATUS_FIELD,
+} from "./reviewStatus.js";
 import type { MutationSink } from "./scene/sceneContext.js";
 import type { PendingAnnotation, PendingEntityChoice, ResourceMutation } from "./types.js";
 
@@ -163,41 +171,52 @@ interface ContentEditContext {
  * gesture, of every kind.
  *
  * An edit of a model's row leaves the status it shows alone: unsaved, the row
- * stays in review — pending — until the edit is saved, which the server stores
- * accepted (the row then reads so as its write leaves,
- * `AnnotationCollection.recordWrite`).
+ * stays in review — pending, Accept offered — until the reviewer accepts it,
+ * or saves the edit, which the server stores accepted (the row then reads so
+ * as its write leaves, `AnnotationCollection.recordWrite`). An unsaved Accept
+ * rides on the edit: the row's one queued update carries both, whichever came
+ * first (`commitAccept`).
  *
  * - **Content back as stored** — a drag undone by hand, the entity it already
  *   had picked again — is not an edit: nothing of it is sent, since the server
  *   would store nothing. A content edit queued earlier for the row is dropped
- *   (with an entity a reassignment queued for it).
+ *   (with an entity a reassignment queued for it); an unsaved Accept stays
+ *   queued, as the status alone.
  * - **Any other edit** replaces the content the row's queued update carried.
  */
 function queueContentEdit(ctx: ContentEditContext, annotation: LocalAnnotation): void {
   const builder = payloadBuilderFor(annotation.kind);
   const body = builder.buildUpdate(ctx.buildContext, annotation);
+  const acceptUnsaved = isReviewable(annotation) && isAcceptUnsaved(annotation.review);
+  const accept = acceptUnsaved ? { [REVIEW_STATUS_FIELD]: REVIEW_STATUS.ACCEPTED } : {};
+  const update = (updateBody: Record<string, unknown>) =>
+    ctx.mutations.upsertUpdate({
+      op: "update",
+      resource: builder.resource,
+      id: annotation.id,
+      body: updateBody,
+      widgetId: ctx.widgetId,
+      localAnnotationId: annotation.id,
+    });
+
   if (leavesContentAsStored(ctx.buildContext, annotation, body)) {
-    if (queuedContentEdit(ctx.mutations.pending, builder.resource, annotation.id) !== undefined) {
-      ctx.mutations.dropForLocalAnnotation(annotation.id);
+    if (queuedContentEdit(ctx.mutations.pending, builder.resource, annotation.id) === undefined) {
+      return;
     }
+    ctx.mutations.dropForLocalAnnotation(annotation.id);
+    if (acceptUnsaved) update(accept);
     return;
   }
-  ctx.mutations.upsertUpdate({
-    op: "update",
-    resource: builder.resource,
-    id: annotation.id,
-    body,
-    widgetId: ctx.widgetId,
-    localAnnotationId: annotation.id,
-  });
+  update({ ...body, ...accept });
 }
 
 /**
  * The body of the update queued for this row when it carries an edit of the
- * row's content — geometry, entity — rather than the status alone; undefined
- * otherwise. The latest queued update is the one read, the one `upsertUpdate`
- * replaces: after a failed request, a row may hold that one and a newer one
- * queued while it was on the wire.
+ * row's content — geometry, entity — rather than an Accept alone, whose body
+ * is the status and nothing else; undefined otherwise. The latest queued
+ * update is the one read, the one `upsertUpdate` replaces: after a failed
+ * request, a row may hold that one and a newer one queued while it was on the
+ * wire.
  */
 function queuedContentEdit(
   pending: readonly ResourceMutation[],
@@ -314,6 +333,63 @@ export function buildDeleteMutations(
   ];
 }
 
+/** What the Accept helper needs: the store to mark, and the queue to write to. */
+export interface AcceptContext {
+  readonly collection: Pick<AnnotationStore, "setReview">;
+  readonly mutations: Pick<MutationSink, "pending" | "upsertUpdate">;
+  /** Who accepted, for the unsaved counters (a widget, or the review controller). */
+  readonly widgetId: string;
+}
+
+/**
+ * Whether a reviewer may accept this annotation now: it is a model's stored
+ * row, shown pending (`mayAccept`). The one test every control offering Accept
+ * reads, so the buttons and the queue never disagree.
+ *
+ * @param annotation The annotation to accept.
+ */
+export function canAccept(annotation: LocalAnnotation): boolean {
+  return isReviewable(annotation) && mayAccept(annotation.review);
+}
+
+/**
+ * Accept a model's annotation: queue the Accept on the existing mutation
+ * queue, sent by Save like every other change, and show it at once.
+ * Kind-agnostic — only the resource name comes from the kind's builder.
+ * Returns whether it was accepted; it is not on a person's annotation, a
+ * draft, or a row shown accepted already (`canAccept`).
+ *
+ * The queue holds one pending update per row, so an Accept and an edit of the
+ * row ride in one update, whichever came first:
+ *
+ * - **Accept over an unsaved edit** adds `review_status: "accepted"` to the
+ *   edit's body: the edit stays, and the server stores both.
+ * - **An edit after an Accept** keeps it: `queueContentEdit` writes the Accept
+ *   into the edit's body while it is unsaved.
+ *
+ * Only a Reject, which deletes the row, or Discard throws the row's unsaved
+ * work away. Rejecting is no part of this helper: a model's annotation is
+ * rejected by deleting it (`deleteLocalAnnotation`).
+ */
+export function commitAccept(annotation: LocalAnnotation, ctx: AcceptContext): boolean {
+  if (!isReviewable(annotation) || !canAccept(annotation)) return false;
+  const { resource } = payloadBuilderFor(annotation.kind);
+  const edit = queuedContentEdit(ctx.mutations.pending, resource, annotation.id);
+  ctx.mutations.upsertUpdate({
+    op: "update",
+    resource,
+    id: annotation.id,
+    body: { ...edit, [REVIEW_STATUS_FIELD]: REVIEW_STATUS.ACCEPTED },
+    widgetId: ctx.widgetId,
+    localAnnotationId: annotation.id,
+  });
+  ctx.collection.setReview(annotation.id, {
+    ...annotation.review,
+    status: REVIEW_STATUS.ACCEPTED,
+  });
+  return true;
+}
+
 /**
  * What the delete gesture (Delete/Backspace, a trash button, a HUD's delete)
  * does to an annotation, so a control can say so before it is pressed: it
@@ -338,7 +414,7 @@ export function deleteGestureFor(annotation: LocalAnnotation): DeleteGesture {
 /**
  * Kind-agnostic local delete, the one path every delete gesture takes — the
  * select tool's Delete/Backspace, the image widget's trash button, the 3D box
- * HUD: drops what the queue holds for the annotation, queues the backend
+ * HUD, the review controller's Reject: drops what the queue holds for the annotation, queues the backend
  * delete of a persisted one (`buildDeleteMutations`), then removes it from the
  * collection.
  *

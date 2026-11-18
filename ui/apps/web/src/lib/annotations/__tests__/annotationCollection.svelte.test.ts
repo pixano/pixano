@@ -4,6 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { flushSync } from "svelte";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -86,6 +87,38 @@ describe("AnnotationCollection", () => {
     expect(collection.find("a")?.geometry).toEqual([0.5, 0.5, 0.1, 0.1]);
   });
 
+  it("setReview replaces the review state in place, and an effect sees it", () => {
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), review: modelReview("pending") },
+    ]);
+    const seen: (string | undefined)[] = [];
+    const stop = $effect.root(() => {
+      $effect(() => {
+        seen.push(collection.find("a")?.review?.status);
+      });
+    });
+    flushSync();
+
+    collection.setReview("a", modelReview("accepted"));
+    flushSync();
+
+    expect(seen).toEqual(["pending", "accepted"]);
+    stop();
+  });
+
+  it("setReview leaves the stored status alone: only a write moves it", () => {
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), review: { ...modelReview("pending"), storedStatus: "pending" } },
+    ]);
+
+    collection.setReview("a", { ...modelReview("accepted"), storedStatus: "accepted" });
+
+    expect(collection.find("a")?.review).toMatchObject({
+      status: "accepted",
+      storedStatus: "pending",
+    });
+  });
+
   it("recordWrite records the content a write carries, and puts the old one back on failure", () => {
     const collection = new AnnotationCollection([
       {
@@ -104,7 +137,7 @@ describe("AnnotationCollection", () => {
 
   it("recordWrite records the status an update stores, and puts it back on failure", () => {
     const collection = new AnnotationCollection([
-      { ...makeBBox("a", true), review: modelReview("pending") },
+      { ...makeBBox("a", true), review: { ...modelReview("pending"), storedStatus: "pending" } },
     ]);
     collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
 
@@ -113,10 +146,40 @@ describe("AnnotationCollection", () => {
       updateBody: { coords: [0.5, 0.5, 0.2, 0.2] },
     });
     // A person's change to a model's row is stored accepted, and reads so at once.
-    expect(collection.find("a")?.review?.status).toBe("accepted");
+    expect(collection.find("a")?.review).toMatchObject({
+      status: "accepted",
+      storedStatus: "accepted",
+    });
 
     undo?.();
-    expect(collection.find("a")?.review?.status).toBe("pending");
+    expect(collection.find("a")?.review).toMatchObject({
+      status: "pending",
+      storedStatus: "pending",
+    });
+  });
+
+  it("recordWrite leaves an unsaved Accept shown, and shown after a failure", () => {
+    const collection = new AnnotationCollection([
+      { ...makeBBox("a", true), review: { ...modelReview("pending"), storedStatus: "pending" } },
+    ]);
+    collection.setReview("a", modelReview("accepted"));
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
+
+    const undo = collection.recordWrite("a", {
+      content: collection.contentOf("a"),
+      updateBody: { coords: [0.5, 0.5, 0.2, 0.2], review_status: "accepted" },
+    });
+    expect(collection.find("a")?.review).toMatchObject({
+      status: "accepted",
+      storedStatus: "accepted",
+    });
+
+    // The Accept is sent again with the write: it still shows, unsaved.
+    undo?.();
+    expect(collection.find("a")?.review).toMatchObject({
+      status: "accepted",
+      storedStatus: "pending",
+    });
   });
 
   it("recordWrite moves no status for a create", () => {
@@ -143,15 +206,18 @@ describe("AnnotationCollection", () => {
     });
   });
 
-  it("recordWrite of a write that carries no content leaves the content recorded as it was", () => {
+  it("recordWrite of an Accept alone leaves the content recorded as it was", () => {
     const stored = { geometry: [0.1, 0.1, 0.2, 0.2], entityId: "e-a" };
     const collection = new AnnotationCollection([
-      { ...makeBBox("a", true), persistedContent: stored },
+      { ...makeBBox("a", true), review: modelReview("pending"), persistedContent: stored },
     ]);
+    // An edit made since, queued behind the Accept: the Accept does not carry it.
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
 
-    collection.recordWrite("a", {});
+    collection.recordWrite("a", { updateBody: { review_status: "accepted" } });
 
     expect(collection.find("a")?.persistedContent).toEqual(stored);
+    expect(collection.find("a")?.review?.storedStatus).toBe("accepted");
   });
 });
 
@@ -229,6 +295,14 @@ describe("ViewScopedAnnotations", () => {
     expect(view.selectedId).toBeNull();
     shared.select("shown");
     expect(view.selectedId).toBe("shown");
+  });
+
+  it("forwards setReview to the shared collection", () => {
+    const { shared, view1 } = makeShared();
+
+    view1.setReview("a", modelReview("accepted"));
+
+    expect(shared.find("a")?.review?.status).toBe("accepted");
   });
 
   it("follows the parent getter when the session replaces the collection", () => {

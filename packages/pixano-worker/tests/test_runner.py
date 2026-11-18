@@ -17,13 +17,13 @@ import psycopg
 import psycopg_pool
 import pytest
 from pixano_worker import queue, runner
-from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, default_registry
+from pixano_worker.kinds import Chunk, FakeKind, Outcome, Registry, TransientError, default_registry
 from pixano_worker.schema import NOTIFY_CHANNEL, SCHEMA_NAME
 from pixano_worker.threads import WorkerThreads
 from pixano_worker.writer import ModelIdentity
 from psycopg_pool import AsyncConnectionPool
 
-from pixano.datasets.utils.errors import DatasetBusyError
+from pixano.datasets.utils.errors import DatasetBusyError, DatasetReplacedError
 
 
 FAST = {"task_count": 200, "chunk_size": 20, "seconds_per_task": 0.0}
@@ -842,6 +842,45 @@ class TestTransientFailures:
         assert _state(declared, job)[0] == "error"
         row = declared.execute(f"SELECT state, attempts FROM {SCHEMA_NAME}.job_chunks WHERE seq = 3").fetchone()
         assert row == ("error", queue.MAX_ATTEMPTS)
+
+
+class TestAWriteWaitsForASave:
+    """A person's save holds the dataset a moment: a chunk's write waits for it, its result kept."""
+
+    @pytest.fixture(autouse=True)
+    def short_waits(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(runner, "CHUNK_DATASET_BUSY_WAIT_S", 0.2)
+        monkeypatch.setattr(runner, "CHUNK_DATASET_BUSY_RETRY_S", 0.01)
+
+    def test_a_write_refused_for_a_save_is_tried_again(self) -> None:
+        tries: list[int] = []
+
+        def write() -> None:
+            tries.append(len(tries))
+            if len(tries) < 3:
+                raise DatasetBusyError("a person is saving")
+
+        runner._write_past_saves(write)
+
+        assert len(tries) == 3
+
+    def test_a_dataset_busy_for_long_hands_the_chunk_back(self) -> None:
+        def write() -> None:
+            raise DatasetBusyError("an import holds the dataset")
+
+        with pytest.raises(TransientError, match="an import holds the dataset"):
+            runner._write_past_saves(write)
+
+    def test_a_dataset_replaced_is_not_waited_for(self) -> None:
+        tries: list[int] = []
+
+        def write() -> None:
+            tries.append(len(tries))
+            raise DatasetReplacedError("recreated underneath")
+
+        with pytest.raises(DatasetReplacedError):
+            runner._write_past_saves(write)
+        assert len(tries) == 1
 
 
 class TestOutcome:

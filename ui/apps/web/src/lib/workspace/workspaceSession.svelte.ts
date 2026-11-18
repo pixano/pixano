@@ -50,7 +50,7 @@ export class WorkspaceSession {
    */
   visibleEntityIds = $state<Set<string> | null>(null);
   /**
-   * The review filter keys switched off: annotations under these keys are not
+   * The review status chips switched off: annotations under these keys are not
    * displayed (drafts always are). None is, by default.
    *
    * A reviewer's preference rather than a property of the record, so neither a
@@ -58,7 +58,7 @@ export class WorkspaceSession {
    * the reviewer was working with.
    *
    * Always replaced, never mutated: Svelte 5 does not track a Set's add/delete,
-   * so a change assigns a new one — hence the read-only type.
+   * so a toggle assigns a new one — hence the read-only type.
    */
   hiddenReviewStatuses = $state<ReadonlySet<ReviewFilterKey>>(new Set());
   /**
@@ -86,6 +86,12 @@ export class WorkspaceSession {
    * moves made since. Written by `RecordLoader` at the end of each load.
    */
   openingLayout = $state<DatasetLayout | null>(null);
+
+  /** Whether an entity's persisted annotations are shown (`visibleEntityIds`). */
+  isEntityVisible(entityId: string): boolean {
+    const visible = this.visibleEntityIds;
+    return visible === null || visible.has(entityId);
+  }
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {

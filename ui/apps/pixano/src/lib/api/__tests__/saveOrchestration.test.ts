@@ -248,3 +248,145 @@ describe("resumable annotation saves", () => {
     expect(requests()).toHaveLength(1);
   });
 });
+
+describe("what the server stored", () => {
+  // The server answers a create and an update with the row it stored, which can differ from the
+  // one sent: a saved edit of a model's row stores it accepted. The caller is told of each.
+  const storedRow = (row: Record<string, unknown>, status = 200) =>
+    new Response(JSON.stringify(row), { status });
+
+  it("is told of each mutation once stored, with the row the server answered with", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update", { coords: [1, 2, 3, 4] }));
+    queue.stage(mutation("entities", "entity", "create"));
+    queue.stage(mutation("masks", "mask", "delete"));
+    fetchMock
+      .mockResolvedValueOnce(storedRow({ id: "entity" }, 201))
+      .mockResolvedValueOnce(storedRow({ id: "box", review_status: "accepted" }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const told: [string, unknown][] = [];
+
+    await persistSaveItems(queue, "ds", (persisted, stored) => {
+      told.push([`${persisted.op} ${persisted.target.id}`, stored]);
+    });
+
+    expect(told).toEqual([
+      ["create entity", { id: "entity" }],
+      ["update box", { id: "box", review_status: "accepted" }],
+      ["delete mask", undefined],
+    ]);
+  });
+
+  it("is not told of a mutation the queue no longer holds", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update"));
+    const updating = deferredResponse();
+    fetchMock.mockReturnValueOnce(updating.promise);
+    const told = vi.fn();
+    const saving = persistSaveItems(queue, "ds", told);
+
+    queue.reset();
+    updating.resolve(storedRow({ id: "box", review_status: "accepted" }));
+    await saving;
+
+    expect(told).not.toHaveBeenCalled();
+  });
+
+  it("is not told of a mutation that failed", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update"));
+    fetchMock.mockResolvedValueOnce(response(503));
+    const told = vi.fn();
+
+    await expect(persistSaveItems(queue, "ds", told)).rejects.toThrow();
+
+    expect(told).not.toHaveBeenCalled();
+  });
+
+  it("takes an answer that is no row for a stored write, with nothing to read", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update"));
+    fetchMock.mockResolvedValueOnce(new Response("stored", { status: 200 }));
+    const told = vi.fn();
+
+    await persistSaveItems(queue, "ds", told);
+
+    expect(told).toHaveBeenCalledWith(expect.objectContaining({ op: "update" }), undefined);
+    expect(queue.mutations).toEqual([]);
+  });
+
+  it("goes on saving when the caller fails: the row is stored", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update"));
+    queue.stage(mutation("masks", "mask", "update"));
+    fetchMock.mockImplementation(() => Promise.resolve(storedRow({})));
+    const told = vi.fn(() => {
+      throw new Error("a caller's bug");
+    });
+
+    await persistSaveItems(queue, "ds", told);
+
+    expect(told).toHaveBeenCalledTimes(2);
+    expect(queue.mutations).toEqual([]);
+  });
+});
+
+describe("an update of a row gone", () => {
+  // Deleted since it was read, or replaced by a model's run: queued again, the update would block
+  // every later write of the record.
+  const notFound = (detail: string) =>
+    new Response(JSON.stringify({ detail }), { status: 404, statusText: "Not Found" });
+
+  it("is dropped, and the rest of the record saved", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "gone", "update", { review_status: "accepted" }));
+    queue.stage(mutation("bboxes", "kept", "update"));
+    fetchMock
+      .mockResolvedValueOnce(notFound("Resource 'gone' not found in 'bboxes'."))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "kept" }), { status: 200 }));
+    const told = vi.fn();
+    const gone = vi.fn();
+
+    await persistSaveItems(queue, "ds", told, gone);
+
+    expect(requests().map(({ url }) => url)).toEqual([
+      "/datasets/ds/bboxes/gone",
+      "/datasets/ds/bboxes/kept",
+    ]);
+    expect(queue.mutations).toEqual([]);
+    expect(told.mock.calls.map(([persisted]) => (persisted as ResourceMutation).target.id)).toEqual(
+      ["kept"],
+    );
+    // The screen is told, so that it stops showing a row the dataset no longer holds.
+    expect(gone.mock.calls.map(([dropped]) => (dropped as ResourceMutation).target.id)).toEqual([
+      "gone",
+    ]);
+  });
+
+  it("goes on saving when the caller fails on it: the update is dropped already", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "gone", "update"));
+    queue.stage(mutation("bboxes", "kept", "update"));
+    fetchMock
+      .mockResolvedValueOnce(notFound("Resource 'gone' not found in 'bboxes'."))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "kept" }), { status: 200 }));
+    const gone = vi.fn(() => {
+      throw new Error("a caller's bug");
+    });
+
+    await persistSaveItems(queue, "ds", undefined, gone);
+
+    expect(gone).toHaveBeenCalledTimes(1);
+    expect(queue.mutations).toEqual([]);
+  });
+
+  it("is not a 404 that names no row, as for a dataset gone: the save fails", async () => {
+    const queue = createSaveQueue();
+    queue.stage(mutation("bboxes", "box", "update"));
+    fetchMock.mockResolvedValueOnce(notFound("Dataset 'ds' not found."));
+
+    await expect(persistSaveItems(queue, "ds")).rejects.toThrow();
+
+    expect(queue.mutations.map((entry) => entry.target.id)).toEqual(["box"]);
+  });
+});

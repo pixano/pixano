@@ -50,22 +50,25 @@ MAX_ATTEMPTS = 5
 RETRY_BASE_DELAY = timedelta(seconds=15)
 RETRY_MAX_DELAY = timedelta(minutes=5)
 
+# A chunk claimed again is redone whole: its progress starts over from zero, and the claim says how
+# far the previous attempt had got, so that the runner can announce the step back.
 CLAIM = f"""
 UPDATE {SCHEMA_NAME}.job_chunks AS c
 SET state = 'running',
     attempts = c.attempts + 1,
     claimed_by = %s,
     lease_until = now() + %s,
+    progress = 0,
     updated_at = now()
 FROM (
-    SELECT id FROM {SCHEMA_NAME}.job_chunks
+    SELECT id, progress FROM {SCHEMA_NAME}.job_chunks
     WHERE state = 'pending' AND available_at <= now()
     ORDER BY id
     FOR UPDATE SKIP LOCKED
     LIMIT %s
 ) AS picked
 WHERE c.id = picked.id
-RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts, c.final
+RETURNING c.id, c.job_id, c.seq, c.payload, c.task_count, c.attempts, c.final, c.weight, picked.progress
 """
 
 # `attempts` serves as a fencing token: a worker whose lease expired while it was working must
@@ -228,6 +231,25 @@ SELECT pg_notify(%s, json_build_object(
 """
 
 IS_CANCELLED = f"SELECT cancel_requested_at IS NOT NULL FROM {SCHEMA_NAME}.jobs WHERE id = %s"
+# How far a running chunk got. Same fencing token as FINISH: a worker that lost its chunk does not
+# speak for its successor.
+RECORD_PROGRESS = f"""
+UPDATE {SCHEMA_NAME}.job_chunks
+SET progress = %s, updated_at = now()
+WHERE id = %s AND state = 'running' AND attempts = %s
+RETURNING job_id
+"""
+# Taken before a job's progress is summed: a chunk finishing meanwhile commits its tasks first, or
+# waits for the sum, so that an event never carries an older sum than the one before it.
+LOCK_JOB_FOR_PROGRESS = f"SELECT 1 FROM {SCHEMA_NAME}.jobs WHERE id = %s FOR NO KEY UPDATE"
+# A job's progress: the tasks of its finished chunks, and how far its running chunks got. What a
+# progress event carries, so that a chunk's own progress and its end tell the same story.
+JOB_PROGRESS = f"""
+SELECT j.done_tasks + coalesce((SELECT sum(c.progress) FROM {SCHEMA_NAME}.job_chunks c
+                                WHERE c.job_id = j.id AND c.state = 'running'), 0)::int,
+       j.total_tasks
+FROM {SCHEMA_NAME}.jobs j WHERE j.id = %s
+"""
 
 # The final chunk joins the queue once every other chunk of its job is done — none failed, none
 # left to run — and the job is neither cancelled nor finished. Run by whoever settles the job,
@@ -259,6 +281,9 @@ class Chunk:
     Attributes:
         final: This chunk runs its job kind's `finalize`, now that the job's other chunks are
             done. It carries no task.
+        weight: How many times the worker's time limit it may run, as its kind decided at
+            planning.
+        previous_progress: How far its previous attempt had got: it starts over from zero.
     """
 
     id: int
@@ -268,6 +293,8 @@ class Chunk:
     task_count: int
     attempts: int
     final: bool = False
+    weight: float = 1.0
+    previous_progress: int = 0
 
 
 # A stable identity, given by the deployment. Without it, the identity is host:pid — stable in
@@ -297,7 +324,15 @@ async def claim(conn: psycopg.AsyncConnection, worker_id: str, batch_size: int) 
     rows = await cursor.fetchall()
     return [
         Chunk(
-            id=row[0], job_id=str(row[1]), seq=row[2], payload=row[3], task_count=row[4], attempts=row[5], final=row[6]
+            id=row[0],
+            job_id=str(row[1]),
+            seq=row[2],
+            payload=row[3],
+            task_count=row[4],
+            attempts=row[5],
+            final=row[6],
+            weight=row[7],
+            previous_progress=row[8],
         )
         for row in rows
     ]
@@ -431,8 +466,41 @@ async def finish(
         if started:
             await record_event(conn, chunk.job_id, "state", {"state": "running"})
         if advanced is not None:
-            await record_event(conn, chunk.job_id, "progress", {"done_tasks": advanced[1], "total_tasks": advanced[2]})
+            await _record_job_progress(conn, chunk.job_id)
     return Finished(started_job=started)
+
+
+async def record_progress(conn: psycopg.AsyncConnection, chunk: Chunk, done: int) -> bool:
+    """Record how far a running chunk got, and announce its job's progress.
+
+    Args:
+        conn: The chunk's connection.
+        chunk: The running chunk.
+        done: Its tasks done so far.
+
+    Returns:
+        False if the chunk no longer belonged to this worker: nothing is recorded.
+    """
+    async with conn.transaction():
+        row = await (await conn.execute(RECORD_PROGRESS, (done, chunk.id, chunk.attempts))).fetchone()
+        if row is None:
+            return False
+        await _record_job_progress(conn, chunk.job_id)
+    return True
+
+
+async def announce_progress(conn: psycopg.AsyncConnection, job_id: str) -> None:
+    """Announce a job's progress as it stands: after a chunk claimed again, which starts over from zero."""
+    async with conn.transaction():
+        await _record_job_progress(conn, job_id)
+
+
+async def _record_job_progress(conn: psycopg.AsyncConnection, job_id: str) -> None:
+    """Announce a job's progress, its running chunks' included: absolute counters, as every progress event."""
+    await conn.execute(LOCK_JOB_FOR_PROGRESS, (job_id,))
+    progress = await (await conn.execute(JOB_PROGRESS, (job_id,))).fetchone()
+    if progress is not None:
+        await record_event(conn, job_id, "progress", {"done_tasks": progress[0], "total_tasks": progress[1]})
 
 
 async def retry_later(
