@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   AnnotationCollection,
   ViewScopedAnnotations,
+  type AnnotationKind,
   type LocalAnnotation,
   type LocalBBox,
 } from "../annotationCollection.svelte.js";
@@ -25,6 +26,9 @@ function makeBBox(id: string, persisted = false): LocalBBox {
     persisted,
   };
 }
+
+/** A read-back in which only the 2D boxes' rows were read. */
+const BBOXES_READ: ReadonlySet<AnnotationKind> = new Set(["bbox"]);
 
 function makeBBox3D(id: string): LocalAnnotation {
   return {
@@ -218,6 +222,83 @@ describe("AnnotationCollection", () => {
 
     expect(collection.find("a")?.persistedContent).toEqual(stored);
     expect(collection.find("a")?.review?.storedStatus).toBe("accepted");
+  });
+
+  it("restoreStored puts every annotation back as stored, drops the drafts and the selection", () => {
+    const collection = new AnnotationCollection([
+      {
+        ...makeBBox("a", true),
+        entity: { category: "dog" },
+        review: { ...modelReview("pending"), storedStatus: "pending" },
+        persistedContent: {
+          geometry: [0.1, 0.1, 0.2, 0.2],
+          entityId: "e-a",
+          entity: { category: "dog" },
+        },
+      },
+      makeBBox("draft"),
+    ]);
+    collection.setGeometry("a", [0.5, 0.5, 0.2, 0.2]);
+    collection.setEntity("a", "e-new", { category: "cat" });
+    collection.setReview("a", modelReview("accepted"));
+    collection.select("a");
+
+    collection.restoreStored();
+
+    expect(collection.items.map((a) => a.id)).toEqual(["a"]);
+    expect(collection.find("a")).toMatchObject({
+      geometry: [0.1, 0.1, 0.2, 0.2],
+      entityId: "e-a",
+      entity: { category: "dog" },
+      review: { status: "pending" },
+    });
+    expect(collection.selectedId).toBeNull();
+  });
+
+  it("takeRowsRead takes the rows read, but keeps the annotations holding unsaved work", () => {
+    const local = new AnnotationCollection([
+      { ...makeBBox("edited", true), geometry: [0.5, 0.5, 0.2, 0.2] },
+      makeBBox("untouched", true),
+      makeBBox("drawn-meanwhile"),
+    ]);
+    local.select("edited");
+    const read = [
+      { ...makeBBox("edited", true), geometry: [0.1, 0.1, 0.2, 0.2] },
+      { ...makeBBox("untouched", true), geometry: [0.7, 0.7, 0.1, 0.1] },
+      makeBBox("deleted-here", true),
+    ] as LocalAnnotation[];
+    const withWork = new Set(["edited", "deleted-here"]);
+
+    local.takeRowsRead(read, (id) => withWork.has(id), BBOXES_READ);
+
+    expect(local.items.map((a) => a.id)).toEqual(["edited", "untouched", "drawn-meanwhile"]);
+    expect(local.find("edited")?.geometry).toEqual([0.5, 0.5, 0.2, 0.2]);
+    expect(local.find("untouched")?.geometry).toEqual([0.7, 0.7, 0.1, 0.1]);
+    expect(local.selectedId).toBe("edited");
+  });
+
+  it("takeRowsRead drops a selection whose annotation the rows no longer hold", () => {
+    const local = new AnnotationCollection([makeBBox("gone", true), makeBBox("kept", true)]);
+    local.select("gone");
+
+    local.takeRowsRead([makeBBox("kept", true)], () => false, BBOXES_READ);
+
+    expect(local.items.map((a) => a.id)).toEqual(["kept"]);
+    expect(local.selectedId).toBeNull();
+  });
+
+  it("takeRowsRead keeps every annotation of a kind whose rows could not be read", () => {
+    // The 3D boxes' list failed: that says nothing about what the dataset holds.
+    const local = new AnnotationCollection([
+      makeBBox("box-gone", true),
+      makeBBox3D("cuboid-unread"),
+    ]);
+    local.select("cuboid-unread");
+
+    local.takeRowsRead([makeBBox("box-read", true)], () => false, BBOXES_READ);
+
+    expect(local.items.map((a) => a.id)).toEqual(["box-read", "cuboid-unread"]);
+    expect(local.selectedId).toBe("cuboid-unread");
   });
 });
 

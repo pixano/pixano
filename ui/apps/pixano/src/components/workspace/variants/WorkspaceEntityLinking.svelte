@@ -48,6 +48,7 @@ License: CECILL-C
   import { getTopEntity } from "$lib/utils/entityLookupUtils";
   import { highlightEntity } from "$lib/utils/highlightOperations";
   import { loadImagesFromViews } from "$lib/utils/imageLoadUtils";
+  import { clickBesideShapesKeepsFocus, clickEditsBoxes } from "$lib/utils/reviewKeyboard";
 
   interface Props {
     // Attributes
@@ -209,6 +210,8 @@ License: CECILL-C
         onBrushSettingsChange={(settings: BrushSettings) => (brushSettings.value = settings)}
         canEditBoxes={!preAnnotationIsActive.value && editModeBlockedReason() === null}
         onEditBox={(box) => enterEditMode(box)}
+        editBoxOnClick={clickEditsBoxes()}
+        keepFocusOnEmptyClick={clickBesideShapesKeepsFocus()}
         onStopEditingBox={exitEditMode}
         getBoxActions={imageBoxActions}
       />

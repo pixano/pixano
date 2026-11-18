@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import * as api from "$lib/api";
-import type { EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
+import type { EntityDeleteAnswer, EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
 import type {
   CalibratedImageResponse,
   PointCloudResponse,
@@ -90,7 +90,17 @@ export interface RecordReadGateway {
 export interface MutationGateway {
   createEntity(datasetId: string, body: Record<string, unknown>): Promise<Record<string, unknown>>;
 
-  deleteEntity(datasetId: string, id: string): Promise<void>;
+  /**
+   * Delete an entity, unless something names it — which the server checks
+   * under the delete's own write lock (`api.deleteEntity`). The workspace
+   * deletes no entity any other way.
+   *
+   * Resolves whether the entity is gone: `deleted: false` when something still
+   * names it, and nothing changed. Resolving nothing reads as gone — the safe
+   * side, on which a write naming the entity sends its create first, which the
+   * server takes as a retry should the entity still be there.
+   */
+  deleteEntity(datasetId: string, id: string): Promise<EntityDeleteAnswer | void>;
 
   createAnnotation(
     datasetId: string,

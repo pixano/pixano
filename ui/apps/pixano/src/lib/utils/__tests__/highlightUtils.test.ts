@@ -10,7 +10,11 @@ import { toRawAnnotation } from "$lib/api/adapters";
 import type { RecordComponentResponse } from "$lib/api/restTypes";
 import { ToolType } from "$lib/tools";
 import { Annotation, Entity, WorkspaceType } from "$lib/types/dataset";
-import { getEffectiveHighlight } from "$lib/utils/highlightUtils";
+import {
+  annotationShownAlone,
+  getEffectiveHighlight,
+  isHiddenByReview,
+} from "$lib/utils/highlightUtils";
 
 // How a shape stands out on the canvas: "self" in full view, "none" faded, "all" as usual.
 
@@ -103,5 +107,40 @@ describe("out of review", () => {
   it("a focused object stands out in the Pan tool", () => {
     expect(highlight(pending, false, "dog")).toBe("self");
     expect(highlight(drawn, false, "dog")).toBe("none");
+  });
+});
+
+describe("with an annotation under review", () => {
+  it("only it is drawn, with a shape being edited", () => {
+    const edited = box("edited", "cat", { ...MODEL, review_status: "accepted" });
+    edited.ui.displayControl = { ...edited.ui.displayControl, editing: true };
+
+    expect(isHiddenByReview(pending, "pending")).toBe(false);
+    expect(isHiddenByReview(accepted, "pending")).toBe(true);
+    expect(isHiddenByReview(drawn, "pending")).toBe(true);
+    expect(isHiddenByReview(edited, "pending")).toBe(false);
+  });
+
+  it("nothing is hidden with none under review", () => {
+    expect(isHiddenByReview(accepted, null)).toBe(false);
+  });
+
+  it("it is shown alone in review, with the Pan tool, while it is shown", () => {
+    const shownAlone = (id: string, reviewing = true, tool: ToolType = ToolType.Pan) =>
+      annotationShownAlone([pending, accepted, drawn], id, reviewing, tool);
+
+    expect(shownAlone("pending")).toBe("pending");
+    expect(shownAlone("pending", false)).toBeNull();
+    // A drawing tool shows the record whole, so that a shape is not drawn twice.
+    expect(shownAlone("pending", true, ToolType.Rectangle)).toBeNull();
+    // Deleted, it hides nothing until the next one comes under review.
+    expect(shownAlone("deleted")).toBeNull();
+  });
+
+  it("nothing is hidden while it is hidden itself", () => {
+    const hidden = box("hidden", "dog", { ...MODEL, review_status: "pending" });
+    hidden.ui.displayControl = { ...hidden.ui.displayControl, hidden: true };
+
+    expect(annotationShownAlone([hidden], "hidden", true, ToolType.Pan)).toBeNull();
   });
 });
