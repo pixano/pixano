@@ -25,6 +25,7 @@ License: CECILL-C
   import { slide } from "svelte/transition";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import ReviewStatusStrip from "../Review/ReviewStatusStrip.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
     handleSetDisplayControl as handleSetDC,
@@ -66,6 +67,13 @@ License: CECILL-C
   import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
+  import {
+    acceptAnnotations,
+    canTakeReviewDecision,
+    rejectAnnotations,
+    reviewTargetsOf,
+  } from "$lib/utils/reviewActions";
+  import { reviewSummaryOf } from "$lib/utils/reviewStatus";
   import { updateView } from "$lib/utils/videoOperations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -186,6 +194,19 @@ License: CECILL-C
       counts[schema] = (counts[schema] ?? 0) + 1;
     }
     return counts;
+  });
+
+  // ─── Review of what a model proposed for this object ────────────────────────
+  const reviewSummary = $derived.by(() => {
+    void entities.value;
+    void annotations.value;
+    return reviewSummaryOf(entity.ui.childs ?? []);
+  });
+  // What its own Accept and Reject decide on: none when all it has to review is hidden.
+  const reviewTargets = $derived.by(() => {
+    void entities.value;
+    void annotations.value;
+    return reviewTargetsOf(entity);
   });
 
   // ─── Detect text-only entities (for typographic fallback thumbnail) ─────────
@@ -586,6 +607,17 @@ License: CECILL-C
         </IconButton>
       </div>
     </div>
+
+    <!-- Review of what a model proposed for this object -->
+    {#if reviewSummary}
+      <ReviewStatusStrip
+        summary={reviewSummary}
+        scope="object"
+        canDecide={canTakeReviewDecision() && reviewTargets.length > 0}
+        onAccept={() => acceptAnnotations(reviewTargetsOf(entity))}
+        onReject={() => rejectAnnotations(reviewTargetsOf(entity))}
+      />
+    {/if}
   </Card.Header>
 
   <!-- ─── Expanded Content (with slide transition) ─────────────────────────── -->

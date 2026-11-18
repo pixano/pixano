@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
+import { REVIEW_STATUS } from "$lib/constants/reviewConstants";
 
 export const LIBRARY_ROUTE = "/";
 export const EXPLORER_ROUTE_ID = "/explorer/[datasetId]";
@@ -21,6 +22,20 @@ export const getWorkspaceRoute = (datasetId: string, itemId: string, query?: str
   if (!query) return baseRoute;
   return query.startsWith("?") ? `${baseRoute}${query}` : `${baseRoute}?${query}`;
 };
+
+/** The workspace route's query key that opens its record in review: the review mode on. */
+export const REVIEW_QUERY_KEY = "review";
+
+/**
+ * The workspace route of a record opened to review what a model proposed. It carries no explorer
+ * query: the records to review are the dataset's, whatever the explorer showed.
+ */
+export const getReviewRoute = (datasetId: string, itemId: string): string =>
+  getWorkspaceRoute(
+    datasetId,
+    itemId,
+    new URLSearchParams({ [REVIEW_QUERY_KEY]: REVIEW_STATUS.PENDING }).toString(),
+  );
 
 /**
  * Query-param keys that describe the explorer's active result set and its
@@ -71,3 +86,7 @@ export const getRouteSearchParams = (url: URL): URLSearchParams => {
 
   return new URLSearchParams(hash.slice(queryIndex + 1));
 };
+
+/** Whether a workspace URL opens its record in review (`getReviewRoute`). */
+export const isReviewRoute = (url: URL): boolean =>
+  getRouteSearchParams(url).get(REVIEW_QUERY_KEY) === REVIEW_STATUS.PENDING;

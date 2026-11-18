@@ -24,9 +24,14 @@ License: CECILL-C
   import { slide } from "svelte/transition";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import ReviewStatusStrip from "../Review/ReviewStatusStrip.svelte";
   import RelinkAnnotation from "../SaveShape/RelinkAnnotation.svelte";
   import { keypointsIcon } from "$lib/assets";
-  import { getConfidenceStyle, getSourceStyle } from "$lib/constants/annotationTypeMeta";
+  import {
+    formatConfidence,
+    getConfidenceStyle,
+    getSourceStyle,
+  } from "$lib/constants/annotationTypeMeta";
   import {
     annotations,
     current_itemBBoxes,
@@ -57,6 +62,12 @@ License: CECILL-C
   import { editModeBlockedReason, toggleEditTrack } from "$lib/utils/editMode";
   import { deleteEntity, onDeleteTrackItemClick } from "$lib/utils/entityDeletion";
   import { relink } from "$lib/utils/entityRelink";
+  import {
+    acceptAnnotations,
+    canTakeReviewDecision,
+    rejectAnnotations,
+  } from "$lib/utils/reviewActions";
+  import { reviewSummaryOf } from "$lib/utils/reviewStatus";
   import { cn } from "$lib/utils/styleUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -123,6 +134,11 @@ License: CECILL-C
   const typeLabel = $derived(
     TYPE_LABELS[child.table_info.base_schema] ?? child.table_info.base_schema,
   );
+
+  const reviewSummary = $derived.by(() => {
+    void annotations.value;
+    return reviewSummaryOf([child]);
+  });
 
   const isMultiView = Object.keys(mediaViews.value).length > 1;
 
@@ -274,11 +290,6 @@ License: CECILL-C
     if (Number.isInteger(v)) return String(v);
     return v.toFixed(4);
   }
-
-  // Format confidence as percentage
-  function fmtConfidence(v: number): string {
-    return `${(v * 100).toFixed(1)}%`;
-  }
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════ -->
@@ -407,6 +418,19 @@ License: CECILL-C
       </Tooltip.Root>
     </div>
   </div>
+
+  <!-- ─── Review of a model's proposal ──────────────────────────────────────── -->
+  {#if reviewSummary}
+    <div class="px-2 pb-1.5">
+      <ReviewStatusStrip
+        summary={reviewSummary}
+        scope="annotation"
+        canDecide={canTakeReviewDecision()}
+        onAccept={() => acceptAnnotations([child])}
+        onReject={() => rejectAnnotations([child])}
+      />
+    </div>
+  {/if}
 
   <!-- ─── Detail block (collapsible) ───────────────────────────────────────── -->
   {#if showDetails}
@@ -641,7 +665,7 @@ License: CECILL-C
                     getConfidenceStyle(bboxData.confidence),
                   )}
                 >
-                  {fmtConfidence(bboxData.confidence)}
+                  {formatConfidence(bboxData.confidence)}
                 </span>
               </div>
             {/if}
