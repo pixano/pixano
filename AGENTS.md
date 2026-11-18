@@ -4,6 +4,18 @@
 
 Pixano is an open-source data engine for multi-modal AI development. It provides tools for dataset annotation, exploration, and curation, with workflows assisted by AI agents.
 
+## Specifications
+
+The specifications in [`specs/`](./specs/README.md) are the only source of truth on what Pixano is and how it is built. They bind every developer and every AI agent. [`specs/README.md`](./specs/README.md) holds the rules about specs, and the index that says which spec covers which code path.
+
+- **Order of precedence:** the specs come first, then this file, then the existing code. Existing code that contradicts a spec is a bug. It is not an example to follow.
+- **Before planning:** find in the index the specs that cover the code paths the task touches, and read them.
+- **In plans and PR descriptions:** cite the rules that apply, by ID (for example `JOB-12`).
+- **Never edit a spec in a code PR.** A spec changes in its own PR, which changes only `specs/`. If the task cannot be done without breaking a rule, stop and report the conflict to the person who asked. Do not work around the rule, and do not edit the spec to fit the code.
+- **Unclear or missing spec:** when a change needs a design decision that no spec states, ask. Never invent the rule.
+
+Three specs were written before `specs/` existed and are still in `docs/specs/`: the index names them. Until each one moves, it keeps the weight it has today and is still edited in code PRs. Do not add a new spec under `docs/`.
+
 ## Project Structure & Module Organization
 
 Pixano is a web application organized as a monorepo with a backend server and a UI frontend. The backend is a Python application following standard `uv` package conventions under `src/pixano/`. The `ui/` directory is a pnpm + Turbo workspace holding two frontend applications, both bundled into the wheel by `hatch_build.py`:
@@ -23,8 +35,6 @@ Backend modules are organized as follows:
 - `src/pixano/schemas`: Pixano database schemas.
 - `src/pixano/utils`: shared utilities.
 - `tests`: unit and e2e test modules.
-
-Design specifications live in `docs/specs/`. Before planning or implementing changes to dataset import/export, read [docs/specs/data-import-export.md](./docs/specs/data-import-export.md) — the accepted architecture reference for the 0.8.0 data import/export redesign.
 
 ## Tech Stack
 
@@ -192,7 +202,8 @@ git push origin <your-branch>
 
 ### Creating Pull Requests
 
-- Follow the instructions at the top of [the PR template](./.github/pull_request_template.md) carefully.
+- Follow the instructions at the top of [the PR template](./.github/PULL_REQUEST_TEMPLATE.md) carefully.
+- Fill the "Specs" section of the template: the IDs of the rules the change follows, and the spec PR it relies on, if any.
 - Inside `gh pr ... --body "$(cat <<'EOF' ... EOF)"`, write backticks plain. The quoted `'EOF'` delimiter already suppresses command substitution, so escaping as `` \` `` is unnecessary and the backslashes get persisted in the PR body, rendering literally instead of as code spans.
 
   ```bash
