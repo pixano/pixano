@@ -65,12 +65,15 @@ License: CECILL-C
         <button
           type="button"
           onclick={() => session.deleteBox()}
+          disabled={gesture === "locked"}
           title={gesture === "reject"
             ? "Reject this 3D box: a model proposed it; rejecting deletes it"
-            : "Delete this 3D box"}
-          class="rounded border border-destructive/40 px-2.5 py-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            : gesture === "locked"
+              ? "Not while Save & next is running"
+              : "Delete this 3D box"}
+          class="rounded border border-destructive/40 px-2.5 py-1 text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
         >
-          {gesture === "reject" ? "Reject" : "Delete"}
+          {gesture === "delete" ? "Delete" : "Reject"}
         </button>
       {/if}
       <div class="mx-1 h-4 w-px bg-border"></div>

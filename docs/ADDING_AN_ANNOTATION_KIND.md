@@ -28,7 +28,8 @@ for the rules.
   staged-work flag of its own, once (`ctx.claimStagedWork(discard)`), raises it while it
   holds the work and lowers it on every way out; `discard` drops the work, and the record's
   Discard calls it. Each raised flag counts as one item of the record's unsaved count.
-  Without the flag, the count reads 0 over the work, and Discard leaves it in place.
+  Without the flag, the count reads 0 over the work, "Save & next" leaves the record and
+  the work with it, and Discard leaves it in place.
   - A box being resized is such work too, held by its editor.
   - So is a shape being dragged, held by its editor.
   - So is a 3D box staged under its HUD or under a gizmo drag, held by its session.
@@ -203,8 +204,9 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   since both are the one box, so a drag counts one unsaved item (`updateStaged`). It
   lowers it on every way out (save, cancel, delete, entity change, the editor's reset), each
   of which drops a drag under way too, so the release that follows stages nothing.
-  Without it the record's unsaved count reads 0 over the edit; the record's Discard calls
-  the `cancel()` it was given. A HUD left open with no work of its own — a box a click
+  Without it the record's unsaved count reads 0 over the edit, and "Save & next" leaves
+  the record and the edit with it; the record's Discard calls the `cancel()` it was given.
+  A HUD left open with no work of its own — a box a click
   opened — has its flag down, out of Discard's reach: it closes once the box it shows is
   no longer the box the record holds (Discard put it back, a Reject or a delete took the
   box away), so it never shows, nor saves again, a geometry the record no longer has
@@ -222,9 +224,12 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   `asStagedUntouched`, `sameAsStored`).
 - `<Kind>Hud.svelte` — the `Tool3D.hud`: the DOM confirm/secondary UI, driven by the session.
   A delete button calls `deleteLocalAnnotation` through the session; name it from
-  `deleteGestureFor(annotation)` (`reject` on a model's annotation, `delete` otherwise), as
-  the image widget's trash button does, its tooltip saying on a Reject that rejecting
-  deletes (`BBox3DHud.svelte`, `BBox3DSession.editingDeleteGesture`).
+  `deleteGestureFor(annotation, seam.mutations)` (`reject` on a model's annotation,
+  `delete` otherwise, `locked` for a model's annotation while "Save & next" holds the
+  decisions back — disabled then, saying why), as the image widget's trash button does,
+  its tooltip saying on a Reject that rejecting deletes (`BBox3DHud.svelte`,
+  `BBox3DSession.editingDeleteGesture`). Pass the sink: its lock is what holds the Reject
+  back, so a button asked without it would offer what pressing it will not do.
 - `draw<Kind>Tool.ts` — the `Tool3D` entry wiring `overlay` + `createSession` + `hud`.
 
 → register in `TOOLS_3D` (`registry3d.ts`).
@@ -240,8 +245,8 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
     answers whatever the mock says, and can pass while a resize goes unsaved.
   - An editable 2D kind drags a shape across a save there (`multiPathDrag.test.ts`): the
     flag is raised once for the drag, the save's read-back leaves the shape where it is
-    dragged — the collection stays the same object — the release saves it, and Discard
-    drops the drag. Send a window `mouseup` after each test:
+    dragged — the collection stays the same object — the release saves it, "Save & next"
+    stays meanwhile, and Discard drops the drag. Send a window `mouseup` after each test:
     Konva's drags are global, and one a failed test left running moves with the next
     test's pointer.
   - It also presses Delete during each of its gestures, through the real select tool's
@@ -250,15 +255,16 @@ type + any kind-specific types (mirror `bbox3dTypes.ts`).
   - A 3D session can be tested on the real workspace too, with the real box editor driving
     it (`bbox3dSession.test.ts`, `__tests__/realBoxEditor.svelte.ts`): a test that rebuilds
     what the editor reports passes whatever the editor does. Press each gizmo through it
-    (`grab`, `grabRing`): the flag is raised from the press to the release, and Discard,
-    Escape and the HUD's Cancel drop the drag. Store what a save writes as the dataset does
+    (`grab`, `grabRing`): the flag is raised from the press to the release, "Save & next"
+    stays meanwhile, and Discard, Escape and the HUD's Cancel drop the drag.
+    Store what a save writes as the dataset does
     — a 3D box's numbers rounded to float32 (`storeAsFloat32` in `BBox3DHud.svelte.test.ts`):
     a fake that hands back the exact numbers hides what the rounding does to a HUD.
 - A tool-lifecycle test where practical (see `drawBBoxTool.test.ts`, `selectTool2D.test.ts`).
   A tool that holds work runs once in an image widget of a record open in the real
   workspace (`openManager` and `widgetSeam`), as `drawMultiPathTool.test.ts` does: the
-  record holds unsaved work while the work is held, the flag goes down on commit, Escape
-  and deactivate, and Discard leaves nothing to commit.
+  record holds unsaved work while the work is held — "Save & next" stays —, the flag goes
+  down on commit, Escape and deactivate, and Discard leaves nothing to commit.
 - A model-row fixture for the kind in `GEOMETRY_COLUMNS`
   (`workspace/__tests__/recordLoader.test.ts`): the envelope test runs every
   registered seed loader on a model's row and checks the annotation keeps its

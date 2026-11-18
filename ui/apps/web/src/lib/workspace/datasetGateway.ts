@@ -123,8 +123,9 @@ export type DatasetGateway = RecordReadGateway & MutationGateway;
 
 /**
  * Production gateway: thin pass-through to the live HTTP `$lib/api` module.
- * This is the *only* place in the workspace layer that imports `$lib/api`
- * directly — everything else goes through the gateway interfaces.
+ * The gateway modules — this one and `reviewGateway.ts` — are the only places
+ * in the workspace layer that call `$lib/api`; everything else goes through
+ * the gateway interfaces.
  */
 export const httpDatasetGateway: DatasetGateway = {
   getDataset: (datasetId) => api.getDataset(datasetId),

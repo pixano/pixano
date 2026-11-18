@@ -45,6 +45,7 @@ import { BBox3DSession } from "$lib/annotations/kinds/3d/bbox3d/bbox3dSession.sv
 import {
   beginEntityReassign,
   deleteGestureFor,
+  deleteLocalAnnotation,
   reassignEntity,
 } from "$lib/annotations/payloadBuilders.js";
 import {
@@ -762,10 +763,76 @@ describe("Delete on a model's annotation is its reject", () => {
       persisted: false,
     };
 
-    expect(deleteGestureFor(manager.annotations.find("pending")!)).toBe("reject");
-    expect(deleteGestureFor(manager.annotations.find("accepted")!)).toBe("reject");
-    expect(deleteGestureFor(manager.annotations.find("human")!)).toBe("delete");
-    expect(deleteGestureFor(draft)).toBe("delete");
+    const queue = widgetSeam(manager).mutations;
+    expect(deleteGestureFor(manager.annotations.find("pending")!, queue)).toBe("reject");
+    expect(deleteGestureFor(manager.annotations.find("accepted")!, queue)).toBe("reject");
+    expect(deleteGestureFor(manager.annotations.find("human")!, queue)).toBe("delete");
+    expect(deleteGestureFor(draft, queue)).toBe("delete");
+    // While "Save & next" runs, a model's annotation is neither rejected nor deleted.
+    expect(deleteGestureFor(manager.annotations.find("pending")!, { decisionsLocked: true })).toBe(
+      "locked",
+    );
+    expect(deleteGestureFor(manager.annotations.find("human")!, { decisionsLocked: true })).toBe(
+      "delete",
+    );
+  });
+
+  function dragUnderWay(seam: SeamContext, id: string) {
+    let held = true;
+    const flag = seam.claimStagedWork!(() => {
+      held = false;
+      flag.set(false);
+    });
+    flag.set(true);
+    return {
+      letGo: () => {
+        if (held) drag(seam, id);
+        held = false;
+        flag.set(false);
+      },
+    };
+  }
+
+  it("cancels a gesture under way first, so the delete applies to the stored row", async () => {
+    const { manager, backend, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    const dragging = dragUnderWay(seam, "b1");
+    let queuedWhenCancelled: number | undefined;
+
+    deleteLocalAnnotation(
+      manager.annotations.find("b1")!,
+      seam.collection,
+      seam.mutations,
+      seam.widgetId,
+      () => {
+        queuedWhenCancelled = manager.pendingCount;
+        manager.discardStagedWork(seam.widgetId);
+      },
+    );
+    dragging.letGo();
+
+    expect(queuedWhenCancelled).toBe(0);
+    expect(manager.unsavedCount).toBe(1);
+    await manager.flushSave();
+    expect(backend.writes).toEqual([{ op: "delete", resource: BBOX_RESOURCE, id: "b1" }]);
+  });
+
+  it("cancels no gesture when it does nothing", async () => {
+    const { manager, seam } = await openWithBoxes(modelBox(REC, "b1"));
+    let cancelled = 0;
+    const cancel = () => cancelled++;
+
+    // "Save & next" runs: the reject is held back.
+    deleteLocalAnnotation(
+      manager.annotations.find("b1")!,
+      seam.collection,
+      { ...seam.mutations, decisionsLocked: true },
+      "w",
+      cancel,
+    );
+
+    expect(cancelled).toBe(0);
+    expect(manager.annotations.find("b1")).toBeDefined();
+    expect(manager.pendingCount).toBe(0);
   });
 
   it("is undone only by Discard, which brings the row back with the rest of the record's unsaved work", async () => {

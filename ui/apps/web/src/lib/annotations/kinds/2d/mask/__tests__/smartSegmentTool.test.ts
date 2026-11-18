@@ -13,7 +13,7 @@ import { AnnotationCollection } from "$lib/annotations/annotationCollection.svel
 import type { LocalMask } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { PendingAnnotation } from "$lib/annotations/types.js";
-import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
+import { openManager, VIEWPORT, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only builds prompt markers.
 vi.mock("konva", () => {
@@ -341,6 +341,7 @@ describe("smart segmentation failure paths", () => {
 
 describe("prompts placed are the record's unsaved work", () => {
   const REC_1 = "rec-1";
+  const REC_2 = "rec-2";
   const PROMPTS = [
     { x: 50, y: 50 },
     { x: 60, y: 60 },
@@ -348,19 +349,26 @@ describe("prompts placed are the record's unsaved work", () => {
 
   /** The tool in an image widget of a record open in the real workspace. */
   async function onTheRecord(backend: Partial<SegmentationBackend> = {}) {
-    const opened = await openManager({ [REC_1]: {} });
+    const opened = await openManager(
+      { [REC_1]: {}, [REC_2]: {} },
+      { next: { recordId: REC_2, remaining: 1 } },
+    );
     const h = makeHarness(backend, widgetSeam(opened.manager));
     h.handler.activate();
     return { ...opened, h };
   }
 
-  it("holds them while they are placed, and lets go of them once Escape drops them", async () => {
+  it("keeps Save & next on the record while prompts are placed, and lets it move once they are gone", async () => {
     const { manager, h } = await onTheRecord();
     clickAt(h, PROMPTS);
-    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_1);
+    expect(manager.review.outcome).toEqual({ kind: "not-saved" });
 
     h.handler.onKeyDown(key("Escape"));
-    expect(manager.hasUnsavedWork).toBe(false);
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_2);
   });
 
   it("holds them until the last is undone, the tool is left, or they become a mask", async () => {

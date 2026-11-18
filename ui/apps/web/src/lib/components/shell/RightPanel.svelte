@@ -6,6 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   import {
+    ClipboardCheck,
     Eye,
     EyeOff,
     Layers,
@@ -16,6 +17,7 @@ License: CECILL-C
   } from "lucide-svelte";
 
   import EntitiesPanel from "./EntitiesPanel.svelte";
+  import ReviewPanel from "./ReviewPanel.svelte";
   import SaveAnnotationForm from "./SaveAnnotationForm.svelte";
   // Measured here, next to the grid, so the manager stays environment-agnostic
   // — the same split `LeftPanel` uses when it opens a record.
@@ -28,7 +30,7 @@ License: CECILL-C
 
   let { manager }: Props = $props();
 
-  let activeTab = $state<"inspector" | "entities" | "agent">("inspector");
+  let activeTab = $state<"inspector" | "entities" | "review" | "agent">("inspector");
 
   // Locking the workspace means "don't rearrange my widgets while I annotate",
   // so it covers every control that can move a widget — not just dragging.
@@ -52,6 +54,7 @@ License: CECILL-C
   const tabs = [
     { id: "inspector" as const, label: "Inspector", icon: ScanSearch },
     { id: "entities" as const, label: "Entities", icon: Layers },
+    { id: "review" as const, label: "Review", icon: ClipboardCheck },
     { id: "agent" as const, label: "Agent", icon: MessageSquare },
   ];
 </script>
@@ -83,6 +86,18 @@ License: CECILL-C
       {:else}
         <div class="p-3">
           <p class="text-xs text-muted-foreground">Open a record to inspect its entities.</p>
+        </div>
+      {/if}
+    {:else if activeTab === "review"}
+      {#if manager.recordId !== null}
+        <ReviewPanel
+          review={manager.review}
+          saving={manager.saving}
+          saveError={manager.saveError}
+        />
+      {:else}
+        <div class="p-3">
+          <p class="text-xs text-muted-foreground">Open a record to review its annotations.</p>
         </div>
       {/if}
     {:else if activeTab === "inspector"}
