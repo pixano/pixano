@@ -75,6 +75,17 @@ class _FakeDataset:
         self.compactions.append(name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
+    # The statistics the writer writes are tested on a real dataset (test_statistics.py): these
+    # stand in for the protocol only.
+    def ensure_statistic_columns(self, level: Any, columns: dict[str, str]) -> str:
+        raise NotImplementedError
+
+    def write_statistic_values(self, level: Any, rows: list[dict[str, Any]], columns: dict[str, str]) -> list[str]:
+        raise NotImplementedError
+
+    def record_computed_statistics(self, computed: list[Any]) -> None:
+        raise NotImplementedError
+
     def record_embedding_spaces(self) -> list[dict[str, Any]]:
         return [space.as_document() for space in self.spaces.spaces]
 
@@ -1494,8 +1505,9 @@ class TestIndexingEmbeddings:
 
     @staticmethod
     def _indexes(dataset: Any) -> dict[str, str]:
-        """The embeddings table's indexes, by the column each covers."""
-        return {index.columns[0]: index.index_type for index in dataset.open_table("embeddings").list_indices()}
+        """The clip embeddings table's indexes, by the column each covers."""
+        table = dataset.open_table(_space(dataset, "clip")["table"])
+        return {index.columns[0]: index.index_type for index in table.list_indices()}
 
     def test_a_small_table_gets_its_record_index_and_no_vector_index(self, tmp_path) -> None:
         """Below the threshold, exact search is fast, and an index would only make it approximate."""
@@ -1512,7 +1524,7 @@ class TestIndexingEmbeddings:
         assert writer.index_embeddings("clip", min_rows=1_000) == ["IVF_SQ"]
 
         assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
-        stats = dataset.open_table("embeddings").index_stats("vector_idx")
+        stats = dataset.open_table(_space(dataset, "clip")["table"]).index_stats("vector_idx")
         assert (stats.num_indexed_rows, stats.num_unindexed_rows) == (1_000, 0)
 
     def test_indexing_again_rebuilds_rather_than_stacks(self, tmp_path) -> None:
@@ -1525,13 +1537,18 @@ class TestIndexingEmbeddings:
         writer.index_embeddings("clip", min_rows=1_000)
 
         assert self._indexes(dataset) == {"record_id": "BTree", "vector": "IvfSq"}
-        stats = dataset.open_table("embeddings").index_stats("vector_idx")
+        stats = dataset.open_table(_space(dataset, "clip")["table"]).index_stats("vector_idx")
         assert (stats.num_indexed_rows, stats.num_unindexed_rows) == (1_001, 0)
 
     def test_a_search_through_the_index_finds_the_vector_asked_for(self, tmp_path) -> None:
         dataset, writer = self._embedded(tmp_path, 1_000)
         writer.index_embeddings("clip", min_rows=1_000)
-        query = dataset.open_table("embeddings").search().where("view_id = 'img-421'").to_list()[0]["vector"]
+        query = (
+            dataset.open_table(_space(dataset, "clip")["table"])
+            .search()
+            .where("view_id = 'img-421'")
+            .to_list()[0]["vector"]
+        )
 
         records, _ = dataset.search_records(list(query), k=1)
 
@@ -1574,7 +1591,8 @@ class TestIndexingEmbeddings:
         with pytest.raises(Exception, match=broken["table"]):
             writer.index_embeddings("clip", min_rows=1_000)
 
-        assert {index.columns[0] for index in dataset.open_table("embeddings").list_indices()} == {
+        indexed = next(space for space in dataset.record_embedding_spaces() if space["checkpoint"] == "ckpt-a")
+        assert {index.columns[0] for index in dataset.open_table(indexed["table"]).list_indices()} == {
             "record_id",
             "vector",
         }

@@ -51,6 +51,11 @@ services:
       PIXANO_MEDIA_ROOT: ${PIXANO_MEDIA_ROOT:-/medias}
       # Unset or false, only the legacy interface is served (see .env.example).
       ACTIVATE_UI_V1_0: ${ACTIVATE_UI_V1_0:-false}
+      # The embeddings job an import queues once done (see .env.example).
+      PIXANO_EMBEDDINGS_AFTER_IMPORT: ${PIXANO_EMBEDDINGS_AFTER_IMPORT:-true}
+      PIXANO_EMBEDDINGS_MODEL: ${PIXANO_EMBEDDINGS_MODEL:-}
+      # The statistics job of the default statistics an import queues once done (see .env.example).
+      PIXANO_STATISTICS_AFTER_IMPORT: ${PIXANO_STATISTICS_AFTER_IMPORT:-true}
     command:
       - sh
       - -c

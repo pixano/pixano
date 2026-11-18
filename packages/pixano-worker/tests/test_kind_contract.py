@@ -33,8 +33,25 @@ from pixano_worker.writer import JobWriter
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import CLUSTER_SLOT, Entity, Image, Record, RecordClusters, SchemaGroup, record_cluster_id
+from pixano.schemas import (
+    CLUSTER_SLOT,
+    BBox,
+    Entity,
+    Image,
+    Record,
+    RecordClusters,
+    SchemaGroup,
+    record_cluster_id,
+    statistics_slot,
+)
 from pixano.schemas.table_names import canonical_family_spec_for_slot, canonical_table_name_for_slot
+from pixano.statistics.definitions import (
+    StatisticAggregation,
+    StatisticChoices,
+    StatisticLevel,
+    StatisticMeasure,
+    define_statistic,
+)
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -55,6 +72,26 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     },
     # Groups the records by the vectors of their images (`_Source.read_record_vectors`).
     "clustering": {"algorithm": "kmeans", "clusters": 2},
+    # Per record and per object, and an area, which reads the images' sizes.
+    "statistics": {
+        "statistics": [
+            define_statistic(StatisticChoices(level=level, element="bbox", measure=StatisticMeasure.COUNT)).model_dump(
+                mode="json"
+            )
+            for level in StatisticLevel
+        ]
+        + [
+            define_statistic(
+                StatisticChoices(
+                    level=StatisticLevel.RECORD,
+                    element="bbox",
+                    measure=StatisticMeasure.AREA,
+                    aggregation=StatisticAggregation.MEAN,
+                )
+            ).model_dump(mode="json")
+        ],
+        "chunk_size": 10,
+    },
 }
 
 #: The kinds whose every job is a run of its own, kept beside the others: a clustering's groups,
@@ -106,6 +143,9 @@ class _Target:
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={})
+        # The statistic columns of each statistics table, and what the dataset records it computed.
+        self.statistic_columns: dict[str, dict[str, str]] = {}
+        self.computed_statistics: dict[tuple[Any, str], Any] = {}
         # The clustering runs the dataset records it holds the clusters of, by run.
         self.clusterings: dict[str, Any] = {}
 
@@ -136,10 +176,14 @@ class _Target:
             self.tables.get(table_name, {}).pop(row_id, None)
 
     def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
-        """By identifiers, or by the prefix filter of a cleanup."""
+        """By identifiers, by the prefix filter of a cleanup, or by the records of the rows."""
         rows = self.tables.get(table_name, {})
         if ids is not None:
             return [rows[i] for i in ids if i in rows]
+        records = re.fullmatch(r"record_id IN \((.*)\)", where or "")
+        if records is not None:
+            listed = set(re.findall(r"'([^']*)'", records.group(1)))
+            return [row for row in rows.values() if getattr(row, "record_id", None) in listed]
         prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
         assert prefix is not None, f"unexpected filter in a test double: {where!r}"
         return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
@@ -150,6 +194,39 @@ class _Target:
             raise ValueError(f"Slot '{slot}' holds no annotations, so a job cannot add its table.")
         self.info.tables.setdefault(family.table_name, family.base_schema)
         return family.table_name
+
+    def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
+        family = canonical_family_spec_for_slot(statistics_slot(level.value))
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        self.statistic_columns.setdefault(family.table_name, {}).update(columns)
+        return family.table_name
+
+    def write_statistic_values(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """A merge on the record's or the object's identifier, as the dataset's: only the columns given
+        are written, a column a row lacks written null; columns never ensured, and two rows of one
+        record or object, are refused as the dataset refuses them."""
+        table_name = canonical_family_spec_for_slot(statistics_slot(level.value)).table_name
+        missing = set(columns) - set(self.statistic_columns.get(table_name, {}))
+        if missing:
+            raise ValueError(f"The statistics table has no column {sorted(missing)}: ensure them first.")
+        own = "entity_id" if level is StatisticLevel.ENTITY else "record_id"
+        if len({row[own] for row in rows}) != len(rows):
+            raise ValueError("A record or an object has two rows of statistics in one write.")
+        table = self.tables.setdefault(table_name, {})
+        for row in rows:
+            existing = table.get(row[own])
+            written = {column: row.get(column) for column in columns}
+            identifiers = {key: value for key, value in row.items() if key not in columns}
+            merged = {**(vars(existing) if existing is not None else {}), **identifiers, **written, "id": row[own]}
+            table[row[own]] = SimpleNamespace(**merged)
+        return [row[own] for row in rows]
+
+    def record_computed_statistics(self, computed: list[Any]) -> None:
+        """Kept beside the tables, as `info.json` holds it beside the dataset's rows."""
+        for statistic in computed:
+            self.computed_statistics[(statistic.definition.level, statistic.definition.name)] = statistic
 
     def ensure_record_clusters(self) -> str:
         family = canonical_family_spec_for_slot(CLUSTER_SLOT)
@@ -171,7 +248,9 @@ class _Target:
 
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""
+        base = list(getattr(self.info.tables.get(table_name), "model_fields", {}))
         return SimpleNamespace(
+            schema=SimpleNamespace(names=base + list(self.statistic_columns.get(table_name, {}))),
             optimize=lambda **_kwargs: self.compactions.append(table_name),
             count_rows=lambda: len(self.tables.get(table_name, {})),
             create_scalar_index=lambda column, **_kwargs: self.indexes.append((table_name, column)),
@@ -287,8 +366,11 @@ class _Source:
     resolver does with them is exercised elsewhere.
     """
 
-    # The real schemas: the reader finds a dataset's media by looking at them.
-    info = SimpleNamespace(id="contract", tables={"records": Record, "images": Image})
+    # The real schemas: the reader finds a dataset's media by looking at them. Objects and boxes,
+    # which statistics measure, the dataset declares and holds none of.
+    info = SimpleNamespace(
+        id="contract", tables={"records": Record, "images": Image, "bboxes": BBox, "entities": Entity}
+    )
 
     # The one space of the dataset's embeddings, when it holds some.
     _SPACE = EmbeddingSpaces().new_space(CONTRACT_EXAMPLES["embeddings"]["model"], "", CONTRACT_VECTOR_DIM)
@@ -351,6 +433,8 @@ class _Source:
                 end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
                 ids = [f"img-{n}" for n in range(skip, end)]
             return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
+        if table_name in ("bboxes", "entities"):
+            return []
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 

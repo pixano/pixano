@@ -20,8 +20,8 @@ stands on may be gone.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Collection, Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import duckdb
@@ -44,6 +44,13 @@ RECORD_STATISTICS_TABLE = canonical_table_name_for_slot("record_statistics")
 #: column names it `c."column"` (`computed_sql_column`).
 RECORDS_ALIAS = "r"
 COMPUTED_ALIAS = "c"
+
+#: What names a computed column among the columns of `matching_records`: apart from a record's own
+#: column of the same name.
+COMPUTED_COLUMN_PREFIX = "computed:"
+#: What names, among the columns of `matching_records`, whether the filters of a column kept apart
+#: keep a record.
+KEPT_BY_PREFIX = "kept_by:"
 
 _RECORDS_TABLE = SchemaGroup.RECORD.value
 
@@ -92,6 +99,29 @@ class RecordOrder:
 
 #: Records in the order of their identifiers: what reading them with no other order means.
 BY_ID = RecordOrder(column="id", descending=False, on_computed=False)
+
+
+@dataclass(frozen=True)
+class CrossFilter:
+    """A request on the records, its filters kept apart per column, so that each column's can be left
+    out in turn: a card of the overview counts the records the other columns' filters keep (§22.7).
+
+    Attributes:
+        where: The condition every record meets whatever the column — the free text, a raw clause —,
+            as LanceDB reads it; None for none.
+        on_records: Per record column filtered, the condition its filters make, as LanceDB reads it.
+        on_computed: Per computed column filtered, the condition its filters make, as the join reads
+            it. A column is named as the explorer names it, in both.
+    """
+
+    where: str | None = None
+    on_records: Mapping[str, str] = field(default_factory=dict)
+    on_computed: Mapping[str, ComputedFilter] = field(default_factory=dict)
+
+    @property
+    def columns(self) -> list[str]:
+        """The columns filtered, the records' first."""
+        return [*self.on_records, *self.on_computed]
 
 
 def quote_identifier(name: str) -> str:
@@ -220,6 +250,94 @@ def matching_record_ids(dataset: Dataset, where: str | None, computed_filter: Co
         return [row[0] for row in connection.execute(f"SELECT {RECORDS_ALIAS}.id {joined}").fetchall()]
 
 
+def matching_records(
+    dataset: Dataset,
+    cross_filter: CrossFilter,
+    record_columns: Sequence[str] = (),
+    computed_columns: Sequence[str] = (),
+    apart: Collection[str] = (),
+) -> pa.Table:
+    """The records a request keeps, with some of their own columns and computed ones; the filters of the
+    columns `apart` told rather than applied.
+
+    For each column apart the request filters, a column named `KEPT_BY_PREFIX` and its name says
+    whether its filters keep the record — not where its value is none, as a filter keeps no such
+    record. The request keeps the records for which each of them is true; the overview counts a card
+    over those every other column's filters keep (§22.7).
+
+    Args:
+        dataset: The dataset.
+        cross_filter: The request, its filters per column.
+        record_columns: The records' columns to read, beside their `id`.
+        computed_columns: The computed columns to read, each named `COMPUTED_COLUMN_PREFIX` and its name;
+            none where a record has no value, or no table holds the column.
+        apart: The columns, as the explorer names them, whose filters are told rather than applied.
+
+    Returns:
+        A row per record the filters of the other columns keep, in no particular order.
+
+    Raises:
+        InvalidRecordFilter: LanceDB refused the request's condition on the records.
+    """
+    told = {column: sql for column, sql in cross_filter.on_records.items() if column in apart}
+    applied = [sql for column, sql in cross_filter.on_records.items() if column not in apart]
+    where = _all_of([condition for condition in (cross_filter.where, *applied) if condition is not None])
+    columns = list(dict.fromkeys(["id", *record_columns]))
+    projection: list[str] | dict[str, str] = columns
+    if told:
+        # A column's filters are a condition of the read, as they would be of its `where`: they say
+        # alike whatever the column holds. A record's columns go through by name.
+        projection = {
+            **{column: _lance_identifier(column) for column in columns},
+            **{KEPT_BY_PREFIX + column: f"coalesce(({sql}), false)" for column, sql in told.items()},
+        }
+    record_rows = _record_rows(dataset, projection, where)
+    told_computed = {column: filter_ for column, filter_ in cross_filter.on_computed.items() if column in apart}
+    computed_filter = _all_computed_of(
+        [filter_ for column, filter_ in cross_filter.on_computed.items() if column not in apart]
+    )
+    read = [
+        *(computed_filter.columns if computed_filter is not None else ()),
+        *(column for filter_ in told_computed.values() for column in filter_.columns),
+        *computed_columns,
+    ]
+    computed_rows = _computed(dataset, list(dict.fromkeys(read)))
+    selected = [
+        f"{RECORDS_ALIAS}.*",
+        *(
+            f"{computed_sql_column(column)} AS {quote_identifier(COMPUTED_COLUMN_PREFIX + column)}"
+            for column in computed_columns
+        ),
+        *(
+            f"coalesce(({filter_.sql}), false) AS {quote_identifier(KEPT_BY_PREFIX + column)}"
+            for column, filter_ in told_computed.items()
+        ),
+    ]
+    with duckdb.connect() as connection:
+        joined = _joined(connection, record_rows, computed_rows, computed_filter)
+        return connection.execute(f"SELECT {', '.join(selected)} {joined}").to_arrow_table()
+
+
+def _all_of(conditions: Sequence[str]) -> str | None:
+    """The conditions joined, each kept whole; None for none."""
+    if not conditions:
+        return None
+    return conditions[0] if len(conditions) == 1 else " AND ".join(f"({condition})" for condition in conditions)
+
+
+def _all_computed_of(filters: Sequence[ComputedFilter]) -> ComputedFilter | None:
+    """Conditions on computed columns joined into one, which reads the columns of each; None for none."""
+    sql = _all_of([filter_.sql for filter_ in filters])
+    if sql is None:
+        return None
+    return ComputedFilter(sql=sql, columns=tuple(dict.fromkeys(column for one in filters for column in one.columns)))
+
+
+def _lance_identifier(name: str) -> str:
+    """A column's name as LanceDB's SQL reads it whatever it is, a keyword included: between backticks."""
+    return "`" + name.replace("`", "``") + "`"
+
+
 def computed_values(dataset: Dataset, record_ids: Sequence[str], columns: Sequence[str]) -> dict[str, dict[str, Any]]:
     """The values of some computed columns for some records.
 
@@ -256,15 +374,24 @@ def _rows(
     record_columns = ["id"]
     if not order.on_computed and order.column != "id":
         record_columns.append(order.column)
-    try:
-        record_rows = _read(dataset.open_table(_RECORDS_TABLE), record_columns, where)
-    except RuntimeError as error:
-        # The compiled conditions are allowlisted and cannot be malformed: only a raw clause is.
-        raise InvalidRecordFilter(str(error)) from error
+    record_rows = _record_rows(dataset, record_columns, where)
     computed_columns = list(computed_filter.columns) if computed_filter is not None else []
     if order.on_computed and order.column not in computed_columns:
         computed_columns.append(order.column)
     return record_rows, _computed(dataset, computed_columns)
+
+
+def _record_rows(dataset: Dataset, columns: list[str] | dict[str, str], where: str | None) -> pa.Table:
+    """These columns of the records matching `where`, all of them.
+
+    Raises:
+        InvalidRecordFilter: LanceDB refused `where`.
+    """
+    try:
+        return _read(dataset.open_table(_RECORDS_TABLE), columns, where)
+    except RuntimeError as error:
+        # The compiled conditions are allowlisted and cannot be malformed: only a raw clause is.
+        raise InvalidRecordFilter(str(error)) from error
 
 
 def _joined(
@@ -297,8 +424,10 @@ def _order_by(order: RecordOrder) -> str:
     return f"{alias}.{quote_identifier(order.column)} {order.direction} NULLS LAST, {RECORDS_ALIAS}.id ASC"
 
 
-def _read(table: Any, columns: list[str], where: str | None) -> pa.Table:
-    """The columns of the rows of a LanceDB table that match a condition, all of them."""
+def _read(table: Any, columns: list[str] | dict[str, str], where: str | None) -> pa.Table:
+    """The columns of the rows of a LanceDB table that match a condition, all of them: named, or each
+    computed by an expression of its own (a projection).
+    """
     # LanceDB applies its default limit of ten rows unless told otherwise; a limit of zero is refused.
     query = table.search(None).select(columns).limit(max(table.count_rows(), 1))
     if where is not None:
@@ -307,23 +436,55 @@ def _read(table: Any, columns: list[str], where: str | None) -> pa.Table:
 
 
 def _read_statistics(dataset: Dataset, columns: list[str], where: str | None) -> pa.Table | None:
-    """These columns of the statistics table, those it holds, with each row's record, at its latest
-    version; None before any computation, or when the table cannot be read — logged.
-
-    A compaction of the table during the read can take the files of the version read away: the read
-    is tried again once, on the version the compaction made.
+    """These columns of the statistics table, those it holds, with each row's record; None before
+    any computation, or when the table cannot be read.
     """
     if RECORD_STATISTICS_TABLE not in dataset.info.tables:
         return None
+    return read_latest(dataset, RECORD_STATISTICS_TABLE, ["record_id", *columns], where, required=["record_id"])
+
+
+def read_latest(
+    dataset: Dataset, table_name: str, columns: list[str], where: str | None, required: list[str]
+) -> pa.Table | None:
+    """These columns of a computed table, those it holds, at its latest version; None when the
+    table cannot be read, or lacks a column it must hold — logged.
+
+    A job compacting the table during the read can take the files of the version read away: the read
+    is tried again once, on the version the compaction made. A table lacking a column it must hold is
+    not read again: it would lack it still.
+
+    Args:
+        dataset: The dataset.
+        table_name: The computed table.
+        columns: The columns to read; those the table does not hold are left out.
+        where: The condition the rows read meet, as LanceDB reads it; None for every row.
+        required: The columns the table must hold to be read at all.
+
+    Returns:
+        The rows read, or None.
+    """
     failure: Exception | None = None
     for _attempt in range(_READ_ATTEMPTS):
         try:
-            table = dataset.open_latest_table(RECORD_STATISTICS_TABLE)
-            present = [column for column in columns if column in table.schema.names]
-            return _read(table, ["record_id", *present], where)
-        except Exception as error:  # noqa: BLE001 - a broken table shows no statistic, it fails no page
+            table = dataset.open_latest_table(table_name)
+            held = table.schema.names
+        except Exception as error:  # noqa: BLE001 - a broken table shows no value, it fails no page
             failure = error
-    logger.warning("Dataset %s: its statistics cannot be read, none shown: %s", dataset.info.id, failure)
+            continue
+        missing = [column for column in required if column not in held]
+        if missing:
+            # Not read again: it would lack them still.
+            failure = ValueError(f"it holds no column {', '.join(missing)}")
+            break
+        present = [column for column in columns if column in held]
+        try:
+            return _read(table, present, where)
+        except Exception as error:  # noqa: BLE001 - a broken table shows no value, it fails no page
+            failure = error
+    logger.warning(
+        "Dataset %s: its table %s cannot be read, none of it shown: %s", dataset.info.id, table_name, failure
+    )
     return None
 
 
