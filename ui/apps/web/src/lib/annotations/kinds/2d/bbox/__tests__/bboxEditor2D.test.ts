@@ -12,6 +12,7 @@ import { BBOX_RESOURCE } from "../bboxPayloadBuilder.js";
 import { bboxRenderer2DFactory } from "../bboxRenderer2D.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
 import { commitGeometryEdit, commitNewAnnotation } from "$lib/annotations/payloadBuilders.js";
+import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import { installSilentCanvas } from "$lib/annotations/scene/__tests__/konvaInHappyDom.js";
 import type { Scene2DContext, StagedWorkFlag } from "$lib/annotations/scene/sceneContext.js";
 import { selectTool2D } from "$lib/annotations/scene/selectTool2D.js";
@@ -19,6 +20,7 @@ import {
   humanBox,
   modelBox,
   openManager,
+  serveLikeTheApi,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
@@ -254,6 +256,24 @@ describe("bboxEditor2D on the real Konva", () => {
     const rect = rectOf(scene, "b1");
     expect([rect.scaleX(), rect.scaleY()]).toEqual([1, 1]);
     expect(rect.width()).toBeCloseTo(40, COORDS_DIGITS);
+  });
+
+  it("a resized model's box reads pending, still offers Accept, and Save sends the new size and reads accepted", async () => {
+    // A row of its own: the backend stores the write into the row it holds.
+    const scene = await openOnCanvas(modelBox(REC, "b1"));
+    serveLikeTheApi(scene.backend, REC);
+    select(scene, "b1");
+    resizeFromBottomRight(scene, 20, 20);
+
+    // Unsaved, the resize leaves the box in review: an Accept now rides on it.
+    expect(scene.ctx.collection.find("b1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(scene.manager.review.accept("b1")).toBe(true);
+
+    expect(await scene.manager.flushSave()).toBe(true);
+    const sent = scene.backend.writes.find((w) => w.op === "update");
+    expect(sent?.op === "update" ? sent.body.review_status : "no update sent").toBe("accepted");
+    expectCoords(sent?.op === "update" ? sent.body.coords : undefined, [0.1, 0.1, 0.4, 0.4]);
+    expect(scene.ctx.collection.find("b1")?.review?.status).toBe(REVIEW_STATUS.ACCEPTED);
   });
 
   it("patches the pending create of a draft resized before its save", async () => {

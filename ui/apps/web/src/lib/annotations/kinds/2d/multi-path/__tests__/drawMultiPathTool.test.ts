@@ -369,9 +369,9 @@ describe("a shape begun is the record's unsaved work", () => {
   it("is dropped by Discard: Enter then commits nothing", async () => {
     const { manager, handler, setPointer } = await onTheRecord();
     click(handler, setPointer, TRIANGLE);
-    expect(manager.hasUnsavedWork).toBe(true);
+    expect(manager.review.canDiscard).toBe(true);
 
-    await manager.discardChanges();
+    await manager.review.discard();
     handler.onKeyDown?.(key("Enter"));
 
     expect(manager.hasUnsavedWork).toBe(false);

@@ -15,6 +15,7 @@ import {
   highlightedEntity,
   preAnnotationIsActive,
   resetWorkspaceStores,
+  reviewDecisionsLockedOn,
   saveData,
   selectedTool,
   workspaceSaveQueue,
@@ -593,6 +594,7 @@ describe("a decision", () => {
       "while the old pre-annotation mode hides the objects",
       () => (preAnnotationIsActive.value = true),
     ],
+    ["on the record Save & next is leaving", () => (reviewDecisionsLockedOn.value = RECORD_ID)],
   ])("is not taken %s", (_, setUp) => {
     setUp();
 
@@ -600,6 +602,13 @@ describe("a decision", () => {
     acceptAnnotations([shown("box")]);
     rejectAnnotations([shown("box")]);
     expect(queued()).toEqual([]);
+  });
+
+  it("is taken on another record than the one Save & next is leaving", () => {
+    // The reviewer moved on while the queue answered.
+    reviewDecisionsLockedOn.value = "the-record-left";
+
+    expect(canTakeReviewDecision()).toBe(true);
   });
 
   it("on an object covers what it shows still to review: a hidden one stays", async () => {

@@ -271,9 +271,9 @@ describe("drawBBoxTool, a box being drawn is the record's unsaved work", () => {
   it("is dropped by Discard: letting go then makes no box", async () => {
     const { manager, handler, pull } = await onTheRecord();
     pull({ x: 10, y: 10 }, { x: 50, y: 50 });
-    expect(manager.hasUnsavedWork).toBe(true);
+    expect(manager.review.canDiscard).toBe(true);
 
-    await manager.discardChanges();
+    await manager.review.discard();
     handler.onPointerUp!(pointerEvent());
 
     expect(manager.hasUnsavedWork).toBe(false);
