@@ -14,7 +14,7 @@ import {
 } from "$lib/annotations/annotationCollection.svelte.js";
 import type { Scene2DContext } from "$lib/annotations/scene/sceneContext.js";
 import type { CoordsNorm } from "$lib/annotations/types.js";
-import { openManager, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
+import { openManager, VIEWPORT, widgetSeam } from "$lib/workspace/__tests__/workspaceHarness.js";
 
 // Konva needs a native canvas in node; the tool only constructs a Rect and
 // reads/writes its geometry. Mock it with a plain accessor object.
@@ -229,10 +229,14 @@ describe("drawBBoxTool", () => {
 
 describe("drawBBoxTool, a box being drawn is the record's unsaved work", () => {
   const REC_1 = "rec-1";
+  const REC_2 = "rec-2";
 
   /** The box tool in an image widget of a record open in the real workspace. */
   async function onTheRecord() {
-    const opened = await openManager({ [REC_1]: {} });
+    const opened = await openManager(
+      { [REC_1]: {}, [REC_2]: {} },
+      { next: { recordId: REC_2, remaining: 1 } },
+    );
     const harness = makeHarness();
     const ctx: Scene2DContext = { ...harness.ctx, ...widgetSeam(opened.manager) };
     const handler = drawBBoxTool.createHandler(ctx);
@@ -246,14 +250,18 @@ describe("drawBBoxTool, a box being drawn is the record's unsaved work", () => {
     return { ...opened, handler, pull };
   }
 
-  it("holds it while the pointer is held, and lets go of it once the pointer is let go", async () => {
+  it("keeps Save & next on the record while the pointer is held, and lets it move once it is let go", async () => {
     const { manager, handler, pull } = await onTheRecord();
     // Too small to make a box: once let go, nothing is left.
     pull({ x: 10, y: 10 }, { x: 10, y: 10 });
-    expect(manager.hasUnsavedWork).toBe(true);
+
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_1);
+    expect(manager.review.outcome).toEqual({ kind: "not-saved" });
 
     handler.onPointerUp!(pointerEvent());
-    expect(manager.hasUnsavedWork).toBe(false);
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_2);
   });
 
   it("holds it until Escape or the tool is left", async () => {

@@ -12,6 +12,7 @@ License: CECILL-C
 
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import ReviewBar from "../Review/ReviewBar.svelte";
+  import ReviewShortcuts from "../Review/ReviewShortcuts.svelte";
   import EntitiesSection from "./EntitiesSection.svelte";
   import EntityCard from "./EntityCard.svelte";
   import {
@@ -344,6 +345,9 @@ License: CECILL-C
 
     <!-- The old pre-annotation mode replaces the list of objects: no review meanwhile. -->
     {#if !preAnnotationIsActive.value}
+      {#if reviewModeIsActive.value}
+        <ReviewShortcuts objects={allTopEntities} />
+      {/if}
       {#if reviewModeIsActive.value || recordHasReview}
         <ReviewBar
           active={reviewModeIsActive.value}

@@ -25,7 +25,7 @@ import { normalizeWorkspaceRuntimeState } from "$lib/utils/workspaceRuntime";
  * Unpacks mask RLE, generates SVG polygons, and attaches frame indices for video.
  */
 function prepareAnnotation(ann: Annotation, workspaceType: WorkspaceType): Annotation {
-  ann.ui = { datasetItemType: workspaceType, displayControl: initDisplayControl };
+  ann.ui = { datasetItemType: workspaceType, displayControl: { ...initDisplayControl } };
 
   if (workspaceType === WorkspaceType.VIDEO) {
     if (ann.table_info.base_schema !== BaseSchema.Tracklet) {

@@ -13,7 +13,8 @@ import {
 import { planFittedLayouts, type Viewport } from "./layoutPlanner.js";
 import { MutationQueue } from "./mutationQueue.svelte.js";
 import { RecordLoader } from "./recordLoader.js";
-import { ReviewController } from "./reviewController.svelte.js";
+import { ReviewController, type SaveReport } from "./reviewController.svelte.js";
+import { httpReviewGateway, type ReviewGateway } from "./reviewGateway.js";
 import { countUnsavedWork } from "./unsavedWork.js";
 import { WorkspaceSession, type StagedWorkHolder } from "./workspaceSession.svelte.js";
 import type {
@@ -102,15 +103,15 @@ export class WorkspaceManager {
    */
   private stagedFlags = new Map<string, StagedWorkHolder>();
 
-  /** The review of the open record: list, status chips, decisions. */
+  /** The review of the open record: list, status chips, decisions, "Save & next". */
   readonly review: ReviewController;
 
   /**
    * How many items of the open record are unsaved (`countUnsavedWork`): each
    * annotation with a change queued or on the wire, each draft, an entity form
    * open on a reassignment, each raised holder of staged work. The one count
-   * every widget toolbar shows, and the one `flushSave` reads — so they never
-   * disagree. Derived once for all of them.
+   * the Review tab and every widget toolbar show, and the one "Save & next"
+   * reads — so they never disagree. Derived once for all of them.
    */
   readonly unsavedCount: number = $derived.by(() => {
     const inFlight = this.mutations.inFlight;
@@ -126,6 +127,7 @@ export class WorkspaceManager {
     registry: WidgetRegistry,
     gateway: DatasetGateway = httpDatasetGateway,
     layoutRepository: DatasetLayoutRepository = localStorageDatasetLayoutRepository,
+    reviewGateway: ReviewGateway = httpReviewGateway,
   ) {
     this.registry = registry;
     this.session = new WorkspaceSession();
@@ -149,16 +151,19 @@ export class WorkspaceManager {
 
     // Narrow dependencies rather than `this`: the controller sees the queue as
     // the same `MutationSink` tools see, and the manager only as a way to save
-    // and to discard.
+    // and to move to another record — its own move, which `openRecord` is not.
     this.review = new ReviewController({
       session: this.session,
       sink: this.mutations,
       navigator: {
-        save: () => this.flushSave(),
+        save: () => this.saveRecord(),
         unsavedCount: () => this.unsavedCount,
         hasUnsavedWork: () => this.hasUnsavedWork,
         discardChanges: () => this.discardChanges(),
+        openRecord: (datasetId, recordId, viewport) =>
+          this.replaceRecord(datasetId, recordId, viewport),
       },
+      gateway: reviewGateway,
     });
   }
 
@@ -294,13 +299,13 @@ export class WorkspaceManager {
 
   // ─── Staged work (work a tool holds until it is confirmed) ────────────────
   // Reached through each widget's seam (`claimStagedWork`), which stamps the
-  // widget's id. While a flag is raised the record is not all saved, and
-  // Discard drops the work.
+  // widget's id. While a flag is raised the record is not all saved: "Save &
+  // next" stays on it rather than drop the work.
 
   /**
    * A flag of its own for one holder of staged work in a widget — a tool, an
-   * editor — lowered until the holder raises it. Holders never lower one
-   * another's flags.
+   * editor, a HUD — lowered until the holder raises it. Holders never lower
+   * one another's flags.
    *
    * @param widgetId The widget the holder belongs to.
    * @param discard Drops the holder's work and lowers its flag; `discardChanges`
@@ -355,6 +360,18 @@ export class WorkspaceManager {
     for (const holder of [...this.stagedFlags.values()]) holder.discard();
     this.stagedFlags.clear();
     this.publishStagedWork();
+  }
+
+  // ─── Review decisions ─────────────────────────────────────────────────────
+
+  /**
+   * True while no review decision may be taken — "Save & next" is saving the
+   * open record or moving from it (`WorkspaceSession.decisionsLocked`). Every
+   * widget's sink carries it, so the shared decision helpers refuse on every
+   * path.
+   */
+  get decisionsLocked(): boolean {
+    return this.session.decisionsLocked;
   }
 
   // ─── Mutation queue forwarders ────────────────────────────────────────────
@@ -418,48 +435,108 @@ export class WorkspaceManager {
 
   /**
    * Throw away every unsaved edit and put the record back as it was last saved.
-   * Work a tool holds staged goes too: every holder of a raised flag drops it.
    *
-   * The backend *is* that state, so the annotations are refetched rather than
-   * rolled back from a snapshot: an optimistic edit has already been applied in
-   * place, and reconstructing what it overwrote would mean keeping a shadow
-   * copy of the whole collection for a button most sessions never press.
+   * At once, the queue is emptied, every tool holding staged work drops it, a
+   * draft waiting for its entity is cancelled, and each annotation is put back
+   * as stored — its content and status as last read or written, which every
+   * annotation keeps (`AnnotationCollection.restoreStored`). Then the record is
+   * read back (`readBack`), since only the backend has what a local copy cannot
+   * give back: an annotation deleted here, what the server itself changed. The
+   * reviewer may go on working meanwhile: what they edit or decide on keeps
+   * that work when the rows land.
    *
-   * Only the annotations are reloaded — not the widgets, their arrangement or
-   * their active tools — so undoing an edit does not feel like reopening the
-   * record, which is the whole point of having this instead of a page refresh.
+   * Only the record's entities and annotations are read again — not the
+   * widgets, their arrangement or their active tools — so undoing an edit does
+   * not feel like reopening the record, which is the whole point of having this
+   * instead of a page refresh.
    */
   async discardChanges(): Promise<void> {
+    // Discarding ends what "Save & next" said when it stayed on the record.
+    this.review.clearNotMoved();
     this.mutations.reset();
     this.dropStagedWork();
-    await this.loader.reloadAnnotations();
-    // The annotation that was selected may no longer exist (a discarded
-    // create) — and even when it does, the collection it belonged to is gone.
-    this.session.annotations.select(null);
-    this.pendingAnnotation?.onCancel();
-    this.pendingAnnotation = null;
+    this.cancelPendingAnnotation();
+    this.session.annotations.restoreStored();
+    await this.readBack({ annotations: true });
   }
 
   /**
-   * Flush every queued mutation to the backend.
+   * Flush every queued mutation to the backend, then read back what it stored.
    *
-   * Resolves true when the save went through and left nothing unsaved. False
-   * when it failed (the error is on `saveError`), or when work is still
-   * unsaved: begun during the save — a change, a draft — or held in a tool.
+   * Resolves true when the save went through and left nothing unsaved — the
+   * condition for moving to another record without losing work. False when it
+   * failed (the error is on `saveError`), when another save was still running,
+   * when work begun during the save — a change, a draft — or held in a tool is
+   * still unsaved, or when another record was opened meanwhile: that record's
+   * state is not this save's to read back or report on.
    */
   async flushSave(): Promise<boolean> {
+    return (await this.saveRecord()).saved;
+  }
+
+  /**
+   * `flushSave`, saying also whether this save failed. That is taken as the
+   * flush ends, before the read-back: a save started meanwhile — the Review
+   * tab's Save stays offered — clears `saveError` as it starts, and a later
+   * read of it would describe that one.
+   */
+  private async saveRecord(): Promise<SaveReport> {
+    const { datasetId, recordId } = this.session;
+    // A save, from whichever control, ends what "Save & next" said when it
+    // stayed on the record.
+    this.review.clearNotMoved();
+    const sending = this.mutations.count > 0;
     await this.mutations.flush();
-    if (this.mutations.saveError) return false;
-    // Entity creates/prunes happen backend-side; refresh the local entity list
-    // so the panel and picker reflect them. Skipped when the flush errored, so
-    // the failed work stays on screen exactly as the user left it.
-    await this.loader.reloadEntities();
+    // `flush` returns at once while another one runs: that save is not ours to
+    // report, and its result is not known yet.
+    if (this.mutations.saving) return NOTHING_SAVED;
+    if (!this.isOpen(datasetId, recordId)) return NOTHING_SAVED;
+    const failed = this.mutations.saveError !== null;
+    // Nothing sent, nothing changed. A save that failed may still have written
+    // before its failure — an entity created — so its entities are read back
+    // too; its annotations are not, the failed work being still queued.
+    if (sending) await this.readBack({ annotations: !failed });
+    if (failed) return SAVE_FAILED;
+    if (!this.isOpen(datasetId, recordId)) return NOTHING_SAVED;
     // Saving ends the edit, so drop the selection: every kind's editing
     // affordances — a bbox's transformer, a path's vertex handles — are tied to
     // it, and a saved annotation should read as a finished outline rather than
     // one still covered in grab points.
     this.session.annotations.select(null);
-    return this.nothingUnsaved();
+    return { saved: this.nothingUnsaved(), failed: false };
+  }
+
+  /**
+   * Read back what the server holds for the open record: its entities, then
+   * its annotations.
+   *
+   * The server decides what a write stored — a model's row a person edited
+   * comes back accepted, whatever the client believed — and creates or prunes
+   * entities. The entities come first, since each annotation's label snapshot
+   * is read from them: the other order labels a reassigned box with nothing.
+   *
+   * The rows never overwrite work done meanwhile: an annotation with a write
+   * queued or on the wire keeps its version here, drafts stay, and a tool's
+   * staged work is committed onto the row read (`RecordLoader.reloadAnnotations`).
+   * Only a write that lands while the record is read calls the read off — the
+   * rows may predate it; that write's own save reads the record back. A write
+   * the server refused stored nothing, and calls off nothing
+   * (`MutationQueue.writesLanded`). Another record opened meanwhile calls it off
+   * too.
+   *
+   * A kind whose rows could not be read keeps what it shows: a failed request
+   * says nothing about what the dataset holds, and the save it follows still
+   * went through.
+   */
+  private async readBack(opts: { annotations: boolean }): Promise<void> {
+    const writes = this.mutations.writesLanded;
+    const noWriteLandedSince = () => this.mutations.writesLanded === writes;
+    await this.loader.reloadEntities(noWriteLandedSince);
+    if (!opts.annotations || !noWriteLandedSince()) return;
+    await this.loader.reloadAnnotations({
+      stillWanted: noWriteLandedSince,
+      holdsWork: (id) => this.mutations.holdsWorkFor(id),
+    });
   }
 
   /**
@@ -471,11 +548,16 @@ export class WorkspaceManager {
     return !this.nothingUnsaved();
   }
 
+  /** Whether this record is still the open one. */
+  private isOpen(datasetId: string | null, recordId: string | null): boolean {
+    return this.session.datasetId === datasetId && this.session.recordId === recordId;
+  }
+
   /**
    * No queued change, no draft in the collection, no draft waiting for its
    * entity, no edit a widget holds staged. Read from the count the screen
-   * shows, so that a save never reports work left on a record said to hold
-   * nothing unsaved, nor the reverse.
+   * shows, so that "Save & next" never stays on a record said to hold nothing
+   * unsaved, nor leaves one said to hold something.
    */
   private nothingUnsaved(): boolean {
     return this.unsavedCount === 0;
@@ -518,9 +600,21 @@ export class WorkspaceManager {
   /**
    * Replace the open record with another one, or open it again: the widgets,
    * the unsaved changes and the arrangement of the previous record go, the new
-   * record's come. The way the record list switches records.
+   * record's come. The way the record list, and everything but "Save & next",
+   * switches records. A "Save & next" still running loses its hold — even on
+   * the record it is saving, opened again (`ReviewController.recordOpening`).
    */
   openRecord(datasetId: string, recordId: string, viewport?: Viewport): Promise<void> {
+    this.review.recordOpening();
+    return this.replaceRecord(datasetId, recordId, viewport);
+  }
+
+  /**
+   * Replace the open record — "Save & next"'s own move, which keeps its hold,
+   * and the second half of `openRecord`. Everything unsaved is dropped here,
+   * which is why "Save & next" saves first.
+   */
+  private replaceRecord(datasetId: string, recordId: string, viewport?: Viewport): Promise<void> {
     this.clearWorkspace();
     return this.selectRecordInDataset(datasetId, recordId, viewport);
   }
@@ -714,3 +808,8 @@ export class WorkspaceManager {
     }
   }
 }
+
+/** What a save reports when another one runs, or another record was opened meanwhile. */
+const NOTHING_SAVED: SaveReport = { saved: false, failed: false };
+/** What a save reports when it failed: the error is on `saveError`. */
+const SAVE_FAILED: SaveReport = { saved: false, failed: true };

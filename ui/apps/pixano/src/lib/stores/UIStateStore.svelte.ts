@@ -12,7 +12,7 @@ import type { ReactiveReadonly } from "$lib/types/store";
 
 export type { DisplayControl };
 
-export const DEFAULT_DISPLAY_CONTROL: DisplayControl = initDisplayControl;
+export const DEFAULT_DISPLAY_CONTROL: Readonly<DisplayControl> = initDisplayControl;
 
 /** Per-node UI state — separated from the domain Document model. */
 export interface NodeUIState {
