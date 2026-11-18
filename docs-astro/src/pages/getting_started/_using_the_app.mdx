@@ -159,6 +159,17 @@ to review stays in view on the image and the rest fades. It says how much is lef
 and **Accept all** accepts the entities shown — an entity with a hidden annotation, with its eye or
 the confidence filter, stays to review whole, its mask with its box.
 
+In review, the keyboard works with the Pan tool, one annotation at a time. A record opened in
+review puts its first annotation to review under review: it is shown alone on the image, and
+outlined in its entity's card. `Enter` accepts it and `Delete` (`Backspace` on a Mac keyboard)
+rejects it, then the next one comes under review — the entity's next annotation, then the next
+entity's; like Accept all, the keys leave an entity with a hidden annotation to review whole.
+Accepting or rejecting it with the mouse moves on the same way. Clicking an entity's card puts its
+first annotation to review under review. A click on a box selects it without editing it — `E` or
+the pencil edits it —, and a click beside the shapes keeps the review: to see the whole record,
+turn the switch off. Once nothing is left, `Enter` offers to save and go to the next record: press
+it again to do so, or any other key to stay. `Enter` still presses a button you reached with `Tab`.
+
 Decisions are staged like any change: **Save** writes them, and leaving the record without
 saving drops them. In review, the header offers **Save & next**, which saves and opens the next
 record to review, and says how many records are left. The next record follows the order of the
@@ -175,6 +186,9 @@ to review, it saves and stays. Video and 3D records are not reviewed.
 | | `Alt` (hold) | Peek at existing annotations |
 | Navigation | `Shift+→` | Next record |
 | | `Shift+←` | Previous record |
+| Review mode | `Enter` | Accept the annotation under review, then review the next |
+| | `Delete` / `Backspace` | Reject the annotation under review, then review the next |
+| | `Enter`, `Enter` | Nothing left on the record: save and go to the next one |
 | Bounding box | `R` | Activate the tool |
 | | `Enter` | Validate the box |
 | Polygon / polyline | `P` / `L` | Activate polygon / polyline |

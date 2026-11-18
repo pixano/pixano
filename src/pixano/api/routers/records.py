@@ -11,11 +11,18 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.api.models import PaginatedResponse, PreviewDescriptor, RecordListResponse, RecordResponse
-from pixano.api.query import FilterCompileError, build_column_catalogue, compile_filters, validate_sort
+from pixano.api.query import (
+    FilterCompileError,
+    build_column_catalogue,
+    compile_record_query,
+    computed_columns_by_name,
+)
+from pixano.api.record_reads import read_page
 from pixano.api.resources import RECORD_RESOURCE
 from pixano.api.routers._deps import PaginationParams, RecordQueryParams, get_dataset_dep
 from pixano.api.service import BaseService
 from pixano.datasets import Dataset, TableQueryBuilder
+from pixano.datasets.queries.computed_columns import computed_values
 from pixano.datasets.utils import DatasetAccessError
 from pixano.utils.python import to_sql_list
 
@@ -196,41 +203,34 @@ def list_records(
 
     catalogue = build_column_catalogue(dataset, "records")
     try:
-        where, _referenced, index_servable = compile_filters(catalogue, query.filter, query.q)
-        sortcol, order = validate_sort(catalogue, query.sort, query.order)
+        # A deprecated raw `where` clause (back-compat) is folded in if present.
+        record_query = compile_record_query(
+            catalogue, query.filter, query.q, query.sort, query.order, raw_where=query.where
+        )
     except FilterCompileError as err:
         raise HTTPException(status_code=400, detail=str(err)) from None
 
-    # Fold in a deprecated raw `where` clause (back-compat) if present.
-    raw_where = bool(query.where)
-    if raw_where:
-        where = f"({query.where})" if where is None else f"{where} AND ({query.where})"
-
     service = BaseService(dataset, RECORD_RESOURCE)
-    records_page = service.list(
-        where=where,
-        limit=pagination.limit,
-        offset=pagination.offset,
-        sortcol=sortcol,
-        order=order,
-        force_full_scan=not index_servable,
-        raw_where=raw_where,
+    records_page = read_page(
+        dataset, service, record_query, pagination.limit, pagination.offset, raw_where=bool(query.where)
     )
 
     record_ids = [record.id for record in records_page.items]
     previews_by_record = (
         _resolve_view_previews(dataset_id, dataset, record_ids) if "view_previews" in includes and record_ids else {}
     )
+    # Each statistic the dataset computed per record, named as the catalogue names it; a record no
+    # value was computed for shows none.
+    computed_columns = computed_columns_by_name(catalogue)
+    values = computed_values(dataset, record_ids, list(computed_columns.values()))
 
-    items = [
-        RecordListResponse.model_validate(
-            {
-                **record.model_dump(),
-                "view_previews": previews_by_record.get(record.id) or None,
-            }
-        )
-        for record in records_page.items
-    ]
+    items = []
+    for record in records_page.items:
+        item: dict[str, Any] = {**record.model_dump(), "view_previews": previews_by_record.get(record.id) or None}
+        if computed_columns:
+            held = values.get(record.id, {})
+            item["computed_values"] = {name: held.get(column) for name, column in computed_columns.items()}
+        items.append(RecordListResponse.model_validate(item))
     return PaginatedResponse(
         items=items, total=records_page.total, limit=records_page.limit, offset=records_page.offset
     )

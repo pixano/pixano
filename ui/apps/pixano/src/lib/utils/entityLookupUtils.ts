@@ -257,6 +257,35 @@ const getFirstTrackFrame = (entity: Entity): number => {
     : Infinity;
 };
 
+/** A row's `name` as text to order by: "" for a value that is none. */
+const comparableName = (value: unknown): string => {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return "";
+};
+
+/**
+ * The order an entity's card lists its annotations: by kind — a box before its mask —, then
+ * tracks by view, in the order of `viewNames`, and the rest by name when both have one, else by
+ * id.
+ */
+export const sortChilds = (a: Annotation, b: Annotation, viewNames: readonly string[]): number => {
+  let res = a.table_info.base_schema.localeCompare(b.table_info.base_schema);
+  if (res === 0) {
+    if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
+      const orderMap = new Map(viewNames.map((val, index) => [val, index]));
+      res =
+        (orderMap.get(a.data.view_name) ?? Infinity) - (orderMap.get(b.data.view_name) ?? Infinity);
+    } else if ("name" in a.data && "name" in b.data) {
+      res = comparableName(a.data["name"]).localeCompare(comparableName(b.data["name"]));
+    } else {
+      res = a.id.localeCompare(b.id);
+    }
+  }
+  return res;
+};
+
 export const sortEntities = (a: Entity, b: Entity): number => {
   let result = 0;
   if (entityHasTracklets(a) && entityHasTracklets(b)) {
