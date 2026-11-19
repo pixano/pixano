@@ -322,3 +322,20 @@ class TestUnreadableStatistics:
 
         assert ordered_record_ids(dataset, None, condition, _by("id")) == ([], 0)
         assert ordered_record_ids(dataset, None, None, _by("bbox_count"))[0] == ["r1", "r2", "r3", "r4", "r5", "r6"]
+
+    def test_a_table_lacking_the_record_column_is_opened_once_and_gives_none(self, folder: Path, monkeypatch) -> None:
+        """Opened again, a table lacking a column it must hold would lack it still."""
+        dataset = _dataset(folder)
+        calls = []
+
+        class WithoutRecords:
+            schema = pa.schema([pa.field("bbox_count", pa.int64())])
+
+        def opened(name: str) -> WithoutRecords:
+            calls.append(name)
+            return WithoutRecords()
+
+        monkeypatch.setattr(dataset, "open_latest_table", opened)
+
+        assert computed_values(dataset, ["r1"], ["bbox_count"]) == {}
+        assert len(calls) == 1
