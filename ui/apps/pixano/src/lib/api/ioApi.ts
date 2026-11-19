@@ -6,6 +6,7 @@ License: CECILL-C
 
 import { JSON_HEADERS, requestJson } from "./apiClient";
 import type {
+  ImportEmbeddingsOffer,
   ImportPlanResponse,
   IoFormatResponse,
   IoJobResponse,
@@ -46,11 +47,18 @@ export async function analyzeImportSource(
   );
 }
 
-/** Queue an import job (202) from a saved plan_id and/or a spec+source pair. */
+/**
+ * Queue an import job (202) from a saved plan_id and/or a spec+source pair.
+ *
+ * `compute_embeddings` left out follows the server's default, which only applies where the job can
+ * run; `embeddings_model` left out is the server's.
+ */
 export async function startIoImport(request: {
   plan_id?: string;
   source: string;
   spec?: Record<string, unknown>;
+  compute_embeddings?: boolean;
+  embeddings_model?: string;
 }): Promise<IoJobResponse> {
   return requestJson<IoJobResponse>(
     "/io/imports",
@@ -61,9 +69,20 @@ export async function startIoImport(request: {
         plan_id: request.plan_id ?? "",
         source: request.source,
         spec: request.spec ?? {},
+        compute_embeddings: request.compute_embeddings,
+        embeddings_model: request.embeddings_model,
       }),
     },
     "startIoImport",
+  );
+}
+
+/** Whether an import can queue the embeddings job of what it imports, and with which models. */
+export async function getImportEmbeddingsOffer(): Promise<ImportEmbeddingsOffer> {
+  return requestJson<ImportEmbeddingsOffer>(
+    "/io/imports/embeddings",
+    {},
+    "getImportEmbeddingsOffer",
   );
 }
 
