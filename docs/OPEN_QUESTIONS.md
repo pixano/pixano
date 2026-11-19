@@ -107,11 +107,12 @@ Two things to watch:
 **Status:** open (an accepted cost; a cache is the proposed fix).
 
 `Dataset.record_embedding_health` (`src/pixano/datasets/dataset.py`) reads no
-vector, but it reads the `view_id` of every row of the embeddings table to count
-the media embedded, and counts the rows of each image table. The explorer calls
-it before every semantic search and every request for its filter schema
-(`src/pixano/api/routers/explorer.py`), so its cost grows with the number of
-vectors — six per record on a six-camera dataset.
+vector, but it reads the `view_id` of every row of a model's embeddings table to
+count the media embedded, and counts the rows of each image table. The explorer
+calls it before every semantic search, and for every model the dataset holds on
+every request for its filter schema (`src/pixano/api/routers/explorer.py`) — the
+media counted once for all —, so its cost grows with the number of vectors of
+every model — six per record and model on a six-camera dataset.
 
 It was accepted because counting distinct media is what makes the answer right:
 counting rows said "complete" with one camera of six embedded. No measurement of
