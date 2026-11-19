@@ -42,9 +42,11 @@ LIST_KINDS = f"SELECT name, params_schema FROM {SCHEMA_NAME}.job_kinds ORDER BY 
 
 # The job is recorded without chunks: the worker splits it, because splitting is
 # kind-specific logic and kind code only runs on that side.
+# Stamped by the clock, not by the transaction's start: the jobs queued together — an import's
+# embeddings, one per model — are then planned and listed in the order they were queued.
 INSERT_JOB = f"""
-INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state)
-VALUES (%s, %s, %s, 'planning')
+INSERT INTO {SCHEMA_NAME}.jobs (kind, dataset, params, state, created_at)
+VALUES (%s, %s, %s, 'planning', clock_timestamp())
 RETURNING id, kind, dataset, state, total_tasks, done_tasks, created_at, 0, 0, 0, false, NULL::jsonb, false
 """
 

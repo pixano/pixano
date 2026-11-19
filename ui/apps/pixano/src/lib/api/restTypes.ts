@@ -65,8 +65,31 @@ export interface ColumnDescriptorResponse {
   values_complete: boolean;
 }
 
+/** One embeddings model of a dataset — its space —, as a search can use it. */
+export interface EmbeddingSpaceStatusResponse {
+  /** What a search, the default and the address name it by. */
+  id: string;
+  /** The model's name, as the inference serves it. */
+  model_id: string;
+  /** The weights loaded under that name; empty when they were not told. */
+  checkpoint: string;
+  dim: number;
+  /** Whether a search that names no model reads this one. */
+  default: boolean;
+  /** Its health, as `SearchCapabilitiesResponse.status` words it. */
+  status: string;
+  detail?: string | null;
+  /** The media it holds a vector of. */
+  embedded_rows: number;
+}
+
+/**
+ * What the explorer can search by. A dataset holds the embeddings of several models; `status`,
+ * `detail` and `embedded_rows` are those of the default one, the one a search naming no model reads.
+ */
 export interface SearchCapabilitiesResponse {
   modes: string[];
+  /** The models a semantic search can name, the default one first. */
   models: string[];
   /** Embedding-storage health: "absent" | "ready" | "partial" | "missing_table" | "empty" | "dim_mismatch" | "corrupt". */
   status?: string;
@@ -75,6 +98,13 @@ export interface SearchCapabilitiesResponse {
   total_records?: number;
   /** Embeddings belong to media: completeness is embedded_rows out of total_media. */
   total_media?: number;
+  /** Every embeddings model of the dataset, with its health. */
+  spaces?: EmbeddingSpaceStatusResponse[];
+  /**
+   * Whether the dataset's description of its embeddings was read entirely: if not, nothing changes
+   * it but computing them again with force, which deletes every model's embeddings first.
+   */
+  fully_read?: boolean;
 }
 
 export interface FilterSchemaResponse {
@@ -231,6 +261,33 @@ export interface ImportPlanResponse {
   plan_id?: string;
 }
 
+/** A processing job an import queues once it is done, and what became of it. */
+export interface IoFollowUp {
+  /** The processing job kind: `embeddings`. */
+  kind: string;
+  params: Record<string, unknown>;
+  /** The queued job's identifier; empty until queued. */
+  job_id: string;
+  /** Why it was not queued; empty otherwise. */
+  error: string;
+  /** The parameters the request did not name, which the server's defaults chose. */
+  defaulted?: string[];
+}
+
+/** Whether an import can queue the embeddings job of what it imports (`GET /io/imports/embeddings`). */
+export interface ImportEmbeddingsOffer {
+  /** A job queue is configured: without one, the import offers no embeddings at all. */
+  queue_configured: boolean;
+  /** A job queue is reachable, a worker declared the job, and a model can be named. */
+  available: boolean;
+  /** Why the job cannot run, when it cannot. */
+  reason: string | null;
+  /** The server's default for an import (PIXANO_EMBEDDINGS_AFTER_IMPORT). */
+  enabled_by_default: boolean;
+  models: string[];
+  default_model: string | null;
+}
+
 /** One durable import/export job as stored. */
 export interface IoJobResponse {
   job_id: string;
@@ -247,6 +304,8 @@ export interface IoJobResponse {
   error: { type?: string; message?: string };
   created_at: number;
   updated_at: number;
+  /** What the import queues once done; absent from a server that predates them. */
+  follow_ups?: IoFollowUp[];
 }
 
 /** GET /app/ui — which UIs the deployment exposes. */

@@ -12,25 +12,41 @@ SQLite store (the CLI sees them too), and the legacy `POST /datasets/import` +
 `GET /datasets/import/{job_id}` pair keeps the shipped modal working until the
 wizard cutover (removed in 0.9). The REST surface never executes user Python —
 the `--importer`/`--info-py` escape hatches are CLI-only (spec Goal 2).
+
+An import can queue the embeddings job of what it imported once it is done, on
+the job queue shared with pixano-worker (`pixano.api.jobs.follow_ups`).
 """
 
+import asyncio
 import json
 import logging
 import os
 import tempfile
 import threading
+from functools import partial
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field, ValidationError
 from s3path import S3Path
 
+from pixano.api.jobs.follow_ups import (
+    NO_MODEL_SERVED,
+    asks_for_embeddings,
+    considers_embeddings,
+    decide_embeddings,
+    embeddings_unavailable,
+    plan_has_still_images,
+    submit_follow_ups,
+)
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.io import FORMATS, ExportSpec, ImportSpec, PixanoDataError, analyze
 from pixano.datasets.io.errors import JobStateError, SpecValidationError
-from pixano.datasets.io.jobs import JobRecord, JobRunner, JobStore
+from pixano.datasets.io.jobs import FollowUp, JobRecord, JobRunner, JobStore
 from pixano.datasets.io.media import VIDEO_EXTENSIONS
+from pixano.inference.types import InferenceTask
 from pixano.schemas import ReviewStatus
 from pixano.utils import to_snake_case
 
@@ -77,8 +93,35 @@ def _runner(settings: Settings) -> tuple[JobStore, JobRunner]:
     with _runners_lock:
         if key not in _runners:
             store = JobStore.for_data_dir(data_dir)
-            _runners[key] = (store, JobRunner(store, data_dir))
+            starter = partial(submit_follow_ups, settings.database_url, settings.library_dir)
+            _runners[key] = (store, JobRunner(store, data_dir, follow_up_starter=starter))
         return _runners[key]
+
+
+# How long an inference may take to say which embeddings models it serves. The answer is a short
+# list: past this, an import goes on without it, rather than wait for the client's own timeout and
+# its retries — three minutes on an inference that hangs.
+EMBEDDINGS_MODELS_LOOKUP_TIMEOUT_S = 5.0
+
+
+async def _served_embedding_models(settings: Settings) -> list[str]:
+    """The embeddings models the inferences this server is connected to serve, by name, each once.
+
+    The worker asks its own inference, often the same: a model left out here can still be named.
+    An inference that does not answer in time serves none, as `GET /inference/models/list` says.
+    """
+    names: list[str] = []
+    # A copy: connecting an inference adds a provider while this awaits.
+    for provider_name, provider in list(settings.inference_providers.items()):
+        try:
+            served = await asyncio.wait_for(
+                provider.list_models(task=InferenceTask.EMBEDDING), EMBEDDINGS_MODELS_LOOKUP_TIMEOUT_S
+            )
+        except Exception:
+            logger.warning("Failed to list the embeddings models of provider %s", provider_name, exc_info=True)
+            continue
+        names += [model.name for model in served]
+    return list(dict.fromkeys(names))
 
 
 # ----------------------------------------------------------------------
@@ -100,6 +143,18 @@ class ImportRequestIO(BaseModel):
     plan_id: str = ""
     source: str = ""
     spec: dict[str, Any] = Field(default_factory=dict)
+    compute_embeddings: bool | None = Field(
+        default=None,
+        description="Queue the embeddings job of what is imported once the import is done — one per "
+        "model the dataset already holds too. Unset follows the server's default "
+        "(PIXANO_EMBEDDINGS_AFTER_IMPORT), which only applies where the job can run.",
+    )
+    embeddings_model: str | None = Field(
+        default=None,
+        description="The model the embeddings job runs, beside the models the dataset already holds. Unset "
+        "is the server's (PIXANO_EMBEDDINGS_MODEL), else the first embeddings model the inference serves, "
+        "used only for a dataset without embeddings.",
+    )
 
 
 class ExportRequestIO(BaseModel):
@@ -117,6 +172,22 @@ class ExportRequestIO(BaseModel):
     )
 
 
+class FollowUpResponse(BaseModel):
+    """A processing job an import queues once it is done, and what became of it.
+
+    Attributes:
+        kind: The processing job kind: `embeddings`.
+        params: Its parameters, the model among them.
+        job_id: The queued job, followed in the jobs panel; empty until queued.
+        error: Why it was not queued; empty otherwise.
+    """
+
+    kind: str
+    params: dict[str, Any] = Field(default_factory=dict)
+    job_id: str = ""
+    error: str = ""
+
+
 class JobResponse(BaseModel):
     """One job, as stored."""
 
@@ -128,6 +199,29 @@ class JobResponse(BaseModel):
     error: dict[str, Any] = Field(default_factory=dict)
     created_at: float = 0.0
     updated_at: float = 0.0
+    follow_ups: list[FollowUpResponse] = Field(default_factory=list)
+
+
+class ImportEmbeddingsOffer(BaseModel):
+    """Whether an import can queue the embeddings job of what it imports, as the import form asks.
+
+    Attributes:
+        queue_configured: A job queue is configured (PIXANO_DATABASE_URL). Without one, the import
+            form does not offer the embeddings at all.
+        available: The job can run now: a job queue reachable, a worker that declared the job, and
+            a model to name.
+        reason: Why it cannot, when it cannot.
+        enabled_by_default: The server's default for an import (PIXANO_EMBEDDINGS_AFTER_IMPORT).
+        models: The models to choose from: the server's, then those the inference serves.
+        default_model: The model proposed: the server's, else the first the inference serves.
+    """
+
+    queue_configured: bool
+    available: bool
+    reason: str | None = None
+    enabled_by_default: bool
+    models: list[str] = Field(default_factory=list)
+    default_model: str | None = None
 
 
 def _job_response(job: JobRecord) -> JobResponse:
@@ -140,6 +234,7 @@ def _job_response(job: JobRecord) -> JobResponse:
         error={key: value for key, value in job.error.items() if key != "cancel_requested"},
         created_at=job.created_at,
         updated_at=job.updated_at,
+        follow_ups=[FollowUpResponse(**follow_up.to_json()) for follow_up in job.follow_ups],
     )
 
 
@@ -258,15 +353,59 @@ def analyze_source(request: AnalyzeRequest, settings: Annotated[Settings, Depend
     return payload
 
 
+@router.get("/imports/embeddings", operation_id="get_import_embeddings_offer")
+async def import_embeddings_offer(settings: Annotated[Settings, Depends(get_settings)]) -> ImportEmbeddingsOffer:
+    """Whether an import can queue the embeddings job of what it imports, and with which models.
+
+    The queue and the inference are asked at once: the import form waits for the slower of the two.
+    """
+    served, reason = await asyncio.gather(
+        _served_embedding_models(settings), run_in_threadpool(embeddings_unavailable, settings.database_url)
+    )
+    # The deployment's model first: it may be served by the worker's inference only.
+    default_model = settings.embeddings_model or next(iter(served), None)
+    models = served if default_model is None or default_model in served else [default_model, *served]
+    if reason is None and default_model is None:
+        reason = NO_MODEL_SERVED
+    return ImportEmbeddingsOffer(
+        queue_configured=bool(settings.database_url),
+        available=reason is None,
+        reason=reason,
+        enabled_by_default=settings.embeddings_after_import,
+        models=models,
+        default_model=default_model,
+    )
+
+
 @router.post("/imports", status_code=202, operation_id="start_import_job")
-def start_import(request: ImportRequestIO, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
-    """Queue an import job (202): from a saved plan_id, or a spec+source pair."""
+async def start_import(request: ImportRequestIO, settings: Annotated[Settings, Depends(get_settings)]) -> JobResponse:
+    """Queue an import job (202): from a saved plan_id, or a spec+source pair.
+
+    The request is checked first; then what the import queues once done is settled, which may ask
+    the inference for a model and the job queue whether it can run the job.
+    """
+    runner, source, spec_payload, has_images = await run_in_threadpool(_checked_import, request, settings)
+    follow_ups = await _import_follow_ups(request, settings, has_images)
+    job = await run_in_threadpool(
+        partial(runner.submit_import, source, spec_payload, plan_id=request.plan_id, follow_ups=follow_ups)
+    )
+    return _job_response(job)
+
+
+def _checked_import(
+    request: ImportRequestIO, settings: Settings
+) -> tuple[JobRunner, str, dict[str, Any], bool | None]:
+    """The runner, the import's source and spec, and whether its plan holds still images; or why it cannot start.
+
+    Whether it holds still images is None when no plan was saved: the import analyses its source then.
+    """
     store, runner = _runner(settings)
     if not request.plan_id and not request.source:
         raise HTTPException(status_code=422, detail="Provide plan_id or source.")
-    if request.plan_id and store.get_plan(request.plan_id) is None:
+    stored = store.get_plan(request.plan_id) if request.plan_id else None
+    if request.plan_id and stored is None:
         raise HTTPException(status_code=409, detail=f"Plan '{request.plan_id}' not found or expired (re-analyze).")
-    source = request.source or (store.get_plan(request.plan_id) or (None, ""))[1]
+    source = request.source or (stored or (None, ""))[1]
     spec_payload = _spec_payload_for_source(source, request.spec)
     if not (spec_payload.get("dataset") or {}).get("name"):
         try:
@@ -278,8 +417,36 @@ def start_import(request: ImportRequestIO, settings: Annotated[Settings, Depends
                 status_code=422,
                 detail="Imports from a staged upload need dataset.name (the upload folder name is opaque).",
             )
-    job = runner.submit_import(source, spec_payload, plan_id=request.plan_id)
-    return _job_response(job)
+    return runner, source, spec_payload, plan_has_still_images(stored[0].inferred_schema) if stored else None
+
+
+async def _import_follow_ups(request: ImportRequestIO, settings: Settings, has_images: bool | None) -> list[FollowUp]:
+    """What the import queues once done: the embeddings job, as asked or by the server's default.
+
+    The default only applies where the job can run, which the queue is asked first: an installation
+    without one never waits for the inference. Nor does it apply to an import whose plan holds no
+    still image. Asked for — a model named is asking —, the job is kept whatever the queue says, and
+    the import says why if it is not queued.
+    """
+    wanted = asks_for_embeddings(request.compute_embeddings, request.embeddings_model)
+    if not considers_embeddings(wanted, default_on=settings.embeddings_after_import, has_images=has_images):
+        return []
+    unavailable = await run_in_threadpool(embeddings_unavailable, settings.database_url) if wanted is None else None
+    if unavailable is not None:
+        return []
+    # The request's model, the deployment's, then the first the inference serves: asked last, only if needed.
+    model = (
+        request.embeddings_model
+        or settings.embeddings_model
+        or next(iter(await _served_embedding_models(settings)), None)
+    )
+    return decide_embeddings(
+        wanted,
+        model,
+        named=bool(request.embeddings_model),
+        default_on=settings.embeddings_after_import,
+        unavailable=unavailable,
+    )
 
 
 @router.post("/exports", status_code=202, operation_id="start_export_job")

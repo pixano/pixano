@@ -17,6 +17,7 @@ from .base import (
     TransientError,
     media_chunks,
 )
+from .detection import DetectionKind, DetectionParams
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
@@ -42,6 +43,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
+    registry.register(DetectionKind(inference_url, api_key))
     registry.register(NerKind(inference_url, api_key))
     return registry
 
@@ -50,6 +52,8 @@ __all__ = [
     "CONFIRM_MARKER",
     "MODEL_TASK_MARKER",
     "Chunk",
+    "DetectionKind",
+    "DetectionParams",
     "FakeKind",
     "EmbeddingsKind",
     "EmbeddingsParams",
