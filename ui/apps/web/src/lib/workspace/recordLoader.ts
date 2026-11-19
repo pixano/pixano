@@ -76,6 +76,15 @@ export class RecordLoader {
    * views are still the previous one's.
    */
   private viewsRecord: { datasetId: string; recordId: string } | null = null;
+  /**
+   * Incremented by every `reloadAnnotations` as it starts; `latestLanded` is
+   * the number of the latest one whose rows were taken. Rows read before rows
+   * already taken are older, and are dropped — whatever order the answers come
+   * back in. A later read that never lands — called off, or failed for every
+   * kind — does not stop an earlier one that still applies.
+   */
+  private reloadCount = 0;
+  private latestLanded = 0;
 
   constructor(deps: RecordLoaderDeps) {
     this.workspace = deps.workspace;
@@ -87,25 +96,32 @@ export class RecordLoader {
   }
 
   /**
-   * Refetch the current record's annotations, replacing what the collection
-   * holds of every kind it read — the backend is the last-saved state, so this
-   * is what "discard my edits" restores to.
+   * Refetch the current record's annotations and take them — the backend is
+   * the last-saved state, so this is what "discard my edits" restores to, and
+   * what a save reads back.
    *
    * Narrower than a full `load()` on purpose: the widgets, their arrangement
    * and their active tools are untouched, so undoing an edit does not feel like
    * reopening the record.
    *
+   * The rows are merged with the work done while they were read
+   * (`AnnotationCollection.takeRowsRead`): an annotation `holdsWork` names, and
+   * every draft, stays as it is here; every other annotation becomes its row.
    * A kind whose rows could not be read keeps what it shows, and the failure
    * is reported: one table not answering does not empty that kind on screen.
-   * Only its drafts go, since Discard has dropped their creates. Its stored
-   * annotations stay as shown, an edit Discard dropped included: the
-   * collection keeps no copy of what the dataset stores to put back, and
-   * reopening the record shows it.
+   *
+   * `stillWanted` is asked once the rows have arrived, before they are taken:
+   * a caller whose reason to read may have lapsed during the fetch — a write
+   * that landed meanwhile, which the rows may predate — calls it off.
    *
    * Nothing is read while the record is still loading: its rows would be
    * placed against the previous record's views, which places none of them.
+   * Rows read before rows already taken are dropped (`latestLanded`).
    */
-  async reloadAnnotations(): Promise<void> {
+  async reloadAnnotations(
+    opts: { stillWanted?: () => boolean; holdsWork?: (id: string) => boolean } = {},
+  ): Promise<void> {
+    const { stillWanted = () => true, holdsWork = () => false } = opts;
     const datasetId = this.session.datasetId;
     const recordId = this.session.recordId;
     if (!datasetId || !recordId) return;
@@ -114,6 +130,7 @@ export class RecordLoader {
     // Observe (don't bump) the load token, as `reloadEntities` does: a record
     // switch mid-fetch must win over our stale result.
     const token = this.loadToken;
+    const reload = ++this.reloadCount;
     try {
       const seedContext = {
         datasetId,
@@ -123,17 +140,13 @@ export class RecordLoader {
         views: this.currentViews,
       };
       const loads = await loadEveryKind(seedContext);
-      if (token !== this.loadToken) return;
+      if (token !== this.loadToken || reload < this.latestLanded || !stillWanted()) return;
       reportUnread(loads, "refresh");
       const kindsRead = new Set(loads.filter((load) => load.read).map((load) => load.kind));
-      // A draft is left out: Discard dropped its create, and nothing would save it.
-      const storedOfKindsUnread = this.session.annotations.items.filter(
-        (annotation) => annotation.persisted && !kindsRead.has(annotation.kind),
-      );
-      this.session.annotations = new AnnotationCollection([
-        ...annotationsRead(loads),
-        ...storedOfKindsUnread,
-      ]);
+      // Read nothing at all: it failed, and must not drop an earlier read still on its way.
+      if (kindsRead.size === 0) return;
+      this.latestLanded = reload;
+      this.session.annotations.takeRowsRead(annotationsRead(loads), holdsWork, kindsRead);
     } catch (err) {
       console.error("Failed to reload annotations:", err);
     }
@@ -142,9 +155,17 @@ export class RecordLoader {
   /**
    * Refetch the current record's entities and refresh `session.entities`.
    * Called after a save so the entity list (right-panel list + picker) reflects
-   * entities the flush created or the backend pruned, without a full reload.
+   * entities the flush created or the backend pruned, without a full reload,
+   * and by Discard before it reads the annotations back, whose labels come
+   * from this list.
+   *
+   * `stillWanted` is asked once the list has arrived, as for the annotations:
+   * a read-back calls it off when a write has landed since it began — the list
+   * may predate that write, and would take its entities off the panel and the
+   * labels of the boxes moved onto them. Two lists read with no write between
+   * them hold the same entities, so their order does not matter.
    */
-  async reloadEntities(): Promise<void> {
+  async reloadEntities(stillWanted: () => boolean = () => true): Promise<void> {
     const datasetId = this.session.datasetId;
     const recordId = this.session.recordId;
     if (!datasetId || !recordId) return;
@@ -154,7 +175,7 @@ export class RecordLoader {
     const token = this.loadToken;
     try {
       const entities = await this.readGateway.listEntities(datasetId, { recordId });
-      if (token !== this.loadToken) return;
+      if (token !== this.loadToken || !stillWanted()) return;
       this.session.entities = entities;
     } catch (err) {
       console.error("Failed to reload entities:", err);

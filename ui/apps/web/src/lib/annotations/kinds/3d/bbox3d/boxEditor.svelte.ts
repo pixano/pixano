@@ -33,7 +33,9 @@ import {
 import { isFormFieldTarget } from "$lib/annotations/scene/tool.js";
 import type { Rotation3x3 } from "$lib/annotations/types";
 
-type DrawPhase = "idle" | "confirming" | "moving" | "resizing-face" | "rotating";
+/** A gizmo drag under way: a move, a resize by one face, a turn about one axis. */
+type DragPhase = "moving" | "resizing-face" | "rotating";
+type DrawPhase = "idle" | "confirming" | DragPhase;
 
 export class BoxEditor {
   // FSM state
@@ -227,6 +229,8 @@ export class BoxEditor {
       editingId?: string,
     ) => void,
     private readonly onDrawCanceled?: () => void,
+    /** Called as a gizmo drag begins (`_beginDrag`); its end comes through the two above. */
+    private readonly onDragStarted?: () => void,
   ) {
     $effect(() => {
       const [w, h, d] = this.previewSize;
@@ -428,7 +432,7 @@ export class BoxEditor {
               .copy(AXIS_UNIT_VECS[this.rotAxis])
               .applyQuaternion(this.rotStartQuaternion);
             this.rotStartAngle = computeRingAngle(e.clientX, e.clientY, ringHit.axis) ?? 0;
-            this.drawPhase = "rotating";
+            this._beginDrag("rotating");
             return;
           }
           const translateHit = raycastTranslateArrows(e.clientX, e.clientY);
@@ -443,7 +447,7 @@ export class BoxEditor {
               .setComponent(this.translateAxis, 1)
               .applyQuaternion(this.previewQuaternion)
               .normalize();
-            this.drawPhase = "moving";
+            this._beginDrag("moving");
             return;
           }
           const arrowHit = raycastArrows(e.clientX, e.clientY);
@@ -458,7 +462,7 @@ export class BoxEditor {
             this._resizeStartFaceCenter
               .fromArray(this.previewCenter)
               .addScaledVector(this._resizeWorldDir, this.previewSize[arrowHit.axis] / 2);
-            this.drawPhase = "resizing-face";
+            this._beginDrag("resizing-face");
             return;
           }
           if (!raycastBox(e.clientX, e.clientY)) return;
@@ -469,7 +473,7 @@ export class BoxEditor {
           if (!ground) return;
           this.moveStartGround = ground.clone();
           this.moveStartCenter = [...this.previewCenter];
-          this.drawPhase = "moving";
+          this._beginDrag("moving");
         }
       };
 
@@ -638,6 +642,17 @@ export class BoxEditor {
       threeQuaternionToLanceRotation(this.previewQuaternion),
       bbox.id,
     );
+  }
+
+  /**
+   * A gizmo drag begins: the box it acts on is work under way until the drag
+   * ends, so the editor says so as it starts — never as the pointer moves.
+   * Every way a drag ends reports too: let go, it reports the box it leaves
+   * (`onReadyToConfirm`); dropped (`reset`), it reports the draw canceled.
+   */
+  private _beginDrag(phase: DragPhase): void {
+    this.drawPhase = phase;
+    this.onDragStarted?.();
   }
 
   private _fireReadyToConfirm(): void {

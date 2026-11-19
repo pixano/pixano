@@ -73,19 +73,26 @@ class FakeKind(JobKind[FakeParams]):
             remaining -= size
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: FakeParams) -> dict[str, Any]:
-        """Sleep for the announced time, then return a token result.
+        """Sleep for the announced time, task after task, then return a token result.
+
+        Each task done is reported as the chunk's progress, and a cancellation of the job stops the
+        chunk between two tasks: what a long chunk does.
 
         Raises:
             RuntimeError: This chunk's rank is the one that was asked to fail.
             TransientError: This chunk's rank is the one that was asked to hit a transient
                 outage.
+            ChunkCancelled: The job was cancelled while the chunk ran.
         """
         rank = payload.get("first_task", 0) // params.chunk_size
         if params.fail_at_chunk == rank:
             raise RuntimeError(f"failure requested at chunk {params.fail_at_chunk}")
         if params.transient_at_chunk == rank:
             raise TransientError(f"transient outage requested at chunk {rank}")
-        time.sleep(params.seconds_per_task * payload["task_count"])
+        for done in range(1, payload["task_count"] + 1):
+            time.sleep(params.seconds_per_task)
+            reader.progress.advance_to(done)
+            reader.progress.stop_if_cancelled()
         skipped = min(params.skip_per_chunk, payload["task_count"])
         quarantined = min(params.quarantine_per_chunk, payload["task_count"] - skipped)
         return {"processed": payload["task_count"], "skipped": skipped, "quarantined": quarantined}

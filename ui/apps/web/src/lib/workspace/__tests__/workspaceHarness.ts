@@ -7,6 +7,7 @@ License: CECILL-C
 import type { Component } from "svelte";
 
 import type { DatasetGateway } from "../datasetGateway.js";
+import type { NextRecordToReview, ReviewGateway } from "../reviewGateway.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import type { BBoxGeometry } from "$lib/annotations/annotationCollection.svelte.js";
@@ -18,7 +19,7 @@ import {
   type ReviewStatus,
 } from "$lib/annotations/reviewStatus.js";
 import type { SeamContext } from "$lib/annotations/scene/sceneContext.js";
-import type { EntityRow } from "$lib/api/annotations.js";
+import type { EntityDeleteAnswer, EntityRow } from "$lib/api/annotations.js";
 import { ApiError } from "$lib/api/apiClient.js";
 import { ENTITY_RESOURCE } from "$lib/api/resourceNames.js";
 import type { CalibratedImageResponse } from "$lib/api/restTypes.js";
@@ -62,11 +63,16 @@ export interface FakeBackend {
   /** Annotation rows per record, then per resource. */
   records: Record<string, Record<string, Row[]>>;
   entities: EntityRow[];
+  /** The dynamic states of entities — rows that name an entity, as annotations do. */
+  entityDynamicStates: { id: string; entity_id: string }[];
   writes: RecordedWrite[];
   /** Every gateway call, writes and reads alike, so a test can check their order. */
   log: string[];
-  /** What the server stores on a write, when a test needs it to change the rows. */
-  onWrite?: (write: RecordedWrite) => void;
+  /**
+   * What the server stores on a write, when a test needs it to change the rows.
+   * Returns the server's answer to an entity delete; nothing reads as gone.
+   */
+  onWrite?: (write: RecordedWrite) => EntityDeleteAnswer | void;
   /** Make the next writes fail, as an unreachable backend would: nothing is stored. */
   failWrites?: Error;
   /**
@@ -79,6 +85,21 @@ export interface FakeBackend {
    * as each write starts, so a test can hold one write and let the others pass.
    */
   holdWrites?: Promise<void>;
+  /**
+   * Hold the answer of every annotation listing until the test releases it.
+   * The rows are read when the listing is asked, as a server reads them before
+   * the answer travels back: an answer held this way may be older than a write
+   * made meanwhile.
+   */
+  holdListings?: Promise<void>;
+  /**
+   * Hold the answer of every entity listing, read when it is asked, as
+   * `holdListings` holds the annotations'. Read as each listing starts, so a
+   * test can hold one save's listing and let a later one pass.
+   */
+  holdEntityListings?: Promise<void>;
+  /** Hold the dataset's description, the first read of a record load. */
+  holdDataset?: Promise<void>;
 }
 
 const stubComponent = (() => null) as unknown as Component<WidgetComponentProps>;
@@ -140,31 +161,40 @@ function jsonCopy<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-async function recordWrite(backend: FakeBackend, write: RecordedWrite): Promise<void> {
+async function recordWrite(
+  backend: FakeBackend,
+  write: RecordedWrite,
+): Promise<EntityDeleteAnswer | void> {
   backend.log.push(`${write.op} ${write.resource}`);
   await backend.holdWrites;
   if (backend.failWrites) throw backend.failWrites;
   // What the server refuses (`onWrite` throws) is not among the writes it stored.
-  backend.onWrite?.(write);
+  const answer = backend.onWrite?.(write);
   backend.writes.push(write);
   if (backend.loseAnswers) throw backend.loseAnswers;
+  return answer;
 }
 
 export function makeBackend(records: FakeBackend["records"], entities: EntityRow[] = []) {
   const backend: FakeBackend = {
     records,
     entities,
+    entityDynamicStates: [],
     writes: [],
     log: [],
   };
   const gateway: DatasetGateway = {
-    getDataset: () => {
+    getDataset: async () => {
       backend.log.push("getDataset");
-      return Promise.resolve(makeDataset());
+      await backend.holdDataset;
+      return makeDataset();
     },
-    listEntities: (_datasetId, { recordId }) => {
+    listEntities: async (_datasetId, { recordId }) => {
       backend.log.push("listEntities");
-      return Promise.resolve(jsonCopy(backend.entities.filter((e) => e.record_id === recordId)));
+      const hold = backend.holdEntityListings;
+      const entities = jsonCopy(backend.entities.filter((e) => e.record_id === recordId));
+      await hold;
+      return entities;
     },
     loadImageByLogicalName: (_datasetId, recordId) =>
       Promise.resolve({
@@ -176,7 +206,7 @@ export function makeBackend(records: FakeBackend["records"], entities: EntityRow
     listRecordImages: () => Promise.resolve([]),
     loadPointCloudByLogicalName: () => Promise.resolve(null),
     loadTextByLogicalName: () => Promise.resolve(null),
-    listAnnotations: <TRow>(
+    listAnnotations: async <TRow>(
       _datasetId: string,
       resource: string,
       params: { recordId?: string },
@@ -184,17 +214,17 @@ export function makeBackend(records: FakeBackend["records"], entities: EntityRow
       backend.log.push(`list ${resource}`);
       // A copy, as a fresh HTTP response would be: the loader must not share
       // objects with the "server".
-      return Promise.resolve(
-        jsonCopy(backend.records[params.recordId ?? ""]?.[resource] ?? []) as TRow[],
-      );
+      const rows = jsonCopy(backend.records[params.recordId ?? ""]?.[resource] ?? []);
+      await backend.holdListings;
+      return rows as TRow[];
     },
     createEntity: async (_datasetId, body) => {
       await recordWrite(backend, { op: "create", resource: "entities", body: jsonCopy(body) });
       return {};
     },
-    deleteEntity: async (_datasetId, id) => {
-      await recordWrite(backend, { op: "delete", resource: "entities", id });
-    },
+    // The gateway's entity delete is the conditional one (`only_if_unnamed`).
+    deleteEntity: (_datasetId, id) =>
+      recordWrite(backend, { op: "delete", resource: "entities", id }),
     createAnnotation: async (_datasetId, resource, body) => {
       await recordWrite(backend, { op: "create", resource, body: jsonCopy(body) });
       return {};
@@ -267,6 +297,10 @@ function asHumanEditOf(row: Row, body: Record<string, unknown>): Record<string, 
  * holding. The annotation writes are the record's:
  *
  * - an entity create is stored once, whatever the retries (its id is the client's);
+ * - an entity delete — the gateway's is always `only_if_unnamed` — deletes the
+ *   entity only when no annotation of any record, no entity (`parent_id`) and
+ *   no entity dynamic state names it, and answers whether it did; one not
+ *   there is gone, as the HTTP layer reads its 404;
  * - an annotation create or update naming an entity that does not exist is
  *   refused ("Foreign key violation"), as the server's reference check does;
  * - an update of a model's row keeps its provenance and score, and stores the
@@ -284,6 +318,10 @@ export function serveLikeTheApi(backend: FakeBackend, recordId: string): void {
     Object.values(backend.records).some((resources) =>
       Object.values(resources).some((rows) => rows.some((row) => row.entity_id === entityId)),
     );
+  const anythingNames = (entityId: string) =>
+    annotationsName(entityId) ||
+    backend.entities.some((entity) => entity.parent_id === entityId) ||
+    backend.entityDynamicStates.some((state) => state.entity_id === entityId);
   const removeEntity = (entityId: string) => {
     backend.entities = backend.entities.filter((entity) => entity.id !== entityId);
   };
@@ -299,6 +337,11 @@ export function serveLikeTheApi(backend: FakeBackend, recordId: string): void {
     if (write.resource === ENTITY_RESOURCE) {
       if (write.op === "create" && !entityExists(write.body.id)) {
         backend.entities.push({ ...(write.body as EntityRow) });
+      } else if (write.op === "delete") {
+        if (!entityExists(write.id)) return { deleted: true };
+        if (anythingNames(write.id)) return { deleted: false };
+        removeEntity(write.id);
+        return { deleted: true };
       }
       return;
     }
@@ -336,16 +379,48 @@ export function deferred<T = void>() {
   return { promise, resolve };
 }
 
+/**
+ * A `ReviewGateway` that answers what the test says and records what it was
+ * asked. A promise for an answer is a lookup the test holds on the wire.
+ */
+export function makeReviewGateway(
+  answer: NextRecordToReview | Error | Promise<NextRecordToReview>,
+  log: string[] = [],
+): ReviewGateway & { asked: { datasetId: string; status: ReviewStatus; after: string | null }[] } {
+  const asked: { datasetId: string; status: ReviewStatus; after: string | null }[] = [];
+  return {
+    asked,
+    nextRecordToReview: (datasetId, query) => {
+      log.push("nextRecordToReview");
+      asked.push({ datasetId, ...query });
+      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
+    },
+  };
+}
+
 /** The real manager over the fake backend, with the record already open. */
 export async function openManager(
   records: FakeBackend["records"],
-  opts: { recordId?: string; entities?: EntityRow[] } = {},
+  opts: {
+    recordId?: string;
+    entities?: EntityRow[];
+    next?: NextRecordToReview | Error | Promise<NextRecordToReview>;
+  } = {},
 ) {
   const { backend, gateway } = makeBackend(records, opts.entities);
-  const manager = new WorkspaceManager(makeRegistry(), gateway, makeLayoutRepository());
+  const reviewGateway = makeReviewGateway(
+    opts.next ?? { recordId: null, remaining: 0 },
+    backend.log,
+  );
+  const manager = new WorkspaceManager(
+    makeRegistry(),
+    gateway,
+    makeLayoutRepository(),
+    reviewGateway,
+  );
   const recordId = opts.recordId ?? Object.keys(records)[0];
   await manager.openRecord(DATASET_ID, recordId, VIEWPORT);
-  return { manager, backend, recordId };
+  return { manager, backend, reviewGateway, recordId };
 }
 
 /** The seam an image widget of this record builds — what its tools commit through. */
@@ -369,7 +444,12 @@ export const MODEL_METADATA = JSON.stringify({
 });
 
 /** A box a model produced, at a review status. */
-export function modelBox(recordId: string, id: string, status: ReviewStatus | "" = "pending"): Row {
+export function modelBox(
+  recordId: string,
+  id: string,
+  status: ReviewStatus | "" = "pending",
+  overrides: Partial<Row> = {},
+): Row {
   return {
     id,
     record_id: recordId,
@@ -383,6 +463,7 @@ export function modelBox(recordId: string, id: string, status: ReviewStatus | ""
     source_name: "detection",
     source_metadata: MODEL_METADATA,
     review_status: status,
+    ...overrides,
   };
 }
 
@@ -441,6 +522,11 @@ export function statusOf(manager: WorkspaceManager, id: string): ReviewStatus | 
 /** The geometry an annotation shows. */
 export function geometryOf(manager: WorkspaceManager, id: string): unknown {
   return manager.annotations.find(id)?.geometry;
+}
+
+/** The review controller's list line of an annotation. */
+export function rowOf(manager: WorkspaceManager, id: string) {
+  return manager.review.rows.find((row) => row.id === id);
 }
 
 /** Drag a box to a new place, as the 2D editor does at the end of a gesture. */
