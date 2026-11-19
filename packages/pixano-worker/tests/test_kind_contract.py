@@ -33,7 +33,7 @@ from pixano_worker.writer import JobWriter
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import CLUSTER_SLOT, Entity, Image, Record, RecordClusters, SchemaGroup, record_cluster_id
+from pixano.schemas import CLUSTER_SLOT, BBox, Entity, Image, Record, RecordClusters, SchemaGroup, record_cluster_id
 from pixano.schemas.table_names import canonical_family_spec_for_slot, canonical_table_name_for_slot
 
 
@@ -47,6 +47,7 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     # the inference — which is the point: the contract exercises the shape, not the model. The
     # real path is checked end to end on the stack, in the demo (docs/demo-etape1.md).
     "embeddings": {"model": "clip", "chunk_size": 8},
+    "detection": {"model": "yolo", "chunk_size": 8},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
@@ -92,31 +93,71 @@ def _confirmed_parameters(kind: JobKind) -> list[str]:
 CONFIRMED = [(name, parameter) for name in REGISTRY.names() for parameter in _confirmed_parameters(_registered(name))]
 
 
+def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
+    """The reads the writers make: by identifiers, or by a filter — the prefix of a cleanup, a
+    list of values of one field (a detection's look at the boxes already on a medium), or several
+    such conditions joined by AND (the pending rows a `replace_previous` clears)."""
+    if ids is not None:
+        return [rows[i] for i in ids if i in rows]
+    assert where, "a read with neither identifiers nor a filter in a test double"
+    conditions = [_condition(clause) for clause in where.split(" AND ")]
+    return [row for row in rows.values() if all(condition(row) for condition in conditions)]
+
+
+def _condition(clause: str) -> Any:
+    """One condition of a filter, as a test on a row."""
+    prefix = re.fullmatch(r"id LIKE '([^']*)%'", clause)
+    if prefix is not None:
+        return lambda row: row.id.startswith(prefix.group(1))
+    equal = re.fullmatch(r"(\w+) = '([^']*)'", clause)
+    if equal is not None:
+        return lambda row: getattr(row, equal.group(1)) == equal.group(2)
+    among = re.fullmatch(r"(\w+) IN \((.*)\)", clause)
+    assert among is not None, f"unexpected filter in a test double: {clause!r}"
+    values = set(re.findall(r"'([^']*)'", among.group(2)))
+    return lambda row: getattr(row, among.group(1), None) in values
+
+
 class _Target:
     """A write target that behaves like LanceDB on the three operations used.
 
     One store per table, as in LanceDB: a dropped table takes its rows with it, and the suite
-    compares every row of every table.
+    compares every row of every table. A detected box and the object it names share an identifier.
+    It starts with what a person drew (`_seeded_prompts`), which a kind may read but did not write:
+    those rows are no kind's output, so `rows` leaves them out unless a kind replaced them. They are
+    what a kind must least destroy, so `snapshot` keeps them, and `altered_seeds` compares them with
+    what was drawn.
     """
 
     def __init__(self) -> None:
         self.compactions: list[str] = []
         self.indexes: list[tuple[str, str]] = []
-        self.tables: dict[str, dict[str, Any]] = {}
+        self._seeded = _seeded_prompts()
+        self.tables: dict[str, dict[str, Any]] = {table: dict(rows) for table, rows in self._seeded.items()}
+        # Taken now, not compared with the seeded objects later: the store holds those very
+        # objects, so a row changed in place would still equal itself.
+        self._drawn = {
+            (table, row_id): _content(row) for table, rows in self._seeded.items() for row_id, row in rows.items()
+        }
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
-        self.info = SimpleNamespace(tables={})
+        self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
         # The clustering runs the dataset records it holds the clusters of, by run.
         self.clusterings: dict[str, Any] = {}
 
     @property
     def rows(self) -> dict[str, Any]:
         """Every row a kind wrote, whatever its table."""
-        return {f"{table}/{row_id}": row for table, rows in self.tables.items() for row_id, row in rows.items()}
+        return {
+            f"{table}/{row_id}": row
+            for table, rows in self.tables.items()
+            for row_id, row in rows.items()
+            if row is not self._seeded.get(table, {}).get(row_id)
+        }
 
     def snapshot(self) -> list[tuple[str, str, str]]:
-        """What the dataset holds: every row of every table, by content, and the clustering runs it
-        records, but for when each was recorded.
+        """What the dataset holds: every row of every table, a person's included, by content, and the
+        clustering runs it records, but for when each was recorded.
 
         A list rather than a digest, so that a failed comparison names the rows that differ.
         """
@@ -127,6 +168,14 @@ class _Target:
         ]
         return sorted(rows + runs)
 
+    def altered_seeds(self) -> list[str]:
+        """The rows a person drew that are gone, or no longer hold what they held."""
+        return [
+            f"{table}/{row_id}"
+            for (table, row_id), drawn in sorted(self._drawn.items())
+            if row_id not in self.tables.get(table, {}) or _content(self.tables[table][row_id]) != drawn
+        ]
+
     def update_data(self, table_name: str, data: list[Any]) -> None:
         for row in data:
             self.tables.setdefault(table_name, {})[row.id] = row
@@ -136,13 +185,7 @@ class _Target:
             self.tables.get(table_name, {}).pop(row_id, None)
 
     def get_data(self, table_name: str, ids: list[str] | None = None, *, where: str | None = None) -> list[Any]:
-        """By identifiers, or by the prefix filter of a cleanup."""
-        rows = self.tables.get(table_name, {})
-        if ids is not None:
-            return [rows[i] for i in ids if i in rows]
-        prefix = re.fullmatch(r"id LIKE '([^']*)%'", where or "")
-        assert prefix is not None, f"unexpected filter in a test double: {where!r}"
-        return [row for row_id, row in rows.items() if row_id.startswith(prefix.group(1))]
+        return _matching(self.tables.get(table_name, {}), ids, where)
 
     def ensure_annotation_table(self, slot: str) -> str:
         family = canonical_family_spec_for_slot(slot)
@@ -273,11 +316,49 @@ class _Vector:
         self.id, self.record_id, self.view_id, self.vector = id, record_id, view_id, vector
 
 
+#: The size of every image of the contract's dataset, in pixels. Not square, so that a kind that
+#: swapped width and height would place its output elsewhere.
+IMAGE_WIDTH, IMAGE_HEIGHT = 100, 60
+
+#: Where a person drew a box on each image, in pixels: left, top, right, bottom. Clear of the box
+#: the simulated detection finds, so that the person's box does not hold the detection back.
+PERSONS_BOX_PX = (60, 10, 90, 50)
+
+
+def _seeded_prompts() -> dict[str, dict[str, Any]]:
+    """The box a person drew on each image of the contract's dataset, and the object it names.
+
+    What a kind must leave as it was. Built anew for each holder, so that no test sees another's rows.
+    """
+    left, top, right, bottom = PERSONS_BOX_PX
+    boxes, entities = {}, {}
+    for n in range(CONTRACT_RECORDS):
+        entity = Entity(id=f"person-{n}", record_id=f"rec-{n}")
+        box = BBox(
+            id=f"drawn-{n}",
+            record_id=f"rec-{n}",
+            view_id=f"img-{n}",
+            entity_id=entity.id,
+            coords=[
+                left / IMAGE_WIDTH,
+                top / IMAGE_HEIGHT,
+                (right - left) / IMAGE_WIDTH,
+                (bottom - top) / IMAGE_HEIGHT,
+            ],
+            format="xywh",
+            is_normalized=True,
+            source_type="human",
+        )
+        boxes[box.id], entities[entity.id] = box, entity
+    return {"bboxes": boxes, "entities": entities}
+
+
 class _Row:
     def __init__(self, row_id: str, record_id: str = "", uri: str = "") -> None:
         self.id = row_id
         self.record_id = record_id
         self.uri = uri
+        self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
 
 
 class _Source:
@@ -288,7 +369,9 @@ class _Source:
     """
 
     # The real schemas: the reader finds a dataset's media by looking at them.
-    info = SimpleNamespace(id="contract", tables={"records": Record, "images": Image})
+    info = SimpleNamespace(
+        id="contract", tables={"records": Record, "images": Image, "bboxes": BBox, "entities": Entity}
+    )
 
     # The one space of the dataset's embeddings, when it holds some.
     _SPACE = EmbeddingSpaces().new_space(CONTRACT_EXAMPLES["embeddings"]["model"], "", CONTRACT_VECTOR_DIM)
@@ -445,7 +528,13 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
         def list_models(self) -> list[Any]:
-            return [SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding")]
+            return [
+                SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
+                SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
+            ]
+
+        def detection(self, request: Any, **_kwargs: Any) -> Any:
+            return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
@@ -538,6 +627,16 @@ class TestPreparation:
     """The `prepare` hook: nothing by default, and never two different states for two calls."""
 
     def test_preparing_with_default_parameters_destroys_nothing(self, kind: JobKind) -> None:
+        """Neither what a person drew nor what a previous run wrote.
+
+        A person's rows are checked on a dataset no job has touched: a `prepare` that deleted one
+        did so in the first run too, so comparing the dataset before and after the second cannot
+        see it go.
+        """
+        untouched = _Target()
+        _plan_and_prepare(kind, untouched, "job-1", _params(kind))
+        assert untouched.altered_seeds() == []
+
         target = _Target()
         _execute(kind, target, "job-1")
         before = target.snapshot()
@@ -667,6 +766,18 @@ class TestExecution:
 
         assert set(first) < set(target.snapshot()), "the second run replaced or changed the first"
 
+    def test_a_job_with_default_parameters_leaves_a_persons_rows_as_they_were(self, kind: JobKind) -> None:
+        """A kind may read what a person drew, never delete or rewrite it.
+
+        Compared with what was drawn, not with a previous run: every run would delete a person's
+        row alike, so two runs would agree.
+        """
+        target = _Target()
+
+        _execute(kind, target, "job-1")
+
+        assert target.altered_seeds() == []
+
     def test_every_annotation_says_where_it_came_from(self, kind: JobKind) -> None:
         """Provenance is required of annotations, not of every output.
 
@@ -715,6 +826,15 @@ class TestTheDoubles:
         _plan_and_prepare(kind, target, "job-2", _confirmed(kind, parameter))
 
         assert target.snapshot() != left
+
+    def test_a_row_a_kind_writes_over_a_persons_counts_as_written(self) -> None:
+        """Only the seeded rows themselves are left out, not whatever later takes their place."""
+        target = _Target()
+        drawn = next(iter(target.tables["bboxes"].values()))
+
+        target.update_data("bboxes", [drawn.model_copy(update={"source_type": "model"})])
+
+        assert list(target.rows) == [f"bboxes/{drawn.id}"]
 
 
 class TestRegistry:

@@ -102,6 +102,28 @@ Two things to watch:
   update body carries the entity id it just assigned. The hook itself is a pure
   function returning the new geometry, or `null` to refuse the move.
 
+## `replace_previous` with classes clears only the pending boxes of those classes
+
+**Status:** open (chosen while implementing, not decided).
+
+A rerun of the same model replaces its own pending rows, and a detection job
+asked for some `classes` replaces only the pending boxes of those classes: asked
+for dogs, then for bicycles, it keeps the dogs (backend-processing §19). A job
+that also sets `replace_previous` clears, before detecting, only the pending
+boxes of the classes it was asked for, whatever their model
+(`DetectionKind.prepare` and `_classes_covered` in
+`packages/pixano-worker/src/pixano_worker/kinds/detection.py`, through
+`JobWriter.drop_pending`). That second scope was chosen while implementing, by
+analogy with the first; nobody decided it.
+
+Options:
+
+- **Clear only the pending boxes of the classes asked for**, as today: a job
+  asked for dogs touches nothing but dogs.
+- **Clear every pending box of the kind, whatever the classes asked for**: the
+  parameter then means what its confirmation says without a condition, and the
+  classes restrict only what the job writes.
+
 ## The embeddings health check reads every row's view
 
 **Status:** open (an accepted cost; a cache is the proposed fix).
@@ -129,6 +151,41 @@ Options:
   but a counter can drift from what it counts, and every writer of the table
   must keep it.
 - **Keep the scan**, and measure it at scale first.
+
+## Embeddings after an import: which models, and at what cost
+
+**Status:** which models is decided (2026-11-10); the cost is open.
+
+Since a dataset keeps one table per embeddings model, an import computes again every
+model the dataset holds, as decided with that rework (2026-11-06): the media it
+added are in none of their embeddings (`src/pixano/api/jobs/follow_ups.py`,
+`_fit_embeddings`; data-import-export spec, amendment of 2026-11-02). How was chosen
+while implementing, and decided on 2026-11-10:
+
+- **The model the import names is computed beside the ones held; a model the
+  deployment chose is not.** `PIXANO_EMBEDDINGS_MODEL`, or the first model the
+  inference serves, stands in only for a dataset without embeddings: by default, an
+  add import into a dataset that holds SigLIP computes SigLIP, and adds no CLIP.
+- **One job per model name.** A job computes the checkpoint the inference serves
+  under the name, into that checkpoint's table: a held checkpoint no longer served is
+  not computed again — its table keeps lacking the new media — and the served one gets
+  a table of its own.
+- **A held model the inference no longer serves is queued anyway**, and refused at its
+  job's planning, on every add import until its embeddings are deleted
+  (`DELETE /datasets/{id}/embedding-spaces/{space_id}`). The application cannot know
+  what the worker's inference serves, and the command line asks no inference.
+- **An explicit request without a model to name queues nothing**, the dataset's own
+  models included: `--embeddings` without `--embeddings-model` nor
+  `PIXANO_EMBEDDINGS_MODEL` says so at once, as before.
+
+The cost is the open part. Each job computes the whole dataset again, since the
+embeddings job has no way to compute only what is missing: on the CPU stack measured
+for step 1, about four images a second, an add import of a few images into a dataset of
+10,000 holding three models runs about two hours of inference. Two add imports in a row
+queue the same jobs twice: nothing checks for a job of that model still to run on the
+dataset. A mode of the embeddings job that skips the media a model's table already
+holds would make the recomputation cost what the import added; skipping a model whose
+job is still pending would remove the duplicates.
 
 ## The Jobs panel opened without a dataset
 

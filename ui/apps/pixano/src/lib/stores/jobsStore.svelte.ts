@@ -1,0 +1,388 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import { modelTasks, type ServedModels } from "$components/jobs/schemaForm";
+
+import { listInferenceModels } from "$lib/api/inferenceApi";
+import {
+  cancelJob,
+  isTerminal,
+  listJobKinds,
+  listJobQuarantine,
+  listJobs,
+  openJobStream,
+  probeJobKinds,
+  queueUnavailableReason,
+  submitJob,
+  type Job,
+  type JobEvent,
+  type JobKind,
+  type QuarantinedItem,
+} from "$lib/api/jobsApi";
+
+/** The kind pixano-worker's embeddings job declares (`EmbeddingsKind.name`). */
+const EMBEDDINGS_KIND = "embeddings";
+
+/**
+ * The jobs a user can see, kept current by one event stream.
+ *
+ * Polling is deliberately absent: the backend pushes an event per state change and per
+ * finished chunk. The stream reconnects on its own after an outage but does not replay what it
+ * missed, so the list is reloaded once on each reconnection — not on a timer, which would add
+ * load and still lag.
+ */
+class JobsStore {
+  jobs = $state<Job[]>([]);
+  kinds = $state<JobKind[]>([]);
+  /** The models the inference serves, by task, for the kinds that run one. */
+  servedModels = $state<ServedModels>({});
+  loading = $state(false);
+  /** What went wrong last, for the panel to show. Null when all is well. */
+  error = $state<string | null>(null);
+  /**
+   * Why this installation cannot run jobs, in the server's words — or null while it can.
+   *
+   * Set when the server answers that it has no job queue: no PostgreSQL database configured,
+   * pixano-worker never started on it, or the database out of reach. That lasts until someone
+   * sets it up, so the panel says it in place of a form whose Run could only fail. Cleared by
+   * the next `start()` or `probe()` that finds the queue.
+   */
+  unavailable = $state<string | null>(null);
+  /** True once the stream is carrying events. */
+  live = $state(false);
+  /** The quarantine of each job someone asked to see, by job identifier. */
+  quarantines = $state<Record<string, QuarantinedItem[]>>({});
+
+  #stream: EventSource | null = null;
+  /** The stream failed since it last opened: whatever it opens next, events were missed. */
+  #missedEvents = false;
+  /** The reload in progress, shared by everyone who asks for one meanwhile. */
+  #refreshing: Promise<void> | null = null;
+  /**
+   * The `start()` a panel is still open for: set as it begins, cleared by `stop()`. A panel
+   * closed while its lists loaded — Escape right after opening — has already called `stop()`,
+   * which found no stream to close. Without this, the lists landing after it would open a stream
+   * for a panel that is gone, holding one of the few connections a browser allows per host.
+   */
+  #opening: symbol | null = null;
+
+  /** Load the list and the runnable kinds, then follow along — unless stopped meanwhile. */
+  async start(): Promise<void> {
+    const opening = Symbol("jobs panel opening");
+    this.#opening = opening;
+    this.loading = true;
+    try {
+      const [jobs, kinds] = await Promise.all([listJobs(), listJobKinds()]);
+      // A start superseded meanwhile leaves the lists to the one that replaced it: its own
+      // answers, landing last, would put back lists older than that one's.
+      if (this.#opening !== opening && this.#opening !== null) return;
+      this.jobs = jobs;
+      this.kinds = kinds;
+      this.error = null;
+      this.unavailable = null;
+    } catch (cause) {
+      if (this.#opening !== opening && this.#opening !== null) return;
+      this.#fail(cause);
+    } finally {
+      // The start that replaced this one owns the spinner until its own lists land.
+      if (this.#opening === opening || this.#opening === null) this.loading = false;
+    }
+    // Stopped while the lists loaded, or superseded by a later start that follows in its place.
+    // Without a queue, there is nothing to follow and no model to ask about.
+    if (this.#opening !== opening || this.unavailable !== null) return;
+    this.#follow();
+    await this.#loadServedModels();
+  }
+
+  /**
+   * Find out which kinds this installation's jobs can run, without following its jobs.
+   *
+   * For what shows outside the panel: the explorer offers its own embeddings computation only
+   * where the embeddings job cannot compute them (`offersEmbeddingsJob`). It reads the kinds, as
+   * `start()` does, into the same state, so the explorer and the panel never disagree. A panel
+   * open when the answer lands has asked the server itself, and follows what it heard: its
+   * answer stands. Nothing is logged: a missing queue is an expected answer here.
+   */
+  async probe(): Promise<void> {
+    let kinds: JobKind[];
+    try {
+      kinds = await probeJobKinds();
+    } catch (cause) {
+      if (this.#opening === null) this.#fail(cause);
+      return;
+    }
+    if (this.#opening !== null) return;
+    this.kinds = kinds;
+    this.unavailable = null;
+  }
+
+  /**
+   * Whether the embeddings job can be launched here: the server answered with its kinds, and a
+   * worker declared that one. False while nothing is known, on a queue no worker declared it on,
+   * and once the server answers that the queue is missing, which empties the kinds.
+   */
+  get offersEmbeddingsJob(): boolean {
+    return this.kinds.some((kind) => kind.name === EMBEDDINGS_KIND);
+  }
+
+  /**
+   * Ask the inference which models it serves for each task the kinds need.
+   *
+   * A task it cannot answer for is left out: its field is then typed, and the worker, which
+   * asks its own inference, refuses a wrong name with the models it does serve.
+   */
+  async #loadServedModels(): Promise<void> {
+    const tasks = modelTasks(this.kinds.map((kind) => kind.params_schema));
+    const answers = await Promise.all(tasks.map((task) => servedNames(task)));
+    const served: ServedModels = {};
+    tasks.forEach((task, index) => {
+      if (answers[index].length > 0) served[task] = answers[index];
+    });
+    this.servedModels = served;
+  }
+
+  /** Stop following, including a `start()` still loading. Safe to call twice. */
+  stop(): void {
+    this.#opening = null;
+    this.#unfollow();
+  }
+
+  /** Whether anything can be launched at all — no worker means no kinds. */
+  get runnable(): boolean {
+    return this.kinds.length > 0;
+  }
+
+  async submit(kind: string, datasetId: string, params: Record<string, unknown>): Promise<boolean> {
+    try {
+      const job = await submitJob({ kind, dataset_id: datasetId, params });
+      this.jobs = [job, ...this.jobs];
+      this.error = null;
+      return true;
+    } catch (cause) {
+      this.#fail(cause);
+      return false;
+    }
+  }
+
+  /** Fetch the items a job set aside. Read on demand: most jobs have none, and nobody looks. */
+  async loadQuarantine(jobId: string): Promise<void> {
+    try {
+      this.quarantines[jobId] = await listJobQuarantine(jobId);
+      this.error = null;
+    } catch (cause) {
+      this.#fail(cause);
+    }
+  }
+
+  async cancel(jobId: string): Promise<void> {
+    try {
+      this.#merge(await cancelJob(jobId));
+      this.error = null;
+    } catch (cause) {
+      this.#fail(cause);
+    }
+  }
+
+  /**
+   * Record what went wrong.
+   *
+   * A missing queue is not one error among others: it holds until someone sets the queue up. The
+   * kinds and jobs read before it went missing can no longer be run or followed, so they go.
+   */
+  #fail(cause: unknown): void {
+    const reason = queueUnavailableReason(cause);
+    if (reason === null) {
+      this.error = describe(cause);
+      return;
+    }
+    this.unavailable = reason;
+    this.error = null;
+    this.kinds = [];
+    this.jobs = [];
+    this.#unfollow();
+  }
+
+  #follow(): void {
+    if (this.#stream || typeof EventSource === "undefined") return;
+    const stream = openJobStream();
+    this.#stream = stream;
+
+    stream.onopen = () => {
+      this.live = true;
+      // A job that finished during the outage would otherwise read "running" until the panel is
+      // reopened: the global stream has no catch-up.
+      if (this.#missedEvents) {
+        this.#missedEvents = false;
+        void this.refresh();
+      }
+    };
+    // EventSource retries on its own, so a drop is not an error to report — only a loss of
+    // liveness. Saying "connection lost" on every hiccup would train the user to ignore it.
+    stream.onerror = () => {
+      this.live = false;
+      this.#missedEvents = true;
+    };
+    stream.addEventListener("state", (event) => this.#apply(event));
+    stream.addEventListener("progress", (event) => this.#apply(event));
+  }
+
+  /** Close the stream, if one is open. */
+  #unfollow(): void {
+    this.#stream?.close();
+    this.#stream = null;
+    this.live = false;
+  }
+
+  #apply(message: MessageEvent): void {
+    let event: JobEvent;
+    try {
+      event = JSON.parse(message.data) as JobEvent;
+    } catch {
+      return;
+    }
+    const index = this.jobs.findIndex((job) => job.id === event.job_id);
+    if (index === -1) {
+      // A job someone else submitted. Its events keep coming until the reload lands, so the
+      // reload is shared rather than started once per event.
+      void this.refresh();
+      return;
+    }
+    const current = this.jobs[index];
+    this.jobs[index] = {
+      ...current,
+      state: event.state ?? current.state,
+      done_tasks: event.done_tasks ?? current.done_tasks,
+      total_tasks: event.total_tasks ?? current.total_tasks,
+      produced: event.produced ?? current.produced,
+      skipped: event.skipped ?? current.skipped,
+      quarantined: event.quarantined ?? current.quarantined,
+      cancel_requested: event.cancel_requested ?? current.cancel_requested,
+      // Said by state events only, so each of them says it: the one releasing the closing step
+      // carries it, and any later one — done, cancelled, retried — clears it.
+      finalizing: event.state === undefined ? current.finalizing : event.finalizing === true,
+      error: event.reason ? { reason: event.reason, detail: event.detail } : current.error,
+    };
+  }
+
+  #merge(job: Job): void {
+    const index = this.jobs.findIndex((known) => known.id === job.id);
+    if (index === -1) this.jobs = [job, ...this.jobs];
+    else this.jobs[index] = job;
+  }
+
+  /**
+   * Reload the list — once, however many callers ask at the same time.
+   *
+   * Every event of a job this panel has never seen asks for a reload, and a job submitted from
+   * elsewhere sends one per finished chunk: without sharing, that was a burst of identical
+   * requests, each opening a database connection on the server.
+   */
+  refresh(): Promise<void> {
+    this.#refreshing ??= this.#reload().finally(() => {
+      this.#refreshing = null;
+    });
+    return this.#refreshing;
+  }
+
+  async #reload(): Promise<void> {
+    try {
+      this.jobs = await listJobs();
+      this.error = null;
+    } catch (cause) {
+      this.#fail(cause);
+    }
+  }
+}
+
+/** Turn a thrown value into something worth showing a user. */
+function describe(cause: unknown): string {
+  if (cause instanceof Error) return cause.message;
+  return typeof cause === "string" ? cause : "Something went wrong.";
+}
+
+/** The names of the models served for a task; none when the inference cannot say. */
+async function servedNames(task: string): Promise<string[]> {
+  try {
+    return (await listInferenceModels(task)).map((model) => model.name);
+  } catch {
+    return [];
+  }
+}
+
+/** How far along a job is, between 0 and 1. Zero total means nothing to show yet. */
+export function progressOf(job: Job): number {
+  if (job.total_tasks <= 0) return 0;
+  return Math.min(1, job.done_tasks / job.total_tasks);
+}
+
+/**
+ * The state to show for a job.
+ *
+ * A cancelled job keeps running for a few seconds while its chunks in flight finish — nothing is
+ * interrupted mid-chunk. Showing "running" meanwhile makes the click look lost. A job whose work
+ * is done may still run its closing step — an index built over its results: its bar is full, and
+ * "running" under it would look stuck.
+ */
+export function stateLabelOf(job: Job): string {
+  if (isTerminal(job.state)) return job.state;
+  if (job.cancel_requested) return "cancelling";
+  if (job.finalizing) return "finalizing";
+  return job.state;
+}
+
+/** Why a job failed, in one line — or null when it did not fail. */
+export function failureOf(job: Job): string | null {
+  if (job.state !== "error") return null;
+  const reason = job.error?.reason;
+  const detail = job.error?.detail;
+  if (typeof reason !== "string" || !reason) return "failed for an unknown reason";
+  // The reason says which step failed, the detail says why — a job refused at planning reads
+  // "planning failed" and nothing more without it.
+  return typeof detail === "string" && detail ? `${reason}: ${detail}` : reason;
+}
+
+/**
+ * The record a quarantined item belongs to, when the job said so.
+ *
+ * An item can be a medium — one camera of a record — and its identifier alone then does not
+ * tell a user which record to open.
+ */
+export function recordOf(item: QuarantinedItem): string | null {
+  const recordId = item.detail?.record_id;
+  return typeof recordId === "string" && recordId ? recordId : null;
+}
+
+/**
+ * The jobs a panel opened on a dataset lists: that dataset's own, among the library's most recent
+ * the store keeps — every dataset's. A row names only its job's kind: another dataset's job read as
+ * this one's, its progress counting another dataset's records, and its Cancel stopped another
+ * dataset's work. Without a dataset, every job.
+ */
+export function jobsOfDataset(jobs: readonly Job[], datasetId: string | null): Job[] {
+  return datasetId === null ? [...jobs] : jobs.filter((job) => job.dataset === datasetId);
+}
+
+/** Whether a Cancel button makes sense: the job still runs and nobody has asked it to stop. */
+export function canCancel(job: Job): boolean {
+  return !isTerminal(job.state) && !job.cancel_requested;
+}
+
+/**
+ * What a finished job produced, in words — or null while it runs.
+ *
+ * Progress alone says how much was attempted: a job over a lidar dataset reaches
+ * 26 766 / 26 766 having embedded 404 images. This is the line that says so.
+ */
+export function outcomeOf(job: Job): string | null {
+  if (!isTerminal(job.state)) return null;
+  const parts = [`${job.produced} produced`];
+  if (job.skipped > 0) parts.push(`${job.skipped} skipped`);
+  if (job.quarantined > 0) parts.push(`${job.quarantined} quarantined`);
+  return parts.join(" · ");
+}
+
+export { isTerminal };
+export const jobsStore = new JobsStore();

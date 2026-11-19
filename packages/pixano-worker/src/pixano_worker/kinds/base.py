@@ -330,7 +330,7 @@ class JobKind(ABC, Generic[ParamsT]):
 
         The kind does not know how to open a dataset: it receives a writer, which is the
         system's single point of writing, and reads through it only. A kind may read, decide,
-        then write here — which objects carry a person's work, what a previous run left — and
+        then write here — which objects carry a person's work, which boxes still stand — and
         those reads belong to the same serialisation as the write: the runner holds its
         per-dataset write lock around the whole call. A writer role that serialises whole
         `write` calls across workers, as the runner does within one, will need no change to a

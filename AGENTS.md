@@ -11,7 +11,7 @@ Pixano is a web application organized as a monorepo with a backend server and a 
 - `ui/apps/web` (package `@pixano/web`) — the **new workspace UI**, built on a plugin annotation architecture. It is being split into its own codebase (decided 2026-10-16), so it no longer drives frontend work in this repository; `docs/FRONTEND_ARCHITECTURE.md`, `docs/ARCHITECTURE_TOOLING.md`, `docs/CODING_STANDARDS.md` and `docs/ADDING_AN_ANNOTATION_KIND.md` all describe this app and only this app.
 - `ui/apps/pixano` — the **legacy app** (`hatch_build.py` calls it the "legacy frontend") and the UI the server serves. Bug fixes **and new features** land here, for every workspace; nothing is held back waiting for the new UI.
 
-There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The documentation website is built with Astro and lives in `docs-astro/`.
+There is no `ui/packages/` directory; the two apps share no code (`restTypes.ts` / `apiClient.ts` are hand-copied between them). The legacy jobs panel is a hand copy too, of the new UI's `lib/components/jobs/`, `lib/api/jobs.ts` and `lib/stores/jobs.svelte.ts`: a change to one copy is made to the other, where it applies. Only the legacy copy asks, outside the panel, which kinds the jobs can run (`probeJobKinds`, the store's `probe()` and `offersEmbeddingsJob`), for its explorer: the new UI computes no embeddings itself. The documentation website is built with Astro and lives in `docs-astro/`.
 
 Backend modules are organized as follows:
 
