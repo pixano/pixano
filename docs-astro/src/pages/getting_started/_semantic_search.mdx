@@ -114,13 +114,19 @@ The popover also holds the embedding tools, for the model searched:
   and so does its button: it empties them and computes them again.
 
 These buttons compute the model searched, and refuse when the inference does not serve it, or
-serves it with other weights than its embeddings were computed with.
+serves it with other weights than its embeddings were computed with. They embed one image per
+record. Where `pixano-worker` runs the **embeddings job**, they give way to it: the search bar
+shows a **Jobs** button in place of **Enable**, and the popover points to the explorer's **Jobs**
+panel. The job embeds every image of a record, so a record holding several images gets a vector
+for each; to compute a model's embeddings again from nothing, or to repair them, tick **Replace
+Existing Embeddings** in its form. Without a worker, the buttons stay, and a dataset with several
+images per record keeps a partial count.
 
 If the dataset's `embeddings.json` cannot be read entirely — written by a later version, or
 damaged —, nothing may change it any more: no model can be computed, nor made the default, and
-the embeddings job refuses the dataset. The popover then offers **Start again from nothing**:
-after a confirmation, it deletes every model's embeddings and computes the searched model's
-again, or the first model's the inference serves.
+the embeddings job refuses the dataset. The popover then offers **Start again from nothing**,
+worker or not: after a confirmation, it deletes every model's embeddings and computes the
+searched model's again, or the first model's the inference serves.
 
 Pixano never mixes two models' vectors: each model's go to its own table, and a text search is
 refused when the inference serves the model with other weights than its embeddings were

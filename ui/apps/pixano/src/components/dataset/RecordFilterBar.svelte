@@ -14,6 +14,7 @@ License: CECILL-C
     CircleNotch,
     FunnelSimple,
     Images,
+    ListChecks,
     MagnifyingGlass,
     Plus,
     Rows,
@@ -64,6 +65,12 @@ License: CECILL-C
     /** What the explorer did of a URL it could not follow as it is. */
     searchNotice?: string;
     computing?: boolean;
+    /**
+     * Embeddings are computed by the embeddings job, from the Jobs panel: a worker runs it on this
+     * installation. The search bar's own computation, one image per record, then gives way to it:
+     * its buttons point to the Jobs panel instead.
+     */
+    embeddingsByJob?: boolean;
     /** Live progress of the embedding-compute job (while `computing`). */
     computeProgress?: IoJobResponse["progress"] | null;
     /** Why the embeddings were not computed, in a sentence. */
@@ -83,6 +90,8 @@ License: CECILL-C
     recordsToReview?: number;
     /** Open the first record to review, in review. */
     onReview?: () => void;
+    /** Open the jobs of this dataset: launch one, follow the ones running. */
+    onOpenJobs?: () => void;
   }
 
   let {
@@ -100,6 +109,7 @@ License: CECILL-C
     settingDefault = false,
     searchNotice = "",
     computing = false,
+    embeddingsByJob = false,
     computeProgress = null,
     computeError = "",
     searchError = "",
@@ -113,6 +123,7 @@ License: CECILL-C
     onViewChange,
     recordsToReview = 0,
     onReview,
+    onOpenJobs,
   }: Props = $props();
 
   const columns = $derived(filterSchema.columns);
@@ -232,6 +243,11 @@ License: CECILL-C
     onCompute?.(force);
   }
 
+  function openJobs() {
+    toolsOpen = false;
+    onOpenJobs?.();
+  }
+
   function askToStartAgain() {
     toolsOpen = false;
     confirmingStartAgain = true;
@@ -308,7 +324,22 @@ License: CECILL-C
               {computePercent !== null ? `${computePercent}%` : ""}
             </span>
           {:else if embeddings.rows.length === 0}
-            {#if onCompute}
+            {#if embeddingsByJob}
+              <!--
+                Enabling the embeddings is the embeddings job's work wherever it runs: it embeds
+                every image of a record, the search bar's own computation one.
+              -->
+              {#if onOpenJobs}
+                <button
+                  type="button"
+                  onclick={openJobs}
+                  title="Compute embeddings with the embeddings job, from Jobs, to enable semantic search."
+                  class="inline-flex items-center h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Jobs
+                </button>
+              {/if}
+            {:else if onCompute}
               <button
                 type="button"
                 onclick={() => runCompute(false)}
@@ -428,9 +459,31 @@ License: CECILL-C
                         Start again from nothing
                       </button>
                     {/if}
+                  {:else if embeddingsByJob}
+                    <!--
+                      The search bar's own computation embeds one image per record: on records of
+                      several images, a model's count would never fill up, whichever button is
+                      pressed. The job embeds every image, so the buttons give way to it wherever a
+                      worker runs it.
+                    -->
+                    <p class="mb-3 text-left text-xs text-muted-foreground">
+                      To compute a model's embeddings, run the embeddings job from Jobs: it embeds
+                      every image of a record. To compute them again from nothing, or to repair
+                      them, tick Replace Existing Embeddings.
+                    </p>
+                    {#if onOpenJobs}
+                      <button
+                        type="button"
+                        onclick={openJobs}
+                        class="h-9 w-full rounded-lg border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        Open Jobs
+                      </button>
+                    {/if}
                   {:else}
                     <p class="mb-3 text-left text-xs text-muted-foreground">
-                      These buttons compute the model searched, one image per record.
+                      These buttons compute the model searched, one image per record. A dataset with
+                      several images per record needs the embeddings job: see Jobs.
                     </p>
                     {#if onCompute}
                       <div class="flex flex-col gap-1.5">
@@ -669,6 +722,17 @@ License: CECILL-C
           >
             {recordsToReview.toLocaleString()}
           </span>
+        </button>
+      {/if}
+
+      {#if onOpenJobs}
+        <button
+          type="button"
+          onclick={onOpenJobs}
+          class="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-border bg-background text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-accent shadow-sm transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ListChecks size={15} />
+          Jobs
         </button>
       {/if}
 
