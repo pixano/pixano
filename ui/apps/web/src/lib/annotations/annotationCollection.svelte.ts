@@ -10,6 +10,7 @@ import type { MaskGeometry } from "./kinds/2d/mask/maskTypes.js";
 import type { MultiPathGeometry } from "./kinds/2d/multi-path/multiPathTypes.js";
 import {
   storedStatusAfterWrite,
+  storedStatusOf,
   type AnnotationReview,
   type ReviewStatus,
 } from "./reviewStatus.js";
@@ -64,8 +65,9 @@ export interface LocalAnnotation<G = unknown> {
    * What the dataset holds for this annotation's content, as last read or
    * written — the content an unsaved edit started from. Kept apart from
    * `geometry`/`entityId`/`entity`, which an edit overwrites in place, so that
-   * an edit that puts the content back as stored is seen to change nothing.
-   * Absent on a draft no write has carried yet.
+   * an edit that puts the content back as stored is seen to change nothing, and
+   * Discard can put the content back. Absent on a draft no write has carried
+   * yet.
    */
   persistedContent?: PersistedContent<G>;
 }
@@ -75,6 +77,19 @@ export interface PersistedContent<G = unknown> {
   geometry: G;
   entityId: string;
   entity?: Record<string, unknown>;
+}
+
+/**
+ * A plain, detached copy of what the dataset holds for an annotation, or
+ * undefined when nothing is known. A copy, because the collection's objects are
+ * reactive proxies that an edit may change in place: what is restored from it
+ * must not move with the edit.
+ */
+export function copyPersistedContent<G>(
+  annotation: LocalAnnotation<G>,
+): PersistedContent<G> | undefined {
+  const stored = annotation.persistedContent;
+  return stored ? ($state.snapshot(stored) as PersistedContent<G>) : undefined;
 }
 
 /** Normalized xywh in [0, 1] — same convention as the backend BBox rows. */
@@ -146,6 +161,8 @@ export interface AnnotationStore {
   setGeometry<G>(id: string, geometry: G): void;
   /** Assign the annotation's parent entity (id + optional label snapshot). */
   setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void;
+  /** Replace the annotation's review state (an Accept taken, not yet saved). */
+  setReview(id: string, review: AnnotationReview): void;
 }
 
 /**
@@ -205,6 +222,18 @@ export class AnnotationCollection implements AnnotationStore {
   }
 
   /**
+   * Show a new review state. The stored status stays what it was: only a write
+   * of the row moves it (`recordWrite`), so an Accept still unsaved is never
+   * mistaken for one the server holds.
+   */
+  setReview(id: string, review: AnnotationReview): void {
+    const annotation = this.find(id);
+    if (!annotation) return;
+    const stored = annotation.review?.storedStatus;
+    annotation.review = stored === undefined ? review : { ...review, storedStatus: stored };
+  }
+
+  /**
    * The annotation's content as it is now, as a detached copy: what a body
    * queued for it now carries. A copy, because the collection's objects are
    * reactive proxies that a later edit may change in place. Undefined when the
@@ -225,21 +254,24 @@ export class AnnotationCollection implements AnnotationStore {
    * Record, as a write of this annotation leaves for the backend, what the
    * dataset holds once it lands: the content the write carries, and, for an
    * update, the status the server stores for that body
-   * (`storedStatusAfterWrite`). So an edit of a model's row reads accepted as
-   * its write leaves, without waiting for anything to be read back.
+   * (`storedStatusAfterWrite`). The status shown moves with the stored one when
+   * it showed the stored one — no unsaved Accept — so an edit of a model's row
+   * reads accepted as its write leaves, without waiting for the save's
+   * read-back; an unsaved Accept already shows it.
    *
-   * That content is the one taken when the body was queued (`contentOf`), not
+   * The content is the one taken when the body was queued (`contentOf`), not
    * the annotation's content now: a write retried after a failure leaves with
    * newer edits queued behind it, which it does not carry. A write that carries
-   * no content leaves the content recorded as it was.
+   * no content — an Accept alone — leaves the content recorded as it was.
    *
    * Recorded when the write leaves rather than when it lands, so that work
    * begun while it is in flight is measured against what the dataset will hold
    * once it lands: an edit taken back to the content on the wire sends nothing
    * (the content compared is `persistedContent`), and a row whose edit is on
-   * the wire already reads accepted. Returns how to put the previous record
-   * back if the write fails — the status included, unless something has moved
-   * it since; nothing when the annotation is not in this collection.
+   * the wire already reads accepted, and is not offered Accept again. Returns
+   * how to put the previous record back if the write fails — the status shown
+   * included, when it moved and nothing has moved it since; nothing when the
+   * annotation is not in this collection.
    *
    * @param id The annotation the write is about.
    * @param write `content`: what the write carries, if any; `updateBody`: the
@@ -252,26 +284,97 @@ export class AnnotationCollection implements AnnotationStore {
     const annotation = this.find(id);
     if (!annotation) return undefined;
     const previousContent = annotation.persistedContent;
-    const previousStatus = annotation.review?.status;
-    let statusMovedTo: ReviewStatus | "" | undefined;
+    const previousStored = annotation.review?.storedStatus;
+    const previousShown = annotation.review?.status;
+    let shownMovedTo: ReviewStatus | "" | undefined;
 
     if (write.content) annotation.persistedContent = write.content;
     const review = annotation.review;
     if (review && write.updateBody) {
+      const showedStored = review.status === storedStatusOf(review);
       const stored = storedStatusAfterWrite(review, write.updateBody);
-      if (review.status !== stored) {
+      review.storedStatus = stored;
+      if (showedStored && review.status !== stored) {
         review.status = stored;
-        statusMovedTo = stored;
+        shownMovedTo = stored;
       }
     }
 
     return () => {
       annotation.persistedContent = previousContent;
       const current = annotation.review;
+      if (!current) return;
+      current.storedStatus = previousStored;
       // Put back only a status nothing has moved since the write left.
-      const untouched = statusMovedTo !== undefined && current?.status === statusMovedTo;
-      if (current && untouched && previousStatus !== undefined) current.status = previousStatus;
+      const untouched = shownMovedTo !== undefined && current.status === shownMovedTo;
+      if (untouched && previousShown !== undefined) current.status = previousShown;
     };
+  }
+
+  /**
+   * Put every annotation back as the dataset holds it — its content and status
+   * as last read or written — and drop the drafts and the selection: what
+   * Discard shows at once, before the rows are read again. A gesture made while
+   * they are read then starts from what is stored, never from discarded work.
+   */
+  restoreStored(): void {
+    this.items = this.items.filter((annotation) => annotation.persisted);
+    for (const annotation of this.items) {
+      const stored = copyPersistedContent(annotation);
+      if (stored) {
+        annotation.geometry = stored.geometry;
+        annotation.entityId = stored.entityId;
+        annotation.entity = stored.entity;
+      }
+      const review = annotation.review;
+      if (review) annotation.review = { ...review, status: storedStatusOf(review) };
+    }
+    this.selectedId = null;
+  }
+
+  /**
+   * Take the rows just read, merged with the work done here meanwhile: each
+   * annotation holding work not saved yet keeps the version here — replacing
+   * it would show the record without work the queue still holds — and every
+   * other one becomes its row. Drafts drawn meanwhile stay; an annotation
+   * deleted here stays deleted; the selection stays while its annotation
+   * exists.
+   *
+   * Only the kinds actually read are replaced. A kind whose rows could not be
+   * read keeps every annotation it shows: a failed request says nothing about
+   * what the dataset holds, and taking it for an empty table would take the
+   * whole kind off the screen.
+   *
+   * In place, so this stays the collection every widget holds: a tool or an
+   * editor in the middle of a gesture — work staged, not queued yet — keeps
+   * working on the record it started on, and commits by id onto the row read.
+   *
+   * @param rows The annotations the seed loaders built from the rows read.
+   * @param holdsWork Whether an annotation has a write still queued or on the wire.
+   * @param kindsRead The kinds whose rows were read; `rows` holds only these.
+   */
+  takeRowsRead(
+    rows: readonly LocalAnnotation[],
+    holdsWork: (id: string) => boolean,
+    kindsRead: ReadonlySet<AnnotationKind>,
+  ): void {
+    const read = new Set(rows.map((row) => row.id));
+    const items: LocalAnnotation[] = [];
+    for (const row of rows) {
+      if (!holdsWork(row.id)) {
+        items.push(row);
+        continue;
+      }
+      const local = this.find(row.id);
+      if (local) items.push(local);
+    }
+    for (const annotation of this.items) {
+      const kept =
+        !annotation.persisted || holdsWork(annotation.id) || !kindsRead.has(annotation.kind);
+      if (kept && !read.has(annotation.id)) items.push(annotation);
+    }
+    this.items = items;
+    if (this.selectedId !== null && !this.find(this.selectedId)) this.selectedId = null;
   }
 }
 
@@ -354,5 +457,9 @@ export class ViewScopedAnnotations implements AnnotationStore {
 
   setEntity(id: string, entityId: string, entity?: Record<string, unknown>): void {
     this.getParent().setEntity(id, entityId, entity);
+  }
+
+  setReview(id: string, review: AnnotationReview): void {
+    this.getParent().setReview(id, review);
   }
 }

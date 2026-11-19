@@ -285,19 +285,24 @@ describe("deleteAnnotation", () => {
 // ─── deleteEntity ────────────────────────────────────────────────────────────
 
 describe("deleteEntity", () => {
-  it("DELETEs the entity by id", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+  it("DELETEs the entity only if nothing names it, and says it did", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ deleted: true }));
 
-    await deleteEntity(DS, "e1");
+    await expect(deleteEntity(DS, "e1")).resolves.toEqual({ deleted: true });
 
     const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe(`/datasets/${DS}/entities/e1`);
-    expect((init as RequestInit).method).toBe("DELETE");
+    expect(url).toBe(`/datasets/${DS}/entities/e1?only_if_unnamed=true`);
+    expect(init.method).toBe("DELETE");
   });
 
-  it("does not throw on 404", async () => {
+  it("says so when something still names the entity", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(okJson({ deleted: false }));
+    await expect(deleteEntity(DS, "e1")).resolves.toEqual({ deleted: false });
+  });
+
+  it("reads a 404 as an entity gone", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 404 }));
-    await expect(deleteEntity(DS, "gone")).resolves.toBeUndefined();
+    await expect(deleteEntity(DS, "gone")).resolves.toEqual({ deleted: true });
   });
 
   it("throws on unexpected error", async () => {

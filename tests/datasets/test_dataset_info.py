@@ -67,6 +67,9 @@ class TestDatasetInfo:
             "message",
             "timeseries",
             "text_span",
+            "record_statistics",
+            "entity_statistics",
+            "statistics",
             "views",
             "tables",
         }

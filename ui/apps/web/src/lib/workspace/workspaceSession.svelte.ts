@@ -50,15 +50,15 @@ export class WorkspaceSession {
    */
   visibleEntityIds = $state<Set<string> | null>(null);
   /**
-   * The review filter keys switched off: annotations under these keys are not
+   * The review status chips switched off: annotations under these keys are not
    * displayed (drafts always are). None is, by default.
    *
    * A reviewer's preference rather than a property of the record, so neither a
-   * record load nor `reset()` touches it: the next record opens with the filter
-   * the reviewer was working with.
+   * record load nor `reset()` touches it: "Save & next" keeps the filter the
+   * reviewer was working with.
    *
    * Always replaced, never mutated: Svelte 5 does not track a Set's add/delete,
-   * so a change assigns a new one — hence the read-only type.
+   * so a toggle assigns a new one — hence the read-only type.
    */
   hiddenReviewStatuses = $state<ReadonlySet<ReviewFilterKey>>(new Set());
   /**
@@ -70,8 +70,9 @@ export class WorkspaceSession {
   liveDraft = $state<LiveAnnotationDraft | null>(null);
   /**
    * The raised flags of work no mutation carries yet — work begun in a tool
-   * and waiting for the person to confirm it, such as a polygon before Enter —
-   * keyed by flag. Raised and lowered by each holder through its widget's seam
+   * and waiting for the person to confirm it, such as a polygon before Enter
+   * or a 3D box moved but not yet applied from its HUD — keyed by flag. Raised
+   * and lowered by each holder through its widget's seam
    * (`SceneContextBase.claimStagedWork`); while any is raised, the record is
    * not all saved.
    *
@@ -82,10 +83,37 @@ export class WorkspaceSession {
    */
   stagedWork = $state<ReadonlyMap<string, StagedWorkHolder>>(new Map());
   /**
+   * The decision lock a running "Save & next" holds, naming the record it is
+   * on: the one it saves, then the one it opens (`ReviewController.saveAndNext`).
+   * Null when none runs. Opening a record other than by the run's own move —
+   * from the record list, the record it saves included — releases it
+   * (`ReviewController.recordOpening`): the reviewer has left the run behind.
+   *
+   * Raw state, never a proxy: the run that took the lock knows it by identity,
+   * so it never releases a lock another run has taken since.
+   */
+  decisionLock = $state.raw<{ readonly datasetId: string; readonly recordId: string } | null>(null);
+
+  /**
+   * True while no review decision may be taken: "Save & next" holds the lock,
+   * from its save to the opening of the next record. Every decision path reads
+   * it through its mutation sink (`MutationSink.decisionsLocked`).
+   */
+  get decisionsLocked(): boolean {
+    return this.decisionLock !== null;
+  }
+
+  /**
    * The arrangement this record opened with, so "Reset layout" can undo the
    * moves made since. Written by `RecordLoader` at the end of each load.
    */
   openingLayout = $state<DatasetLayout | null>(null);
+
+  /** Whether an entity's persisted annotations are shown (`visibleEntityIds`). */
+  isEntityVisible(entityId: string): boolean {
+    const visible = this.visibleEntityIds;
+    return visible === null || visible.has(entityId);
+  }
 
   /** Reset the selection (e.g. on `clearWorkspace`). */
   reset(): void {
