@@ -17,6 +17,7 @@ more like it.
 - How Pixano stores embeddings and why no model runs inside Pixano
 - How to **enable** semantic search on a dataset
 - How to search by text and find **more like this**
+- How to search with **another model**, and pick the **default** one
 - How to **repair** or **update** embeddings
 
 </Callout>
@@ -28,9 +29,14 @@ Pixano does not load an ML model. Embeddings are computed by a
 resulting vectors in the dataset:
 
 - One vector per **record**, computed from its image view.
-- Vectors live in a `RecordEmbedding` table inside the dataset, described by an
-  `embeddings.json` sidecar recording the model, the vector dimension and the distance metric.
-- Because the sidecar carries that metadata, the table opens without registering an embedding
+- A dataset can hold the embeddings of **several models** side by side, each in a table of its
+  own with its own vector index. A model is its name and its checkpoint — the weights the
+  inference loaded under that name: two checkpoints of one name are two models, whose vectors
+  are never compared.
+- An `embeddings.json` sidecar describes every model's table — its checkpoint, the vector
+  dimension and the distance metric — and names the **default** model, the one a search reads
+  when it names none.
+- Because the sidecar carries that metadata, the tables open without registering an embedding
   function — embeddings survive a restart, and an export/import round trip.
 
 <Callout type="note" title="Scope in 0.8">
@@ -77,20 +83,48 @@ Every record carries a **More like this** action — on its card in gallery view
 actions column in table view. It re-runs the search using that record as the query and shows a
 removable **Similar to &lt;id&gt;** chip so you always know what you are looking at.
 
+## Several models
+
+Once there is another model to search with, a selector appears beside the search bar: it lists
+the models a search can read, the default one first, and keeps the default and the searched
+model among them whatever their health, so that you can always go back to them. The model picked
+is the one a text search and **More like this** read; the page's URL keeps it, opening a record
+and coming back included, so a reload or a shared link searches with the same model, and
+changing it re-runs the search under way. A URL naming a model the dataset does not hold
+searches the default model, and says so. A text search needs the inference to serve that very
+model, with the weights its embeddings were computed with: otherwise the search says so rather
+than rank by meaningless distances.
+
+The popover at the end of the search bar lists every model of the dataset with its health —
+ready, partial or broken, and what is wrong with a broken one — and how many media it embedded.
+**Set as default** makes a model a search can read the one a search reads when none is picked,
+for everyone using the dataset. To add a model, run the embeddings job with it, from the new
+interface's **Jobs** panel: its embeddings go beside the others.
+
 ## Repair and update
 
-The embedding tools live in a popover next to the search bar:
+The popover also holds the embedding tools, for the model searched:
 
 - **Update embeddings** — appears when only some records have vectors (for example after
   importing more data in `add` mode). Computes the missing ones.
-- **Recompute** — rebuilds the store from scratch. Use it after switching models.
-- **Repair** — replaces the Enable button when the store is degraded (a missing or corrupt
-  table, or a vector dimension that no longer matches the model). It drops the store and
-  rebuilds it.
+- **Recompute** — computes the searched model's embeddings again from nothing; the other
+  models' are kept.
+- **Repair** — when the searched model's embeddings are degraded (a missing or corrupt table, or
+  a vector dimension that no longer matches the model), the popover's trigger reads **Repair**,
+  and so does its button: it empties them and computes them again.
 
-Pixano refuses to silently mix embedding spaces: if you point a dataset at a different model
-without forcing a recompute, the request is rejected with an explanation rather than producing
-meaningless neighbours.
+These buttons compute the model searched, and refuse when the inference does not serve it, or
+serves it with other weights than its embeddings were computed with.
+
+If the dataset's `embeddings.json` cannot be read entirely — written by a later version, or
+damaged —, nothing may change it any more: no model can be computed, nor made the default, and
+the embeddings job refuses the dataset. The popover then offers **Start again from nothing**:
+after a confirmation, it deletes every model's embeddings and computes the searched model's
+again, or the first model's the inference serves.
+
+Pixano never mixes two models' vectors: each model's go to its own table, and a text search is
+refused when the inference serves the model with other weights than its embeddings were
+computed with.
 
 ## Next steps
 
