@@ -40,6 +40,7 @@ from pixano.schemas import (
     AnnotationSourceKind,
     ReviewStatus,
     SchemaGroup,
+    is_statistics,
     label_field_of,
     statistics_slot,
 )
@@ -715,7 +716,9 @@ class JobWriter:
         for batch in _batched(entity_ids):
             listed = to_sql_list(batch)
             for name, schema in self.dataset.info.tables.items():
-                if "entity_id" not in getattr(schema, "model_fields", {}):
+                # A statistic is nobody's work: computed from the records, it neither holds an
+                # object nor goes with one — the statistics job drops the rows of objects gone.
+                if is_statistics(schema) or "entity_id" not in getattr(schema, "model_fields", {}):
                     continue
                 for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
                     if name == own_table and row.id == row.entity_id:
