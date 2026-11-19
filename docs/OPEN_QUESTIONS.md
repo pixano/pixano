@@ -130,6 +130,17 @@ Options:
   must keep it.
 - **Keep the scan**, and measure it at scale first.
 
+## The Jobs panel opened without a dataset
+
+**Status:** open (left as it was when the panel of a dataset was given its own jobs, 2026-11-12).
+
+A Jobs panel opened on a dataset lists that dataset's jobs only (`jobsOfDataset`, in the new
+UI's jobs store). The new UI also opens it from the dataset list, with no dataset: it then
+lists every dataset's recent jobs, as it did everywhere before, and a row names only its
+job's kind — nothing tells which dataset a job runs on, and its Cancel is offered all the same.
+The store holds the datasets' identifiers, not their names; naming the dataset on a row, when
+the panel has none, would take the list of datasets the explorer already reads.
+
 ## An entity the save queue gave up on stays in the dataset
 
 **Status:** open (an accepted limit).

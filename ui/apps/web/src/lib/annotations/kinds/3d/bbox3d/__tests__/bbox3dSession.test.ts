@@ -21,12 +21,15 @@ import { REVIEW_STATUS } from "$lib/annotations/reviewStatus.js";
 import type { LiveAnnotationDraft, SeamContext } from "$lib/annotations/scene/sceneContext.js";
 import type { PendingAnnotation, ResourceMutation, Rotation3x3 } from "$lib/annotations/types.js";
 import {
+  deferred,
   modelBox,
   openManager,
   serveLikeTheApi,
+  VIEWPORT,
   widgetSeam,
   type Row,
 } from "$lib/workspace/__tests__/workspaceHarness.js";
+import type { NextRecordToReview } from "$lib/workspace/reviewGateway.js";
 import type { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 const COORDS: [number, number, number, number, number, number] = [1, 2, 3, 4, 5, 6];
@@ -558,6 +561,7 @@ describe("BBox3DSession, a gizmo drag", () => {
 
 describe("BBox3DSession on the real workspace", () => {
   const REC_1 = "rec-1";
+  const REC_2 = "rec-2";
 
   /** A model's 3D box as the dataset holds it: record-wide (no view), turned, float32. */
   function modelBox3D(recordId: string, id: string, overrides: Partial<Row> = {}): Row {
@@ -573,8 +577,17 @@ describe("BBox3DSession on the real workspace", () => {
     };
   }
 
-  async function open(box: Row = modelBox3D(REC_1, "m1")) {
-    const opened = await openManager({ [REC_1]: { [BBOX3D_RESOURCE]: [box] } });
+  async function open(
+    box: Row = modelBox3D(REC_1, "m1"),
+    next: NextRecordToReview | Promise<NextRecordToReview> = { recordId: REC_2, remaining: 1 },
+  ) {
+    const opened = await openManager(
+      {
+        [REC_1]: { [BBOX3D_RESOURCE]: [box] },
+        [REC_2]: { [BBOX3D_RESOURCE]: [modelBox3D(REC_2, "m2")] },
+      },
+      { next },
+    );
     const seam = widgetSeam(opened.manager, "point-cloud-widget");
     const session = new BBox3DSession(seam);
     const editor = boxEditorFor(session, seam.collection);
@@ -651,6 +664,43 @@ describe("BBox3DSession on the real workspace", () => {
     expect(sent?.op === "update" ? sent.body.rotation : undefined).toEqual(turned);
   });
 
+  it("Save & next stays on a record whose HUD holds a moved box, and moves once it is saved", async () => {
+    const { manager, session, editor, backend } = await open();
+    const moved = movedOneUnit(editor.open("m1"));
+    session.reportReady(moved.coords, moved.rotation, "m1");
+
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_1);
+    expect(manager.review.outcome).toEqual({ kind: "not-saved" });
+    expect(backend.writes).toEqual([]);
+
+    session.save();
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_2);
+    expect(backend.writes.map((w) => w.op === "update" && w.id)).toEqual(["m1"]);
+  });
+
+  it("Save & next stays on a record whose HUD holds a new box, and moves once it is cancelled", async () => {
+    const { manager, session } = await open();
+    session.reportReady(COORDS, ROTATION);
+
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_1);
+
+    session.cancel();
+    await manager.review.saveAndNext(VIEWPORT);
+    expect(manager.recordId).toBe(REC_2);
+  });
+
+  it("Save & next is not held by a HUD a click only opened", async () => {
+    const { manager, editor } = await open();
+    editor.open("m1");
+
+    await manager.review.saveAndNext(VIEWPORT);
+
+    expect(manager.recordId).toBe(REC_2);
+  });
+
   it("Discard closes a HUD holding a moved box, and puts the box back as stored", async () => {
     const { manager, session, editor } = await open();
     const moved = movedOneUnit(editor.open("m1"));
@@ -665,9 +715,60 @@ describe("BBox3DSession on the real workspace", () => {
     expect(geometryOf(manager, "m1").coords).toEqual(COORDS);
   });
 
+  it("rejects nothing while Save & next runs: the HUD says so and stays open", async () => {
+    const lookup = deferred<NextRecordToReview>();
+    const { manager, session, editor, backend } = await open(undefined, lookup.promise);
+    editor.open("m1");
+
+    const moving = manager.review.saveAndNext(VIEWPORT);
+    await expect.poll(() => backend.log).toContain("nextRecordToReview");
+    expect(session.editingDeleteGesture).toBe("locked");
+    session.deleteBox();
+
+    expect(session.confirm?.editingId).toBe("m1");
+    expect(manager.annotations.find("m1")?.review?.status).toBe(REVIEW_STATUS.PENDING);
+    expect(manager.pendingCount).toBe(0);
+    lookup.resolve({ recordId: null, remaining: 0 });
+    await moving;
+
+    // Once it is over, the HUD rejects again.
+    expect(session.editingDeleteGesture).toBe("reject");
+  });
+
   describe("a gizmo drag on a box a click only opened", () => {
     /** The model's box upright, so that its rings can be grabbed (`grabRing`). */
     const upright = () => modelBox3D(REC_1, "m1", { rotation: [...ROTATION] });
+
+    it("keeps Save & next on the record while it runs, and lets it move once let go", async () => {
+      const { manager, editor } = await open(upright());
+      editor.open("m1");
+      const ring = editor.grabRing();
+
+      await manager.review.saveAndNext(VIEWPORT);
+      expect(manager.recordId).toBe(REC_1);
+      expect(manager.review.outcome).toEqual({ kind: "not-saved" });
+
+      ring.release();
+      await manager.review.saveAndNext(VIEWPORT);
+      expect(manager.recordId).toBe(REC_2);
+    });
+
+    it("begun while Save & next looks for the next record, keeps the reviewer on the record", async () => {
+      const lookup = deferred<NextRecordToReview>();
+      const { manager, editor, backend } = await open(upright(), lookup.promise);
+      editor.open("m1");
+
+      const moving = manager.review.saveAndNext(VIEWPORT);
+      await expect.poll(() => backend.log).toContain("nextRecordToReview");
+      const ring = editor.grabRing();
+      lookup.resolve({ recordId: REC_2, remaining: 1 });
+      await moving;
+
+      expect(manager.recordId).toBe(REC_1);
+      expect(manager.review.outcome).toEqual({ kind: "not-saved" });
+      expect(editor.editor.drawPhase).toBe("rotating");
+      ring.release();
+    });
 
     it("counts as one unsaved item while it runs, and as none once let go where it began", async () => {
       const { manager, editor } = await open(upright());

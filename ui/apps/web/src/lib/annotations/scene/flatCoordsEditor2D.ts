@@ -53,12 +53,12 @@ export interface FlatCoordsEditorSpec<G> {
  *
  * A drag is work of its own until it ends: the move sits on the nodes, not in
  * the collection. So the editor raises its staged-work flag while one runs —
- * the record counts it as one unsaved item, and Discard or a delete pressed
- * mid-drag drops it — and stamps the shape's group (`spec.draggingAttr`) so that
- * the renderer's sync leaves it alone instead of rebuilding it under the
- * pointer. A save's read-back may meanwhile take the shape's row into the
- * collection, in place; the drag commits onto that row, by its id, when it
- * ends. It commits only a drag it saw begin.
+ * the record counts it as one unsaved item, "Save & next" stays on the record,
+ * and Discard or a delete pressed mid-drag drops it — and stamps the shape's
+ * group (`spec.draggingAttr`) so that the renderer's sync leaves it alone
+ * instead of rebuilding it under the pointer. A save's read-back may meanwhile
+ * take the shape's row into the collection, in place; the drag commits onto
+ * that row, by its id, when it ends. It commits only a drag it saw begin.
  *
  * Like `bboxEditor2D`, it never creates nodes — the renderer owns those (D4) —
  * and it listens at the **layer**, so display and input stay decoupled. It only

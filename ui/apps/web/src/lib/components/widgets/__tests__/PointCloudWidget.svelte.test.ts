@@ -14,7 +14,12 @@ import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extension
 import { WidgetExtension } from "$lib/extensions/WidgetExtension.js";
 import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
 import { makeLayoutRepository } from "$lib/workspace/__tests__/fakeDatasetLayoutRepository.js";
-import { DATASET_ID, makeBackend, VIEWPORT } from "$lib/workspace/__tests__/workspaceHarness.js";
+import {
+  DATASET_ID,
+  makeBackend,
+  makeReviewGateway,
+  VIEWPORT,
+} from "$lib/workspace/__tests__/workspaceHarness.js";
 import { WorkspaceManager } from "$lib/workspace/workspaceManager.svelte.js";
 
 // The point-cloud widget around its 3D canvas. The canvas needs WebGL, which
@@ -54,7 +59,12 @@ async function renderWidget() {
   registry.register(WidgetExtension.create(VIEW_CLAIMER));
   registry.register(PointCloudExtension);
   const { gateway } = makeBackend({ [REC]: {} });
-  const manager = new WorkspaceManager(registry, gateway, makeLayoutRepository());
+  const manager = new WorkspaceManager(
+    registry,
+    gateway,
+    makeLayoutRepository(),
+    makeReviewGateway({ recordId: null, remaining: 0 }),
+  );
   await manager.openRecord(DATASET_ID, REC, VIEWPORT);
   const widget = manager.addWidget(PointCloudExtension.config.name);
   if (!widget) throw new Error("no point-cloud widget");
@@ -66,7 +76,7 @@ async function renderWidget() {
 }
 
 describe("PointCloudWidget", () => {
-  it("counts the record's unsaved work per annotation, as the image toolbar does", async () => {
+  it("counts the record's unsaved work per annotation, as the image toolbar and Review tab do", async () => {
     const { manager } = await renderWidget();
 
     // A new box: its entity and itself, two writes for one annotation.
@@ -112,7 +122,7 @@ describe("PointCloudWidget", () => {
     held.set(true);
     flushSync();
     expect(manager.pendingCount).toBe(0);
-    // Unsaved: the toolbar says so.
+    // Unsaved, as "Save & next" reads it: the toolbar says so.
     expect(
       within(screen.getByRole("toolbar", { name: "Point cloud tools" })).getByText("1 unsaved"),
     ).toBeTruthy();

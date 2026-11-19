@@ -20,11 +20,12 @@ export interface UnsavedWorkSources {
 
 /**
  * How many items of the open record are unsaved — the one number every unsaved
- * counter shows, and the one `flushSave` reads: the record is all saved only
- * when it is zero.
+ * counter shows, and the one "Save & next" reads: the record is all saved only
+ * when it is zero, so the screen never says "0 unsaved" while the reviewer is
+ * kept on the record.
  *
- * - **An annotation counts once**, whatever it holds: an edit, a new entity
- *   and the update naming it, a draft not stored yet.
+ * - **An annotation counts once**, whatever it holds: a decision, an edit, a
+ *   new entity and the update naming it, a draft not stored yet.
  * - **A change that names no annotation** counts on its own.
  * - **An open entity form** counts once. A draft's form is its draft, already
  *   counted: a draft the queue holds no change for is one whose entity is still
