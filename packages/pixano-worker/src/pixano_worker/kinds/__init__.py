@@ -19,6 +19,7 @@ from .base import (
     media_chunks,
 )
 from .clustering import ClusteringKind, ClusteringParams
+from .detection import DetectionKind, DetectionParams
 from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
@@ -46,6 +47,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
     registry.register(EmbeddingsKind(inference_url, api_key))
     registry.register(StatisticsKind())
     registry.register(ClusteringKind())
+    registry.register(DetectionKind(inference_url, api_key))
     return registry
 
 
@@ -56,6 +58,8 @@ __all__ = [
     "Chunk",
     "ClusteringKind",
     "ClusteringParams",
+    "DetectionKind",
+    "DetectionParams",
     "FakeKind",
     "EmbeddingsKind",
     "EmbeddingsParams",

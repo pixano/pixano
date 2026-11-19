@@ -102,6 +102,28 @@ Two things to watch:
   update body carries the entity id it just assigned. The hook itself is a pure
   function returning the new geometry, or `null` to refuse the move.
 
+## `replace_previous` with classes clears only the pending boxes of those classes
+
+**Status:** open (chosen while implementing, not decided).
+
+A rerun of the same model replaces its own pending rows, and a detection job
+asked for some `classes` replaces only the pending boxes of those classes: asked
+for dogs, then for bicycles, it keeps the dogs (backend-processing §19). A job
+that also sets `replace_previous` clears, before detecting, only the pending
+boxes of the classes it was asked for, whatever their model
+(`DetectionKind.prepare` and `_classes_covered` in
+`packages/pixano-worker/src/pixano_worker/kinds/detection.py`, through
+`JobWriter.drop_pending`). That second scope was chosen while implementing, by
+analogy with the first; nobody decided it.
+
+Options:
+
+- **Clear only the pending boxes of the classes asked for**, as today: a job
+  asked for dogs touches nothing but dogs.
+- **Clear every pending box of the kind, whatever the classes asked for**: the
+  parameter then means what its confirmation says without a condition, and the
+  classes restrict only what the job writes.
+
 ## The embeddings health check reads every row's view
 
 **Status:** open (an accepted cost; a cache is the proposed fix).

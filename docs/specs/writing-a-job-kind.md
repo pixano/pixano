@@ -429,6 +429,11 @@ means for a kind:
   entity gets this without asking — and so does a kind that writes its rows on another kind's
   objects, whose pending rows a person's fix of the object accepts, though nobody looked at them
   (backend-processing §19).
+- **Freezing is not matching.** A rerun that finds the same object again writes it again,
+  pending, next to the accepted row — unless the kind looks before writing: the detection kind
+  writes no box whose IoU with a box a person drew or accepted reaches its `overlap_threshold`
+  for the same class (a person's box without a class stands for any). A rejected proposal is
+  deleted, so nothing keeps the model from proposing it again.
 - **A kind can annotate another kind's objects.** A kind that writes masks on detected objects
   writes each mask on the object of the box that prompted it, and no object of its own
   (`replace` without `entities`). Until a person accepts them, its rows hold nothing: only **a
@@ -439,7 +444,8 @@ means for a kind:
   kind that wrote the objects removes the pending masks of the objects it rewrites, and the
   masks are to be written again after it. A kind that proposes objects asks
   `writer.entities_with_a_persons_work` before proposing again one a person worked on, or the
-  same model would write a second object beside it, at the next rank.
+  same model would write a second object beside it, at the next rank: the detection kind
+  protects a pending box whose object carries a person's work like a box the person drew.
 - **Nothing to register — for a kind an interface can review.** Which kinds those are is one
   predicate, `pixano.schemas.is_reviewable_annotation`: every entity annotation but tracklets,
   relations and text spans. The next record to review is found by scanning those tables — for
@@ -474,6 +480,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
+    registry.register(DetectionKind(inference_url, api_key))
     registry.register(MyKind(inference_url, api_key))  # ← the only engine file a new kind touches
     return registry
 ```
