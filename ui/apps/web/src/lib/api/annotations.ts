@@ -170,17 +170,33 @@ export function createEntity(
   );
 }
 
+/** The answer to a delete of an entity made only if nothing names it (`deleteEntity`). */
+export interface EntityDeleteAnswer {
+  /** Whether the entity is gone. False when something still names it: nothing changed. */
+  deleted: boolean;
+}
+
 /**
- * Delete an entity. One that is not there (a 404) counts as deleted.
+ * Delete an entity, unless something names it: an annotation of any table, an
+ * entity (its `parent_id`), a dynamic state of an entity. The server checks
+ * that under the write lock the delete takes, so nothing comes to name the
+ * entity in between (`?only_if_unnamed=true`).
  *
+ * The only entity delete this client makes. It sees one record at a time, and
+ * never every row that may name an entity — a row another client stored, a
+ * write whose answer was lost — so the server, which sees them all, decides.
+ *
+ * @returns Whether the entity is gone. One that is not there (a 404) is:
+ *   nothing is left to delete.
  * @throws ApiError On any other failure, with its status: a refusal (4xx)
- *   deleted nothing.
+ *   changed nothing.
  */
-export async function deleteEntity(datasetId: string, id: string): Promise<void> {
-  const res = await fetch(resourceUrl(datasetId, "entities", id), { method: "DELETE" });
-  if (!res.ok && res.status !== HTTP_NOT_FOUND) {
-    throw await apiErrorFrom(res, "deleteEntity");
-  }
+export async function deleteEntity(datasetId: string, id: string): Promise<EntityDeleteAnswer> {
+  const url = `${resourceUrl(datasetId, "entities", id)}?only_if_unnamed=true`;
+  const res = await fetch(url, { method: "DELETE" });
+  if (res.status === HTTP_NOT_FOUND) return { deleted: true };
+  if (!res.ok) throw await apiErrorFrom(res, "deleteEntity");
+  return (await res.json()) as EntityDeleteAnswer;
 }
 
 export function createAnnotation(

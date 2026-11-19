@@ -175,7 +175,7 @@ class TestUnconfigured:
 
 
 class TestLocalPath:
-    """The file a view names, for what the worker reads itself — a medium it resends as bytes."""
+    """The file a view names, for what the worker reads itself — a medium it resends as bytes, an image's size."""
 
     RESOLVER = MediaResolver("/medias", "/srv/inference/medias")
 
