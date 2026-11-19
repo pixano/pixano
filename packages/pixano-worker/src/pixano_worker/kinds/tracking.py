@@ -9,8 +9,8 @@
 A tracking model — SAM 2's video predictor — takes frames and, for each object, a prompt on one of
 them, and answers the object's mask on every later frame. The prompt is the object's annotation on
 a frame, its keyframe: the mask, else the box, drawn there. The job follows the object from its
-keyframe to the video's end, and proposes its mask on each later frame, pending review, with one
-tracklet spanning them.
+keyframe to the video's end, and proposes on each later frame, pending review, its mask, the box
+around that mask, or both, as asked, with one tracklet spanning them.
 
 A video is a view of a record, its frames a sequence: a record filmed by several cameras holds as
 many videos, told apart by their logical name, and an object is followed in the video its keyframe
@@ -24,9 +24,10 @@ again from its start, and its rows, keyed by video and object, replace rather th
 the attempt before.
 
 A person's work is never contradicted: a frame on which the object holds a mask someone drew or
-accepted gets no model mask, and the keyframe's annotation stays as it is. A track from a later
-frame replaces what the model proposed after that frame only — and on it, when a person's
-annotation there prompts the track: what an earlier track proposed before it stays.
+accepted gets no model mask, one where it holds such a box no model box, and the keyframe's
+annotation stays as it is. A track from a later frame replaces what the model proposed after that
+frame only — and on it, when a person's annotation there prompts the track: what an earlier track
+proposed before it stays.
 """
 
 import logging
@@ -34,7 +35,7 @@ import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Callable, Iterable, Literal, Sequence
 
 import httpx
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
@@ -51,8 +52,9 @@ from pixano.utils.python import to_sql_list
 from ..reader import PAGE_SIZE, JobReader, MediaType
 from ..writer import ENTITY_TABLE, MODEL_SOURCE, Coverage, JobWriter, ModelIdentity, is_a_persons_work
 from .base import MODEL_TASK_MARKER, Chunk, JobKind, JobParams, Outcome, QuarantinedItem, TransientError
+from .boxes import BOX_FORMAT
 from .inference import REFUSED_BY_THE_SERVER, InferenceServer, chunk_media, classify, quarantined_item, refusal_detail
-from .masks import is_empty, is_readable, pixel_prompt
+from .masks import is_empty, is_readable, normalized_bounds, pixel_prompt
 
 
 log = logging.getLogger("pixano-worker")
@@ -64,8 +66,25 @@ TRACKING_CAPABILITY = TASK_TO_CAPABILITY[TRACKING_TASK]
 FRAME_TABLE = canonical_table_name_for_slot("sequence_frame")
 MASK_SLOT = "mask"
 MASK_TABLE = canonical_table_name_for_slot(MASK_SLOT)
-BBOX_TABLE = canonical_table_name_for_slot("bbox")
+BBOX_SLOT = "bbox"
+BBOX_TABLE = canonical_table_name_for_slot(BBOX_SLOT)
 TRACKLET_SLOT = "tracklet"
+
+#: What the job proposes on each frame it follows an object to: the object's mask, the box around
+#: that mask, or both.
+Output = Literal["masks", "boxes", "both"]
+#: Masks, all the job proposed before it could propose boxes: a job that does not ask proposes the same.
+DEFAULT_OUTPUT: Output = "masks"
+#: The tables each output writes into, by their slot.
+OUTPUT_SLOTS: dict[str, tuple[str, ...]] = {
+    "masks": (MASK_SLOT,),
+    "boxes": (BBOX_SLOT,),
+    "both": (MASK_SLOT, BBOX_SLOT),
+}
+#: Where a chunk's result holds an object's proposals for each table, by its slot.
+RESULT_FIELDS = {MASK_SLOT: "masks", BBOX_SLOT: "boxes"}
+#: The table of each slot the job proposes into.
+TABLE_OF_SLOT = {MASK_SLOT: MASK_TABLE, BBOX_SLOT: BBOX_TABLE}
 
 # Frames per call for one object. SAM 2.1 tiny's video predictor takes 15 to 29 s a frame through
 # the compose's inference on CPU, as the machine is loaded (2 CPUs, measured 2026-11-05 and 06):
@@ -133,6 +152,8 @@ class TrackingParams(JobParams):
         media: The media types to run the model on: videos, as sequences of frames.
         objects: The objects to track. None given: every object a person annotated on a frame of
             a video, from the first frame where they did.
+        output: What is proposed on each frame an object is followed to: its mask, the box around
+            that mask, or both. Its mask by default (`DEFAULT_OUTPUT`).
         window: Frames per call to the inference, for one object followed: a call following
             several takes as many times fewer (`_frames_per_call`). A window shares its first
             frame with the previous one, which carries each object from one to the next.
@@ -145,6 +166,11 @@ class TrackingParams(JobParams):
     model: str = Field(min_length=1, json_schema_extra={MODEL_TASK_MARKER: TRACKING_TASK.value})
     media: list[MediaType] = Field(default=["video"], min_length=1)
     objects: list[TrackingTarget] = Field(default=[])
+    output: Output = Field(
+        default=DEFAULT_OUTPUT,
+        description="What the model proposes on each frame it follows an object to: the object's mask, "
+        "the box around that mask, or both.",
+    )
     window: int = Field(default=DEFAULT_WINDOW, ge=MIN_WINDOW, le=MAX_WINDOW)
     max_retries: int = Field(default=DEFAULT_MAX_RETRIES, ge=0, le=MAX_RETRIES)
     request_timeout_s: float = Field(default=DEFAULT_REQUEST_TIMEOUT_S, gt=0)
@@ -165,13 +191,13 @@ class _Object:
 
 
 class TrackingKind(JobKind[TrackingParams]):
-    """Follows annotated objects through their videos, proposing their mask on each later frame for review."""
+    """Follows annotated objects through their videos, proposing their mask or box on each later frame for review."""
 
     name = "tracking"
     params_model = TrackingParams
     # A tracking model reads a video as its frames.
     supported_media = frozenset({"video"})
-    # A mask is the output of a model, and arrives pending review.
+    # A mask or a box is the output of a model, and arrives pending review.
     source_type = MODEL_SOURCE
 
     #: How the engine runs the job, not what it computes, and the objects pointed at, which the
@@ -187,8 +213,13 @@ class TrackingKind(JobKind[TrackingParams]):
         return self.server.model_identity(params.model)
 
     def prepare(self, writer: JobWriter, params: TrackingParams) -> None:
-        """Give the dataset tables of masks and tracklets if it has none: a video with boxes only has none."""
-        writer.ensure_table(MASK_SLOT)
+        """Give the dataset the tables of what the job writes, and of tracklets, where it has none.
+
+        A video annotated with boxes only has no table of masks: one is added only when masks are
+        asked for.
+        """
+        for slot in OUTPUT_SLOTS[params.output]:
+            writer.ensure_table(slot)
         writer.ensure_table(TRACKLET_SLOT)
 
     def plan(self, reader: JobReader, params: TrackingParams) -> Iterable[Chunk]:
@@ -233,7 +264,10 @@ class TrackingKind(JobKind[TrackingParams]):
             raise ValueError(NO_FRAME_AFTER)
 
     def process(self, reader: JobReader, payload: dict[str, Any], params: TrackingParams) -> dict[str, Any]:
-        """Track a video's objects window after window, and return their masks.
+        """Track a video's objects window after window, and return their masks, the boxes around them, or both.
+
+        The model answers masks, which carry each object from one window to the next whatever is
+        asked for; the boxes are drawn around them once the video is tracked.
 
         A frame after the earliest keyframe is **produced** when an object got a mask on it,
         **skipped** when none did — every object lost, or not started yet. A video one of whose
@@ -286,12 +320,18 @@ class TrackingKind(JobKind[TrackingParams]):
                 quarantined_item(result["first_frame_id"], refusal.reason, record_id, view=view, **refusal.detail)
             )
             return result
+        slots = OUTPUT_SLOTS[params.output]
         result["objects"] = [
             {
                 "entity_id": target.entity_id,
                 "keyframe": target.keyframe,
                 "prompted_by_a_person": target.prompted_by_a_person,
-                "masks": [{"frame_index": index, **mask} for index, mask in sorted(target.masks.items())],
+                "masks": (
+                    [{"frame_index": index, **mask} for index, mask in sorted(target.masks.items())]
+                    if MASK_SLOT in slots
+                    else []
+                ),
+                "boxes": _boxes_around(target.masks) if BBOX_SLOT in slots else [],
             }
             for target in objects.values()
         ]
@@ -299,31 +339,48 @@ class TrackingKind(JobKind[TrackingParams]):
         return result
 
     def outcome(self, result: dict[str, Any], payload: dict[str, Any], task_count: int) -> Outcome:
-        """The frames after the earliest keyframe: produced when an object got a mask on one."""
+        """The frames after the earliest keyframe: produced when an object got a mask or a box on one."""
         quarantined = [QuarantinedItem.model_validate(item) for item in result["quarantined"]]
-        with_mask = {mask["frame_index"] for target in result["objects"] for mask in target["masks"]}
-        produced = min(len(with_mask), task_count - len(quarantined))
+        with_output = {
+            proposal["frame_index"]
+            for target in result["objects"]
+            for proposal in (*target["masks"], *target["boxes"])
+        }
+        produced = min(len(with_output), task_count - len(quarantined))
         return Outcome(produced=produced, skipped=task_count - produced - len(quarantined), quarantined=quarantined)
 
     def write(
         self, writer: JobWriter, result: dict[str, Any], payload: dict[str, Any], params: TrackingParams
     ) -> None:
-        """Write each object's masks, with the tracklet spanning them, replacing the model's previous ones.
+        """Write each object's masks, the boxes around them, or both, with the tracklet spanning them.
 
         Read again first, as `process` ran outside this worker's write lock of the dataset — through
         this worker's dataset, which sees what this worker wrote, not what a person saved meanwhile
         (backend-processing §18): an object deleted gets nothing, and its model rows go; a frame on
-        which a person drew or accepted the object's mask gets no model mask. Only the model's masks
-        after the keyframe are replaced — the keyframe's too when a person's annotation prompted the
-        track, a correction of what the model proposed there —, and the tracklet spans every mask
-        that names it, those an earlier track proposed before the keyframe and those a person
-        accepted included.
+        which a person drew or accepted the object's mask gets no model mask, one on which they drew
+        or accepted its box no model box. Only the model's rows after the keyframe are replaced — the
+        keyframe's too when a person's annotation prompted the track, a correction of what the model
+        proposed there —, in the tables this run writes into: a run asked for boxes leaves the masks
+        an earlier run proposed, and the other way round — but an object deleted loses the model's
+        masks and boxes alike. The tracklet spans every mask that names it, those an earlier track
+        proposed before the keyframe and those a person accepted included, and every box this kind
+        wrote that names it.
         """
         started = time.perf_counter()
-        masks_table = writer.ensure_table(MASK_SLOT)
+        tables = {slot: writer.ensure_table(slot) for slot in OUTPUT_SLOTS[params.output]}
         tracklets_table = writer.ensure_table(TRACKLET_SLOT)
-        mask_schema = writer.table_schema(masks_table)
+        schemas = {slot: writer.table_schema(table) for slot, table in tables.items()}
         tracklet_schema = writer.table_schema(tracklets_table)
+        # The tables of masks and boxes the dataset holds, whatever this run writes: an earlier run's
+        # rows of the other output name the object's tracklet too.
+        held_slots = [slot for slot, table in TABLE_OF_SLOT.items() if table in writer.dataset.info.tables]
+        # What names a tracklet, by table: every mask, as before boxes; a box only as this kind wrote
+        # it. A person's box joined to the model's tracklet is left out, as a job asked for masks
+        # always left it: counted, it would change what such a job writes.
+        naming = {
+            MASK_TABLE: "",
+            BBOX_TABLE: f" AND source_name IN {to_sql_list([self.name])}",
+        }
         provenance = writer.provenance()
         record_id, view, first_frame_id = result["record_id"], result["view"], result["first_frame_id"]
         frames = {int(index): frame for index, frame in result["frames"].items()}
@@ -331,7 +388,8 @@ class TrackingKind(JobKind[TrackingParams]):
         present = (
             {row.id for row in writer.read(ENTITY_TABLE, f"id IN {to_sql_list(entity_ids)}")} if entity_ids else set()
         )
-        held = _persons_frames(writer.read, entity_ids, {frame["id"] for frame in frames.values()})
+        frame_ids = {frame["id"] for frame in frames.values()}
+        held = {slot: _persons_frames(writer.read, table, entity_ids, frame_ids) for slot, table in tables.items()}
         set_aside = result.get("set_aside", 0)
 
         def tracklet(entity_id: str, first: int, last: int) -> Any:
@@ -347,65 +405,79 @@ class TrackingKind(JobKind[TrackingParams]):
                 **provenance,
             )
 
-        written = 0
+        def annotation(slot: str, entity_id: str, tracklet_id: str, proposal: dict[str, Any]) -> Any:
+            shape = (
+                {"size": proposal["size"], "counts": proposal["counts"]}
+                if slot == MASK_SLOT
+                else {"coords": proposal["coords"], "format": BOX_FORMAT, "is_normalized": True}
+            )
+            return schemas[slot](
+                id="",
+                record_id=record_id,
+                view_id=first_frame_id,
+                entity_id=entity_id,
+                tracklet_id=tracklet_id,
+                frame_id=frames[proposal["frame_index"]]["id"],
+                frame_index=proposal["frame_index"],
+                **shape,
+                **provenance,
+            )
+
+        written = dict.fromkeys(tables, 0)
         for target in result["objects"]:
             entity_id, keyframe = target["entity_id"], target["keyframe"]
             key = f"{record_id}:{view}:{entity_id}"
-            # Keyed apart from the masks: a key's rows are numbered from zero in every table, and the
-            # tracklet would share its identifier with the object's first mask.
-            tracklet_key = f"{key}:{TRACKLET_SLOT}"
+            tracklet_key = _keyed(key, TRACKLET_SLOT)
             if entity_id not in present:
+                # Gone, whatever this run proposes: nothing will track it again to clean what is left.
                 writer.replace(tracklets_table, tracklet_key, [])
-                writer.replace(masks_table, key, [])
+                for slot in held_slots:
+                    writer.replace(TABLE_OF_SLOT[slot], _keyed(key, slot), [])
                 continue
-            masks = [
-                mask
-                for mask in target["masks"]
-                if mask["frame_index"] in frames and mask["frame_index"] not in held[entity_id]
-            ]
-            # Written first, so that the masks name it; its span is set once every mask naming it is known.
-            last_new = masks[-1]["frame_index"] if masks else keyframe
+            kept = {
+                slot: [
+                    proposal
+                    for proposal in target[RESULT_FIELDS[slot]]
+                    if proposal["frame_index"] in frames and proposal["frame_index"] not in held[slot][entity_id]
+                ]
+                for slot in tables
+            }
+            # Written first, so that the rows name it; its span is set once every row naming it is known.
+            last_new = max(
+                (proposal["frame_index"] for proposals in kept.values() for proposal in proposals), default=keyframe
+            )
             [tracklet_id] = writer.replace(tracklets_table, tracklet_key, [tracklet(entity_id, keyframe, last_new)])
-            rows = [
-                mask_schema(
-                    id="",
-                    record_id=record_id,
-                    view_id=first_frame_id,
-                    entity_id=entity_id,
-                    tracklet_id=tracklet_id,
-                    frame_id=frames[mask["frame_index"]]["id"],
-                    frame_index=mask["frame_index"],
-                    size=mask["size"],
-                    counts=mask["counts"],
-                    **provenance,
-                )
-                for mask in masks
-            ]
             replaced = _from(keyframe) if target["prompted_by_a_person"] else _after(keyframe)
-            written += len(writer.replace(masks_table, key, rows, covers=replaced))
+            for slot, table in tables.items():
+                rows = [annotation(slot, entity_id, tracklet_id, proposal) for proposal in kept[slot]]
+                written[slot] += len(writer.replace(table, _keyed(key, slot), rows, covers=replaced))
             named = sorted(
                 int(row.frame_index)
+                for slot in held_slots
                 for row in writer.read(
-                    MASK_TABLE,
-                    f"entity_id IN {to_sql_list([entity_id])} AND tracklet_id IN {to_sql_list([tracklet_id])}",
+                    TABLE_OF_SLOT[slot],
+                    f"entity_id IN {to_sql_list([entity_id])} AND tracklet_id IN {to_sql_list([tracklet_id])}"
+                    f"{naming[TABLE_OF_SLOT[slot]]}",
                 )
             )
             if not named:
                 writer.replace(tracklets_table, tracklet_key, [])
             elif (min(keyframe, named[0]), named[-1]) != (keyframe, last_new):
-                # The same rank, so the same identifier: the masks still name it.
+                # The same rank, so the same identifier: the rows still name it.
                 writer.replace(
                     tracklets_table, tracklet_key, [tracklet(entity_id, min(keyframe, named[0]), named[-1])]
                 )
         phases = result.get("phases_s", {})
         log.info(
             "job %s: phases read %.3f s, inference %.3f s, write %.3f s "
-            "(%d mask(s) on %d object(s), %d set aside: empty, unreadable or not the frame's size)",
+            "(%d mask(s) and %d box(es) on %d object(s), %d mask(s) set aside: empty, unreadable or not the "
+            "frame's size)",
             writer.job_id,
             phases.get("read", 0.0),
             phases.get("inference", 0.0),
             time.perf_counter() - started,
-            written,
+            written.get(MASK_SLOT, 0),
+            written.get(BBOX_SLOT, 0),
             len(result["objects"]),
             set_aside,
         )
@@ -526,13 +598,36 @@ def _of_video(record_id: str, view: str) -> str:
     return f"record_id IN {to_sql_list([record_id])} AND logical_name IN {to_sql_list([view])}"
 
 
+def _keyed(key: str, slot: str) -> str:
+    """The key of an object's rows in a table: its own for the masks, the table's slot added for the others.
+
+    A key's rows are numbered from zero in every table: keyed alike, the object's tracklet and its
+    first box would share their identifier with its first mask, and the interface finds an
+    annotation by its identifier, whatever its table. The masks keep the object's key, under which
+    every run wrote them before the job could propose boxes, and which a rerun replaces.
+    """
+    return key if slot == MASK_SLOT else f"{key}:{slot}"
+
+
+def _boxes_around(masks: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+    """The box around each of an object's masks, by frame, as the dataset stores a box: normalised `xywh`."""
+    boxes = []
+    for index, mask in sorted(masks.items()):
+        corners = normalized_bounds(mask)
+        if corners is None:
+            continue
+        left, top, right, bottom = corners
+        boxes.append({"frame_index": index, "coords": [left, top, right - left, bottom - top]})
+    return boxes
+
+
 def _after(keyframe: int) -> Coverage:
-    """The model's earlier masks a track from this keyframe replaces: those after it."""
+    """The model's earlier masks or boxes a track from this keyframe replaces: those after it."""
     return lambda row, _: int(row.frame_index) > keyframe
 
 
 def _from(keyframe: int) -> Coverage:
-    """The model's earlier masks a track a person prompted replaces: those after it, and the one on it."""
+    """The model's earlier masks or boxes a track a person prompted replaces: those after it, and the one on it."""
     return lambda row, _: int(row.frame_index) >= keyframe
 
 
@@ -698,14 +793,20 @@ def _video_names(reader: JobReader, view_ids: Sequence[str]) -> dict[str, str]:
     return names
 
 
-def _persons_frames(read: Any, entity_ids: Sequence[str], frame_ids: set[str]) -> defaultdict[str, set[int]]:
-    """The frames of the video on which a person drew or accepted each object's mask: no model mask goes there."""
+def _persons_frames(
+    read: Any, table: str, entity_ids: Sequence[str], frame_ids: set[str]
+) -> defaultdict[str, set[int]]:
+    """The frames of the video on which a person drew or accepted each object's annotation in this table.
+
+    No model annotation goes there in the same table: no model mask where a person's mask is, no
+    model box where a person's box is.
+    """
     held: defaultdict[str, set[int]] = defaultdict(set)
     if not entity_ids:
         return held
-    for mask in read(MASK_TABLE, f"entity_id IN {to_sql_list(list(entity_ids))} AND {PERSONS_WORK}"):
-        if is_a_persons_work(mask) and mask.view_id in frame_ids:
-            held[mask.entity_id].add(int(mask.frame_index))
+    for annotation in read(table, f"entity_id IN {to_sql_list(list(entity_ids))} AND {PERSONS_WORK}"):
+        if is_a_persons_work(annotation) and annotation.view_id in frame_ids:
+            held[annotation.entity_id].add(int(annotation.frame_index))
     return held
 
 

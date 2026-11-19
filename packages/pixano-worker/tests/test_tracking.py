@@ -5,7 +5,7 @@
 # =====================================
 
 """The tracking kind: which objects it follows from which frame, how it carries them from one window to
-the next, and what it writes, leaving a person's work alone.
+the next, and what it writes — masks, the boxes around them, or both —, leaving a person's work alone.
 
 The dataset is a real one, read and written through the runner's own reader and writer; only the
 inference is a stand-in. It answers each prompted object with a car that moves right by a few pixels a
@@ -170,6 +170,11 @@ class _Scene:
         rows = self.dataset().get_data("masks", where=f"entity_id = '{entity_id}'")
         return sorted(rows, key=lambda row: row.frame_index)
 
+    def boxes(self, entity_id: str = "car", source_type: str = "model") -> list[Any]:
+        """An object's boxes from one source: the model's by default, without the box a person started from."""
+        rows = self.dataset().get_data("bboxes", where=f"entity_id = '{entity_id}' AND source_type = '{source_type}'")
+        return sorted(rows, key=lambda row: row.frame_index)
+
 
 def _frame_id(record_id: str, index: int, view: str = VIDEO) -> str:
     return f"{record_id}-f{index}" if view == VIDEO else f"{record_id}-{view}-f{index}"
@@ -190,8 +195,9 @@ def _frame(media_root: Path, record_id: str, index: int, view: str = VIDEO) -> S
     )
 
 
-@pytest.fixture
-def scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
+def _scene(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, with_masks: bool = True, with_boxes: bool = True
+) -> _Scene:
     monkeypatch.setattr(runner, "_open_datasets", OrderedDict())
     media_root = tmp_path / "media"
     media_root.mkdir()
@@ -203,8 +209,8 @@ def scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
             name="Traffic",
             record=Record,
             entity=Entity,
-            bbox=BBox,
-            mask=CompressedRLE,
+            **({"bbox": BBox} if with_boxes else {}),
+            **({"mask": CompressedRLE} if with_masks else {}),
             # A dataset that holds tracklets already: the job adds no table, and reads through the
             # worker's dataset as it opened it.
             tracklet=Tracklet,
@@ -220,6 +226,23 @@ def scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
     return _Scene(
         library, MediaResolver(str(media_root), INFERENCE_MEDIA_ROOT), inference, TrackingKind("http://inference")
     )
+
+
+@pytest.fixture
+def scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
+    return _scene(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def boxes_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
+    """A video annotated with boxes alone: its dataset has no table of masks."""
+    return _scene(tmp_path, monkeypatch, with_masks=False)
+
+
+@pytest.fixture
+def masks_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Scene:
+    """A video annotated with masks alone: its dataset has no table of boxes."""
+    return _scene(tmp_path, monkeypatch, with_boxes=False)
 
 
 def _annotate(
@@ -250,12 +273,24 @@ def _annotate(
     if as_mask:
         dataset.add_data("masks", [CompressedRLE(id=f"m-{entity_id}-{suffix}", **_rle(_car(frame_index)), **common)])
         return
-    left, top, right, bottom = _car(frame_index)
-    coords = [left / WIDTH, top / HEIGHT, (right - left) / WIDTH, (bottom - top) / HEIGHT]
     dataset.add_data(
         "bboxes",
-        [BBox(id=f"b-{entity_id}-{suffix}", coords=coords, format="xywh", is_normalized=True, **common)],
+        [
+            BBox(
+                id=f"b-{entity_id}-{suffix}",
+                coords=_normalized_xywh(_car(frame_index)),
+                format="xywh",
+                is_normalized=True,
+                **common,
+            )
+        ],
     )
+
+
+def _normalized_xywh(corners: tuple[int, int, int, int]) -> list[float]:
+    """Pixel corners as the dataset stores a box: normalised, top-left and size."""
+    left, top, right, bottom = corners
+    return [left / WIDTH, top / HEIGHT, (right - left) / WIDTH, (bottom - top) / HEIGHT]
 
 
 def _params(**fields: Any) -> TrackingParams:
@@ -278,6 +313,17 @@ class TestParams:
         # The filter narrows what `is_a_persons_work` decides on: it must keep every reviewed status.
         reviewed = [status.value for status in ReviewStatus if status.value not in NOT_REVIEWED_STATUSES]
         assert reviewed and all(f"'{status}'" in PERSONS_WORK for status in reviewed)
+
+    def test_masks_are_proposed_unless_boxes_are_asked_for(self) -> None:
+        # The form shows the choices where the parameter stands; without it, nothing changes.
+        output = TrackingKind("http://inference").params_schema()["properties"]["output"]
+
+        assert (output["enum"], output["default"]) == (["masks", "boxes", "both"], "masks")
+        assert _params().output == "masks"
+
+    def test_an_output_of_another_name_is_refused(self) -> None:
+        with pytest.raises(ValueError, match="output"):
+            _params(output="box")
 
     def test_an_object_named_with_a_misspelt_field_is_refused(self) -> None:
         # Dropped instead, the frame would be lost and the track start from another one.
@@ -757,6 +803,252 @@ class TestTrackAgain:
 
         scene.run(_params(objects=[_target()]), job_id="job-2")
 
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 6)
+        assert {mask.tracklet_id for mask in scene.masks()} == {tracklet.id}
+
+
+class TestBoxes:
+    """Asked for, the box around the model's mask on each frame, by the masks' rules, in the table of boxes."""
+
+    def test_boxes_alone_go_around_the_masks_after_the_keyframe_and_no_mask_is_written(self, scene: _Scene) -> None:
+        _annotate(scene)
+
+        [outcome] = scene.run(_params(objects=[_target()], output="boxes"))
+
+        boxes = scene.boxes()
+        assert [box.frame_index for box in boxes] == list(range(1, 7))
+        for box in boxes:
+            assert box.coords == pytest.approx(_normalized_xywh(_car(box.frame_index)))
+        assert scene.masks() == []
+        assert (outcome.produced, outcome.skipped) == (6, 0)
+
+    def test_the_boxes_sit_on_their_frames_of_the_video_pending_review(self, scene: _Scene) -> None:
+        _annotate(scene)
+
+        scene.run(_params(objects=[_target()], output="boxes"))
+
+        box = scene.boxes()[0]
+        assert (box.view_id, box.frame_id, box.record_id) == (_frame_id("r1", 0), _frame_id("r1", 1), "r1")
+        assert (box.format, box.is_normalized, box.confidence) == ("xywh", True, -1.0)
+        assert (box.source_type, box.source_name, box.review_status) == ("model", "tracking", "pending")
+        assert json.loads(box.source_metadata)["params"]["output"] == "boxes"
+
+    def test_masks_by_default_write_no_box(self, scene: _Scene) -> None:
+        _annotate(scene)
+
+        scene.run(_params(objects=[_target()]))
+
+        assert scene.boxes() == []
+        assert len(scene.masks()) == 6
+
+    def test_both_write_a_mask_and_the_box_around_it_on_each_frame(self, scene: _Scene) -> None:
+        _annotate(scene)
+
+        [outcome] = scene.run(_params(objects=[_target()], output="both"))
+
+        masks, boxes = scene.masks(), scene.boxes()
+        assert [mask.frame_index for mask in masks] == [box.frame_index for box in boxes] == list(range(1, 7))
+        for mask, box in zip(masks, boxes, strict=True):
+            assert box.coords[0] == pytest.approx(_left_of(mask) / WIDTH)
+        assert (outcome.produced, outcome.skipped) == (6, 0)
+
+    def test_a_frame_holding_a_mask_and_its_box_counts_once(self, scene: _Scene) -> None:
+        # Lost after frame 3: counted twice, the three frames tracked would read as the six.
+        _annotate(scene)
+        scene.inference.lost_after = 3
+
+        [outcome] = scene.run(_params(objects=[_target()], output="both"))
+
+        assert (outcome.produced, outcome.skipped) == (3, 3)
+
+    def test_one_tracklet_spans_the_boxes_and_no_identifier_is_shared(self, scene: _Scene) -> None:
+        # The interface finds an annotation by its identifier, whatever its table.
+        _annotate(scene, frame_index=2)
+
+        scene.run(_params(objects=[_target(frame_index=2)], output="both"))
+
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (2, 6)
+        masks, boxes = scene.masks(), scene.boxes()
+        assert {row.tracklet_id for row in masks + boxes} == {tracklet.id}
+        identifiers = [tracklet.id, *(mask.id for mask in masks), *(box.id for box in boxes)]
+        assert len(set(identifiers)) == len(identifiers)
+
+    def test_boxes_alone_add_no_table_of_masks_to_a_video_of_boxes(self, boxes_only: _Scene) -> None:
+        _annotate(boxes_only)
+
+        boxes_only.run(_params(objects=[_target()], output="boxes"))
+
+        assert "masks" not in boxes_only.dataset().info.tables
+        assert [box.frame_index for box in boxes_only.boxes()] == list(range(1, 7))
+        [tracklet] = boxes_only.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 6)
+
+    def test_boxes_add_their_table_to_a_video_of_masks(self, masks_only: _Scene) -> None:
+        _annotate(masks_only, as_mask=True)
+
+        masks_only.run(_params(objects=[_target()], output="boxes"))
+
+        assert "bboxes" in masks_only.dataset().info.tables
+        assert [box.frame_index for box in masks_only.boxes()] == list(range(1, 7))
+
+    def test_masks_add_their_table_to_a_video_of_boxes(self, boxes_only: _Scene) -> None:
+        _annotate(boxes_only)
+
+        boxes_only.run(_params(objects=[_target()]))
+
+        assert "masks" in boxes_only.dataset().info.tables
+        assert boxes_only.boxes() == []
+
+    def test_a_frame_holding_a_persons_box_gets_no_model_box(self, scene: _Scene) -> None:
+        _annotate(scene)
+        _annotate(scene, frame_index=4)
+
+        scene.run(_params(objects=[_target()], output="both"))
+
+        assert [box.frame_index for box in scene.boxes()] == [1, 2, 3, 5, 6]
+        # The person's box holds the frame's box only: the model's mask goes there.
+        assert [mask.frame_index for mask in scene.masks()] == list(range(1, 7))
+
+    def test_a_frame_holding_a_persons_mask_gets_no_model_mask_but_its_box(self, scene: _Scene) -> None:
+        _annotate(scene)
+        _annotate(scene, frame_index=4, as_mask=True)
+
+        scene.run(_params(objects=[_target()], output="both"))
+
+        assert [box.frame_index for box in scene.boxes()] == list(range(1, 7))
+        on_frame_4 = [mask for mask in scene.masks() if mask.frame_index == 4]
+        assert [(mask.id, mask.source_type) for mask in on_frame_4] == [("m-car-4", "human")]
+
+    def test_a_rerun_replaces_the_boxes_rather_than_doubling_them(self, scene: _Scene) -> None:
+        _annotate(scene)
+        scene.run(_params(objects=[_target()], output="boxes"))
+        first = [box.id for box in scene.boxes()]
+
+        scene.run(_params(objects=[_target()], output="boxes"), job_id="job-2")
+
+        assert [box.id for box in scene.boxes()] == first
+        assert len(scene.dataset().get_data("tracklets", where="entity_id = 'car'")) == 1
+
+    def test_a_box_a_person_accepted_stays_and_is_not_doubled(self, scene: _Scene) -> None:
+        _annotate(scene)
+        scene.run(_params(objects=[_target()], output="boxes"))
+        accepted = next(box for box in scene.boxes() if box.frame_index == 3)
+        accepted.review_status = "accepted"
+        scene.dataset().update_data("bboxes", [accepted])
+
+        scene.run(_params(objects=[_target()], output="boxes"), job_id="job-2")
+
+        on_frame_3 = [box for box in scene.boxes() if box.frame_index == 3]
+        assert [(box.id, box.review_status) for box in on_frame_3] == [(accepted.id, "accepted")]
+        assert len(scene.boxes()) == 6
+
+    def test_an_object_deleted_meanwhile_loses_what_a_run_of_the_other_output_proposed(self, scene: _Scene) -> None:
+        # Nothing tracks a deleted object again: its boxes would stay for good.
+        _annotate(scene)
+        scene.run(_params(objects=[_target()], output="boxes"))
+        assert scene.boxes()
+        params = _params(objects=[_target()])
+        [chunk] = scene.plan(params)
+        reader = runner._reader_for(scene.library, DATASET_ID, scene.media, progress=ChunkProgress(chunk.task_count))
+        result = scene.kind.process(reader, chunk.payload, params)
+        runner._open_dataset(scene.library, DATASET_ID).delete_data("entities", ["car"])
+
+        scene.kind.write(
+            runner._writer_for(scene.library, DATASET_ID, scene.kind, "job-1", params), result, chunk.payload, params
+        )
+
+        assert scene.boxes() == [] and scene.masks() == []
+        assert scene.dataset().get_data("tracklets", where="entity_id = 'car'") == []
+
+    def test_a_track_from_a_later_frame_replaces_the_boxes_after_it_only(self, scene: _Scene) -> None:
+        _annotate(scene, frame_index=0)
+        scene.run(_params(objects=[_target(frame_index=0)], output="boxes"))
+        before = {box.frame_index: box.id for box in scene.boxes()}
+        # The model's box drifted on frame 3: a person draws the box there, then tracks again from it.
+        _annotate(scene, frame_index=3)
+
+        scene.run(_params(objects=[_target(frame_index=3)], output="boxes"), job_id="job-2")
+
+        # The drifted box on frame 3 gives way to the person's; those before it stay.
+        boxes = scene.boxes()
+        assert [box.frame_index for box in boxes] == [1, 2, 4, 5, 6]
+        assert {box.frame_index: box.id for box in boxes if box.frame_index < 3} == {
+            index: before[index] for index in (1, 2)
+        }
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (1, 6)
+
+    def test_a_track_from_a_models_box_keeps_it_and_prompts_with_it(self, scene: _Scene) -> None:
+        _annotate(scene, frame_index=0)
+        scene.run(_params(objects=[_target(frame_index=0)], output="boxes"))
+        on_frame_3 = next(box.id for box in scene.boxes() if box.frame_index == 3)
+
+        scene.run(_params(objects=[_target(frame_index=3)], output="boxes"), job_id="job-2")
+
+        prompts = scene.inference.calls[-2].keyframes[0].prompts
+        assert prompts.box is not None and prompts.mask is None
+        assert [box.frame_index for box in scene.boxes()] == [1, 2, 3, 4, 5, 6]
+        assert next(box.id for box in scene.boxes() if box.frame_index == 3) == on_frame_3
+
+    def test_a_run_for_boxes_leaves_the_masks_an_earlier_run_proposed(self, scene: _Scene) -> None:
+        _annotate(scene)
+        scene.inference.lost_after = 3
+        scene.run(_params(objects=[_target()]))
+        masks = [mask.id for mask in scene.masks()]
+        scene.inference.lost_after = None
+
+        scene.run(_params(objects=[_target()], output="boxes"), job_id="job-2")
+
+        assert [mask.id for mask in scene.masks()] == masks
+        assert [box.frame_index for box in scene.boxes()] == list(range(1, 7))
+        # One tracklet, which the masks and the boxes name, spanning both.
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 6)
+        assert {row.tracklet_id for row in scene.masks() + scene.boxes()} == {tracklet.id}
+
+    def test_a_run_for_masks_leaves_the_boxes_an_earlier_run_proposed(self, scene: _Scene) -> None:
+        _annotate(scene)
+        scene.inference.lost_after = 3
+        scene.run(_params(objects=[_target()], output="boxes"))
+        boxes = [box.id for box in scene.boxes()]
+        scene.inference.lost_after = None
+
+        scene.run(_params(objects=[_target()]), job_id="job-2")
+
+        assert [box.id for box in scene.boxes()] == boxes
+        assert [mask.frame_index for mask in scene.masks()] == list(range(1, 7))
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 6)
+        assert {row.tracklet_id for row in scene.masks() + scene.boxes()} == {tracklet.id}
+
+    def test_a_persons_box_joined_to_the_tracklet_leaves_its_span_as_masks_alone_set_it(self, scene: _Scene) -> None:
+        # The legacy workspace joins a box drawn within a tracklet's span to it: counted, it would
+        # change what a job asked for masks writes.
+        _annotate(scene)
+        scene.run(_params(objects=[_target()]))
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        _annotate(scene, frame_index=6)
+        [joined] = scene.dataset().get_data("bboxes", ids=["b-car-6"])
+        joined.tracklet_id = tracklet.id
+        scene.dataset().update_data("bboxes", [joined])
+        scene.inference.lost_after = 3
+
+        scene.run(_params(objects=[_target()]), job_id="job-2")
+
+        [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
+        assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 3)
+
+    def test_a_tracklet_is_kept_while_an_earlier_runs_masks_name_it(self, scene: _Scene) -> None:
+        _annotate(scene)
+        scene.run(_params(objects=[_target()]))
+        # The model now loses the car at once: the run for boxes proposes none.
+        scene.inference.lost_after = 0
+
+        scene.run(_params(objects=[_target()], output="boxes"), job_id="job-2")
+
+        assert scene.boxes() == []
         [tracklet] = scene.dataset().get_data("tracklets", where="entity_id = 'car'")
         assert (tracklet.start_timestep, tracklet.end_timestep) == (0, 6)
         assert {mask.tracklet_id for mask in scene.masks()} == {tracklet.id}

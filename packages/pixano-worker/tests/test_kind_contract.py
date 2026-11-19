@@ -50,8 +50,9 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     "detection": {"model": "yolo", "chunk_size": 8},
     # Segments the box a person drew on each image (`_seeded_prompts`).
     "segmentation": {"model": "sam", "chunk_size": 8},
-    # Follows the object a person drew on the first frame of each video, three frames a call.
-    "tracking": {"model": "sam-video", "window": 3},
+    # Follows the object a person drew on the first frame of each video, three frames a call, and
+    # proposes both its masks and the boxes around them: every table the kind can write into.
+    "tracking": {"model": "sam-video", "window": 3, "output": "both"},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
