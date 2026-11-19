@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import { toRawAnnotation } from "../adapters";
 import { normalizeTableName } from "../resourceNames";
-import { toResourceMutation, type ResourceMutation } from "../resourcePayloads";
+import { toAcceptMutation, toResourceMutation, type ResourceMutation } from "../resourcePayloads";
 import type { RecordComponentResponse } from "../restTypes";
 import { Annotation, BBox } from "$lib/types/dataset";
 
@@ -32,8 +32,8 @@ const READ_BACK = {
 
 describe("a legacy edit of an annotation", () => {
   it("does not send back the review status it read", () => {
-    // The legacy app has no review interface, yet it sent back the status it
-    // had read with every edit, and the server reads a status sent as a decision of the user.
+    // The legacy app sent back the status it had read with every edit, and the server reads a
+    // status sent as a decision of the user.
     const box = new BBox(toRawAnnotation(READ_BACK, new Map([["view-1", "image"]]), "bboxes"));
     box.data.coords = [0.3, 0.3, 0.2, 0.2];
 
@@ -102,4 +102,60 @@ describe("every annotation the legacy app writes", () => {
       expect(mutation.body).not.toHaveProperty("review_status");
     },
   );
+});
+
+describe("an Accept taken here", () => {
+  // The one status the legacy app sends: a decision of its user, taken on a model's row in
+  // review and not saved yet. It rides on the row's update, with whatever else the row holds.
+  const REVIEWED = ["bboxes", "masks", "multi-paths", "keypoints"];
+
+  it.each(REVIEWED)("rides on the update of a model's %s", (resource) => {
+    const annotation = readAsTheWorkspaceDoes(resource, "pending");
+    annotation.ui.unsavedAccept = true;
+
+    const mutation = toResourceMutation("update", annotation);
+
+    expect(mutation.body).toMatchObject({ review_status: "accepted" });
+  });
+
+  it("rides with an edit of the row", () => {
+    const box = new BBox(toRawAnnotation(READ_BACK, new Map([["view-1", "image"]]), "bboxes"));
+    box.data.review_status = "pending";
+    box.data.coords = [0.3, 0.3, 0.2, 0.2];
+    box.ui.unsavedAccept = true;
+
+    const body = toResourceMutation("update", box).body ?? {};
+
+    expect(body).toMatchObject({ review_status: "accepted", coords: [0.3, 0.3, 0.2, 0.2] });
+  });
+
+  it("never rides on a create: this app creates a person's rows, which take no status", () => {
+    const annotation = readAsTheWorkspaceDoes("bboxes", "pending");
+    annotation.ui.unsavedAccept = true;
+
+    expect(toResourceMutation("create", annotation).body).not.toHaveProperty("review_status");
+  });
+
+  it.each(["text-spans", "tracklets"])(
+    "never rides on a %s, which no one reviews yet",
+    (resource) => {
+      const annotation = readAsTheWorkspaceDoes(resource, "pending");
+      annotation.ui.unsavedAccept = true;
+
+      expect(toResourceMutation("update", annotation).body).not.toHaveProperty("review_status");
+    },
+  );
+});
+
+describe("an Accept taken alone", () => {
+  it("sends the status and nothing else, so that the row is stored as the model wrote it", () => {
+    const annotation = readAsTheWorkspaceDoes("masks", "pending");
+
+    expect(toAcceptMutation(annotation)).toEqual({
+      op: "update",
+      target: { resource: "masks", id: annotation.id },
+      body: { review_status: "accepted" },
+      table: annotation.table_info.name,
+    });
+  });
 });

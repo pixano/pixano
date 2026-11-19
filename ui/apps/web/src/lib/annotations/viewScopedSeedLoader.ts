@@ -35,7 +35,7 @@ export interface ViewScopedRow extends PersistedRow {
  * A failed fetch rejects, as every seed loader's does, since an empty list
  * would read as a table holding nothing. What it means is the caller's to
  * decide (`RecordLoader`, through `loadEveryKind`): a record opening seeds
- * nothing for the kind, a reload keeps what the kind shows.
+ * nothing for the kind, a read-back keeps what the kind shows.
  *
  * Lives in its own module rather than in `seedLoaders.ts` on purpose: the
  * registry there imports every kind, so a kind importing a *value* back from it

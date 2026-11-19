@@ -266,6 +266,12 @@ class TestOpenApiContract:
         assert {"filter", "q", "sort", "order"} <= names
 
 
+class TestOffset:
+    def test_beyond_what_a_query_takes_is_bad_input(self, client: TestClient):
+        response = client.get(f"{BASE}/records", params={"offset": 2**63})
+        assert response.status_code == 422
+
+
 class TestNeighbors:
     def test_neighbors_match_paged_order(self, client: TestClient):
         ordered = _all_ids(client, sort="id", order="asc")
@@ -275,6 +281,14 @@ class TestNeighbors:
         assert nb["next"] == ordered[8]
         assert nb["position"] == 8
         assert nb["total"] == 15
+
+    @pytest.mark.parametrize("order", ["asc", "desc"])
+    def test_neighbors_match_paged_order_on_another_column(self, client: TestClient, order: str):
+        """Sorted on a column but `id`, they used to follow the identifiers' order instead."""
+        ordered = _all_ids(client, sort="score", order=order)
+        target = ordered[7]
+        nb = client.get(f"{BASE}/records/{target}/neighbors", params={"sort": "score", "order": order}).json()
+        assert (nb["prev"], nb["next"], nb["position"]) == (ordered[6], ordered[8], 8)
 
     def test_neighbors_respect_filter(self, client: TestClient):
         ordered = _all_ids(client, filter="split:eq:train", sort="id", order="asc")

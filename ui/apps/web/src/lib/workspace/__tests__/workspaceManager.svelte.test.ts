@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { Component } from "svelte";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DatasetGateway } from "../datasetGateway.js";
 import { DATASET_LAYOUT_VERSION } from "../datasetLayout.js";
@@ -13,8 +13,11 @@ import { planViewportLayouts } from "../layoutPlanner.js";
 import { WorkspaceManager } from "../workspaceManager.svelte.js";
 import { makeLayoutRepository } from "./fakeDatasetLayoutRepository.js";
 import { BBOX_RESOURCE } from "$lib/annotations/kinds/2d/bbox/bboxPayloadBuilder.js";
+import { MASK_RESOURCE } from "$lib/annotations/kinds/2d/mask/maskPayloadBuilder.js";
+import type { MaskRow } from "$lib/annotations/kinds/2d/mask/maskSeedLoader.js";
 import { BBOX3D_RESOURCE } from "$lib/annotations/kinds/3d/bbox3d/bbox3dPayloadBuilder.js";
-import type { BBox3DRow, BBoxRow, EntityRow } from "$lib/api/annotations.js";
+import type { BBox3DRow, BBoxRow, EntityRow, ListAnnotationsParams } from "$lib/api/annotations.js";
+import { ApiError } from "$lib/api/apiClient.js";
 import type { CalibratedImageResponse, PointCloudResponse } from "$lib/api/restTypes.js";
 import type { WidgetComponentProps, WidgetExtensionConfig } from "$lib/extensions/types.js";
 import { WidgetRegistry } from "$lib/extensions/WidgetRegistry.js";
@@ -781,6 +784,103 @@ describe("WorkspaceManager.selectRecordInDataset", () => {
     resolveDataset(dataset);
     resolveEntities([]);
     await done;
+  });
+});
+
+// ─── Read-back with a kind that cannot be read ──────────────────────────────
+// A save or a Discard reads every kind back. One list failing says nothing
+// about what the dataset holds, so that kind stays on screen as it was.
+
+describe("WorkspaceManager read-back with a kind that cannot be read", () => {
+  /** The HTTP status of a server failure, as the masks list answers below. */
+  const SERVER_ERROR = 500;
+
+  function bboxRow(id: string): BBoxRow {
+    return {
+      id,
+      record_id: "rec-1",
+      view_id: "img-front",
+      entity_id: `ent-${id}`,
+      coords: [0.1, 0.2, 0.3, 0.4],
+      is_normalized: true,
+    } as BBoxRow;
+  }
+
+  const MASK: MaskRow = {
+    id: "mask-1",
+    record_id: "rec-1",
+    entity_id: "ent-mask",
+    view_id: "img-front",
+    size: [50, 100],
+    counts: "a2b1",
+  };
+
+  /**
+   * An open record holding one box and one mask, whose masks list can be made
+   * to fail; `state.bboxes` is what the server holds next.
+   */
+  async function openRecord() {
+    const state = {
+      dataset: makeDataset({ cam_front: { base: "Image" } }),
+      entities: [],
+      imagesByLogicalName: new Map([
+        [
+          "cam_front",
+          { id: "img-front", src: "/f.png", width: 100, height: 50 } as CalibratedImageResponse,
+        ],
+      ]),
+      pointCloudsByLogicalName: new Map(),
+      bboxes: [bboxRow("box-1")],
+      bboxes3d: [],
+    };
+    const { gateway } = makeGateway(state);
+    const listOthers = gateway.listAnnotations.bind(gateway);
+    const masks = { fail: false };
+    gateway.listAnnotations = <TRow>(
+      datasetId: string,
+      resource: string,
+      params: ListAnnotationsParams,
+    ): Promise<TRow[]> => {
+      if (resource !== MASK_RESOURCE) return listOthers<TRow>(datasetId, resource, params);
+      if (masks.fail) {
+        return Promise.reject(new ApiError("listAnnotations(masks)", SERVER_ERROR, "boom"));
+      }
+      return Promise.resolve([MASK] as TRow[]);
+    };
+    const manager = new WorkspaceManager(makeRegistry(), gateway);
+    await manager.selectRecordInDataset("ds-1", "rec-1", FIXED_VIEWPORT);
+    expect(manager.annotations.items.map((a) => a.id)).toEqual(["box-1", "mask-1"]);
+    return { manager, state, masks };
+  }
+
+  it("keeps the masks when their list fails after a save, and takes the other kinds", async () => {
+    const { manager, state, masks } = await openRecord();
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // The server replaced the box meanwhile; the masks list then answers 500.
+    state.bboxes = [bboxRow("box-2")];
+    masks.fail = true;
+
+    manager.queueMutation({ op: "delete", resource: BBOX_RESOURCE, id: "x", widgetId: "w" });
+    const saved = await manager.flushSave();
+
+    expect(saved).toBe(true);
+    expect(manager.annotations.items.map((a) => a.id)).toEqual(["box-2", "mask-1"]);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Could not refresh the mask annotations:",
+      expect.any(ApiError),
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it("keeps the masks when their list fails after a Discard", async () => {
+    const { manager, masks } = await openRecord();
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    masks.fail = true;
+
+    await manager.discardChanges();
+
+    expect(manager.annotations.find("mask-1")).toBeDefined();
+    consoleSpy.mockRestore();
   });
 });
 

@@ -21,10 +21,12 @@ License: CECILL-C
     TextT,
     Trash,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import { cubicOut } from "svelte/easing";
   import { slide } from "svelte/transition";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import ReviewStatusStrip from "../Review/ReviewStatusStrip.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
     handleSetDisplayControl as handleSetDC,
@@ -42,6 +44,7 @@ License: CECILL-C
     highlightedEntity,
     itemMetas,
     mediaViews,
+    reviewedAnnotation,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
@@ -63,9 +66,16 @@ License: CECILL-C
   } from "$lib/ui";
   import { toggleEditAnnotation } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
-  import { defineAnnotationThumbnail } from "$lib/utils/entityLookupUtils";
+  import { defineAnnotationThumbnail, sortChilds } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
   import { highlightEntity } from "$lib/utils/highlightOperations";
+  import {
+    acceptAnnotations,
+    canTakeReviewDecision,
+    rejectAnnotations,
+    reviewTargetsOf,
+  } from "$lib/utils/reviewActions";
+  import { reviewSummaryOf } from "$lib/utils/reviewStatus";
   import { updateView } from "$lib/utils/videoOperations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -110,6 +120,19 @@ License: CECILL-C
   const { manifest } = getWorkspaceContext();
   let detailsTab = $state<"attributes" | "annotations">("attributes");
 
+  // The annotation under review, when it is this entity's, is shown in its card — unless its
+  // attributes are being edited, which keep their tab.
+  $effect(() => {
+    const underReview = reviewedAnnotation.value;
+    if (underReview === null) return;
+    untrack(() => {
+      if (entityDisplayControl.editing) return;
+      if ((entity.ui.childs ?? []).some((child) => child.id === underReview)) {
+        detailsTab = "annotations";
+      }
+    });
+  });
+
   const color = $derived(annotationColors.value.colorOfEntity(entity.id));
   const entityDisplayControl = $derived.by(() => {
     void entities.value;
@@ -135,35 +158,6 @@ License: CECILL-C
     return false;
   };
 
-  const sortChilds = (a: Annotation, b: Annotation): number => {
-    let res = a.table_info.base_schema.localeCompare(b.table_info.base_schema);
-    if (res === 0) {
-      if (a.is_type(BaseSchema.Tracklet) && b.is_type(BaseSchema.Tracklet)) {
-        const orderMap = new Map(Object.keys(mediaViews.value).map((val, index) => [val, index]));
-        res =
-          (orderMap.get(a.data.view_name) ?? Infinity) -
-          (orderMap.get(b.data.view_name) ?? Infinity);
-      } else {
-        if ("name" in a.data && "name" in b.data) {
-          const getComparableName = (value: unknown): string => {
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean"
-            ) {
-              return String(value);
-            }
-            return "";
-          };
-          res = getComparableName(a.data["name"]).localeCompare(getComparableName(b.data["name"]));
-        } else {
-          res = a.id.localeCompare(b.id);
-        }
-      }
-    }
-    return res;
-  };
-
   const totalAllowableChildCount = $derived.by(() => {
     void entities.value;
     return entity.ui.childs?.filter((ann) => isAllowableChild(ann)).length ?? 0;
@@ -173,7 +167,12 @@ License: CECILL-C
     if (!isExpanded) return [];
     if (currentFrameIndex.value === undefined) return [];
     void entities.value;
-    return entity.ui.childs?.filter((ann) => isAllowedChild(ann)).sort(sortChilds) ?? [];
+    const viewNames = Object.keys(mediaViews.value);
+    return (
+      entity.ui.childs
+        ?.filter((ann) => isAllowedChild(ann))
+        .sort((a, b) => sortChilds(a, b, viewNames)) ?? []
+    );
   });
 
   // ─── Annotation type summary for header pills ──────────────────────────────
@@ -186,6 +185,19 @@ License: CECILL-C
       counts[schema] = (counts[schema] ?? 0) + 1;
     }
     return counts;
+  });
+
+  // ─── Review of what a model proposed for this object ────────────────────────
+  const reviewSummary = $derived.by(() => {
+    void entities.value;
+    void annotations.value;
+    return reviewSummaryOf(entity.ui.childs ?? []);
+  });
+  // What its own Accept and Reject decide on: none when all it has to review is hidden.
+  const reviewTargets = $derived.by(() => {
+    void entities.value;
+    void annotations.value;
+    return reviewTargetsOf(entity);
   });
 
   // ─── Detect text-only entities (for typographic fallback thumbnail) ─────────
@@ -586,6 +598,17 @@ License: CECILL-C
         </IconButton>
       </div>
     </div>
+
+    <!-- Review of what a model proposed for this object -->
+    {#if reviewSummary}
+      <ReviewStatusStrip
+        summary={reviewSummary}
+        scope="object"
+        canDecide={canTakeReviewDecision() && reviewTargets.length > 0}
+        onAccept={() => acceptAnnotations(reviewTargetsOf(entity))}
+        onReject={() => rejectAnnotations(reviewTargetsOf(entity))}
+      />
+    {/if}
   </Card.Header>
 
   <!-- ─── Expanded Content (with slide transition) ─────────────────────────── -->

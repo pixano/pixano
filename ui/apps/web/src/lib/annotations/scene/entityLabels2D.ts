@@ -95,12 +95,12 @@ export interface EntityLabelEntry {
  * Shared rather than re-implemented per kind because the interesting parts are
  * not the drawing:
  *
- * - **Reconciliation.** An annotation can be moved to another entity, saved,
- *   or read again at another review status, so a label built once and never
- *   revisited goes on naming the entity the shape left behind, or on wearing a
- *   draft's colour or a status it no longer has — invisible until a page
- *   reload. Each label carries the text and colour it was built from and is
- *   rebuilt when either changes.
+ * - **Reconciliation.** An annotation can be moved to another entity, accepted,
+ *   saved, or read again at another review status, so a label built once and
+ *   never revisited goes on naming the entity the shape left behind, or on
+ *   wearing a draft's colour or a status it no longer has — invisible until a
+ *   page reload. Each label carries the text and colour it was built from and
+ *   is rebuilt when either changes.
  * - **Review status.** A model's annotation shows where it stands with its
  *   reviewer — on its label, so every kind that draws one shows it without a
  *   line of its own.
