@@ -68,7 +68,7 @@ License: CECILL-C
     canTakeReviewDecision,
     rejectAnnotations,
   } from "$lib/utils/reviewActions";
-  import { reviewSummaryOf } from "$lib/utils/reviewStatus";
+  import { modelScoreOf, reviewSummaryOf } from "$lib/utils/reviewStatus";
   import { cn } from "$lib/utils/styleUtils";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -175,7 +175,8 @@ License: CECILL-C
     const data = (child as BBox).data;
     const format = typeof data.format === "string" ? data.format : "xyxy";
     const isNormalized = typeof data.is_normalized === "boolean" ? data.is_normalized : false;
-    const confidence = typeof data.confidence === "number" ? data.confidence : null;
+    // None for the -1 of a box no score came with, which a badge would show as -100.0%.
+    const confidence = modelScoreOf(child);
     const coords = Array.isArray(data.coords) ? data.coords : [];
 
     let labels: string[];
