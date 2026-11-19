@@ -213,11 +213,18 @@ export interface DisplayControl {
   open?: boolean;
 }
 
-export const initDisplayControl: DisplayControl = {
+/**
+ * How a shape shows by default. Frozen, and copied into each annotation: the Fusion tool, the
+ * pre-annotation review and the highlight of a track's shapes write an annotation's display state in
+ * place, and every annotation of a record read used to hold this one object — a pick of the Fusion
+ * tool dimmed every shape of the record, and of each record opened after it, until the page was
+ * reloaded.
+ */
+export const initDisplayControl: Readonly<DisplayControl> = Object.freeze({
   hidden: false,
   editing: false,
   highlighted: "all",
-};
+});
 
 export interface AnnotationThumbnail {
   uri: string;
@@ -357,7 +364,7 @@ export abstract class Annotation extends BaseData<AnnotationData> {
   //UI only fields
   ui: AnnotationUIFields = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
@@ -492,7 +499,7 @@ export class BBox extends Annotation {
     strokeFactor?: number;
     tooltip?: string;
     startRef?: BBox; //for interpolated box
-  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
+  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: { ...initDisplayControl } };
 
   constructor(obj: RawSchemaData) {
     super(obj);
@@ -558,7 +565,7 @@ export class Classification extends Annotation {
   //UI only fields
   ui: AnnotationUIFields = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
@@ -590,7 +597,7 @@ export class Keypoints extends Annotation {
     tooltip?: string;
   } = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
@@ -663,7 +670,7 @@ export class Mask extends Annotation {
     bitmapCanvas?: OffscreenCanvas;
     bounds?: import("$lib/utils/maskUtils").MaskBounds;
     tooltip?: string;
-  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: initDisplayControl };
+  } = { datasetItemType: WorkspaceType.UNDEFINED, displayControl: { ...initDisplayControl } };
 
   constructor(obj: RawSchemaData) {
     super(obj);
@@ -694,7 +701,7 @@ export class MultiPath extends Annotation {
     tooltip?: string;
   } = {
     datasetItemType: WorkspaceType.UNDEFINED,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
@@ -728,7 +735,7 @@ export class TextSpan extends Annotation {
     bgColor?: string;
   } = {
     datasetItemType: WorkspaceType.IMAGE_TEXT_ENTITY_LINKING,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
@@ -757,7 +764,11 @@ export class Tracklet extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     childs: Annotation[];
-  } = { datasetItemType: WorkspaceType.VIDEO, childs: [], displayControl: initDisplayControl };
+  } = {
+    datasetItemType: WorkspaceType.VIDEO,
+    childs: [],
+    displayControl: { ...initDisplayControl },
+  };
 
   constructor(obj: RawSchemaData) {
     super(obj);
@@ -817,7 +828,7 @@ export class Message extends Annotation {
   //UI only fields
   ui: AnnotationUIFields = {
     datasetItemType: WorkspaceType.IMAGE_VQA,
-    displayControl: initDisplayControl,
+    displayControl: { ...initDisplayControl },
   };
 
   constructor(obj: RawSchemaData) {
