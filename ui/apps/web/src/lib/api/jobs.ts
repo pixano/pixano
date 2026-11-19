@@ -74,6 +74,11 @@ export type JsonSchema = {
    * models the inference serves for that task rather than a name written into the job.
    */
   "x-pixano-model-task"?: string;
+  /**
+   * Set on the parameters of a kind the generic form cannot build: the statistics, whose
+   * definitions the application sends itself.
+   */
+  "x-pixano-own-form"?: string;
 };
 
 /** The dataset a job would run on — the one last opened in the Explorer. */

@@ -101,15 +101,16 @@ class FollowUp:
     """A processing job an import queues once it is done, and what became of it.
 
     Kept with the import job from its start, so that an import resumed after its process died
-    still queues it. Neither `job_id` nor `error` is set until the import is done.
+    still queues it. None of `job_id`, `error` and `skipped` is set until the import is done.
 
     Attributes:
-        kind: The processing job kind, as a worker declares it: `embeddings`.
+        kind: The processing job kind, as a worker declares it: `embeddings`, `statistics`.
         params: The job's parameters.
         job_id: The queued job's identifier, once queued.
         error: Why it was not queued.
         defaulted: The parameters the request did not name, which the deployment's defaults chose:
             fitting the follow-up to the dataset written may choose otherwise.
+        skipped: Why it needed no job: the dataset written left it nothing to do, and nothing failed.
     """
 
     kind: str
@@ -117,11 +118,12 @@ class FollowUp:
     job_id: str = ""
     error: str = ""
     defaulted: tuple[str, ...] = ()
+    skipped: str = ""
 
     @property
     def pending(self) -> bool:
-        """Neither queued nor refused yet."""
-        return not self.job_id and not self.error
+        """Neither queued, refused nor found needless yet."""
+        return not self.job_id and not self.error and not self.skipped
 
     def to_json(self) -> dict[str, Any]:
         """The follow-up as the store keeps it, in JSON's own types."""
@@ -136,6 +138,7 @@ class FollowUp:
             job_id=str(payload.get("job_id") or ""),
             error=str(payload.get("error") or ""),
             defaulted=tuple(str(name) for name in payload.get("defaulted") or ()),
+            skipped=str(payload.get("skipped") or ""),
         )
 
 

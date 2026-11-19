@@ -10,7 +10,7 @@ import datetime
 import json
 import shutil
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import typer
 
@@ -28,6 +28,12 @@ from pixano.datasets.io import (
 from pixano.datasets.io.jobs import FollowUp, FollowUpStarter, queue_import_follow_ups
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.utils import to_snake_case
+
+
+if TYPE_CHECKING:
+    # The server's modules: loaded at run time only when an import may queue a job.
+    from pixano.api.jobs.follow_ups import QueueProbe
+    from pixano.api.settings import Settings
 
 
 data_app = typer.Typer(help="Pixano dataset import/export commands.")
@@ -128,41 +134,62 @@ def _build_spec(
 NO_MODEL_HERE = "no embeddings model — pass --embeddings-model or set PIXANO_EMBEDDINGS_MODEL"
 
 
-def _embeddings_follow_ups(
-    data_dir: Path, compute: Optional[bool], model: Optional[str], plan: ImportPlan
+def _import_follow_ups(
+    data_dir: Path,
+    embeddings: Optional[bool],
+    embeddings_model: Optional[str],
+    statistics: Optional[bool],
+    plan: ImportPlan,
 ) -> list[FollowUp]:
-    """The embeddings job an import queues once done: as asked, or by the deployment's default.
+    """The jobs an import queues once done: the embeddings job and the default statistics' job, each as
+    asked or by the deployment's default.
 
-    The deployment is read, as the server reads it, only when the embeddings may follow: the server's
-    modules load then, and never for `--no-embeddings` nor any other command. The CLI asks no
-    inference: the model is the one given, else PIXANO_EMBEDDINGS_MODEL. The default applies where
-    the job can run, which the queue is asked only once a model is known, and not to an import whose
-    plan holds no still image.
+    The deployment is read, as the server reads it, only when one of them may follow: the server's
+    modules load then, and never for `--no-embeddings --no-statistics` nor any other command. The
+    queue is asked at most once whether their jobs can run.
     """
-    if compute is False:
+    if embeddings is False and statistics is False:
         return []
     try:
-        from pixano.api.jobs.follow_ups import (
-            asks_for_embeddings,
-            considers_embeddings,
-            decide_embeddings,
-            embeddings_unavailable,
-            plan_has_still_images,
-        )
+        from pixano.api.jobs.follow_ups import QueueProbe
         from pixano.api.settings import Settings
 
         deployment = Settings(data_dir=data_dir)
     except (ValueError, AttributeError) as error:
-        # An environment the server would refuse too: the import goes on, without the embeddings.
-        typer.echo(f"Embeddings not considered: the deployment's settings are invalid: {error}", err=True)
+        # An environment the server would refuse too: the import goes on, without its follow-ups.
+        typer.echo(f"Follow-up jobs not considered: the deployment's settings are invalid: {error}", err=True)
         return []
+    probe = QueueProbe(deployment.database_url)
+    return [
+        *_embeddings_follow_ups(deployment, probe, embeddings, embeddings_model, plan),
+        *_statistics_follow_ups(deployment, probe, statistics),
+    ]
+
+
+def _embeddings_follow_ups(
+    deployment: "Settings", probe: "QueueProbe", compute: Optional[bool], model: Optional[str], plan: ImportPlan
+) -> list[FollowUp]:
+    """The embeddings job an import queues once done: as asked, or by the deployment's default.
+
+    The CLI asks no inference: the model is the one given, else PIXANO_EMBEDDINGS_MODEL. The default
+    applies where the job can run, which the queue is asked only once a model is known, and not to an
+    import whose plan holds no still image.
+    """
+    from pixano.api.jobs.follow_ups import (
+        EMBEDDINGS_KIND,
+        asks_for_embeddings,
+        considers_embeddings,
+        decide_embeddings,
+        plan_has_still_images,
+    )
+
     wanted = asks_for_embeddings(compute, model)
     has_images = plan_has_still_images(plan.inferred_schema)
     if not considers_embeddings(wanted, default_on=deployment.embeddings_after_import, has_images=has_images):
         return []
     named = bool(model)
     model = model or deployment.embeddings_model
-    unavailable = embeddings_unavailable(deployment.database_url) if wanted is None and model else None
+    unavailable = probe.unavailable(EMBEDDINGS_KIND) if wanted is None and model else None
     return decide_embeddings(
         wanted,
         model,
@@ -171,6 +198,18 @@ def _embeddings_follow_ups(
         unavailable=unavailable,
         no_model=NO_MODEL_HERE,
     )
+
+
+def _statistics_follow_ups(deployment: "Settings", probe: "QueueProbe", compute: Optional[bool]) -> list[FollowUp]:
+    """The default statistics' job an import queues once done, for the dataset's overview: as asked, or by
+    the deployment's default, which applies where the job can run.
+    """
+    from pixano.api.jobs.follow_ups import STATISTICS_KIND, decide_statistics
+
+    if compute is None and not deployment.statistics_after_import:
+        return []
+    unavailable = probe.unavailable(STATISTICS_KIND) if compute is None else None
+    return decide_statistics(compute, default_on=deployment.statistics_after_import, unavailable=unavailable)
 
 
 def _follow_up_starter(data_dir: Path) -> FollowUpStarter:
@@ -192,12 +231,14 @@ def _follow_up_starter(data_dir: Path) -> FollowUpStarter:
 
 
 def _echo_follow_ups(follow_ups: list[FollowUp]) -> None:
-    """Say what became of an import's follow-ups: queued, or why not."""
+    """Say what became of an import's follow-ups: queued, needless, or why not."""
     for follow_up in follow_ups:
         model = follow_up.params.get("model")
         name = f"{follow_up.kind.capitalize()}{f' ({model})' if model else ''}"
         if follow_up.job_id:
             typer.echo(f"{name} queued as job {follow_up.job_id}: follow it in the dataset's Jobs panel.")
+        elif follow_up.skipped:
+            typer.echo(f"{name} not needed: {follow_up.skipped}.")
         elif follow_up.error:
             typer.echo(f"{name} {follow_up.error}", err=True)
 
@@ -239,6 +280,12 @@ def import_command(
         "--embeddings-model",
         help="The model the embeddings job runs, beside the models the dataset already holds (default: "
         "PIXANO_EMBEDDINGS_MODEL, for a dataset without embeddings only).",
+    ),
+    statistics: Optional[bool] = typer.Option(
+        None,
+        "--statistics/--no-statistics",
+        help="Queue the statistics job of the default statistics of what is imported once the import is "
+        "done. By default, per PIXANO_STATISTICS_AFTER_IMPORT, where a worker runs it.",
     ),
 ) -> None:
     """Import a dataset: analyze, confirm the plan, then ingest atomically."""
@@ -296,7 +343,7 @@ def import_command(
     from pixano.datasets.io.engine import ImportEngine
     from pixano.datasets.io.jobs import JobSink, JobStore
 
-    follow_ups = _embeddings_follow_ups(data_dir, embeddings, embeddings_model, plan)
+    follow_ups = _import_follow_ups(data_dir, embeddings, embeddings_model, statistics, plan)
     store = JobStore.for_data_dir(data_dir)
     job = store.create_job(
         "import",

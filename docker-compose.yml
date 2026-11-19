@@ -54,6 +54,8 @@ services:
       # The embeddings job an import queues once done (see .env.example).
       PIXANO_EMBEDDINGS_AFTER_IMPORT: ${PIXANO_EMBEDDINGS_AFTER_IMPORT:-true}
       PIXANO_EMBEDDINGS_MODEL: ${PIXANO_EMBEDDINGS_MODEL:-}
+      # The statistics job of the default statistics an import queues once done (see .env.example).
+      PIXANO_STATISTICS_AFTER_IMPORT: ${PIXANO_STATISTICS_AFTER_IMPORT:-true}
     command:
       - sh
       - -c

@@ -9,6 +9,7 @@
 from .base import (
     CONFIRM_MARKER,
     MODEL_TASK_MARKER,
+    OWN_FORM_MARKER,
     Chunk,
     JobKind,
     JobParams,
@@ -22,6 +23,7 @@ from .embeddings import EmbeddingsKind, EmbeddingsParams
 from .fake import FakeKind, FakeParams
 from .label import LabelKind, LabelParams
 from .registry import Registry
+from .statistics import StatisticsKind, StatisticsParams
 
 
 def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: bool = False) -> Registry:
@@ -43,12 +45,14 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
     registry.register(DetectionKind(inference_url, api_key))
+    registry.register(StatisticsKind())
     return registry
 
 
 __all__ = [
     "CONFIRM_MARKER",
     "MODEL_TASK_MARKER",
+    "OWN_FORM_MARKER",
     "Chunk",
     "DetectionKind",
     "DetectionParams",
@@ -63,6 +67,8 @@ __all__ = [
     "Outcome",
     "QuarantinedItem",
     "Registry",
+    "StatisticsKind",
+    "StatisticsParams",
     "TransientError",
     "media_chunks",
     "default_registry",
