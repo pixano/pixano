@@ -17,9 +17,11 @@ import {
   type RawFields,
 } from "./rawSchema";
 import type {
+  ImportEmbeddingsOffer,
   ImportPlanResponse,
   InferredSchemaResponse,
   IoFinding,
+  IoFollowUp,
   IoJobResponse,
   SchemaDescriptor,
 } from "$lib/api/restTypes";
@@ -340,4 +342,107 @@ export function jobStateLabel(entry: ImportJobEntry): string {
   if (entry.job.status === "error" || entry.job.status === "interrupted") return "Failed";
   if (entry.cancelRequested) return "Cancelling…";
   return entry.job.progress?.phase || "Running";
+}
+
+/** What the wizard asks of the embeddings job: queue it once the import is done, with a model. */
+export interface EmbeddingsChoice {
+  compute: boolean;
+  model: string;
+  /** Shown on an offer the user could use, the choice is theirs: it is sent as it stands. */
+  decided: boolean;
+}
+
+/** The view type the embeddings job computes: a frame belongs to its video, not to the images. */
+const EMBEDDED_VIEW_BASE = "Image";
+
+/** True when the plan says which views it holds. */
+function planViewsKnown(plan: ImportPlanResponse | null): boolean {
+  return plan?.inferred_schema?.views != null;
+}
+
+/** True when the plan holds still images, the media the embeddings job computes. */
+export function planHasImages(plan: ImportPlanResponse | null): boolean {
+  return Object.values(plan?.inferred_schema?.views ?? {}).some(
+    (view) => view.base === EMBEDDED_VIEW_BASE,
+  );
+}
+
+/** Whether the Review step offers the choice: a job queue configured, and still images to embed. */
+export function offersEmbeddingsChoice(
+  offer: ImportEmbeddingsOffer | null,
+  plan: ImportPlanResponse | null,
+): boolean {
+  return offer !== null && offer.queue_configured && planHasImages(plan);
+}
+
+/** The choice the wizard opens with: on where the job can run and the server's default says so. */
+export function initialEmbeddingsChoice(offer: ImportEmbeddingsOffer): EmbeddingsChoice {
+  return {
+    compute: offer.available && offer.enabled_by_default,
+    model: offer.default_model ?? offer.models[0] ?? "",
+    decided: offer.available,
+  };
+}
+
+/**
+ * The choice once the offer is read again, on the way to Review.
+ *
+ * A choice the user made stands, whatever the offer says now. One they never could make starts
+ * from the server's default. A model the inference no longer serves gives way to the default one;
+ * an offer that cannot run the job says nothing of the models, and the user's stays.
+ */
+export function nextEmbeddingsChoice(
+  choice: EmbeddingsChoice,
+  offer: ImportEmbeddingsOffer,
+): EmbeddingsChoice {
+  const initial = initialEmbeddingsChoice(offer);
+  if (!choice.decided) return initial;
+  const keepsModel = !offer.available || offer.models.includes(choice.model);
+  return {
+    compute: choice.compute,
+    model: keepsModel ? choice.model : initial.model,
+    decided: true,
+  };
+}
+
+/**
+ * The import request's embeddings fields.
+ *
+ * The wizard says no for a source without still images, and sends the user's choice once they
+ * made one. Until then, or when the plan does not say which views it holds, it says nothing, and
+ * the server, which checks again when the import starts, applies its default.
+ */
+export function embeddingsRequest(
+  choice: EmbeddingsChoice,
+  offer: ImportEmbeddingsOffer | null,
+  plan: ImportPlanResponse | null,
+): { compute_embeddings?: boolean; embeddings_model?: string } {
+  if (offer === null || !planViewsKnown(plan)) return {};
+  if (!planHasImages(plan)) return { compute_embeddings: false };
+  if (!choice.decided) return {};
+  if (!choice.compute || !choice.model) return { compute_embeddings: false };
+  return { compute_embeddings: true, embeddings_model: choice.model };
+}
+
+/** One line of the jobs tray about a job an import queued once done. */
+export interface FollowUpLine {
+  text: string;
+  /** It was not queued: the import is done, the job is not. */
+  notQueued: boolean;
+}
+
+/** What the tray says of an import's follow-ups, once the import is done. */
+export function followUpLines(job: IoJobResponse): FollowUpLine[] {
+  if (job.status !== "done") return [];
+  return (job.follow_ups ?? []).map((followUp) => ({
+    text: describeFollowUp(followUp),
+    notQueued: !followUp.job_id,
+  }));
+}
+
+function describeFollowUp(followUp: IoFollowUp): string {
+  const model = typeof followUp.params.model === "string" ? ` (${followUp.params.model})` : "";
+  const name = `${followUp.kind.charAt(0).toUpperCase()}${followUp.kind.slice(1)}${model}`;
+  if (followUp.job_id) return `${name} queued.`;
+  return `${name} ${followUp.error || "not queued."}`;
 }
