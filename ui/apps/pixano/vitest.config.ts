@@ -9,7 +9,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  // Compiles the runes of `.svelte.ts` modules, such as the workspace stores, for the tests that load them.
+  // Compiles the runes of `.svelte.ts` modules, such as the workspace and jobs stores, for the tests that load them.
   plugins: [svelte()],
   resolve: {
     alias: {

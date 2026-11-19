@@ -65,8 +65,31 @@ export interface ColumnDescriptorResponse {
   values_complete: boolean;
 }
 
+/** One embeddings model of a dataset — its space —, as a search can use it. */
+export interface EmbeddingSpaceStatusResponse {
+  /** What a search, the default and the address name it by. */
+  id: string;
+  /** The model's name, as the inference serves it. */
+  model_id: string;
+  /** The weights loaded under that name; empty when they were not told. */
+  checkpoint: string;
+  dim: number;
+  /** Whether a search that names no model reads this one. */
+  default: boolean;
+  /** Its health, as `SearchCapabilitiesResponse.status` words it. */
+  status: string;
+  detail?: string | null;
+  /** The media it holds a vector of. */
+  embedded_rows: number;
+}
+
+/**
+ * What the explorer can search by. A dataset holds the embeddings of several models; `status`,
+ * `detail` and `embedded_rows` are those of the default one, the one a search naming no model reads.
+ */
 export interface SearchCapabilitiesResponse {
   modes: string[];
+  /** The models a semantic search can name, the default one first. */
   models: string[];
   /** Embedding-storage health: "absent" | "ready" | "partial" | "missing_table" | "empty" | "dim_mismatch" | "corrupt". */
   status?: string;
@@ -75,12 +98,30 @@ export interface SearchCapabilitiesResponse {
   total_records?: number;
   /** Embeddings belong to media: completeness is embedded_rows out of total_media. */
   total_media?: number;
+  /** Every embeddings model of the dataset, with its health. */
+  spaces?: EmbeddingSpaceStatusResponse[];
+  /**
+   * Whether the dataset's description of its embeddings was read entirely: if not, nothing changes
+   * it but computing them again with force, which deletes every model's embeddings first.
+   */
+  fully_read?: boolean;
 }
 
 export interface FilterSchemaResponse {
   table: string;
   columns: ColumnDescriptorResponse[];
   search: SearchCapabilitiesResponse;
+}
+
+/** The next record to review, as `GET /datasets/{id}/review/next` answers. */
+export interface NextRecordToReview {
+  /**
+   * The first record after the one left, in record id order, wrapping round to the first. Null
+   * when no record holds a model's annotation still to review.
+   */
+  record_id: string | null;
+  /** How many records hold one, the record being left included when it still holds one. */
+  remaining: number;
 }
 
 export interface NeighborsResponse {

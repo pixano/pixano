@@ -93,7 +93,8 @@ uv run --directory packages/pixano-worker pixano-worker
 ```
 
 Optional: `PIXANO_WORKER_CONCURRENCY` (chunks in flight, default 4),
-`PIXANO_WORKER_CHUNK_TIMEOUT_S` (default 1800), `PIXANO_WORKER_DEMO_KINDS=true` for the
+`PIXANO_WORKER_CHUNK_TIMEOUT_S` (default 1800, for a chunk of one inference call; a chunk its
+kind weighs as several calls gets that many times it), `PIXANO_WORKER_DEMO_KINDS=true` for the
 `fake` and `label` kinds, `PIXANO_WORKER_HEARTBEAT` (the file the worker touches to say it is
 alive, `/tmp/pixano-worker.heartbeat` by default).
 

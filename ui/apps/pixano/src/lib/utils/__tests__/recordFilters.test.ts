@@ -7,6 +7,7 @@ License: CECILL-C
 import { describe, expect, it } from "vitest";
 
 import {
+  canApplyFilter,
   looksLikeRawSql,
   parseFilter,
   parseFilters,
@@ -88,5 +89,24 @@ describe("looksLikeRawSql", () => {
   it("treats empty input as not raw SQL", () => {
     expect(looksLikeRawSql("")).toBe(false);
     expect(looksLikeRawSql("   ")).toBe(false);
+  });
+});
+
+describe("canApplyFilter", () => {
+  it("takes a number as typed in a number input, or the number it holds", () => {
+    expect(canApplyFilter("width", "gte", ["10"])).toBe(true);
+    expect(canApplyFilter("width", "gte", [10])).toBe(true);
+  });
+
+  it("waits for a value, a column and an operator", () => {
+    expect(canApplyFilter("score", "gt", [""])).toBe(false);
+    expect(canApplyFilter("score", "gt", [null])).toBe(false);
+    expect(canApplyFilter("", "gt", ["1"])).toBe(false);
+    expect(canApplyFilter("score", "", ["1"])).toBe(false);
+  });
+
+  it("waits for both ends of a range", () => {
+    expect(canApplyFilter("created_at", "between", ["2026-01-01", " "])).toBe(false);
+    expect(canApplyFilter("created_at", "between", ["2026-01-01", "2026-02-01"])).toBe(true);
   });
 });

@@ -4,10 +4,12 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { REVIEW_STATUS, REVIEW_STATUS_FIELD } from "$lib/constants/reviewConstants";
 import { views } from "$lib/stores/workspaceStores.svelte";
 import { BaseSchema, Message, type Schema } from "$lib/types/dataset";
 import { rleToString } from "$lib/utils/maskUtils";
 import { toMessageTransportPayload } from "$lib/utils/messageUtils";
+import { carriesUnsavedAccept } from "$lib/utils/reviewStatus";
 
 export interface MutationTarget {
   resource: string;
@@ -21,9 +23,12 @@ export interface ResourceMutation {
   table: string;
 }
 
+/** The resource of the entities, whose edits the review reads (`createReviewReflection`). */
+export const ENTITY_RESOURCE = "entities";
+
 const RESOURCE_BY_BASE_SCHEMA: Partial<Record<BaseSchema, string>> = {
   [BaseSchema.Item]: "records",
-  [BaseSchema.Entity]: "entities",
+  [BaseSchema.Entity]: ENTITY_RESOURCE,
   [BaseSchema.Tracklet]: "tracklets",
   [BaseSchema.BBox]: "bboxes",
   [BaseSchema.Mask]: "masks",
@@ -39,13 +44,13 @@ const SHARED_EXCLUDED_FIELDS = new Set([
   "source_id",
   "timestamp",
   "inference_metadata",
-  // This app has no review interface: the review status it read is never a decision of its
-  // user. Sent back, the server would read it as one and refuse it: the second edit of a model's
-  // row stored with no status would ask to empty the status its first edit accepted it with, and
-  // a split of a model's tracklet, whose clone is a person's row, would carry a status. Left out
-  // here, it is left out of every serializer built on the shared payload: entities, tracklets and
-  // annotations alike.
-  "review_status",
+  // The review status read from a row is never a decision of the user, and the server reads a
+  // status sent as one. Sent back, it would be refused: the second edit of a model's row stored
+  // with no status would ask to empty the status its first edit accepted it with, and a split of
+  // a model's tracklet, whose clone is a person's row, would carry a status. Left out here, it is
+  // left out of every serializer built on the shared payload: entities, tracklets and annotations
+  // alike. The one status sent is an Accept taken here (`withUnsavedAccept`, `toAcceptMutation`).
+  REVIEW_STATUS_FIELD,
 ]);
 
 function withoutUndefined<T extends Record<string, unknown>>(payload: T): T {
@@ -176,6 +181,34 @@ export function resourceForSchema(schema: Schema): string {
   return resource;
 }
 
+/**
+ * An Accept taken alone: the status and nothing else, so that the row is stored as the model
+ * wrote it — the server merges an update over the stored row.
+ */
+export function toAcceptMutation(schema: Schema): ResourceMutation {
+  return {
+    op: "update",
+    target: { resource: resourceForSchema(schema), id: schema.id },
+    body: { [REVIEW_STATUS_FIELD]: REVIEW_STATUS.ACCEPTED },
+    table: schema.table_info.name,
+  };
+}
+
+/**
+ * The body of an update of a model's row accepted here and not saved yet carries the Accept. A
+ * create's body does not: the rows this app creates are a person's, or a model's it saves for a
+ * person — its smart segmentation's — stored with no status. The save queue folds a later update
+ * into a create not sent yet, Accept included: the server takes a model's new row accepted.
+ */
+function withUnsavedAccept(
+  changeType: ResourceMutation["op"],
+  schema: Schema,
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  if (changeType !== "update" || !carriesUnsavedAccept(schema)) return body;
+  return { ...body, [REVIEW_STATUS_FIELD]: REVIEW_STATUS.ACCEPTED };
+}
+
 export function toResourceMutation(
   changeType: ResourceMutation["op"],
   schema: Schema,
@@ -186,7 +219,10 @@ export function toResourceMutation(
       resource: resourceForSchema(schema),
       id: schema.id,
     },
-    body: changeType === "delete" ? undefined : serializeSchema(schema),
+    body:
+      changeType === "delete"
+        ? undefined
+        : withUnsavedAccept(changeType, schema, serializeSchema(schema)),
     table: schema.table_info.name,
   };
 }

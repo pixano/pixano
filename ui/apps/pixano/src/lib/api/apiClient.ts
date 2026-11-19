@@ -51,22 +51,48 @@ export function buildQueryString(
   return query ? `?${query}` : "";
 }
 
+/**
+ * The server's own words for a request it failed, from the `detail` of a FastAPI error body: a
+ * sentence, the first of a list of refusals, or the message of a coded error — a dataset busy
+ * being written. Null when the error carries none.
+ */
+export function serverDetail(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(error.body);
+  } catch {
+    return null;
+  }
+  const detail = (parsed as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0] as { msg?: unknown } | null;
+    if (typeof first?.msg === "string") return first.msg;
+  }
+  const message = (detail as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message ? message : null;
+}
+
+/** The error a response that is not ok stands for, logged. */
+async function failureOf(response: Response, label: string): Promise<ApiError> {
+  const body = await response.text();
+  const error = new ApiError(
+    `${label} failed with ${response.status} ${response.statusText}`,
+    response.status,
+    body,
+  );
+  logApiError(label, error);
+  return error;
+}
+
 export async function requestJson<T>(
   url: string,
   init: RequestInit = {},
   label: string,
 ): Promise<T> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
   return (await response.json()) as T;
 }
 
@@ -76,16 +102,7 @@ export async function requestBlob(
   label: string,
 ): Promise<Blob> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
   return await response.blob();
 }
 
@@ -95,16 +112,7 @@ export async function requestVoid(
   label: string,
 ): Promise<void> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
 }
 
 /**
@@ -131,6 +139,27 @@ export async function apiFetch<T>(
     logApiError(label, e);
   }
   return fallback;
+}
+
+/**
+ * A mutation whose response body is the row the server stored. Fails as `requestJson` does; a
+ * body that is no JSON object reads as undefined: the write landed all the same.
+ */
+export async function apiMutateReturningRow(
+  url: string,
+  init: RequestInit,
+  label: string,
+): Promise<Record<string, unknown> | undefined> {
+  const response = await fetch(url, init);
+  if (!response.ok) throw await failureOf(response, label);
+  try {
+    const stored: unknown = await response.json();
+    return stored !== null && typeof stored === "object" && !Array.isArray(stored)
+      ? (stored as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
