@@ -432,3 +432,16 @@ describe("jobsStore asking which models are served", () => {
     expect(store.servedModels).toEqual({ embedding: ["clip"] });
   });
 });
+
+describe("the kinds the Jobs form launches", () => {
+  it("leave out a kind whose parameters it cannot build", async () => {
+    api.listJobKinds.mockResolvedValue([
+      { name: "embeddings", params_schema: {} },
+      { name: "statistics", params_schema: { "x-pixano-own-form": "statistics" } },
+    ]);
+
+    const { store } = await startedStore();
+
+    expect(store.formKinds.map((kind) => kind.name)).toEqual(["embeddings"]);
+  });
+});
