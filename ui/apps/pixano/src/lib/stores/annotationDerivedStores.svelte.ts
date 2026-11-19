@@ -10,6 +10,7 @@ import {
   annotations,
   entities,
   highlightedEntity,
+  reviewedAnnotation,
   reviewModeIsActive,
   selectedTool,
   views,
@@ -36,7 +37,11 @@ import {
   mapKeypointsForDisplay,
   mapMaskForDisplay,
 } from "$lib/utils/annotationMapping";
-import { getEffectiveHighlight } from "$lib/utils/highlightUtils";
+import {
+  annotationShownAlone,
+  getEffectiveHighlight,
+  isHiddenByReview,
+} from "$lib/utils/highlightUtils";
 
 // --- Shared entity-by-id map ---
 // Only built when Pan tool + focused entity (used by highlight logic).
@@ -73,14 +78,23 @@ export const itemBboxes = reactiveDerived(() => {
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
   const reviewing = reviewModeIsActive.value;
+  const underReview = annotationShownAlone(
+    annotations.value,
+    reviewedAnnotation.value,
+    reviewing,
+    selectedToolType,
+  );
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.BBox)) {
+      if (isHiddenByReview(ann, underReview)) continue;
       const bbox = ann as BBox;
       const box = mapBBoxForDisplay(
         bbox,
         mViews,
-        getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, eById, reviewing),
+        bbox.id === underReview
+          ? "self"
+          : getEffectiveHighlight(bbox, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (box) bboxes.push(box);
     }
@@ -94,13 +108,22 @@ export const itemMasks = reactiveDerived(() => {
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
   const reviewing = reviewModeIsActive.value;
+  const underReview = annotationShownAlone(
+    annotations.value,
+    reviewedAnnotation.value,
+    reviewing,
+    selectedToolType,
+  );
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Mask)) {
+      if (isHiddenByReview(ann, underReview)) continue;
       const rawMask = ann as Mask;
       const mask = mapMaskForDisplay(
         rawMask,
-        getEffectiveHighlight(rawMask, focusedEntityId, selectedToolType, eById, reviewing),
+        rawMask.id === underReview
+          ? "self"
+          : getEffectiveHighlight(rawMask, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (mask) masks.push(mask);
     }
@@ -115,14 +138,23 @@ export const itemKeypoints = reactiveDerived(() => {
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
   const reviewing = reviewModeIsActive.value;
+  const underReview = annotationShownAlone(
+    annotations.value,
+    reviewedAnnotation.value,
+    reviewing,
+    selectedToolType,
+  );
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.Keypoints)) {
+      if (isHiddenByReview(ann, underReview)) continue;
       const keypoint = ann as Keypoints;
       const kpt = mapKeypointsForDisplay(
         keypoint,
         mViews,
-        getEffectiveHighlight(keypoint, focusedEntityId, selectedToolType, eById, reviewing),
+        keypoint.id === underReview
+          ? "self"
+          : getEffectiveHighlight(keypoint, focusedEntityId, selectedToolType, eById, reviewing),
       );
       if (kpt) m_keypoints.push(kpt);
     }
@@ -136,17 +168,21 @@ export const itemMultiPaths = reactiveDerived(() => {
   const focusedEntityId = highlightedEntity.value;
   const eById = entitiesById.value;
   const reviewing = reviewModeIsActive.value;
+  const underReview = annotationShownAlone(
+    annotations.value,
+    reviewedAnnotation.value,
+    reviewing,
+    selectedToolType,
+  );
 
   for (const ann of annotations.value) {
     if (ann.is_type(BaseSchema.MultiPath)) {
+      if (isHiddenByReview(ann, underReview)) continue;
       const mp = ann as MultiPath;
-      const effectiveHighlight = getEffectiveHighlight(
-        mp,
-        focusedEntityId,
-        selectedToolType,
-        eById,
-        reviewing,
-      );
+      const effectiveHighlight =
+        mp.id === underReview
+          ? "self"
+          : getEffectiveHighlight(mp, focusedEntityId, selectedToolType, eById, reviewing);
       const mapped = {
         ...mp,
         ui: {

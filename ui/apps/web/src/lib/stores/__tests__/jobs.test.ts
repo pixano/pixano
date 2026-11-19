@@ -10,6 +10,7 @@ import {
   canCancel,
   failureOf,
   isTerminal,
+  jobsOfDataset,
   outcomeOf,
   progressOf,
   recordOf,
@@ -187,5 +188,18 @@ describe("recordOf", () => {
 
   it("is silent when the job gave none", () => {
     expect(recordOf(item(null))).toBeNull();
+  });
+});
+
+describe("jobsOfDataset", () => {
+  const ours = job({ id: "ours", dataset: "ds" });
+  const theirs = job({ id: "theirs", dataset: "other" });
+
+  it("keeps the jobs of the dataset the panel is opened on", () => {
+    expect(jobsOfDataset([theirs, ours], "ds")).toEqual([ours]);
+  });
+
+  it("keeps every job when no dataset is given", () => {
+    expect(jobsOfDataset([theirs, ours], null)).toEqual([theirs, ours]);
   });
 });

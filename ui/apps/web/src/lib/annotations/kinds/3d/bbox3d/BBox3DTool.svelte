@@ -9,17 +9,16 @@ License: CECILL-C
   import { HTML } from "@threlte/extras";
   import { onDestroy, onMount } from "svelte";
 
+  import { editorBoxOf } from "./bbox3dEditorBoxes.js";
   import type { BBox3DSession } from "./bbox3dSession.svelte.js";
   import { DRAW_BBOX3D_TOOL_ID, type BBoxRenderData } from "./bbox3dTypes.js";
   import { BoxEditor } from "./boxEditor.svelte.js";
   import {
-    bboxTransform,
     threeBoxToLanceXYZWHD,
     threeQuaternionToLanceRotation,
   } from "$lib/annotations/coordinateTransforms";
   import type { Scene3DContext } from "$lib/annotations/scene/sceneContext.js";
   import type { ToolHandle3D } from "$lib/annotations/scene/tool.js";
-  import { pickEntityLabel } from "$lib/annotations/types";
 
   interface Props {
     ctx: Scene3DContext;
@@ -46,16 +45,7 @@ License: CECILL-C
   // Pull bbox3d annotations from the shared collection and convert them to
   // BBoxRenderData for the editor, so the editor stays free of domain formats.
   const bboxesForEditor = $derived<BBoxRenderData[]>(
-    ctx.collection.byKind("bbox3d").map((a) => {
-      const t = bboxTransform(a.geometry);
-      return {
-        id: a.id,
-        position: t.position,
-        size: t.size,
-        quaternion: { x: t.quaternion.x, y: t.quaternion.y, z: t.quaternion.z, w: t.quaternion.w },
-        label: pickEntityLabel(a.entity),
-      };
-    }),
+    ctx.collection.byKind("bbox3d").map(editorBoxOf),
   );
 
   // ctx is a stable object built once by the scene; capturing it here is intended.
@@ -71,6 +61,7 @@ License: CECILL-C
     () => session.gizmoVisibility,
     (coords, rotation, editingId) => session.reportReady(coords, rotation, editingId),
     () => session.reportCanceled(),
+    () => session.reportDragStarted(),
   );
 
   // A stable handle whose getters track the editor's reactive state, so the
