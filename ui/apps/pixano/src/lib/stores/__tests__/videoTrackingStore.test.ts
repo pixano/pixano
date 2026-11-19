@@ -43,6 +43,9 @@ vi.mock("../jobsStore.svelte", () => ({
     stop: jobs.stop,
     probe: jobs.probe,
     offers: (name: string) => jobs.kinds.some((kind) => kind.name === name),
+    get kinds() {
+      return jobs.kinds;
+    },
     get jobs() {
       return jobs.list;
     },
@@ -88,6 +91,8 @@ beforeEach(() => {
   videoTracking.jobs = {};
   videoTracking.refusals = {};
   videoTracking.startFrames = {};
+  videoTracking.outputs = {};
+  videoTracking.output = "masks";
 });
 
 describe("videoTracking", () => {
@@ -103,6 +108,40 @@ describe("videoTracking", () => {
       objects: [{ record_id: "record-1", entity_id: "car", frame_index: 3 }],
     });
     expect(videoTracking.jobOf("car")?.id).toBe("j1");
+  });
+
+  it("asks for what the job proposes, and keeps it for the object's card", async () => {
+    jobs.launch.mockResolvedValue(job("j1"));
+
+    await videoTracking.track("ds", "record-1", "car", 3, "sam-video", "both");
+
+    expect(jobs.launch).toHaveBeenCalledWith("tracking", "ds", {
+      model: "sam-video",
+      objects: [{ record_id: "record-1", entity_id: "car", frame_index: 3 }],
+      output: "both",
+    });
+    expect(videoTracking.outputOf("car")).toBe("both");
+    expect(videoTracking.outputOf("van")).toBe("masks");
+    videoTracking.dismiss("car");
+    expect(videoTracking.outputOf("car")).toBe("masks");
+  });
+
+  it("knows a job launched without a choice proposes masks", async () => {
+    jobs.launch.mockResolvedValue(job("j1"));
+
+    await videoTracking.track("ds", "record-1", "car", 3, "sam-video");
+
+    expect(videoTracking.outputOf("car")).toBe("masks");
+  });
+
+  it("offers the choice only where the workers' tracking job declares it", () => {
+    jobs.kinds = [{ name: "tracking", params_schema: { properties: { model: {} } } }];
+    expect(videoTracking.offersOutputs).toBe(false);
+
+    jobs.kinds = [
+      { name: "tracking", params_schema: { properties: { output: { enum: ["masks", "boxes"] } } } },
+    ];
+    expect(videoTracking.offersOutputs).toBe(true);
   });
 
   it("follows nothing when the server refuses the job", async () => {

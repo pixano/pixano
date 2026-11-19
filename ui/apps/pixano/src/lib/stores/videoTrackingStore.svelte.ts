@@ -7,10 +7,12 @@ License: CECILL-C
 import { jobsStore } from "./jobsStore.svelte";
 import type { Job } from "$lib/api/jobsApi";
 import {
+  DEFAULT_TRACKING_OUTPUT,
   TRACKING_KIND,
   TRACKING_TASK,
   trackingModel,
   trackingParams,
+  type TrackingOutput,
 } from "$lib/tracking/backgroundTracking";
 
 /**
@@ -28,6 +30,10 @@ class VideoTrackingState {
   refusals = $state<Record<string, string>>({});
   /** The frame each object's job tracks it from, by the object's identifier. */
   startFrames = $state<Record<string, number>>({});
+  /** What each object's job proposes, by the object's identifier. */
+  outputs = $state<Record<string, TrackingOutput>>({});
+  /** What the next object followed is proposed as, chosen on a card: kept from one card to the next. */
+  output = $state<TrackingOutput>(DEFAULT_TRACKING_OUTPUT);
   /** The open video's follow, until it closes: a follow closed while it asked stops there. */
   #following: symbol | null = null;
 
@@ -55,6 +61,15 @@ class VideoTrackingState {
     return jobsStore.offers(TRACKING_KIND);
   }
 
+  /**
+   * Whether the workers' tracking job lets one choose what it proposes: one older than the choice
+   * proposes masks, and refuses being asked.
+   */
+  get offersOutputs(): boolean {
+    const kind = jobsStore.kinds.find((declared) => declared.name === TRACKING_KIND);
+    return kind?.params_schema.properties?.output !== undefined;
+  }
+
   /** The model a tracking job would run, given the one chosen for the video tools. */
   modelFor(selected: string | undefined): string | null {
     return trackingModel(selected, jobsStore.servedModels[TRACKING_TASK]);
@@ -75,9 +90,14 @@ class VideoTrackingState {
     return this.refusals[entityId] ?? null;
   }
 
+  /** What an object's job proposes; masks, what a job proposes by default, when none of this page follows it. */
+  outputOf(entityId: string): TrackingOutput {
+    return this.outputs[entityId] ?? DEFAULT_TRACKING_OUTPUT;
+  }
+
   /**
    * The frame after the one an object's job tracks it from, where the object was drawn: the first its
-   * masks can be on. Null when no job of this page follows the object.
+   * masks or boxes can be on. Null when no job of this page follows the object.
    */
   firstTrackedFrame(entityId: string): number | null {
     const start = this.startFrames[entityId];
@@ -87,6 +107,7 @@ class VideoTrackingState {
   /**
    * Follow an object of a video from a frame where it is annotated, to the video's end.
    *
+   * @param output What the job proposes; none asked, where the workers' job offers no choice, is masks.
    * @returns Whether the job was accepted.
    */
   async track(
@@ -95,6 +116,7 @@ class VideoTrackingState {
     entityId: string,
     frameIndex: number,
     model: string,
+    output?: TrackingOutput,
   ): Promise<boolean> {
     if (this.starting.includes(entityId)) return false;
     this.starting = [...this.starting, entityId];
@@ -103,7 +125,7 @@ class VideoTrackingState {
       const job = await jobsStore.launch(
         TRACKING_KIND,
         datasetId,
-        trackingParams(model, recordId, entityId, frameIndex),
+        trackingParams(model, recordId, entityId, frameIndex, output),
       );
       if (job === null) {
         this.refusals = {
@@ -114,6 +136,7 @@ class VideoTrackingState {
       }
       this.jobs = { ...this.jobs, [entityId]: job };
       this.startFrames = { ...this.startFrames, [entityId]: frameIndex };
+      this.outputs = { ...this.outputs, [entityId]: output ?? DEFAULT_TRACKING_OUTPUT };
       return true;
     } finally {
       this.starting = this.starting.filter((starting) => starting !== entityId);
@@ -130,6 +153,7 @@ class VideoTrackingState {
   dismiss(entityId: string): void {
     this.jobs = withoutKey(this.jobs, entityId);
     this.startFrames = withoutKey(this.startFrames, entityId);
+    this.outputs = withoutKey(this.outputs, entityId);
   }
 }
 

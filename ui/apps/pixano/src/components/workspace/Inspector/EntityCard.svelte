@@ -56,8 +56,10 @@ License: CECILL-C
   import { panTool, ToolType } from "$lib/tools";
   import {
     canTrackFrom,
-    showMasksBlocker,
+    DEFAULT_TRACKING_OUTPUT,
+    showTrackedBlocker,
     trackingBlocker,
+    type TrackingOutput,
   } from "$lib/tracking/backgroundTracking";
   import type { Feature } from "$lib/types/workspace";
   import {
@@ -230,6 +232,15 @@ License: CECILL-C
     }),
   );
 
+  // What a job launched from this card proposes: masks where the workers' job offers no choice.
+  const nextTrackingOutput = $derived(
+    videoTracking.offersOutputs ? videoTracking.output : DEFAULT_TRACKING_OUTPUT,
+  );
+
+  function chooseTrackingOutput(output: TrackingOutput) {
+    videoTracking.output = output;
+  }
+
   function trackInBackground() {
     const datasetId = currentDatasetStore.value?.id;
     const recordId = itemMetas.value?.item.id;
@@ -240,25 +251,26 @@ License: CECILL-C
       entity.id,
       currentFrameIndex.value,
       trackingModelName,
+      videoTracking.offersOutputs ? videoTracking.output : undefined,
     );
   }
 
-  // Why the masks cannot be shown now; or null. While the save form is open, or a detection review
+  // Why what the job wrote cannot be shown now; or null. While the save form is open, or a detection review
   // runs, the inspector shows that form or panel in place of the cards.
   const showBlockedBy = $derived(
-    showMasksBlocker({
+    showTrackedBlocker({
       unsaved: saveData.value.length > 0,
       session: editModeBlockedReason(),
     }),
   );
 
   /**
-   * Read the record again, with the masks the job wrote, and show them from the frame after the one
-   * the object was tracked from. A drawing tool shows no shape but the one drawn, and the box tool the
-   * object was just drawn with stays chosen: the masks take the Pan tool, as a click on an object's
-   * row or keyframe in the timeline takes it.
+   * Read the record again, with the masks or boxes the job wrote, and show them from the frame after
+   * the one the object was tracked from. A drawing tool shows no shape but the one drawn, and the box
+   * tool the object was just drawn with stays chosen: they take the Pan tool, as a click on an
+   * object's row or keyframe in the timeline takes it.
    */
-  async function showTrackedMasks() {
+  async function showTracked() {
     const recordId = itemMetas.value?.item.id;
     const firstFrame = videoTracking.firstTrackedFrame(entity.id);
     videoTracking.dismiss(entity.id);
@@ -703,10 +715,14 @@ License: CECILL-C
         blocker={trackingBlockedBy}
         starting={videoTracking.starting.includes(entity.id)}
         refusal={videoTracking.refusalOf(entity.id)}
+        choosable={videoTracking.offersOutputs}
+        output={nextTrackingOutput}
+        jobOutput={videoTracking.outputOf(entity.id)}
         showBlocker={showBlockedBy}
+        onOutputChange={chooseTrackingOutput}
         onTrack={trackInBackground}
         onCancel={() => void videoTracking.cancel(entity.id)}
-        onShow={() => void showTrackedMasks()}
+        onShow={() => void showTracked()}
         onDismiss={() => videoTracking.dismiss(entity.id)}
       />
     {/if}

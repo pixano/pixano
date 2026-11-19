@@ -9,9 +9,12 @@ import { describe, expect, it } from "vitest";
 import type { Job } from "$lib/api/jobsApi";
 import {
   canTrackFrom,
-  showMasksBlocker,
+  showTrackedBlocker,
+  showTrackedLabel,
   trackingBlocker,
+  trackingHint,
   trackingModel,
+  trackingOutput,
   trackingParams,
   trackingSummary,
 } from "$lib/tracking/backgroundTracking";
@@ -204,15 +207,15 @@ describe("trackingBlocker", () => {
   });
 });
 
-describe("showMasksBlocker", () => {
+describe("showTrackedBlocker", () => {
   const free = { unsaved: false, session: null };
 
   it("lets the masks be shown when reading the record again drops nothing", () => {
-    expect(showMasksBlocker(free)).toBeNull();
+    expect(showTrackedBlocker(free)).toBeNull();
   });
 
   it("asks for a save first, which reading the record again would drop", () => {
-    expect(showMasksBlocker({ ...free, unsaved: true })).toBe(
+    expect(showTrackedBlocker({ ...free, unsaved: true })).toBe(
       "Save your changes first, then show them.",
     );
   });
@@ -221,12 +224,12 @@ describe("showMasksBlocker", () => {
     // A mask tracking session holds its masks unsaved until its form is confirmed.
     const session = "Finish or cancel the mask tracking session first";
 
-    expect(showMasksBlocker({ ...free, session })).toBe(`${session}.`);
+    expect(showTrackedBlocker({ ...free, session })).toBe(`${session}.`);
   });
 
   it("names what is unsaved before a session", () => {
     expect(
-      showMasksBlocker({
+      showTrackedBlocker({
         unsaved: true,
         session: "Finish or cancel the tracking session first",
       }),
@@ -240,6 +243,37 @@ describe("trackingParams", () => {
       model: "sam",
       objects: [{ record_id: "record-1", entity_id: "car", frame_index: 3 }],
     });
+  });
+
+  it("asks for what the job proposes when it is chosen", () => {
+    expect(trackingParams("sam", "record-1", "car", 3, "boxes")).toMatchObject({ output: "boxes" });
+  });
+
+  it("asks for nothing a worker older than the choice would refuse when none is chosen", () => {
+    expect(trackingParams("sam", "record-1", "car", 3)).not.toHaveProperty("output");
+  });
+});
+
+describe("what the job proposes", () => {
+  it("reads a choice back from the card's list, masks for anything else", () => {
+    expect(trackingOutput("both")).toBe("both");
+    expect(trackingOutput("box")).toBe("masks");
+  });
+
+  it("is said before the job is launched", () => {
+    expect(trackingHint("sam", "masks")).toBe(
+      "From this frame to the video's end, with sam. The masks arrive pending review.",
+    );
+    expect(trackingHint("sam", "boxes")).toMatch(/The boxes arrive pending review\.$/);
+    expect(trackingHint("sam", "both")).toMatch(
+      /The masks and their boxes arrive pending review\.$/,
+    );
+  });
+
+  it("names the button that shows what the job wrote", () => {
+    expect(showTrackedLabel("masks")).toBe("Show the masks");
+    expect(showTrackedLabel("boxes")).toBe("Show the boxes");
+    expect(showTrackedLabel("both")).toBe("Show the masks and boxes");
   });
 });
 
@@ -256,6 +290,13 @@ describe("trackingSummary", () => {
     expect(trackingSummary(job({ state: "done", produced: 11 }))).toBe(
       "Tracked: a mask on 11 frames",
     );
+  });
+
+  it("says what the job proposed on each frame", () => {
+    const done = job({ state: "done", produced: 1 });
+
+    expect(trackingSummary(done, "boxes")).toBe("Tracked: a box on 1 frame");
+    expect(trackingSummary(done, "both")).toBe("Tracked: a mask and its box on 1 frame");
   });
 
   it("says when the object was lost at once", () => {
