@@ -4,28 +4,35 @@
 # License: CECILL-C
 # =====================================
 
+import asyncio
 import json
 import time
 from pathlib import Path
 
 import PIL.Image
+import psycopg
 import pytest
 import yaml
 from fastapi.testclient import TestClient
 from httpx import Response
 from s3path import S3Path
 
+from pixano.api.jobs.follow_ups import EMBEDDINGS_KIND, NO_MODEL, NO_MODEL_SERVED, QUEUE_UNREADABLE
 from pixano.api.main import create_app
+from pixano.api.routers import data_io as data_io_router
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
 from pixano.datasets.io.jobs import JobStore
+from pixano.inference.types import InferenceTask, ModelInfo
 from tests.datasets.io._review_fixture import (
     DROPPED_ENTITIES,
     KEPT_ENTITIES,
     REVIEW_DATASET_NAME,
     build_review_dataset,
 )
+from tests.datasets.io.formats.test_jsonl_importer import SPECS, materialize_corpus
 from tests.datasets.io.formats.test_lerobot_importer import make_v21_dataset, needs_ffmpeg
+from tests.fixtures.job_queue import queued_jobs
 
 
 @pytest.fixture()
@@ -53,6 +60,233 @@ def _wait_done(client: TestClient, job_id: str, timeout: float = 60.0) -> dict:
             return payload
         time.sleep(0.05)
     raise AssertionError(f"job {job_id} did not finish: {payload}")
+
+
+class _ServesEmbeddings:
+    """An inference serving embeddings models, as the app's provider lists them; it counts the asks."""
+
+    def __init__(self, *names: str, hangs: bool = False):
+        self.names = names
+        self.hangs = hangs
+        self.asked = 0
+
+    async def list_models(self, task: InferenceTask | None = None) -> list[ModelInfo]:
+        self.asked += 1
+        if self.hangs:
+            await asyncio.sleep(HANGING_S)
+        if task not in (None, InferenceTask.EMBEDDING):
+            return []
+        return [ModelInfo(name=name, task=InferenceTask.EMBEDDING.value) for name in self.names]
+
+
+# An inference that hangs: far longer than the lookup is given, short enough that a regression fails
+# the test rather than hold it.
+HANGING_S = 10.0
+
+
+def _embeddings_client(
+    tmp_path: Path, served: tuple[str, ...] = ("clip",), providers: dict | None = None, **deployment: object
+) -> TestClient:
+    """A client of an app connected to an inference serving `served`, as deployed with `deployment`.
+
+    `deployment` holds the environment variables of a deployment: PIXANO_DATABASE_URL,
+    PIXANO_EMBEDDINGS_MODEL, ...
+    """
+    (tmp_path / "data" / "library").mkdir(parents=True, exist_ok=True)
+    settings = Settings(
+        library_dir=str(tmp_path / "data" / "library"),
+        inference_providers=providers if providers is not None else {"inference": _ServesEmbeddings(*served)},
+        default_inference_provider="inference",
+        **deployment,
+    )
+    app = create_app(settings)
+    app.dependency_overrides[get_settings] = lambda: settings
+    return TestClient(app)
+
+
+def _image_source(tmp_path: Path) -> Path:
+    """A folder of images with its dataset.yaml, as the wizard uploads it."""
+    source = tmp_path / "embeddings_src"
+    (source / "train").mkdir(parents=True)
+    for stem in ("a", "b"):
+        PIL.Image.new("RGB", (16, 16), (20, 30, 200)).save(source / "train" / f"{stem}.jpg")
+    (source / "dataset.yaml").write_text(
+        yaml.safe_dump({"pixano": 2, "format": "pixano_jsonl", "dataset": {"name": "photos", "workspace": "image"}})
+    )
+    return source
+
+
+class TestEmbeddingsAfterAnImport:
+    def test_the_offer_says_why_the_job_cannot_run(self, tmp_path: Path):
+        offer = _embeddings_client(tmp_path).get("/io/imports/embeddings").json()
+
+        assert (offer["queue_configured"], offer["available"]) == (False, False)
+        assert "PIXANO_DATABASE_URL" in offer["reason"]
+        assert (offer["enabled_by_default"], offer["models"], offer["default_model"]) == (True, ["clip"], "clip")
+
+    def test_the_offer_lists_a_model_two_inferences_serve_once(self, tmp_path: Path):
+        providers = {"one": _ServesEmbeddings("clip", "siglip"), "two": _ServesEmbeddings("clip")}
+
+        offer = _embeddings_client(tmp_path, providers=providers).get("/io/imports/embeddings").json()
+
+        assert offer["models"] == ["clip", "siglip"]
+
+    def test_the_offer_does_not_wait_for_an_inference_that_hangs(
+        self, tmp_path: Path, embeddings_declared: str, monkeypatch: pytest.MonkeyPatch
+    ):
+        monkeypatch.setattr(data_io_router, "EMBEDDINGS_MODELS_LOOKUP_TIMEOUT_S", 0.05)
+        client = _embeddings_client(
+            tmp_path,
+            providers={"inference": _ServesEmbeddings("clip", hangs=True)},
+            PIXANO_DATABASE_URL=embeddings_declared,
+        )
+
+        offer = client.get("/io/imports/embeddings").json()
+
+        assert (offer["available"], offer["reason"], offer["models"]) == (False, NO_MODEL_SERVED, [])
+
+    def test_the_offer_proposes_the_deployments_model_first(self, tmp_path: Path):
+        """Named by the deployment, it may be served only by the worker's inference."""
+        client = _embeddings_client(tmp_path, PIXANO_EMBEDDINGS_MODEL="siglip", PIXANO_EMBEDDINGS_AFTER_IMPORT=False)
+
+        offer = client.get("/io/imports/embeddings").json()
+
+        assert (offer["enabled_by_default"], offer["models"], offer["default_model"]) == (
+            False,
+            ["siglip", "clip"],
+            "siglip",
+        )
+
+    def test_the_offer_where_the_job_can_run(self, tmp_path: Path, embeddings_declared: str):
+        offer = (
+            _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared).get("/io/imports/embeddings").json()
+        )
+
+        assert (offer["queue_configured"], offer["available"], offer["reason"]) == (True, True, None)
+
+    def test_the_offer_without_a_model_to_name(self, tmp_path: Path, embeddings_declared: str):
+        client = _embeddings_client(tmp_path, served=(), PIXANO_DATABASE_URL=embeddings_declared)
+
+        offer = client.get("/io/imports/embeddings").json()
+
+        assert (offer["available"], offer["reason"], offer["models"]) == (False, NO_MODEL_SERVED, [])
+
+    def test_by_default_an_import_queues_the_embeddings_of_what_it_imported(
+        self, tmp_path: Path, embeddings_declared: str
+    ):
+        """Through the queue a worker declared the job on, with the model the inference serves."""
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared)
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path))})
+        final = _wait_done(client, started.json()["job_id"])
+
+        assert final["status"] == "done", final["error"]
+        (follow_up,) = final["follow_ups"]
+        assert follow_up["job_id"] and not follow_up["error"], follow_up
+        assert queued_jobs(embeddings_declared) == [(EMBEDDINGS_KIND, final["dataset"], {"model": "clip"})]
+
+    def test_by_default_an_import_where_the_job_cannot_run_asks_nothing(self, tmp_path: Path):
+        """No queue: the import ends as it did before the embeddings could follow it."""
+        client = _embeddings_client(tmp_path)
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path))})
+
+        assert started.json()["follow_ups"] == []
+        assert _wait_done(client, started.json()["job_id"])["follow_ups"] == []
+
+    def test_asked_off_none(self, tmp_path: Path, embeddings_declared: str):
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared)
+
+        started = client.post(
+            "/io/imports", json={"source": str(_image_source(tmp_path)), "compute_embeddings": False}
+        )
+        _wait_done(client, started.json()["job_id"])
+
+        assert queued_jobs(embeddings_declared) == []
+
+    def test_asked_for_the_import_says_why_it_was_not_queued(self, tmp_path: Path):
+        client = _embeddings_client(tmp_path)
+
+        started = client.post(
+            "/io/imports",
+            json={"source": str(_image_source(tmp_path)), "compute_embeddings": True, "embeddings_model": "siglip"},
+        )
+        final = _wait_done(client, started.json()["job_id"])
+
+        assert final["status"] == "done", final["error"]
+        (follow_up,) = final["follow_ups"]
+        assert follow_up["params"] == {"model": "siglip"} and not follow_up["job_id"]
+        assert follow_up["error"].startswith("not queued: no job queue is configured")
+
+    def test_asked_for_without_a_model_the_answer_says_so(self, tmp_path: Path):
+        client = _embeddings_client(tmp_path, served=())
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path)), "compute_embeddings": True})
+        final = _wait_done(client, started.json()["job_id"])
+
+        assert started.status_code == 202
+        assert started.json()["follow_ups"] == [
+            {"kind": EMBEDDINGS_KIND, "params": {}, "job_id": "", "error": f"not queued: {NO_MODEL}"}
+        ]
+        assert final["follow_ups"] == started.json()["follow_ups"]
+
+    def test_a_model_named_asks_for_the_job(self, tmp_path: Path):
+        """Without saying whether to compute them: naming the model is asking."""
+        client = _embeddings_client(tmp_path)
+
+        started = client.post(
+            "/io/imports", json={"source": str(_image_source(tmp_path)), "embeddings_model": "siglip"}
+        )
+        final = _wait_done(client, started.json()["job_id"])
+
+        (follow_up,) = final["follow_ups"]
+        assert follow_up["params"] == {"model": "siglip"}
+        assert follow_up["error"].startswith("not queued: no job queue is configured")
+
+    def test_by_default_an_import_where_the_job_cannot_run_never_asks_the_inference(self, tmp_path: Path):
+        """An installation without a queue never waits for the inference to start an import."""
+        inference = _ServesEmbeddings("clip")
+        client = _embeddings_client(tmp_path, providers={"inference": inference})
+
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path))})
+        _wait_done(client, started.json()["job_id"])
+
+        assert inference.asked == 0
+
+    def test_by_default_a_saved_plan_without_a_still_image_asks_nothing(
+        self, tmp_path: Path, embeddings_declared: str
+    ):
+        """A video's frames are not still images: its import reads no refusal."""
+        source = materialize_corpus("frames_masks", tmp_path / "frames_src")
+        (source / "dataset.yaml").write_text(
+            yaml.safe_dump({"pixano": 2, "format": "pixano_jsonl", **SPECS["frames_masks"]}, sort_keys=False)
+        )
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared)
+
+        plan = client.post("/io/analyze", json={"source": str(source), "spec": {}}).json()
+        started = client.post("/io/imports", json={"plan_id": plan["plan_id"], "source": str(source)})
+        final = _wait_done(client, started.json()["job_id"])
+
+        assert final["status"] == "done", final["error"]
+        assert final["follow_ups"] == [] and queued_jobs(embeddings_declared) == []
+
+    def test_a_queue_that_fails_once_connected_never_fails_the_import(
+        self, tmp_path: Path, embeddings_declared: str, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A role without the rights, a server restarting: the import starts all the same."""
+
+        def failing(conn: object) -> None:
+            raise psycopg.errors.InsufficientPrivilege("permission denied for schema pixano_jobs")
+
+        monkeypatch.setattr("pixano.api.jobs.follow_ups.available_kinds", failing)
+        client = _embeddings_client(tmp_path, PIXANO_DATABASE_URL=embeddings_declared)
+
+        offer = client.get("/io/imports/embeddings")
+        started = client.post("/io/imports", json={"source": str(_image_source(tmp_path))})
+
+        assert offer.status_code == 200 and offer.json()["reason"] == QUEUE_UNREADABLE
+        assert started.status_code == 202
+        assert _wait_done(client, started.json()["job_id"])["status"] == "done"
 
 
 class TestS3LibraryGuards:

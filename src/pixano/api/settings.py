@@ -10,7 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import boto3
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings
 from s3path import S3Path, register_configuration_parameter
 from typing_extensions import Self
@@ -37,6 +37,12 @@ class Settings(BaseSettings):
         database_url: PostgreSQL connection URL of the job queue, shared with pixano-worker.
             Unset means no queue is configured: the job endpoints answer 503 rather than
             failing at request time.
+        embeddings_after_import: Whether an import queues the embeddings job of what it imported
+            when the request does not say, where the job can run: a job queue reachable, a worker
+            that declared the job, and a model to name. Set it with PIXANO_EMBEDDINGS_AFTER_IMPORT.
+        embeddings_model: The model the embeddings job runs after an import whose request names
+            none. Unset, the first embeddings model the inference serves. Set it with
+            PIXANO_EMBEDDINGS_MODEL.
         cors_origins: Explicit list of origins allowed to make cross-origin requests. Defaults to an
             empty list, which disables CORS entirely (the app is same-origin in both development,
             via the Vite dev proxy, and production, where the UI is bundled into this app). Set it
@@ -60,10 +66,22 @@ class Settings(BaseSettings):
     # The field's name alone would read DATABASE_URL; the alias makes it read the worker's
     # variable, so that a single value configures both components.
     database_url: str | None = Field(default=None, validation_alias="PIXANO_DATABASE_URL")
+    # With the PIXANO_ prefix of the deployment's other variables (`.env.example`), as the queue's URL.
+    embeddings_after_import: bool = Field(default=True, validation_alias="PIXANO_EMBEDDINGS_AFTER_IMPORT")
+    embeddings_model: str | None = Field(default=None, validation_alias="PIXANO_EMBEDDINGS_MODEL")
     inference_providers: dict[str, Any] = {}
     default_inference_provider: str | None = None
     cors_origins: list[str] = []
     activate_ui_v1_0: bool = False
+
+    @field_validator("embeddings_after_import", "embeddings_model", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: Any, info: ValidationInfo) -> Any:
+        # A deployment file that leaves a variable empty — `PIXANO_EMBEDDINGS_MODEL=` — means its
+        # default, not a value: an empty boolean would otherwise stop the server from starting.
+        if value == "" and info.field_name is not None:
+            return cls.model_fields[info.field_name].default
+        return value
 
     @field_validator("data_dir", mode="before")
     @classmethod
