@@ -74,22 +74,25 @@ export function serverDetail(error: unknown): string | null {
   return typeof message === "string" && message ? message : null;
 }
 
+/** The error a response that is not ok stands for, logged. */
+async function failureOf(response: Response, label: string): Promise<ApiError> {
+  const body = await response.text();
+  const error = new ApiError(
+    `${label} failed with ${response.status} ${response.statusText}`,
+    response.status,
+    body,
+  );
+  logApiError(label, error);
+  return error;
+}
+
 export async function requestJson<T>(
   url: string,
   init: RequestInit = {},
   label: string,
 ): Promise<T> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
   return (await response.json()) as T;
 }
 
@@ -99,16 +102,7 @@ export async function requestBlob(
   label: string,
 ): Promise<Blob> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
   return await response.blob();
 }
 
@@ -118,16 +112,7 @@ export async function requestVoid(
   label: string,
 ): Promise<void> {
   const response = await fetch(url, init);
-  if (!response.ok) {
-    const body = await response.text();
-    const error = new ApiError(
-      `${label} failed with ${response.status} ${response.statusText}`,
-      response.status,
-      body,
-    );
-    logApiError(label, error);
-    throw error;
-  }
+  if (!response.ok) throw await failureOf(response, label);
 }
 
 /**
@@ -154,6 +139,27 @@ export async function apiFetch<T>(
     logApiError(label, e);
   }
   return fallback;
+}
+
+/**
+ * A mutation whose response body is the row the server stored. Fails as `requestJson` does; a
+ * body that is no JSON object reads as undefined: the write landed all the same.
+ */
+export async function apiMutateReturningRow(
+  url: string,
+  init: RequestInit,
+  label: string,
+): Promise<Record<string, unknown> | undefined> {
+  const response = await fetch(url, init);
+  if (!response.ok) throw await failureOf(response, label);
+  try {
+    const stored: unknown = await response.json();
+    return stored !== null && typeof stored === "object" && !Array.isArray(stored)
+      ? (stored as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

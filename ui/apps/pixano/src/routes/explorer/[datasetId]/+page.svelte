@@ -9,8 +9,10 @@ License: CECILL-C
   import type { PageProps } from "./$types";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
+  import { isReviewedWorkspace } from "$lib/utils/reviewStatus";
   import {
     getExplorerRoute,
+    getReviewRoute,
     getRouteSearchParams,
     getWorkspaceRoute,
     pickExplorerQuery,
@@ -45,11 +47,16 @@ License: CECILL-C
     if (data.semantic?.active) params.delete("q");
     await goto(getWorkspaceRoute(data.dataset.id, itemId, params.toString()));
   };
+
+  const handleOpenReview = async (recordId: string) => {
+    await goto(getReviewRoute(data.dataset.id, recordId));
+  };
 </script>
 
 {#if data.browserData?.table_data}
   <DatasetExplorer
     selectedDataset={data.browserData}
+    datasetName={data.dataset.name}
     filterSchema={data.filterSchema}
     splitCounts={data.splitCounts ?? []}
     semanticActive={data.semantic?.active ?? false}
@@ -59,6 +66,7 @@ License: CECILL-C
     searchError={data.searchError ?? ""}
     view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
+    onOpenReview={isReviewedWorkspace(data.dataset.workspace) ? handleOpenReview : undefined}
     onNavigate={navigateTable}
     pagination={data.pagination}
   />

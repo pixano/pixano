@@ -6,7 +6,10 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
+
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
+  import JobsModal from "../jobs/JobsModal.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
   import GridSkeleton from "./GridSkeleton.svelte";
@@ -19,12 +22,14 @@ License: CECILL-C
   import {
     computeEmbeddings,
     getIoJob,
+    getNextRecordToReview,
     listInferenceModels,
     setDefaultEmbeddingSpace,
   } from "$lib/api";
   import { ApiError, serverDetail } from "$lib/api/apiClient";
-  import type { FilterSchemaResponse, IoJobResponse } from "$lib/api/restTypes";
+  import type { FilterSchemaResponse, IoJobResponse, NextRecordToReview } from "$lib/api/restTypes";
   import { DEFAULT_DATASET_GRID_SIZE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
+  import { jobsStore } from "$lib/stores/jobsStore.svelte";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
@@ -43,6 +48,8 @@ License: CECILL-C
 
   interface Props {
     selectedDataset: DatasetBrowser;
+    /** The dataset's display name: `selectedDataset.name` holds its id. */
+    datasetName: string;
     filterSchema: FilterSchemaResponse;
     splitCounts?: SplitStatusCount[];
     semanticActive?: boolean;
@@ -55,6 +62,11 @@ License: CECILL-C
     searchNotice?: string;
     view?: "grid" | "table";
     onSelectItem?: (itemId: string) => void;
+    /**
+     * Open a record to review what a model proposed, in review; none where this interface does not
+     * review the dataset's annotations.
+     */
+    onOpenReview?: (recordId: string) => void;
     onNavigate: (updates: Record<string, string | string[] | undefined>) => void;
     pagination: {
       currentPage: number;
@@ -69,6 +81,7 @@ License: CECILL-C
 
   let {
     selectedDataset,
+    datasetName,
     filterSchema,
     splitCounts = [],
     semanticActive = false,
@@ -78,6 +91,7 @@ License: CECILL-C
     searchNotice = "",
     view = "table",
     onSelectItem,
+    onOpenReview,
     onNavigate,
     pagination,
   }: Props = $props();
@@ -94,14 +108,43 @@ License: CECILL-C
     pagination.filters.length > 0 || pagination.q !== "" || similarTo !== "",
   );
 
+  // The records holding a model's annotation still to review, for the Review entry, where this
+  // interface reviews the dataset's annotations. A queue that cannot be read offers no review.
+  const datasetId = $derived(selectedDataset.id);
+  let reviewQueue = $state<{ datasetId: string; data: NextRecordToReview } | null>(null);
+  $effect(() => {
+    const askedFor = datasetId;
+    if (!onOpenReview) return;
+    let cancelled = false;
+    void getNextRecordToReview(askedFor)
+      .then((data) => {
+        if (!cancelled) reviewQueue = { datasetId: askedFor, data };
+      })
+      .catch(() => {
+        if (!cancelled) reviewQueue = null;
+      });
+    return () => {
+      cancelled = true;
+    };
+  });
+  const firstRecordToReview = $derived(
+    reviewQueue?.datasetId === datasetId ? reviewQueue.data.record_id : null,
+  );
+  const recordsToReview = $derived(
+    reviewQueue?.datasetId === datasetId ? reviewQueue.data.remaining : 0,
+  );
+
+  function openReview() {
+    if (firstRecordToReview) onOpenReview?.(firstRecordToReview);
+  }
+
   let computing = $state(false);
   let showConnectModal = $state(false);
+  let showJobsModal = $state(false);
   let computeJob = $state<IoJobResponse | null>(null);
   let settingDefault = $state(false);
   // The force a computation was asked with while no inference was connected: kept for after.
   let pendingForce = false;
-
-  const datasetId = $derived(selectedDataset.id);
 
   // What went wrong computing the embeddings, and changing the default model, said for the dataset
   // it went wrong on: another dataset shown in place reuses this component.
@@ -111,6 +154,20 @@ License: CECILL-C
     computeFailure?.datasetId === datasetId ? computeFailure.message : "",
   );
   const spaceError = $derived(spaceFailure?.datasetId === datasetId ? spaceFailure.message : "");
+
+  // Where a worker runs the embeddings job, it computes the embeddings, one vector per image; the
+  // search bar's own computation, one per record, then gives way to it.
+  onMount(() => {
+    void jobsStore.probe();
+  });
+
+  // A job run from the panel may have changed what the explorer shows — the embeddings job, the
+  // count of embedded images the search bar reads from the page's data — so closing it reads
+  // that data again, as the search bar's own computation does once it ends.
+  function closeJobs() {
+    showJobsModal = false;
+    void invalidateAll();
+  }
 
   async function runCompute(force = false): Promise<boolean> {
     // Returns false when no embedding model is reachable (caller prompts to connect).
@@ -346,6 +403,7 @@ License: CECILL-C
         {settingDefault}
         {searchNotice}
         {computing}
+        embeddingsByJob={jobsStore.offersEmbeddingsJob}
         computeProgress={computeJob?.progress ?? null}
         {computeError}
         {searchError}
@@ -357,6 +415,9 @@ License: CECILL-C
         onSelectSpace={handleSelectSpace}
         onSetDefaultSpace={handleSetDefaultSpace}
         onViewChange={handleViewChange}
+        {recordsToReview}
+        onReview={onOpenReview && firstRecordToReview ? openReview : undefined}
+        onOpenJobs={() => (showJobsModal = true)}
       />
     </div>
 
@@ -416,4 +477,8 @@ License: CECILL-C
 
 {#if showConnectModal}
   <ConnectToServerModal onClose={() => (showConnectModal = false)} onConnected={handleConnected} />
+{/if}
+
+{#if showJobsModal}
+  <JobsModal dataset={{ id: selectedDataset.id, name: datasetName }} onClose={closeJobs} />
 {/if}

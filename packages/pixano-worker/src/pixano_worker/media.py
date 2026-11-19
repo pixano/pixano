@@ -144,7 +144,8 @@ class MediaResolver:
         """The file a view names, as this worker sees it, if it is under the media root.
 
         For what the worker must read itself rather than send — a medium's bytes, resent when
-        the inference refuses its path. A relative reference is taken from the media root.
+        the inference refuses its path, or an image's size when the dataset does not record it. A
+        relative reference is taken from the media root.
 
         The file must be under the root once links are followed, the root's own included: the
         check is on the real path, since opening the file follows them. On the path's text alone,
