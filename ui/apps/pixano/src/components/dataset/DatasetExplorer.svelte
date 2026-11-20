@@ -10,6 +10,7 @@ License: CECILL-C
 
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
   import JobsModal from "../jobs/JobsModal.svelte";
+  import DatasetOverview from "../overview/DatasetOverview.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
   import GridSkeleton from "./GridSkeleton.svelte";
@@ -17,28 +18,40 @@ License: CECILL-C
   import RecordGrid from "./RecordGrid.svelte";
   import { Table } from "./table";
   import TableSkeleton from "./TableSkeleton.svelte";
-  import { invalidateAll } from "$app/navigation";
+  import { invalidate, invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import {
     computeEmbeddings,
+    getImportStatisticsOffer,
     getIoJob,
     getNextRecordToReview,
     listInferenceModels,
     setDefaultEmbeddingSpace,
   } from "$lib/api";
   import { ApiError, serverDetail } from "$lib/api/apiClient";
+  import type { DatasetOverview as Overview, OverviewCard } from "$lib/api/overviewApi";
   import type { FilterSchemaResponse, IoJobResponse, NextRecordToReview } from "$lib/api/restTypes";
   import { DEFAULT_DATASET_GRID_SIZE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
   import { jobsStore } from "$lib/stores/jobsStore.svelte";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
+  import { describeTableColumns, undescribedStatisticColumns } from "$lib/utils/columns";
   import {
     embeddingsView,
     modelToCompute,
     orderedSpaces,
     selectedSpace,
   } from "$lib/utils/embeddingSpaces";
+  import { EXPLORER_COLUMNS_DEPENDENCY } from "$lib/utils/explorerData";
+  import type { ExplorerView } from "$lib/utils/explorerSearch";
+  import {
+    filtersAfterClick,
+    filtersWithoutCard,
+    keptBars,
+    MAX_FILTERS,
+    withinFilterLimit,
+  } from "$lib/utils/overview";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
 
   /** The status of an answer about a model the dataset holds no more. */
@@ -58,7 +71,13 @@ License: CECILL-C
     searchError?: string;
     /** What the explorer did of a URL it could not follow as it is: a model the dataset does not hold. */
     searchNotice?: string;
-    view?: "grid" | "table";
+    view?: ExplorerView;
+    /** The overview of the records the filters keep, when it is the view; none when it could not be read. */
+    overview?: Overview | null;
+    /** Why it could not be read. */
+    overviewError?: string;
+    /** Whether the overview compares the splits. */
+    bySplit?: boolean;
     onSelectItem?: (itemId: string) => void;
     /**
      * Open a record to review what a model proposed, in review; none where this interface does not
@@ -88,6 +107,9 @@ License: CECILL-C
     searchError = "",
     searchNotice = "",
     view = "table",
+    overview = null,
+    overviewError = "",
+    bySplit = false,
     onSelectItem,
     onOpenReview,
     onNavigate,
@@ -214,11 +236,35 @@ License: CECILL-C
     return true;
   }
 
+  // The page's columns named as the explorer names them: a statistic by its label and unit.
+  const tableItems = $derived(
+    describeTableColumns(selectedDataset.table_data, filterSchema.columns),
+  );
+
+  // A page can carry a statistic the explorer's columns, read before it was computed, do not
+  // describe — a statistics job that ended after they were read: they are read again, once per such
+  // column.
+  let columnsAskedFor = "";
+  $effect(() => {
+    const undescribed = undescribedStatisticColumns(
+      selectedDataset.table_data,
+      filterSchema.columns,
+    ).join(",");
+    if (undescribed === "" || undescribed === columnsAskedFor) return;
+    columnsAskedFor = undescribed;
+    void invalidate(EXPLORER_COLUMNS_DEPENDENCY);
+  });
+
   // Remount the table only when the dataset or its column set changes — the
   // table builds its column defs once at mount. Sorting is prop-driven and
   // re-renders in place (no remount, no scroll reset).
+  // A column's label is part of it: the headers are built at mount, and a statistic gets its label
+  // once the explorer's columns describe it.
   const tableKey = $derived(
-    [selectedDataset.id, selectedDataset.table_data.columns.map((c) => c.name).join(",")].join("|"),
+    [
+      selectedDataset.id,
+      tableItems.columns.map((c) => `${c.name}\u0000${c.label ?? ""}`).join(","),
+    ].join("|"),
   );
 
   function handleSelectItem(itemId: string) {
@@ -335,7 +381,7 @@ License: CECILL-C
     onNavigate({ page: "1", size: String(size) });
   }
 
-  function handleViewChange(nextView: "grid" | "table") {
+  function handleViewChange(nextView: ExplorerView) {
     if (nextView === view) return;
     // Remember the choice per dataset; switching views resets to page 1 with the
     // view's default page size.
@@ -343,8 +389,75 @@ License: CECILL-C
     onNavigate({
       page: "1",
       view: nextView,
-      size: String(nextView === "grid" ? DEFAULT_DATASET_GRID_SIZE : DEFAULT_DATASET_TABLE_SIZE),
+      size: String(nextView === "table" ? DEFAULT_DATASET_TABLE_SIZE : DEFAULT_DATASET_GRID_SIZE),
     });
+  }
+
+  // ---- Overview ----
+
+  // A bar of the overview keeps the records it counts, in place of the filters of its column, and
+  // every card, the records' list too, shows the records left; clicked again, or its card cleared,
+  // every record comes back. Nothing is filtered while the overview of other filters is read, by
+  // pointer or by keyboard: the filters it would start from are about to change. The server takes
+  // a bounded number of filters: one past them is said, not sent, for the filters it was said of.
+  const overviewKept = $derived(keptBars(overview?.cards ?? [], pagination.filters));
+  let overviewNotice = $state<{ datasetId: string; filters: string; text: string } | null>(null);
+  const overviewNoticeShown = $derived(
+    overviewNotice?.datasetId === datasetId &&
+      overviewNotice.filters === pagination.filters.join("\n")
+      ? overviewNotice.text
+      : "",
+  );
+
+  function applyOverviewFilters(filters: string[]) {
+    if (!withinFilterLimit(filters)) {
+      overviewNotice = {
+        datasetId,
+        filters: pagination.filters.join("\n"),
+        text: `At most ${MAX_FILTERS} filters apply at once: remove one to add another.`,
+      };
+      return;
+    }
+    overviewNotice = null;
+    onNavigate({ page: "1", filter: filters.length > 0 ? filters : undefined });
+  }
+
+  function handleOverviewBarClick(card: OverviewCard, index: number) {
+    if (isLoadingTableItems) return;
+    const filters = filtersAfterClick(pagination.filters, card, index);
+    if (filters !== null) applyOverviewFilters(filters);
+  }
+
+  function handleOverviewClear(card: OverviewCard) {
+    if (isLoadingTableItems) return;
+    applyOverviewFilters(filtersWithoutCard(pagination.filters, card));
+  }
+
+  function handleToggleSplit() {
+    onNavigate({ by_split: bySplit ? undefined : "1" });
+  }
+
+  // Whether the statistics job can run here, for what the overview says of the statistics not
+  // computed yet: asked of each reading that lists some, until it can — a worker declared since, a
+  // server that did not answer, is heard at the next reading. Unanswered, it is left unsaid.
+  let statisticsJobRuns = $state<boolean | null>(null);
+  let statisticsJobAskedFor: Overview | null = null;
+  $effect(() => {
+    if (view !== "overview" || !overview || overview.statistics_to_compute.length === 0) return;
+    if (statisticsJobRuns === true || statisticsJobAskedFor === overview) return;
+    statisticsJobAskedFor = overview;
+    void getImportStatisticsOffer()
+      .then((offer) => (statisticsJobRuns = offer.available))
+      .catch(() => (statisticsJobRuns = null));
+  });
+
+  // The overview read again as a person asks, never over a reading under way: it would take that
+  // reading's place, and drop the filter just clicked.
+  let readingAgain = $state(false);
+  function readOverviewAgain() {
+    if (readingAgain || isLoadingTableItems) return;
+    readingAgain = true;
+    void invalidateAll().finally(() => (readingAgain = false));
   }
 
   function handleClearAllForEmptyState() {
@@ -399,7 +512,23 @@ License: CECILL-C
     <div
       class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-elevation-1"
     >
-      {#if isLoadingTableItems}
+      {#if view === "overview"}
+        <DatasetOverview
+          {overview}
+          error={overviewError}
+          kept={overviewKept}
+          {bySplit}
+          loading={isLoadingTableItems}
+          semanticActive={ranked}
+          notice={overviewNoticeShown}
+          {statisticsJobRuns}
+          {readingAgain}
+          onToggleSplit={handleToggleSplit}
+          onBarClick={handleOverviewBarClick}
+          onClear={handleOverviewClear}
+          onReadAgain={readOverviewAgain}
+        />
+      {:else if isLoadingTableItems}
         {#if view === "grid"}
           <GridSkeleton count={pagination.size} />
         {:else}
@@ -424,7 +553,7 @@ License: CECILL-C
         <div class="flex-1 min-h-0">
           {#key tableKey}
             <Table
-              items={selectedDataset.table_data}
+              items={tableItems}
               activeSort={{ col: pagination.sort, order: pagination.order }}
               onSelectItem={handleSelectItem}
               onColsort={handleColSort}
@@ -435,17 +564,19 @@ License: CECILL-C
       {/if}
     </div>
 
-    <!-- Pagination — always visible at the bottom -->
-    <div class="shrink-0">
-      <DatasetPagination
-        {selectedDataset}
-        currentPage={pagination.currentPage}
-        pageSize={pagination.size}
-        pageSizeOptions={ranked ? [] : view === "grid" ? [24, 48, 96] : [20, 50, 100]}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
-    </div>
+    <!-- Pagination — always visible at the bottom, but over the overview, which pages nothing -->
+    {#if view !== "overview"}
+      <div class="shrink-0">
+        <DatasetPagination
+          {selectedDataset}
+          currentPage={pagination.currentPage}
+          pageSize={pagination.size}
+          pageSizeOptions={ranked ? [] : view === "grid" ? [24, 48, 96] : [20, 50, 100]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
+    {/if}
   {/if}
 </div>
 

@@ -10,9 +10,11 @@ import DateTimeCell from "./TableCells/DateTimeCell.svelte";
 import HistogramCell from "./TableCells/HistogramCell.svelte";
 import ImageCell from "./TableCells/ImageCell.svelte";
 import NumberCell from "./TableCells/NumberCell.svelte";
+import StatisticCell from "./TableCells/StatisticCell.svelte";
 import TextCell from "./TableCells/TextCell.svelte";
 import VideoCell from "./TableCells/VideoCell.svelte";
 import type { DatasetStat } from "$lib/types/dataset";
+import { STATISTIC_CELL_TYPE } from "$lib/utils/columns";
 
 type CellValue = string | number | boolean | DatasetStat;
 
@@ -32,4 +34,5 @@ export const TableCell: Record<string, (value: CellValue) => ReturnType<typeof r
   datetime: createCellRenderer(DateTimeCell),
   video: createCellRenderer(VideoCell),
   histogram: createCellRenderer(HistogramCell),
+  [STATISTIC_CELL_TYPE]: createCellRenderer(StatisticCell),
 };

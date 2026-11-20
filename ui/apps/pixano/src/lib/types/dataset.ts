@@ -110,6 +110,8 @@ export type TableRow = Record<string, string | number | boolean | DatasetStat>;
 export interface TableColumn {
   name: string;
   type: string;
+  /** What the column is called, when its name is not what a person reads: a statistic's label. */
+  label?: string;
 }
 
 export interface TableData {

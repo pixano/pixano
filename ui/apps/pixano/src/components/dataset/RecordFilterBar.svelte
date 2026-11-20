@@ -10,6 +10,7 @@ License: CECILL-C
     ArrowsClockwise,
     ArrowsDownUp,
     CaretDown,
+    ChartBarHorizontal,
     CheckSquareOffset,
     CircleNotch,
     FunnelSimple,
@@ -35,8 +36,9 @@ License: CECILL-C
   } from "$lib/api/restTypes";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { ConfirmModal, Select } from "$lib/ui";
-  import { formatColumnLabel } from "$lib/utils/columns";
+  import { columnLabel, columnLabelOf } from "$lib/utils/columns";
   import type { EmbeddingsView } from "$lib/utils/embeddingSpaces";
+  import type { ExplorerView } from "$lib/utils/explorerSearch";
   import {
     isListOperator,
     OPERATOR_LABELS,
@@ -76,7 +78,7 @@ License: CECILL-C
     /** Why the embeddings were not computed, in a sentence. */
     computeError?: string;
     searchError?: string;
-    view?: "grid" | "table";
+    view?: ExplorerView;
     onApply: (updates: { filter?: string[]; q?: string; semantic?: boolean }) => void;
     onSortChange?: (sort: string | undefined, order: string | undefined) => void;
     onCompute?: (force?: boolean) => void;
@@ -85,7 +87,7 @@ License: CECILL-C
     onSelectSpace?: (spaceId: string) => void;
     /** Make a model, by its id, the one a search naming none reads. */
     onSetDefaultSpace?: (spaceId: string) => void;
-    onViewChange?: (view: "grid" | "table") => void;
+    onViewChange?: (view: ExplorerView) => void;
     /** How many records hold a model's annotation still to review. */
     recordsToReview?: number;
     /** Open the first record to review, in review. */
@@ -145,7 +147,7 @@ License: CECILL-C
   const ranked = $derived(semanticActive || similarTo !== "");
   const sortItems = $derived([
     { value: "", label: "Default order" },
-    ...sortableColumns.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) })),
+    ...sortableColumns.map((c) => ({ value: c.name, label: columnLabel(c) })),
   ]);
 
   // Embedding-tools popover (grouped inside the search bar).
@@ -261,7 +263,7 @@ License: CECILL-C
   function chipLabel(filter: RecordFilter): string {
     const op = OPERATOR_LABELS[filter.op] ?? filter.op;
     const value = isListOperator(filter.op) ? filter.values.join(", ") : (filter.values[0] ?? "");
-    return `${formatColumnLabel(filter.col)} ${op} ${value}`;
+    return `${columnLabelOf(columns, filter.col)} ${op} ${value}`;
   }
 
   // ---- Compute progress ----
@@ -642,10 +644,24 @@ License: CECILL-C
           >
             <Rows size={16} weight={view === "table" ? "fill" : "regular"} />
           </button>
+          <button
+            type="button"
+            title="Overview: how the records, their images and their objects spread"
+            aria-label="Overview"
+            aria-pressed={view === "overview"}
+            class="px-3 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring {view ===
+            'overview'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background text-muted-foreground hover:text-foreground'}"
+            onclick={() => onViewChange("overview")}
+          >
+            <ChartBarHorizontal size={16} weight={view === "overview" ? "fill" : "regular"} />
+          </button>
         </div>
       {/if}
 
-      {#if onSortChange && sortableColumns.length > 0}
+      <!-- The overview orders nothing: its cards count every record the filters keep. -->
+      {#if onSortChange && sortableColumns.length > 0 && view !== "overview"}
         <div
           class="flex items-center gap-1"
           title={ranked ? "Results are ranked by similarity" : undefined}
@@ -664,7 +680,7 @@ License: CECILL-C
               {#snippet children()}
                 <ArrowsDownUp size={14} />
                 <span class="max-w-[120px] truncate">
-                  {sort ? formatColumnLabel(sort) : "Sort"}
+                  {sort ? columnLabelOf(columns, sort) : "Sort"}
                 </span>
               {/snippet}
             </Select.Trigger>
@@ -743,7 +759,8 @@ License: CECILL-C
         <span
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1"
         >
-          {#if ranked}
+          <!-- The overview counts the records the filters keep, unranked. -->
+          {#if ranked && view !== "overview"}
             Ranked
           {:else}
             Records
