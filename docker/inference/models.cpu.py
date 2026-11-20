@@ -23,7 +23,7 @@ two checkpoints, tiny the faster, small a second segmentation model beside it. C
 checkpoints are Apache-2.0. Their weights come from huggingface.co on first load and are cached
 under HF_HOME (the persistent volume in the container), not under PIXANO_INFERENCE_WEIGHTS_DIR.
 Each replica holds about 1.5 GiB of memory, 2 GiB at peak. Every client of the server shares
-these two deployments, the interactive smart-segment tool included.
+these two deployments: segmentation jobs and the interactive smart-segment tool.
 
 Every model listed must load for the server to start. A missing plugin fails the list itself;
 with strict startup, the server's default, so do weights that cannot be fetched or CPUs that
