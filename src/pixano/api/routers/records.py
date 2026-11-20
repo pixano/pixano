@@ -219,8 +219,8 @@ def list_records(
     previews_by_record = (
         _resolve_view_previews(dataset_id, dataset, record_ids) if "view_previews" in includes and record_ids else {}
     )
-    # Each statistic the dataset computed per record, named as the catalogue names it; a record no
-    # value was computed for shows none.
+    # Each column the dataset computed per record — a statistic, a run of a clustering —, named as the
+    # catalogue names it; a record no value was computed for shows none.
     computed_columns = computed_columns_by_name(catalogue)
     values = computed_values(dataset, record_ids, list(computed_columns.values()))
 

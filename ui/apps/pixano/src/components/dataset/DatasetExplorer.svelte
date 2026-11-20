@@ -36,7 +36,7 @@ License: CECILL-C
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
-  import { describeTableColumns, undescribedStatisticColumns } from "$lib/utils/columns";
+  import { describeTableColumns, undescribedComputedColumns } from "$lib/utils/columns";
   import {
     embeddingsView,
     modelToCompute,
@@ -236,17 +236,17 @@ License: CECILL-C
     return true;
   }
 
-  // The page's columns named as the explorer names them: a statistic by its label and unit.
+  // The page's columns named as the explorer names them: a computed column by its label and unit.
   const tableItems = $derived(
     describeTableColumns(selectedDataset.table_data, filterSchema.columns),
   );
 
-  // A page can carry a statistic the explorer's columns, read before it was computed, do not
-  // describe — a statistics job that ended after they were read: they are read again, once per such
-  // column.
+  // A page can carry a computed column — a statistic, a run of a clustering — the explorer's
+  // columns, read before it was computed, do not describe — a job that ended after they were read:
+  // they are read again, once per such column.
   let columnsAskedFor = "";
   $effect(() => {
-    const undescribed = undescribedStatisticColumns(
+    const undescribed = undescribedComputedColumns(
       selectedDataset.table_data,
       filterSchema.columns,
     ).join(",");

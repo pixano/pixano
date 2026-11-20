@@ -4,13 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-"""Records ordered and filtered through the columns computed from them (backend-processing §22.5).
+"""Records ordered and filtered through the columns computed from them (backend-processing §22.5, §24).
 
 The explorer sorts and filters records on columns a job computed from them, which live in tables of
-their own: their statistics, in `record_statistics`, keyed by record. DuckDB joins them to the
-records: LanceDB reads the identifiers of the records matching their own conditions, and the record
-column sorted on if any; the computed tables give the columns a condition or the order reads. The
-join orders and counts the records; the page's records are then read by their identifiers.
+their own: their statistics, in `record_statistics`, keyed by record; their clusters, in
+`record_clusters`, a row per run of a clustering and record, read as a column per run. DuckDB joins
+them to the records: LanceDB reads the identifiers of the records matching their own conditions, and
+the record column sorted on if any; the computed tables give the columns a condition or the order
+reads. The join orders and counts the records; the page's records are then read by their
+identifiers.
 
 A computed table is read through a handle of its own at each call, never one a `Dataset` keeps:
 another process may write and compact it meanwhile, and the files of the version a kept handle
@@ -39,6 +41,13 @@ logger = logging.getLogger(__name__)
 
 #: The table of the records' statistics.
 RECORD_STATISTICS_TABLE = canonical_table_name_for_slot("record_statistics")
+#: The table of the records' clusters: a row per run of a clustering and record.
+RECORD_CLUSTERS_TABLE = canonical_table_name_for_slot("record_clusters")
+
+#: What names a run's clusters among the join's computed columns — not among the records' columns,
+#: where a run is `record_clusters.<run>`. A statistic's column holds no colon
+#: (`pixano.statistics.definitions.COLUMN_NAME_PATTERN`): the two never meet.
+_RUN_COLUMN_PREFIX = "clusters:"
 
 #: How the join names the records, and the columns computed from them: a condition on a computed
 #: column names it `c."column"` (`computed_sql_column`).
@@ -134,6 +143,16 @@ def computed_sql_column(name: str) -> str:
     return f"{COMPUTED_ALIAS}.{quote_identifier(name)}"
 
 
+def clusters_column(run_id: str) -> str:
+    """The computed column of a run of a clustering: each record's group in it."""
+    return f"{_RUN_COLUMN_PREFIX}{run_id}"
+
+
+def _run_of(column: str) -> str | None:
+    """The run whose clusters a computed column holds; None for a statistic's column."""
+    return column.removeprefix(_RUN_COLUMN_PREFIX) if column.startswith(_RUN_COLUMN_PREFIX) else None
+
+
 def ordered_record_ids(
     dataset: Dataset,
     where: str | None,
@@ -165,15 +184,21 @@ def ordered_record_ids(
     record_rows, computed_rows = _rows(dataset, where, computed_filter, order)
     with duckdb.connect() as connection:
         joined = _joined(connection, record_rows, computed_rows, computed_filter)
-        page = f"SELECT {RECORDS_ALIAS}.id {joined} ORDER BY {_order_by(order)}"
+        # The page carries the total: the join is not run again to count it. Joined with no
+        # condition, every record stays once, and the records read are the total.
+        total = "" if computed_filter is None else ", COUNT(*) OVER ()"
+        page = f"SELECT {RECORDS_ALIAS}.id{total} {joined} ORDER BY {_order_by(order)}"
         if limit is not None:
             page += f" LIMIT {int(limit)}"
         if offset:
             page += f" OFFSET {int(offset)}"
-        ids = [row[0] for row in connection.execute(page).fetchall()]
+        rows = connection.execute(page).fetchall()
+        ids = [row[0] for row in rows]
         if computed_filter is None:
-            # Joined with no condition, every record stays once: the records read are the total.
             return ids, record_rows.num_rows
+        if rows:
+            return ids, int(rows[0][1])
+        # A page past the end carries no total.
         total_row = connection.execute(f"SELECT COUNT(*) {joined}").fetchone()
     return ids, int(total_row[0]) if total_row is not None else 0
 
@@ -357,7 +382,7 @@ def computed_values(dataset: Dataset, record_ids: Sequence[str], columns: Sequen
     values: dict[str, dict[str, Any]] = {}
     for start in range(0, len(record_ids), IDS_PER_QUERY):
         batch = list(record_ids[start : start + IDS_PER_QUERY])
-        rows = _read_statistics(dataset, list(columns), f"record_id IN {to_sql_list(batch)}")
+        rows = _read_computed(dataset, list(columns), f"record_id IN {to_sql_list(batch)}")
         if rows is None:
             return {}
         for row in rows.to_pylist():
@@ -435,6 +460,39 @@ def _read(table: Any, columns: list[str] | dict[str, str], where: str | None) ->
     return query.to_arrow()
 
 
+def _read_computed(dataset: Dataset, columns: list[str], where: str | None) -> pa.Table | None:
+    """These computed columns of the records `where` names, those the tables hold, with each row's
+    record: a statistic's from the statistics table, a run's clusters from the clusters table; None
+    when neither answers — before any computation, or when they cannot be read.
+    """
+    runs = [run for column in columns if (run := _run_of(column)) is not None]
+    statistics = [column for column in columns if _run_of(column) is None]
+    read = [
+        rows
+        for rows in (
+            _read_statistics(dataset, statistics, where) if statistics else None,
+            _read_clusters(dataset, runs, where) if runs else None,
+        )
+        if rows is not None
+    ]
+    if not read:
+        return None
+    rows = _identified(read[0])
+    for more in read[1:]:
+        rows = rows.join(_identified(more), keys="record_id", join_type="full outer")
+    return rows
+
+
+def _identified(rows: pa.Table) -> pa.Table:
+    """The rows, their records named as plain strings, whichever table they come from: two tables
+    are joined on them.
+    """
+    position = rows.schema.get_field_index("record_id")
+    if rows.schema.field(position).type == pa.string():
+        return rows
+    return rows.set_column(position, "record_id", rows.column(position).cast(pa.string()))
+
+
 def _read_statistics(dataset: Dataset, columns: list[str], where: str | None) -> pa.Table | None:
     """These columns of the statistics table, those it holds, with each row's record; None before
     any computation, or when the table cannot be read.
@@ -442,6 +500,47 @@ def _read_statistics(dataset: Dataset, columns: list[str], where: str | None) ->
     if RECORD_STATISTICS_TABLE not in dataset.info.tables:
         return None
     return read_latest(dataset, RECORD_STATISTICS_TABLE, ["record_id", *columns], where, required=["record_id"])
+
+
+def _read_clusters(dataset: Dataset, runs: list[str], where: str | None) -> pa.Table | None:
+    """The clusters of these runs, with each row's record: a column per run (`clusters_column`), the
+    record's group in it, none where the run did not group the record; None before any clustering,
+    or when the table cannot be read.
+    """
+    if RECORD_CLUSTERS_TABLE not in dataset.info.tables:
+        return None
+    condition = f"run_id IN {to_sql_list(runs)}" + (f" AND ({where})" if where is not None else "")
+    if len(runs) == 1:
+        # A sort or a filter on one run, the common case: its rows are its column already.
+        (run,) = runs
+        columns = ["record_id", "cluster"]
+        rows = read_latest(dataset, RECORD_CLUSTERS_TABLE, columns, condition, required=columns)
+        return None if rows is None else rows.rename_columns(["record_id", clusters_column(run)])
+    columns = ["record_id", "run_id", "cluster"]
+    rows = read_latest(dataset, RECORD_CLUSTERS_TABLE, columns, condition, required=columns)
+    if rows is None:
+        return None
+    try:
+        return _one_column_per_run(rows, runs)
+    except duckdb.Error as error:
+        logger.warning("Dataset %s: its clusters cannot be read, none shown: %s", dataset.info.id, error)
+        return None
+
+
+def _one_column_per_run(rows: pa.Table, runs: list[str]) -> pa.Table:
+    """The rows of these runs, a record's in each run turned into a column per run.
+
+    A record holds one row per run: should two be stored, as for the statistics (`_joined`), one
+    value is kept.
+    """
+    columns = ", ".join(
+        f"MAX(cluster) FILTER (WHERE run_id = ?) AS {quote_identifier(clusters_column(run))}" for run in runs
+    )
+    with duckdb.connect() as connection:
+        connection.register("cluster_rows", rows)
+        return connection.execute(
+            f"SELECT record_id, {columns} FROM cluster_rows GROUP BY record_id", runs
+        ).to_arrow_table()
 
 
 def read_latest(
@@ -492,7 +591,7 @@ def _computed(dataset: Dataset, columns: list[str]) -> pa.Table:
     """The records' computed columns: their record and these columns, none where no table holds
     them — before any computation, or when one cannot be read.
     """
-    rows = _read_statistics(dataset, columns, None)
+    rows = _read_computed(dataset, columns, None)
     if rows is None:
         rows = pa.table({"record_id": pa.array([], pa.string())})
     for column in columns:

@@ -24,17 +24,19 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from pixano.datasets.dataset_schema import serialize_all_fields
 from pixano.datasets.queries.computed_columns import (
+    RECORD_CLUSTERS_TABLE,
     RECORD_STATISTICS_TABLE,
     ComputedFilter,
     CrossFilter,
     RecordOrder,
+    clusters_column,
     computed_sql_column,
 )
-from pixano.schemas import SchemaGroup
+from pixano.schemas import NOISE_CLUSTER, SchemaGroup
 from pixano.schemas.records import Record
 from pixano.statistics.definitions import StatisticLevel
 from pixano.utils.python import quote_sql_string
@@ -86,6 +88,34 @@ _STATISTICS_SOURCE = "statistics"
 _MIN_INT64 = -(2**63)
 _MAX_INT64 = 2**63 - 1
 
+#: What names a run of a clustering among the records' columns: its table, then the run. Its values
+#: are each record's group in the run (backend-processing §24).
+CLUSTERS_COLUMN_PREFIX = f"{RECORD_CLUSTERS_TABLE}."
+_CLUSTERS_SOURCE = "clusters"
+#: What a person reads for the group of a record no group took in: HDBSCAN's noise.
+NOISE_LABEL = "Noise"
+#: The columns the clusters table holds whatever the runs: without one of them, it is unreadable.
+_CLUSTERS_COLUMNS = frozenset({"record_id", "run_id", "cluster"})
+
+
+class _ComputedTable(NamedTuple):
+    """A table of columns computed from the records.
+
+    Attributes:
+        prefix: What names its columns among the records' columns.
+        noun: What a message calls one of them.
+    """
+
+    prefix: str
+    noun: str
+
+
+#: The tables of the columns computed from the records, by name.
+_COMPUTED_TABLES = {
+    RECORD_STATISTICS_TABLE: _ComputedTable(prefix=STATISTICS_COLUMN_PREFIX, noun="statistic"),
+    RECORD_CLUSTERS_TABLE: _ComputedTable(prefix=CLUSTERS_COLUMN_PREFIX, noun="clustering"),
+}
+
 
 class FilterCompileError(ValueError):
     """A filter/sort could not be compiled from the request (→ HTTP 400)."""
@@ -108,9 +138,12 @@ class ColumnDescriptor:
         operators: Operators allowed for this column (empty if not filterable).
         values: Enumerable values (split/status), else ``None``.
         values_complete: Whether ``values`` is exhaustive (not truncated).
-        table: The table the column is read from: the records', or their statistics'.
-        label: What a person reads in place of the name, for a statistic.
+        table: The table the column is read from: the records', or one computed from them — their
+            statistics', their clusters'.
+        label: What a person reads in place of the name, for a computed column.
         unit: The unit of a statistic's values, if they have one.
+        value_labels: What a person reads in place of some of the values, as pairs of a value and
+            its label: a clustering's noise.
     """
 
     name: str
@@ -127,6 +160,7 @@ class ColumnDescriptor:
     table: str = SchemaGroup.RECORD.value
     label: str | None = None
     unit: str | None = None
+    value_labels: tuple[tuple[str, str], ...] = ()
 
 
 # Per-(dataset, table, version) cache of enumerable column values.
@@ -233,7 +267,7 @@ def build_column_catalogue(dataset: "Dataset", table_name: str = "records") -> l
 
     descriptors.sort(key=lambda d: (d.source != "base", d.name))
     if table_name == SchemaGroup.RECORD.value:
-        descriptors += _statistic_descriptors(dataset)
+        descriptors += _statistic_descriptors(dataset) + _cluster_descriptors(dataset)
     return descriptors
 
 
@@ -277,25 +311,70 @@ def _statistic_descriptors(dataset: "Dataset") -> list[ColumnDescriptor]:
     return sorted(columns, key=lambda column: (column.label or column.name, column.name))
 
 
+def _cluster_descriptors(dataset: "Dataset") -> list[ColumnDescriptor]:
+    """The runs of a clustering the dataset kept, as columns of the records, in the order they ran.
+
+    A record's value is its group in the run: 0 for the largest group, then by decreasing size, and
+    `NOISE_CLUSTER` for a record no group took in, which a person reads as `NOISE_LABEL`. The groups
+    are listed while they are few enough to be chosen from a list, noise counted among them. A
+    clusters table that cannot be opened, or lacks a column, is logged and offers none: the explorer
+    of the dataset keeps working on its other columns.
+    """
+    if not dataset.info.clusterings or RECORD_CLUSTERS_TABLE not in dataset.info.tables:
+        return []
+    try:
+        held = set(dataset.open_latest_table(RECORD_CLUSTERS_TABLE).schema.names)
+    except Exception as error:  # noqa: BLE001 - a broken table offers no run, it fails no page
+        logger.warning("Dataset %s: its clusters cannot be read, none offered: %s", dataset.info.id, error)
+        return []
+    if not _CLUSTERS_COLUMNS <= held:
+        missing = ", ".join(sorted(_CLUSTERS_COLUMNS - held))
+        logger.warning("Dataset %s: its clusters table lacks %s, none offered", dataset.info.id, missing)
+        return []
+    columns = []
+    for run in dataset.info.clusterings:
+        groups = [*([NOISE_CLUSTER] if run.noise else []), *range(run.clusters)]
+        listed = len(groups) <= _MAX_ENUMERABLE_VALUES
+        columns.append(
+            ColumnDescriptor(
+                name=f"{CLUSTERS_COLUMN_PREFIX}{run.run_id}",
+                type="int",
+                collection=False,
+                source=_CLUSTERS_SOURCE,
+                filterable=True,
+                sortable=True,
+                searchable=False,
+                indexed=False,
+                operators=FILTER_OPERATORS["int"],
+                values=tuple(str(group) for group in groups) if listed else None,
+                values_complete=True,
+                table=RECORD_CLUSTERS_TABLE,
+                label=run.label,
+                value_labels=((str(NOISE_CLUSTER), NOISE_LABEL),) if run.noise else (),
+            )
+        )
+    return columns
+
+
+def _is_computed(descriptor: ColumnDescriptor) -> bool:
+    """Whether a column was computed from the records, in a table of its own."""
+    return descriptor.table in _COMPUTED_TABLES
+
+
 def computed_columns_by_name(catalogue: list[ColumnDescriptor]) -> dict[str, str]:
     """The computed columns the catalogue offers, for the values a page shows: their column in the
     join, by the name the catalogue gives them.
     """
-    return {
-        descriptor.name: _computed_column(descriptor)
-        for descriptor in catalogue
-        if descriptor.table == RECORD_STATISTICS_TABLE
-    }
+    return {descriptor.name: _computed_column(descriptor) for descriptor in catalogue if _is_computed(descriptor)}
 
 
 def _computed_column(descriptor: ColumnDescriptor) -> str:
-    """The column of the join a computed column's descriptor names: a statistic's column of its table."""
+    """The column of the join a computed column's descriptor names: a statistic's column of its
+    table, or a run's clusters.
+    """
+    if descriptor.table == RECORD_CLUSTERS_TABLE:
+        return clusters_column(descriptor.name.removeprefix(CLUSTERS_COLUMN_PREFIX))
     return descriptor.name.removeprefix(STATISTICS_COLUMN_PREFIX)
-
-
-def _is_computed(descriptor: ColumnDescriptor) -> bool:
-    """Whether a column was computed from the records, in a table of its own: a statistic's."""
-    return descriptor.table == RECORD_STATISTICS_TABLE
 
 
 def _sql_column(descriptor: ColumnDescriptor) -> str:
@@ -527,8 +606,8 @@ def compile_filters(
 def split_filters(filters: list[str] | None) -> tuple[list[str], list[str]]:
     """Tell the filters on the records' own columns from those on the columns computed from them.
 
-    A computed column is named after its table (`STATISTICS_COLUMN_PREFIX`), so that one the dataset
-    did not compute is told apart too, and refused as such.
+    A computed column is named after its table (`STATISTICS_COLUMN_PREFIX`, `CLUSTERS_COLUMN_PREFIX`),
+    so that one the dataset did not compute is told apart too, and refused as such.
 
     Args:
         filters: ``col:op:value`` tokens.
@@ -548,8 +627,13 @@ def split_filters(filters: list[str] | None) -> tuple[list[str], list[str]]:
     on_computed: list[str] = []
     for token in filters:
         column, _op, _raw = _split_filter(token)
-        (on_computed if column.startswith(STATISTICS_COLUMN_PREFIX) else own).append(token)
+        (on_computed if _computed_table_naming(column) is not None else own).append(token)
     return own, on_computed
+
+
+def _computed_table_naming(column: str) -> _ComputedTable | None:
+    """The table of columns computed from the records whose prefix names this column, if one does."""
+    return next((table for table in _COMPUTED_TABLES.values() if column.startswith(table.prefix)), None)
 
 
 def compile_computed_filters(catalogue: list[ColumnDescriptor], filters: list[str]) -> ComputedFilter | None:
@@ -566,14 +650,16 @@ def compile_computed_filters(catalogue: list[ColumnDescriptor], filters: list[st
         FilterCompileError: On a column the dataset did not compute, an operator its type does not
             take, or a value it cannot hold.
     """
-    by_name = {descriptor.name: descriptor for descriptor in catalogue if descriptor.table == RECORD_STATISTICS_TABLE}
+    by_name = {descriptor.name: descriptor for descriptor in catalogue if _is_computed(descriptor)}
     clauses: list[str] = []
     columns: list[str] = []
     for token in filters:
         column, op, raw = _split_filter(token)
         descriptor = by_name.get(column)
         if descriptor is None:
-            raise FilterCompileError(f"Unknown statistic '{column}'. Call GET /datasets/{{id}}/filters for the list.")
+            table = _computed_table_naming(column)
+            noun = table.noun if table is not None else "column"
+            raise FilterCompileError(f"Unknown {noun} '{column}'. Call GET /datasets/{{id}}/filters for the list.")
         if op not in descriptor.operators:
             allowed = ", ".join(descriptor.operators)
             raise FilterCompileError(f"Operator '{op}' is not valid for '{column}' (allowed: {allowed}).")
@@ -707,7 +793,7 @@ def record_order(catalogue: list[ColumnDescriptor], sortcol: str, order: str) ->
         The order, on a record's column or on a computed one.
     """
     descriptor = next((d for d in catalogue if d.name == sortcol), None)
-    if descriptor is not None and descriptor.table == RECORD_STATISTICS_TABLE:
+    if descriptor is not None and _is_computed(descriptor):
         return RecordOrder(column=_computed_column(descriptor), descending=order == "desc", on_computed=True)
     return RecordOrder(column=sortcol, descending=order == "desc", on_computed=False)
 

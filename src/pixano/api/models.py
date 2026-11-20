@@ -149,9 +149,10 @@ class PreviewDescriptor(ResponseModel):
 
 class RecordListResponse(RecordResponse):  # type: ignore[valid-type, misc]
     view_previews: dict[str, PreviewDescriptor] | None = None
-    # The values of the columns the dataset computed per record — its statistics —, by the name the
-    # explorer's catalogue gives them, `record_statistics.<name>` (backend-processing §22.5). Named
-    # apart from a record's own fields.
+    # The values of the columns the dataset computed per record — its statistics, its group in each
+    # run of a clustering —, by the name the explorer's catalogue gives them, `record_statistics.<name>`
+    # and `record_clusters.<run>` (backend-processing §22.5, §24). Named apart from a record's own
+    # fields.
     computed_values: dict[str, int | float | None] | None = None
 
 
@@ -172,6 +173,8 @@ class ColumnDescriptorResponse(ResponseModel):
     table: str = SchemaGroup.RECORD.value
     label: str | None = None
     unit: str | None = None
+    # What a person reads in place of some of the values, by value: a clustering's noise.
+    value_labels: dict[str, str] | None = None
 
 
 class EmbeddingSpaceStatus(ResponseModel):

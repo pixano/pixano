@@ -10,8 +10,10 @@ import duckdb
 import pytest
 
 from pixano.api.query import (
+    CLUSTERS_COLUMN_PREFIX,
     FILTER_OPERATORS,
     MAX_FILTERS,
+    NOISE_LABEL,
     STATISTICS_COLUMN_PREFIX,
     ColumnDescriptor,
     FilterCompileError,
@@ -24,6 +26,7 @@ from pixano.api.query import (
     validate_sort,
 )
 from pixano.datasets.queries.computed_columns import (
+    RECORD_CLUSTERS_TABLE,
     RECORD_STATISTICS_TABLE,
     ComputedFilter,
     CrossFilter,
@@ -333,6 +336,64 @@ class TestStatistics:
     def test_a_refusal_names_the_statistic_as_the_catalogue_does(self):
         with pytest.raises(FilterCompileError, match="column 'record_statistics.bbox_count'"):
             compile_record_query(STATISTICS_CATALOGUE, ["record_statistics.bbox_count:gt:many"])
+
+
+def _clustering(run_id: str) -> ColumnDescriptor:
+    return ColumnDescriptor(
+        name=f"{CLUSTERS_COLUMN_PREFIX}{run_id}",
+        type="int",
+        collection=False,
+        source="clusters",
+        filterable=True,
+        sortable=True,
+        searchable=False,
+        indexed=False,
+        operators=FILTER_OPERATORS["int"],
+        values=("-1", "0", "1"),
+        values_complete=True,
+        table=RECORD_CLUSTERS_TABLE,
+        label=f"Clusters of {run_id}",
+        value_labels=(("-1", NOISE_LABEL),),
+    )
+
+
+CLUSTERS_CATALOGUE = [*STATISTICS_CATALOGUE, _clustering("job-1")]
+
+
+class TestClusters:
+    def test_the_filters_on_a_runs_groups_are_told_apart(self):
+        own, on_computed = split_filters(
+            ["split:eq:train", "record_clusters.job-1:eq:0", "record_clusters.job-9:eq:0"]
+        )
+
+        assert own == ["split:eq:train"]
+        assert on_computed == ["record_clusters.job-1:eq:0", "record_clusters.job-9:eq:0"]
+
+    def test_a_filter_on_a_runs_groups_reads_its_column_as_the_join_does(self):
+        compiled = compile_computed_filters(
+            CLUSTERS_CATALOGUE, ["record_clusters.job-1:in:0,-1", "record_statistics.bbox_count:gte:2"]
+        )
+
+        assert compiled == ComputedFilter(
+            sql='c."clusters:job-1" IN (0, -1) AND c."bbox_count" >= 2', columns=("clusters:job-1", "bbox_count")
+        )
+
+    def test_a_sort_on_a_runs_groups(self):
+        query = compile_record_query(CLUSTERS_CATALOGUE, [], sort="record_clusters.job-1", order="desc")
+
+        assert query.order == RecordOrder(column="clusters:job-1", descending=True, on_computed=True)
+        assert query.through_computed
+
+    def test_the_columns_a_page_shows(self):
+        assert computed_columns_by_name(CLUSTERS_CATALOGUE)["record_clusters.job-1"] == "clusters:job-1"
+
+    def test_a_run_the_dataset_does_not_hold_is_refused_as_a_clustering(self):
+        with pytest.raises(FilterCompileError, match="Unknown clustering 'record_clusters.job-9'"):
+            compile_record_query(CLUSTERS_CATALOGUE, ["record_clusters.job-9:eq:0"])
+
+    def test_a_group_is_a_whole_number(self):
+        with pytest.raises(FilterCompileError, match="not a valid integer"):
+            compile_record_query(CLUSTERS_CATALOGUE, ["record_clusters.job-1:eq:noise"])
 
 
 class TestCrossFilter:

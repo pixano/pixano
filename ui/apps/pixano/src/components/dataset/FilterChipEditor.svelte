@@ -10,7 +10,7 @@ License: CECILL-C
 
   import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
   import { Select } from "$lib/ui";
-  import { columnLabel, columnLabelOf } from "$lib/utils/columns";
+  import { columnLabel, columnLabelOf, valueLabel } from "$lib/utils/columns";
   import {
     canApplyFilter,
     isListOperator,
@@ -177,25 +177,25 @@ License: CECILL-C
     <Select.Root
       type="single"
       value={values[0]}
-      items={enumValues.map((v) => ({ value: v, label: v }))}
+      items={enumValues.map((v) => ({ value: v, label: valueLabel(column, v) }))}
       onValueChange={(value: string) => {
         if (value) values[0] = value;
       }}
     >
       <Select.Trigger aria-label="Filter value" class={triggerClass}>
         {#snippet children()}
-          <span class="truncate">{values[0] || "Select…"}</span>
+          <span class="truncate">{values[0] ? valueLabel(column, values[0]) : "Select…"}</span>
           <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
         {/snippet}
       </Select.Trigger>
       <Select.Portal>
         <Select.Content sideOffset={6} class={contentClass} data-select-content>
           {#each enumValues as v (v)}
-            <Select.Item value={v} label={v} class={itemClass}>
+            <Select.Item value={v} label={valueLabel(column, v)} class={itemClass}>
               {#snippet children()}
                 <span class="flex items-center gap-2">
                   {#if values[0] === v}<Check size={12} class="text-primary" />{/if}
-                  {v}
+                  {valueLabel(column, v)}
                 </span>
               {/snippet}
             </Select.Item>
@@ -233,25 +233,25 @@ License: CECILL-C
             <Select.Root
               type="single"
               {value}
-              items={enumValues.map((v) => ({ value: v, label: v }))}
+              items={enumValues.map((v) => ({ value: v, label: valueLabel(column, v) }))}
               onValueChange={(next: string) => {
                 if (next) values[i] = next;
               }}
             >
               <Select.Trigger aria-label="Filter value {i + 1}" class={triggerClass}>
                 {#snippet children()}
-                  <span class="truncate">{value || "Select…"}</span>
+                  <span class="truncate">{value ? valueLabel(column, value) : "Select…"}</span>
                   <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
                 {/snippet}
               </Select.Trigger>
               <Select.Portal>
                 <Select.Content sideOffset={6} class={contentClass} data-select-content>
                   {#each enumValues as v (v)}
-                    <Select.Item value={v} label={v} class={itemClass}>
+                    <Select.Item value={v} label={valueLabel(column, v)} class={itemClass}>
                       {#snippet children()}
                         <span class="flex items-center gap-2">
                           {#if value === v}<Check size={12} class="text-primary" />{/if}
-                          {v}
+                          {valueLabel(column, v)}
                         </span>
                       {/snippet}
                     </Select.Item>

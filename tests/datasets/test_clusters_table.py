@@ -181,6 +181,18 @@ class TestTheRuns:
         assert _run().label == "Clusters — K-Means, 2 groups, 2026-11-06 15:40 UTC"
         assert hdbscan.label == "Clusters — HDBSCAN, groups of 10 or more, 2026-11-06 15:40 UTC"
 
+    def test_names_a_run_of_hdbscan_that_found_no_group_so(self) -> None:
+        nothing = _run().model_copy(
+            update={
+                "algorithm": ClusteringAlgorithm.HDBSCAN,
+                "parameters": {"min_cluster_size": 10},
+                "clusters": 0,
+                "noise": 3,
+            }
+        )
+
+        assert nothing.label == "Clusters — HDBSCAN, groups of 10 or more, no group found, 2026-11-06 15:40 UTC"
+
     def test_an_entry_without_its_size_is_named_without_it(self) -> None:
         hdbscan = _run().model_copy(update={"algorithm": ClusteringAlgorithm.HDBSCAN, "parameters": {}})
 
