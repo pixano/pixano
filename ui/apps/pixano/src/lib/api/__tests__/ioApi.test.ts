@@ -11,6 +11,7 @@ import {
   cancelIoJob,
   createUploadSession,
   getImportEmbeddingsOffer,
+  getImportStatisticsOffer,
   getIoJob,
   listIoFormats,
   startIoImport,
@@ -108,6 +109,30 @@ describe("ioApi", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(offer));
     await expect(getImportEmbeddingsOffer()).resolves.toEqual(offer);
     expect(fetchMock).toHaveBeenCalledWith("/io/imports/embeddings", expect.anything());
+  });
+
+  it("starts an import saying no to the statistics", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ job_id: "j1", status: "pending" }, 202));
+    await startIoImport({ plan_id: "p1", source: "/data/src", compute_statistics: false });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      plan_id: "p1",
+      source: "/data/src",
+      spec: {},
+      compute_statistics: false,
+    });
+  });
+
+  it("asks whether an import can queue the statistics job", async () => {
+    const offer = {
+      queue_configured: true,
+      available: true,
+      reason: null,
+      enabled_by_default: true,
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse(offer));
+    await expect(getImportStatisticsOffer()).resolves.toEqual(offer);
+    expect(fetchMock).toHaveBeenCalledWith("/io/imports/statistics", expect.anything());
   });
 
   it("polls a job", async () => {

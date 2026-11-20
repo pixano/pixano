@@ -217,6 +217,10 @@ type the kind cannot process is refused whole, the types named — never run on 
 was asked. Plan by medium, one chunk per table, and quarantine a medium under its own
 identifier with its `record_id` in the detail: the panel shows the record.
 
+A kind whose parameters the generic submission form cannot build — the statistics' definitions,
+which the application sends itself — carries `OWN_FORM_MARKER` (`x-pixano-own-form`) at the root
+of its schema, naming the kind's own way in. The generic form leaves it out.
+
 A parameter that destroys something when set carries `CONFIRM_MARKER`
 (`x-pixano-confirm`) in its `json_schema_extra`, with the text to show: the submission form
 turns Run into a confirmation. Give such a parameter a plain `default`, not a
@@ -290,6 +294,34 @@ private helpers, which another kind must not import.
   declares is answered from its metadata, with no lock and without marking the dataset
   modified; only creating the table takes the dataset's lock. A kind may instead refuse a
   dataset without its table.
+
+### What the reader and the writer offer the statistics kind
+
+A kind reaches the dataset through these two only. The statistics kind brought
+(backend-processing §22):
+
+- **`reader.read(table, where)`** — the rows of a table matching a filter, for `process`, which
+  runs outside the write lock and has no writer: a chunk's objects and boxes. Not paged, so the
+  filter must bound what it reads — a chunk's records, not a whole table.
+- **`reader.image_size(table, view)`** — an image's `(width, height)` in pixels, as the dataset
+  records it, else from the image's header; `None` when the worker cannot read one.
+- **`writer.ensure_statistics(definitions)`** — the statistics tables of their levels and a
+  nullable column per statistic, added to the dataset where missing. Call it from `prepare`,
+  and again before writing. Columns the dataset holds already are answered from its tables,
+  without its lock.
+- **`writer.write_statistics(level, rows, columns)`** — the values of these columns, one row
+  per record or per object, naming its record, and its object for an object: the dataset makes
+  the row's identifier the record's or the object's. A merge that writes these columns only,
+  the other statistics of each row kept, and leaves out the rows of records and objects deleted
+  since they were measured. Answers the identifiers of the rows written.
+- **`writer.forget_object_statistics(record_ids, kept)`** — deletes the statistics of these
+  records' objects but those kept — the rows the chunk wrote: objects deleted since the last
+  computation, or since the chunk measured them.
+- **`writer.record_computed_statistics(definitions)`** — records in the dataset that this job
+  computed these statistics, now; the explorer names and dates its columns with it. For
+  `finalize`: it changes the dataset's description, never a row.
+
+### What the reader and the writer offer the clustering kind
 
 The clustering kind brought (backend-processing §24):
 

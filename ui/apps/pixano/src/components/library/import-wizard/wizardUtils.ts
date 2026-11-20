@@ -19,6 +19,7 @@ import {
 import type {
   ImportEmbeddingsOffer,
   ImportPlanResponse,
+  ImportStatisticsOffer,
   InferredSchemaResponse,
   IoFinding,
   IoFollowUp,
@@ -424,10 +425,54 @@ export function embeddingsRequest(
   return { compute_embeddings: true, embeddings_model: choice.model };
 }
 
+/** What the wizard asks of the statistics job: queue it once the import is done. */
+export interface StatisticsChoice {
+  compute: boolean;
+  /** Shown on an offer the user could use, the choice is theirs: it is sent as it stands. */
+  decided: boolean;
+}
+
+/**
+ * Whether the Review step offers the choice: a job queue configured. A dataset written with nothing
+ * to count — no object, box nor mask — needs no job, which the import says once done.
+ */
+export function offersStatisticsChoice(offer: ImportStatisticsOffer | null): boolean {
+  return offer !== null && offer.queue_configured;
+}
+
+/** The choice the wizard opens with: on where the job can run and the server's default says so. */
+export function initialStatisticsChoice(offer: ImportStatisticsOffer): StatisticsChoice {
+  return { compute: offer.available && offer.enabled_by_default, decided: offer.available };
+}
+
+/**
+ * The choice once the offer is read again, on the way to Review: a choice the user made stands,
+ * whatever the offer says now; one they never could make starts from the server's default.
+ */
+export function nextStatisticsChoice(
+  choice: StatisticsChoice,
+  offer: ImportStatisticsOffer,
+): StatisticsChoice {
+  return choice.decided ? choice : initialStatisticsChoice(offer);
+}
+
+/**
+ * The import request's statistics field: the user's choice once they made one. Until then the
+ * wizard says nothing, and the server, which checks again when the import starts, applies its
+ * default.
+ */
+export function statisticsRequest(
+  choice: StatisticsChoice,
+  offer: ImportStatisticsOffer | null,
+): { compute_statistics?: boolean } {
+  if (offer === null || !choice.decided) return {};
+  return { compute_statistics: choice.compute };
+}
+
 /** One line of the jobs tray about a job an import queued once done. */
 export interface FollowUpLine {
   text: string;
-  /** It was not queued: the import is done, the job is not. */
+  /** It was not queued, though it had something to do: the import is done, the job is not. */
   notQueued: boolean;
 }
 
@@ -436,7 +481,7 @@ export function followUpLines(job: IoJobResponse): FollowUpLine[] {
   if (job.status !== "done") return [];
   return (job.follow_ups ?? []).map((followUp) => ({
     text: describeFollowUp(followUp),
-    notQueued: !followUp.job_id,
+    notQueued: !followUp.job_id && !followUp.skipped,
   }));
 }
 
@@ -444,5 +489,6 @@ function describeFollowUp(followUp: IoFollowUp): string {
   const model = typeof followUp.params.model === "string" ? ` (${followUp.params.model})` : "";
   const name = `${followUp.kind.charAt(0).toUpperCase()}${followUp.kind.slice(1)}${model}`;
   if (followUp.job_id) return `${name} queued.`;
+  if (followUp.skipped) return `${name} not needed: ${followUp.skipped}.`;
   return `${name} ${followUp.error || "not queued."}`;
 }

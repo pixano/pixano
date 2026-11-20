@@ -7,22 +7,33 @@
 """What a dataset offers to compose a statistic from: what it holds, never a fixed list."""
 
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
+import pytest
 from pydantic import create_model
 
 from pixano.datasets import Dataset, DatasetInfo
 from pixano.datasets import statistic_choices as choices_module
-from pixano.datasets.statistic_choices import choices_for, statistic_applies
+from pixano.datasets.statistic_choices import (
+    choices_for,
+    default_statistics,
+    default_statistics_to_compute,
+    statistic_applies,
+)
 from pixano.schemas import BBox, CompressedRLE, Entity, Image, Record
+from pixano.statistics.computed import ComputedStatistic
 from pixano.statistics.definitions import (
     AttributeFilter,
     StatisticAggregation,
     StatisticChoices,
     StatisticLevel,
     StatisticMeasure,
+    define_statistic,
 )
+from pixano.statistics.registry import StatisticRegistry
 
 
 VocEntity = create_model("VocEntity", __base__=Entity, category=(str, ""), color=(str, ""), is_difficult=(bool, False))
@@ -30,6 +41,24 @@ VocEntity = create_model("VocEntity", __base__=Entity, category=(str, ""), color
 
 #: The categories of the dataset's objects, one object each: the last has none.
 CATEGORIES = ("dog", "cat", "dog", "")
+
+
+#: When the statistics the tests hold were computed.
+COMPUTED_AT = datetime(2026, 11, 10, tzinfo=timezone.utc)
+
+
+def _with_boxes(dataset: Dataset) -> Dataset:
+    """The dataset, a box drawn on its first object."""
+    box = BBox(id="b0", record_id="r1", entity_id="e0", coords=[0, 0, 1, 1], format="xywh", is_normalized=True)
+    dataset.add_data("bboxes", [box], raise_or_warn="none")
+    return dataset
+
+
+def _with_masks(dataset: Dataset) -> Dataset:
+    """The dataset, a mask drawn on its first object."""
+    mask = CompressedRLE.from_mask(np.ones((2, 2), dtype=np.uint8), id="m0", record_id="r1", entity_id="e0")
+    dataset.add_data("masks", [mask], raise_or_warn="none")
+    return dataset
 
 
 def _dataset(
@@ -41,7 +70,7 @@ def _dataset(
     info = DatasetInfo(id="ds", name="ds", record=Record, entity=entity, views={"image": Image}, **slots)
     dataset = Dataset.create(target / "ds", info)
     dataset.add_records({"records": [Record(id="r1")]})
-    if entity is not None:
+    if entity is not None and categories:
         entities = [
             entity(
                 id=f"e{index}", record_id="r1", **({"category": category} if "category" in entity.model_fields else {})
@@ -173,3 +202,68 @@ class TestStatisticApplies:
 
         assert statistic_applies(dogs, source)
         assert not statistic_applies(self._choices(element="mask"), source)
+
+
+class TestDefaultStatistics:
+    def test_a_dataset_of_objects_and_boxes_gets_those_that_count_them(self, tmp_path: Path) -> None:
+        dataset = _with_boxes(_dataset(tmp_path, bbox=BBox))
+
+        assert [(statistic.level.value, statistic.name) for statistic in default_statistics(dataset)] == [
+            ("record", "entity_count"),
+            ("record", "bbox_count"),
+            ("entity", "bbox_to_image_ratio_mean"),
+        ]
+
+    def test_a_dataset_of_masks_counts_its_masks_and_no_box(self, tmp_path: Path) -> None:
+        dataset = _with_masks(_dataset(tmp_path, mask=CompressedRLE))
+
+        assert [statistic.name for statistic in default_statistics(dataset)] == ["entity_count", "mask_count"]
+
+    def test_a_dataset_without_objects_nor_annotations_gets_none(self, tmp_path: Path) -> None:
+        assert default_statistics(_dataset(tmp_path, entity=None)) == []
+
+    def test_a_table_declared_without_a_row_counts_nothing_yet(self, tmp_path: Path) -> None:
+        """An import of images alone declares a table of objects and one of boxes, both empty."""
+        dataset = _dataset(tmp_path, categories=(), bbox=BBox, mask=CompressedRLE)
+
+        assert default_statistics(dataset) == []
+
+    def test_those_computed_are_no_longer_to_compute(self, tmp_path: Path) -> None:
+        dataset = _with_boxes(_dataset(tmp_path, bbox=BBox))
+        objects = default_statistics(dataset)[0]
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, {objects.name: "int"})
+        dataset.record_computed_statistics(
+            [ComputedStatistic(definition=objects, job_id="j", computed_at=COMPUTED_AT)]
+        )
+
+        assert [statistic.name for statistic in default_statistics_to_compute(dataset)] == [
+            "bbox_count",
+            "bbox_to_image_ratio_mean",
+        ]
+
+    def test_the_label_the_dataset_gave_one_stays(self, tmp_path: Path) -> None:
+        dataset = _with_boxes(_dataset(tmp_path, bbox=BBox))
+        objects = default_statistics(dataset)[0].model_copy(update={"label": "Animals"})
+        dataset.ensure_statistic_columns(StatisticLevel.RECORD, {objects.name: "int"})
+        dataset.record_computed_statistics(
+            [ComputedStatistic(definition=objects, job_id="j", computed_at=COMPUTED_AT)]
+        )
+
+        assert default_statistics(dataset)[0].label == "Animals"
+
+    def test_the_label_the_library_gave_one_stays_where_the_dataset_holds_none(self, tmp_path: Path) -> None:
+        dataset = _with_boxes(_dataset(tmp_path, bbox=BBox))
+        boxes = default_statistics(dataset)[1]
+        registry = StatisticRegistry(tmp_path)
+        registry.add(define_statistic(boxes.choices, label="Boxes drawn"))
+
+        assert [statistic.label for statistic in default_statistics_to_compute(dataset, registry)][1] == "Boxes drawn"
+
+    def test_a_statistic_of_an_earlier_version_of_its_measure_keeps_no_label(self, tmp_path: Path) -> None:
+        dataset = _with_boxes(_dataset(tmp_path, bbox=BBox))
+        objects = default_statistics(dataset)[0].model_copy(update={"label": "Animals", "version": 0})
+        dataset.record_computed_statistics(
+            [ComputedStatistic(definition=objects, job_id="j", computed_at=COMPUTED_AT)]
+        )
+
+        assert default_statistics(dataset)[0].label == "Number of objects"
