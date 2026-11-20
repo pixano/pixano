@@ -42,7 +42,8 @@ License: CECILL-C
   {#if offer.available}
     <p id={DESCRIPTION_ID} class="mt-1 text-xs text-muted-foreground">
       Runs in the background once the import is done, for a dataset holding objects, boxes or masks:
-      how many each record holds, and the share of its image each object's boxes cover.
+      how many each record holds, and the share of its image each object's boxes cover, which the
+      dataset's Overview shows.
     </p>
   {:else}
     <p id={DESCRIPTION_ID} class="mt-1 text-xs text-muted-foreground">
