@@ -24,7 +24,10 @@ License: CECILL-C
   const DESCRIPTION_ID = "embeddings-after-import-description";
 </script>
 
-<section aria-label="After the import" class="rounded-xl border border-border bg-card p-5">
+<section
+  aria-label="Embeddings after the import"
+  class="rounded-xl border border-border bg-card p-5"
+>
   <label
     class="inline-flex items-center gap-2 text-sm font-medium text-foreground {offer.available
       ? 'cursor-pointer'

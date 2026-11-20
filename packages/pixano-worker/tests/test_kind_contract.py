@@ -33,8 +33,15 @@ from pycocotools import mask as mask_api
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, SequenceFrame
+from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, SequenceFrame, statistics_slot
 from pixano.schemas.table_names import canonical_family_spec_for_slot
+from pixano.statistics.definitions import (
+    StatisticAggregation,
+    StatisticChoices,
+    StatisticLevel,
+    StatisticMeasure,
+    define_statistic,
+)
 
 
 #: The provenance vocabulary of the Pixano schemas. Writing anything else is refused at write time.
@@ -58,6 +65,26 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
         "label": "to-review",
         "chunk_size": 10,
         "write_to": "toy",
+    },
+    # Per record and per object, and an area, which reads the images' sizes.
+    "statistics": {
+        "statistics": [
+            define_statistic(StatisticChoices(level=level, element="bbox", measure=StatisticMeasure.COUNT)).model_dump(
+                mode="json"
+            )
+            for level in StatisticLevel
+        ]
+        + [
+            define_statistic(
+                StatisticChoices(
+                    level=StatisticLevel.RECORD,
+                    element="bbox",
+                    measure=StatisticMeasure.AREA,
+                    aggregation=StatisticAggregation.MEAN,
+                )
+            ).model_dump(mode="json")
+        ],
+        "chunk_size": 10,
     },
 }
 
@@ -146,6 +173,9 @@ class _Target:
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
+        # The statistic columns of each statistics table, and what the dataset records it computed.
+        self.statistic_columns: dict[str, dict[str, str]] = {}
+        self.computed_statistics: dict[tuple[Any, str], Any] = {}
 
     @property
     def rows(self) -> dict[str, Any]:
@@ -192,9 +222,44 @@ class _Target:
         self.info.tables.setdefault(family.table_name, family.base_schema)
         return family.table_name
 
+    def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
+        family = canonical_family_spec_for_slot(statistics_slot(level.value))
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        self.statistic_columns.setdefault(family.table_name, {}).update(columns)
+        return family.table_name
+
+    def write_statistic_values(
+        self, level: StatisticLevel, rows: list[dict[str, Any]], columns: dict[str, str]
+    ) -> list[str]:
+        """A merge on the record's or the object's identifier, as the dataset's: only the columns given
+        are written, a column a row lacks written null; columns never ensured, and two rows of one
+        record or object, are refused as the dataset refuses them."""
+        table_name = canonical_family_spec_for_slot(statistics_slot(level.value)).table_name
+        missing = set(columns) - set(self.statistic_columns.get(table_name, {}))
+        if missing:
+            raise ValueError(f"The statistics table has no column {sorted(missing)}: ensure them first.")
+        own = "entity_id" if level is StatisticLevel.ENTITY else "record_id"
+        if len({row[own] for row in rows}) != len(rows):
+            raise ValueError("A record or an object has two rows of statistics in one write.")
+        table = self.tables.setdefault(table_name, {})
+        for row in rows:
+            existing = table.get(row[own])
+            written = {column: row.get(column) for column in columns}
+            identifiers = {key: value for key, value in row.items() if key not in columns}
+            merged = {**(vars(existing) if existing is not None else {}), **identifiers, **written, "id": row[own]}
+            table[row[own]] = SimpleNamespace(**merged)
+        return [row[own] for row in rows]
+
+    def record_computed_statistics(self, computed: list[Any]) -> None:
+        """Kept beside the tables, as `info.json` holds it beside the dataset's rows."""
+        for statistic in computed:
+            self.computed_statistics[(statistic.definition.level, statistic.definition.name)] = statistic
+
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""
+        base = list(getattr(self.info.tables.get(table_name), "model_fields", {}))
         return SimpleNamespace(
+            schema=SimpleNamespace(names=base + list(self.statistic_columns.get(table_name, {}))),
             optimize=lambda **_kwargs: self.compactions.append(table_name),
             count_rows=lambda: len(self.tables.get(table_name, {})),
             create_scalar_index=lambda column, **_kwargs: self.indexes.append((table_name, column)),
@@ -399,7 +464,8 @@ class _Source:
     resolver does with them is exercised elsewhere.
     """
 
-    # The real schemas: the reader finds a dataset's media by looking at them.
+    # The real schemas: the reader finds a dataset's media by looking at them. Its objects and boxes
+    # are those a person drew (`_seeded_prompts`), which segmentation outlines and statistics count.
     info = SimpleNamespace(
         tables={
             "records": Record,
