@@ -282,14 +282,26 @@ class TestEmbeddingsAfterTheImport:
         assert result.exit_code == 0, result.output
         assert "Embeddings (clip) not queued: no job queue is configured" in result.output
 
-    def test_no_embeddings_reads_no_deployment(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-        """A setting the server would refuse does not stop an import that asks for no embeddings."""
+    def test_no_embeddings_nor_statistics_reads_no_deployment(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """A setting the server would refuse does not stop an import that asks for no follow-up job."""
+        monkeypatch.setenv("PIXANO_EMBEDDINGS_AFTER_IMPORT", "maybe")
+
+        result, job = self._import(tmp_path, "--no-embeddings", "--no-statistics")
+
+        assert result.exit_code == 0, result.output
+        assert job.status == "done" and job.follow_ups == []
+        assert "not considered" not in result.output
+
+    def test_no_embeddings_alone_reads_the_deployment_for_the_statistics(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
         monkeypatch.setenv("PIXANO_EMBEDDINGS_AFTER_IMPORT", "maybe")
 
         result, job = self._import(tmp_path, "--no-embeddings")
 
         assert result.exit_code == 0, result.output
         assert job.status == "done" and job.follow_ups == []
+        assert "Follow-up jobs not considered: the deployment's settings are invalid" in result.output
 
     def test_an_invalid_deployment_leaves_the_import_done_and_says_so(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -300,7 +312,7 @@ class TestEmbeddingsAfterTheImport:
 
         assert result.exit_code == 0, result.output
         assert job.status == "done"
-        assert "Embeddings not considered: the deployment's settings are invalid" in result.output
+        assert "Follow-up jobs not considered: the deployment's settings are invalid" in result.output
 
     def test_by_default_an_import_without_a_still_image_asks_nothing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, embeddings_declared: str
@@ -363,8 +375,66 @@ def test_an_import_in_a_process_whose_environment_the_server_refuses_ends_done(t
     )
 
     assert imported.returncode == 0, imported.stderr
-    assert "Embeddings not considered: the deployment's settings are invalid" in imported.stderr
+    assert "Follow-up jobs not considered: the deployment's settings are invalid" in imported.stderr
     assert JobStore.for_data_dir(data_dir).list_jobs()[0].status == "done"
+
+
+class TestStatisticsAfterTheImport:
+    """The statistics job of the default statistics an import queues once done: asked for, or by default."""
+
+    # What the golden corpus holds to count: an object, its box, its mask.
+    DEFAULTS = ["entity_count", "bbox_count", "mask_count", "bbox_to_image_ratio_mean"]
+
+    @staticmethod
+    def _import(tmp_path: Path, *flags: str):
+        data_dir, source = _prepare_source(tmp_path)
+        result = runner.invoke(app, ["data", "import", str(data_dir), str(source), "--yes", *flags])
+        return result, JobStore.for_data_dir(data_dir).list_jobs()[0]
+
+    def test_by_default_without_a_queue_nothing_is_asked(self, tmp_path: Path):
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        assert job.follow_ups == [] and "Statistics" not in result.output
+
+    def test_by_default_where_the_job_can_run_the_defaults_of_what_was_imported_are_queued(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, statistics_declared: str
+    ):
+        monkeypatch.setenv("PIXANO_DATABASE_URL", statistics_declared)
+
+        result, job = self._import(tmp_path)
+
+        assert result.exit_code == 0, result.output
+        (follow_up,) = job.follow_ups
+        assert f"Statistics queued as job {follow_up.job_id}" in result.output
+        [(kind, _dataset, params)] = queued_jobs(statistics_declared)
+        assert (kind, [statistic["name"] for statistic in params["statistics"]]) == ("statistics", self.DEFAULTS)
+
+    def test_no_statistics_asks_none_where_the_job_can_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, statistics_declared: str
+    ):
+        monkeypatch.setenv("PIXANO_DATABASE_URL", statistics_declared)
+
+        result, job = self._import(tmp_path, "--no-statistics")
+
+        assert result.exit_code == 0, result.output
+        assert job.follow_ups == [] and queued_jobs(statistics_declared) == []
+
+    def test_asked_for_without_a_queue_the_import_says_why_they_were_not_queued(self, tmp_path: Path):
+        result, job = self._import(tmp_path, "--statistics")
+
+        assert result.exit_code == 0, result.output
+        assert job.status == "done"
+        assert "Statistics not queued: no job queue is configured" in result.output
+
+    def test_a_follow_up_with_nothing_to_do_is_told_as_not_needed(self, capsys: pytest.CaptureFixture[str]):
+        _echo_follow_ups(
+            [FollowUp(kind="statistics", skipped="the dataset holds no objects, boxes nor masks to count")]
+        )
+
+        assert capsys.readouterr().out.strip() == (
+            "Statistics not needed: the dataset holds no objects, boxes nor masks to count."
+        )
 
 
 def test_the_command_line_starts_without_the_server():

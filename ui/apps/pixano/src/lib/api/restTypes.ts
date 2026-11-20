@@ -263,13 +263,15 @@ export interface ImportPlanResponse {
 
 /** A processing job an import queues once it is done, and what became of it. */
 export interface IoFollowUp {
-  /** The processing job kind: `embeddings`. */
+  /** The processing job kind: `embeddings`, `statistics`. */
   kind: string;
   params: Record<string, unknown>;
   /** The queued job's identifier; empty until queued. */
   job_id: string;
   /** Why it was not queued; empty otherwise. */
   error: string;
+  /** Why it needed no job — nothing to do, nothing failed —; empty or absent otherwise. */
+  skipped?: string;
   /** The parameters the request did not name, which the server's defaults chose. */
   defaulted?: string[];
 }
@@ -286,6 +288,18 @@ export interface ImportEmbeddingsOffer {
   enabled_by_default: boolean;
   models: string[];
   default_model: string | null;
+}
+
+/** Whether an import can queue the statistics job of its default statistics (`GET /io/imports/statistics`). */
+export interface ImportStatisticsOffer {
+  /** A job queue is configured: without one, the import offers no statistics at all. */
+  queue_configured: boolean;
+  /** A job queue is reachable, and a worker declared the job. */
+  available: boolean;
+  /** Why the job cannot run, when it cannot. */
+  reason: string | null;
+  /** The server's default for an import (PIXANO_STATISTICS_AFTER_IMPORT). */
+  enabled_by_default: boolean;
 }
 
 /** One durable import/export job as stored. */

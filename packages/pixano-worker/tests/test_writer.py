@@ -75,6 +75,17 @@ class _FakeDataset:
         self.compactions.append(name)
         return SimpleNamespace(optimize=lambda **_kwargs: None)
 
+    # The statistics the writer writes are tested on a real dataset (test_statistics.py): these
+    # stand in for the protocol only.
+    def ensure_statistic_columns(self, level: Any, columns: dict[str, str]) -> str:
+        raise NotImplementedError
+
+    def write_statistic_values(self, level: Any, rows: list[dict[str, Any]], columns: dict[str, str]) -> list[str]:
+        raise NotImplementedError
+
+    def record_computed_statistics(self, computed: list[Any]) -> None:
+        raise NotImplementedError
+
     def record_embedding_spaces(self) -> list[dict[str, Any]]:
         return [space.as_document() for space in self.spaces.spaces]
 
@@ -1120,6 +1131,27 @@ class TestDetectedObjects:
         writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
 
         assert writer.entities_with_a_persons_work(first, own_table="bboxes") == {first[1], first[2]}
+
+    def test_an_objects_statistics_are_nobodys_work(self, scene) -> None:
+        """No model produced an object's statistics, yet they hold no object: computed from the
+        records, they would otherwise keep every measured object from being proposed again."""
+        from pixano.statistics.defaults import DEFAULT_STATISTIC_CHOICES
+        from pixano.statistics.definitions import StatisticLevel, define_statistic
+
+        first = self._detect(scene, ["car", "dog"])
+        statistic = define_statistic(
+            next(choices for choices in DEFAULT_STATISTIC_CHOICES if choices.level is StatisticLevel.ENTITY)
+        )
+        table = scene.ensure_statistic_columns(StatisticLevel.ENTITY, {statistic.name: statistic.value_type})
+        measured = self._attach_a_row(scene, table, first[1])
+        writer = JobWriter(lambda: scene, "detection", "job-2", "model", model=ModelIdentity("yolo"))
+
+        assert writer.entities_with_a_persons_work(first, own_table="bboxes") == set()
+
+        self._detect(scene, ["car"])
+
+        assert self._objects(scene) == {first[0]: ("car", "pending")}
+        assert measured in {row.id for row in scene.get_data(table, limit=None)}
 
 
 class TestAnnotationTableForAKind:
