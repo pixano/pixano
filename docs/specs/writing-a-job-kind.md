@@ -246,7 +246,8 @@ dataset reaches 26 766 / 26 766 having embedded 404 images.
 
 `write` receives a writer, not a dataset: a kind cannot open a dataset itself, and it reads
 through the writer only. That matters once `write` decides as well as writes: a kind that writes
-objects reads which of them carry a person's work before replacing its rows (§4). Those reads
+objects reads which of them carry a person's work before replacing its rows (§4), and the
+segmentation kind reads the boxes and the person's masks again before writing its masks. Those reads
 must sit in the same serialisation as the write, so the unit serialised is a kind's whole
 `write`, reads included: the runner holds its per-dataset write lock around the call, not
 around each writer call. That is what will let a dataset's writes be serialised across workers
@@ -285,13 +286,23 @@ A kind reaches the dataset through these two only. What a kind needs from the da
 another may need too goes there, named and documented here, for every kind — never in a kind's
 private helpers, which another kind must not import.
 
+- **`reader.read(table, where)`** — the rows of a table matching a filter, for `process`, which
+  runs outside the write lock and has no writer: the boxes already on a chunk's images, say.
+  Not paged, so the filter must bound what it reads — a chunk's views, not a whole table.
+- **`reader.image_size(table, view)`** — an image's `(width, height)` in pixels, as the dataset
+  records it, else from the image's header; `None` when the worker cannot read one. A mask's
+  `size` runs the other way, `[height, width]`.
 - **`writer.ensure_table(slot)`** — the canonical table of an annotation slot (`mask` gives
   `masks`), added to the dataset if it has none, and its name. Call it from `prepare`, and
   again before writing: a worker whose cached dataset predates the table does not see it. It
   is idempotent, and refuses a slot that holds no annotations. A table the dataset already
   declares is answered from its metadata, with no lock and without marking the dataset
   modified; only creating the table takes the dataset's lock. A kind may instead refuse a
-  dataset without its table.
+  dataset without its table, as detection does for boxes.
+
+The geometry kinds share lives beside them, in `kinds/boxes.py` and `kinds/masks.py`: where a
+box lands in pixels, how much two boxes or two masks overlap, and the checks a mask must pass
+before pycocotools reads it.
 
 ### What the reader and the writer offer the statistics kind
 
@@ -339,7 +350,7 @@ clean up.
 Rows can come with the objects they name — a detected box and its entity, which shares the
 box's identifier (`replace(..., entities=...)`). Then one more thing goes: the models' rows
 nobody reviewed that name an object this write rewrites at its rank, or sweeps, whatever their
-kind — a model's pending mask on a detected object (§4). Left, they would name whatever the
+kind — a segmentation's pending masks on a detected object (§4). Left, they would name whatever the
 rank holds next, or an object that is gone. They are deleted before the object changes, so a
 crash never leaves a mask on what is now another object, and the replay finishes the rest. An
 object a person worked on keeps its rank, and what names it stays.
@@ -402,17 +413,19 @@ means for a kind:
 - **Freezing is not matching.** A rerun that finds the same object again writes it again,
   pending, next to the accepted row — unless the kind looks before writing: the detection kind
   writes no box whose IoU with a box a person drew or accepted reaches its `overlap_threshold`
-  for the same class (a person's box without a class stands for any). A rejected proposal is
-  deleted, so nothing keeps the model from proposing it again.
-- **A kind can annotate another kind's objects.** A kind that writes masks on detected objects
-  writes each mask on the object of the box that prompted it, and no object of its own
+  for the same class (a person's box without a class stands for any). The segmentation kind
+  does the same with masks, and writes none on an object that already holds a mask a person
+  drew or accepted. A rejected proposal is deleted, so nothing keeps the model from proposing
+  it again.
+- **A kind can annotate another kind's objects.** The segmentation kind writes each mask on
+  the object of the box that prompted it, and no object of its own
   (`replace` without `entities`). Until a person accepts them, its rows hold nothing: only **a
   person's work** keeps an object where it is (`is_a_persons_work`: a row no model produced, a
   model's row a person accepted, or a child object; that an accepted row counts is decided,
   backend-processing §19). When the object's own kind rewrites it at its rank or sweeps it, a
-  model's unreviewed rows that name it go with it, whatever their kind (§2): a rerun of the
-  kind that wrote the objects removes the pending masks of the objects it rewrites, and the
-  masks are to be written again after it. A kind that proposes objects asks
+  model's unreviewed rows that name it go with it, whatever their kind (§2): a detection rerun
+  removes the pending masks of the objects it rewrites, and the segmentation runs after it
+  again. A kind that proposes objects asks
   `writer.entities_with_a_persons_work` before proposing again one a person worked on, or the
   same model would write a second object beside it, at the next rank: the detection kind
   protects a pending box whose object carries a person's work like a box the person drew.
@@ -431,7 +444,9 @@ means for a kind:
 - **The score belongs to the model.** A person's edit keeps the row's score, as it keeps its
   provenance: write the model's own score there, never a placeholder. Each schema names its
   score fields in `MODEL_SCORE_FIELDS` — `confidence` on a box, `confidences` on a
-  classification. A new schema with a score declares it there. A list of scores that scores
+  classification. A mask has no score column: the segmentation kind drops the predicted IoU
+  SAM answers with each mask rather than store it under a field no schema declares, a gap
+  recorded in backend-processing §18. A new schema with a score declares it there. A list of scores that scores
   another field position by position — one score per label — also says so in
   `MODEL_SCORE_ALIGNMENT` (`{"confidences": "labels"}` on a classification): when a person
   changes the labels, each label the model gave keeps the model's score and a label the person
@@ -451,12 +466,13 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
     registry.register(DetectionKind(inference_url, api_key))
+    registry.register(SegmentationKind(inference_url, api_key))
     registry.register(MyKind(inference_url, api_key))  # ← the only engine file a new kind touches
     return registry
 ```
 
-A kind that calls the inference takes its address and key from the registry, as the embeddings
-kind does, rather than reading the environment: a kind should not know about the deployment. A
+A kind that calls the inference takes its address and key from the registry, as the three
+above do, rather than reading the environment: a kind should not know about the deployment. A
 kind that calls nothing, as `fake` and `label`, takes no argument. A real kind goes outside the
 `demo_kinds` block. That block exists because the demonstration
 kinds write wherever they are told and have no place in a shared deployment; the local compose

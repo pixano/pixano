@@ -81,8 +81,8 @@ the worker, the application and PostgreSQL still run beside it on the same CPUs.
 replica holds about 1.5 GiB of memory, 2 GiB at peak, and takes 1.0 to 1.2 s per image on its
 two CPUs, measured by hand on an 8-core M1 Pro; the same call takes about 6 s inside the
 compose's Linux container on that machine, and 7 to 8 s there through the server (measured on
-2026-10-09: 7 s for tiny, 7.8 s for small). Each replica answers one call at a time, for every
-client of the server, the interactive smart-segment tool included.
+2026-10-09: 7 s for tiny, 7.8 s for small). Segmentation jobs and the interactive
+smart-segment tool share these two replicas, each answering one call at a time.
 
 ## 3. The worker
 
@@ -148,6 +148,10 @@ objects, boxes and masks each record holds, and the share of its image each obje
 cover —, where the worker runs that job; a dataset with nothing to count needs none. Set
 `PIXANO_STATISTICS_AFTER_IMPORT=false` to stop that by default, or pass `--no-statistics` to
 `pixano data import`.
+
+A segmentation job gives a dataset that had no masks its `masks` table. The legacy app reads a
+dataset's tables once, when it opens the dataset: if it was open when that first job ran,
+reload the page to see the masks.
 
 ## The demo, by hand
 

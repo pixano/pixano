@@ -29,6 +29,7 @@ from pixano_worker.kinds.base import Chunk, JobKind
 from pixano_worker.media import MediaResolver
 from pixano_worker.reader import JobReader
 from pixano_worker.writer import JobWriter
+from pycocotools import mask as mask_api
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
@@ -56,6 +57,8 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     "detection": {"model": "yolo", "chunk_size": 8},
     # Recognizes the one name each record's text starts with (`_Client.ner`).
     "ner": {"model": "fake-ner", "chunk_size": 8},
+    # Segments the box a person drew on each image (`_seeded_prompts`).
+    "segmentation": {"model": "sam", "chunk_size": 8},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
@@ -375,7 +378,8 @@ PERSONS_BOX_PX = (60, 10, 90, 50)
 def _seeded_prompts() -> dict[str, dict[str, Any]]:
     """The box a person drew on each image of the contract's dataset, and the object it names.
 
-    What a kind must leave as it was. Built anew for each holder, so that no test sees another's rows.
+    What a kind must leave as it was, and what a kind that reads the dataset's boxes — a segmentation —
+    works from. Built anew for each holder, so that no test sees another's rows.
     """
     left, top, right, bottom = PERSONS_BOX_PX
     boxes, entities = {}, {}
@@ -411,17 +415,21 @@ class _Row:
 
 
 class _Source:
-    """A dataset of twenty-five records, each with an image designated by path.
+    """A dataset of twenty-five records, each with an image designated by path, and the box a
+    person drew on it.
 
     By path and not by bytes, so that the contract does not have to simulate images: what the
     resolver does with them is exercised elsewhere.
     """
 
-    # The real schemas: the reader finds a dataset's media by looking at them. Objects and boxes,
-    # which statistics measure, the dataset declares and holds none of.
+    # The real schemas: the reader finds a dataset's media by looking at them. Its objects and boxes
+    # are those a person drew (`_seeded_prompts`), which segmentation outlines and statistics count.
     info = SimpleNamespace(
         tables={"records": Record, "images": Image, "texts": Text, "bboxes": BBox, "entities": Entity}
     )
+
+    def __init__(self) -> None:
+        self._seeded = _seeded_prompts()
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
         return CONTRACT_RECORDS
@@ -454,8 +462,8 @@ class _Source:
                 end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
                 ids = [f"txt-{n}" for n in range(skip, end)]
             return [_Row(i, record_id=f"rec-{i.removeprefix('txt-')}", content=CONTRACT_TEXT) for i in ids]
-        if table_name in ("bboxes", "entities"):
-            return []
+        if table_name in self._seeded:
+            return _matching(self._seeded[table_name], ids, where)
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 
@@ -544,6 +552,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
                 SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
                 SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
                 SimpleNamespace(name="fake-ner", model_path="", capability="ner"),
+                SimpleNamespace(name="sam", model_path="facebook/sam2.1-hiera-tiny", capability="segmentation"),
             ]
 
         def ner(self, request: Any, **_kwargs: Any) -> Any:
@@ -554,6 +563,16 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
 
         def detection(self, request: Any, **_kwargs: Any) -> Any:
             return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))
+
+        def segmentation(self, request: Any, **_kwargs: Any) -> Any:
+            """One mask per box, filling the box, on the image's grid, as SAM answers one per box."""
+            masks = []
+            for left, top, right, bottom in request.boxes:
+                pixels = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8, order="F")
+                pixels[top:bottom, left:right] = 1
+                encoded = mask_api.encode(pixels)
+                masks.append([SimpleNamespace(size=list(encoded["size"]), counts=encoded["counts"])])
+            return SimpleNamespace(data=SimpleNamespace(masks=masks))
 
         def embedding(self, request: Any, **_kwargs: Any) -> Any:
             count = len(request.image) if isinstance(request.image, list) else 1
