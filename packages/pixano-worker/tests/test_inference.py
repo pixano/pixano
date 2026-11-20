@@ -32,11 +32,13 @@ import pytest
 from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
+from pixano_inference.schemas import mask_to_rle
 from pixano_worker import runner
-from pixano_worker.kinds import Chunk, DetectionKind, EmbeddingsKind, JobKind, TransientError
+from pixano_worker.kinds import Chunk, DetectionKind, EmbeddingsKind, JobKind, SegmentationKind, TransientError
 from pixano_worker.kinds.detection import BBOX_TABLE, DETECTION_CAPABILITY
 from pixano_worker.kinds.embeddings import EMBEDDING_CAPABILITY
 from pixano_worker.kinds.inference import REFUSED_BY_THE_SERVER, Failure, chunk_media, classify, witness_image
+from pixano_worker.kinds.segmentation import MASK_TABLE, SEGMENTATION_CAPABILITY
 from pixano_worker.media import MediaResolver
 from pixano_worker.writer import ENTITY_TABLE, MODEL_SOURCE, JobWriter, derive_id
 
@@ -59,15 +61,15 @@ WIDTH, HEIGHT = 200, 100
 VIEWS = {"v1": ("r1", "a.png"), "v2": ("r2", "b.png")}
 # The class field the entities hold a class in.
 CLASS_FIELD = "category"
-# A box a person drew on every image, which a detection must leave alone: normalised top-left and
-# size, away from what the detector finds.
+# A box a person drew on every image, which a detection must leave alone and a segmentation
+# prompts with: normalised top-left and size, away from what the detector finds.
 PERSONS_BOX = [0.6, 0.4, 0.3, 0.5]
 # What the simulated detector finds on every image: pixel corners, score, class.
 DETECTED = ([20, 10, 120, 60], 0.9, "car")
 # The width of the simulated embedding model's vectors.
 DIM = 4
 # The model the simulated server serves for each capability these kinds use.
-CLIP, YOLO = "clip", "yolo"
+CLIP, YOLO, SAM = "clip", "yolo", "sam"
 # Where a URL designation points: a host the simulated inference cannot reach.
 UNREACHABLE_HOST = "https://media.example"
 
@@ -119,6 +121,7 @@ class _Server:
     MODELS = [
         {"name": CLIP, "capability": EMBEDDING_CAPABILITY, "modelPath": "MobileCLIP2-S2", "status": "RUNNING"},
         {"name": YOLO, "capability": DETECTION_CAPABILITY, "modelPath": "yolo26s.pt", "status": "RUNNING"},
+        {"name": SAM, "capability": SEGMENTATION_CAPABILITY, "modelPath": "sam2.1-hiera-tiny", "status": "RUNNING"},
     ]
 
     def __init__(self, media_root: Path) -> None:
@@ -152,9 +155,20 @@ class _Server:
             return _refusal(httpx.codes.INTERNAL_SERVER_ERROR, "internal_error", "Inference error.")
         if request.url.path == "/v1/inference/embedding":
             return _answer({"embeddings": _array(np.ones((len(images), DIM))), "dim": DIM})
-        assert request.url.path == "/v1/inference/detection", request.url.path
-        corners, score, name = DETECTED
-        return _answer({"boxes": [corners], "scores": [score], "classes": [name]})
+        if request.url.path == "/v1/inference/detection":
+            corners, score, name = DETECTED
+            return _answer({"boxes": [corners], "scores": [score], "classes": [name]})
+        assert request.url.path == "/v1/inference/segmentation", request.url.path
+        # One image per segmentation call, and it opened: the batch was refused otherwise.
+        (size,) = sizes
+        assert size is not None
+        width, height = size
+        return _answer(
+            {
+                "masks": [[_filled(corners, width, height)] for corners in body["boxes"]],
+                "scores": _array(np.ones((len(body["boxes"]), 1))),
+            }
+        )
 
     @staticmethod
     def _is_a_mediums_bytes(image: str) -> bool:
@@ -173,6 +187,15 @@ class _Server:
                 return opened.size
         except (OSError, UnidentifiedImageError):
             return None
+
+
+def _filled(corners: list[int], width: int, height: int) -> dict[str, Any]:
+    """A mask filling a box, on the grid of the image it was asked about."""
+    left, top, right, bottom = corners
+    pixels = np.zeros((height, width), dtype=np.uint8)
+    pixels[top:bottom, left:right] = 1
+    encoded = mask_to_rle(pixels)
+    return {"size": list(encoded["size"]), "counts": encoded["counts"].decode()}
 
 
 @dataclass(frozen=True)
@@ -209,6 +232,9 @@ KINDS = {
     "embeddings": _Kind(lambda key: EmbeddingsKind(INFERENCE_URL, key), CLIP, "replace_existing_embeddings", _vectors),
     "detection": _Kind(
         lambda key: DetectionKind(INFERENCE_URL, key), YOLO, "replace_previous", _model_rows(BBOX_TABLE)
+    ),
+    "segmentation": _Kind(
+        lambda key: SegmentationKind(INFERENCE_URL, key), SAM, "replace_previous", _model_rows(MASK_TABLE)
     ),
 }
 

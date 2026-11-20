@@ -4,11 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-"""The single read point of a dataset, for planning a job.
+"""The single read point of a dataset, for planning a job and processing its chunks.
 
 Symmetric to the writer, and for the same reason: a job kind enumerates what it is going to
-process without opening a dataset itself. This keeps a single door into LanceDB, which will
-make it possible to put a cache or a coordination there without touching a single kind.
+process, then reads what a chunk needs — the boxes on its images, a medium's file —, without
+opening a dataset itself. This keeps a single door into LanceDB, which will make it possible
+to put a cache or a coordination there without touching a single kind. `write` reads through
+the writer instead, under the write lock.
 
 The dataset is opened on first use: a kind whose work fits in its parameters has nothing to
 read, and must not require a dataset to exist.
