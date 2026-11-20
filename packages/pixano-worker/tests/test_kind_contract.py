@@ -179,11 +179,11 @@ class _Target:
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
         self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
+        # The clustering runs the dataset records it holds the clusters of, by run.
+        self.clusterings: dict[str, Any] = {}
         # The statistic columns of each statistics table, and what the dataset records it computed.
         self.statistic_columns: dict[str, dict[str, str]] = {}
         self.computed_statistics: dict[tuple[Any, str], Any] = {}
-        # The clustering runs the dataset records it holds the clusters of, by run.
-        self.clusterings: dict[str, Any] = {}
 
     @property
     def rows(self) -> dict[str, Any]:
@@ -234,6 +234,24 @@ class _Target:
         self.info.tables.setdefault(family.table_name, family.base_schema)
         return family.table_name
 
+    def ensure_record_clusters(self) -> str:
+        family = canonical_family_spec_for_slot(CLUSTER_SLOT)
+        self.info.tables.setdefault(family.table_name, family.base_schema)
+        return family.table_name
+
+    def write_clustering(self, run: Any, clusters: dict[str, int]) -> Any:
+        """The run's rows replaced, as the dataset's — one per record, keyed by the run and the record —,
+        then its entry, kept beside the tables as `info.json` holds it beside the dataset's rows."""
+        table = self.tables.setdefault(canonical_table_name_for_slot(CLUSTER_SLOT), {})
+        for row_id in [row_id for row_id, row in table.items() if row.run_id == run.run_id]:
+            del table[row_id]
+        for record_id, cluster in clusters.items():
+            row_id = record_cluster_id(run.run_id, record_id)
+            table[row_id] = RecordClusters(id=row_id, record_id=record_id, run_id=run.run_id, cluster=cluster)
+        recorded = run.counted(clusters)
+        self.clusterings[run.run_id] = recorded
+        return recorded
+
     def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
         family = canonical_family_spec_for_slot(statistics_slot(level.value))
         self.info.tables.setdefault(family.table_name, family.base_schema)
@@ -266,24 +284,6 @@ class _Target:
         """Kept beside the tables, as `info.json` holds it beside the dataset's rows."""
         for statistic in computed:
             self.computed_statistics[(statistic.definition.level, statistic.definition.name)] = statistic
-
-    def ensure_record_clusters(self) -> str:
-        family = canonical_family_spec_for_slot(CLUSTER_SLOT)
-        self.info.tables.setdefault(family.table_name, family.base_schema)
-        return family.table_name
-
-    def write_clustering(self, run: Any, clusters: dict[str, int]) -> Any:
-        """The run's rows replaced, as the dataset's — one per record, keyed by the run and the record —,
-        then its entry, kept beside the tables as `info.json` holds it beside the dataset's rows."""
-        table = self.tables.setdefault(canonical_table_name_for_slot(CLUSTER_SLOT), {})
-        for row_id in [row_id for row_id, row in table.items() if row.run_id == run.run_id]:
-            del table[row_id]
-        for record_id, cluster in clusters.items():
-            row_id = record_cluster_id(run.run_id, record_id)
-            table[row_id] = RecordClusters(id=row_id, record_id=record_id, run_id=run.run_id, cluster=cluster)
-        recorded = run.counted(clusters)
-        self.clusterings[run.run_id] = recorded
-        return recorded
 
     def open_table(self, table_name: str) -> Any:
         """A table that compacts and indexes, recording each operation: they change no row."""

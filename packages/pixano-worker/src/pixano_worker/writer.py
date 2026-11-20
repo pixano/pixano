@@ -45,6 +45,7 @@ from pixano.schemas import (
     AnnotationSourceKind,
     ReviewStatus,
     SchemaGroup,
+    is_statistics,
     label_field_of,
     statistics_slot,
 )
@@ -244,10 +245,6 @@ class DatasetWriteTarget(Protocol):
         """Empty a model's embeddings, keeping its space, the other models' left as they are."""
         ...
 
-    def ensure_annotation_table(self, slot: str) -> str:
-        """Give the dataset the canonical table of an annotation slot it lacks; the table's name."""
-        ...
-
     def ensure_statistic_columns(self, level: StatisticLevel, columns: dict[str, str]) -> str:
         """Give the dataset the statistics table of a level, with these columns; the table's name."""
         ...
@@ -260,6 +257,10 @@ class DatasetWriteTarget(Protocol):
 
     def record_computed_statistics(self, computed: list[ComputedStatistic]) -> None:
         """Keep what a job computed, each statistic replacing the one of the same level and name."""
+        ...
+
+    def ensure_annotation_table(self, slot: str) -> str:
+        """Give the dataset the canonical table of an annotation slot it lacks; the table's name."""
         ...
 
     def ensure_record_clusters(self) -> str:
@@ -736,7 +737,9 @@ class JobWriter:
         for batch in _batched(entity_ids):
             listed = to_sql_list(batch)
             for name, schema in self.dataset.info.tables.items():
-                if "entity_id" not in getattr(schema, "model_fields", {}):
+                # A statistic is nobody's work: computed from the records, it neither holds an
+                # object nor goes with one — the statistics job drops the rows of objects gone.
+                if is_statistics(schema) or "entity_id" not in getattr(schema, "model_fields", {}):
                     continue
                 for row in self.dataset.get_data(name, where=f"entity_id IN {listed}"):
                     if name == own_table and row.id == row.entity_id:

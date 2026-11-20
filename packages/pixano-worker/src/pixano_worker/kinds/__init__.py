@@ -45,9 +45,9 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
         registry.register(FakeKind())
         registry.register(LabelKind())
     registry.register(EmbeddingsKind(inference_url, api_key))
-    registry.register(StatisticsKind())
     registry.register(ClusteringKind())
     registry.register(DetectionKind(inference_url, api_key))
+    registry.register(StatisticsKind())
     return registry
 
 

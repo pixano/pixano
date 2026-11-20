@@ -152,93 +152,6 @@ Options:
   must keep it.
 - **Keep the scan**, and measure it at scale first.
 
-## The Jobs panel opened without a dataset
-
-**Status:** open (left as it was when the panel of a dataset was given its own jobs, 2026-11-12).
-
-A Jobs panel opened on a dataset lists that dataset's jobs only (`jobsOfDataset`, in the new
-UI's jobs store). The new UI also opens it from the dataset list, with no dataset: it then
-lists every dataset's recent jobs, as it did everywhere before, and a row names only its
-job's kind — nothing tells which dataset a job runs on, and its Cancel is offered all the same.
-The store holds the datasets' identifiers, not their names; naming the dataset on a row, when
-the panel has none, would take the list of datasets the explorer already reads.
-
-## An entity the save queue gave up on stays in the dataset
-
-**Status:** open (an accepted limit).
-
-The new interface's save queue deletes an entity it created and no longer
-names, and only conditionally (`DELETE …/entities/{id}?only_if_unnamed=true`):
-the server deletes it only if no stored row names it. It never deletes an
-entity named by a write that failed without the server refusing it — a network
-error, a lost answer, a 5xx —, since that write may have been stored
-(`mayHaveStored` in `ui/apps/web/src/lib/workspace/mutationQueue.svelte.ts`).
-When it was not, the entity stays in the dataset, named by nothing: a draft
-deleted after its create's answer was lost, a reassignment lost and then
-changed. `reset()` — a Discard, another record opened — forgets the entities
-the queue created as well, so one whose create had left before a Discard can
-stay the same way.
-
-It was accepted as the price of never deleting what a stored row names: the
-browser sees one record, and cannot tell what a write whose answer was lost
-stored. Keeping the delete queued after a Discard would show one unsaved item
-right after it. FRONTEND_ARCHITECTURE.md describes the queue's rules.
-
-Options:
-
-- **A server-side sweep** of the entities nothing names, as a maintenance
-  command or a job.
-- **Read the record back after a failure that is not a refusal**, before
-  deciding what the queue still owns. It would also close the other cases of a
-  lost answer, where the server stored a write the browser takes for failed.
-- **An identifier per write**, so that a retry can ask whether a write landed.
-
-## A chunk's weight multiplies the worker's time limit
-
-**Status:** open (chosen while implementing, not decided).
-
-The review decided that a chunk's time limit follows its work, through a weight
-its kind declares at planning (backend-processing §9). How the weight turns
-into a limit was left open. A kind now weighs a chunk in inference calls, and
-the worker gives it that many times `PIXANO_WORKER_CHUNK_TIMEOUT_S`, which stays
-the limit of a chunk of one call (`Chunk.weight` in
-`packages/pixano-worker/src/pixano_worker/kinds/base.py`, `_execute` in
-`runner.py`). The clustering kind, which calls no inference, weighs its one
-chunk by the square of its records over 150,000, from the time it was measured
-to take (backend-processing §24.2). The setting then binds every call a
-weighed chunk makes: a deployment that lowers it to fit its fast kinds sends
-back long chunks the inference server would still have answered, and the kind
-cannot say so.
-
-Options:
-
-- **The weight multiplies the deployment's limit**, as today: a slower
-  deployment raises one number for every kind, and a kind says nothing of
-  durations.
-- **The kind gives the chunk a duration of its own**, computed from its own
-  timeouts: exact for each kind, but out of the deployment's hands, and every
-  kind must know its worst case.
-
-## Forgetting a run of a clustering, and a run older than its embeddings
-
-**Status:** open (lot 6 of step 2's second version, 2026-11-06).
-
-Every run of a clustering is kept, and each is a column of the explorer
-(backend-processing §24). Nothing forgets one: `Dataset.drop_clustering` takes a
-run's rows and its entry, but no route nor interface calls it, so the columns
-pile up with the runs. Nor does a run say that its model's embeddings were
-computed again since, or for more media.
-
-Options:
-
-- **A route that forgets a run**, `DELETE /datasets/{id}/clusterings/{run}`, and
-  an entry in the explorer's column to call it.
-- **Keep the latest runs only**, a number of them per dataset, the oldest
-  forgotten when a job records a new one: nothing to click, but a run someone
-  filters on may go.
-- **Mark a run stale** when its model's embeddings are written after it: the
-  explorer could say so in the column's label, or hide it.
-
 ## Embeddings after an import: which models, and at what cost
 
 **Status:** which models is decided (2026-11-10); the cost is open.
@@ -331,3 +244,90 @@ without being asked:
   to undo over (data-import-export spec, amendment of 2026-11-10).
   Leaving the tables a job derives from the data out of that check would keep the rollback;
   it was not done.
+
+## The Jobs panel opened without a dataset
+
+**Status:** open (left as it was when the panel of a dataset was given its own jobs, 2026-11-12).
+
+A Jobs panel opened on a dataset lists that dataset's jobs only (`jobsOfDataset`, in the new
+UI's jobs store). The new UI also opens it from the dataset list, with no dataset: it then
+lists every dataset's recent jobs, as it did everywhere before, and a row names only its
+job's kind — nothing tells which dataset a job runs on, and its Cancel is offered all the same.
+The store holds the datasets' identifiers, not their names; naming the dataset on a row, when
+the panel has none, would take the list of datasets the explorer already reads.
+
+## An entity the save queue gave up on stays in the dataset
+
+**Status:** open (an accepted limit).
+
+The new interface's save queue deletes an entity it created and no longer
+names, and only conditionally (`DELETE …/entities/{id}?only_if_unnamed=true`):
+the server deletes it only if no stored row names it. It never deletes an
+entity named by a write that failed without the server refusing it — a network
+error, a lost answer, a 5xx —, since that write may have been stored
+(`mayHaveStored` in `ui/apps/web/src/lib/workspace/mutationQueue.svelte.ts`).
+When it was not, the entity stays in the dataset, named by nothing: a draft
+deleted after its create's answer was lost, a reassignment lost and then
+changed. `reset()` — a Discard, another record opened — forgets the entities
+the queue created as well, so one whose create had left before a Discard can
+stay the same way.
+
+It was accepted as the price of never deleting what a stored row names: the
+browser sees one record, and cannot tell what a write whose answer was lost
+stored. Keeping the delete queued after a Discard would show one unsaved item
+right after it. FRONTEND_ARCHITECTURE.md describes the queue's rules.
+
+Options:
+
+- **A server-side sweep** of the entities nothing names, as a maintenance
+  command or a job.
+- **Read the record back after a failure that is not a refusal**, before
+  deciding what the queue still owns. It would also close the other cases of a
+  lost answer, where the server stored a write the browser takes for failed.
+- **An identifier per write**, so that a retry can ask whether a write landed.
+
+## A chunk's weight multiplies the worker's time limit
+
+**Status:** open (chosen while implementing, not decided).
+
+The review decided that a chunk's time limit follows its work, through a weight
+its kind declares at planning (backend-processing §9). How the weight turns
+into a limit was left open. A kind now weighs a chunk in inference calls, and
+the worker gives it that many times `PIXANO_WORKER_CHUNK_TIMEOUT_S`, which stays
+the limit of a chunk of one call (`Chunk.weight` in
+`packages/pixano-worker/src/pixano_worker/kinds/base.py`, `_execute` in
+`runner.py`). The clustering kind, which calls no inference, weighs its one
+chunk by the square of its records over 150,000, from the time it was measured
+to take (backend-processing §24.2). The setting then binds every call a
+weighed chunk makes: a deployment that lowers it to fit its fast kinds sends
+back long chunks the inference server would still have answered, and the kind
+cannot say so.
+
+Options:
+
+- **The weight multiplies the deployment's limit**, as today: a slower
+  deployment raises one number for every kind, and a kind says nothing of
+  durations.
+- **The kind gives the chunk a duration of its own**, computed from its own
+  timeouts: exact for each kind, but out of the deployment's hands, and every
+  kind must know its worst case.
+
+## Forgetting a run of a clustering, and a run older than its embeddings
+
+**Status:** open (lot 6 of step 2's second version, 2026-11-06).
+
+Every run of a clustering is kept, and each is a column of the explorer
+(backend-processing §24). Nothing forgets one: `Dataset.drop_clustering` takes a
+run's rows and its entry, but no route nor interface calls it, so the columns
+pile up with the runs. Nor does a run say that its model's embeddings were
+computed again since, or for more media.
+
+Options:
+
+- **A route that forgets a run**, `DELETE /datasets/{id}/clusterings/{run}`, and
+  an entry in the explorer's column to call it.
+- **Keep the latest runs only**, a number of them per dataset, the oldest
+  forgotten when a job records a new one: nothing to click, but a run someone
+  filters on may go.
+- **Mark a run stale** when its model's embeddings are written after it: the
+  explorer could say so in the column's label, or hide it.

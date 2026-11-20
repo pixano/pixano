@@ -295,7 +295,10 @@ private helpers, which another kind must not import.
   modified; only creating the table takes the dataset's lock. A kind may instead refuse a
   dataset without its table.
 
-The statistics kind brought (backend-processing §22):
+### What the reader and the writer offer the statistics kind
+
+A kind reaches the dataset through these two only. The statistics kind brought
+(backend-processing §22):
 
 - **`reader.read(table, where)`** — the rows of a table matching a filter, for `process`, which
   runs outside the write lock and has no writer: a chunk's objects and boxes. Not paged, so the
@@ -318,6 +321,8 @@ The statistics kind brought (backend-processing §22):
   computed these statistics, now; the explorer names and dates its columns with it. For
   `finalize`: it changes the dataset's description, never a row.
 
+### What the reader and the writer offer the clustering kind
+
 The clustering kind brought (backend-processing §24):
 
 - **`reader.record_vectors(model)`** — every vector of one model's embeddings — named by its
@@ -335,11 +340,11 @@ The clustering kind brought (backend-processing §24):
   none, and its name. Call it from `prepare`.
 - **`writer.write_clustering(run, clusters)`** — this job's run, under one lock of the dataset:
   each record's group, one row per record, in place of every row the run wrote before, then what
-  the run was, which the explorer names its column with. The run is the job: its identifier must
-  be the job's. Records deleted since they were grouped get no row and count in none of the run's
-  figures; the run is answered as recorded. The table's indexes are then rebuilt, outside the
-  lock (`writer.index_record_clusters()`): a build that fails is logged, the rows are read without
-  them meanwhile.
+  the run was (`DatasetInfo.clusterings`), which the explorer names its column with. The run is
+  the job: its identifier must be the job's. Records deleted since they were grouped get no row
+  and count in none of the run's figures; the run is answered as recorded. The table's indexes
+  are then rebuilt, outside the lock (`writer.index_record_clusters()`): a build that fails is
+  logged, the rows are read without them meanwhile.
 
 A clustering is the one kind whose resubmission adds to the dataset rather than leaving it as it
 was: every run is kept. The contract suite knows it (`RUNS_KEPT`), and checks instead that a second
