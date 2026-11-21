@@ -44,7 +44,7 @@ License: CECILL-C
     {
       task: "image_text_entity_linking",
       title: "Image–text linking",
-      description: "Link text spans to image regions.",
+      description: "Text spans, alone or linked to image regions.",
       icon: LinkSimple,
     },
   ];

@@ -69,7 +69,8 @@ For Raw media, task icon cards appear at the top of Annotation, above the tools 
 - **Video annotation** — video files, one folder of frame images per video, or one subfolder
   per view.
 - **Visual Q&A** — a folder of images; questions and answers are added in Pixano.
-- **Image–text linking** — an `image/` folder and a `text/` folder whose file names pair up.
+- **Image–text linking** — a folder of text files alone, or an `image/` folder and a `text/` folder
+  whose file names pair up.
 
 LeRobot shows a fixed **Video annotation** task summary. In Source, the raw-media task summary's
 **Change** link takes you to the task cards in Annotation without clearing the current setup.
@@ -184,7 +185,8 @@ The command **analyzes first**: it validates every line, counts records, checks 
 A folder holding only media — images, videos or text files, optionally wrapped in `train/`,
 `val/` or `test/` folders — imports without a `metadata.jsonl` or a `dataset.yaml`: one record
 per file, an empty entity table, and the workspace's default annotation types (for an image
-folder, `bbox` and `keypoint`). This is the path the
+folder, `bbox` and `keypoint`). A folder of text files alone opens in the image–text linking
+workspace, the one that shows texts, with classifications and text spans. This is the path the
 [Quickstart](/pixano/getting_started/quickstart/) takes, and what the app's **Raw media** choice
 builds on; add a `dataset.yaml` when you need custom attributes or other annotation types.
 

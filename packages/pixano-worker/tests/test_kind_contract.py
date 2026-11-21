@@ -33,7 +33,7 @@ from pycocotools import mask as mask_api
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, statistics_slot
+from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, Text, statistics_slot
 from pixano.schemas.table_names import canonical_family_spec_for_slot
 from pixano.statistics.definitions import (
     StatisticAggregation,
@@ -55,6 +55,8 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     # real path is checked end to end on the stack, in the demo (docs/demo-etape1.md).
     "embeddings": {"model": "clip", "chunk_size": 8},
     "detection": {"model": "yolo", "chunk_size": 8},
+    # Recognizes the one name each record's text starts with (`_Client.ner`).
+    "ner": {"model": "fake-ner", "chunk_size": 8},
     # Segments the box a person drew on each image (`_seeded_prompts`).
     "segmentation": {"model": "sam", "chunk_size": 8},
     "label": {
@@ -113,8 +115,9 @@ CONFIRMED = [(name, parameter) for name in REGISTRY.names() for parameter in _co
 
 def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
     """The reads the writers make: by identifiers, or by a filter — the prefix of a cleanup, a
-    list of values of one field (a detection's look at the boxes already on a medium), or several
-    such conditions joined by AND (the pending rows a `replace_previous` clears)."""
+    list of values of one field (a detection's look at the boxes already on a medium, a NER's at
+    the spans already on its texts), or several such conditions joined by AND (the pending rows a
+    `replace_previous` clears)."""
     if ids is not None:
         return [rows[i] for i in ids if i in rows]
     assert where, "a read with neither identifiers nor a filter in a test double"
@@ -123,16 +126,26 @@ def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) ->
 
 
 def _condition(clause: str) -> Any:
-    """One condition of a filter, as a test on a row."""
+    """One condition of a filter, as a test on a row — or several joined by OR, in parentheses."""
+    either = re.fullmatch(r"\((.*)\)", clause)
+    if either is not None:
+        alternatives = [_condition(alternative) for alternative in either.group(1).split(" OR ")]
+        return lambda row: any(alternative(row) for alternative in alternatives)
     prefix = re.fullmatch(r"id LIKE '([^']*)%'", clause)
     if prefix is not None:
         return lambda row: row.id.startswith(prefix.group(1))
     equal = re.fullmatch(r"(\w+) = '([^']*)'", clause)
     if equal is not None:
         return lambda row: getattr(row, equal.group(1)) == equal.group(2)
+    compared = re.fullmatch(r"(\w+) (>=|>|<=|<) (-?\d+)", clause)
+    if compared is not None:
+        name, operator, bound = compared.group(1), compared.group(2), int(compared.group(3))
+        tests = {">=": bound.__le__, ">": bound.__lt__, "<=": bound.__ge__, "<": bound.__gt__}
+        return lambda row: tests[operator](getattr(row, name))
     among = re.fullmatch(r"(\w+) IN \((.*)\)", clause)
     assert among is not None, f"unexpected filter in a test double: {clause!r}"
-    values = set(re.findall(r"'([^']*)'", among.group(2)))
+    quoted = re.findall(r"'([^']*)'", among.group(2))
+    values: set[Any] = set(quoted) if quoted else {int(value) for value in among.group(2).split(", ")}
     return lambda row: getattr(row, among.group(1), None) in values
 
 
@@ -159,6 +172,8 @@ class _Target:
         }
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
+        # The boxes a detection writes, and the entities every dataset holds, with no text field: a
+        # kind writing a class adds one.
         self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
         # The statistic columns of each statistics table, and what the dataset records it computed.
         self.statistic_columns: dict[str, dict[str, str]] = {}
@@ -334,6 +349,11 @@ def _confirmed(kind: JobKind, parameter: str) -> JobParams:
 #: empty dataset — and the contract must exercise those kinds too.
 CONTRACT_RECORDS = 25
 
+#: The text of each record of the contract's dataset: a name, then words, for a NER kind to find.
+CONTRACT_TEXT = "Ada met nobody."
+#: The name it starts with, where it starts and ends.
+CONTRACT_NAME = (0, 3)
+
 
 class _Vector:
     """An embedding row: no provenance, only a vector.
@@ -385,10 +405,12 @@ def _seeded_prompts() -> dict[str, dict[str, Any]]:
 
 
 class _Row:
-    def __init__(self, row_id: str, record_id: str = "", uri: str = "") -> None:
+    def __init__(self, row_id: str, record_id: str = "", uri: str = "", content: str = "") -> None:
         self.id = row_id
         self.record_id = record_id
         self.uri = uri
+        # A text's content; an image's, none.
+        self.content = content
         self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
 
 
@@ -402,7 +424,9 @@ class _Source:
 
     # The real schemas: the reader finds a dataset's media by looking at them. Its objects and boxes
     # are those a person drew (`_seeded_prompts`), which segmentation outlines and statistics count.
-    info = SimpleNamespace(tables={"records": Record, "images": Image, "bboxes": BBox, "entities": Entity})
+    info = SimpleNamespace(
+        tables={"records": Record, "images": Image, "texts": Text, "bboxes": BBox, "entities": Entity}
+    )
 
     def __init__(self) -> None:
         self._seeded = _seeded_prompts()
@@ -433,6 +457,11 @@ class _Source:
                 end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
                 ids = [f"img-{n}" for n in range(skip, end)]
             return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
+        if table_name == "texts":
+            if ids is None:
+                end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+                ids = [f"txt-{n}" for n in range(skip, end)]
+            return [_Row(i, record_id=f"rec-{i.removeprefix('txt-')}", content=CONTRACT_TEXT) for i in ids]
         if table_name in self._seeded:
             return _matching(self._seeded[table_name], ids, where)
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
@@ -522,8 +551,15 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return [
                 SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
                 SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
+                SimpleNamespace(name="fake-ner", model_path="", capability="ner"),
                 SimpleNamespace(name="sam", model_path="facebook/sam2.1-hiera-tiny", capability="segmentation"),
             ]
+
+        def ner(self, request: Any, **_kwargs: Any) -> Any:
+            """The name the text starts with, a person."""
+            start, end = CONTRACT_NAME
+            name = SimpleNamespace(text=request.text[start:end], label="PER", start=start, end=end, score=0.9)
+            return SimpleNamespace(data=SimpleNamespace(entities=[name]))
 
         def detection(self, request: Any, **_kwargs: Any) -> Any:
             return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))

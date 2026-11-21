@@ -1,0 +1,203 @@
+---
+layout: ../../layouts/DocsLayout.astro
+title: "Named Entity Recognition"
+section: cookbook
+---
+import Callout from '../../components/Callout.astro'
+import PrevNext from '../../components/PrevNext.astro'
+
+# Named Entity Recognition
+
+Find the people, places and organizations your texts mention. A NER model served by
+[pixano-inference](https://github.com/pixano/pixano-inference) proposes them, the `ner` job writes
+each one as an object and the stretch of text that mentions it, and you correct them in the
+workspace. This guide serves spaCy's small English pipeline, `en_core_web_sm`; any NER model served
+the same way works.
+
+## Prerequisites
+
+- Pixano installed (see [Installation](/pixano/getting_started/installing_pixano/)) and a data
+  directory initialized with `pixano init ./my_data`.
+- PostgreSQL, the app and `pixano-worker`: jobs run in the worker.
+  [Running by hand](https://github.com/pixano/pixano/blob/main/docs/running-by-hand.md) starts them
+  one by one; the compose at the root of the Pixano repository starts them in containers (see
+  [With the compose](#with-the-compose) below).
+- Python 3.10 to 3.13 for the inference server, and release 0.7.1 of pixano-inference — the one
+  Pixano's client requires.
+
+## Serve a NER model
+
+pixano-inference ships no NER model. A model is a plugin package: a class deriving `NERModel`,
+registered under a name, which the package declares in its `pixano_inference.models` entry points.
+The server discovers it once installed in its environment, and serves it once listed in its model
+file. A spaCy pipeline takes a dozen lines:
+
+```toml
+# pixano-ner-spacy/pyproject.toml
+[project]
+name = "pixano-ner-spacy"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = ["pixano-inference>=0.7.1", "spacy>=3.8"]
+
+[project.entry-points."pixano_inference.models"]
+spacy_ner = "pixano_ner_spacy.model"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+```python
+# pixano-ner-spacy/pixano_ner_spacy/model.py (next to an empty __init__.py)
+import spacy
+from pixano_inference.models import register_model
+from pixano_inference.models.ner import NEREntity, NERInput, NERInterface, NERModel, NEROutput
+
+
+@register_model("SpacyNERModel")
+class SpacyNERModel(NERModel):
+    def load_model(self) -> None:
+        self.nlp = spacy.load(self.config.model_params["path"])
+
+    @property
+    def interface(self) -> NERInterface:
+        return NERInterface(entity_types=list(self.nlp.get_pipe("ner").labels))
+
+    def predict(self, input: NERInput) -> NEROutput:
+        doc = self.nlp(input.text)
+        return NEROutput(
+            entities=[
+                NEREntity(text=ent.text, label=ent.label_, start=ent.start_char, end=ent.end_char, score=1.0)
+                for ent in doc.ents
+            ]
+        )
+```
+
+What Pixano expects of any NER model:
+
+- **Offsets** count the text's characters as a Python string does, the end left out — spaCy's
+  `start_char` and `end_char` do. Pixano converts them to the unit the interface counts in.
+- **A score** for each entity. A model without scores of its own, as spaCy's, answers 1.0, so that
+  the job's **Score Threshold** keeps what it finds.
+- **The labels** are written as the model returns them: `PERSON`, `ORG`, `GPE` for spaCy.
+
+Install the server, the plugin and the pipeline in one environment, list the model, and start the
+server:
+
+```bash
+pip install "pixano-inference[server]==0.7.1" ./pixano-ner-spacy \
+  "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+```
+
+```python
+# models.py
+from pixano_inference.configs import DeploymentConfig, ModelConfig
+
+models = [
+    ModelConfig(
+        name="spacy-en-ner",
+        model_class="SpacyNERModel",
+        model_params={"path": "en_core_web_sm"},
+        deployment=DeploymentConfig(num_gpus=0, num_cpus=1, min_replicas=1, max_replicas=1),
+    ),
+]
+```
+
+```bash
+pixano-inference --host 127.0.0.1 --port 7463 --config models.py
+```
+
+`curl http://127.0.0.1:7463/v1/models` lists `spacy-en-ner`, capability `ner`.
+
+### Point Pixano at it
+
+Start — or restart — the app and the worker with the server's address: both read it when they
+start.
+
+```bash
+pixano server run ./my_data --pixano-inference-url http://127.0.0.1:7463
+PIXANO_INFERENCE_URL=http://127.0.0.1:7463 pixano-worker   # with the worker's other variables
+```
+
+The app talks to one inference server at a time, and this one serves your NER model alone. To keep
+the models another server serves — the stack's own inference, which already takes port 7463 —,
+add your entry to that server's list instead: install the plugin and the pipeline into its
+environment too, and give it one CPU more than its list reserves, since the entry asks Ray for one.
+
+### With the compose
+
+The compose's inference (`docker-compose.inference.yml`) is built without your plugin. Start the
+compose without it, run the NER server on the machine listening on every interface —
+`--host 0.0.0.0`, then keep the port behind your firewall —, and give the containers its address
+as they reach it, in `.env`:
+
+```bash
+PIXANO_INFERENCE_URL=http://host.docker.internal:7463   # Docker Desktop; on Linux, the machine's address
+```
+
+`docker compose up -d` then restarts the app and the worker on it. `127.0.0.1` would not do: inside
+a container, it is the container itself.
+
+## Import your texts
+
+One record per text file, `.txt` or `.md`, optionally in `train/`, `val/` or `test/` folders:
+
+```
+texts/
+  curie.txt
+  lovelace.txt
+  turing.txt
+```
+
+In the app, click **Import** and choose **Raw media**. In **Annotation setup**, pick the
+**Image–text linking** task: **Text spans** are included, and **Bounding boxes** and **Masks** can
+be unticked for texts that come without images. Then **Choose a folder**, **Review import** and
+**Start import**. The texts open in the entity linking workspace, the one that shows texts, its
+image panel empty. From the command line, a folder of texts alone opens there too, in the data
+directory the app serves:
+
+```bash
+pixano data import ./my_data ./texts --name my_texts
+```
+
+## Run the job
+
+The legacy app has no Jobs panel yet: the job runs from the new interface's. Start the app with
+`ACTIVATE_UI_V1_0=true` in its environment, click **Switch to new UI** in the header, open the
+dataset and its **Jobs** tab, and choose `ner`, then `spacy-en-ner` as the model. **Entity
+Types** keeps the classes you name, as the model names them — `PERSON, ORG, GPE, LOC` for spaCy's
+people, organizations and places; empty, every class it returns, dates and numbers included. Click
+**Run**: each text is one call to the model, and the panel follows the job. A text the job cannot
+read goes to quarantine, which **Show quarantine** lists with the reason.
+
+## Correct the proposals
+
+Come back with **Switch to legacy UI** and open a record: each mention the model proposed is marked in the text, and its object, pending
+review, is listed in the **Entities** tab with its class in `name`. Color the objects by **Name**
+to see the classes in the text. Fix a class, mark a mention the model missed, delete a wrong one.
+
+Running the job again replaces what the same model proposed — of the classes in **Entity Types**
+only, when you set some —, and never touches a mention you marked or edited: no mention over one
+of yours is proposed again, whatever its class.
+
+<Callout type="note" title="Limits of this first version">
+
+- Only the legacy app's entity linking workspace shows the mentions; the new interface shows the
+  text alone.
+- A proposal cannot be accepted as it is: one you edit becomes yours and stays, one you leave may
+  be replaced by the next run. Edit them once the job is done — an edit saved while it runs can be
+  missed.
+- An export with `--review-status accepted` keeps every proposal: a model's text spans are
+  exported whatever their status.
+
+</Callout>
+
+## Next steps
+
+- [Entity Linking](/pixano/cookbook/entity_linking/) — link the mentions to regions of images
+- [Key Concepts](/pixano/getting_started/key_concepts/) — records, views, entities and annotations
+
+<PrevNext
+  prev={{ title: "Entity Linking", href: "/cookbook/entity_linking/" }}
+/>

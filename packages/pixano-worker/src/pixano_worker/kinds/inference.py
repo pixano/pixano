@@ -8,9 +8,9 @@
 
 Knowing whether a model is served before a job starts, finding a chunk's media and designating
 each for the inference, knowing which checkpoint answered, for the provenance of a job's rows,
-whether a failed call is the server's fault or the medium's, and — when every medium of a chunk
-is refused — asking the server itself with an image known to be good. Kinds differ in the call
-they make, not in any of this.
+whether a failed call is the server's fault or the medium's, and — when every item of a chunk is
+refused — asking the server itself with a witness known to be good: an image for the kinds that
+send images, a text for NER. Kinds differ in the call they make, not in any of this.
 """
 
 import io
@@ -286,6 +286,28 @@ class InferenceServer:
         return None
 
 
+def refuse_unless_the_witness_passes(call: Callable[[str], Any], witness: str, what: str) -> None:
+    """Send the server a witness it must accept, on a chunk whose every item it refused.
+
+    The first step of telling a server that is not well from items it cannot read, whatever the
+    items: an image for the kinds that send images (`blame_the_server_or_the_media`), a text for
+    those that send texts.
+
+    Args:
+        call: The kind's call on one item; it raises when the server refuses it.
+        witness: An item any model of the kind's task must accept.
+        what: What the witness is, as the reason names it: `image`, `text`.
+
+    Raises:
+        TransientError: The server refuses the witness too, or does not answer: the chunk is
+            replayed later.
+    """
+    try:
+        call(witness)
+    except (httpx.TransportError, PixanoInferenceError) as error:
+        raise TransientError(f"the inference refuses even the witness {what}: {error}") from error
+
+
 def blame_the_server_or_the_media(
     call: Callable[[str], Any],
     reader: JobReader,
@@ -318,10 +340,7 @@ def blame_the_server_or_the_media(
         PixanoInferenceError: The resent medium meets an error no medium causes (`classify`
             says "request"): it is fatal to the chunk.
     """
-    try:
-        call(witness_image())
-    except (httpx.TransportError, PixanoInferenceError) as error:
-        raise TransientError(f"the inference refuses even the witness image: {error}") from error
+    refuse_unless_the_witness_passes(call, witness_image(), "image")
 
     readable = _first_readable(reader, table, refused, by_path)
     if readable is None:
