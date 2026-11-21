@@ -19,8 +19,11 @@ read, and must not require a dataset to exist.
 import io
 import logging
 import os
+from dataclasses import dataclass
 from typing import Any, BinaryIO, Callable, Iterator, Sequence
 
+import numpy as np
+import pyarrow.compute as pc
 from PIL import Image, UnidentifiedImageError
 
 from pixano.schemas import MEDIA_TYPES, MediaType, media_type_of
@@ -38,6 +41,23 @@ logger = logging.getLogger("pixano-worker")
 # How many rows we fetch per request when enumerating a table. Enough to amortise the round
 # trip, small enough that a dataset of several million items is never held in memory at once.
 PAGE_SIZE = 2_000
+
+
+@dataclass(frozen=True)
+class RecordVectors:
+    """Every vector of a dataset's embeddings, with the record and the medium it belongs to.
+
+    Attributes:
+        record_ids: The record of each vector. A record holds one per medium, so it may come several
+            times.
+        view_ids: The medium of each vector; empty for one of a whole record, written before
+            embeddings were per medium.
+        vectors: The vectors, as the rows of a matrix, in the order of the two lists.
+    """
+
+    record_ids: list[str]
+    view_ids: list[str]
+    vectors: np.ndarray
 
 
 class JobReader:
@@ -96,6 +116,47 @@ class JobReader:
     def rows(self, table_name: str, ids: Sequence[str]) -> list[Any]:
         """Read specific rows, by identifier."""
         return self.dataset.get_data(table_name, ids=list(ids))
+
+    def record_vectors(self, model: str | None = None) -> RecordVectors | None:
+        """Every vector of one model's embeddings, with its record and its medium, for a computation
+        over the whole dataset.
+
+        One read of their three columns (`Dataset.read_record_vectors`): a clustering groups every
+        record at once. The vectors are held in memory once, as a matrix: 2 GB for a million of 512
+        dimensions.
+
+        Args:
+            model: The model — its space's id or its name —; the dataset's default one when None.
+
+        Returns:
+            The vectors, or None when the dataset has no embeddings of that model.
+        """
+        table = self.dataset.read_record_vectors(model)
+        if table is None:
+            return None
+        # A vector another writer of the table left empty points nowhere: left out, as one of zeros is.
+        # Filtered only then: a filter copies every vector.
+        if table.column("vector").null_count:
+            table = table.filter(pc.is_valid(table.column("vector")))
+        vectors = table.column("vector").combine_chunks()
+        matrix = vectors.flatten().to_numpy(zero_copy_only=False).reshape(len(vectors), vectors.type.list_size)
+        return RecordVectors(
+            record_ids=table.column("record_id").to_pylist(),
+            view_ids=[view_id or "" for view_id in table.column("view_id").to_pylist()],
+            vectors=matrix,
+        )
+
+    def all_ids(self, table_name: str) -> list[str]:
+        """Every identifier of a table, read at once, for a computation over the whole dataset: the
+        records a clustering checks its vectors against. `ids` reads a table by pages.
+
+        Args:
+            table_name: The table.
+
+        Returns:
+            Its identifiers.
+        """
+        return self.dataset.get_all_ids(table_name)
 
     def read(self, table_name: str, where: str) -> list[Any]:
         """Rows of a table matching a filter: what a kind reads beside the media it was given.

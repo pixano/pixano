@@ -168,10 +168,14 @@ class RecordBundleReader:
         if limit is not None:
             record_ids = record_ids[:limit]
 
-        # Statistics are computed from a dataset, and computed again on another (backend-processing §22).
-        statistics_tables = dataset.info.groups.get(SchemaGroup.STATISTICS, set())
+        # Statistics and clusters are computed from a dataset, and computed again on another
+        # (backend-processing §22, §24).
+        computed_tables = {
+            *dataset.info.groups.get(SchemaGroup.STATISTICS, set()),
+            *dataset.info.groups.get(SchemaGroup.CLUSTERS, set()),
+        }
         component_tables = [
-            name for name in dataset.info.tables if name != SchemaGroup.RECORD.value and name not in statistics_tables
+            name for name in dataset.info.tables if name != SchemaGroup.RECORD.value and name not in computed_tables
         ]
         record_schema = dataset.info.tables[SchemaGroup.RECORD.value]
         review_tables = (

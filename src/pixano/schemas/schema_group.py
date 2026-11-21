@@ -23,6 +23,7 @@ from .annotations import (
     TextSpan,
     Tracklet,
 )
+from .clusters import RecordClusters
 from .embeddings import Embedding, ViewEmbedding
 from .entities import Entity, EntityDynamicState
 from .records import Record
@@ -46,6 +47,7 @@ class SchemaGroup(Enum):
     """High-level groups used by datasets and the API layer."""
 
     ANNOTATION = "annotations"
+    CLUSTERS = "clusters"
     EMBEDDING = "embeddings"
     RECORD = "records"
     ENTITY = "entities"
@@ -105,6 +107,7 @@ CANONICAL_SCHEMA_TYPES = (
     ViewEmbedding,
     RecordStatistics,
     EntityStatistics,
+    RecordClusters,
 )
 
 CANONICAL_SCHEMA_MAP: dict[str, type[LanceModel]] = {
@@ -129,6 +132,8 @@ def schema_to_group(schema_type: LanceModel | type) -> SchemaGroup:
         and issubclass(schema_type, (RecordStatistics, EntityStatistics))
     ):
         return SchemaGroup.STATISTICS
+    if isinstance(schema_type, RecordClusters) or is_class and issubclass(schema_type, RecordClusters):
+        return SchemaGroup.CLUSTERS
     if isinstance(schema_type, EntityDynamicState) or is_class and issubclass(schema_type, EntityDynamicState):
         return SchemaGroup.ENTITY_DYNAMIC_STATE
     if isinstance(schema_type, TimeSeries) or is_class and issubclass(schema_type, TimeSeries):
@@ -165,4 +170,6 @@ def group_to_str(group: SchemaGroup, plural: bool = False) -> str:
         return "embeddings" if plural else "embedding"
     if group == SchemaGroup.STATISTICS:
         return "statistics"
+    if group == SchemaGroup.CLUSTERS:
+        return "clusters"
     raise ValueError(f"Unknown schema group: {group}")

@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.workspaces import WorkspaceType
 from pixano.schemas import (
-    STATISTICS_SLOTS,
+    COMPUTED_SLOTS,
     BBox,
     CompressedRLE,
     Entity,
@@ -47,9 +47,9 @@ from .plan import Provenance, fingerprint
 
 
 # The slots no import declares as annotations: the record, the objects and their states, which the
-# spec declares apart, and the statistics, computed from a dataset and computed again on another
-# (backend-processing §22).
-_NOT_ANNOTATION_SLOTS = frozenset({"record", "entity", "entity_dynamic_state", *STATISTICS_SLOTS})
+# spec declares apart, and what a dataset computes from itself — statistics, clusters —, computed
+# again on another (backend-processing §22, §24).
+_NOT_ANNOTATION_SLOTS = frozenset({"record", "entity", "entity_dynamic_state", *COMPUTED_SLOTS})
 
 
 class MediaPolicy(BaseModel):
@@ -439,10 +439,12 @@ def resolve_dataset_info(spec: ImportSpec) -> DatasetInfo:
     if spec.schema_manifest is not None:
         from pixano.datasets.dataset_schema import _deserialize_table_schema
 
-        statistics = sorted(set(spec.schema_manifest) & set(STATISTICS_SLOTS))
-        if statistics:
-            # Computed from a dataset, and computed again on another (backend-processing §22.3).
-            raise SpecValidationError(f"Invalid schema_manifest: an import takes no statistics table ({statistics}).")
+        computed = sorted(set(spec.schema_manifest) & set(COMPUTED_SLOTS))
+        if computed:
+            # Computed from a dataset, and computed again on another (backend-processing §22.3, §24).
+            raise SpecValidationError(
+                f"Invalid schema_manifest: an import takes no table a dataset computes from itself ({computed})."
+            )
         payload: dict[str, Any] = {"workspace": spec.dataset.workspace}
         try:
             for slot_name, manifest in spec.schema_manifest.items():

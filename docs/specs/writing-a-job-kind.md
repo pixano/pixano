@@ -27,6 +27,10 @@ is what lets a misspelled parameter be refused at submission. Without it, `thres
 validation and is silently ignored — the user gets a job running on defaults with no
 indication why.
 
+A parameter typed as an enumeration reaches the forms with its choices where it stands
+(`JobKind.params_schema` takes them out of the schema's definitions): the generic form offers them
+in a list.
+
 ### `plan(reader, params) -> Iterable[Chunk]`
 
 Splits the work. It runs in the worker, not in the application: dividing by video, by image or
@@ -328,6 +332,35 @@ A kind reaches the dataset through these two only. The statistics kind brought
   computed these statistics, now; the explorer names and dates its columns with it. For
   `finalize`: it changes the dataset's description, never a row.
 
+### What the reader and the writer offer the clustering kind
+
+The clustering kind brought (backend-processing §24):
+
+- **`reader.record_vectors(model)`** — every vector of one model's embeddings — named by its
+  space's id or its name, the dataset's default one when `None` — with its record and its
+  medium, read once, their three columns only, at the table's latest version: a `RecordVectors`
+  of the records' identifiers — a record comes once per medium —, the media's — empty for a vector
+  of a whole record, written before embeddings were per medium —, and the vectors as the rows of a
+  numpy matrix, a vector another writer left empty left out; `None` when the dataset has no
+  embeddings of that model, or no longer has them. For a computation over the whole dataset: it
+  holds every vector in memory, 2 GB for a million of 512 dimensions. A deleted record may keep
+  its vectors: check them against `reader.all_ids("records")`.
+- **`reader.all_ids(table)`** — every identifier of a table, read at once: 0.6 s for a million
+  records. `reader.ids` reads a table by pages, for planning.
+- **`writer.ensure_record_clusters()`** — the clusters table, added to the dataset if it has
+  none, and its name. Call it from `prepare`.
+- **`writer.write_clustering(run, clusters)`** — this job's run, under one lock of the dataset:
+  each record's group, one row per record, in place of every row the run wrote before, then what
+  the run was (`DatasetInfo.clusterings`). The run is the job: its identifier must be the job's.
+  Records deleted since they were grouped get no row and count in none of the run's figures; the
+  run is answered as recorded. The table's indexes are then rebuilt, outside the lock
+  (`writer.index_record_clusters()`): a build that fails is logged, the rows are read without them
+  meanwhile.
+
+A clustering is the one kind whose resubmission adds to the dataset rather than leaving it as it
+was: every run is kept. The contract suite knows it (`RUNS_KEPT`), and checks instead that a second
+job leaves the first run as it was. A kind of that sort says so there, with why.
+
 ---
 
 ## 2. Writing, and why it must be idempotent
@@ -355,6 +388,10 @@ object a person worked on keeps its rank, and what names it stays.
 `drop_pending(table, with_entities=True)`, the clearing a kind's `prepare` does on an explicit
 parameter, does the same. Without entities — a kind writing on objects it does not own —
 nothing else is touched.
+
+A clustering is the one kind that keeps every run (backend-processing §24): its rows carry
+their run, which is the job, so a second job adds a run beside the first. A replay of the job
+still writes the same rows over its own (`writer.write_clustering`).
 
 **Choose the key carefully.** It should be the smallest thing the output is about — usually a
 record id. The `label` kind uses one key per record, so re-labelling one record does not depend

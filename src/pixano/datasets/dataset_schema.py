@@ -295,8 +295,9 @@ def serialize_dataset_info_schema(info: Any) -> dict[str, Any]:
     """Serialize a DatasetInfo's resolved schema for display (plan ``inferred_schema``, REST).
 
     The payload mirrors what ``GET /datasets/{id}/info`` serves per slot: the
-    workspace, each logical view, and every non-``None`` schema slot but the statistics' as a
-    ``{base, name?, fields}`` manifest dict.
+    workspace, each logical view, and every non-``None`` schema slot but those of the tables a
+    dataset computes from itself — its statistics, its clusters — as a ``{base, name?, fields}``
+    manifest dict.
 
     Args:
         info: The resolved ``DatasetInfo``.
@@ -304,15 +305,15 @@ def serialize_dataset_info_schema(info: Any) -> dict[str, Any]:
     Returns:
         JSON-compatible schema payload.
     """
-    from pixano.schemas import STATISTICS_SLOTS, supported_dataset_info_slots
+    from pixano.schemas import COMPUTED_SLOTS, supported_dataset_info_slots
 
     payload: dict[str, Any] = {
         "workspace": getattr(info.workspace, "value", str(info.workspace)),
         "views": {name: _serialize_table_schema(cls) for name, cls in sorted(info.views.items())},
     }
     for slot in supported_dataset_info_slots():
-        if slot in STATISTICS_SLOTS:
-            # Computed from the dataset, never displayed as its schema (backend-processing §22.3).
+        if slot in COMPUTED_SLOTS:
+            # Computed from the dataset, never displayed as its schema (backend-processing §22.3, §24).
             continue
         schema_cls = getattr(info, slot, None)
         if schema_cls is not None:

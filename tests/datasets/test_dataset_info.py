@@ -70,6 +70,8 @@ class TestDatasetInfo:
             "record_statistics",
             "entity_statistics",
             "statistics",
+            "record_clusters",
+            "clusterings",
             "views",
             "tables",
         }
