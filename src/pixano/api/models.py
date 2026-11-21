@@ -171,10 +171,42 @@ class ColumnDescriptorResponse(ResponseModel):
     unit: str | None = None
 
 
-class SearchCapabilities(ResponseModel):
-    """Available search modes for a dataset, with embedding-storage health."""
+class EmbeddingSpaceStatus(ResponseModel):
+    """One embeddings model of a dataset — its space —, as a search can use it.
 
+    Attributes:
+        id: The space's identifier, what a search, the default and a deletion name it by.
+        model_id: The model's name, as the inference serves it.
+        checkpoint: The weights loaded under that name; empty when they were not told.
+        dim: The vectors' dimension.
+        default: Whether a search that names no model reads this one.
+        status: Its health, as `SearchCapabilities.status` words it.
+        detail: What is wrong with it, when something is.
+        embedded_rows: The media it holds a vector of.
+    """
+
+    id: str
+    model_id: str
+    checkpoint: str
+    dim: int
+    default: bool
+    status: str
+    detail: str | None = None
+    embedded_rows: int = 0
+
+
+class SearchCapabilities(ResponseModel):
+    """Available search modes for a dataset, with embedding-storage health.
+
+    A dataset holds the embeddings of several models, each a space of its own (`spaces`); `status`,
+    `detail` and `embedded_rows` are those of the default one, the one a search naming no model
+    reads.
+    """
+
+    # "semantic" when the default embeddings — those a search naming no model reads — can be searched.
     modes: list[str] = Field(default_factory=lambda: ["text"])
+    # The models a semantic search can name — each name finding embeddings that can be searched —, the
+    # default one first.
     models: list[str] = Field(default_factory=list)
     # Embedding health: "absent" (never computed), "ready", "partial" (some records missing),
     # or a degraded state needing recompute ("missing_table" | "empty" | "dim_mismatch" | "corrupt").
@@ -184,6 +216,10 @@ class SearchCapabilities(ResponseModel):
     total_records: int = 0
     # Embeddings belong to media: completeness is `embedded_rows` out of `total_media`.
     total_media: int = 0
+    spaces: list[EmbeddingSpaceStatus] = Field(default_factory=list)
+    # Whether `embeddings.json` was read entirely: if not, no computation changes it, and only one
+    # with force — which deletes every model's embeddings — starts again.
+    fully_read: bool = True
 
 
 class FilterSchemaResponse(ResponseModel):
@@ -543,8 +579,18 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
-        """Build a full dataset response from a Dataset instance, its statistics tables left out."""
-        tables = {name: schema.__name__ for name, schema in dataset.info.tables.items() if not is_statistics(schema)}
+        """Build a full dataset response from a Dataset instance, its statistics and embeddings tables left out.
+
+        A search reads a model's embeddings, through `embeddings.json`, and no client reads the rows of
+        their tables; nor does a client tell such a table, which bears no schema of its own, from a view's.
+        Nor does a client read rows of statistics, which are columns of the records.
+        """
+        embeddings = {space["table"] for space in dataset.record_embedding_spaces()}
+        tables = {
+            name: schema.__name__
+            for name, schema in dataset.info.tables.items()
+            if name not in embeddings and not is_statistics(schema)
+        }
         return cls(
             id=dataset.info.id,
             path=dataset.path,

@@ -22,7 +22,7 @@ from s3path import S3Path
 from pixano.datasets.dataset import _UNREAD, Dataset, _file_stamp
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.embedding_spaces import FORMAT_VERSION, AmbiguousModelError
+from pixano.datasets.embedding_spaces import FORMAT_VERSION, LEGACY_TABLE, TABLE_PREFIX, AmbiguousModelError
 from pixano.datasets.utils.errors import DatasetAccessError
 from pixano.features import Image, Record
 
@@ -59,7 +59,7 @@ class TestRecordEmbeddingStorage:
 
     def test_embedding_table_opens_without_a_model(self, dataset_with_embeddings: Dataset):
         # A plain Embedding table must open with no embedding-function registration.
-        table = dataset_with_embeddings.open_table("embeddings")
+        table = dataset_with_embeddings.open_table(dataset_with_embeddings.record_embedding_space()["table"])
         assert table.count_rows() == 20
 
     def test_search_ranks_by_distance(self, dataset_with_embeddings: Dataset):
@@ -93,7 +93,7 @@ class TestRecordEmbeddingStorage:
 
 
 def _embeddings_table_dir(dataset: Dataset) -> Path:
-    return dataset.path / "db" / "embeddings.lance"
+    return dataset.path / "db" / f"{dataset.record_embedding_space()['table']}.lance"
 
 
 class TestRecordEmbeddingHealth:
@@ -131,9 +131,9 @@ class TestRecordEmbeddingHealth:
 
     def test_dim_mismatch_detected(self, dataset_with_embeddings: Dataset):
         sidecar = dataset_with_embeddings.path / "embeddings.json"
-        space = json.loads(sidecar.read_text())
-        space["dim"] = 16  # stored vectors are dim 8
-        sidecar.write_text(json.dumps(space))
+        document = json.loads(sidecar.read_text())
+        document["spaces"][0]["dim"] = 16  # stored vectors are dim 8
+        sidecar.write_text(json.dumps(document))
         reopened = Dataset(dataset_with_embeddings.path)
         assert reopened.record_embedding_health()["status"] == "dim_mismatch"
 
@@ -146,9 +146,9 @@ class TestRecordEmbeddingHealth:
 
     def test_corrupt_sidecar_degrades_instead_of_bricking_the_dataset(self, dataset_with_embeddings: Dataset):
         sidecar = dataset_with_embeddings.path / "embeddings.json"
-        space = json.loads(sidecar.read_text())
-        space["dim"] = 0  # previously raised out of Dataset.__init__ → 500 on EVERY endpoint
-        sidecar.write_text(json.dumps(space))
+        document = json.loads(sidecar.read_text())
+        document["spaces"][0]["dim"] = 0  # previously raised out of Dataset.__init__ → 500 on EVERY endpoint
+        sidecar.write_text(json.dumps(document))
         reopened = Dataset(dataset_with_embeddings.path)
         assert not reopened.has_record_embeddings()
         # Broken rather than absent: no computation may rewrite the file, a recomputation from nothing does.
@@ -157,10 +157,11 @@ class TestRecordEmbeddingHealth:
 
 class TestDropRecordEmbeddings:
     def test_drop_clears_table_sidecar_and_space(self, dataset_with_embeddings: Dataset):
+        table_dir = _embeddings_table_dir(dataset_with_embeddings)
         dataset_with_embeddings.drop_record_embeddings()
         assert not dataset_with_embeddings.has_record_embeddings()
         assert not (dataset_with_embeddings.path / "embeddings.json").exists()
-        assert not _embeddings_table_dir(dataset_with_embeddings).exists()
+        assert not table_dir.exists()
         assert dataset_with_embeddings.record_embedding_health()["status"] == "absent"
 
     def test_drop_is_safe_when_the_table_is_already_gone(self, dataset_with_embeddings: Dataset):
@@ -230,7 +231,7 @@ class TestMultiMediaRecords:
     def test_a_prefilter_smaller_than_k_does_not_widen_to_the_whole_table(self, six_cameras: Dataset):
         """With fewer than k records to find, the search widened up to the table."""
         searches: list[int] = []
-        table = six_cameras.open_table(six_cameras._RECORD_EMBEDDING_TABLE)
+        table = six_cameras.open_table(six_cameras.record_embedding_space()["table"])
         real_search = table.search
 
         def counting_search(*args, **kwargs):
@@ -238,7 +239,7 @@ class TestMultiMediaRecords:
             return real_search(*args, **kwargs)
 
         table.search = counting_search  # type: ignore[method-assign]
-        six_cameras._table_handles[six_cameras._RECORD_EMBEDDING_TABLE] = table
+        six_cameras._table_handles[six_cameras.record_embedding_space()["table"]] = table
 
         records, _ = six_cameras.search_records(_bit_vector(1), k=50, record_id_filter=["r1", "r2"])
 
@@ -280,7 +281,8 @@ def indexed_dataset() -> tuple[Dataset, np.ndarray]:
         [{"record_id": f"r{i}", "view_id": f"img-r{i}", "vector": vectors[i].tolist()} for i in range(INDEXED_RECORDS)]
     )
     dataset.build_record_embedding_index()
-    assert [index.index_type for index in dataset.open_table("embeddings").list_indices() if "vector" in index.columns]
+    table = dataset.open_table(dataset.record_embedding_space()["table"])
+    assert [index.index_type for index in table.list_indices() if "vector" in index.columns]
     return dataset, vectors
 
 
@@ -357,8 +359,8 @@ class TestSeveralModels:
             ("test-clip", 8, True),
             ("test-siglip", SIGLIP_DIM, False),
         ]
-        assert clip["table"] == "embeddings"
-        assert siglip["table"] == f"embeddings_{siglip['id']}"
+        assert clip["table"] == f"{TABLE_PREFIX}{clip['id']}"
+        assert siglip["table"] == f"{TABLE_PREFIX}{siglip['id']}"
         assert dataset.open_table(siglip["table"]).count_rows() == 20
 
     def test_a_search_reads_the_model_it_names(self):
@@ -712,22 +714,17 @@ class TestWritingAModelsVectors:
 
 
 class TestTheEmbeddingsFile:
-    """`embeddings.json`: the document a build before several models reads, while it can; replaced whole."""
+    """`embeddings.json`: one format, whatever the dataset holds; replaced whole."""
 
-    def test_a_dataset_of_one_model_keeps_the_document_it_always_had(self):
-        dataset, clip, siglip = _two_model_dataset()
-        sidecar = dataset.path / "embeddings.json"
-        assert json.loads(sidecar.read_text())["version"] == FORMAT_VERSION
+    def test_a_dataset_of_one_model_is_described_as_one_of_several(self):
+        dataset, _, siglip = _two_model_dataset()
 
         dataset.drop_record_embeddings(siglip["id"])
 
-        document = json.loads(sidecar.read_text())
-        assert "spaces" not in document
-        assert (document["table"], document["model_id"], document["dim"], document["id"]) == (
-            "embeddings",
-            "test-clip",
-            8,
-            clip["id"],
+        document = json.loads((dataset.path / "embeddings.json").read_text())
+        assert (document["version"], [space["model_id"] for space in document["spaces"]]) == (
+            FORMAT_VERSION,
+            ["test-clip"],
         )
 
     def test_written_for_the_first_time_it_gets_the_permissions_of_any_new_file(self):
@@ -885,11 +882,15 @@ class TestEmbeddingsWrittenBeforeSeveralModels:
 
     @pytest.fixture()
     def legacy(self, dataset_with_embeddings: Dataset) -> Dataset:
+        # The table a build before several models wrote its vectors to: a local table is its folder.
+        tables = dataset_with_embeddings.path / "db"
+        written = dataset_with_embeddings.record_embedding_space()["table"]
+        (tables / f"{written}.lance").rename(tables / f"{LEGACY_TABLE}.lance")
         sidecar = dataset_with_embeddings.path / "embeddings.json"
         sidecar.write_text(
             json.dumps(
                 {
-                    "table": "embeddings",
+                    "table": LEGACY_TABLE,
                     "model_id": "test-clip",
                     "dim": 8,
                     "metric": "cosine",
@@ -910,29 +911,59 @@ class TestEmbeddingsWrittenBeforeSeveralModels:
         legacy.drop_record_embeddings()
 
         assert not (legacy.path / "embeddings.json").exists()
-        assert "embeddings" not in legacy._db_connection.list_tables().tables
+        assert LEGACY_TABLE not in legacy._db_connection.list_tables().tables
 
-    def test_its_model_learning_its_checkpoint_keeps_the_document_and_the_vectors(self, legacy: Dataset):
+    def test_its_model_deleted_by_its_id_takes_its_table_along(self, legacy: Dataset):
+        legacy.drop_record_embeddings(legacy.record_embedding_space()["id"])
+
+        assert legacy.record_embedding_spaces() == []
+        assert LEGACY_TABLE not in legacy._db_connection.list_tables().tables
+
+    def test_its_model_learning_its_checkpoint_keeps_its_table_and_its_vectors(self, legacy: Dataset):
         legacy.ensure_record_embedding_space("test-clip", "ckpt-a", dim=8)
 
         document = json.loads((legacy.path / "embeddings.json").read_text())
-        assert "spaces" not in document
-        assert (document["table"], document["checkpoint"]) == ("embeddings", "ckpt-a")
-        assert legacy.open_table("embeddings").count_rows() == 20
+        (space,) = document["spaces"]
+        assert (document["version"], space["table"], space["checkpoint"]) == (FORMAT_VERSION, LEGACY_TABLE, "ckpt-a")
+        assert legacy.open_table(LEGACY_TABLE).count_rows() == 20
+        assert Dataset(legacy.path).record_embedding_space()["table"] == LEGACY_TABLE
+
+    def test_its_model_emptied_keeps_its_table(self, legacy: Dataset):
+        """What the worker's replacement and the API's forced computation do to it."""
+        emptied = legacy.empty_model_record_embeddings("test-clip", "ckpt-a", index_type="IVF_SQ")
+
+        assert emptied is not None and emptied["table"] == LEGACY_TABLE
+        assert legacy.open_table(LEGACY_TABLE).count_rows() == 0
+        reopened = Dataset(legacy.path).record_embedding_space()
+        assert (reopened["table"], reopened["checkpoint"], reopened["index_type"]) == (
+            LEGACY_TABLE,
+            "ckpt-a",
+            "IVF_SQ",
+        )
+
+    def test_its_model_recomputed_from_nothing_gets_a_table_of_its_own_name(self, legacy: Dataset):
+        created = legacy.create_record_embedding_table(dim=8, model_id="test-clip")
+
+        assert created["table"] == f"{TABLE_PREFIX}{created['id']}"
+        assert [space["id"] for space in Dataset(legacy.path).record_embedding_spaces()] == [created["id"]]
+        assert LEGACY_TABLE not in legacy._db_connection.list_tables().tables
 
     def test_another_model_beside_it_rewrites_the_file_in_the_new_format(self, legacy: Dataset):
-        legacy.ensure_record_embedding_space("test-siglip", "ckpt-b", dim=SIGLIP_DIM)
+        siglip = legacy.ensure_record_embedding_space("test-siglip", "ckpt-b", dim=SIGLIP_DIM)
 
         document = json.loads((legacy.path / "embeddings.json").read_text())
         assert document["version"] == FORMAT_VERSION
-        assert [space["model_id"] for space in document["spaces"]] == ["test-clip", "test-siglip"]
+        assert [(space["model_id"], space["table"]) for space in document["spaces"]] == [
+            ("test-clip", LEGACY_TABLE),
+            ("test-siglip", f"{TABLE_PREFIX}{siglip['id']}"),
+        ]
 
     def test_its_name_at_another_dimension_is_another_model(self, legacy: Dataset):
         other = legacy.ensure_record_embedding_space("test-clip", "ViT-L-14", dim=16)
 
-        assert other["table"] != "embeddings"
+        assert other["table"] != LEGACY_TABLE
         assert len(Dataset(legacy.path).record_embedding_spaces()) == 2
-        assert legacy.open_table("embeddings").count_rows() == 20
+        assert legacy.open_table(LEGACY_TABLE).count_rows() == 20
 
     def test_its_name_at_another_dimension_recomputed_from_nothing_never_takes_its_id(self, legacy: Dataset):
         """It keeps the id of a space without a checkpoint once it learns its own; a new one gets another."""

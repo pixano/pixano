@@ -64,7 +64,7 @@ def read_page(
     try:
         record_ids, total = ordered_record_ids(dataset, query.where, query.computed_filter, query.order, limit, offset)
     except InvalidRecordFilter as error:
-        raise _refused(error, raw_where) from None
+        raise refused(error, raw_where) from None
     return PaginatedResponse(items=service.get_many(record_ids), total=total, limit=limit, offset=offset)
 
 
@@ -81,7 +81,7 @@ def read_neighbors(dataset: Dataset, query: RecordQuery, record_id: str, raw_whe
         try:
             return record_neighbors(dataset, query.where, query.computed_filter, query.order, record_id)
         except InvalidRecordFilter as error:
-            raise _refused(error, raw_where) from None
+            raise refused(error, raw_where) from None
     try:
         return dataset.get_neighbors(
             record_id=record_id,
@@ -91,7 +91,7 @@ def read_neighbors(dataset: Dataset, query: RecordQuery, record_id: str, raw_whe
             order=query.order.direction,
         )
     except RuntimeError as error:
-        raise _refused(error, raw_where) from None
+        raise refused(error, raw_where) from None
 
 
 def read_matching_ids(dataset: Dataset, query: RecordQuery, raw_where: bool) -> list[str]:
@@ -100,16 +100,24 @@ def read_matching_ids(dataset: Dataset, query: RecordQuery, raw_where: bool) -> 
         try:
             return matching_record_ids(dataset, query.where, query.computed_filter)
         except InvalidRecordFilter as error:
-            raise _refused(error, raw_where) from None
+            raise refused(error, raw_where) from None
     try:
         matches = dataset.get_data(_RECORDS_TABLE, where=query.where, limit=None)
     except RuntimeError as error:
-        raise _refused(error, raw_where) from None
+        raise refused(error, raw_where) from None
     return [record.id for record in (matches or [])]
 
 
-def _refused(error: Exception, raw_where: bool) -> Exception:
-    """A failure of a read as answered: bad input when a raw clause may be to blame, as it is."""
+def refused(error: Exception, raw_where: bool) -> Exception:
+    """A failure of a read as answered: bad input when a raw clause may be to blame, as it is.
+
+    Args:
+        error: Why the read failed.
+        raw_where: Whether the request carried a raw clause, which may be malformed.
+
+    Returns:
+        A 400 naming the failure when a raw clause may be to blame, else the failure itself.
+    """
     if raw_where:
         return HTTPException(status_code=400, detail=f"Invalid filter. {error}")
     return error

@@ -56,10 +56,16 @@ License: CECILL-C
 {#if data.browserData?.table_data}
   <DatasetExplorer
     selectedDataset={data.browserData}
+    datasetName={data.dataset.name}
     filterSchema={data.filterSchema}
     splitCounts={data.splitCounts ?? []}
     semanticActive={data.semantic?.active ?? false}
     similarTo={data.semantic?.similarTo ?? ""}
+    model={data.semantic?.model ?? ""}
+    searchNotice={data.searchNotice ?? ""}
+    overview={data.overview ?? null}
+    overviewError={data.overviewError ?? ""}
+    bySplit={data.bySplit ?? false}
     searchError={data.searchError ?? ""}
     view={data.view ?? "table"}
     onSelectItem={handleSelectItem}
