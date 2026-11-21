@@ -33,7 +33,7 @@ from pycocotools import mask as mask_api
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, statistics_slot
+from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, SequenceFrame, statistics_slot
 from pixano.schemas.table_names import canonical_family_spec_for_slot
 from pixano.statistics.definitions import (
     StatisticAggregation,
@@ -57,6 +57,9 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     "detection": {"model": "yolo", "chunk_size": 8},
     # Segments the box a person drew on each image (`_seeded_prompts`).
     "segmentation": {"model": "sam", "chunk_size": 8},
+    # Follows the object a person drew on the first frame of each video, three frames a call, and
+    # proposes both its masks and the boxes around them: every table the kind can write into.
+    "tracking": {"model": "sam-video", "window": 3, "output": "both"},
     "label": {
         "record_ids": [f"rec-{n}" for n in range(25)],
         "label": "to-review",
@@ -123,16 +126,26 @@ def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) ->
 
 
 def _condition(clause: str) -> Any:
-    """One condition of a filter, as a test on a row."""
+    """One condition of a filter, as a test on a row — or several joined by OR, in parentheses."""
+    either = re.fullmatch(r"\((.*)\)", clause)
+    if either is not None:
+        alternatives = [_condition(alternative) for alternative in either.group(1).split(" OR ")]
+        return lambda row: any(alternative(row) for alternative in alternatives)
     prefix = re.fullmatch(r"id LIKE '([^']*)%'", clause)
     if prefix is not None:
         return lambda row: row.id.startswith(prefix.group(1))
     equal = re.fullmatch(r"(\w+) = '([^']*)'", clause)
     if equal is not None:
         return lambda row: getattr(row, equal.group(1)) == equal.group(2)
+    compared = re.fullmatch(r"(\w+) (>=|>|<=|<) (-?\d+)", clause)
+    if compared is not None:
+        name, operator, bound = compared.group(1), compared.group(2), int(compared.group(3))
+        tests = {">=": bound.__le__, ">": bound.__lt__, "<=": bound.__ge__, "<": bound.__gt__}
+        return lambda row: tests[operator](getattr(row, name))
     among = re.fullmatch(r"(\w+) IN \((.*)\)", clause)
     assert among is not None, f"unexpected filter in a test double: {clause!r}"
-    values = set(re.findall(r"'([^']*)'", among.group(2)))
+    quoted = re.findall(r"'([^']*)'", among.group(2))
+    values: set[Any] = set(quoted) if quoted else {int(value) for value in among.group(2).split(", ")}
     return lambda row: getattr(row, among.group(1), None) in values
 
 
@@ -350,9 +363,28 @@ class _Vector:
 #: swapped width and height would place its output elsewhere.
 IMAGE_WIDTH, IMAGE_HEIGHT = 100, 60
 
+#: The videos of the contract's dataset, beside its images: records of their own, a few frames each,
+#: and an object a person drew on the first frame of each — what a tracking kind follows.
+CONTRACT_VIDEOS = 3
+FRAMES_PER_VIDEO = 4
+
 #: Where a person drew a box on each image, in pixels: left, top, right, bottom. Clear of the box
 #: the simulated detection finds, so that the person's box does not hold the detection back.
 PERSONS_BOX_PX = (60, 10, 90, 50)
+
+
+class _Row:
+    def __init__(
+        self, row_id: str, record_id: str = "", uri: str = "", frame_index: int = -1, timestamp: float = 0.0
+    ) -> None:
+        self.id = row_id
+        self.record_id = record_id
+        self.uri = uri
+        self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
+        # A video's frame says where it stands in its video, and which video of its record it is;
+        # an image, nowhere.
+        self.frame_index, self.timestamp = frame_index, timestamp
+        self.logical_name = "video"
 
 
 def _seeded_prompts() -> dict[str, dict[str, Any]]:
@@ -381,15 +413,47 @@ def _seeded_prompts() -> dict[str, dict[str, Any]]:
             source_type="human",
         )
         boxes[box.id], entities[entity.id] = box, entity
+    for n in range(CONTRACT_VIDEOS):
+        entity = Entity(id=f"mover-{n}", record_id=f"vid-{n}")
+        box = BBox(
+            id=f"drawn-on-video-{n}",
+            record_id=f"vid-{n}",
+            view_id=_frame_id(n, 0),
+            frame_id=_frame_id(n, 0),
+            frame_index=0,
+            entity_id=entity.id,
+            coords=[
+                left / IMAGE_WIDTH,
+                top / IMAGE_HEIGHT,
+                (right - left) / IMAGE_WIDTH,
+                (bottom - top) / IMAGE_HEIGHT,
+            ],
+            format="xywh",
+            is_normalized=True,
+            source_type="human",
+        )
+        boxes[box.id], entities[entity.id] = box, entity
     return {"bboxes": boxes, "entities": entities}
 
 
-class _Row:
-    def __init__(self, row_id: str, record_id: str = "", uri: str = "") -> None:
-        self.id = row_id
-        self.record_id = record_id
-        self.uri = uri
-        self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
+def _frame_id(video: int, index: int) -> str:
+    return f"vid-{video}-f{index}"
+
+
+def _frames() -> dict[str, Any]:
+    """The frames of the contract's videos, designated by path as its images are."""
+    frames = {}
+    for video in range(CONTRACT_VIDEOS):
+        for index in range(FRAMES_PER_VIDEO):
+            frame = _Row(
+                _frame_id(video, index),
+                record_id=f"vid-{video}",
+                uri=f"/medias/{_frame_id(video, index)}.jpg",
+                frame_index=index,
+                timestamp=index / 10,
+            )
+            frames[frame.id] = frame
+    return frames
 
 
 class _Source:
@@ -402,12 +466,23 @@ class _Source:
 
     # The real schemas: the reader finds a dataset's media by looking at them. Its objects and boxes
     # are those a person drew (`_seeded_prompts`), which segmentation outlines and statistics count.
-    info = SimpleNamespace(tables={"records": Record, "images": Image, "bboxes": BBox, "entities": Entity})
+    info = SimpleNamespace(
+        tables={
+            "records": Record,
+            "images": Image,
+            "sequence_frames": SequenceFrame,
+            "bboxes": BBox,
+            "entities": Entity,
+        }
+    )
 
     def __init__(self) -> None:
         self._seeded = _seeded_prompts()
+        self._frames = _frames()
 
     def count_rows_where(self, table_name: str, where: str | None = None) -> int:
+        if table_name == "sequence_frames":
+            return len(self._frames) if where is None else len(_matching(self._frames, None, where))
         return CONTRACT_RECORDS
 
     def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
@@ -435,6 +510,8 @@ class _Source:
             return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
         if table_name in self._seeded:
             return _matching(self._seeded[table_name], ids, where)
+        if table_name == "sequence_frames":
+            return _matching(self._frames, ids, where)
         end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
         return [_Row(f"rec-{n}") for n in range(skip, end)]
 
@@ -523,7 +600,28 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
                 SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
                 SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
                 SimpleNamespace(name="sam", model_path="facebook/sam2.1-hiera-tiny", capability="segmentation"),
+                SimpleNamespace(name="sam-video", model_path="facebook/sam2.1-hiera-tiny", capability="tracking"),
             ]
+
+        def tracking(self, request: Any, **_kwargs: Any) -> Any:
+            """Each prompted object on every frame of the window from its prompt on, at the box a person drew."""
+            left, top, right, bottom = PERSONS_BOX_PX
+            pixels = np.zeros((IMAGE_HEIGHT, IMAGE_WIDTH), dtype=np.uint8, order="F")
+            pixels[top:bottom, left:right] = 1
+            encoded = mask_api.encode(pixels)
+            mask = SimpleNamespace(size=list(encoded["size"]), counts=encoded["counts"])
+            frames = [
+                SimpleNamespace(
+                    frame_index=relative,
+                    objects=[
+                        SimpleNamespace(track_id=track_id, mask=mask)
+                        for track_id, prompted_at in zip(request.objects_ids, request.frame_indexes, strict=True)
+                        if relative >= prompted_at
+                    ],
+                )
+                for relative in range(len(request.video))
+            ]
+            return SimpleNamespace(data=SimpleNamespace(frames=frames))
 
         def detection(self, request: Any, **_kwargs: Any) -> Any:
             return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))

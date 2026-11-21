@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""The geometry of masks: where a box prompts a model, and whether a person's mask covers a model's.
+"""The geometry of masks: where a box prompts a model, the box around a mask, whether a person's covers a model's.
 
 Pure functions, no dataset and no inference, beside `boxes`: a kind decides what to do, these say
 where things are.
@@ -120,6 +120,16 @@ def is_empty(mask: Any) -> bool:
     """
     read = _read(mask)
     return read is None or read.area == 0
+
+
+def normalized_bounds(mask: Any) -> Box | None:
+    """The box drawn around a mask: its bounding box, as corners relative to its own grid.
+
+    None for a mask that paints nothing, or that cannot be read (see `is_readable`): no box goes
+    around it.
+    """
+    read = _read(mask)
+    return None if read is None or read.area == 0 else _normalized_bounds(read)
 
 
 def mask_iou(first: Any, second: Any) -> float:
