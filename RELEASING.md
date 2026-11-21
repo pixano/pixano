@@ -42,8 +42,9 @@ The model only works if `main` can be released on any day, including by someone 
 | `Docker`         | The application and worker images build, the running container answers `/health`, and the compose files resolve                |
 | `Documentation`  | The Astro site builds, including the generated API reference                                                                   |
 | `License header` | The copyright header is present in `.py`, `.ts`, and `.svelte` files                                                           |
+| `Specs`          | A pull request that changes `specs/` changes nothing else and carries the `spec-change` label                                  |
 
-Every workflow runs on every pull request, whatever files it changes, and each one ends with a check named after it: `Backend`, `Frontend`, `Docker`, `Documentation`, and `License header`. A pull request merges only when these five have passed, with one approving review, and with every commit signed off (`git commit -s`).
+Every workflow runs on every pull request, whatever files it changes, and each one ends with a check named after it: `Backend`, `Frontend`, `Docker`, `Documentation`, `License header`, and `Specs`. A pull request merges only when these six have passed, with one approving review, and with every commit signed off (`git commit -s`). A pull request that changes a path listed in `.github/CODEOWNERS` also needs the approval of that path's owner.
 
 A job added to a workflow must also be added to the `needs` list of that workflow's last job. Otherwise its failure does not block the merge.
 
@@ -209,6 +210,6 @@ A release candidate is optional. Use one when a minor is large enough to need a 
 This section lists what the repository still lacks relative to the process above. Remove each item when it is done, and the section when it is empty.
 
 - **Changelog of the work in progress.** `main` carries the work that was developed on `dev/v0.9`, but `changelog.d/` has no fragment for it.
-- **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows predate this document: they trigger on `releases/**` and do not report the five checks, so both have to be fixed on that branch first. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
+- **0.8 line.** If 0.8 needs a patch, `release/0.8` is created from the `v0.8.0` tag. Its workflows predate this document: they trigger on `releases/**` and do not report the six checks, so both have to be fixed on that branch first. The old `releases/0.8` branch has the same content as the tag but holds the detailed 0.8 history, which the squashed release commit on `main` does not: archive it as a tag before deleting it.
 - **Slow and end-to-end tests.** Tests marked `slow`, `hub`, and `e2e` never run in CI, and no test drives the UI in a browser. A scheduled run on `main` is needed, and the manual checks of step 1 should shrink as it grows.
 - **Worker package.** `packages/pixano-worker` has its own version and no publication step in `Publish`. Whether it is released together with Pixano is still to be decided.
