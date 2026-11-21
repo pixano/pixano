@@ -6,7 +6,11 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
+  import { onMount } from "svelte";
+
   import ConnectToServerModal from "../inference/ConnectToServerModal.svelte";
+  import JobsModal from "../jobs/JobsModal.svelte";
+  import DatasetOverview from "../overview/DatasetOverview.svelte";
   import DatasetPagination from "./DatasetPagination.svelte";
   import ExplorerEmptyState from "./ExplorerEmptyState.svelte";
   import GridSkeleton from "./GridSkeleton.svelte";
@@ -14,30 +18,66 @@ License: CECILL-C
   import RecordGrid from "./RecordGrid.svelte";
   import { Table } from "./table";
   import TableSkeleton from "./TableSkeleton.svelte";
-  import { invalidateAll } from "$app/navigation";
+  import { invalidate, invalidateAll } from "$app/navigation";
   import { navigating } from "$app/state";
   import {
     computeEmbeddings,
+    getImportStatisticsOffer,
     getIoJob,
     getNextRecordToReview,
     listInferenceModels,
+    setDefaultEmbeddingSpace,
   } from "$lib/api";
+  import { ApiError, serverDetail } from "$lib/api/apiClient";
+  import type { DatasetOverview as Overview, OverviewCard } from "$lib/api/overviewApi";
   import type { FilterSchemaResponse, IoJobResponse, NextRecordToReview } from "$lib/api/restTypes";
   import { DEFAULT_DATASET_GRID_SIZE, DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants";
+  import { jobsStore } from "$lib/stores/jobsStore.svelte";
   import type { SplitStatusCount } from "$lib/types/dataset";
   import { MultimodalImageNLPTask } from "$lib/types/inference";
   import type { DatasetBrowser } from "$lib/ui";
+  import { describeTableColumns, undescribedStatisticColumns } from "$lib/utils/columns";
+  import {
+    embeddingsView,
+    modelToCompute,
+    orderedSpaces,
+    selectedSpace,
+  } from "$lib/utils/embeddingSpaces";
+  import { EXPLORER_COLUMNS_DEPENDENCY } from "$lib/utils/explorerData";
+  import type { ExplorerView } from "$lib/utils/explorerSearch";
+  import {
+    filtersAfterClick,
+    filtersWithoutCard,
+    keptBars,
+    MAX_FILTERS,
+    withinFilterLimit,
+  } from "$lib/utils/overview";
   import { EXPLORER_ROUTE_ID } from "$lib/utils/routes";
+
+  /** The status of an answer about a model the dataset holds no more. */
+  const HTTP_NOT_FOUND = 404;
 
   interface Props {
     selectedDataset: DatasetBrowser;
+    /** The dataset's display name: `selectedDataset.name` holds its id. */
+    datasetName: string;
     filterSchema: FilterSchemaResponse;
     splitCounts?: SplitStatusCount[];
     semanticActive?: boolean;
     /** Record id the current ranked view is "similar to" (find-similar mode). */
     similarTo?: string;
+    /** The model a search reads, as the URL names it — its id —; empty for the default one. */
+    model?: string;
     searchError?: string;
-    view?: "grid" | "table";
+    /** What the explorer did of a URL it could not follow as it is: a model the dataset does not hold. */
+    searchNotice?: string;
+    view?: ExplorerView;
+    /** The overview of the records the filters keep, when it is the view; none when it could not be read. */
+    overview?: Overview | null;
+    /** Why it could not be read. */
+    overviewError?: string;
+    /** Whether the overview compares the splits. */
+    bySplit?: boolean;
     onSelectItem?: (itemId: string) => void;
     /**
      * Open a record to review what a model proposed, in review; none where this interface does not
@@ -58,19 +98,30 @@ License: CECILL-C
 
   let {
     selectedDataset,
+    datasetName,
     filterSchema,
     splitCounts = [],
     semanticActive = false,
     similarTo = "",
+    model = "",
     searchError = "",
+    searchNotice = "",
     view = "table",
+    overview = null,
+    overviewError = "",
+    bySplit = false,
     onSelectItem,
     onOpenReview,
     onNavigate,
     pagination,
   }: Props = $props();
   const isLoadingTableItems = $derived(navigating.to?.route?.id === EXPLORER_ROUTE_ID);
-  const semanticAvailable = $derived((filterSchema.search?.modes ?? []).includes("semantic"));
+  // The dataset's embeddings models, and the one a search reads — "more like this" too: the
+  // URL's, else the default one.
+  const spaces = $derived(orderedSpaces(filterSchema.search));
+  const searchedSpace = $derived(selectedSpace(spaces, model));
+  const embeddings = $derived(embeddingsView(filterSchema.search, spaces, searchedSpace));
+  const semanticAvailable = $derived(embeddings.searchReady);
   const ranked = $derived(semanticActive || similarTo !== "");
   const isEmpty = $derived(selectedDataset.table_data.rows.length === 0);
   const hasActiveQuery = $derived(
@@ -109,23 +160,70 @@ License: CECILL-C
 
   let computing = $state(false);
   let showConnectModal = $state(false);
+  let showJobsModal = $state(false);
   let computeJob = $state<IoJobResponse | null>(null);
-  let computeError = $state("");
+  let settingDefault = $state(false);
+  // The force a computation was asked with while no inference was connected: kept for after.
+  let pendingForce = false;
+
+  // What went wrong computing the embeddings, and changing the default model, said for the dataset
+  // it went wrong on: another dataset shown in place reuses this component.
+  let computeFailure = $state<{ datasetId: string; message: string } | null>(null);
+  let spaceFailure = $state<{ datasetId: string; message: string } | null>(null);
+  const computeError = $derived(
+    computeFailure?.datasetId === datasetId ? computeFailure.message : "",
+  );
+  const spaceError = $derived(spaceFailure?.datasetId === datasetId ? spaceFailure.message : "");
+
+  // Where a worker runs the embeddings job, it computes the embeddings, one vector per image; the
+  // search bar's own computation, one per record, then gives way to it.
+  onMount(() => {
+    void jobsStore.probe();
+  });
+
+  // A job run from the panel may have changed what the explorer shows — the embeddings job, the
+  // count of embedded images the search bar reads from the page's data — so closing it reads
+  // that data again, as the search bar's own computation does once it ends.
+  function closeJobs() {
+    showJobsModal = false;
+    void invalidateAll();
+  }
 
   async function runCompute(force = false): Promise<boolean> {
     // Returns false when no embedding model is reachable (caller prompts to connect).
     const models = await listInferenceModels();
     const embeddingModels = models.filter((m) => m.task === MultimodalImageNLPTask.EMBEDDING);
     if (embeddingModels.length === 0) return false;
-    computeError = "";
-    const jobId = await computeEmbeddings(selectedDataset.id, embeddingModels[0].name, force);
+    const computedFor = datasetId;
+    computeFailure = null;
+    // Forced on a description read in part, the computation deletes every model's embeddings and
+    // starts again: whichever model is served then, the searched one first.
+    const startAgain = force && !embeddings.descriptionReadable;
+    const computed = modelToCompute(searchedSpace, spaces, embeddingModels, startAgain);
+    if ("refusal" in computed) {
+      computeFailure = { datasetId: computedFor, message: computed.refusal };
+      return true;
+    }
+    let jobId: string;
+    try {
+      jobId = await computeEmbeddings(computedFor, computed.model, force, computed.provider);
+    } catch (error) {
+      computeFailure = {
+        datasetId: computedFor,
+        message: serverDetail(error) ?? "The embedding computation could not start.",
+      };
+      return true;
+    }
     try {
       for (;;) {
         const job = await getIoJob(jobId);
         computeJob = job;
         if (["done", "error", "cancelled"].includes(job.status)) {
           if (job.status === "error") {
-            computeError = job.error?.message ?? "Embedding computation failed.";
+            computeFailure = {
+              datasetId: computedFor,
+              message: `Embedding computation failed: ${job.error?.message ?? "no reason given."}`,
+            };
           }
           break;
         }
@@ -138,11 +236,35 @@ License: CECILL-C
     return true;
   }
 
+  // The page's columns named as the explorer names them: a statistic by its label and unit.
+  const tableItems = $derived(
+    describeTableColumns(selectedDataset.table_data, filterSchema.columns),
+  );
+
+  // A page can carry a statistic the explorer's columns, read before it was computed, do not
+  // describe — a statistics job that ended after they were read: they are read again, once per such
+  // column.
+  let columnsAskedFor = "";
+  $effect(() => {
+    const undescribed = undescribedStatisticColumns(
+      selectedDataset.table_data,
+      filterSchema.columns,
+    ).join(",");
+    if (undescribed === "" || undescribed === columnsAskedFor) return;
+    columnsAskedFor = undescribed;
+    void invalidate(EXPLORER_COLUMNS_DEPENDENCY);
+  });
+
   // Remount the table only when the dataset or its column set changes — the
   // table builds its column defs once at mount. Sorting is prop-driven and
   // re-renders in place (no remount, no scroll reset).
+  // A column's label is part of it: the headers are built at mount, and a statistic gets its label
+  // once the explorer's columns describe it.
   const tableKey = $derived(
-    [selectedDataset.id, selectedDataset.table_data.columns.map((c) => c.name).join(",")].join("|"),
+    [
+      selectedDataset.id,
+      tableItems.columns.map((c) => `${c.name}\u0000${c.label ?? ""}`).join(","),
+    ].join("|"),
   );
 
   function handleSelectItem(itemId: string) {
@@ -180,13 +302,48 @@ License: CECILL-C
     onNavigate({ page: "1", similar_to: undefined });
   }
 
+  function handleSelectSpace(spaceId: string) {
+    computeFailure = null;
+    spaceFailure = null;
+    // The default one is the URL naming none, so that the URL follows the dataset's default. Another
+    // model ranks the records otherwise: a search running runs again, from its first page.
+    const isDefault = spaces.some((space) => space.id === spaceId && space.default);
+    onNavigate({ ...(ranked ? { page: "1" } : {}), model: isDefault ? undefined : spaceId });
+  }
+
+  async function handleSetDefaultSpace(spaceId: string) {
+    if (settingDefault) return;
+    const changedFor = datasetId;
+    settingDefault = true;
+    spaceFailure = null;
+    try {
+      await setDefaultEmbeddingSpace(changedFor, spaceId);
+    } catch (error) {
+      spaceFailure = {
+        datasetId: changedFor,
+        message: serverDetail(error) ?? "The default model could not be changed.",
+      };
+      // A model gone meanwhile: the list is read again.
+      if (error instanceof ApiError && error.status === HTTP_NOT_FOUND) await invalidateAll();
+      return;
+    } finally {
+      settingDefault = false;
+    }
+    // The search bar, and a search naming no model, read the default one.
+    await invalidateAll();
+  }
+
   async function handleCompute(force = false) {
     if (computing) return;
     computing = true;
     try {
-      // If no embedding model is reachable, the server isn't connected — prompt for it.
+      // If no embedding model is reachable, the server isn't connected — prompt for it, and
+      // compute as asked once it is.
       const ok = await runCompute(force);
-      if (!ok) showConnectModal = true;
+      if (!ok) {
+        pendingForce = force;
+        showConnectModal = true;
+      }
     } finally {
       computing = false;
     }
@@ -196,9 +353,10 @@ License: CECILL-C
     showConnectModal = false;
     computing = true;
     try {
-      await runCompute();
+      await runCompute(pendingForce);
     } finally {
       computing = false;
+      pendingForce = false;
     }
   }
 
@@ -223,7 +381,7 @@ License: CECILL-C
     onNavigate({ page: "1", size: String(size) });
   }
 
-  function handleViewChange(nextView: "grid" | "table") {
+  function handleViewChange(nextView: ExplorerView) {
     if (nextView === view) return;
     // Remember the choice per dataset; switching views resets to page 1 with the
     // view's default page size.
@@ -231,8 +389,75 @@ License: CECILL-C
     onNavigate({
       page: "1",
       view: nextView,
-      size: String(nextView === "grid" ? DEFAULT_DATASET_GRID_SIZE : DEFAULT_DATASET_TABLE_SIZE),
+      size: String(nextView === "table" ? DEFAULT_DATASET_TABLE_SIZE : DEFAULT_DATASET_GRID_SIZE),
     });
+  }
+
+  // ---- Overview ----
+
+  // A bar of the overview keeps the records it counts, in place of the filters of its column, and
+  // every card, the records' list too, shows the records left; clicked again, or its card cleared,
+  // every record comes back. Nothing is filtered while the overview of other filters is read, by
+  // pointer or by keyboard: the filters it would start from are about to change. The server takes
+  // a bounded number of filters: one past them is said, not sent, for the filters it was said of.
+  const overviewKept = $derived(keptBars(overview?.cards ?? [], pagination.filters));
+  let overviewNotice = $state<{ datasetId: string; filters: string; text: string } | null>(null);
+  const overviewNoticeShown = $derived(
+    overviewNotice?.datasetId === datasetId &&
+      overviewNotice.filters === pagination.filters.join("\n")
+      ? overviewNotice.text
+      : "",
+  );
+
+  function applyOverviewFilters(filters: string[]) {
+    if (!withinFilterLimit(filters)) {
+      overviewNotice = {
+        datasetId,
+        filters: pagination.filters.join("\n"),
+        text: `At most ${MAX_FILTERS} filters apply at once: remove one to add another.`,
+      };
+      return;
+    }
+    overviewNotice = null;
+    onNavigate({ page: "1", filter: filters.length > 0 ? filters : undefined });
+  }
+
+  function handleOverviewBarClick(card: OverviewCard, index: number) {
+    if (isLoadingTableItems) return;
+    const filters = filtersAfterClick(pagination.filters, card, index);
+    if (filters !== null) applyOverviewFilters(filters);
+  }
+
+  function handleOverviewClear(card: OverviewCard) {
+    if (isLoadingTableItems) return;
+    applyOverviewFilters(filtersWithoutCard(pagination.filters, card));
+  }
+
+  function handleToggleSplit() {
+    onNavigate({ by_split: bySplit ? undefined : "1" });
+  }
+
+  // Whether the statistics job can run here, for what the overview says of the statistics not
+  // computed yet: asked of each reading that lists some, until it can — a worker declared since, a
+  // server that did not answer, is heard at the next reading. Unanswered, it is left unsaid.
+  let statisticsJobRuns = $state<boolean | null>(null);
+  let statisticsJobAskedFor: Overview | null = null;
+  $effect(() => {
+    if (view !== "overview" || !overview || overview.statistics_to_compute.length === 0) return;
+    if (statisticsJobRuns === true || statisticsJobAskedFor === overview) return;
+    statisticsJobAskedFor = overview;
+    void getImportStatisticsOffer()
+      .then((offer) => (statisticsJobRuns = offer.available))
+      .catch(() => (statisticsJobRuns = null));
+  });
+
+  // The overview read again as a person asks, never over a reading under way: it would take that
+  // reading's place, and drop the filter just clicked.
+  let readingAgain = $state(false);
+  function readOverviewAgain() {
+    if (readingAgain || isLoadingTableItems) return;
+    readingAgain = true;
+    void invalidateAll().finally(() => (readingAgain = false));
   }
 
   function handleClearAllForEmptyState() {
@@ -260,7 +485,12 @@ License: CECILL-C
         order={pagination.order}
         {semanticActive}
         {similarTo}
+        {embeddings}
+        {spaceError}
+        {settingDefault}
+        {searchNotice}
         {computing}
+        embeddingsByJob={jobsStore.offersEmbeddingsJob}
         computeProgress={computeJob?.progress ?? null}
         {computeError}
         {searchError}
@@ -269,9 +499,12 @@ License: CECILL-C
         onSortChange={handleSortSelect}
         onCompute={handleCompute}
         onClearSimilar={handleClearSimilar}
+        onSelectSpace={handleSelectSpace}
+        onSetDefaultSpace={handleSetDefaultSpace}
         onViewChange={handleViewChange}
         {recordsToReview}
         onReview={onOpenReview && firstRecordToReview ? openReview : undefined}
+        onOpenJobs={() => (showJobsModal = true)}
       />
     </div>
 
@@ -279,7 +512,23 @@ License: CECILL-C
     <div
       class="flex-1 min-h-0 overflow-hidden flex flex-col border border-border/50 rounded-xl bg-card shadow-elevation-1"
     >
-      {#if isLoadingTableItems}
+      {#if view === "overview"}
+        <DatasetOverview
+          {overview}
+          error={overviewError}
+          kept={overviewKept}
+          {bySplit}
+          loading={isLoadingTableItems}
+          semanticActive={ranked}
+          notice={overviewNoticeShown}
+          {statisticsJobRuns}
+          {readingAgain}
+          onToggleSplit={handleToggleSplit}
+          onBarClick={handleOverviewBarClick}
+          onClear={handleOverviewClear}
+          onReadAgain={readOverviewAgain}
+        />
+      {:else if isLoadingTableItems}
         {#if view === "grid"}
           <GridSkeleton count={pagination.size} />
         {:else}
@@ -304,7 +553,7 @@ License: CECILL-C
         <div class="flex-1 min-h-0">
           {#key tableKey}
             <Table
-              items={selectedDataset.table_data}
+              items={tableItems}
               activeSort={{ col: pagination.sort, order: pagination.order }}
               onSelectItem={handleSelectItem}
               onColsort={handleColSort}
@@ -315,20 +564,26 @@ License: CECILL-C
       {/if}
     </div>
 
-    <!-- Pagination — always visible at the bottom -->
-    <div class="shrink-0">
-      <DatasetPagination
-        {selectedDataset}
-        currentPage={pagination.currentPage}
-        pageSize={pagination.size}
-        pageSizeOptions={ranked ? [] : view === "grid" ? [24, 48, 96] : [20, 50, 100]}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
-    </div>
+    <!-- Pagination — always visible at the bottom, but over the overview, which pages nothing -->
+    {#if view !== "overview"}
+      <div class="shrink-0">
+        <DatasetPagination
+          {selectedDataset}
+          currentPage={pagination.currentPage}
+          pageSize={pagination.size}
+          pageSizeOptions={ranked ? [] : view === "grid" ? [24, 48, 96] : [20, 50, 100]}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </div>
+    {/if}
   {/if}
 </div>
 
 {#if showConnectModal}
   <ConnectToServerModal onClose={() => (showConnectModal = false)} onConnected={handleConnected} />
+{/if}
+
+{#if showJobsModal}
+  <JobsModal dataset={{ id: selectedDataset.id, name: datasetName }} onClose={closeJobs} />
 {/if}

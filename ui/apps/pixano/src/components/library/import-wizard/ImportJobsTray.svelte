@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   import { CheckCircle, CircleNotch, Prohibit, WarningCircle, X } from "phosphor-svelte";
 
-  import { isTerminalJob, jobStateLabel, visibleJobEntries } from "./wizardUtils";
+  import { followUpLines, isTerminalJob, jobStateLabel, visibleJobEntries } from "./wizardUtils";
   import {
     dismissImportJob,
     importJobsStore,
@@ -82,6 +82,15 @@ License: CECILL-C
             {entry.job.error?.message || "The import stopped unexpectedly."}
           </p>
         {/if}
+        {#each followUpLines(entry.job) as line, index (index)}
+          <p
+            class="mt-1.5 line-clamp-3 text-xs {line.notQueued
+              ? 'text-amber-600 dark:text-amber-400'
+              : 'text-muted-foreground'}"
+          >
+            {line.text}
+          </p>
+        {/each}
       </div>
     {/each}
   </div>

@@ -10,7 +10,7 @@ License: CECILL-C
 
   import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
   import { Select } from "$lib/ui";
-  import { formatColumnLabel } from "$lib/utils/columns";
+  import { columnLabel, columnLabelOf } from "$lib/utils/columns";
   import {
     canApplyFilter,
     isListOperator,
@@ -114,25 +114,25 @@ License: CECILL-C
   <Select.Root
     type="single"
     value={col}
-    items={filterable.map((c) => ({ value: c.name, label: formatColumnLabel(c.name) }))}
+    items={filterable.map((c) => ({ value: c.name, label: columnLabel(c) }))}
     onValueChange={(value: string) => {
       if (value) col = value;
     }}
   >
     <Select.Trigger aria-label="Filter column" class={triggerClass}>
       {#snippet children()}
-        <span class="truncate">{col ? formatColumnLabel(col) : "Column"}</span>
+        <span class="truncate">{col ? columnLabelOf(filterable, col) : "Column"}</span>
         <CaretUpDown size={13} class="shrink-0 text-muted-foreground" />
       {/snippet}
     </Select.Trigger>
     <Select.Portal>
       <Select.Content sideOffset={6} class={contentClass} data-select-content>
         {#each filterable as c (c.name)}
-          <Select.Item value={c.name} label={formatColumnLabel(c.name)} class={itemClass}>
+          <Select.Item value={c.name} label={columnLabel(c)} class={itemClass}>
             {#snippet children()}
               <span class="flex items-center gap-2">
                 {#if col === c.name}<Check size={12} class="text-primary" />{/if}
-                {formatColumnLabel(c.name)}
+                {columnLabel(c)}
               </span>
             {/snippet}
           </Select.Item>

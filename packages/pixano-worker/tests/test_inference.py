@@ -32,17 +32,20 @@ import pytest
 from PIL import Image as PILImage
 from PIL import UnidentifiedImageError
 from pixano_inference.client import PixanoInferenceError, SyncPixanoInferenceClient
+from pixano_inference.schemas import mask_to_rle
 from pixano_worker import runner
-from pixano_worker.kinds import Chunk, EmbeddingsKind, JobKind, TransientError
+from pixano_worker.kinds import Chunk, DetectionKind, EmbeddingsKind, JobKind, SegmentationKind, TransientError
+from pixano_worker.kinds.detection import BBOX_TABLE, DETECTION_CAPABILITY
 from pixano_worker.kinds.embeddings import EMBEDDING_CAPABILITY
 from pixano_worker.kinds.inference import REFUSED_BY_THE_SERVER, Failure, chunk_media, classify, witness_image
+from pixano_worker.kinds.segmentation import MASK_TABLE, SEGMENTATION_CAPABILITY
 from pixano_worker.media import MediaResolver
-from pixano_worker.writer import JobWriter, derive_id
+from pixano_worker.writer import ENTITY_TABLE, MODEL_SOURCE, JobWriter, derive_id
 
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.inference.media import bytes_to_data_uri
-from pixano.schemas import Image, Record
+from pixano.schemas import BBox, Entity, Image, Record
 
 
 DATASET_ID = "street"
@@ -56,10 +59,17 @@ INFERENCE_MEDIA_ROOT = "/inference-media"
 WIDTH, HEIGHT = 200, 100
 # Each view, its record and its file.
 VIEWS = {"v1": ("r1", "a.png"), "v2": ("r2", "b.png")}
+# The class field the entities hold a class in.
+CLASS_FIELD = "category"
+# A box a person drew on every image, which a detection must leave alone and a segmentation
+# prompts with: normalised top-left and size, away from what the detector finds.
+PERSONS_BOX = [0.6, 0.4, 0.3, 0.5]
+# What the simulated detector finds on every image: pixel corners, score, class.
+DETECTED = ([20, 10, 120, 60], 0.9, "car")
 # The width of the simulated embedding model's vectors.
 DIM = 4
-# The model the simulated server serves for embeddings, which the embeddings kind asks for.
-CLIP = "clip"
+# The model the simulated server serves for each capability these kinds use.
+CLIP, YOLO, SAM = "clip", "yolo", "sam"
 # Where a URL designation points: a host the simulated inference cannot reach.
 UNREACHABLE_HOST = "https://media.example"
 
@@ -96,7 +106,7 @@ def _array(values: np.ndarray) -> dict[str, Any]:
 
 
 class _Server:
-    """The inference at its HTTP edge, serving an embedding model.
+    """The inference at its HTTP edge, serving one model of each capability these kinds use.
 
     Attributes:
         models_answer: What `GET /v1/models` answers instead of the models: a response, or an
@@ -110,6 +120,8 @@ class _Server:
 
     MODELS = [
         {"name": CLIP, "capability": EMBEDDING_CAPABILITY, "modelPath": "MobileCLIP2-S2", "status": "RUNNING"},
+        {"name": YOLO, "capability": DETECTION_CAPABILITY, "modelPath": "yolo26s.pt", "status": "RUNNING"},
+        {"name": SAM, "capability": SEGMENTATION_CAPABILITY, "modelPath": "sam2.1-hiera-tiny", "status": "RUNNING"},
     ]
 
     def __init__(self, media_root: Path) -> None:
@@ -141,8 +153,22 @@ class _Server:
         if any(size is None for size in sizes):
             # The whole batch, as the real server refuses it for one image it cannot open.
             return _refusal(httpx.codes.INTERNAL_SERVER_ERROR, "internal_error", "Inference error.")
-        assert request.url.path == "/v1/inference/embedding", request.url.path
-        return _answer({"embeddings": _array(np.ones((len(images), DIM))), "dim": DIM})
+        if request.url.path == "/v1/inference/embedding":
+            return _answer({"embeddings": _array(np.ones((len(images), DIM))), "dim": DIM})
+        if request.url.path == "/v1/inference/detection":
+            corners, score, name = DETECTED
+            return _answer({"boxes": [corners], "scores": [score], "classes": [name]})
+        assert request.url.path == "/v1/inference/segmentation", request.url.path
+        # One image per segmentation call, and it opened: the batch was refused otherwise.
+        (size,) = sizes
+        assert size is not None
+        width, height = size
+        return _answer(
+            {
+                "masks": [[_filled(corners, width, height)] for corners in body["boxes"]],
+                "scores": _array(np.ones((len(body["boxes"]), 1))),
+            }
+        )
 
     @staticmethod
     def _is_a_mediums_bytes(image: str) -> bool:
@@ -163,6 +189,15 @@ class _Server:
             return None
 
 
+def _filled(corners: list[int], width: int, height: int) -> dict[str, Any]:
+    """A mask filling a box, on the grid of the image it was asked about."""
+    left, top, right, bottom = corners
+    pixels = np.zeros((height, width), dtype=np.uint8)
+    pixels[top:bottom, left:right] = 1
+    encoded = mask_to_rle(pixels)
+    return {"size": list(encoded["size"]), "counts": encoded["counts"].decode()}
+
+
 @dataclass(frozen=True)
 class _Kind:
     """One inference kind, as these tests drive it.
@@ -180,6 +215,13 @@ class _Kind:
     written: Callable[[Dataset], int]
 
 
+def _model_rows(table: str) -> Callable[[Dataset], int]:
+    """The rows a model wrote in a table: those a kind's `prepare` would destroy."""
+    return lambda dataset: (
+        dataset.count_rows_where(table, f"source_type = '{MODEL_SOURCE}'") if table in dataset.info.tables else 0
+    )
+
+
 def _vectors(dataset: Dataset) -> int:
     """The vectors of the model the embeddings kind asks for: those its `prepare` would destroy."""
     space = dataset.record_embedding_space(CLIP)
@@ -188,6 +230,12 @@ def _vectors(dataset: Dataset) -> int:
 
 KINDS = {
     "embeddings": _Kind(lambda key: EmbeddingsKind(INFERENCE_URL, key), CLIP, "replace_existing_embeddings", _vectors),
+    "detection": _Kind(
+        lambda key: DetectionKind(INFERENCE_URL, key), YOLO, "replace_previous", _model_rows(BBOX_TABLE)
+    ),
+    "segmentation": _Kind(
+        lambda key: SegmentationKind(INFERENCE_URL, key), SAM, "replace_previous", _model_rows(MASK_TABLE)
+    ),
 }
 
 
@@ -230,7 +278,7 @@ class _Scene:
 
 
 def _make_scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uri_of: Callable[[Path, str], str]) -> _Scene:
-    """A dataset of two images on disk, served by a simulated inference.
+    """A dataset of two images on disk, each with a box a person drew, served by a simulated inference.
 
     Args:
         tmp_path: Where the library and the media live.
@@ -244,7 +292,7 @@ def _make_scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uri_of: Callabl
     library = tmp_path / "library"
     dataset = Dataset.create(
         library / DATASET_ID,
-        DatasetInfo(id=DATASET_ID, name="Street", record=Record, views={"image": Image}),
+        DatasetInfo(id=DATASET_ID, name="Street", record=Record, entity=Entity, bbox=BBox, views={"image": Image}),
     )
     dataset.add_records({"records": [Record(id=record_id) for record_id, _ in VIEWS.values()]})
     for _, file_name in VIEWS.values():
@@ -264,6 +312,26 @@ def _make_scene(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uri_of: Callabl
         ],
         raise_or_warn="none",
     )
+    dataset.ensure_entity_text_field(CLASS_FIELD)
+    schema = dataset.info.entity
+    assert schema is not None
+    for view_id, (record_id, _) in VIEWS.items():
+        dataset.add_data(ENTITY_TABLE, [schema(id=f"e-{view_id}", record_id=record_id, **{CLASS_FIELD: "dog"})])
+        dataset.add_data(
+            BBOX_TABLE,
+            [
+                BBox(
+                    id=f"b-{view_id}",
+                    record_id=record_id,
+                    view_id=view_id,
+                    entity_id=f"e-{view_id}",
+                    coords=PERSONS_BOX,
+                    format="xywh",
+                    is_normalized=True,
+                    source_type="human",
+                )
+            ],
+        )
 
     server = _Server(media_root)
     transport = httpx.MockTransport(server.handle)

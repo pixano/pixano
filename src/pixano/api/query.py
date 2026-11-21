@@ -30,6 +30,7 @@ from pixano.datasets.dataset_schema import serialize_all_fields
 from pixano.datasets.queries.computed_columns import (
     RECORD_STATISTICS_TABLE,
     ComputedFilter,
+    CrossFilter,
     RecordOrder,
     computed_sql_column,
 )
@@ -642,6 +643,56 @@ def compile_record_query(
         computed_filter=compile_computed_filters(catalogue, on_computed),
         order=record_order(catalogue, sortcol, normalized_order),
     )
+
+
+def compile_cross_filter(
+    catalogue: list[ColumnDescriptor],
+    filters: list[str] | None,
+    q: str | None = None,
+    raw_where: str | None = None,
+) -> CrossFilter:
+    """Compile a request on the records per column filtered, so that each column's filters can be left out
+    in turn: the overview counts a card over what the other columns' filters keep (backend-processing §22.7).
+
+    Checked as `compile_record_query` checks it. The free text and a raw clause name no column: they
+    apply to every card.
+
+    Args:
+        catalogue: The column catalogue for the records.
+        filters: ``col:op:value`` tokens, on the records' columns or on columns computed from them.
+        q: Free-text search over searchable string columns.
+        raw_where: A deprecated raw where clause on the records, added as is.
+
+    Returns:
+        The compiled request, its filters per column.
+
+    Raises:
+        FilterCompileError: On any filter the catalogue refuses.
+    """
+    own, on_computed = split_filters(filters)
+    where, _referenced, _index_servable = compile_filters(catalogue, [], q)
+    if raw_where:
+        where = f"({raw_where})" if where is None else f"{where} AND ({raw_where})"
+    on_records: dict[str, str] = {}
+    for column, tokens in _by_column(own).items():
+        condition, _referenced, _index_servable = compile_filters(catalogue, tokens)
+        if condition is not None:
+            on_records[column] = condition
+    computed: dict[str, ComputedFilter] = {}
+    for column, tokens in _by_column(on_computed).items():
+        compiled = compile_computed_filters(catalogue, tokens)
+        if compiled is not None:
+            computed[column] = compiled
+    return CrossFilter(where=where, on_records=on_records, on_computed=computed)
+
+
+def _by_column(filters: list[str]) -> dict[str, list[str]]:
+    """Filter tokens by the column they name, in the order the columns first come."""
+    grouped: dict[str, list[str]] = {}
+    for token in filters:
+        column, _op, _raw = _split_filter(token)
+        grouped.setdefault(column, []).append(token)
+    return grouped
 
 
 def record_order(catalogue: list[ColumnDescriptor], sortcol: str, order: str) -> RecordOrder:

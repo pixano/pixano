@@ -6,7 +6,7 @@
 
 """Tests for recording job requests on the queue."""
 
-import os
+from collections.abc import Iterator
 
 import psycopg
 import pytest
@@ -15,8 +15,6 @@ from psycopg.types.json import Jsonb
 from pixano.api import jobs
 from pixano.api.jobs import SCHEMA_NAME, enqueue
 
-
-TEST_DATABASE_URL = "PIXANO_TEST_DATABASE_URL"
 
 # The shape a worker publishes for a kind, reduced to what these tests need.
 FAKE_SCHEMA = {
@@ -28,22 +26,10 @@ FAKE_SCHEMA = {
 
 
 @pytest.fixture
-def queue() -> psycopg.Connection:
-    """A connection to a throwaway queue, emptied around each test.
-
-    Keyed on a dedicated variable, never PIXANO_DATABASE_URL: a developer running the stack
-    has that one exported, and these tests delete rows.
-    """
-    url = os.environ.get(TEST_DATABASE_URL, "")
-    if not url:
-        pytest.skip(f"{TEST_DATABASE_URL} not set")
-    with psycopg.connect(url, autocommit=True) as conn:
-        exists = conn.execute(f"SELECT to_regclass('{SCHEMA_NAME}.jobs')").fetchone()
-        if exists is None or exists[0] is None:
-            pytest.skip("the queue schema is absent — pixano-worker installs it")
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
+def queue(queue_url: str) -> Iterator[psycopg.Connection]:
+    """A connection to a throwaway queue, emptied around each test (`tests.fixtures.job_queue`)."""
+    with psycopg.connect(queue_url, autocommit=True) as conn:
         yield conn
-        conn.execute(f"TRUNCATE {SCHEMA_NAME}.jobs, {SCHEMA_NAME}.job_kinds CASCADE")
 
 
 @pytest.fixture
