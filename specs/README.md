@@ -201,4 +201,4 @@ Two things enforce them:
 ## Decision log
 
 - 2026-11-18: first version, with the rules about specs, the template and the index ([#862](https://github.com/pixano/pixano/pull/862)).
-- 2026-11-22: a rule that the code does not follow yet is a target rule, marked `(target)`, with a `_Today:_` line (SPEC-14).
+- 2026-11-22: a rule that the code does not follow yet is a target rule, marked `(target)`, with a `_Today:_` line (SPEC-14) ([#866](https://github.com/pixano/pixano/pull/866)).
