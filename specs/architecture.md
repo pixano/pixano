@@ -229,6 +229,10 @@ _Why:_ an open route that makes the server call any address is a way into the pr
 
 _Today:_ `POST /inference/connect` is open to whoever reaches the app, and takes `api_key` in the query string (`src/pixano/api/routers/inference.py`).
 
+**ARCH-59.** `pixano-api` MUST start, be ready and serve everything that needs no model when the inference cannot be reached.
+
+_Why:_ browsing, annotating by hand, importing and exporting need no model. An outage of the inference must not take the rest of Pixano out of service.
+
 ### Agents
 
 **ARCH-32 (target).** Pixano MUST provide a Model Context Protocol server, `pixano-mcp`. It speaks Streamable HTTP for remote agents, and MAY speak stdio for local ones. Its tools and resources cover: finding datasets, filtering and semantic search, inspecting overviews and quarantined items, managing snapshots, running jobs.
@@ -329,11 +333,11 @@ _Today:_ each workflow ends in one job that gathers the others (`Backend`, `Fron
 
 _Why:_ the app, and a worker without a GPU, must not pull Ray Serve or a model framework.
 
-**ARCH-48 (target).** `pixano.schemas` MUST NOT import a heavy native, graphical or server dependency: OpenCV, FastAPI, anything of the interface.
+**ARCH-48 (target).** `pixano.schemas` MUST hold the schemas and nothing else: Pydantic models and Lance models, with the types and the names they need. It MUST NOT import a library that no model is made of: OpenCV, pycocotools, FastAPI, anything of the interface.
 
 _Why:_ the schemas are what every component and every pipeline imports, also on a machine with no display.
 
-_Today:_ importing `pixano.schemas` imports OpenCV: `src/pixano/schemas/views/image.py` imports `src/pixano/features/utils/image.py`, which imports `cv2`.
+_Today:_ importing `pixano.schemas` imports OpenCV and pycocotools: `src/pixano/schemas/views/image.py` imports `src/pixano/features/utils/image.py`, which imports both. The models also carry code that is not a schema, and that imports Pillow, NumPy and shortuuid: opening an image, converting a mask, projecting a box, making an identifier.
 
 **ARCH-49 (target).** `pixano-inference` MUST NOT import `pixano`.
 
@@ -522,6 +526,8 @@ About the target:
 - **The air gap.** How is ARCH-4 checked: by a CI job that runs the stack with no way out to the internet?
 - **Parity.** What must the desktop application do before it replaces the legacy app (ARCH-52), and who says that it does?
 - **What is flattened today.** Which data does the code still flatten, at import or in storage (ARCH-16)? The answer is a measurement, to be made with the `DATA` spec.
+- **The code that the models carry.** Where do the methods that are not a schema go, once `pixano.schemas` holds schemas only (ARCH-48): opening an image, converting a mask, projecting a box? They are part of the Python API today. The answer comes with the `DATA` spec.
+- **The worker without the inference.** Does ARCH-59 hold for `pixano-worker` too? Today it refuses to start when `PIXANO_INFERENCE_URL` is not set (`packages/pixano-worker/src/pixano_worker/config.py`), also to run the kinds that call no model.
 
 Details that this spec leaves to the spec of a part:
 
@@ -534,3 +540,4 @@ Details that this spec leaves to the spec of a part:
 ## Decision log
 
 - 2026-11-22: first version. The target architecture in six planes, with the rules that the code already follows, and the target rules marked (`ARCH-1` to `ARCH-58`) ([#866](https://github.com/pixano/pixano/pull/866)).
+- 2026-11-22: `pixano.schemas` holds schemas only, Pydantic and Lance models (ARCH-48). `pixano-api` starts, is ready and serves what needs no model when the inference cannot be reached (ARCH-59) ([#867](https://github.com/pixano/pixano/pull/867)).
