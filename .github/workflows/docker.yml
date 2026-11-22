@@ -47,6 +47,14 @@ jobs:
           load: true
           tags: pixano/pixano:test
 
+      # `id` is asked of the image itself, in place of the command it starts.
+      - name: The image does not run as root
+        run: |
+          uid=$(docker run --rm --entrypoint id pixano/pixano:test -u)
+          echo "uid: $uid"
+          test "$uid" -ne 0
+
+      # No volume here: the user of the image initializes its default data directory, then serves.
       - name: Test container
         run: |
           docker run -p 7492:7492 --name pixano -d pixano/pixano:test
@@ -68,6 +76,16 @@ jobs:
           echo "$RESPONSE" | grep -q '"status":"ok"'
           echo "Test passed"
           docker rm -f pixano
+
+      # What a deployer on Linux does: a folder of their own, mounted, and their own user when it
+      # is not the image's. The runner's is not, and a bind mount keeps the owner it has on the
+      # host: the image's user could not write there. The home must take that user too.
+      - name: A mounted folder is written as the user given at run time
+        run: |
+          mkdir my_data
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/my_data:/library" pixano/pixano:test \
+            sh -c 'pixano init "$DATA_DIR" && touch "$HOME/written"'
+          test "$(stat -c %u my_data/library)" -eq "$(id -u)"
 
   worker:
     name: Worker image
@@ -100,6 +118,26 @@ jobs:
           names = default_registry(demo_kinds=True).names()
           print('kinds:', names)
           assert names, 'no job kind could be loaded'
+          "
+
+      # `id` is asked of the image itself, in place of the command it starts.
+      - name: The image does not run as root
+        run: |
+          uid=$(docker run --rm --entrypoint id pixano/pixano-worker:test -u)
+          echo "uid: $uid"
+          test "$uid" -ne 0
+
+      # The worker says it is alive by touching a file, which the probe of the compose reads:
+      # the user of the image must be able to write it where the worker puts it by default.
+      - name: The liveness probe reads the heartbeat the image's user writes
+        run: |
+          docker run --rm pixano/pixano-worker:test python -c "
+          from pixano_worker.__main__ import beat
+          from pixano_worker.config import heartbeat_path
+          from pixano_worker.healthcheck import main as probe
+          assert probe() == 1, 'a heartbeat was there before the worker wrote one'
+          beat(heartbeat_path())
+          assert probe() == 0, 'the probe does not see the heartbeat'
           "
 
       # Without configuration, the worker must refuse to start and say so, rather than loop or

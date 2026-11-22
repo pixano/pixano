@@ -60,10 +60,11 @@ Pixano is also available on the [Docker Hub](https://hub.docker.com/r/pixano/pix
 
 ```shell
 docker pull pixano/pixano:stable
+mkdir -p my_data
 docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-`my_data` is a folder on your machine where Pixano keeps your datasets; the container creates it on first start.
+`my_data` is a folder on your machine where Pixano keeps your datasets. The container does not run as root: on Linux it writes there as user 1000, so if your own user has another number (`id -u`), add `--user "$(id -u):$(id -g)"` to `docker run`.
 
 ## Development (from source)
 

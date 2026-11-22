@@ -104,11 +104,14 @@ docker pull pixano/pixano:stable
 ```
 
 ```bash
+mkdir -p my_data
 docker run -d --name pixano -e DATA_DIR=/library -p 7492:7492 -v "$(pwd)/my_data:/library" pixano/pixano:stable
 ```
 
-`my_data` is the folder where Pixano keeps your datasets; it is created in the current folder on
-first start. Open **http://localhost:7492** in your browser: the Library.
+`my_data` is the folder where Pixano keeps your datasets, created here in the current folder.
+The container does not run as root: on Linux it writes there as user 1000, so if your own user
+has another number (`id -u`), add `--user "$(id -u):$(id -g)"` to `docker run`. Open
+**http://localhost:7492** in your browser: the Library.
 
 Stop the container with `docker stop pixano` and start it again with `docker start pixano`.
 
