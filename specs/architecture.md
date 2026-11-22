@@ -89,7 +89,7 @@ _Today:_ there is no migration engine, on purpose. A changed schema is wiped and
 
 _Why:_ state in one process is lost at a restart, and the other replicas do not know it.
 
-_Today:_ the providers are in the settings of the process (`Settings.inference_providers`, `src/pixano/api/settings.py`). Import and export run in threads of the app (`src/pixano/datasets/io/jobs.py`), and so does one embeddings path (`src/pixano/api/embeddings.py`).
+_Today:_ the providers are in the settings of the process (`Settings.inference_providers`, `src/pixano/api/settings.py`), and tracking jobs in a map in memory (`TRACKING_JOB_REGISTRY`, `src/pixano/api/routers/inference.py`). Import and export run in threads of the app (`src/pixano/datasets/io/jobs.py`), and so does one embeddings path (`src/pixano/api/embeddings.py`).
 
 **ARCH-9.** The events of the jobs MUST reach every replica of `pixano-api` through PostgreSQL `LISTEN/NOTIFY`, or through a shared bus that does the same.
 
@@ -129,7 +129,7 @@ _Today:_ a file lock beside the dataset, skipped for an S3 path (`dataset_mutati
 
 _Why:_ a read that writes creates races when an API, a command line and a worker of different versions open the same storage, and it fails on read-only storage.
 
-_Today:_ opening a dataset of an older layout migrates it in place (`_migrate_storage`, `src/pixano/datasets/dataset.py`).
+_Today:_ opening a dataset of an older layout migrates it in place (`_migrate_storage`, `src/pixano/datasets/dataset.py`), and resolving an annotation or entity resource creates its missing table and rewrites `info.json` on the fly (`BaseService.resolve_table`, `src/pixano/api/service.py`).
 
 **ARCH-16 (target).** The data plane MUST hold the data of physical AI without flattening it: video from several cameras, kept as video and read by time window; 3D point clouds with the calibration of their sensors; robot states and actions as time series at their own rate.
 
@@ -201,7 +201,7 @@ _Today:_ a worker declares its kinds at startup, in the table `job_kinds`, and c
 
 _Why:_ a planner whose lease expired must not run a destructive preparation again, against the planner that took over.
 
-_Today:_ the write of a chunk is fenced by its `attempts` counter (`packages/pixano-worker/src/pixano_worker/sql/schema.sql`). Planning runs under a lease and a time limit (`docs/specs/backend-processing.md` §10 and §12). Whether that lease stops a late planner is not checked yet.
+_Today:_ the write of a chunk is fenced by its `attempts` counter (`packages/pixano-worker/src/pixano_worker/sql/schema.sql`). Planning runs under a lease and a time limit (`docs/specs/backend-processing.md` §10 and §12), with no fencing token: a planner whose lease lapsed can still interfere with the planner that took over, or run `prepare` late (`docs/specs/backend-processing.md` §20.2).
 
 **ARCH-28 (target).** The control plane MUST share the workers fairly between the jobs, and MUST cap the calls in flight for each model.
 
@@ -285,7 +285,7 @@ _Today:_ no limit is set (`src/pixano/api/routers/data_io.py`).
 
 _Why:_ a pasted filter is an injection.
 
-_Today:_ filters are built as SQL strings (`f"split='{split}'"` in `src/pixano/datasets/exporters/dataset_exporter.py`, `to_sql_list` in `src/pixano/datasets/io/reader.py`).
+_Today:_ filters are built as SQL strings, including caller query parameters pasted directly into `WHERE` clauses (`f"record_id = '{record_id}'"`, `logical_name`, `where` in `src/pixano/api/routers/views.py`; `f"split='{split}'"` in `src/pixano/datasets/exporters/dataset_exporter.py`; `to_sql_list` in `src/pixano/datasets/io/reader.py`).
 
 **ARCH-41 (target).** Every image (`pixano-api`, `pixano-worker`, `pixano-inference`, `pixano-mcp`) MUST run as a dedicated user that is not root.
 
@@ -311,7 +311,7 @@ _Today:_ `pixano`, with the API inside it, `pixano-worker`, `specs/` and `docs-a
 
 _Why:_ a deployment then takes only the parts it runs, and each one builds fast.
 
-_Today:_ two packages, `pixano` (with the API) and `pixano-worker`, and two images, the app's and the worker's (`dockerfiles/`, `packages/pixano-worker/Dockerfile`).
+_Today:_ two packages, `pixano` (with the API) and `pixano-worker`, and two images, the app's and the worker's (`dockerfiles/`, `packages/pixano-worker/Dockerfile`). Neither the worker's package nor its image is published yet (`docs/releases/0.9-followups.md`).
 
 **ARCH-45 (target).** The build of the `pixano` package MUST NOT call Node or pnpm, and its wheel MUST NOT contain frontend files.
 
