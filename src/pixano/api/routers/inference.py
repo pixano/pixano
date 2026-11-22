@@ -20,8 +20,8 @@ from typing import Annotated, Any, Literal
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field, SecretStr
 
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets import Dataset
@@ -110,6 +110,18 @@ class ModelInfoResponse(BaseModel):
     model_class: str | None = None
     # How the model is called, when the server publishes it (pixano-inference >= 0.7.1).
     interface: dict[str, Any] | None = None
+
+
+class ConnectInferenceServerRequest(BaseModel):
+    """Request schema for connecting an inference server.
+
+    The key travels here, in the body, and never in the URL: a URL ends up in access logs, in proxies and in
+    browser histories.
+    """
+
+    url: str | None = None
+    provider_type: str = "pixano-inference"
+    api_key: SecretStr | None = None
 
 
 class VLMRequest(BaseModel):
@@ -650,14 +662,38 @@ def list_connected_providers(settings: Annotated[Settings, Depends(get_settings)
     )
 
 
-@router.post("/connect", operation_id="connect_inference_server")
+def _refuse_api_key_in_query(http_request: Request) -> None:
+    """Refuse a key sent in the query string, where this route took it before.
+
+    A dependency runs before the body is validated. A request in the old shape has no body: it is told where
+    the key goes now, not that its body is missing.
+    """
+    if "api_key" in http_request.query_params:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "The API key must not be sent in the query string. Send it in the JSON body of the request, "
+                "as 'api_key', next to 'url' and 'provider_type'."
+            ),
+        )
+
+
+@router.post(
+    "/connect",
+    operation_id="connect_inference_server",
+    dependencies=[Depends(_refuse_api_key_in_query)],
+)
 async def connect_inference_server(
+    request: ConnectInferenceServerRequest,
     settings: Annotated[Settings, Depends(get_settings)],
-    url: Annotated[str | None, Query()] = None,
-    provider_type: Annotated[str, Query()] = "pixano-inference",
-    api_key: Annotated[str | None, Query()] = None,
 ) -> dict[str, Any]:
-    """Connect to an inference server and register it as the default provider."""
+    """Connect to an inference server and register it as the default provider.
+
+    The address, the provider type and the key all travel in the JSON body.
+    """
+    url = request.url
+    provider_type = request.provider_type
+    api_key = request.api_key.get_secret_value() if request.api_key is not None else None
     if url:
         resolved_url = _normalize_provider_url(url)
     elif provider_type in _DEFAULT_PROVIDER_URLS:

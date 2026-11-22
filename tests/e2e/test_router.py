@@ -64,7 +64,7 @@ class TestRouterConnect:
     def test_connect_real_server(self, e2e_app_client: TestClient, inference_url: str):
         response = e2e_app_client.post(
             "/inference/connect",
-            params={"url": inference_url},
+            json={"url": inference_url},
         )
         assert response.status_code == 200
         data = response.json()
@@ -74,6 +74,6 @@ class TestRouterConnect:
     def test_connect_bad_url(self, e2e_app_client: TestClient):
         response = e2e_app_client.post(
             "/inference/connect",
-            params={"url": "http://localhost:1"},
+            json={"url": "http://localhost:1"},
         )
         assert response.status_code == 404
