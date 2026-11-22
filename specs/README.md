@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Owner:** @jrabary
-**Last agreed change:** 2026-11-18
+**Last agreed change:** 2026-11-22
 **Covers:** `specs/`
 
 This file says how the specs work. It follows the template it defines, and its own rules are numbered `SPEC-1`, `SPEC-2`, and so on.
@@ -20,6 +20,7 @@ The words used in every spec:
 - A **spec** is one file of this directory. It describes one part of Pixano: what it is, and the rules its code follows.
 - A **rule** is one design decision, written so that it can be checked. It says what the code MUST or MUST NOT do, and why.
 - A **rule ID** names a rule: the prefix of its spec, then a number, as in `JOB-12`.
+- A **target rule** is a rule that the code does not follow yet. It says where Pixano goes. It carries the mark `(target)` after its ID, and a line `_Today:_` that says what the code does instead.
 - An **open question** is something that is not decided yet.
 - The **decision log** of a spec lists the changes that were agreed, one line each.
 - A **spec PR** is a pull request that changes files in `specs/` and nothing else. A **code PR** is any other pull request.
@@ -27,11 +28,11 @@ The words used in every spec:
 
 A spec has one of three statuses:
 
-| Status       | Meaning                                                                                                                                              |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Draft`      | The spec lists rules that are already true in the code. It may be incomplete. Its rules bind like any other, and a missing rule is not a permission. |
-| `Accepted`   | The tech lead and the developers agreed that the spec covers its part of Pixano.                                                                     |
-| `Superseded` | Another spec replaced this one, and the header names it. A superseded spec binds nobody. It stays for history.                                       |
+| Status       | Meaning                                                                                                                                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Draft`      | The spec lists rules that are already true in the code, and target rules. It may be incomplete. Its rules bind like any other, a target rule as SPEC-14 says, and a missing rule is not a permission. |
+| `Accepted`   | The tech lead and the developers agreed that the spec covers its part of Pixano.                                                                                                                      |
+| `Superseded` | Another spec replaced this one, and the header names it. A superseded spec binds nobody. It stays for history.                                                                                        |
 
 ## Rules
 
@@ -87,20 +88,24 @@ _Why:_ a reader must find the current rule in one place, without replaying its h
 
 _Why:_ every developer and every agent reads English. A published design doc is read as a promise to users, and the specs are not one.
 
+**SPEC-14.** A rule that the code does not follow yet MUST carry the mark `(target)` after its ID, and a line `_Today:_` that says what the code does instead. Until a spec PR removes the mark, the code that exists follows `_Today:_`: it is not a bug, and SPEC-10 does not stop a task on it. A change MUST NOT take the code further from a target rule.
+
+_Why:_ a decision about where Pixano goes must be written where agents read it, before the code exists. Without the mark, it would make most of the code a bug on the day it is merged.
+
 ## Index
 
 Find the code paths you are about to change in the last column, and read the spec of that row.
 
-| Part of Pixano          | Prefix | Spec                                                                                                                                                                                          | Code paths                                                                                                                                                    |
-| ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| How the specs work      | `SPEC` | This file. Accepted.                                                                                                                                                                          | `specs/`                                                                                                                                                      |
-| Overall architecture    | `ARCH` | [`architecture.md`](./architecture.md). Accepted.                                                                                                                                             | System topology, component boundaries, monorepo package discipline, and cross-cutting wiring: `docker-compose*.yml`, `.env.example`, `dockerfiles/`, `hatch_build.py`, `src/pixano/cli/`, `src/pixano/utils/`, `packages/pixano-worker/`, `packages/pixano-inference/`, `packages/pixano-mcp/` |
-| Data model and database | `DATA` | `data-model.md`, not written yet                                                                                                                                                              | `src/pixano/schemas/`, `src/pixano/features/`, `src/pixano/datasets/` except `io/`                                                                            |
-| REST API                | `API`  | `rest-api.md`, not written yet                                                                                                                                                                | `src/pixano/api/`, except the jobs routes                                                                                                                     |
-| Worker and jobs         | `JOB`  | `jobs.md`, not moved yet. Until then: [`docs/specs/backend-processing.md`](../docs/specs/backend-processing.md) and [`docs/specs/writing-a-job-kind.md`](../docs/specs/writing-a-job-kind.md) | `packages/pixano-worker/`, `src/pixano/api/jobs/`, `src/pixano/api/routers/jobs.py`, `src/pixano/statistics/`                                                 |
-| Import and export       | `IO`   | `import-export.md`, not moved yet. Until then: [`docs/specs/data-import-export.md`](../docs/specs/data-import-export.md)                                                                      | `src/pixano/datasets/io/`, `src/pixano/cli/data.py`, `src/pixano/api/routers/data_io.py`                                                                      |
-| Legacy app              | `UI`   | `legacy-app.md`, not written yet                                                                                                                                                              | `ui/apps/pixano/`                                                                                                                                             |
-| Inference               | `INF`  | `inference.md`, not written yet                                                                                                                                                               | `src/pixano/inference/`, `src/pixano/api/routers/inference.py`, `docker/inference/`                                                                           |
+| Part of Pixano          | Prefix | Spec                                                                                                                                                                                          | Code paths                                                                                                                                                                                                                      |
+| ----------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How the specs work      | `SPEC` | This file. Accepted.                                                                                                                                                                          | `specs/`                                                                                                                                                                                                                        |
+| Overall architecture    | `ARCH` | [`architecture.md`](./architecture.md). Draft.                                                                                                                                                | The components, how they reach each other and what they may import: `docker-compose*.yml`, `.env.example`, `dockerfiles/`, `hatch_build.py`, `src/pixano/cli/`, `src/pixano/utils/`, and the list of packages under `packages/` |
+| Data model and database | `DATA` | `data-model.md`, not written yet                                                                                                                                                              | `src/pixano/schemas/`, `src/pixano/features/`, `src/pixano/datasets/` except `io/`                                                                                                                                              |
+| REST API                | `API`  | `rest-api.md`, not written yet                                                                                                                                                                | `src/pixano/api/`, except the jobs routes                                                                                                                                                                                       |
+| Worker and jobs         | `JOB`  | `jobs.md`, not moved yet. Until then: [`docs/specs/backend-processing.md`](../docs/specs/backend-processing.md) and [`docs/specs/writing-a-job-kind.md`](../docs/specs/writing-a-job-kind.md) | `packages/pixano-worker/`, `src/pixano/api/jobs/`, `src/pixano/api/routers/jobs.py`, `src/pixano/statistics/`                                                                                                                   |
+| Import and export       | `IO`   | `import-export.md`, not moved yet. Until then: [`docs/specs/data-import-export.md`](../docs/specs/data-import-export.md)                                                                      | `src/pixano/datasets/io/`, `src/pixano/cli/data.py`, `src/pixano/api/routers/data_io.py`                                                                                                                                        |
+| Legacy app              | `UI`   | `legacy-app.md`, not written yet                                                                                                                                                              | `ui/apps/pixano/`                                                                                                                                                                                                               |
+| Inference               | `INF`  | `inference.md`, not written yet                                                                                                                                                               | `src/pixano/inference/`, `src/pixano/api/routers/inference.py`, `docker/inference/`                                                                                                                                             |
 
 A path that no row lists has no spec yet. Neither has a row whose spec is not written yet. SPEC-11 applies to both.
 
@@ -144,6 +149,12 @@ _Why:_ <the reason>.
 
 **<PREFIX>-3.** Removed on YYYY-MM-DD ([#<number>](https://github.com/pixano/pixano/pull/<number>)).
 
+**<PREFIX>-4 (target).** <This part> MUST <do this, once the code is there>.
+
+_Why:_ <the reason>.
+
+_Today:_ <what the code does instead, and the file or the spec that says so>.
+
 ## Open questions
 
 - <What is not decided yet, and what waits for it.>
@@ -162,8 +173,9 @@ How to fill it:
 - **One rule, one decision.** Keep a rule short. A rule states the decision, not how it was reached.
 - **History and measurements** stay out, unless they are the reason for a rule.
 - **A new rule** takes the next number that was never used.
+- **A target rule** (SPEC-14) carries the mark `(target)` and a `_Today:_` line. When the code follows the rule, a spec PR removes the mark and the line. The ID stays.
 - **Other sections** (a diagram, a reference table, an example) can follow the rules. The five parts above are never dropped.
-- **A Draft** lists only what is already true in the code. Everything else is an open question.
+- **A Draft** lists what is already true in the code, and target rules. What is not decided is an open question.
 
 ## How a spec changes
 
@@ -189,3 +201,4 @@ Two things enforce them:
 ## Decision log
 
 - 2026-11-18: first version, with the rules about specs, the template and the index ([#862](https://github.com/pixano/pixano/pull/862)).
+- 2026-11-22: a rule that the code does not follow yet is a target rule, marked `(target)`, with a `_Today:_` line (SPEC-14).

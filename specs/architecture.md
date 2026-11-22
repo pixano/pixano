@@ -1,257 +1,536 @@
 # Overall architecture
 
-**Status:** Accepted
+**Status:** Draft
 **Owner:** @jrabary
 **Last agreed change:** 2026-11-22
-**Covers:** System topology, component boundaries, monorepo package discipline, deployment contracts, security/operability invariants, and cross-cutting wiring (`docker-compose*.yml`, `.env.example`, `dockerfiles/`, `hatch_build.py`, `src/pixano/cli/`, `src/pixano/utils/`, `packages/pixano-worker/`, `packages/pixano-inference/`, `packages/pixano-mcp/`, and cross-plane interfaces across `src/pixano/`)
+**Covers:** `docker-compose*.yml`, `.env.example`, `dockerfiles/`, `hatch_build.py`, `src/pixano/cli/`, `src/pixano/utils/`, and the list of packages under `packages/`
 
 ## Purpose and concepts
 
-Pixano is an open-source **data engine for physical AI operations**. It manages the closed operational loop of embodied and multimodal AI data: ingesting raw fleet, lab, and simulation recordings (multi-camera synchronized video, calibrated 3D point clouds, high-frequency robot telemetry, images, and text); curating, indexing, pre-annotating, and validating them through automated pipelines and AI agents; reviewing them with human operators; and publishing immutable, reproducible dataset snapshots for policy training and evaluation.
+Pixano is an open-source data engine for physical AI: robots, vehicles and other machines that learn from what their sensors record. It takes in recordings from fleets, labs and simulators: video from several cameras at once, 3D point clouds, robot telemetry, images and text. It sorts, indexes and pre-annotates them with jobs and AI agents. People review the result. Pixano then publishes versions of a dataset that never change, so that a training or an evaluation can be run again on the same data.
 
-This specification is the architectural constitution of Pixano. Every component specification (`DATA`, `API`, `JOB`, `IO`, `UI`, `INF`) MUST conform to the boundaries and invariants defined here.
+This spec says what Pixano is made of, and how its parts reach each other.
 
-The six architectural planes of Pixano:
+**Most of this spec is a target.** A rule marked `(target)` says where the code goes, and the line `_Today:_` under it says where the code is ([SPEC-14](./README.md#rules)). A rule without the mark is true in the code today. The section [The repository today](#the-repository-today) describes the code as it is.
 
-- **Presentation & SDK Plane:** `pixano-ui` (the embedded legacy Svelte app `ui/apps/pixano` until the rebuilt standalone desktop application reaches parity), the `pixano` CLI, and the lean Python SDK used by data pipelines and training loaders.
-- **Agentic Interface Plane:** `pixano-mcp`, a Model Context Protocol server enabling AI agents to query, curate, inspect, and orchestrate Pixano operations under the same security boundary as human users.
-- **Control & Query Plane:** `pixano-api` (stateless FastAPI service with an ephemeral read-through cache) backed by **PostgreSQL**, owning the dataset catalog, immutable snapshot pointers, lineage, job queue, worker registry, distributed write leases, inference provider registry, authentication/RBAC, audit logs, and real-time event fan-out.
-- **Execution Plane:** `pixano-worker`, stateless pull-based workers executing all long-running data-engine jobs (import, export, optimization/compaction, embeddings, detection, segmentation, video tracking, statistics, and multi-stage curation DAGs).
-- **Unified Multimodal Data Plane:** **Lance (LanceDB with Lance Blob v2)** on S3-compatible object storage or POSIX storage, storing analytical tables, annotations, vector indexes, high-frequency robot time-series, native media blobs (and optional external-URI blob references), and immutable snapshot manifests in one versioned lakehouse format.
-- **Inference Plane:** One or more `pixano-inference` GPU serving pools and external model providers (vLLM, OpenAI, Gemini, Ollama, or custom HTTP endpoints) serving both interactive annotation and batch workers.
+The words this spec uses:
 
-Deployment profiles (all running the exact same six-plane architecture, differing only in configuration and scale):
+- A **component** is a program that runs on its own. The target has five: `pixano-api`, `pixano-worker`, `pixano-mcp`, `pixano-inference` and PostgreSQL. Today there are four: `pixano-mcp` does not exist, and `pixano-api` is the app that `pixano server run` starts.
+- A **plane** is a group of components with one role. Pixano has six, listed below.
+- A **provider** is a server of models that Pixano calls: a `pixano-inference` server, or an external one (vLLM, OpenAI, Gemini, Ollama, any HTTP endpoint).
+- A **snapshot** is one version of a dataset. It never changes once it is published.
+- A **manifest** is a file written beside the tables of a snapshot. It describes the snapshot, so that a program can read it without PostgreSQL.
+- A **write lease** is the right to write to one dataset. One writer holds it at a time, for a limited time.
+- A **fencing token** is a number that only grows. Each lease gets a higher one, and a write that carries an old one is refused. A writer that lost its lease can then no longer write.
+- A **read-through cache** keeps a copy of what was read, to answer faster the next time. It can be lost at any moment.
 
-- **Local workstation:** single machine via Docker Compose or plain processes (local PostgreSQL, local POSIX/MinIO Lance storage, local CPU/GPU inference).
-- **Lab / On-premises (including air-gapped):** private network with shared PostgreSQL, NAS or MinIO S3 storage for Lance, on-prem GPU inference cluster, and local OIDC/SSO.
-- **Cloud / Production cluster:** horizontally scaled stateless `pixano-api`, `pixano-worker`, and `pixano-mcp` replicas on Kubernetes, managed PostgreSQL, S3/GCS storage for Lance, optional shared HTTP/Redis cache in front of `pixano-api`, and autoscaling GPU inference pools.
+The six planes:
+
+1. **Presentation and SDK.** The user interface, the `pixano` command line, and the Python SDK that data pipelines and training loaders use. The interface is the legacy app (`ui/apps/pixano`), served by `pixano-api`, until a desktop application, built in its own repository, can replace it.
+2. **Agents.** `pixano-mcp`, a Model Context Protocol server. An AI agent uses it to search, sort and inspect datasets and to run jobs, with the same rights as a person.
+3. **Control and queries.** `pixano-api` and PostgreSQL. They hold everything that is not the data itself: the catalogue of datasets, the pointer to each one's current snapshot, lineage, the queue of jobs, the registry of workers, the write leases, the providers, the accounts and their rights, the audit log.
+4. **Execution.** `pixano-worker`. It runs every long job: import, export, compaction, embeddings, detection, segmentation, video tracking, statistics, chains of jobs.
+5. **Data.** Lance (LanceDB), on S3-compatible or POSIX storage. It holds the tables, the annotations, the vector indexes, the time series, the media and the manifests of the snapshots.
+6. **Inference.** One or several providers. They serve the interactive tools and the jobs.
+
+The same six planes run everywhere. Three kinds of deployment differ only by their configuration and their size:
+
+- **A workstation:** one machine, with Docker Compose or plain processes.
+- **A lab, possibly cut off from the internet:** a private network, a shared PostgreSQL, a NAS or MinIO, GPUs on site, a local single sign-on.
+- **A cloud cluster:** several replicas of `pixano-api`, `pixano-worker` and `pixano-mcp` on Kubernetes, a managed PostgreSQL, S3 or GCS, GPU pools that grow and shrink.
 
 ## Rules
 
+### Between the specs
+
+**ARCH-1.** The spec of one part of Pixano (`DATA`, `API`, `JOB`, `IO`, `UI`, `INF`) MUST NOT contradict a rule of this spec. Where this spec has a target rule, the spec of the part describes what the code does today, and MUST NOT decide against the target.
+
+_Why:_ the parts are designed one at a time, by different people and agents. One spec has to hold what they share.
+
 ### Topology and deployment
 
-**ARCH-1.** Every Pixano deployment — local, on-premises, air-gapped, or cloud — MUST run the unified multi-component architecture (Control Plane with PostgreSQL, Execution Plane with `pixano-worker`, Unified Lance Data Plane, and Inference Plane as configured). A standalone local browse/annotate mode without PostgreSQL and workers MUST NOT be supported.
+**ARCH-2 (target).** Every deployment MUST run all the planes: `pixano-api` with PostgreSQL, at least one `pixano-worker`, the Lance storage, and the providers it is configured with. Pixano MUST NOT offer a mode without PostgreSQL and a worker.
 
-_Why:_ maintaining a degraded single-process SQLite mode duplicates job execution, locking, and metadata code paths, causing behavior and reliability guarantees to diverge between local development and production.
+_Why:_ a second, smaller mode needs its own code for jobs, locks and metadata. The two modes drift apart, and what works on a laptop stops telling what works in production.
 
-**ARCH-2.** Every link between components MUST be configured through addresses and credentials supplied by environment variables or secret mounts, and MUST NOT assume host colocation, shared process memory, or a container runtime.
+_Today:_ the app runs alone: `pixano init`, then `pixano server run`. Without `PIXANO_DATABASE_URL`, the jobs routes answer 503 and an import reports that no queue is configured (`src/pixano/api/routers/jobs.py`, `src/pixano/api/routers/data_io.py`). Import and export need no PostgreSQL.
 
-_Why:_ the same code and images must deploy unchanged from a developer laptop to a lab NAS/GPU setup or Kubernetes, whether started with Compose, Kubernetes, or plain processes.
+**ARCH-3.** Every link between two components MUST be configured from outside the code: an address, and credentials when the link needs them. A component MUST NOT assume that another one runs on the same host, in the same process or in a container.
 
-**ARCH-3.** Every runtime component MUST operate cleanly in air-gapped and sovereign on-premises environments without requiring outbound public internet access to start, authenticate, serve datasets, execute jobs, or run local inference.
+_Why:_ the same code and the same images must run on a laptop, in a lab and on Kubernetes, started by Compose, by Kubernetes or by hand.
 
-_Why:_ physical AI robotics labs and industrial deployments frequently run in isolated networks with strict data-residency requirements.
+**ARCH-4 (target).** Every component MUST start, authenticate its users, serve datasets, run jobs and call a local provider without any access to the public internet.
 
-### Control plane and state ownership
+_Why:_ robotics labs and industrial sites often run on closed networks, and must keep their data on site.
 
-**ARCH-4.** PostgreSQL MUST be the sole authoritative Control Plane store for mutable operational state: dataset catalog, active snapshot pointers, lineage, job queues and events, worker registry and heartbeats, distributed dataset write leases, inference provider configurations, user accounts, RBAC policies, and audit logs. SQLite MUST NOT be used as a runtime job or metadata store.
+_Today:_ nothing checks it. The code reaches the internet at least on request: for a Hugging Face import (`src/pixano/datasets/io/formats/lerobot/hub.py`) and for the external providers (`src/pixano/inference/providers/`).
 
-_Why:_ a single transactional control store eliminates split-brain state between API replicas, CLI runs, and workers, and retires the non-distributed SQLite I/O job store.
+### Control plane
 
-**ARCH-5.** `pixano-api` MUST be the sole runtime component that connects directly to PostgreSQL and owns its schema migrations; `pixano-worker`, `pixano-mcp`, `pixano-ui`, and CLI/SDK clients MUST NOT hold direct PostgreSQL credentials or execute direct SQL against the control plane.
+**ARCH-5 (target).** PostgreSQL MUST be the only store of the state of the control plane: the catalogue of datasets, the pointer to each current snapshot, lineage, the jobs and their events, the registry of workers, the write leases, the providers, the accounts, their rights and the audit log. SQLite MUST NOT hold jobs or metadata at run time.
 
-_Why:_ isolating PostgreSQL behind a versioned HTTP contract (replicating the `pixano-inference` pattern) removes duplicated SQL across packages, keeps database credentials off remote GPU and edge workers, and allows rolling control-plane migrations without breaking workers.
+_Why:_ with one transactional store, the replicas of the API, the command line and the workers cannot disagree on the state.
 
-**ARCH-6.** Every control-plane database schema change MUST be applied through an explicit, versioned, forward-only migration runner; destructive schema recreation (`DROP SCHEMA CASCADE`) MUST NOT be used as a migration strategy.
+_Today:_ PostgreSQL holds the queue of the worker's jobs and nothing else: the six tables of the schema `pixano_jobs` (`packages/pixano-worker/src/pixano_worker/sql/schema.sql`). Import and export jobs are in a SQLite file, `<data_dir>/.pixano/jobs.sqlite` (`src/pixano/datasets/io/jobs.py`, `docs/specs/data-import-export.md`). The providers are in the memory of the app. There is no catalogue, no account, no right and no audit log.
 
-_Why:_ production PostgreSQL instances hold irreplaceable dataset catalog, lineage, RBAC, audit, and job-history records.
+**ARCH-6 (target).** `pixano-api` MUST be the only component that connects to PostgreSQL, and it owns the schema. `pixano-worker`, `pixano-mcp`, the interface, the command line and the SDK MUST NOT hold PostgreSQL credentials or send SQL to it.
 
-**ARCH-7.** `pixano-api` MUST be horizontally stateless across replicas: shared mutable state MUST NOT be kept in process memory (such as in-memory provider maps, tracking job registries, or local runner threads), real-time job events and read-cache invalidations MUST propagate across all API replicas through PostgreSQL `LISTEN/NOTIFY` (or an equivalent shared pub/sub bus), and `pixano-api` MUST use a bounded PostgreSQL connection pool rather than opening a connection per HTTP request.
+_Why:_ one owner means one place for the SQL and for the migrations. The credentials of the database stay off remote GPU machines, and the control plane can be migrated without breaking the workers.
 
-_Why:_ process-local state breaks multi-replica deployments and loses state on restart, while unpooled per-request connections exhaust PostgreSQL under concurrent team usage.
+_Today:_ the worker connects to PostgreSQL, claims its work with SQL and owns the schema. The app and the command line connect too, to submit jobs and to read them (`docs/specs/backend-processing.md` §2 to §4: "The worker shares nothing with the API but PostgreSQL and the storage"). That stays the rule for the worker until this mark is removed.
 
-### Unified multimodal data plane, write coordination, and physical AI modalities
+**ARCH-7 (target).** Every change to the schema of the control plane MUST go through a migration that is versioned and only goes forward. The schema MUST NOT be dropped and recreated to change it.
 
-**ARCH-8.** Dataset analytical tables (records, views, entities, annotations, embeddings, computed statistics, and high-frequency time-series) AND dataset media payloads MUST be stored in **Lance (LanceDB)** on S3-compatible object storage or POSIX storage, and every published dataset snapshot MUST write a self-describing immutable snapshot manifest alongside its Lance tables so external training loaders (PyTorch, JAX, Lance) can read complete multimodal snapshots directly without querying PostgreSQL.
+_Why:_ in production, PostgreSQL holds what cannot be rebuilt: the catalogue, lineage, the rights, the audit log and the history of the jobs.
 
-_Why:_ unifying structured metadata, vectors, telemetry, and media in Lance keeps every dataset snapshot atomic and lets training clusters stream directly from storage at native speed without managing a detached media store.
+_Today:_ there is no migration engine, on purpose. A changed schema is wiped and recreated, and `SCHEMA_VERSION` makes a worker refuse a stale one (`docs/specs/backend-processing.md` §5, which plans the runner for the day the database holds something that cannot be rebuilt).
 
-**ARCH-9.** Every cross-process write to a dataset (human edits, worker chunk writes, ingestion, compaction, schema evolution) MUST hold an active, fenced per-dataset write lease issued by the Control Plane (carrying a monotonic fencing epoch) and MUST commit catalog/manifest updates atomically against that epoch; process-local `flock` locks and silent S3 no-op locks MUST NOT be used for concurrency control. Interactive human saves encountering an active lease MUST wait briefly up to a bounded timeout before returning HTTP 409.
+**ARCH-8 (target).** `pixano-api` MUST NOT keep shared state in the memory of one process: no map of providers, no registry of jobs, no thread that runs a job. Any replica MUST be able to answer any request.
 
-_Why:_ local file locks fail on NFS and do nothing on S3, causing silent data corruption under concurrent writers; PostgreSQL per-dataset leases work identically across local disk, NFS, and S3 with automatic crash recovery and minimal operational complexity.
+_Why:_ state in one process is lost at a restart, and the other replicas do not know it.
 
-**ARCH-10.** Opening, listing, or reading a dataset MUST NOT mutate on-disk schemas, execute storage-layout migrations, or auto-create missing tables; all schema migrations and table creations MUST be explicit write operations guarded by a dataset write lease.
+_Today:_ the providers are in the settings of the process (`Settings.inference_providers`, `src/pixano/api/settings.py`). Import and export run in threads of the app (`src/pixano/datasets/io/jobs.py`), and so does one embeddings path (`src/pixano/api/embeddings.py`).
 
-_Why:_ silent write-on-read causes race conditions and corruption when mixed API, CLI, and worker versions access shared or read-only storage.
+**ARCH-9.** The events of the jobs MUST reach every replica of `pixano-api` through PostgreSQL `LISTEN/NOTIFY`, or through a shared bus that does the same.
 
-**ARCH-11.** The Data Plane MUST natively support Physical AI multimodal structures without lossy flattening: synchronized multi-camera video with time-window addressing (HTTP Range streaming without forced JPEG frame explosion), calibrated 3D point clouds with camera intrinsics/extrinsics, high-frequency robot telemetry/state/action `TimeSeries`, and pluggable format importers/exporters covering LeRobot (v2/v3), MCAP / ROS 2 bags, RLDS/HDF5, simulator rollouts, COCO, and Pixano JSONL.
+_Why:_ the replica that holds a browser's connection is rarely the one where the event happened.
 
-_Why:_ physical AI operations center on synchronized multi-sensor robot episodes; flattening video into embedded frame rows or dropping time-series breaks storage scalability and closed-loop training.
+**ARCH-10 (target).** `pixano-api` MUST reach PostgreSQL through a pool of connections with a fixed maximum. It MUST NOT open a connection for each request.
 
-**ARCH-12.** Every automated write, ingestion, and dataset export MUST preserve provenance and snapshot lineage: exports and training views MUST be addressable by immutable dataset snapshot version and review-status filter so any model training or evaluation run can be reproduced bit-for-bit.
+_Why:_ a team at work sends many requests at once, and one connection for each exhausts PostgreSQL.
 
-_Why:_ robotics evaluation and safety auditing require tracing every trained policy back to the exact curated data snapshot and model/human provenance.
+_Today:_ each request that needs the queue opens its own connection (`connect`, `src/pixano/api/jobs/enqueue.py`). The worker has a pool.
 
-### Lance-native media storage, API caching, and inference media delivery
+### Data plane
 
-**ARCH-13.** Pixano MUST store dataset media natively in Lance using Lance blob storage semantics (dedicated/packed blob columns with lazy byte-range access so metadata scans and table compactions do not rewrite large binary payloads) and MUST NOT require a separate raw-media file store or cross-container POSIX media-root mount translation (`PIXANO_MEDIA_ROOT` / `PIXANO_INFERENCE_MEDIA_ROOT`). Opt-in external URI references (via Lance external blobs or immutable `https://`/`s3://` URIs) MAY be supported for pre-existing datalakes without introducing a server-managed raw media store.
+**ARCH-11.** The tables of a dataset (records, views, entities, annotations, embeddings) MUST be stored in Lance (LanceDB), on POSIX or S3-compatible storage.
 
-_Why:_ keeping media inside Lance's blob storage format eliminates detached file synchronization, broken mount translations, and orphaned media files while preserving compaction efficiency and random-access video streaming.
+_Why:_ one versioned format holds the structured data and the vectors, and a training cluster reads it straight from the storage.
 
-**ARCH-14.** `pixano-api` MUST serve client media (images, thumbnails, Range-streamed video, point clouds) and expensive read summaries (such as dataset overviews and embedding health) through an **ephemeral, bounded (LRU/TTL), version-keyed read-through cache** emitting immutable `ETag` and `Cache-Control` headers; cached entries MUST NEVER be authoritative state so any replica or cache loss recovers transparently from Lance. Media sent to `pixano-inference` MUST use raw binary streaming (short-lived signed Media Gateway URLs for interactive API calls, multipart `/binary` streaming from `pixano-worker` directly to `pixano-inference` for batch jobs, or direct Lance/external blob references) and MUST NOT base64-encode raw images or multi-frame video windows inside JSON request bodies. (External cloud providers that cannot reach private internal URLs may encode bounded inputs strictly inside their provider adapter.)
+**ARCH-12 (target).** The media of a dataset MUST be stored in Lance too, in blob columns that are read by byte range, so that a scan of the metadata or a compaction does not rewrite the media. Pixano MUST NOT need a separate store of media files, or a translation of media paths between components. A dataset MAY refer to media that stay outside it, by an immutable `https://` or `s3://` URI.
 
-_Why:_ read-through caching absorbs repeated thumbnail, video-scrubbing, and overview latency without breaking API statelessness, enables local caching in standalone desktop clients, and keeps high-bandwidth batch GPU traffic off `pixano-api` while avoiding base64 JSON memory blowups.
+_Why:_ media kept beside a dataset get out of step with it: files are orphaned, mounts break. Inside Lance, a snapshot is whole, and a video can still be read from any point.
 
-### Unified execution plane
+_Today:_ a view holds its bytes in the dataset (`embed`, the default import mode) or the path of a file outside it (`docs/specs/backend-processing.md` §13). In the Compose stack these files are one directory, `PIXANO_MEDIA_DIR`, and the worker and the inference each declare the root under which they see it (`PIXANO_MEDIA_ROOT`, `PIXANO_INFERENCE_MEDIA_ROOT`; §2: "the worker translates between them").
 
-**ARCH-15.** All long-running, batch, or compute-intensive dataset operations — including import, export, dataset compaction/optimization, embeddings, detection, segmentation, video tracking, statistics, and multi-stage curation DAGs — MUST execute asynchronously on `pixano-worker` via the unified Control Plane job queue, and MUST NOT run inside `pixano-api` request handlers or API background threads.
+**ARCH-13 (target).** Every published snapshot MUST have a manifest, written beside its Lance tables, that describes it whole. A training loader (PyTorch, JAX, Lance) MUST be able to read a snapshot from the storage without PostgreSQL.
 
-_Why:_ running heavy I/O or inference work in the API process degrades interactive annotation latency, prevents horizontal scaling, and loses durability on restarts.
+_Why:_ training clusters read the storage directly, at full speed, and often cannot reach the control plane.
 
-**ARCH-16.** `pixano-worker` MUST execute as a pull-based worker communicating with the Control Plane exclusively over an authenticated, versioned HTTP/HTTPS API (`PIXANO_API_URL` + worker service token), exposing no inbound network ports, and MUST discover job kinds through Python entry points (`pixano.job_kinds`) following the same typed contract and plugin discipline as `pixano-inference`.
+_Today:_ there is no snapshot and no such manifest. A dataset is one set of Lance tables that changes in place. (`src/pixano/datasets/io/manifest.py` is the journal of an import, not the description of a dataset.)
 
-_Why:_ pull-based HTTPS communication lets GPU, CPU, and edge/lab workers run behind firewalls and NATs with natural backpressure, while entry-point plugins allow domain-specific robotics jobs without modifying core worker code.
+**ARCH-14 (target).** Every write to a dataset, from any process, MUST hold a write lease on that dataset, given by the control plane with a fencing token, and MUST be committed against that token. A file lock, or a lock that does nothing on S3, MUST NOT be what protects a dataset.
 
-**ARCH-17.** Every worker MUST send periodic heartbeats and declare its live capabilities (supported job kinds, compute profile, reachable storage/inference pools) to the Control Plane; the Control Plane MUST route planning and chunk claims only to capable live workers, fence both planning and chunk execution with monotonic tokens, and enforce fair scheduling across jobs and per-model concurrency caps.
+_Why:_ a file lock fails on NFS and does not exist on S3, so two writers corrupt a dataset without a word. A lease in PostgreSQL works the same on a disk, on NFS and on S3, and frees itself when its holder dies.
 
-_Why:_ heterogeneous worker pools fail when incapable workers claim jobs, when expired planners race on destructive preparation steps, or when one large job starves smaller or interactive jobs.
+_Today:_ a file lock beside the dataset, skipped for an S3 path (`dataset_mutation_lock`, `src/pixano/datasets/locking.py`). In a worker, one thread lock per dataset (`docs/specs/backend-processing.md` §12).
+
+**ARCH-15 (target).** Opening, listing or reading a dataset MUST NOT write to it: no change of schema, no migration of the storage layout, no table created. Each of these is an explicit write, under a write lease.
+
+_Why:_ a read that writes creates races when an API, a command line and a worker of different versions open the same storage, and it fails on read-only storage.
+
+_Today:_ opening a dataset of an older layout migrates it in place (`_migrate_storage`, `src/pixano/datasets/dataset.py`).
+
+**ARCH-16 (target).** The data plane MUST hold the data of physical AI without flattening it: video from several cameras, kept as video and read by time window; 3D point clouds with the calibration of their sensors; robot states and actions as time series at their own rate.
+
+_Why:_ a robot episode is several sensors in step. Video cut into one row per frame does not scale, and a dataset without its time series cannot train a policy.
+
+_Today:_ view types exist for a video, the frames of a sequence, a calibrated image and a calibrated point cloud (`src/pixano/schemas/views/`), and time series have their routes (`src/pixano/api/routers/timeseries.py`). What is still flattened, at import or in storage, is not measured yet: it is an open question below.
+
+**ARCH-17.** Pixano MUST accept an import or export format as a plug-in, found through the Python entry points of the group `pixano.formats`.
+
+_Why:_ a lab adds the format of its robots without changing the core.
+
+**ARCH-18 (target).** Every automated write, import and export MUST keep where the data comes from. An export or a training view MUST be addressed by a snapshot and a filter on the review status, so that a training or an evaluation can be run again on exactly the same data.
+
+_Why:_ evaluating a robot and auditing its safety means tracing a trained policy back to the exact data, and to who or what produced each annotation.
+
+_Today:_ an annotation carries its source and its review status, and an export can filter on that status (`src/pixano/schemas/annotations/`, `docs/specs/writing-a-job-kind.md`). There is no snapshot: an export reads the dataset as it is at that moment.
+
+### Media, cache and the way to the inference
+
+**ARCH-19 (target).** `pixano-api` MUST serve media (images, thumbnails, video by HTTP Range, point clouds) and costly summaries through a read-through cache with a fixed maximum size, whose keys include the version of the data. The cache MUST NOT be the only place where anything is kept: when a replica or the cache is lost, everything is read again from Lance.
+
+_Why:_ the same thumbnails, video positions and overviews are asked again and again. A cache absorbs them without giving the API a state of its own, and lets a desktop client cache too.
+
+_Today:_ there is no cache with a fixed size and keys by version. The bytes of a view are answered with `Cache-Control: public, max-age=3600` and an `ETag` (`src/pixano/api/routers/views.py`).
+
+**ARCH-20 (target).** A change that makes cached data stale MUST reach every replica of `pixano-api`, the same way as the events of the jobs (ARCH-9).
+
+_Why:_ a replica that was not told keeps answering with the old data.
+
+_Today:_ the caches of the app are told of a change inside one process only (`Dataset.invalidate_caches`, `src/pixano/datasets/dataset.py`).
+
+**ARCH-21 (target).** Media MUST reach a provider as raw bytes or as a reference: a signed URL that expires soon, for an interactive call; a stream from `pixano-worker` straight to `pixano-inference`, for a job; or a reference to a Lance blob or to an external URI. An image or a video MUST NOT be sent as base64 text inside a JSON body. The adapter of an external provider that cannot reach a private URL MAY encode a bounded input itself.
+
+_Why:_ base64 in JSON multiplies the memory a call needs, and the heavy traffic of the jobs must not pass through `pixano-api`.
+
+_Today:_ paths are preferred and bytes are the fallback: a view stored inside the dataset is sent as a data URI, that is base64 (`docs/specs/backend-processing.md` §2 and §13, `src/pixano/inference/media.py`).
+
+### Execution plane
+
+**ARCH-22.** A job of the queue MUST run in `pixano-worker`, never in the process of `pixano-api`.
+
+_Why:_ a job over tens of thousands of images must not slow down the annotation interface.
+
+**ARCH-23 (target).** Every long or heavy operation on a dataset MUST be a job of the queue: import, export, compaction, embeddings, detection, segmentation, video tracking, statistics, and chains of jobs. None MUST run in a request handler or in a thread of `pixano-api`.
+
+_Why:_ heavy work in the API slows the interface down, cannot be spread over several machines, and is lost at a restart.
+
+_Today:_ import and export run in threads of the app, with their own SQLite store (`src/pixano/datasets/io/jobs.py`). So does one embeddings path (`src/pixano/api/embeddings.py`). `pixano data optimize` runs in the command line (`src/pixano/cli/data.py`).
+
+**ARCH-24 (target).** `pixano-worker` MUST get its work from `pixano-api`, over an HTTP API that is authenticated and versioned, with a service token. It MUST NOT listen on any port.
+
+_Why:_ a worker that only calls out runs behind a firewall or a NAT, on a GPU machine or on a lab bench, and takes work only when it is ready for it.
+
+_Today:_ the worker gets its work from PostgreSQL, with SQL (`docs/specs/backend-processing.md` §3). It listens on no port already (`packages/pixano-worker/src/pixano_worker/healthcheck.py`).
+
+**ARCH-25 (target).** `pixano-worker` MUST find its job kinds through the Python entry points of the group `pixano.job_kinds`, with a typed contract, as `pixano-inference` finds its model plug-ins.
+
+_Why:_ a team adds the job its robots need without changing the worker.
+
+_Today:_ the kinds are registered in code (`default_registry`, `packages/pixano-worker/src/pixano_worker/kinds/__init__.py`; `docs/specs/writing-a-job-kind.md`).
+
+**ARCH-26 (target).** Every worker MUST send a heartbeat and declare what it can do: its job kinds, its hardware, the storage and the providers it reaches. The control plane MUST give a piece of work only to a live worker that can do it.
+
+_Why:_ in a pool of different machines, a worker that claims a job it cannot run blocks that job.
+
+_Today:_ a worker declares its kinds at startup, in the table `job_kinds`, and claims the pending chunks in the order of their ids, whatever their kind (`packages/pixano-worker/src/pixano_worker/sql/schema.sql`, `packages/pixano-worker/src/pixano_worker/queue.py`). There is no registry of workers.
+
+**ARCH-27 (target).** The planning of a job and the execution of each of its chunks MUST be fenced by tokens that only grow.
+
+_Why:_ a planner whose lease expired must not run a destructive preparation again, against the planner that took over.
+
+_Today:_ the write of a chunk is fenced by its `attempts` counter (`packages/pixano-worker/src/pixano_worker/sql/schema.sql`). Planning runs under a lease and a time limit (`docs/specs/backend-processing.md` §10 and §12). Whether that lease stops a late planner is not checked yet.
+
+**ARCH-28 (target).** The control plane MUST share the workers fairly between the jobs, and MUST cap the calls in flight for each model.
+
+_Why:_ one large job must not starve the small ones or the interactive tools, and a model server has a limit of its own.
+
+_Today:_ the chunks are claimed in the order of their ids (`packages/pixano-worker/src/pixano_worker/queue.py`). There is no cap per model: `docs/specs/backend-processing.md` §6 names it as the subject of step 4.
 
 ### Inference plane
 
-**ARCH-18.** The Inference Plane MUST support multiple deployment-configured providers — including one or more `pixano-inference` GPU serving pools and external providers (vLLM, OpenAI, Gemini, Ollama, custom HTTP endpoints) — stored in the Control Plane and shared identically by both `pixano-api` (interactive tools) and `pixano-worker` (batch jobs).
+**ARCH-29 (target).** A deployment MUST be able to configure several providers: one or more pools of `pixano-inference`, and external providers. They MUST be stored in the control plane, and be the same for `pixano-api` and for `pixano-worker`.
 
-_Why:_ physical AI teams combine on-prem GPU clusters (SAM2, detectors, vision encoders, VLA evaluators) with external VLMs; a shared Control Plane registry prevents interactive and batch inference from drifting and survives restarts.
+_Why:_ a team mixes its own GPUs with external models. With one registry, the interactive tools and the jobs use the same models, and the configuration survives a restart.
 
-**ARCH-19.** Every inference call from `pixano-api` or `pixano-worker` MUST forward configured provider credentials in request headers (`X-API-Key` / `Authorization`); provider registration and endpoint configuration MUST require authenticated admin privileges or deployment configuration, and MUST NOT be exposed as an unauthenticated runtime endpoint or accept secrets in URL query parameters.
+_Today:_ the app keeps its providers in memory. One is connected at startup with `--pixano-inference-url`, others at run time through `POST /inference/connect` (`src/pixano/api/routers/inference.py`). The worker reads one address, `PIXANO_INFERENCE_URL`. The external providers (Gemini, Ollama, OpenAI) exist in the app only (`src/pixano/inference/providers/`).
 
-_Why:_ omitting API keys on the API side breaks authenticated shared inference servers, while unauthenticated runtime connection endpoints with query-string secrets expose SSRF and credential-leakage vulnerabilities.
+**ARCH-30 (target).** Every call from `pixano-api` or `pixano-worker` to a provider MUST carry the credentials configured for it, in a header (`X-API-Key` or `Authorization`).
 
-### Agentic interface plane
+_Why:_ a shared inference server asks for a key, and a call without it fails.
 
-**ARCH-20.** Pixano MUST provide a first-class Model Context Protocol server (`pixano-mcp`) supporting Streamable HTTP transport for production/remote agents and optional stdio transport for local agents, exposing structured tools and resources for dataset discovery, filtering/semantic search, overview/quarantine inspection, snapshot management, and job orchestration.
+_Today:_ the worker is given a key (`PIXANO_INFERENCE_API_KEY`, `docker-compose.yml`). The app started with `--pixano-inference-url` has none: a key reaches it only through `POST /inference/connect` (`src/pixano/cli/server.py`).
 
-_Why:_ agentic curation, failure-mode mining, and automated labeling orchestration are core workflows of a modern physical AI data engine.
+**ARCH-31 (target).** Registering a provider, or changing its endpoint, MUST need the rights of an administrator, or be done by the configuration of the deployment. It MUST NOT be an open route, and a secret MUST NOT travel in the query string of a URL.
 
-**ARCH-21.** `pixano-mcp` MUST operate strictly as an authenticated client of `pixano-api` using scoped user or service tokens, MUST inherit the exact same RBAC, storage-isolation, and audit logging as human callers, and MUST NEVER access PostgreSQL or LanceDB directly. Mutating or compute-triggering MCP tools MUST enforce explicit permission scopes and support policy/human-approval gates.
+_Why:_ an open route that makes the server call any address is a way into the private network, and a key in a URL ends up in logs and in histories.
 
-_Why:_ allowing autonomous agents to bypass the Control Plane circumvents authorization, locking, and lineage guarantees and creates unacceptable data-loss and compute-cost risks.
+_Today:_ `POST /inference/connect` is open to whoever reaches the app, and takes `api_key` in the query string (`src/pixano/api/routers/inference.py`).
 
-### Security, isolation, and hardening
+### Agents
 
-**ARCH-22.** Every `pixano-api` and `pixano-mcp` route other than public liveness probes MUST enforce authentication via standard header tokens (pluggable OIDC/JWT Bearer tokens supporting both web and desktop PKCE flows, plus scoped API keys for workers, CLI, SDK, and agents) and RBAC authorization with audit logging; media playback routes consumed by native `<video>`/`<img>` elements MUST additionally accept short-lived signed tokens so clients need not rely on browser cookies. Disabling authentication MUST require an explicit non-default local-development opt-in flag that emits a prominent startup warning.
+**ARCH-32 (target).** Pixano MUST provide a Model Context Protocol server, `pixano-mcp`. It speaks Streamable HTTP for remote agents, and MAY speak stdio for local ones. Its tools and resources cover: finding datasets, filtering and semantic search, inspecting overviews and quarantined items, managing snapshots, running jobs.
 
-_Why:_ shared lab and cloud deployments, autonomous agents, and standalone desktop applications all require verifiable token-based identity, least-privilege access control, and an audit trail without browser-cookie coupling.
+_Why:_ sorting data, mining failure cases and running labelling campaigns with agents is core work for a data engine of physical AI.
 
-**ARCH-23.** All REST and worker endpoints accepting import/export paths or external URIs MUST confine access strictly to explicitly configured staging/export roots or allowed object-storage buckets/prefixes after canonicalization and symlink resolution, MUST enforce configurable upload and request payload limits, and MUST validate or parameterize all query filters instead of interpolating raw SQL strings.
+_Today:_ `pixano-mcp` does not exist.
 
-_Why:_ unjailed import/export paths, unbounded uploads, and raw SQL interpolation allow arbitrary filesystem read/write, disk exhaustion, and query injection.
+**ARCH-33 (target).** `pixano-mcp` MUST be a client of `pixano-api`, with a token scoped to a user or to a service. It gets the same rights, the same isolation of storage and the same audit log as a person. It MUST NOT reach PostgreSQL or Lance directly.
 
-**ARCH-24.** All production OCI container images (`pixano-api`, `pixano-worker`, `pixano-inference`, `pixano-mcp`) MUST run as a dedicated unprivileged non-root user and MUST NEVER embed or log secrets in images, process arguments, URLs, or log lines.
+_Why:_ an agent that goes around the control plane goes around the rights, the leases and lineage.
 
-_Why:_ running containers as root violates cluster security standards and creates file-ownership and privilege-escalation hazards on shared storage.
+_Today:_ `pixano-mcp` does not exist.
 
-### Monorepo topology, packaging, and frontend boundary
+**ARCH-34 (target).** An MCP tool that writes, or that starts a computation, MUST require an explicit permission scope, and MUST support an approval, by a policy or by a person, before it acts.
 
-**ARCH-25.** All core Python planes — `pixano` (SDK/CLI), `pixano-api`, `pixano-worker`, `pixano-inference` (core and model plugin packages), and `pixano-mcp` — together with `specs/` and unified user documentation (`docs-astro/`) MUST live in the `pixano` monorepo.
+_Why:_ an agent left alone can delete data or burn GPU hours.
 
-_Why:_ co-locating the specifications, docs, wire contracts, API, worker, inference server, and MCP server lets developers and AI agents evolve cross-plane contracts atomically, eliminates sibling-checkout Compose hacks, and publishes one unified documentation site.
+_Today:_ `pixano-mcp` does not exist.
 
-**ARCH-26.** Production deployments MUST use a container-first distribution publishing independent OCI images for `pixano-api`, `pixano-worker`, `pixano-inference`, and `pixano-mcp`, with each Python package maintaining its own `pyproject.toml` and publishable PyPI distribution. The PyPI `pixano` SDK/CLI package MUST NOT invoke Node/pnpm or bundle frontend assets in its build hook. CI MUST path-scope heavy test and build jobs (ML/Ray plugins, legacy UI, Docker images) under stable required status aggregators.
+### Security
 
-_Why:_ independent packages and OCI images keep deployment units modular and fast to build, prevent 4 GB Node builds from breaking Python SDK wheels, and keep monorepo CI fast for every contributor.
+**ARCH-35 (target).** Every route of `pixano-api` and of `pixano-mcp`, except the liveness probes, MUST authenticate its caller with a token in a header, check its rights by role, and write to the audit log. A person signs in through OIDC, from a browser or from a desktop application (PKCE), and gets a bearer token. A worker, the command line, the SDK and an agent use a scoped API key.
 
-**ARCH-27.** Monorepo packages MUST enforce strict, CI-verified import boundaries (monorepo MUST NOT become a monolith): `pixano.schemas` MUST NOT import heavy native, GUI, or server dependencies (`cv2`/X11, FastAPI, UI tooling); `packages/pixano-inference/` MUST NOT import `pixano` (`datasets`, `api`, `lancedb`); `pixano` and `pixano-worker` MUST import ONLY `pixano_inference.schemas` and `pixano_inference.client` (never Ray Serve or model plugins); and `packages/pixano-mcp/` MUST import ONLY the `pixano` HTTP client and wire schemas (never `pixano.api` internals, PostgreSQL, or LanceDB).
+_Why:_ a shared lab, a cloud deployment, agents and a desktop application all need an identity that can be checked, the least rights that do the job, and a trace of who did what.
 
-_Why:_ strict import barriers preserve standalone installability, keep headless workers free of X11 and ML frameworks, and prevent accidental cross-plane coupling inside the monorepo.
+_Today:_ there is no authentication. Every route answers whoever reaches the server.
 
-**ARCH-28.** The legacy web application (`ui/apps/pixano`) remains embedded and served by the `pixano-api` OCI image solely as a transitional interface until the rebuilt standalone desktop application (`pixano-ui`, maintained externally) reaches parity; `ui/apps/web` and dual-UI cookie routing (`ACTIVATE_UI_V1_0`) MUST be removed from this repository. `pixano-api` MUST remain strictly UI-agnostic and standalone-desktop-ready: every feature MUST be exposed over documented versioned HTTP/SSE endpoints with explicit origin/CORS configuration and zero dependency on same-origin cookies or server-local client paths.
+**ARCH-36 (target).** A media route used by a `<video>` or an `<img>` element MUST also accept a signed token that expires soon, so that no client depends on a browser cookie.
 
-_Why:_ keeping the legacy UI embedded preserves uninterrupted annotation operations today while ensuring the API, media gateway, and auth layer cleanly support a standalone desktop application running on engineers' machines against local, lab, or cloud Pixano backends.
+_Why:_ these elements cannot send a header, and a desktop application has no cookie of the same origin.
 
-### Observability and operability
+_Today:_ there is no authentication, so no token of any kind.
 
-**ARCH-29.** Every long-running service (`pixano-api`, `pixano-worker`, `pixano-inference`, `pixano-mcp`) MUST separate liveness (`/health/live` or event-loop heartbeat) from dependency-aware readiness (`/health/ready`), emit structured JSON logs carrying correlation identifiers (`X-Request-ID`, `job_id`, `worker_id`, `dataset_id`), export OpenTelemetry traces and Prometheus metrics, and handle `SIGTERM` with bounded graceful shutdown and lease release.
+**ARCH-37 (target).** Turning authentication off MUST need an explicit flag, meant for local development and off by default, and MUST print a visible warning at startup.
 
-_Why:_ static `{"status": "ok"}` endpoints and unstructured text logs mask broken dependencies, defeat Kubernetes readiness probes, and impede production troubleshooting.
+_Why:_ a server that is open by default ends up open in production.
 
-## System topology
+_Today:_ there is no authentication to turn off.
+
+**ARCH-38 (target).** A route, of the API or for the workers, that takes a path or a URI for an import or an export MUST keep it inside the roots or the buckets configured for that, after `..` and symbolic links are resolved.
+
+_Why:_ without it, a caller reads or writes any file the server can reach.
+
+_Today:_ an upload is kept under the uploads root. But an import takes as its source any path that the server can read, and an export any destination it can write (`source` and `destination`, `src/pixano/api/routers/data_io.py`).
+
+**ARCH-39 (target).** Every upload and every request body MUST have a size limit that the deployment can set.
+
+_Why:_ without a limit, one request fills the disk or the memory.
+
+_Today:_ no limit is set (`src/pixano/api/routers/data_io.py`).
+
+**ARCH-40 (target).** A filter that comes from a caller MUST be validated or passed as a parameter. It MUST NOT be pasted into a SQL string.
+
+_Why:_ a pasted filter is an injection.
+
+_Today:_ filters are built as SQL strings (`f"split='{split}'"` in `src/pixano/datasets/exporters/dataset_exporter.py`, `to_sql_list` in `src/pixano/datasets/io/reader.py`).
+
+**ARCH-41 (target).** Every image (`pixano-api`, `pixano-worker`, `pixano-inference`, `pixano-mcp`) MUST run as a dedicated user that is not root.
+
+_Why:_ a container that runs as root breaks the rules of most clusters, and leaves files owned by root on shared storage.
+
+_Today:_ none of the three Dockerfiles sets a user, so the images run as root (`dockerfiles/Dockerfile`, `dockerfiles/Dockerfile.source`, `packages/pixano-worker/Dockerfile`).
+
+**ARCH-42 (target).** A secret MUST NOT be written in an image, in the arguments of a process, in a URL or in a log line.
+
+_Why:_ each of these is read by more people than the secret is meant for.
+
+_Today:_ `pixano server run` takes the S3 keys as options (`--aws-secret-key`, `src/pixano/cli/server.py`), and `POST /inference/connect` takes a key in its URL.
+
+### Repository, packages and frontend
+
+**ARCH-43 (target).** This repository MUST hold every Python component: `pixano` (the SDK and the command line), `pixano-api`, `pixano-worker`, `pixano-inference` with its model plug-ins, and `pixano-mcp`. It also holds `specs/` and the docs for users (`docs-astro/`).
+
+_Why:_ a contract between two components then changes in one pull request, with its spec and its docs. No Compose file has to build from a checkout beside this one.
+
+_Today:_ `pixano`, with the API inside it, `pixano-worker`, `specs/` and `docs-astro/` are here. `pixano-inference` is a repository of its own: Pixano depends on its published package (`pyproject.toml`), and the Compose file builds its image, unmodified, from a checkout beside this one (`docker-compose.inference.yml`). `pixano-mcp` does not exist.
+
+**ARCH-44 (target).** Each component MUST be delivered as its own OCI image, and each Python package MUST have its own `pyproject.toml` and its own distribution on PyPI.
+
+_Why:_ a deployment then takes only the parts it runs, and each one builds fast.
+
+_Today:_ two packages, `pixano` (with the API) and `pixano-worker`, and two images, the app's and the worker's (`dockerfiles/`, `packages/pixano-worker/Dockerfile`).
+
+**ARCH-45 (target).** The build of the `pixano` package MUST NOT call Node or pnpm, and its wheel MUST NOT contain frontend files.
+
+_Why:_ a frontend build of several gigabytes must not be what breaks the wheel of the Python SDK.
+
+_Today:_ the build hook of the wheel runs pnpm and builds both frontends into it (`hatch_build.py`). `pip install pixano` then gives a server with its interface.
+
+**ARCH-46 (target).** In CI, a heavy job (the tests of the model plug-ins, the legacy app, the Docker images) MUST run only when the paths it covers change, and the checks that a pull request requires MUST keep the same names whatever runs.
+
+_Why:_ in a repository of several components, a contributor must not wait for the tests of what they did not touch. And a required check that does not report blocks the pull request.
+
+_Today:_ each workflow ends in one job that gathers the others (`Backend`, `Frontend`, and the one of `docker.yml`). The path filters apply to a push only: a pull request runs every job (`.github/workflows/`).
+
+**ARCH-47.** `pixano` and `pixano-worker` MUST import nothing from `pixano-inference` but `pixano_inference.schemas` and `pixano_inference.client`.
+
+_Why:_ the app, and a worker without a GPU, must not pull Ray Serve or a model framework.
+
+**ARCH-48 (target).** `pixano.schemas` MUST NOT import a heavy native, graphical or server dependency: OpenCV, FastAPI, anything of the interface.
+
+_Why:_ the schemas are what every component and every pipeline imports, also on a machine with no display.
+
+_Today:_ importing `pixano.schemas` imports OpenCV: `src/pixano/schemas/views/image.py` imports `src/pixano/features/utils/image.py`, which imports `cv2`.
+
+**ARCH-49 (target).** `pixano-inference` MUST NOT import `pixano`.
+
+_Why:_ the model server must install and run on its own.
+
+_Today:_ `pixano-inference` is not in this repository (ARCH-43).
+
+**ARCH-50 (target).** `pixano-mcp` MUST import from `pixano` only its HTTP client and its wire schemas.
+
+_Why:_ it is a client of the API (ARCH-33), and must not carry the API's internals, PostgreSQL or Lance.
+
+_Today:_ `pixano-mcp` does not exist.
+
+**ARCH-51 (target).** CI MUST check the import rules ARCH-47 to ARCH-50.
+
+_Why:_ an import boundary that nothing checks is crossed within weeks. A repository of several packages must not become one program.
+
+_Today:_ nothing checks imports.
+
+**ARCH-52.** `pixano-api` MUST serve the legacy app (`ui/apps/pixano`), until the desktop application can replace it.
+
+_Why:_ annotation work must not stop while the new interface is built.
+
+**ARCH-53 (target).** This repository MUST hold one frontend only, the legacy app. The new UI (`ui/apps/web`) and the switch between two interfaces (`ACTIVATE_UI_V1_0` and its cookie) MUST NOT be in it.
+
+_Why:_ the new interface is rebuilt as a desktop application, in a repository of its own. Two interfaces in one wheel double the build, and the switch ties the API to a cookie.
+
+_Today:_ `ui/apps/web` is here, and it is built into the wheel. The server shows it when `ACTIVATE_UI_V1_0` is true and the browser asked for it with the cookie `pixano_ui_version` (`src/pixano/api/serve.py`).
+
+**ARCH-54 (target).** `pixano-api` MUST NOT depend on the interface that calls it. Every feature MUST be reachable through an HTTP or SSE endpoint that is documented and versioned. The allowed origins MUST be set by configuration. No feature MUST depend on a cookie of the same origin, or on a path of the machine where the server runs.
+
+_Why:_ a desktop application on an engineer's machine must work against a Pixano on that machine, in the lab or in the cloud.
+
+_Today:_ the allowed origins are set by configuration already (`cors_origins`, `src/pixano/api/main.py`). The switch between interfaces uses a cookie, an import takes a path of the server as its source, and the paths of the routes carry no version.
+
+### Observability
+
+**ARCH-55 (target).** Every long-running component MUST answer two questions apart: "is the process alive" (`/health/live`, or a heartbeat), and "can it serve", which tests what it depends on (`/health/ready`).
+
+_Why:_ a route that always answers `ok` hides a broken dependency, and defeats the readiness probes of Kubernetes.
+
+_Today:_ the app has one route, `/health`, that tests nothing (`src/pixano/api/main.py`). The worker has a heartbeat file, read by `pixano_worker.healthcheck`.
+
+**ARCH-56 (target).** Every component MUST write its logs as JSON, with the identifiers that tie the lines together: the request, the job, the worker, the dataset.
+
+_Why:_ plain text logs from several replicas cannot be searched or joined.
+
+_Today:_ the logs are plain text, and a request has no identifier.
+
+**ARCH-57 (target).** Every component MUST export OpenTelemetry traces and Prometheus metrics.
+
+_Why:_ a slow request crosses the API, a worker and a provider. Without traces, nobody can say where the time went.
+
+_Today:_ none does.
+
+**ARCH-58 (target).** On `SIGTERM`, every component MUST stop within a bounded time, finish or hand back its work, and release its leases.
+
+_Why:_ a cluster stops containers all day. A component that dies with a lease in hand blocks the work until the lease expires.
+
+_Today:_ the worker handles `SIGTERM` and `SIGINT` (`packages/pixano-worker/src/pixano_worker/__main__.py`). The app has no handling of its own.
+
+## The repository today
+
+This section describes the code as it is. It changes each time a target rule loses its mark.
+
+| Component                   | Where it lives                                                                | Started by                     | What it reaches, and how it is told                                                                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The app (API and interface) | `src/pixano/`, the package `pixano`                                           | `pixano server run <data_dir>` | PostgreSQL (`PIXANO_DATABASE_URL`, optional), the inference (`--pixano-inference-url`), the storage (the data directory, or S3)                                                                |
+| `pixano-worker`             | `packages/pixano-worker/`, a package with its own lockfile, built on `pixano` | `pixano-worker`                | PostgreSQL (`PIXANO_DATABASE_URL`), the inference (`PIXANO_INFERENCE_URL`, `PIXANO_INFERENCE_API_KEY`), the storage (`PIXANO_LIBRARY_DIR`, `PIXANO_MEDIA_ROOT`, `PIXANO_INFERENCE_MEDIA_ROOT`) |
+| PostgreSQL                  | The image `postgres:16`, in `docker-compose.yml`                              | Compose, or by hand            | Nothing                                                                                                                                                                                        |
+| The inference               | The repository `pixano-inference`; `docker-compose.inference.yml` builds it   | Compose, or by hand            | The media, under the root it declares                                                                                                                                                          |
+
+- **The stack.** `docker-compose.yml` starts PostgreSQL, the app and the worker. `docker-compose.inference.yml` adds an inference built on the machine. `docs/running-by-hand.md` runs the same four components as plain processes, with the same variables. `.env.example` lists every address.
+- **The repository.** `src/pixano/` holds the backend: `api`, `cli`, `datasets`, `inference`, `features`, `schemas`, `utils`. `packages/pixano-worker/` holds the worker. `ui/` is a pnpm and Turbo workspace with two apps. `docs-astro/` holds the docs for users, and `specs/` the specs.
+- **The two frontends.** `ui/apps/pixano` is the legacy app, and the one the server serves. `ui/apps/web` is the new UI: the server shows it only when `ACTIVATE_UI_V1_0` is true and the browser asked for it. The two apps share no code.
+- **The wheel.** `uv build` runs `hatch_build.py`. It runs `pnpm install --frozen-lockfile`, then builds the legacy app, then the new UI. Both builds go into the wheel, under `pixano/api/legacy_dist` and `pixano/api/dist`. An editable install skips the hook.
+- **The command line.** The package `pixano` has one console script, `pixano` (`pixano.cli:main`): `pixano init`, `pixano server run`, and `pixano data` with `import`, `export`, `formats`, `optimize`, `jobs` and `fix-creation-dates`. `pixano dataset` is another name for `pixano data`. The package `pixano-worker` has one too, `pixano-worker` (`pixano_worker.__main__:main`).
+
+```mermaid
+flowchart LR
+    UI["Legacy app (ui/apps/pixano), in the browser"]
+    APP["The app: pixano server run (src/pixano)"]
+    W["pixano-worker (packages/pixano-worker)"]
+    PG[("PostgreSQL: the queue of jobs")]
+    L[("Storage: Lance tables and media files")]
+    INF["pixano-inference (its own repository)"]
+
+    UI -->|"HTTP and SSE"| APP
+    APP -->|"SQL: submit and read jobs"| PG
+    W -->|"SQL: claim work, write events"| PG
+    PG -.->|"LISTEN/NOTIFY"| APP
+    APP <-->|"read and write"| L
+    W <-->|"read and write"| L
+    APP -->|"HTTP"| INF
+    W -->|"HTTP: paths, or bytes"| INF
+    INF -.->|"reads media by path"| L
+```
+
+## The target
 
 ```mermaid
 flowchart TB
-    subgraph Presentation["1. Presentation & SDK Plane"]
-        DESKTOP["pixano-ui (Target: Standalone Desktop App, external repo)"]
-        LEGACY["Legacy Web UI (ui/apps/pixano, embedded in pixano-api until desktop parity)"]
-        CLI["pixano CLI & Lean PyPI SDK"]
-        PY["Python / PyTorch / JAX Training Loaders"]
+    subgraph Presentation["1. Presentation and SDK"]
+        DESKTOP["Desktop application (target, its own repository)"]
+        LEGACY["Legacy app (ui/apps/pixano), served by pixano-api until the desktop application replaces it"]
+        CLI["pixano command line and Python SDK"]
+        PY["Training loaders (PyTorch, JAX)"]
     end
 
-    subgraph Monorepo["pixano Monorepo (Unified specs/ + docs-astro/ + Path-Scoped CI)"]
-        subgraph Agentic["2. Agentic Interface Plane"]
-            MCP["pixano-mcp (packages/pixano-mcp: Streamable HTTP + stdio)"]
+    subgraph Repo["The pixano repository"]
+        subgraph Agentic["2. Agents"]
+            MCP["pixano-mcp (packages/pixano-mcp): Streamable HTTP, stdio"]
         end
 
-        subgraph Control["3. Control & Query Plane (Stateless HA)"]
-            API["pixano-api (src/pixano/api: FastAPI, pooled PG, Media Gateway, OIDC/Bearer RBAC, SSE)"]
-            CACHE[("Ephemeral Read-Through Cache (RAM / NVMe / HTTP Proxy)")]
-            PG[("PostgreSQL (Sole Control Store: Catalog, Snapshots, Jobs, Leases, Workers, Providers, RBAC, Audit)")]
-            API <-->|"Read-Through Hit/Miss"| CACHE
-            API <-->|"SQL + LISTEN/NOTIFY"| PG
+        subgraph Control["3. Control and queries"]
+            API["pixano-api (src/pixano/api): several replicas, no state"]
+            CACHE[("Read-through cache: can be lost")]
+            PG[("PostgreSQL: catalogue, snapshots, jobs, leases, workers, providers, rights, audit")]
+            API <-->|"hit or miss"| CACHE
+            API <-->|"SQL, LISTEN/NOTIFY"| PG
         end
 
-        subgraph Execution["4. Execution Plane (Pull-Based, Heterogeneous)"]
-            W_IO["pixano-worker (packages/pixano-worker: io / cpu / robotics formats)"]
-            W_GPU["pixano-worker (packages/pixano-worker: embeddings / detect / segment / VLM / track)"]
-            W_EDGE["pixano-worker (lab / edge box, outbound HTTPS only)"]
+        subgraph Execution["4. Execution"]
+            W_IO["pixano-worker: import, export, formats"]
+            W_GPU["pixano-worker: embeddings, detection, segmentation, tracking"]
+            W_EDGE["pixano-worker on a lab machine: calls out only"]
         end
 
-        subgraph Inference["6. Inference Plane (Multi-Provider)"]
-            PINF["pixano-inference (packages/pixano-inference: Ray Serve GPU Pools + Model Plugins)"]
+        subgraph Inference["6. Inference"]
+            PINF["pixano-inference (packages/pixano-inference): GPU pools, model plug-ins"]
         end
     end
 
-    subgraph External["External Clients & Providers"]
-        AGENTS["AI Agents (Curation / QA / Ops)"]
-        EXT["External Providers (vLLM, OpenAI, Gemini, Ollama)"]
+    subgraph External["Outside"]
+        AGENTS["AI agents"]
+        EXT["External providers (vLLM, OpenAI, Gemini, Ollama)"]
     end
 
-    subgraph Data["5. Unified Multimodal Data Plane"]
-        LANCE[("LanceDB / Lance Blob v2 on S3 / MinIO / POSIX (Tables, Vectors, TimeSeries, Native Media Blobs, Optional External-URI Refs, Immutable Snapshot Manifests)")]
+    subgraph Data["5. Data"]
+        LANCE[("Lance on S3, MinIO or POSIX: tables, vectors, time series, media, manifests")]
     end
 
-    DESKTOP -->|"HTTPS REST + SSE + Range Media (Bearer / Signed URLs)"| API
-    LEGACY -->|"Same-Origin HTTPS REST + SSE + Range Media"| API
-    CLI -->|"HTTPS REST (Bearer / API Key)"| API
+    DESKTOP -->|"HTTPS, SSE, media by Range (bearer token, signed URL)"| API
+    LEGACY -->|"HTTPS, SSE, media by Range"| API
+    CLI -->|"HTTPS (bearer token or API key)"| API
     AGENTS --> MCP
-    MCP -->|"HTTPS REST (Scoped Token / RBAC)"| API
+    MCP -->|"HTTPS (scoped token)"| API
 
-    PY -.->|"Direct High-Throughput Snapshot & Blob Read"| LANCE
+    PY -.->|"reads snapshots straight from the storage"| LANCE
 
-    API <-->|"Cache-Miss Blob Range Read / Fenced Write"| LANCE
-    API -->|"Interactive Calls (API Key + Signed Media URL / Binary)"| PINF
-    API -->|"Interactive Calls (API Key)"| EXT
+    API <-->|"reads on a cache miss, writes under a lease"| LANCE
+    API -->|"interactive calls (key, signed media URL)"| PINF
+    API -->|"interactive calls (key)"| EXT
 
-    W_IO -->|"HTTPS Pull: Claim / Heartbeat / Write Lease"| API
-    W_GPU -->|"HTTPS Pull: Claim / Heartbeat / Write Lease"| API
-    W_EDGE -->|"HTTPS Pull: Claim / Heartbeat / Write Lease"| API
+    W_IO -->|"HTTPS: claim, heartbeat, lease"| API
+    W_GPU -->|"HTTPS: claim, heartbeat, lease"| API
+    W_EDGE -->|"HTTPS: claim, heartbeat, lease"| API
 
-    W_IO <-->|"Direct Fenced Lance Read/Write"| LANCE
-    W_GPU <-->|"Direct Fenced Lance Read/Write"| LANCE
-    W_GPU -->|"Batch Calls (API Key + Multipart Binary / Lance Blob Ref)"| PINF
-    W_GPU -->|"Batch Calls (API Key)"| EXT
+    W_IO <-->|"reads, writes under a lease"| LANCE
+    W_GPU <-->|"reads, writes under a lease"| LANCE
+    W_GPU -->|"batch calls (key, bytes or blob reference)"| PINF
+    W_GPU -->|"batch calls (key)"| EXT
 ```
 
-## Component and repository map
-
-| Plane | Runtime artifact | Repository location | Talks to |
-| --- | --- | --- | --- |
-| Presentation (Target) | `pixano-ui` standalone desktop app | External repository _(rebuilt from `ui/apps/web`)_ | `pixano-api` (HTTPS REST, SSE, cached Range media with Bearer/signed tokens) |
-| Presentation (Transitional) | Legacy SPA embedded in `pixano-api` OCI image | `ui/apps/pixano/` _(until desktop parity)_ | `pixano-api` (HTTP REST, SSE, cached Range media) |
-| SDK & CLI | `pixano` PyPI package (lean, no UI bundle) | `src/pixano/{schemas,datasets,inference,cli,utils}/` | `pixano-api` (HTTPS), LanceDB (direct multimodal snapshot reads) |
-| Agentic Interface | `pixano-mcp` OCI image & PyPI package | `packages/pixano-mcp/` _(planned)_ | `pixano-api` (HTTPS, scoped token) |
-| Control & Query | `pixano-api` OCI image (+ ephemeral cache) | `src/pixano/api/` | PostgreSQL (sole owner), Ephemeral Cache, LanceDB, Inference Plane |
-| Execution | `pixano-worker` OCI image & PyPI package | `packages/pixano-worker/` | `pixano-api` (`/internal/v1/worker/*`), LanceDB, Inference Plane |
-| Inference | `pixano-inference` OCI image & PyPI packages | `packages/pixano-inference/` _(migrating from `pixano/pixano-inference`)_ | Receives binary multipart, signed Media Gateway URLs, or Lance/external blob refs |
+| Plane                     | What is delivered                                | Where it lives                                                            | Talks to                                                       |
+| ------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Presentation (target)     | The desktop application                          | Its own repository, rebuilt from `ui/apps/web`                            | `pixano-api`                                                   |
+| Presentation (until then) | The legacy app, inside the image of `pixano-api` | `ui/apps/pixano/`                                                         | `pixano-api`                                                   |
+| SDK and command line      | The package `pixano`, with no interface in it    | `src/pixano/{schemas,datasets,inference,cli,utils}/`                      | `pixano-api`; Lance, to read snapshots                         |
+| Agents                    | `pixano-mcp`: an image and a package             | `packages/pixano-mcp/` (does not exist yet)                               | `pixano-api`                                                   |
+| Control and queries       | `pixano-api`: an image, with its cache           | `src/pixano/api/`                                                         | PostgreSQL (it alone), the cache, Lance, the providers         |
+| Execution                 | `pixano-worker`: an image and a package          | `packages/pixano-worker/`                                                 | `pixano-api`, Lance, the providers                             |
+| Inference                 | `pixano-inference`: an image and packages        | `packages/pixano-inference/` (today in the repository `pixano-inference`) | Nothing: it receives bytes, signed URLs or references to blobs |
 
 ## Open questions
 
-- **Direct Lance blob reader in `pixano-inference`:** For multi-terabyte GPU batch jobs, should `pixano-inference` eventually support reading a Lance blob coordinate (`dataset_uri + table + row_id + version`) directly from S3/POSIX, or is multipart `/binary` streaming from `pixano-worker` (plus external-URI refs) sufficient?
-- **API cache backend tiers:** Should `pixano-api`'s read-through cache start as an in-process / local-NVMe bounded LRU cache (paired with standard HTTP `Cache-Control: immutable` / `ETag` headers for reverse-proxy and desktop client caching), or also include an optional shared Redis/Valkey backend for multi-replica query summaries?
-- **Monorepo release tag scheme:** Once `pixano-inference`, `pixano-worker`, and `pixano-mcp` publish from the monorepo, should packages use independent prefixed tags (`pixano-vX.Y.Z`, `pixano-inference-vX.Y.Z`, `pixano-worker-vX.Y.Z`) or lockstep versioning?
-- **Multi-tenant SaaS isolation:** Should initial RBAC scope access at the project/dataset level within a single organization, or include hard multi-tenant isolation (tenant-scoped PostgreSQL schemas/rows, isolated S3 prefixes, and dedicated worker queues)?
-- **Lance Namespace catalog interoperability:** Should the PostgreSQL Control Plane also expose a `lance-namespace` REST catalog adapter so external Spark, Ray, and DuckDB engines can open Pixano datasets directly by namespace URI?
-- **Browser-incompatible robotics video codecs:** While the standalone desktop app can decode broader codecs natively, how should AV1/HEVC or raw sensor-bag image streams be handled for legacy web viewing — via an asynchronous worker transcoding job storing H.264 proxy blobs beside the raw media in Lance, or strictly delegated to the desktop app?
-- **PostgreSQL-only local developer ergonomics:** What is the exact one-command local startup UX (`docker compose up` vs. `pixano stack up`) once standalone non-PostgreSQL mode (`ARCH-1`) is removed?
+About the target:
+
+- **Lance blobs read by `pixano-inference`.** For batch jobs over terabytes, should `pixano-inference` read a blob of Lance by its address (dataset, table, row, version) straight from the storage? Or is a stream from `pixano-worker`, with references to external URIs, enough?
+- **Where the cache of the API lives.** Does it start in the process, or on a local disk, with the standard HTTP headers for a proxy and for the desktop client? Or does it also need a shared store (Redis, Valkey) for the summaries, when there are several replicas?
+- **Release tags.** Once `pixano-inference`, `pixano-worker` and `pixano-mcp` are published from this repository, does each package get its own tag (`pixano-vX.Y.Z`, `pixano-worker-vX.Y.Z`), or do all share one version?
+- **Several tenants.** Do the first rights apply to projects and datasets inside one organization, or does Pixano isolate tenants from the start (PostgreSQL schemas or rows, S3 prefixes, queues of workers)?
+- **Lance Namespace.** Should the control plane also expose a `lance-namespace` REST catalogue, so that Spark, Ray and DuckDB open a Pixano dataset by its URI?
+- **Video codecs a browser cannot play.** The desktop application decodes more codecs. For the legacy app, are AV1, HEVC and the raw images of sensor bags transcoded by a job, which stores an H.264 copy beside the raw media in Lance? Or are they left to the desktop application?
+- **Starting everything on one machine.** Once the mode without PostgreSQL is gone (ARCH-2), what is the one command that starts a local Pixano: `docker compose up`, or a `pixano stack up`?
+- **The air gap.** How is ARCH-4 checked: by a CI job that runs the stack with no way out to the internet?
+- **Parity.** What must the desktop application do before it replaces the legacy app (ARCH-52), and who says that it does?
+- **What is flattened today.** Which data does the code still flatten, at import or in storage (ARCH-16)? The answer is a measurement, to be made with the `DATA` spec.
+
+Details that this spec leaves to the spec of a part:
+
+- `DATA` and `API`: what a person's save does when it meets a write lease (ARCH-14). The proposal is a short, bounded wait, then a 409.
+- `API`: the cache headers of the media (`ETag`, `Cache-Control`), and how the version of the API appears in the routes (ARCH-19, ARCH-54).
+- `JOB`: the routes of the worker API, and the shape of a claim, a heartbeat and a lease (ARCH-24 to ARCH-28). The proposal is a group of routes under `/internal/v1/worker/`.
+- `INF`: how bytes reach `pixano-inference` (ARCH-21). The proposal is a multipart route, `/binary`.
+- `IO`: which formats Pixano ships, and in which order: LeRobot v2 and v3, MCAP and ROS 2 bags, RLDS and HDF5, simulator rollouts, beside COCO and Pixano JSONL (ARCH-16, ARCH-17).
 
 ## Decision log
 
-- 2026-11-22: first version of the overall architecture specification (`ARCH-1` through `ARCH-29`), establishing Pixano as a unified six-plane physical AI data engine in a Python monorepo with Lance as the unified multimodal data plane, ephemeral read-through caching on `pixano-api`, and a desktop-ready API boundary while keeping the legacy embedded UI until standalone desktop parity (PIX-276).
+- 2026-11-22: first version. The target architecture in six planes, with the rules that the code already follows, and the target rules marked (`ARCH-1` to `ARCH-58`).
