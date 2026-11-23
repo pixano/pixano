@@ -9,10 +9,13 @@ import io
 from io import BytesIO
 from itertools import groupby
 
-import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from pycocotools import mask as mask_api
+
+
+# OpenCV and pycocotools are imported inside the functions that call them, never here.
+# `pixano.schemas` imports this module, and the schemas must load without a library that no model
+# is made of (ARCH-48): tests/test_import_boundaries.py checks it.
 
 
 def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
@@ -54,6 +57,8 @@ def depth_file_to_binary(depth_path: str) -> bytes:
     Returns:
         Depth file as RGB image in binary.
     """
+    import cv2  # Imported where it is used: see the note at the top of the module.
+
     depth = cv2.imread(depth_path, cv2.IMREAD_ANYDEPTH).astype(np.float32)
     depth = depth_array_to_gray(depth)
     depth_rgb = Image.fromarray(depth)
@@ -78,6 +83,8 @@ def depth_array_to_gray(
     Returns:
         Depth array in gray levels.
     """
+    import cv2  # Imported where it is used: see the note at the top of the module.
+
     mask = depth > 1
 
     # Scale gives depth in mm
@@ -123,6 +130,8 @@ def mask_to_rle(mask: Image.Image | np.ndarray) -> dict:
     Returns:
         Mask as RLE.
     """
+    from pycocotools import mask as mask_api  # Imported where it is used: see the note at the top of the module.
+
     mask_array = np.asfortranarray(mask)
     return mask_api.encode(mask_array)
 
@@ -136,6 +145,8 @@ def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
     Returns:
         Mask as NumPy array.
     """
+    from pycocotools import mask as mask_api  # Imported where it is used: see the note at the top of the module.
+
     return mask_api.decode(rle)
 
 
@@ -150,6 +161,8 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
     Returns:
         Mask as RLE.
     """
+    from pycocotools import mask as mask_api  # Imported where it is used: see the note at the top of the module.
+
     rles = mask_api.frPyObjects(polygons, height, width)
     return mask_api.merge(rles)
 
@@ -187,6 +200,8 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
             - Mask as polygons
             - True if mask has holes
     """
+    import cv2  # Imported where it is used: see the note at the top of the module.
+
     # Some versions of cv2 does not support incontiguous arr
     mask = np.ascontiguousarray(mask)
 
@@ -228,6 +243,8 @@ def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
     Returns:
         Mask as RLE.
     """
+    from pycocotools import mask as mask_api  # Imported where it is used: see the note at the top of the module.
+
     height, width = urle["size"]
     return mask_api.frPyObjects(urle, height, width)
 
@@ -261,6 +278,8 @@ def mask_area(rle: dict[str, list[int] | bytes]) -> float:
     Returns:
         Mask area
     """
+    from pycocotools import mask as mask_api  # Imported where it is used: see the note at the top of the module.
+
     return float(mask_api.area(rle))
 
 

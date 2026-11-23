@@ -1,0 +1,9 @@
+# The specifications in specs/ are the source of truth on what Pixano is and how it is built.
+# One owner reviews every change to them, and to the files that enforce that review.
+#
+# Each pattern starts with a slash: without it, `specs/` would also match docs/specs/.
+# The last matching pattern wins: a broader line added below these would take them over.
+/specs/                             @jrabary
+/.github/CODEOWNERS                 @jrabary
+/.github/workflows/specs.yml        @jrabary
+/.github/scripts/check_specs_pr.py  @jrabary

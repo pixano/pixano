@@ -64,13 +64,16 @@ export async function registerInferenceServer(
   apiKey: string | null = null,
 ): Promise<{ provider: ConnectedProvider } | { error: string }> {
   try {
-    const params = new URLSearchParams({ provider_type: type });
-    if (url?.trim()) params.set("url", url.trim());
-    if (apiKey?.trim()) params.set("api_key", apiKey.trim());
-
-    const response = await fetch(`/inference/connect?${params.toString()}`, {
+    // Everything travels in the body. The key must never be in the URL: a URL ends up in access
+    // logs, in proxies and in the browser history.
+    const response = await fetch("/inference/connect", {
       headers: JSON_HEADERS,
       method: "POST",
+      body: JSON.stringify({
+        provider_type: type,
+        url: url?.trim() || null,
+        api_key: apiKey?.trim() || null,
+      }),
     });
 
     if (!response.ok) {
