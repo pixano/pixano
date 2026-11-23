@@ -16,6 +16,19 @@ Pull requests target the `main` branch. [RELEASING.md](./RELEASING.md) describes
 
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
 
+## Changing a specification
+
+The specifications in [`specs/`](./specs/README.md) say what Pixano is and how it is built. The code follows them, so a specification never changes in the same pull request as code:
+
+1. Open a pull request that changes only `specs/`, and give it the `spec-change` label. Say what changes, why, and which code will rely on it.
+2. Discuss it with the developers, in the pull request.
+3. The tech lead approves it. [`.github/CODEOWNERS`](./.github/CODEOWNERS) asks for this review.
+4. Once it is merged, write the code in another pull request, and cite the rules it follows.
+
+The `Specs` check fails a pull request that changes `specs/` together with anything else, or without the label.
+
+When your change needs a design decision that no specification states, ask before writing the code. [`specs/README.md`](./specs/README.md) has the full rules, the index of the specifications and their template.
+
 ## Running Pixano locally
 
 If you are looking to contribute to Pixano and develop new features, you will need to clone the Pixano repository and run it locally.

@@ -126,6 +126,18 @@ Open <http://localhost:7492> and switch to the new UI with the button in the hea
 panel shows the worker's kinds; a job submitted there is picked up by the worker started in
 step 3.
 
+A probe has two routes to ask. `GET /health/live` answers 200 as long as the process is alive,
+and tests nothing else. `GET /health/ready` answers 200 when the app can serve, and 503 with the
+name of what is missing otherwise: the library directory, or PostgreSQL when `PIXANO_DATABASE_URL`
+is set. Each is given 2 s to answer, so a probe that reads the answer waits a little longer than
+that. The inference is asked too, and never makes the app not ready: the app serves everything
+that needs no model without it, and the answer names it under `degraded` when it does not answer.
+`GET /health` still answers without testing anything.
+
+```sh
+curl -s http://127.0.0.1:7492/health/ready
+```
+
 An import then queues the embeddings job of the dataset it imported into, unless it says
 otherwise; into a dataset that already holds embeddings, it queues one job per model the dataset
 holds, beside the model it names, each computing the whole dataset again. Set

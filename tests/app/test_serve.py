@@ -107,6 +107,23 @@ def test_root_static_routes_preserve_spa_and_api_routing(bundled_app):
         assert "location" not in response.headers
 
 
+def test_health_routes_are_not_pages_of_the_spa(bundled_app):
+    """The fallback that sends an unknown path to the SPA takes none of the health routes."""
+    client, _ = bundled_app
+
+    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health/live").json() == {"status": "ok"}
+
+    # The data directory of this app holds no library: the readiness is asked, and says so.
+    ready = client.get("/health/ready")
+    assert ready.status_code == 503
+    assert ready.json()["missing"] == ["storage"]
+
+    unknown = client.get("/health/unknown")
+    assert unknown.status_code == 404
+    assert "location" not in unknown.headers
+
+
 @pytest.mark.parametrize("ui_version_cookie", [None, serve.NEW_UI_COOKIE_VALUE, "legacy"])
 def test_root_serves_the_legacy_ui_while_the_new_one_is_disabled(bundled_app, ui_version_cookie: str | None):
     client, _ = bundled_app

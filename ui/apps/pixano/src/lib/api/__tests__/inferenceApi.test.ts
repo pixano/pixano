@@ -11,6 +11,7 @@ import {
   cancelTrackingJob,
   getTrackingJob,
   listInferenceModels,
+  registerInferenceServer,
   segmentImage,
   submitTrackingJob,
   trackVideo,
@@ -248,6 +249,73 @@ describe("tracking job APIs", () => {
     await expect(cancelTrackingJob("tracking-job-1")).resolves.toMatchObject({
       job_id: "tracking-job-1",
       status: "canceled",
+    });
+  });
+});
+
+describe("registerInferenceServer", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function connected(provider: string, url: string): Response {
+    return new Response(JSON.stringify({ status: "connected", provider, url }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  it("sends the key in the body, and nothing in the URL", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(connected("pixano-inference", "http://127.0.0.1:7463"));
+
+    await expect(
+      registerInferenceServer(" http://127.0.0.1:7463 ", "pixano-inference", " secret-key "),
+    ).resolves.toEqual({ provider: { name: "pixano-inference", url: "http://127.0.0.1:7463" } });
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/inference/connect");
+    expect(init.method).toBe("POST");
+    expect(init.headers).toMatchObject({ "Content-Type": "application/json" });
+    expect(JSON.parse(init.body as string)).toEqual({
+      provider_type: "pixano-inference",
+      url: "http://127.0.0.1:7463",
+      api_key: "secret-key",
+    });
+  });
+
+  it("sends null for an address or a key that is not given", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      connected("ollama@localhost:11434", "http://localhost:11434"),
+    );
+
+    await registerInferenceServer(null, "ollama", "  ");
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/inference/connect");
+    expect(JSON.parse(init.body as string)).toEqual({
+      provider_type: "ollama",
+      url: null,
+      api_key: null,
+    });
+  });
+
+  it("returns the reason the server gives when the connection fails", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ detail: "Invalid inference server URL" }), {
+        status: 400,
+        statusText: "Bad Request",
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(registerInferenceServer("not-a-url")).resolves.toEqual({
+      error: "Invalid inference server URL",
     });
   });
 });
