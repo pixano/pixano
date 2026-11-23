@@ -1,0 +1,56 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+name: Specs
+
+# A pull request that changes specs/ changes nothing else and carries the label `spec-change`.
+# The rule is in .github/scripts/check_specs_pr.py.
+on:
+  # Nothing to check on a push. The job still runs, so that every commit of these branches
+  # carries the six required checks, like a commit that went through a pull request.
+  push:
+    branches:
+      - "main"
+      - "release/**"
+  pull_request:
+    branches:
+      - "main"
+      - "release/**"
+    # The three default types, plus the two that change the verdict without a push.
+    # No `paths` filter: a required check that does not run blocks the pull request for good.
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+# The default token of this repository can write. This job only reads.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  specs:
+    # Named after the workflow: this is the check that branch protection requires.
+    # Never put an `if` on this job: a skipped job counts as a pass.
+    name: Specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # On a pull request, this is its merge commit, with its two parents: the base branch,
+      # then the head of the pull request.
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: python3 .github/scripts/check_specs_pr.py

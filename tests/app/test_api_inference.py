@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from PIL import Image as PILImage
 
 from pixano.api.main import create_app
-from pixano.api.routers.inference import MAX_TRACKING_FRAMES
+from pixano.api.routers.inference import MAX_TRACKING_FRAMES, ConnectInferenceServerRequest
 from pixano.api.settings import Settings, get_settings
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
@@ -44,6 +44,10 @@ from pixano.inference.types import (
     VLMResult,
 )
 from pixano.schemas import Image, Record, SequenceFrame
+
+
+# A made-up key: the tests check where it travels, and that it is never sent back.
+SECRET_KEY = "pix289-secret-key"
 
 
 def _make_mock_provider(name: str, url: str) -> MagicMock:
@@ -197,7 +201,7 @@ class TestInferenceRegistry:
             "pixano.api.routers.inference.PixanoInferenceProvider.connect",
             AsyncMock(return_value=provider),
         ) as connect_mock:
-            response = client.post("/inference/connect", params={"url": "http://127.0.0.1:7463 "})
+            response = client.post("/inference/connect", json={"url": "http://127.0.0.1:7463 "})
 
         assert response.status_code == 200
         assert response.json() == {
@@ -211,8 +215,84 @@ class TestInferenceRegistry:
 
     def test_connect_bad_url_is_400(self):
         client, _ = _make_client()
-        response = client.post("/inference/connect", params={"url": "not-a-url"})
+        response = client.post("/inference/connect", json={"url": "not-a-url"})
         assert response.status_code == 400
+
+    def test_connect_passes_the_key_of_the_body_to_the_provider(self):
+        client, _ = _make_client()
+        provider = _make_mock_provider("pixano-inference", "http://127.0.0.1:7463")
+
+        with patch(
+            "pixano.api.routers.inference.PixanoInferenceProvider.connect",
+            AsyncMock(return_value=provider),
+        ) as connect_mock:
+            response = client.post(
+                "/inference/connect",
+                json={"url": "http://127.0.0.1:7463", "provider_type": "pixano-inference", "api_key": SECRET_KEY},
+            )
+
+        assert response.status_code == 200
+        connect_mock.assert_awaited_once_with("http://127.0.0.1:7463", api_key=SECRET_KEY)
+        assert SECRET_KEY not in response.text
+
+    def test_connect_passes_the_key_of_the_body_to_another_provider_type(self):
+        client, settings = _make_client()
+        provider = _make_mock_provider("openai", "https://api.openai.com")
+
+        with patch("pixano.api.routers.inference.get_provider", MagicMock(return_value=provider)) as get_provider_mock:
+            response = client.post("/inference/connect", json={"provider_type": "openai", "api_key": SECRET_KEY})
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "status": "connected",
+            "provider": "openai@api.openai.com:443",
+            "url": "https://api.openai.com",
+        }
+        get_provider_mock.assert_called_once_with("openai", url="https://api.openai.com", api_key=SECRET_KEY)
+        assert settings.default_inference_provider == "openai@api.openai.com:443"
+
+    def test_connect_refuses_a_key_in_the_query_string(self):
+        client, settings = _make_client()
+        provider = _make_mock_provider("pixano-inference", "http://127.0.0.1:7463")
+
+        with patch(
+            "pixano.api.routers.inference.PixanoInferenceProvider.connect",
+            AsyncMock(return_value=provider),
+        ) as connect_mock:
+            # The shape the route took before: everything in the query string, and no body.
+            old_shape = client.post(
+                "/inference/connect", params={"url": "http://127.0.0.1:7463", "api_key": SECRET_KEY}
+            )
+            # A key in the query string is refused even next to a valid body.
+            beside_a_body = client.post(
+                "/inference/connect", params={"api_key": SECRET_KEY}, json={"url": "http://127.0.0.1:7463"}
+            )
+
+        for response in (old_shape, beside_a_body):
+            assert response.status_code == 422, response.text
+            detail = response.json()["detail"]
+            assert "query string" in detail
+            assert "JSON body" in detail
+            assert SECRET_KEY not in response.text
+        connect_mock.assert_not_awaited()
+        assert settings.inference_providers == {}
+
+    def test_connect_without_a_body_is_422(self):
+        client, settings = _make_client()
+
+        with patch("pixano.api.routers.inference.PixanoInferenceProvider.connect", AsyncMock()) as connect_mock:
+            # The address in the query string, as before, is not read any more.
+            response = client.post("/inference/connect", params={"url": "http://127.0.0.1:7463"})
+
+        assert response.status_code == 422
+        connect_mock.assert_not_awaited()
+        assert settings.inference_providers == {}
+
+    def test_connect_request_hides_the_key_when_printed(self):
+        request = ConnectInferenceServerRequest(url="http://127.0.0.1:7463", api_key=SECRET_KEY)
+
+        assert SECRET_KEY not in repr(request)
+        assert SECRET_KEY not in str(request.model_dump())
 
 
 class TestInferenceModels:
