@@ -52,15 +52,17 @@ PIXANO_INFERENCE_WEIGHTS_DIR=/srv/pixano/inference-weights \
 `PIXANO_INFERENCE_MEDIA_ROOTS` is the directory under which the server accepts image paths;
 `PIXANO_INFERENCE_WEIGHTS_DIR` a writable directory where YOLO keeps its weights. Wait for
 `http://127.0.0.1:7463/health` to answer; the first start downloads the models. CLIP and the
-two SAM 2.1 checkpoints (about 340 MB for SAM) come from huggingface.co and are cached under
+SAM 2.1 tiny checkpoint, served for images and for videos, come from huggingface.co and are cached under
 `HF_HOME`, `~/.cache/huggingface` unless set, not in `PIXANO_INFERENCE_WEIGHTS_DIR`. Set
 `HF_HOME` to keep them next to YOLO's, as the container does.
 
 The YOLO plugin runs Ultralytics, which is AGPL-3.0: a demonstration choice. Serve any other
 detection model instead — nothing in Pixano names this one.
 
-The list serves no tracking model, so tracking by detection, in the legacy video workspace, has
-none to run. The YOLO plugin brings one, `YOLOByteTrackModel` (pixano-inference's
+The list serves one tracking model, `sam2.1-tiny-video`, SAM 2.1 tiny's video predictor, which
+the tracking job runs: it follows an object a person annotated on a frame to the video's end.
+Tracking by detection, in the legacy video workspace, needs a detector that tracks, which the
+list does not serve. The YOLO plugin brings one, `YOLOByteTrackModel` (pixano-inference's
 `examples/yolo/config_tracking.py` shows its entry): add it to a copy of the list, with two more
 CPUs than the eight below, or run the application against another inference server that serves
 one. The application talks to one pixano-inference server at a time.
@@ -76,13 +78,17 @@ writes the plugin and the entry for spaCy.
 finds on the machine: two for CLIP, two for YOLO, two for each SAM 2.1 model — eight in all.
 With fewer, the server refuses to start, every model included; `--no-strict-startup` starts it
 anyway, with the models that fit: they are placed in list order, the SAM models last, so on six
-or seven CPUs `sam2.1-small` is the one left out. The reservation is a count, not a pinning:
+or seven CPUs `sam2.1-tiny-video` is the one left out. The reservation is a count, not a pinning:
 the worker, the application and PostgreSQL still run beside it on the same CPUs. Each SAM
 replica holds about 1.5 GiB of memory, 2 GiB at peak, and takes 1.0 to 1.2 s per image on its
 two CPUs, measured by hand on an 8-core M1 Pro; the same call takes about 6 s inside the
 compose's Linux container on that machine, and 7 to 8 s there through the server (measured on
-2026-10-09: 7 s for tiny, 7.8 s for small). Segmentation jobs and the interactive
-smart-segment tool share these two replicas, each answering one call at a time.
+2026-10-09: 7 s for tiny, 7.8 s for SAM 2.1 small, which the list served then). Segmentation
+jobs and the interactive smart-segment tool share the image replica, answering one call at a
+time. The video replica takes 15 to 29 s a frame in the container, as the machine is loaded
+(measured on 2026-11-05 and 06), so a tracking job sends a video sixteen frames at a time, four
+to eight minutes a call. The list gives a tracking call half an hour, its wait behind the calls
+queued before it on the replica included, where the server's default is ten minutes.
 
 ## 3. The worker
 

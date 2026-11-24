@@ -25,10 +25,12 @@
 # The build fetches sam-2 from GitHub, and the first start fetches the SAM weights from
 # huggingface.co into the weights volume (HF_HOME, /data/hf): both need the network once.
 #
-# No tracking model is served: the four models of docker/inference/models.cpu.py already
-# reserve 8 CPUs, all a machine of 8 cores gives Docker. Tracking by detection, in the legacy
-# video workspace, needs another inference server that serves one, or two more CPUs here and
-# the YOLO plugin's YOLOByteTrackModel added to the model list.
+# One tracking model is served, SAM 2.1 tiny's video predictor, which the tracking job runs on
+# an object a person annotated on a video's frame. The four models of
+# docker/inference/models.cpu.py reserve 8 CPUs, all a machine of 8 cores gives Docker.
+# Tracking by detection, in the legacy video workspace, needs another inference server that
+# serves a detector that tracks, or two more CPUs here and the YOLO plugin's
+# YOLOByteTrackModel added to the model list.
 
 services:
   pixano-inference:
