@@ -8,13 +8,14 @@ Name the file after the issue and the kind of change:
 
 - `PM-<n>.added.md`, `PM-<n>.changed.md`, `PM-<n>.deprecated.md`, `PM-<n>.removed.md` or
   `PM-<n>.fixed.md`;
-- `PIX-<n>.<type>.md` for an issue still in Linear;
+- `PIX-<n>.<type>.md` for an older issue;
 - `+<short-name>.<type>.md` when there is no issue.
 
-The changelog shows the issue ID as plain text, without a link: the team's issues are private.
+The name only keeps two pull requests from writing the same file. The changelog is for users,
+so it shows the entry without its issue (`template.md`).
 
 The file holds the entry as Markdown, written for users: what changes for them, not how the
-code changed. Never copy the text of the private issue into it. For example, `PIX-172.fixed.md`:
+code changed. For example, `PIX-172.fixed.md`:
 
 ```markdown
 The legacy app finds the bounds of a mask whose first pixel is painted, as a SAM mask can be.

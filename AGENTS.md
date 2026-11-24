@@ -174,18 +174,11 @@ Add or update tests alongside the code you change. Backend tests should use `tes
 
 All pull requests target `main`, which stays releasable at any time. Branching, versioning, and the release procedures are described in [RELEASING.md](./RELEASING.md).
 
-### Issue Tracking
-
-Team issues are private. They live in the private repository [`pixano/pixano-project-manager`](https://github.com/pixano/pixano-project-manager), on the org project "Pixano", and are named `PM-<n>`: an autolink on this repository turns `PM-<n>` into a link. Issues on this public repository are reports from outside the team.
-
-- Open a team issue only in `pixano/pixano-project-manager`, never on `pixano/pixano`. One opened here by mistake is moved with `gh issue transfer <n> pixano/pixano-project-manager`.
-- Never copy the text or the discussion of a private issue into a public pull request, commit, issue or changelog entry. Name it `PM-<n>`.
-- File an issue with `gh issue create -R pixano/pixano-project-manager --project Pixano --type Task` (or `Bug`, `Feature`). Keep the `[Theme]` prefix of the title, and put the details for agents in a `<details><summary>Agent notes</summary>…</details>` block at the end of the body. Attach an issue to its parent with `gh api -X POST repos/pixano/pixano-project-manager/issues/<parent>/sub_issues -F sub_issue_id=<id>`, where `<id>` is `gh api repos/pixano/pixano-project-manager/issues/<child> -q .id`.
-- Linear holds the `PIX-<n>` issues opened before 2026-11-22. They are finished there, but no issue is created in Linear any more: a follow-up of a `PIX-<n>` issue is a new `PM-<n>` issue that says "Follow-up of PIX-<n>".
-
 ### Starting Work on an Issue
 
-Work on each issue in its own git worktree, next to the main checkout. Name the worktree and the branch after the issue, `PM-<n>` (or `PIX-<n>` for an issue still in Linear), with the usual prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`):
+Before you file an issue, start work on one, or open a pull request for one, read [`.agents/issue-tracking.md`](./.agents/issue-tracking.md): where the team's issues live, and how they are named.
+
+Work on each issue in its own git worktree, next to the main checkout. Name the worktree and the branch after the issue ID, with the usual prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`):
 
 ```bash
 git worktree add ../PM-<n> -b feat/PM-<n> origin/main
@@ -199,7 +192,7 @@ When committing changes:
 - DCO sign-off: All commits MUST use the `-s` flag (otherwise CI will reject them)
 - Do NOT add `Co-Authored-By` trailers (or any other co-author lines) to commit messages.
 - Pre-commit hooks: Run before committing (see [Pre-commit Hooks](#pre-commit-hooks))
-- Changelog: a change users see adds a fragment to `changelog.d/` (`PM-<n>.fixed.md`, `.added.md`…, or `PIX-<n>…` for an issue still in Linear; see `RELEASING.md`). Never edit `CHANGELOG.md` directly: the release builds it.
+- Changelog: a change users see adds a fragment to `changelog.d/`, named after its issue (see `changelog.d/README.md`). Never edit `CHANGELOG.md` directly: the release builds it.
 
 ```bash
 # Commit with required DCO sign-off
@@ -213,7 +206,7 @@ git push origin <your-branch>
 
 - Follow the instructions at the top of [the PR template](./.github/PULL_REQUEST_TEMPLATE.md) carefully.
 - Fill the "Specs" section of the template: the IDs of the rules the change follows, and the spec PR it relies on, if any.
-- End the title with the issue ID, as in `(PM-<n>)`, and write `Fixes pixano/pixano-project-manager#<n>` in the body. Only that full reference closes the private issue when the pull request merges: `PM-<n>` alone is just a link. An issue of this repository is closed with `Fixes #<n>`.
+- End the title with the issue ID, as in `(PM-<n>)`, and close the issue from the body as [`.agents/issue-tracking.md`](./.agents/issue-tracking.md) says.
 - Inside `gh pr ... --body "$(cat <<'EOF' ... EOF)"`, write backticks plain. The quoted `'EOF'` delimiter already suppresses command substitution, so escaping as `` \` `` is unnecessary and the backslashes get persisted in the PR body, rendering literally instead of as code spans.
 
   ```bash
