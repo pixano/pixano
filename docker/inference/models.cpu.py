@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-"""Models served by the local-mode inference: an embedding model, a detector and two segmenters, on CPU.
+"""Models served by the local-mode inference: an embedding model, a detector, a segmenter and a tracker, on CPU.
 
 Mounted into the `pixano-inference` container by `docker-compose.inference.yml`, and passed to a
 server started by hand (docs/running-by-hand.md). It lives in this repository, not in
@@ -18,12 +18,14 @@ YOLO26n is the smallest Ultralytics detector, trained on the 80 COCO classes. Ul
 AGPL-3.0 (see docker-compose.inference.yml): a demonstration choice, which Pixano does not
 depend on — nothing in Pixano names this model.
 
-SAM 2.1 tiny and small turn what they are pointed at on an image, points or boxes, into masks:
-two checkpoints, tiny the faster, small a second segmentation model beside it. Code and
-checkpoints are Apache-2.0. Their weights come from huggingface.co on first load and are cached
-under HF_HOME (the persistent volume in the container), not under PIXANO_INFERENCE_WEIGHTS_DIR.
-Each replica holds about 1.5 GiB of memory, 2 GiB at peak. Every client of the server shares
-these two deployments: segmentation jobs and the interactive smart-segment tool.
+SAM 2.1 tiny serves twice. Its image predictor turns the boxes already on an image into masks;
+batch segmentation jobs and the interactive smart-segment tool share it. Its video predictor
+follows an object a person annotated on a video's frame through the frames after it, for the
+tracking job. It took the place of SAM 2.1 small, a second image checkpoint, on 2026-11-05: the
+8 CPUs had no room for a fifth model. Code and checkpoints are Apache-2.0. The weights come from
+huggingface.co on first load and are cached under HF_HOME (the persistent volume in the
+container), not under PIXANO_INFERENCE_WEIGHTS_DIR. Each replica holds about 1.5 GiB of memory,
+2 GiB at peak.
 
 Every model listed must load for the server to start. A missing plugin fails the list itself;
 with strict startup, the server's default, so do weights that cannot be fetched or CPUs that
@@ -48,11 +50,13 @@ YOLO_CPUS = 2
 # image): 10.7 s per call on one thread, about 6 s on two, 3.7 s on four; and through the server
 # with one CPU each, 13 s for tiny and 14 s for small; with two each, 7 s and 7.8 s. Two each put
 # the four models at all 8 CPUs the stack requires of Docker (CLIP 2 + YOLO 2 + SAM 2 × 2); four
-# each would need 12. Ray's reservation is a count, not a pinning: the app, the worker and
-# PostgreSQL still share the CPUs. A replica answers one call at a time, and a worker keeps at
-# most its concurrency of them queued, 4 by default: in the container a queued call then waits at
-# most about 4 × 7.8 s = 31 s, its own included, under the 60 s the server gives a segmentation
-# call with its queue time.
+# each would need 12. The video predictor takes 15 to 29 s a frame on its two, as the machine is
+# loaded (measured on 2026-11-05 and 06 in the container): the tracking job sends a video sixteen
+# frames at a time. Ray's reservation is a count, not a pinning: the app, the worker and PostgreSQL
+# still share the CPUs. A replica answers one call at a time, and a worker keeps at most its
+# concurrency of them queued, 4 by default: in the container a queued segmentation call then
+# waits at most about 4 × 7 s = 28 s, its own included, under the 60 s the server gives it with
+# its queue time.
 SAM_CPUS = 2
 
 # Sam2ImageModel's defaults, bfloat16 and torch.compile, are meant for a GPU. Compiling makes
@@ -61,6 +65,14 @@ SAM_CPUS = 2
 # either: segmentation keeps the server's default, 60 s per call with its queue time, above the
 # longest wait a worker's calls make (above).
 SAM_CPU_PARAMS = {"torch_dtype": "float32", "compile": False}
+
+# What the server gives a tracking call, its time queued on the replica included: ten minutes by
+# default. A window of sixteen frames takes four to eight minutes on CPU, and a worker keeps up to
+# four calls in flight, one per video, which the replica answers one after the other: half an hour
+# lets the fourth through up to about 28 s a frame; at the slowest pace measured, 29 s, it could
+# still be answered 504, and its video goes back to the queue. Measured on 2026-11-06: a call queued
+# behind another one ran past ten minutes and was answered 504, while the replica went on computing it.
+TRACKING_TIMEOUT_S = 1800.0
 
 # Where YOLO fetches its weights on first load, and finds them afterwards. In the container,
 # the inference's persistent volume; run by hand, any writable directory.
@@ -79,18 +91,20 @@ models = [
         model_params={"path": str(WEIGHTS_DIR / "yolo" / "yolo26n.pt")},
         deployment=DeploymentConfig(num_gpus=0, num_cpus=YOLO_CPUS, min_replicas=1, max_replicas=1),
     ),
-    # Tiny before small: the new UI's smart-segment tool takes the first segmentation model the
-    # server lists, and tiny is the faster of the two.
     ModelConfig(
         name="sam2.1-tiny",
         model_class="Sam2ImageModel",
         model_params={"path": "facebook/sam2.1-hiera-tiny", **SAM_CPU_PARAMS},
         deployment=DeploymentConfig(num_gpus=0, num_cpus=SAM_CPUS, min_replicas=1, max_replicas=1),
     ),
+    # Without the optimisations meant for a GPU, as for images: no compilation, and no VOS-optimised
+    # predictor, which compiles too.
     ModelConfig(
-        name="sam2.1-small",
-        model_class="Sam2ImageModel",
-        model_params={"path": "facebook/sam2.1-hiera-small", **SAM_CPU_PARAMS},
-        deployment=DeploymentConfig(num_gpus=0, num_cpus=SAM_CPUS, min_replicas=1, max_replicas=1),
+        name="sam2.1-tiny-video",
+        model_class="Sam2VideoModel",
+        model_params={"path": "facebook/sam2.1-hiera-tiny", **SAM_CPU_PARAMS, "vos_optimized": False},
+        deployment=DeploymentConfig(
+            num_gpus=0, num_cpus=SAM_CPUS, min_replicas=1, max_replicas=1, timeout_s=TRACKING_TIMEOUT_S
+        ),
     ),
 ]
