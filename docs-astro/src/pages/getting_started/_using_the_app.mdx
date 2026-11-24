@@ -289,6 +289,25 @@ reveal its track along the timeline; pin up to two to compare them. Coloured seg
 tracklets — continuous stretches where the entity is visible — and dots are keyframes. Right
 click a tracklet to add a point, split it, glue it to a neighbour, relink it, or delete it.
 
+### Tracking entities to the end of their videos
+
+The `tracking` job follows an entity from a frame to the video's last one, with the tracking model
+the inference serves, and proposes on each frame after it what its **Output** says: the entity's
+mask, the box around that mask, or both — masks unless you choose otherwise. Run from the **Jobs**
+panel, it follows every entity a person annotated on a frame of a video, each from the first frame
+where they did; on a record filmed by several cameras, in each video it is annotated in. It runs
+in the background, so `pixano-worker` must be running. The panel counts the frames as they are
+done, and **Cancel** stops the job at the end of the batch of frames it is on, which then writes
+nothing.
+
+The masks or boxes of a video arrive together once it is tracked, *pending review*, with a tracklet
+spanning them: open the record again to see them. A frame on which a person drew or accepted the
+entity's mask keeps theirs, and one on which they drew or accepted its box keeps theirs. Running the
+job again replaces what it proposed, but not what was accepted since, by you or by an edit of the
+entity; a job for boxes leaves the masks an earlier one proposed, and the other way round. What you
+change on a video while it is tracked may not be seen by the job, so review what it proposed once
+it is done.
+
 ## Next steps
 
 - [Inference](/pixano/getting_started/inference/) — connect a model server
