@@ -718,14 +718,21 @@ def _box_prompt(reader: JobReader, frame: Any, box: Any) -> TrackingPrompts | No
 def _named_keyframes(reader: JobReader, targets: Sequence[TrackingTarget]) -> dict[Track, int]:
     """The keyframe of each object named, in each video of its record where it is: the frame given, else the first.
 
+    The objects come from the caller: each is checked against the dataset's objects, read without a
+    filter, before its identifier reaches one.
+
     Raises:
         ValueError: An object is not in the record named, or not annotated on the frame given.
     """
+    known = set(reader.ids(ENTITY_TABLE))
+    for target in targets:
+        if target.entity_id not in known:
+            raise ValueError(f"object '{target.entity_id}' is not in record '{target.record_id}'")
     entity_ids = sorted({target.entity_id for target in targets})
     entities = {row.id: row for row in reader.rows(ENTITY_TABLE, entity_ids)}
     for target in targets:
-        entity = entities.get(target.entity_id)
-        if entity is None or entity.record_id != target.record_id:
+        entity = entities[target.entity_id]
+        if entity.record_id != target.record_id:
             raise ValueError(f"object '{target.entity_id}' is not in record '{target.record_id}'")
     where = f"entity_id IN {to_sql_list(entity_ids)}"
     # Each object pointed at on a frame: only that frame's annotations are read.
