@@ -163,9 +163,8 @@ pixano data import ./my_data ./texts --name my_texts
 
 ## Run the job
 
-The legacy app has no Jobs panel yet: the job runs from the new interface's. Start the app with
-`ACTIVATE_UI_V1_0=true` in its environment, click **Switch to new UI** in the header, open the
-dataset and its **Jobs** tab, and choose `ner`, then `spacy-en-ner` as the model. **Entity
+Open the dataset in the explorer, click **Jobs**, and choose `ner`, then `spacy-en-ner` as the
+model. **Entity
 Types** keeps the classes you name, as the model names them — `PERSON, ORG, GPE, LOC` for spaCy's
 people, organizations and places; empty, every class it returns, dates and numbers included. Click
 **Run**: each text is one call to the model, and the panel follows the job. A text the job cannot
@@ -173,7 +172,7 @@ read goes to quarantine, which **Show quarantine** lists with the reason.
 
 ## Correct the proposals
 
-Come back with **Switch to legacy UI** and open a record: each mention the model proposed is marked in the text, and its object, pending
+Open a record: each mention the model proposed is marked in the text, and its object, pending
 review, is listed in the **Entities** tab with its class in `name`. Color the objects by **Name**
 to see the classes in the text. Fix a class, mark a mention the model missed, delete a wrong one.
 

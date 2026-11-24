@@ -89,8 +89,7 @@ records hold some, and opens the first of them in review — see
 ### Named entities in texts
 
 On a dataset of texts, the `ner` job proposes the named entities a model recognizes in them —
-people, places, organizations. Open the dataset's **Jobs** tab in the new interface (**Switch to
-new UI** in the header, shown when the app runs with `ACTIVATE_UI_V1_0=true`), choose `ner` and the
+people, places, organizations. In the dataset's explorer, click **Jobs**, choose `ner` and the
 model; **Entity Types** keeps only the classes you name, as the model names them (`PER`, `LOC`),
 and **Score Threshold** (0.5 by default) leaves out the entities the model is less sure of. It
 needs `pixano-worker` running, and a NER model served by your inference: pixano-inference ships
