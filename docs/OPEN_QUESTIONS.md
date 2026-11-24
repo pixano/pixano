@@ -344,17 +344,18 @@ masks, boxes or both —, masks by default, so that nothing changes without it
 
 **Status:** open (lot 6 of step 2's second version, 2026-11-06).
 
-Every run of a clustering is kept (backend-processing §24). Nothing forgets one:
-`Dataset.drop_clustering` takes a run's rows and its entry, but no route nor
-interface calls it, so the runs pile up. Nor does a run say that its model's
-embeddings were computed again since, or for more media.
+Every run of a clustering is kept, and each is a column of the explorer
+(backend-processing §24). Nothing forgets one: `Dataset.drop_clustering` takes a
+run's rows and its entry, but no route nor interface calls it, so the columns
+pile up with the runs. Nor does a run say that its model's embeddings were
+computed again since, or for more media.
 
 Options:
 
 - **A route that forgets a run**, `DELETE /datasets/{id}/clusterings/{run}`, and
-  a way to call it wherever a run is shown.
+  an entry in the explorer's column to call it.
 - **Keep the latest runs only**, a number of them per dataset, the oldest
   forgotten when a job records a new one: nothing to click, but a run someone
-  still reads may go.
-- **Mark a run stale** when its model's embeddings are written after it: what
-  shows the run could say so, or hide it.
+  filters on may go.
+- **Mark a run stale** when its model's embeddings are written after it: the
+  explorer could say so in the column's label, or hide it.

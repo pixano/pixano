@@ -63,12 +63,17 @@ export interface ColumnDescriptorResponse {
   operators: string[];
   values?: string[] | null;
   values_complete: boolean;
-  /** The table the column is read from: the records', or their statistics' (`record_statistics`). */
+  /**
+   * The table the column is read from: the records', or one computed from them — their statistics'
+   * (`record_statistics`), their clusters' (`record_clusters`).
+   */
   table?: string;
-  /** What a person reads in place of the name: a statistic's label. */
+  /** What a person reads in place of the name: a computed column's label. */
   label?: string | null;
   /** The unit of a statistic's values, if they have one. */
   unit?: string | null;
+  /** What a person reads in place of some of the values, by value: a clustering's noise. */
+  value_labels?: Record<string, string> | null;
 }
 
 /** One embeddings model of a dataset — its space —, as a search can use it. */
@@ -150,8 +155,9 @@ export interface RecordResponse {
   updated_at?: string;
   view_previews?: Record<string, PreviewDescriptor>;
   /**
-   * The values of the columns the dataset computed for the record — its statistics —, by the name
-   * the explorer's columns give them (`record_statistics.<name>`).
+   * The values of the columns the dataset computed for the record — its statistics, its group in
+   * each run of a clustering —, by the name the explorer's columns give them
+   * (`record_statistics.<name>`, `record_clusters.<run>`).
    */
   computed_values?: Record<string, number | null> | null;
   [key: string]: unknown;

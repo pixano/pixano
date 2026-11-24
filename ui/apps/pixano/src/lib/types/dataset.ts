@@ -110,8 +110,10 @@ export type TableRow = Record<string, string | number | boolean | DatasetStat>;
 export interface TableColumn {
   name: string;
   type: string;
-  /** What the column is called, when its name is not what a person reads: a statistic's label. */
+  /** What the column is called, when its name is not what a person reads: a computed column's label. */
   label?: string;
+  /** What a person reads in place of some of the values, by value: a clustering's noise. */
+  valueLabels?: Record<string, string>;
 }
 
 export interface TableData {

@@ -163,6 +163,7 @@ def get_filter_schema(
             table=column.table,
             label=column.label,
             unit=column.unit,
+            value_labels=dict(column.value_labels) or None,
         )
         for column in catalogue
     ]

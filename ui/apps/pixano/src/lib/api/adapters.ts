@@ -202,10 +202,11 @@ export function toDatasetBrowser(
     const attrs: RecordCard["attrs"] = {};
     for (const [key, value] of Object.entries(record)) {
       if (key === "computed_values") {
-        // The statistics the dataset computed: a column each, named as the explorer's filters and
-        // sorts name it. A record without a value shows none.
-        for (const [name, statistic] of Object.entries((value ?? {}) as Record<string, unknown>)) {
-          row[name] = typeof statistic === "number" ? statistic : "";
+        // The columns the dataset computed — its statistics, the groups of each run of a
+        // clustering —: a column each, named as the explorer's filters and sorts name it. A record
+        // without a value shows none.
+        for (const [name, computed] of Object.entries((value ?? {}) as Record<string, unknown>)) {
+          row[name] = typeof computed === "number" ? computed : "";
           if (!columnsMap.has(name)) columnsMap.set(name, STATISTIC_CELL_TYPE);
         }
         continue;

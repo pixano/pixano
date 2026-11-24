@@ -6,8 +6,10 @@ License: CECILL-C
 
 import { describe, expect, it } from "vitest";
 
+import type { ColumnDescriptorResponse } from "$lib/api/restTypes";
 import {
   canApplyFilter,
+  filterLabel,
   looksLikeRawSql,
   parseFilter,
   parseFilters,
@@ -108,5 +110,37 @@ describe("canApplyFilter", () => {
   it("waits for both ends of a range", () => {
     expect(canApplyFilter("created_at", "between", ["2026-01-01", " "])).toBe(false);
     expect(canApplyFilter("created_at", "between", ["2026-01-01", "2026-02-01"])).toBe(true);
+  });
+});
+
+describe("filterLabel", () => {
+  const clusters: ColumnDescriptorResponse = {
+    name: "record_clusters.job-1",
+    type: "int",
+    collection: false,
+    source: "clusters",
+    filterable: true,
+    sortable: true,
+    searchable: false,
+    indexed: false,
+    operators: ["eq", "in"],
+    values: ["-1", "0", "1"],
+    values_complete: true,
+    table: "record_clusters",
+    label: "Clusters — K-Means, 2 groups, 2026-11-06 15:40 UTC",
+    value_labels: { "-1": "Noise" },
+  };
+
+  it("names a run of a clustering by its label, and its noise by name", () => {
+    expect(filterLabel([clusters], { col: clusters.name, op: "eq", values: ["-1"] })).toBe(
+      "Clusters — K-Means, 2 groups, 2026-11-06 15:40 UTC is Noise",
+    );
+    expect(filterLabel([clusters], { col: clusters.name, op: "in", values: ["0", "-1"] })).toBe(
+      "Clusters — K-Means, 2 groups, 2026-11-06 15:40 UTC is any of 0, Noise",
+    );
+  });
+
+  it("names a column it does not know by its name, and its values as they are", () => {
+    expect(filterLabel([], { col: "split", op: "eq", values: ["train"] })).toBe("Split is train");
   });
 });
