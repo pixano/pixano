@@ -12,12 +12,12 @@ This document describes how Pixano is branched, versioned, and released. It is t
 
 ## Branches and tags
 
-| Name                                                                           | Created from            | Purpose                                 | Lifetime                             |
-| ------------------------------------------------------------------------------ | ----------------------- | --------------------------------------- | ------------------------------------ |
-| `main`                                                                         |                         | The next version, always releasable     | Permanent                            |
-| `feat/PIX-<n>`, `fix/PIX-<n>`, and the `docs/`, `refactor/`, `chore/` prefixes | `main`                  | One issue, one pull request into `main` | Deleted when the pull request merges |
-| `release/X.Y`                                                                  | Tag `vX.Y.0`            | Patch releases `vX.Y.1`, `vX.Y.2`, ...  | Until the next minor is released     |
-| Tag `vX.Y.Z`                                                                   | `main` or `release/X.Y` | A published version                     | Permanent, never moved               |
+| Name                                                                                                                  | Created from            | Purpose                                 | Lifetime                             |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------- | --------------------------------------- | ------------------------------------ |
+| `main`                                                                                                                |                         | The next version, always releasable     | Permanent                            |
+| `feat/PM-<n>`, `fix/PM-<n>` (`PIX-<n>` for an issue still in Linear), and the `docs/`, `refactor/`, `chore/` prefixes | `main`                  | One issue, one pull request into `main` | Deleted when the pull request merges |
+| `release/X.Y`                                                                                                         | Tag `vX.Y.0`            | Patch releases `vX.Y.1`, `vX.Y.2`, ...  | Until the next minor is released     |
+| Tag `vX.Y.Z`                                                                                                          | `main` or `release/X.Y` | A published version                     | Permanent, never moved               |
 
 Rules:
 
@@ -75,7 +75,7 @@ A job added to a workflow must also be added to the `needs` list of that workflo
 
 ## Changelog and release notes
 
-- Each pull request that changes what users see adds a fragment to `changelog.d/`, not a line to `CHANGELOG.md`: one Markdown file holding its entry, named `PIX-<n>.<type>.md` after its Linear issue, where `<type>` is `added`, `changed`, `deprecated`, `removed` or `fixed`. A change without an issue uses `+<short-name>.<type>.md`. Two pull requests never edit the same file, so their changelog entries never conflict. `changelog.d/README.md` has an example.
+- Each pull request that changes what users see adds a fragment to `changelog.d/`, not a line to `CHANGELOG.md`: one Markdown file holding its entry, named `PM-<n>.<type>.md` after its issue (`PIX-<n>.<type>.md` for an issue still in Linear), where `<type>` is `added`, `changed`, `deprecated`, `removed` or `fixed`. A change without an issue uses `+<short-name>.<type>.md`. Two pull requests never edit the same file, so their changelog entries never conflict. The name only does that: the changelog is for users, and shows the entry without its issue. `changelog.d/README.md` has an example.
 - At release, `uvx towncrier build --version X.Y.Z --yes` gathers the fragments into a `## X.Y.Z (YYYY-MM-DD)` section at the top of `CHANGELOG.md`, sorted under "Added", "Changed", "Deprecated", "Removed" and "Fixed", and deletes them. Add `--draft` to see the section without writing anything.
 - For a minor version, `docs/releases/X.Y.Z.md` holds a short summary for users: highlights, compatibility changes, known limitations. It becomes the body of the GitHub release. `docs/releases/0.8.0.md` is the example.
 - For a patch version, the changelog section is the release body.
@@ -164,7 +164,7 @@ Replace `X.Y.Z` with the version being released; `X.Y` is the latest minor.
 3. **Backport the fix** through a pull request into the release branch:
 
    ```sh
-   git switch -c fix/PIX-<n>-backport origin/release/X.Y
+   git switch -c fix/PM-<n>-backport origin/release/X.Y
    git cherry-pick -x -s <sha of the fix on main>
    gh pr create --base release/X.Y
    ```

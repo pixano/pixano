@@ -26,6 +26,7 @@ from .label import LabelKind, LabelParams
 from .registry import Registry
 from .segmentation import SegmentationKind, SegmentationParams
 from .statistics import StatisticsKind, StatisticsParams
+from .tracking import TrackingKind, TrackingParams
 
 
 def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: bool = False) -> Registry:
@@ -50,6 +51,7 @@ def default_registry(inference_url: str = "", api_key: str = "", demo_kinds: boo
     registry.register(DetectionKind(inference_url, api_key))
     registry.register(SegmentationKind(inference_url, api_key))
     registry.register(StatisticsKind())
+    registry.register(TrackingKind(inference_url, api_key))
     return registry
 
 
@@ -77,6 +79,8 @@ __all__ = [
     "SegmentationParams",
     "StatisticsKind",
     "StatisticsParams",
+    "TrackingKind",
+    "TrackingParams",
     "TransientError",
     "media_chunks",
     "default_registry",

@@ -176,10 +176,12 @@ All pull requests target `main`, which stays releasable at any time. Branching, 
 
 ### Starting Work on an Issue
 
-Work on each Linear issue in its own git worktree, next to the main checkout. Name the branch with the usual prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`) followed by the issue identifier:
+Before you file an issue, start work on one, or open a pull request for one, read [`.agents/issue-tracking.md`](./.agents/issue-tracking.md): where the team's issues live, and how they are named.
+
+Work on each issue in its own git worktree, next to the main checkout. Name the worktree and the branch after the issue ID, with the usual prefix (`feat/`, `fix/`, `docs/`, `refactor/`, `chore/`):
 
 ```bash
-git worktree add ../PIX-<n> -b feat/PIX-<n> origin/main
+git worktree add ../PM-<n> -b feat/PM-<n> origin/main
 ```
 
 ### Committing Changes
@@ -190,7 +192,7 @@ When committing changes:
 - DCO sign-off: All commits MUST use the `-s` flag (otherwise CI will reject them)
 - Do NOT add `Co-Authored-By` trailers (or any other co-author lines) to commit messages.
 - Pre-commit hooks: Run before committing (see [Pre-commit Hooks](#pre-commit-hooks))
-- Changelog: a change users see adds a fragment to `changelog.d/` (`PIX-<n>.fixed.md`, `.added.md`…; see `RELEASING.md`). Never edit `CHANGELOG.md` directly: the release builds it.
+- Changelog: a change users see adds a fragment to `changelog.d/`, named after its issue (see `changelog.d/README.md`). Never edit `CHANGELOG.md` directly: the release builds it.
 
 ```bash
 # Commit with required DCO sign-off
@@ -204,6 +206,7 @@ git push origin <your-branch>
 
 - Follow the instructions at the top of [the PR template](./.github/PULL_REQUEST_TEMPLATE.md) carefully.
 - Fill the "Specs" section of the template: the IDs of the rules the change follows, and the spec PR it relies on, if any.
+- End the title with the issue ID, as in `(PM-<n>)`, and close the issue from the body as [`.agents/issue-tracking.md`](./.agents/issue-tracking.md) says.
 - Inside `gh pr ... --body "$(cat <<'EOF' ... EOF)"`, write backticks plain. The quoted `'EOF'` delimiter already suppresses command substitution, so escaping as `` \` `` is unnecessary and the backslashes get persisted in the PR body, rendering literally instead of as code spans.
 
   ```bash

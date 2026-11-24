@@ -4,8 +4,10 @@
 # License: CECILL-C
 # =====================================
 
-"""The geometry of masks, on its own: box prompts, emptiness, and the overlap of a model's mask with
-a person's — whichever interface wrote the person's."""
+"""The geometry of masks, on its own: box prompts, emptiness, the box around a mask, overlaps.
+
+The overlap is that of a model's mask with a person's — whichever interface wrote the person's.
+"""
 
 import subprocess
 import sys
@@ -16,7 +18,7 @@ from typing import Any
 import numpy as np
 import pytest
 from pixano_worker.kinds import masks
-from pixano_worker.kinds.masks import covered, is_empty, is_readable, mask_iou, pixel_prompt
+from pixano_worker.kinds.masks import covered, is_empty, is_readable, mask_iou, normalized_bounds, pixel_prompt
 from pycocotools import mask as mask_api
 
 
@@ -136,6 +138,29 @@ class TestIsEmpty:
 
         assert is_readable(row)
         assert not is_empty(row)
+
+
+class TestNormalizedBounds:
+    def test_the_box_around_a_mask_is_relative_to_its_grid(self) -> None:
+        """Rows 1 to 4 over columns 2 to 5: the box's far edges lie past the last painted pixels."""
+        assert normalized_bounds(MODEL) == pytest.approx((2 / WIDTH, 1 / HEIGHT, 6 / WIDTH, 5 / HEIGHT))
+
+    def test_a_mask_whose_first_pixel_is_painted_starts_on_the_edge(self) -> None:
+        """Its runs open on an empty run of background, which must not be read as a pixel."""
+        corner = _encoded(_painted(HEIGHT, WIDTH, (slice(0, 2), slice(0, 3))))
+
+        assert normalized_bounds(corner) == pytest.approx((0.0, 0.0, 3 / WIDTH, 2 / HEIGHT))
+
+    def test_the_box_around_a_persons_mask_follows_its_outline(self) -> None:
+        """The web L lies inside the model's rectangle: the same box goes around both."""
+        assert normalized_bounds({"size": [HEIGHT, WIDTH], "counts": WEB_STRING}) == normalized_bounds(MODEL)
+
+    def test_no_box_goes_around_a_mask_painted_nowhere(self) -> None:
+        assert normalized_bounds(_encoded(_painted(HEIGHT, WIDTH))) is None
+
+    @pytest.mark.parametrize("mask", [{"size": [HEIGHT, WIDTH], "counts": "=3"}, {"size": None, "counts": "33"}])
+    def test_no_box_goes_around_a_mask_that_cannot_be_read(self, mask: dict[str, Any]) -> None:
+        assert normalized_bounds(mask) is None
 
 
 # Masks that are not one, each over the model's mask. pycocotools takes every one of them: compared
