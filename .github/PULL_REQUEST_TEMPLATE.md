@@ -1,6 +1,8 @@
 ## Issue
 
-<!--- Link to the issue related to this feature if it exists. -->
+<!--- The issue this pull request closes, if there is one.
+A team issue is private: write `Fixes pixano/pixano-project-manager#<n>`, the only reference that closes it on merge, and never copy its text here, as this pull request is public.
+An issue of this repository: `Fixes #<n>`. An issue still in Linear: `PIX-<n>`. -->
 
 Fixes #
 
