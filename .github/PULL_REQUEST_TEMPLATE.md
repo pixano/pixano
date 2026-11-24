@@ -1,6 +1,6 @@
 ## Issue
 
-<!--- Link to the issue related to this feature if it exists. -->
+<!--- The issue this pull request closes, if there is one. Pixano team: see .agents/issue-tracking.md. -->
 
 Fixes #
 
