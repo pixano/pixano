@@ -26,7 +26,7 @@ export const FILE_KIND_EXTENSIONS: Record<MediaFileKind, string[]> = {
   text: [".txt", ".md"],
 };
 
-/** The media kinds each task imports (MEL pairs images with texts). */
+/** The media kinds each task imports (MEL: texts, alone or paired with images). */
 export const TASK_FILE_KINDS: Record<RawTask, MediaFileKind[]> = {
   image: ["image"],
   video: ["video"],
@@ -266,16 +266,17 @@ export function preflightLayout(
     ...(encoding === "folders" ? { groupCount: view.groupCount ?? 0 } : {}),
   }));
 
+  // The entity linking workspace is the one that shows texts: a dataset of texts alone opens there
+  // too, its image panel empty.
   if (task === "image_text_entity_linking") {
     const textViews = views.filter((view) => view.kind === "text").length;
-    const imageViews = views.filter((view) => view.kind === "image").length;
-    if (textViews !== 1 || imageViews < 1) {
+    if (textViews !== 1) {
       findings.push({
-        code: "mel_needs_image_and_text",
+        code: "mel_needs_one_text_view",
         severity: "error",
         message:
-          "Image–text linking needs one text folder and at least one image folder " +
-          "(e.g. image/ + text/), with files matched by name.",
+          "Image–text linking needs its texts in one folder — alone, or beside image folders " +
+          "(e.g. image/ + text/) whose files pair up by name.",
       });
     }
   }

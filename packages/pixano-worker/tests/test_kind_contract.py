@@ -33,7 +33,7 @@ from pycocotools import mask as mask_api
 from pydantic import BaseModel, create_model
 
 from pixano.datasets.embedding_spaces import AmbiguousModelError, EmbeddingSpaces
-from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, SequenceFrame, statistics_slot
+from pixano.schemas import BBox, Entity, Image, Record, SchemaGroup, SequenceFrame, Text, statistics_slot
 from pixano.schemas.table_names import canonical_family_spec_for_slot
 from pixano.statistics.definitions import (
     StatisticAggregation,
@@ -55,6 +55,8 @@ CONTRACT_EXAMPLES: dict[str, dict[str, Any]] = {
     # real path is checked end to end on the stack, in the demo (docs/demo-etape1.md).
     "embeddings": {"model": "clip", "chunk_size": 8},
     "detection": {"model": "yolo", "chunk_size": 8},
+    # Recognizes the one name each record's text starts with (`_Client.ner`).
+    "ner": {"model": "fake-ner", "chunk_size": 8},
     # Segments the box a person drew on each image (`_seeded_prompts`).
     "segmentation": {"model": "sam", "chunk_size": 8},
     # Follows the object a person drew on the first frame of each video, three frames a call, and
@@ -116,8 +118,9 @@ CONFIRMED = [(name, parameter) for name in REGISTRY.names() for parameter in _co
 
 def _matching(rows: dict[str, Any], ids: list[str] | None, where: str | None) -> list[Any]:
     """The reads the writers make: by identifiers, or by a filter — the prefix of a cleanup, a
-    list of values of one field (a detection's look at the boxes already on a medium), or several
-    such conditions joined by AND (the pending rows a `replace_previous` clears)."""
+    list of values of one field (a detection's look at the boxes already on a medium, a NER's at
+    the spans already on its texts), or several such conditions joined by AND (the pending rows a
+    `replace_previous` clears)."""
     if ids is not None:
         return [rows[i] for i in ids if i in rows]
     assert where, "a read with neither identifiers nor a filter in a test double"
@@ -172,6 +175,8 @@ class _Target:
         }
         # The embeddings spaces, kept by the real description: the double decides nothing of its own.
         self.spaces = EmbeddingSpaces()
+        # The boxes a detection writes, and the entities every dataset holds, with no text field: a
+        # kind writing a class adds one.
         self.info = SimpleNamespace(tables={"bboxes": BBox, "entities": Entity}, entity=Entity)
         # The statistic columns of each statistics table, and what the dataset records it computed.
         self.statistic_columns: dict[str, dict[str, str]] = {}
@@ -347,6 +352,11 @@ def _confirmed(kind: JobKind, parameter: str) -> JobParams:
 #: empty dataset — and the contract must exercise those kinds too.
 CONTRACT_RECORDS = 25
 
+#: The text of each record of the contract's dataset: a name, then words, for a NER kind to find.
+CONTRACT_TEXT = "Ada met nobody."
+#: The name it starts with, where it starts and ends.
+CONTRACT_NAME = (0, 3)
+
 
 class _Vector:
     """An embedding row: no provenance, only a vector.
@@ -375,11 +385,19 @@ PERSONS_BOX_PX = (60, 10, 90, 50)
 
 class _Row:
     def __init__(
-        self, row_id: str, record_id: str = "", uri: str = "", frame_index: int = -1, timestamp: float = 0.0
+        self,
+        row_id: str,
+        record_id: str = "",
+        uri: str = "",
+        frame_index: int = -1,
+        timestamp: float = 0.0,
+        content: str = "",
     ) -> None:
         self.id = row_id
         self.record_id = record_id
         self.uri = uri
+        # A text's content; an image's, none.
+        self.content = content
         self.width, self.height = IMAGE_WIDTH, IMAGE_HEIGHT
         # A video's frame says where it stands in its video, and which video of its record it is;
         # an image, nowhere.
@@ -471,6 +489,7 @@ class _Source:
             "records": Record,
             "images": Image,
             "sequence_frames": SequenceFrame,
+            "texts": Text,
             "bboxes": BBox,
             "entities": Entity,
         }
@@ -508,6 +527,11 @@ class _Source:
                 end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
                 ids = [f"img-{n}" for n in range(skip, end)]
             return [_Row(i, record_id=f"rec-{i.removeprefix('img-')}", uri=f"/medias/{i}.jpg") for i in ids]
+        if table_name == "texts":
+            if ids is None:
+                end = CONTRACT_RECORDS if limit is None else min(skip + limit, CONTRACT_RECORDS)
+                ids = [f"txt-{n}" for n in range(skip, end)]
+            return [_Row(i, record_id=f"rec-{i.removeprefix('txt-')}", content=CONTRACT_TEXT) for i in ids]
         if table_name in self._seeded:
             return _matching(self._seeded[table_name], ids, where)
         if table_name == "sequence_frames":
@@ -599,6 +623,7 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
             return [
                 SimpleNamespace(name="clip", model_path="MobileCLIP2-S2", capability="embedding"),
                 SimpleNamespace(name="yolo", model_path="yolo26s.pt", capability="detection"),
+                SimpleNamespace(name="fake-ner", model_path="", capability="ner"),
                 SimpleNamespace(name="sam", model_path="facebook/sam2.1-hiera-tiny", capability="segmentation"),
                 SimpleNamespace(name="sam-video", model_path="facebook/sam2.1-hiera-tiny", capability="tracking"),
             ]
@@ -622,6 +647,12 @@ def _offline_inference(monkeypatch: pytest.MonkeyPatch) -> None:
                 for relative in range(len(request.video))
             ]
             return SimpleNamespace(data=SimpleNamespace(frames=frames))
+
+        def ner(self, request: Any, **_kwargs: Any) -> Any:
+            """The name the text starts with, a person."""
+            start, end = CONTRACT_NAME
+            name = SimpleNamespace(text=request.text[start:end], label="PER", start=start, end=end, score=0.9)
+            return SimpleNamespace(data=SimpleNamespace(entities=[name]))
 
         def detection(self, request: Any, **_kwargs: Any) -> Any:
             return SimpleNamespace(data=SimpleNamespace(boxes=[[10, 20, 50, 60]], scores=[0.8], classes=["thing"]))

@@ -60,8 +60,10 @@ export const TASK_CARDS: {
   {
     task: "image_text_entity_linking",
     title: "Image–text linking",
-    blurb: "Link mentions in a text to regions in an image (multimodal entity linking).",
-    layoutHint: "pairs/\n├─ image/  a.jpg  b.jpg\n└─ text/   a.txt  b.txt  (same names pair up)",
+    blurb:
+      "Mark mentions in texts, alone or linked to regions in an image (multimodal entity linking).",
+    layoutHint:
+      "texts/\n├─ a.txt  b.txt …       (texts alone)\n└─ or image/ + text/    (images and texts, same names pair up)",
   },
 ];
 
@@ -111,7 +113,10 @@ export const ANNOTATION_TOOLS: Record<string, { label: string; description: stri
     label: "Questions & answers",
     description: "Image question-answer pairs.",
   },
-  text_span: { label: "Text spans", description: "Text spans linked to image regions." },
+  text_span: {
+    label: "Text spans",
+    description: "Mentions in texts, alone or linked to image regions.",
+  },
 };
 
 /** Only supported tools are emitted, with task requirements included automatically. */

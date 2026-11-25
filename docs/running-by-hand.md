@@ -67,6 +67,13 @@ list does not serve. The YOLO plugin brings one, `YOLOByteTrackModel` (pixano-in
 CPUs than the eight below, or run the application against another inference server that serves
 one. The application talks to one pixano-inference server at a time.
 
+Nor does the list serve a NER model, which the `ner` job needs: pixano-inference ships none.
+Install a NER plugin into the checkout's environment, as for YOLO's
+(`uv pip install --python .venv/bin/python ./pixano-ner-spacy "en_core_web_sm @ …"` for the
+cookbook's), and add its entry to a copy of the list, with one more CPU than the eight below. The
+cookbook's Named Entity Recognition page (`docs-astro/src/pages/cookbook/named_entities.mdx`)
+writes the plugin and the entry for spaCy.
+
 **The machine.** Each model runs one replica, for which Ray reserves CPUs out of those it
 finds on the machine: two for CLIP, two for YOLO, two for each SAM 2.1 model — eight in all.
 With fewer, the server refuses to start, every model included; `--no-strict-startup` starts it

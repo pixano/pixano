@@ -66,6 +66,7 @@ export const sidebarNav: Record<string, NavSection[]> = {
           href: "/cookbook/vqa/",
         },
         { title: "Entity Linking", href: "/cookbook/entity_linking/" },
+        { title: "Named Entity Recognition", href: "/cookbook/named_entities/" },
       ],
     },
   ],

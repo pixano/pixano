@@ -29,7 +29,7 @@ License: CECILL-C
     {
       intent: "raw",
       title: "Raw media",
-      description: "Images, videos, or image–text pairs.",
+      description: "Images, videos, or texts.",
       icon: Images,
     },
     {

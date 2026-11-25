@@ -15,7 +15,18 @@ from .entity_annotation import EntityAnnotation
 
 
 class TextSpan(EntityAnnotation):
-    """Designation of a text span in a text view."""
+    """Designation of a text span in a text view.
+
+    Offsets are counted as the interface counts a text's characters, in UTF-16 code units, each
+    range's end left out: a character outside the Basic Multilingual Plane — U+1F389, an emoji —
+    counts two, where a Python string counts it one. Whoever writes spans from a Python string's
+    offsets converts them.
+
+    Attributes:
+        mention: The text the span designates.
+        spans_start: Where each of its ranges starts.
+        spans_end: Where each of its ranges ends, left out.
+    """
 
     mention: str
     spans_start: list[int]
