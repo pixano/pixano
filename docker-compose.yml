@@ -39,6 +39,12 @@ services:
     build:
       context: .
       dockerfile: dockerfiles/Dockerfile.source
+    # Not root. 1000:1000 is the user the images are built with; another one, given in .env,
+    # needs no rebuild. The application and the worker write to the same library, so both take
+    # the same user. The data folder mounted below must belong to it: on Linux a bind mount
+    # keeps the owner it has on the host, and Docker creates a missing folder as root (see
+    # .env.example).
+    user: "${PIXANO_UID:-1000}:${PIXANO_GID:-1000}"
     ports:
       - "127.0.0.1:${PIXANO_PORT:-7492}:7492"
     environment:
@@ -95,6 +101,8 @@ services:
     # demo, which kills the worker and then relaunches it by hand, relies on it; a process
     # that exits on its own, whatever its code, is relaunched.
     restart: unless-stopped
+    # Not root, and the same user as the application: see there.
+    user: "${PIXANO_UID:-1000}:${PIXANO_GID:-1000}"
     # Above the 30 s the worker leaves its in-flight chunks to finish (SHUTDOWN_GRACE_S):
     # without this margin, docker would kill it before it had returned the ones not finished.
     stop_grace_period: 45s

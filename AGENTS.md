@@ -77,6 +77,10 @@ runs against a remote database or a shared inference server without a code chang
 ```sh
 cp .env.example .env
 
+# The containers do not run as root. On Linux they write to this folder as the user of `.env`
+# (`PIXANO_UID`, `PIXANO_GID`), and Docker would create a missing folder as root.
+mkdir -p data/media
+
 # Against an inference server already running somewhere (set PIXANO_INFERENCE_URL).
 docker compose up
 
