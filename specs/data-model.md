@@ -624,4 +624,4 @@ flowchart TB
 
 ## Decision log
 
-- 2026-11-24: first draft of the data model and database spec (`DATA-1` to `DATA-53`), recording current rules verified against the code and target rules for production-grade, large-scale storage prioritizing lossless support for LeRobot v3.0, 123D (`py123d`), COCO, and Pixano JSONL v2 (PIX-277).
+- 2026-11-24: first draft of the data model and database spec (`DATA-1` to `DATA-53`), recording current rules verified against the code and target rules for production-grade, large-scale storage prioritizing lossless support for LeRobot v3.0, 123D (`py123d`), COCO, and Pixano JSONL v2 ([#874](https://github.com/pixano/pixano/pull/874)).
