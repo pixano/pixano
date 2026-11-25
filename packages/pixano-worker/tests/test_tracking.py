@@ -401,8 +401,14 @@ class TestPlan:
             (_target("car", "r2", 0), "is not in record"),
             (_target("car", "r1", 4), "has no mask nor box on frame 4"),
             (_target("ghost", "r1", 0), "is not in record"),
+            (_target("car' OR entity_id != '", "r1", 0), "is not in record"),
         ],
-        ids=["another record", "a frame it is not annotated on", "an object that does not exist"],
+        ids=[
+            "another record",
+            "a frame it is not annotated on",
+            "an object that does not exist",
+            "an identifier written as a filter",
+        ],
     )
     def test_an_object_named_wrong_is_refused(self, scene: _Scene, target: dict[str, Any], refusal: str) -> None:
         _annotate(scene)

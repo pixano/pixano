@@ -311,28 +311,29 @@ Options:
 
 ## Tracking boxes: choices made while implementing
 
-**Status:** open (chosen while implementing the boxes the tracking job proposes, 2026-11-19).
+**Status:** decided. Chosen while implementing the boxes the tracking job proposes (2026-11-19),
+and confirmed by the user on 2026-11-24.
 
 The user decided on 2026-11-19 that the tracking job proposes boxes as an option of the job —
 masks, boxes or both —, masks by default, so that nothing changes without it
 (backend-processing §23.3). These were chosen while implementing it, without being asked:
 
-- **The parameter is `output`, its values `masks`, `boxes` and `both`**, a closed list of strings
+- **Decided.** **The parameter is `output`, its values `masks`, `boxes` and `both`**, a closed list of strings
   rather than an enumeration, whose choices the forms read where the parameter stands without
   depending on the change that inlines an enumeration's choices.
-- **Each table protects a person's work on its own**: a person's box keeps the model's box off its
+- **Decided.** **Each table protects a person's work on its own**: a person's box keeps the model's box off its
   frame, a person's mask the model's mask, as for masks before boxes. A person's mask does not
   keep the model's box off its frame, nor a person's box the model's mask; the other choice would
   change what a job asked for masks writes, which the decision rules out.
-- **A job replaces only what it was asked for**: a job asked for boxes leaves the masks an earlier
+- **Decided.** **A job replaces only what it was asked for**: a job asked for boxes leaves the masks an earlier
   one proposed, and the other way round. The other choice — a job replaces the model's masks and
   boxes after its keyframe, whatever it proposes in their place — would keep a video from holding
   boxes of one track and masks of another, at the cost of deleting proposals nobody asked to
   delete.
-- **The tracklet counts every mask that names it, and only the boxes the job wrote**: a box a
+- **Decided.** **The tracklet counts every mask that names it, and only the boxes the job wrote**: a box a
   person drew, which the legacy workspace joins to a tracklet whose span it falls in, is left out,
   as a job asked for masks always left it. Counting it would keep the tracklet over every
   person's box joined to it, at the cost of changing what a job asked for masks writes.
-- **An object deleted loses the model's masks and boxes alike**, whatever the job was asked for:
+- **Decided.** **An object deleted loses the model's masks and boxes alike**, whatever the job was asked for:
   nothing will track it again to clean what the other output left.
-- **A box carries no score** (`confidence` -1): SAM 2's video predictor answers none.
+- **Decided.** **A box carries no score** (`confidence` -1): SAM 2's video predictor answers none.
