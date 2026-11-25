@@ -13,7 +13,8 @@ two writes that cannot share a transaction. A worker that dies between the two w
 chunk, and a chunk whose lease has expired can be picked up by another worker. Replaying must
 therefore produce exactly the same content, never duplicates. For that, identifiers are
 derived **from the work**, not from its execution: two runs of the same processing on the
-same item write to the same rows.
+same item write to the same rows. A clustering keeps every run on purpose: its rows carry the
+job, and a replay of the job writes the same rows over its own (`write_clustering`).
 
 **The single writer, later.** LanceDB does not have PostgreSQL's concurrency control, and
 coordinating several workers writing to the same dataset is an open question. Having every
@@ -34,7 +35,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterable, Iterator, Protocol, Sequence
 
+import pyarrow as pa
+
+from pixano.clustering.runs import Clustering
 from pixano.schemas import (
+    CLUSTER_SLOT,
     DEFAULT_LABEL_FIELD,
     NOT_REVIEWED_STATUSES,
     AnnotationSourceKind,
@@ -191,6 +196,14 @@ class DatasetReadSource(Protocol):
         """Every embeddings space of the dataset, one per model and checkpoint."""
         ...
 
+    def read_record_vectors(self, model: str | None = None) -> pa.Table | None:
+        """Every vector of one model's embeddings with its record and its medium; None without them."""
+        ...
+
+    def get_all_ids(self, table_name: str = ...) -> list[str]:
+        """Every identifier of a table, read at once."""
+        ...
+
 
 class DatasetWriteTarget(Protocol):
     """The only operations writing a job needs.
@@ -248,6 +261,14 @@ class DatasetWriteTarget(Protocol):
 
     def ensure_annotation_table(self, slot: str) -> str:
         """Give the dataset the canonical table of an annotation slot it lacks; the table's name."""
+        ...
+
+    def ensure_record_clusters(self) -> str:
+        """Give the dataset the table of its records' clusters if it has none; its name."""
+        ...
+
+    def write_clustering(self, run: Clustering, clusters: dict[str, int]) -> Clustering:
+        """Write a run's groups and what it was, in place of the run's earlier rows; the run as recorded."""
         ...
 
     def open_table(self, name: str) -> Any:
@@ -914,6 +935,61 @@ class JobWriter:
         space = self.dataset.upsert_record_embeddings(model, checkpoint, rows, index_type=EMBEDDING_INDEX_TYPE)
         self._count_write(space["table"])
         return space
+
+    def ensure_record_clusters(self) -> str:
+        """The table of the records' clusters, added to the dataset if it has none; its name.
+
+        Called from `prepare`: a table there already is answered from the dataset's metadata, without
+        its write lock.
+        """
+        table_name = canonical_table_name_for_slot(CLUSTER_SLOT)
+        if table_name in self.dataset.info.tables:
+            return table_name
+        return self.dataset.ensure_record_clusters()
+
+    def write_clustering(self, run: Clustering, clusters: dict[str, int]) -> Clustering:
+        """Write this job's run: each record's group, then what the run was, which the explorer names
+        its column with — under one lock of the dataset (`Dataset.write_clustering`).
+
+        The job is the run: a chunk replayed writes the same rows over its own. The table's indexes
+        are rebuilt once the dataset's lock is released (`index_record_clusters`).
+
+        Args:
+            run: The run, as the job found it; its identifier is the job's.
+            clusters: Each record's group.
+
+        Returns:
+            The run as recorded: records deleted since they were grouped get no row, and count in none
+            of its figures.
+
+        Raises:
+            ValueError: The run is not this job's.
+        """
+        if run.run_id != self.job_id:
+            raise ValueError(f"job {self.job_id} writes its own run, not {run.run_id}")
+        recorded = self.dataset.write_clustering(run, clusters)
+        table_name = canonical_table_name_for_slot(CLUSTER_SLOT)
+        self._count_write(table_name)
+        self.index_record_clusters()
+        return recorded
+
+    def index_record_clusters(self) -> None:
+        """Index the clusters table on its records and its runs, every row anew.
+
+        A page of the explorer reads its records' groups, and a sort or a filter reads a run's rows:
+        indexed, a page of a million records over five runs reads its groups in 3 ms rather than
+        350 ms (backend-processing §24.1). Not under the dataset's own write lock, as
+        `index_embeddings` is not: an index changes no row, and a person's save is never refused for
+        it. A build that fails — a commit conflicting with another writer of the table — is logged,
+        not raised: the rows are written, and read without the index meanwhile, only slower.
+        """
+        table_name = canonical_table_name_for_slot(CLUSTER_SLOT)
+        try:
+            table = self.dataset.open_table(table_name)
+            table.create_scalar_index("record_id", index_type="BTREE", replace=True)
+            table.create_scalar_index("run_id", index_type="BITMAP", replace=True)
+        except Exception as error:  # noqa: BLE001 - an index failing leaves the rows written and readable
+            logger.warning("job %s: cannot index %s (%s)", self.job_id, table_name, error)
 
     def index_embeddings(self, model: str, min_rows: int | None = None) -> list[str]:
         """Index a model's embeddings for search, once a job has filled them.

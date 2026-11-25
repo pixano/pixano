@@ -31,6 +31,7 @@ from lancedb.table import LanceTable
 from pydantic import create_model
 from s3path import S3Path
 
+from pixano.clustering.runs import Clustering
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError, DatasetReplacedError
 from pixano.datasets.utils.integrity import (
@@ -42,6 +43,7 @@ from pixano.datasets.utils.integrity import (
 )
 from pixano.features.utils.image import create_mosaic, image_to_base64
 from pixano.schemas import (
+    CLUSTER_SLOT,
     Conversation,
     Entity,
     Message,
@@ -56,6 +58,7 @@ from pixano.schemas import (
     is_video,
     is_view_embedding,
     media_type_of,
+    record_cluster_id,
     statistics_slot,
     validate_canonical_table_map,
 )
@@ -657,6 +660,116 @@ class Dataset:
         logger.info("Dataset %s: created the '%s' table for the '%s' slot", self.id, table_name, slot)
         return table_name
 
+    @dataset_write
+    def ensure_record_clusters(self) -> str:
+        """Give the dataset the table of its records' clusters if it has none.
+
+        For the clustering job (backend-processing §24). The table is created empty the first time,
+        with its schema, and declared in `info.json`. Idempotent: a table there already is left as it
+        is, and `info.json` is not rewritten.
+
+        Returns:
+            The table's name.
+        """
+        family = canonical_family_spec_for_slot(CLUSTER_SLOT)
+        if family.table_name not in self.info.tables:
+            schema = family.base_schema
+            # The table before its declaration, as for an annotation table (`ensure_annotation_table`).
+            self._db_connection.create_table(
+                name=family.table_name, schema=schema, exist_ok=True, embedding_functions=None
+            )
+            setattr(self.info, CLUSTER_SLOT, schema)
+            self.info.tables[family.table_name] = schema
+            self._patch_info_json({CLUSTER_SLOT: _serialize_table_schema(schema)})
+            logger.info("Dataset %s: created the '%s' table", self.id, family.table_name)
+        return family.table_name
+
+    @dataset_write
+    def write_clustering(self, run: Clustering, clusters: dict[str, int]) -> Clustering:
+        """Write a run of a clustering, its rows then what it was, under one lock of the dataset.
+
+        For the clustering job (backend-processing §24). The run's rows — each record's group, one row
+        per record — replace every row the run wrote before: a run written again, its job's chunk
+        taken back, leaves its rows as this write makes them. A record deleted since it was grouped
+        gets no row. The run's entry then replaces the entry of the same run, its counts those of the
+        rows written.
+
+        The rows are deleted, then added: two versions of the table, between which a reader finds the
+        run without rows. The table's indexes are not rebuilt under the lock: the worker's writer
+        rebuilds them once it is released (`JobWriter.index_record_clusters`).
+
+        Args:
+            run: The run, as its job found it.
+            clusters: Each record's group in the run.
+
+        Returns:
+            The run as recorded, its counts those of the rows written.
+        """
+        table = self.open_table(self.ensure_record_clusters())
+        table.delete(f"run_id IN {to_sql_list([run.run_id])}")
+        held = set(self.get_all_ids(SchemaGroup.RECORD.value))
+        written = {record_id: clusters[record_id] for record_id in sorted(clusters) if record_id in held}
+        if written:
+            table.add(
+                pa.Table.from_pydict(
+                    {
+                        "id": [record_cluster_id(run.run_id, record_id) for record_id in written],
+                        "record_id": list(written),
+                        "run_id": [run.run_id] * len(written),
+                        "cluster": list(written.values()),
+                    },
+                    schema=table.schema,
+                )
+            )
+        recorded = run.counted(written)
+        self._record_clustering(recorded)
+        return recorded
+
+    def _record_clustering(self, run: Clustering) -> None:
+        """Keep a run of a clustering: it replaces the entry of the same run. Under the write lock.
+
+        `info.json` is patched, not rewritten: the entries this build no longer reads stay as they are
+        written, their rows holding groups still. A rewrite of the whole document — a bookmark, a
+        table added — drops them, as it drops the statistics this build no longer reads.
+
+        Args:
+            run: The run, as written.
+        """
+        self.info.clusterings = [*(kept for kept in self.info.clusterings if kept.run_id != run.run_id), run]
+        written = json.loads(self._info_file.read_text(encoding="utf-8")).get("clusterings") or []
+        self._patch_info_json(
+            {
+                "clusterings": [
+                    *(
+                        entry
+                        for entry in written
+                        if not (isinstance(entry, dict) and entry.get("run_id") == run.run_id)
+                    ),
+                    run.model_dump(mode="json"),
+                ]
+            }
+        )
+
+    @dataset_write
+    def drop_clustering(self, run_id: str) -> None:
+        """Forget a run of a clustering: its rows, and its entry.
+
+        Args:
+            run_id: The run.
+        """
+        table_name = canonical_family_spec_for_slot(CLUSTER_SLOT).table_name
+        if table_name in self.info.tables:
+            self.open_table(table_name).delete(f"run_id IN {to_sql_list([run_id])}")
+        self.info.clusterings = [kept for kept in self.info.clusterings if kept.run_id != run_id]
+        written = json.loads(self._info_file.read_text(encoding="utf-8")).get("clusterings") or []
+        self._patch_info_json(
+            {
+                "clusterings": [
+                    entry for entry in written if not (isinstance(entry, dict) and entry.get("run_id") == run_id)
+                ]
+            }
+        )
+
     def _patch_info_json(self, fields: dict[str, Any]) -> None:
         """Set top-level fields of `info.json`, leaving the rest of the document as written.
 
@@ -1046,8 +1159,8 @@ class Dataset:
         """Open a dataset table at its latest version, through a handle of its own, never kept.
 
         For a table another process writes and compacts while this instance reads it — the
-        statistics (backend-processing §22.5): a kept handle stays on the version it opened, and a
-        compaction may since have removed that version's files.
+        statistics or the clusters, the embeddings (backend-processing §22.5, §24): a kept handle
+        stays on the version it opened, and a compaction may since have removed that version's files.
 
         Args:
             name: Name of the table to open.
@@ -2293,6 +2406,31 @@ class Dataset:
         For a caller about to compute embeddings, to refuse before computing what it could not write.
         """
         return self._embedding_spaces.fully_read
+
+    def read_record_vectors(self, model: str | None = None) -> pa.Table | None:
+        """Every vector of one model's embeddings, with its record and its medium: the `record_id`,
+        `view_id` and `vector` columns.
+
+        For a computation over the whole dataset, a clustering (backend-processing §24): one read of
+        the three columns, without the rows' other fields, at the table's latest version — an
+        embeddings job compacts the table, and the files of the version a kept handle stands on may be
+        gone. A record holds a vector per medium; one written before embeddings were per medium holds
+        one for the record, its `view_id` empty.
+
+        Args:
+            model: The model — its space's id or its name —; the default one when None.
+
+        Returns:
+            The vectors, or None when the dataset has no embeddings of that model — none any more,
+            its table dropped since this instance read what the dataset holds.
+        """
+        space = self._embedding_spaces.find(model)
+        if space is None or space.table not in self._db_connection.list_tables().tables:
+            return None
+        table = self.open_latest_table(space.table)
+        # LanceDB applies its default limit of ten rows unless told otherwise; a limit of zero is refused.
+        columns = ["record_id", "view_id", "vector"]
+        return table.search(None).select(columns).limit(max(table.count_rows(), 1)).to_arrow()
 
     def record_embedding_space(self, model: str | None = None) -> dict[str, Any] | None:
         """One model's embedding space — its id, table, model, checkpoint, dimension, metric —, or None.

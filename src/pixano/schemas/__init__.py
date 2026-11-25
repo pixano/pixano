@@ -57,6 +57,7 @@ from .annotations import (
     review_status_of,
     stored_statuses,
 )
+from .clusters import NOISE_CLUSTER, RecordClusters, is_clusters, record_cluster_id
 from .embeddings import (
     Embedding,
     ViewEmbedding,
@@ -78,6 +79,9 @@ from .records import Record, RecordComponent, is_record, is_record_component
 from .schema_group import CANONICAL_SCHEMA_MAP, SchemaGroup, group_to_str, schema_to_group
 from .statistics import EntityStatistics, RecordStatistics, is_statistics, statistics_slot
 from .table_names import (
+    CLUSTER_SLOT,
+    CLUSTER_SLOTS,
+    COMPUTED_SLOTS,
     STATISTICS_SLOTS,
     canonical_base_schema_for_schema,
     canonical_family_spec_for_resource,
@@ -147,6 +151,11 @@ __all__ = [
     "RecordStatistics",
     "EntityStatistics",
     "STATISTICS_SLOTS",
+    "RecordClusters",
+    "NOISE_CLUSTER",
+    "CLUSTER_SLOT",
+    "CLUSTER_SLOTS",
+    "COMPUTED_SLOTS",
     "KeyPoints",
     "KeyPoints3D",
     "Message",
@@ -213,6 +222,8 @@ __all__ = [
     "is_record_component",
     "is_statistics",
     "statistics_slot",
+    "is_clusters",
+    "record_cluster_id",
     "is_supported_view_schema",
     "is_keypoints",
     "is_keypoints3d",

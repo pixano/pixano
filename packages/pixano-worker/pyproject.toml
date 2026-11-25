@@ -18,6 +18,10 @@ dependencies = [
     # which the worker needs whatever happens. A shared package would have saved 7 %. See
     # docs/specs/backend-processing.md §7.
     "pixano",
+    # K-Means and HDBSCAN, for the clustering job: HDBSCAN is in no library the worker had. SciPy,
+    # which scikit-learn brings, for the sparse product that places each record by its vectors.
+    "scikit-learn>=1.5",
+    "scipy>=1.10",
 ]
 
 [tool.uv.sources]

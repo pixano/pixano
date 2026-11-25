@@ -12,12 +12,14 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, overload
+from typing import Any, Literal, overload
 
 import PIL.Image
 from lancedb.pydantic import LanceModel
 from pydantic import BaseModel, Field, ValidationError, field_serializer, field_validator, model_validator
 from typing_extensions import Self
+
+from pixano.clustering.runs import Clustering
 
 # ---------------------------------------------------------------------------
 # Schema serialization helpers (moved from dataset_schema.py)
@@ -40,6 +42,7 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    RecordClusters,
     RecordComponent,
     RecordStatistics,
     Relation,
@@ -61,8 +64,9 @@ BOOKMARK_TYPES: tuple[str, ...] = ("TODO", "NEW", "FAVORITE")
 
 logger = logging.getLogger(__name__)
 
-# The computed statistics already logged as unreadable, by `info.json` and entry.
+# The computed statistics and clustering runs already logged as unreadable, by `info.json` and entry.
 _UNREADABLE_STATISTICS_LOGGED: set[tuple[str, str]] = set()
+_UNREADABLE_CLUSTERINGS_LOGGED: set[tuple[str, str]] = set()
 
 
 _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
@@ -82,6 +86,7 @@ _DATASET_INFO_SLOT_TYPES: dict[str, type[LanceModel]] = {
     "text_span": TextSpan,
     "record_statistics": RecordStatistics,
     "entity_statistics": EntityStatistics,
+    "record_clusters": RecordClusters,
 }
 
 
@@ -122,6 +127,8 @@ class DatasetInfo(BaseModel):
             was computed.
         statistics: The statistics the dataset holds the values of, with the job that computed
             them last (backend-processing §22).
+        record_clusters: Schema of the records' clusters table, once a clustering ran.
+        clusterings: The clustering runs the dataset holds the clusters of (backend-processing §24).
         views: Mapping of logical view names to view schema classes.
     """
 
@@ -152,6 +159,8 @@ class DatasetInfo(BaseModel):
     record_statistics: type[RecordStatistics] | None = None
     entity_statistics: type[EntityStatistics] | None = None
     statistics: list[ComputedStatistic] = Field(default_factory=list)
+    record_clusters: type[RecordClusters] | None = None
+    clusterings: list[Clustering] = Field(default_factory=list)
     views: dict[str, type[View]] = Field(default_factory=dict)
     tables: dict[str, type[LanceModel]] = Field(default_factory=dict, exclude=True)
 
@@ -170,6 +179,11 @@ class DatasetInfo(BaseModel):
     def serialize_statistics(self, statistics: list[ComputedStatistic]) -> list[dict]:
         """Dump the computed statistics as JSON values: `info.json` holds their dates as text."""
         return [computed.model_dump(mode="json") for computed in statistics]
+
+    @field_serializer("clusterings")
+    def serialize_clusterings(self, clusterings: list[Clustering]) -> list[dict]:
+        """Dump the clustering runs as JSON values, as the computed statistics."""
+        return [run.model_dump(mode="json") for run in clusterings]
 
     @field_validator("id", mode="after")
     @classmethod
@@ -275,10 +289,11 @@ class DatasetInfo(BaseModel):
 
         This excludes all schema-type fields (``tables``, ``views``, and schema
         slot fields like ``record``, ``entity``, etc.) that contain Python class
-        objects which cannot be serialized to JSON, and the statistics the dataset
-        computed: no export carries them (backend-processing §22.3).
+        objects which cannot be serialized to JSON, and the statistics and the
+        clustering runs the dataset computed: no export carries them
+        (backend-processing §22.3, §24.1).
         """
-        return self.model_dump(exclude={*self._SCHEMA_FIELDS, "statistics"})
+        return self.model_dump(exclude={*self._SCHEMA_FIELDS, "statistics", "clusterings"})
 
     def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
@@ -379,6 +394,7 @@ class DatasetInfo(BaseModel):
                     _UNREADABLE_STATISTICS_LOGGED.add(unreadable)
                     logger.warning("Leaving out a computed statistic of %s that no longer reads: %s", json_fp, e)
         info_json["statistics"] = readable_statistics
+        info_json["clusterings"] = _readable_clusterings(info_json.get("clusterings") or [], json_fp)
 
         info = DatasetInfo.model_validate(info_json)
         return info
@@ -498,3 +514,21 @@ class DatasetInfo(BaseModel):
                     info.preview = ""
                 return (info, json_fp.parent) if return_path else info
         raise FileNotFoundError(f"No dataset found with ID {id}")
+
+
+def _readable_clusterings(entries: list[Any], json_fp: Any) -> list[Clustering]:
+    """The clustering runs of `info.json` this build reads; one it does not is logged once and left out.
+
+    Its rows keep their clusters, as a computed statistic's column keeps its values: only the run's
+    entry is left out, while this build cannot read it.
+    """
+    readable = []
+    for entry in entries:
+        try:
+            readable.append(Clustering.model_validate(entry))
+        except (ValidationError, TypeError, ValueError) as e:
+            unreadable = (str(json_fp), json.dumps(entry, sort_keys=True, default=str))
+            if unreadable not in _UNREADABLE_CLUSTERINGS_LOGGED:
+                _UNREADABLE_CLUSTERINGS_LOGGED.add(unreadable)
+                logger.warning("Leaving out a clustering run of %s that no longer reads: %s", json_fp, e)
+    return readable

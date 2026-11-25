@@ -12,6 +12,7 @@ from typing import Any, Generic, TypeVar
 from lancedb.pydantic import LanceModel
 from pydantic import BaseModel, ConfigDict, Field, create_model, field_serializer
 
+from pixano.clustering.runs import Clustering
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo
 from pixano.datasets.dataset_schema import _serialize_table_schema
 from pixano.schemas import (
@@ -27,12 +28,14 @@ from pixano.schemas import (
     Message,
     MultiPath,
     Record,
+    RecordClusters,
     RecordStatistics,
     Relation,
     SchemaGroup,
     TextSpan,
     TimeSeries,
     Tracklet,
+    is_clusters,
     is_statistics,
 )
 from pixano.statistics.computed import ComputedStatistic
@@ -523,14 +526,17 @@ TimeSeriesResponse = _create_transport_model("TimeSeriesResponse", TimeSeries)
 class DatasetInfoResponse(DatasetInfo):
     """Dataset info plus the number of records.
 
-    The statistics are left out: their tables are no table a client reads rows of, and what the
-    dataset computed is answered apart (`GET /datasets/{id}/statistics`, backend-processing §22.3).
+    The statistics and the clusters are left out: their tables are no table a client reads rows of,
+    and what the dataset computed is answered apart (`GET /datasets/{id}/statistics`, the explorer's
+    columns; backend-processing §22.3, §24).
     """
 
     num_records: int
     record_statistics: type[RecordStatistics] | None = Field(default=None, exclude=True)
     entity_statistics: type[EntityStatistics] | None = Field(default=None, exclude=True)
     statistics: list[ComputedStatistic] = Field(default_factory=list, exclude=True)
+    record_clusters: type[RecordClusters] | None = Field(default=None, exclude=True)
+    clusterings: list[Clustering] = Field(default_factory=list, exclude=True)
 
     @field_serializer(
         "record",
@@ -579,17 +585,18 @@ class DatasetResponse(BaseModel):
 
     @classmethod
     def from_dataset(cls, dataset: Dataset) -> "DatasetResponse":
-        """Build a full dataset response from a Dataset instance, its statistics and embeddings tables left out.
+        """Build a full dataset response from a Dataset instance, its statistics, clusters and embeddings tables
+        left out.
 
         A search reads a model's embeddings, through `embeddings.json`, and no client reads the rows of
         their tables; nor does a client tell such a table, which bears no schema of its own, from a view's.
-        Nor does a client read rows of statistics, which are columns of the records.
+        Nor does a client read the rows of statistics or of clusters, computed from the records.
         """
         embeddings = {space["table"] for space in dataset.record_embedding_spaces()}
         tables = {
             name: schema.__name__
             for name, schema in dataset.info.tables.items()
-            if name not in embeddings and not is_statistics(schema)
+            if name not in embeddings and not is_statistics(schema) and not is_clusters(schema)
         }
         return cls(
             id=dataset.info.id,

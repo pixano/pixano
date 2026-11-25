@@ -459,7 +459,7 @@ class TestWriteStatisticValues:
         }
         spec = ImportSpec.model_validate({"dataset": {"workspace": "image"}, "schema_manifest": manifest})
 
-        with pytest.raises(SpecValidationError, match="no statistics table"):
+        with pytest.raises(SpecValidationError, match="computes from itself"):
             resolve_dataset_info(spec)
 
     def test_an_entry_of_an_import_that_is_no_schema_is_refused_as_such(self) -> None:
