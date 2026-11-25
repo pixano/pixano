@@ -34,7 +34,7 @@ The words this spec uses:
 - A **storage root** is a named, explicitly configured POSIX or S3-compatible root (`StorageRoot`) with its URI, credentials reference, and read-only flag.
 - A **snapshot** is an immutable point-in-time coordinate across all tables of a dataset: a map of `table_name -> (lance_version, lance_tag)` plus its complete metadata.
 - A **snapshot manifest** is an immutable, self-describing JSON file written beside the Lance tables of a snapshot so training loaders can read it without PostgreSQL and the catalogue can be rebuilt from storage.
-- A **write lease** is a time-bounded exclusive right to commit mutations to one dataset, issued by PostgreSQL with a strictly monotonic **fencing token**.
+- A **write lease** is a time-bounded exclusive right to commit mutations to one dataset, issued by `pixano-api` (backed by PostgreSQL) with a strictly monotonic **fencing token**.
 - A **spec version** (`spec_version`) is the integer version of a dataset's on-disk layout (currently `3`).
 
 ## Rules
@@ -157,7 +157,7 @@ _Today:_ `Relation` has no endpoint-kind fields, temporal span, or confidence (`
 
 _Why:_ mutually exclusive `uri` and `raw_bytes` prevent split sources of truth on one view, and storing blobs directly on `videos`, `images`, and `point_clouds` avoids an extra join on every media read.
 
-**DATA-22 (target).** Embedded media in `View.raw_bytes` MUST use Lance Format v2.2 Blob v2 encoding (`lance.blob.v2`) with adaptive tiering (inline, packed, dedicated `.blob` files) and lazy byte-range reads (`take_blobs` / `fetch_blob_ranges`), so metadata scans and table compactions never rewrite media payloads ([ARCH-12](./architecture.md#data-plane)). External references in `View.uri` MUST be immutable `https://` or `s3://` URIs (or paths inside an explicitly configured `StorageRoot` for zero-copy datalakes) — never host filesystem paths translated through `PIXANO_MEDIA_ROOT` or `PIXANO_INFERENCE_MEDIA_ROOT`.
+**DATA-22 (target).** Media stored inside a dataset in `View.raw_bytes` MUST use Lance Format v2.2 Blob v2 encoding (`lance.blob.v2`) — whose internal inline, packed, and dedicated `.blob` files are managed inside the Lance table itself — with lazy byte-range reads (`take_blobs` / `fetch_blob_ranges`), so metadata scans and table compactions never rewrite media payloads ([ARCH-12](./architecture.md#data-plane)). A dataset MAY refer to external media via `View.uri`, which MUST be an immutable `https://` or `s3://` URI — never a local or POSIX filesystem path, never a `StorageRoot`-relative path, and never a path translated through `PIXANO_MEDIA_ROOT` or `PIXANO_INFERENCE_MEDIA_ROOT`.
 
 _Why:_ inline `large_binary` forces compaction to copy gigabytes of untouched media, and path translation breaks whenever API, worker, and inference run on different hosts.
 
@@ -239,7 +239,7 @@ _Why:_ Lance versions individual tables, not whole multi-table datasets; a snaps
 
 _Today:_ there are no snapshots and no Lance tags; each table's version advances independently in place (`src/pixano/datasets/dataset.py`).
 
-**DATA-35 (target).** Every multi-table mutation MUST commit through a **two-phase fenced protocol**: (1) under a write lease, write Lance table updates, pin Lance tags, and write the immutable Snapshot Manifest to storage; (2) atomically insert the snapshot and advance the dataset ref in one PostgreSQL transaction that asserts the writer's `fencing_token` is still active ([ARCH-13](./architecture.md#data-plane), [ARCH-14](./architecture.md#data-plane)). Readers pinned to an earlier snapshot MUST NEVER see half-written multi-table state; uncommitted versions or manifests left by a crash MUST remain invisible until swept by garbage collection.
+**DATA-35 (target).** Every multi-table mutation MUST commit through a **two-phase fenced protocol**: (1) under a write lease, write Lance table updates, pin Lance tags, and write the immutable Snapshot Manifest to storage; (2) ask `pixano-api` to atomically insert the snapshot and advance the dataset ref in one PostgreSQL transaction that asserts the writer's `fencing_token` is still active ([ARCH-6](./architecture.md#control-plane), [ARCH-13](./architecture.md#data-plane), [ARCH-14](./architecture.md#data-plane)). Readers pinned to an earlier snapshot MUST NEVER see half-written multi-table state; uncommitted versions or manifests left by a crash MUST remain invisible until swept by garbage collection.
 
 _Why:_ without a single atomic visibility flip, a crash mid-insert or mid-delete leaves orphaned entities, broken foreign keys, and inconsistent counts across tables.
 
@@ -265,7 +265,7 @@ _Today:_ exports stream whatever latest table versions happen to exist when the 
 
 ### Concurrency, write leases and read-only open
 
-**DATA-39 (target).** Every write to a dataset — from `pixano-api`, `pixano-worker`, or the CLI — MUST hold a per-dataset **write lease** in PostgreSQL with a strictly monotonic `BIGINT` `fencing_token`, bounded TTL, and heartbeat renewal, and MUST commit against that token ([ARCH-14](./architecture.md#data-plane)). `filelock` and process-local thread locks MUST NOT protect datasets.
+**DATA-39 (target).** Every write to a dataset — from `pixano-api`, `pixano-worker`, or the CLI — MUST hold a per-dataset **write lease** issued by `pixano-api` (backed by PostgreSQL) with a strictly monotonic `BIGINT` `fencing_token`, bounded TTL, and heartbeat renewal, and MUST commit against that token through `pixano-api` ([ARCH-6](./architecture.md#control-plane), [ARCH-14](./architecture.md#data-plane)). `filelock` and process-local thread locks MUST NOT protect datasets.
 
 _Why:_ POSIX file locks fail on NFS and do not exist on S3, and process-local locks do not coordinate across API replicas or multiple workers; a database lease expires cleanly when its holder crashes.
 
@@ -345,7 +345,7 @@ _Why:_ read-only inspection stays safe on mounted archives and across rolling up
 
 _Today:_ `Dataset.__init__` automatically acquires `dataset_mutation_lock` and runs `_migrate_storage()` in place on open, logging a warning and continuing unmigrated if the write fails (`src/pixano/datasets/dataset.py`).
 
-**DATA-53 (target).** Migrating a dataset to a newer `spec_version` MUST be an explicit, idempotent operation exposed both as a `pixano-worker` job kind (`migrate`) and as a CLI command (`pixano data migrate <dataset>`), executing under a write lease and publishing a new snapshot ([ARCH-15](./architecture.md#data-plane), [ARCH-23](./architecture.md#execution-plane)).
+**DATA-53 (target).** Migrating a dataset to a newer `spec_version` MUST be an explicit, idempotent `pixano-worker` job (`migrate`), triggered via `pixano-api` or the CLI (`pixano data migrate <dataset>`, which submits and follows the job through `pixano-api`), executing under a write lease and publishing a new snapshot ([ARCH-6](./architecture.md#control-plane), [ARCH-15](./architecture.md#data-plane), [ARCH-23](./architecture.md#execution-plane)).
 
 _Why:_ explicit, leased, resumable migrations prevent accidental background corruption and give operators a predictable rollout workflow for terabyte libraries.
 
