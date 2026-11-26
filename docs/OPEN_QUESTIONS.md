@@ -336,5 +336,5 @@ masks, boxes or both —, masks by default, so that nothing changes without it
 - **An object deleted loses the model's masks and boxes alike**, whatever the job was asked for:
   nothing will track it again to clean what the other output left.
 - **A box carries no score** (`confidence` -1): SAM 2's video predictor answers none.
-- **Open.** **The legacy card offers the choice beside Track to the end**, kept for the page, masks first,
-  and only where the workers' tracking kind declares `output`.
+- **Decided** (confirmed by the user on 2026-11-26). **The legacy card offers the choice beside Track to
+  the end**, kept for the page, masks first, and only where the workers' tracking kind declares `output`.
