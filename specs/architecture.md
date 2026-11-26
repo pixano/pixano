@@ -541,3 +541,4 @@ Details that this spec leaves to the spec of a part:
 
 - 2026-11-22: first version. The target architecture in six planes, with the rules that the code already follows, and the target rules marked (`ARCH-1` to `ARCH-58`) ([#866](https://github.com/pixano/pixano/pull/866)).
 - 2026-11-22: `pixano.schemas` holds schemas only, Pydantic and Lance models (ARCH-48). `pixano-api` starts, is ready and serves what needs no model when the inference cannot be reached (ARCH-59) ([#867](https://github.com/pixano/pixano/pull/867)).
+- 2026-11-26: every export and training view records the source snapshot and the user's selection for replay (ARCH-18) ([#876](https://github.com/pixano/pixano/pull/876)).
