@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** @jrabary
-**Last agreed change:** 2026-11-22
+**Last agreed change:** 2026-11-26
 **Covers:** `docker-compose*.yml`, `.env.example`, `dockerfiles/`, `hatch_build.py`, `src/pixano/cli/`, `src/pixano/utils/`, and the list of packages under `packages/`
 
 ## Purpose and concepts
@@ -141,9 +141,9 @@ _Today:_ view types exist for a video, the frames of a sequence, a calibrated im
 
 _Why:_ a lab adds the format of its robots without changing the core.
 
-**ARCH-18 (target).** Every automated write, import and export MUST keep where the data comes from. An export or a training view MUST be addressed by a snapshot and a filter on the review status, so that a training or an evaluation can be run again on exactly the same data.
+**ARCH-18 (target).** Every automated write, import and export MUST keep where the data comes from. Every export and training view MUST record the immutable source `snapshot_id` and the user's effective selection. A user may select records by split, annotations by review status, or both. Each omitted filter leaves that part of the selection unrestricted. Replay MUST apply the recorded selection to the recorded snapshot.
 
-_Why:_ evaluating a robot and auditing its safety means tracing a trained policy back to the exact data, and to who or what produced each annotation.
+_Why:_ evaluating a robot and auditing its safety requires knowing which data trained the policy and who or what produced each annotation. The same snapshot can supply several different training sets.
 
 _Today:_ an annotation carries its source and its review status, and an export can filter on that status (`src/pixano/schemas/annotations/`, `docs/specs/writing-a-job-kind.md`). There is no snapshot: an export reads the dataset as it is at that moment.
 
@@ -541,3 +541,4 @@ Details that this spec leaves to the spec of a part:
 
 - 2026-11-22: first version. The target architecture in six planes, with the rules that the code already follows, and the target rules marked (`ARCH-1` to `ARCH-58`) ([#866](https://github.com/pixano/pixano/pull/866)).
 - 2026-11-22: `pixano.schemas` holds schemas only, Pydantic and Lance models (ARCH-48). `pixano-api` starts, is ready and serves what needs no model when the inference cannot be reached (ARCH-59) ([#867](https://github.com/pixano/pixano/pull/867)).
+- 2026-11-26: every export and training view records the source snapshot and the user's selection for replay (ARCH-18) ([#876](https://github.com/pixano/pixano/pull/876)).

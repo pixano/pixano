@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Owner:** @jrabary
-**Last agreed change:** 2026-11-24
+**Last agreed change:** 2026-11-26
 **Covers:** `src/pixano/schemas/`, `src/pixano/features/`, `src/pixano/datasets/` except `io/`
 
 ## Purpose and concepts
@@ -257,9 +257,9 @@ _Why:_ separating working edits from published releases keeps storage costs boun
 
 _Today:_ datasets have no snapshot tiers, named releases, or snapshot lineage.
 
-**DATA-38 (target).** Every export and every training view MUST address an explicit immutable `snapshot_id` (or published ref resolved to one) and an optional `review_status` filter, so running the same export or training loader twice returns identical rows even if the dataset is edited in between ([ARCH-18](./architecture.md#data-plane)).
+**DATA-38 (target).** Every export and training view MUST record the immutable source `snapshot_id` and the effective selection. If the user supplies a published ref, resolve it once and record the resulting ID. The optional `split` filter selects records. The optional `review_status` filter selects annotations within those records. Omitting either filter leaves its dimension unrestricted. Omitting both selects the whole snapshot. Replay MUST use the recorded ID and selection to return the same rows after subsequent edits ([ARCH-18](./architecture.md#data-plane)).
 
-_Why:_ reproducible robot and vehicle policy evaluation requires pinning training inputs to an immutable data version and review filter.
+_Why:_ a later edit can move a record to another split or change an annotation's review status. Evaluating both against the original snapshot reproduces the data used to train or evaluate the policy.
 
 _Today:_ exports stream whatever latest table versions happen to exist when the export runs (`src/pixano/datasets/io/reader.py`, `src/pixano/datasets/exporters/dataset_exporter.py`).
 
@@ -625,3 +625,4 @@ flowchart TB
 ## Decision log
 
 - 2026-11-24: first draft of the data model and database spec (`DATA-1` to `DATA-53`), recording current rules verified against the code and target rules for production-grade, large-scale storage prioritizing lossless support for LeRobot v3.0, 123D (`py123d`), COCO, and Pixano JSONL v2 ([#874](https://github.com/pixano/pixano/pull/874)).
+- 2026-11-26: split and annotation review status can be selected independently when reading a pinned snapshot (DATA-38) ([#876](https://github.com/pixano/pixano/pull/876)).
