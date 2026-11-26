@@ -21,7 +21,7 @@ export type Job = {
   skipped: number;
   /** Tasks that failed, readable one by one from the quarantine. */
   quarantined: number;
-  /** Someone asked the job to stop; the chunks in flight are finishing. */
+  /** Someone asked the job to stop; the chunks in flight are finishing, or stopping at their next step. */
   cancel_requested: boolean;
   /** Why the job failed, when it did — at least a `reason`. Null otherwise. */
   error: Record<string, unknown> | null;

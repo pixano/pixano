@@ -16,6 +16,7 @@ License: CECILL-C
   import { saveErrorMessage as describeSaveError } from "$lib/api/saveOrchestration";
   import { currentItemSaveCoordinator } from "$lib/stores/appStores.svelte";
   import { configureColorBy } from "$lib/stores/colorByStore.svelte";
+  import { recordReloads } from "$lib/stores/recordReload.svelte";
   import {
     annotations,
     canSave,
@@ -121,6 +122,17 @@ License: CECILL-C
       // Colors first, so the record's shapes are drawn once, in the dataset's color mode.
       configureColorBy(workspaceData.ui.datasetId, workspaceManifest);
       loadData();
+    });
+  });
+
+  // The same record read again on request — after a job wrote to it —: shown as the server now has it,
+  // unless a change was made while it was read, which showing it would drop.
+  let reloadsShown = recordReloads.value;
+  $effect(() => {
+    if (recordReloads.value === reloadsShown) return;
+    reloadsShown = recordReloads.value;
+    untrack(() => {
+      if (saveData.value.length === 0) loadData();
     });
   });
 

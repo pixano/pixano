@@ -23,6 +23,7 @@ import type { KeypointAnnotation } from "$lib/types/shapeTypes";
 import type { EntityProperties, MView } from "$lib/types/workspace";
 import { tryGetTopEntity } from "$lib/utils/entityLookupUtils";
 import { templates } from "$lib/utils/keyPointsTemplates";
+import { modelScoreOf } from "$lib/utils/reviewStatus";
 import { getDefaultDisplayFeat } from "$lib/utils/workspaceDefaultFeatures";
 
 type HighlightState = "all" | "self" | "none";
@@ -68,13 +69,20 @@ const isPreAnnotation = (sourceName: string): boolean => {
   return sourceName === PRE_ANNOTATION;
 };
 
-const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
+/**
+ * A box's label: its object's name, then its score. A box no score came with (`modelScoreOf`: the
+ * -1 the schema stores, as for a box drawn around a tracked mask) shows none, nor does a score of
+ * zero, a ground truth's box or a person's.
+ */
+export const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   if (!(bbox && bbox.is_type(BaseSchema.BBox))) return null;
 
+  const score = modelScoreOf(bbox);
   const confidence =
-    bbox.data.confidence !== 0.0 &&
+    score !== null &&
+    score !== 0.0 &&
     !(bbox.data.source_type === "ground_truth" || bbox.data.source_name === "Pixano")
-      ? bbox.data.confidence.toFixed(2)
+      ? score.toFixed(2)
       : null;
 
   const displayFeat = getDefaultDisplayFeat(entity);

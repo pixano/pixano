@@ -21,12 +21,13 @@ License: CECILL-C
     TextT,
     Trash,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { cubicOut } from "svelte/easing";
   import { slide } from "svelte/transition";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import ReviewStatusStrip from "../Review/ReviewStatusStrip.svelte";
+  import BackgroundTracking from "./BackgroundTracking.svelte";
   import ChildCard from "./ChildCard.svelte";
   import {
     handleSetDisplayControl as handleSetDC,
@@ -35,8 +36,12 @@ License: CECILL-C
   } from "./entityCardOps";
   import { keypointsIcon } from "$lib/assets";
   import { ANNOTATION_TYPE_META } from "$lib/constants/annotationTypeMeta";
+  import { currentDatasetStore } from "$lib/stores/appStores.svelte";
+  import { selectedVideoSegmentationModel } from "$lib/stores/inferenceStores.svelte";
+  import { reloadOpenRecord } from "$lib/stores/recordReload.svelte";
   import { isTracking } from "$lib/stores/trackingStore.svelte";
-  import { currentFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { currentFrameIndex, lastFrameIndex } from "$lib/stores/videoStores.svelte";
+  import { videoTracking } from "$lib/stores/videoTrackingStore.svelte";
   import {
     annotationColors,
     annotations,
@@ -45,9 +50,17 @@ License: CECILL-C
     itemMetas,
     mediaViews,
     reviewedAnnotation,
+    saveData,
     selectedTool,
   } from "$lib/stores/workspaceStores.svelte";
   import { panTool, ToolType } from "$lib/tools";
+  import {
+    canTrackFrom,
+    DEFAULT_TRACKING_OUTPUT,
+    showTrackedBlocker,
+    trackingBlocker,
+    type TrackingOutput,
+  } from "$lib/tracking/backgroundTracking";
   import type { Feature } from "$lib/types/workspace";
   import {
     Annotation,
@@ -64,7 +77,7 @@ License: CECILL-C
     type AnnotationThumbnail,
     type DisplayControl,
   } from "$lib/ui";
-  import { toggleEditAnnotation } from "$lib/utils/editMode";
+  import { editModeBlockedReason, toggleEditAnnotation } from "$lib/utils/editMode";
   import { deleteEntity } from "$lib/utils/entityDeletion";
   import { defineAnnotationThumbnail, sortChilds } from "$lib/utils/entityLookupUtils";
   import { createFeature } from "$lib/utils/featureMapping";
@@ -76,6 +89,11 @@ License: CECILL-C
     reviewTargetsOf,
   } from "$lib/utils/reviewActions";
   import { reviewSummaryOf } from "$lib/utils/reviewStatus";
+  import {
+    currentTimelinePolicy,
+    leaveDrawingTool,
+    seekTimeline,
+  } from "$lib/utils/timelineActions";
   import { updateView } from "$lib/utils/videoOperations";
   import { getWorkspaceContext } from "$lib/workspace/context";
 
@@ -186,6 +204,86 @@ License: CECILL-C
     }
     return counts;
   });
+
+  // ─── Tracking of this object through its video, in the background ──────────
+  // Followed from the frame shown to the video's end: from a frame where the object is drawn, or as
+  // long as its card shows the job's end.
+  const trackingJob = $derived(
+    itemMetas.value?.type === WorkspaceType.VIDEO ? videoTracking.jobOf(entity.id) : null,
+  );
+  const trackable = $derived.by(() => {
+    // The entity's annotations change in place: the store says when.
+    void entities.value;
+    return (
+      itemMetas.value?.type === WorkspaceType.VIDEO &&
+      (trackingJob !== null || canTrackFrom(entity, currentFrameIndex.value))
+    );
+  });
+  const trackingModelName = $derived(
+    videoTracking.modelFor(selectedVideoSegmentationModel.value?.name),
+  );
+  const trackingBlockedBy = $derived(
+    trackingBlocker({
+      available: videoTracking.available,
+      model: trackingModelName,
+      unsaved: saveData.value.length > 0,
+      lastFrame:
+        lastFrameIndex.value !== undefined && currentFrameIndex.value >= lastFrameIndex.value,
+    }),
+  );
+
+  // What a job launched from this card proposes: masks where the workers' job offers no choice.
+  const nextTrackingOutput = $derived(
+    videoTracking.offersOutputs ? videoTracking.output : DEFAULT_TRACKING_OUTPUT,
+  );
+
+  function chooseTrackingOutput(output: TrackingOutput) {
+    videoTracking.output = output;
+  }
+
+  function trackInBackground() {
+    const datasetId = currentDatasetStore.value?.id;
+    const recordId = itemMetas.value?.item.id;
+    if (!datasetId || !recordId || !trackingModelName) return;
+    void videoTracking.track(
+      datasetId,
+      recordId,
+      entity.id,
+      currentFrameIndex.value,
+      trackingModelName,
+      videoTracking.offersOutputs ? videoTracking.output : undefined,
+    );
+  }
+
+  // Why what the job wrote cannot be shown now; or null. While the save form is open, or a detection review
+  // runs, the inspector shows that form or panel in place of the cards.
+  const showBlockedBy = $derived(
+    showTrackedBlocker({
+      unsaved: saveData.value.length > 0,
+      session: editModeBlockedReason(),
+    }),
+  );
+
+  /**
+   * Read the record again, with the masks or boxes the job wrote, and show them from the frame after
+   * the one the object was tracked from. A drawing tool shows no shape but the one drawn, and the box
+   * tool the object was just drawn with stays chosen: they take the Pan tool, as a click on an
+   * object's row or keyframe in the timeline takes it.
+   */
+  async function showTracked() {
+    const recordId = itemMetas.value?.item.id;
+    const firstFrame = videoTracking.firstTrackedFrame(entity.id);
+    videoTracking.dismiss(entity.id);
+    await reloadOpenRecord();
+    // The record read again opens on its first frame, once its effects have run. Another record,
+    // opened meanwhile, is left as it opened.
+    await tick();
+    if (itemMetas.value?.item.id !== recordId) return;
+    // Taken again: a session started meanwhile keeps its tool.
+    const policy = currentTimelinePolicy();
+    leaveDrawingTool(policy);
+    if (firstFrame !== null) seekTimeline(firstFrame, policy);
+  }
 
   // ─── Review of what a model proposed for this object ────────────────────────
   const reviewSummary = $derived.by(() => {
@@ -607,6 +705,25 @@ License: CECILL-C
         canDecide={canTakeReviewDecision() && reviewTargets.length > 0}
         onAccept={() => acceptAnnotations(reviewTargetsOf(entity))}
         onReject={() => rejectAnnotations(reviewTargetsOf(entity))}
+      />
+    {/if}
+
+    {#if trackable}
+      <BackgroundTracking
+        job={trackingJob}
+        model={trackingModelName}
+        blocker={trackingBlockedBy}
+        starting={videoTracking.starting.includes(entity.id)}
+        refusal={videoTracking.refusalOf(entity.id)}
+        choosable={videoTracking.offersOutputs}
+        output={nextTrackingOutput}
+        jobOutput={videoTracking.outputOf(entity.id)}
+        showBlocker={showBlockedBy}
+        onOutputChange={chooseTrackingOutput}
+        onTrack={trackInBackground}
+        onCancel={() => void videoTracking.cancel(entity.id)}
+        onShow={() => void showTracked()}
+        onDismiss={() => videoTracking.dismiss(entity.id)}
       />
     {/if}
   </Card.Header>

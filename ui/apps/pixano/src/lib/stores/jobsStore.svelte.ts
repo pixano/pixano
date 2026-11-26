@@ -155,15 +155,32 @@ class JobsStore {
     return this.kinds.length > 0;
   }
 
+  /** Whether a worker declared this kind: a job of it can be launched here. */
+  offers(kindName: string): boolean {
+    return this.kinds.some((kind) => kind.name === kindName);
+  }
+
   async submit(kind: string, datasetId: string, params: Record<string, unknown>): Promise<boolean> {
+    return (await this.launch(kind, datasetId, params)) !== null;
+  }
+
+  /**
+   * Submit a job and return it as the server recorded it, for what follows that one job — the
+   * tracking of an object, say. Null when the server refused it: the store says why.
+   */
+  async launch(
+    kind: string,
+    datasetId: string,
+    params: Record<string, unknown>,
+  ): Promise<Job | null> {
     try {
       const job = await submitJob({ kind, dataset_id: datasetId, params });
       this.jobs = [job, ...this.jobs];
       this.error = null;
-      return true;
+      return job;
     } catch (cause) {
       this.#fail(cause);
-      return false;
+      return null;
     }
   }
 
@@ -321,8 +338,8 @@ export function progressOf(job: Job): number {
 /**
  * The state to show for a job.
  *
- * A cancelled job keeps running for a few seconds while its chunks in flight finish — nothing is
- * interrupted mid-chunk. Showing "running" meanwhile makes the click look lost. A job whose work
+ * A cancelled job keeps running for a few seconds while its chunks in flight finish, or stop at
+ * their next step — a video's next window. Showing "running" meanwhile makes the click look lost. A job whose work
  * is done may still run its closing step — an index built over its results: its bar is full, and
  * "running" under it would look stuck.
  */

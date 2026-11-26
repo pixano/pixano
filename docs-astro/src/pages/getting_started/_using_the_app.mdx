@@ -284,6 +284,25 @@ entity; a job for boxes leaves the masks an earlier one proposed, and the other 
 change on a video while it is tracked may not be seen by the job, so review what it proposed once
 it is done.
 
+To follow one entity, track it from its card. On a frame where an entity has a box or a mask, its
+card in the **Entities** tab offers **Track to the end**: the same job follows that entity from
+that frame, and proposes on each frame after it what the list beside the button says —
+**Masks**, **Boxes** or **Masks and boxes**. The choice stays from one card to the next. Save your
+changes first: the job follows the entity as it is saved, and the button waits for it. The card
+counts the frames as they are done, and **Cancel** stops the job. You can leave the record
+meanwhile. A worker must run tracking jobs: without one, the card says so.
+
+Once it is done, **Show the masks** — **Show the boxes**, **Show the masks and boxes** — reads the
+record again to display them, on the frame after the one you tracked from, and takes the Pan tool
+if a drawing tool is chosen, since a drawing tool hides every shape but the one drawn. Save your
+changes first, as reading the record again would lose them; the card says what else is in the way.
+A shape being drawn and not yet confirmed — a box, a polygon or a line, a mask being painted — is
+dropped, as by a click on an object's row in the timeline. If the track drifts, draw the entity's
+box on the frame where it does and track it again from there: your box replaces the drifted mask
+or box, what was proposed before that frame stays, and what comes after it is tracked again. On a
+record filmed by several cameras, the entity is followed in each video it is drawn in on that
+frame.
+
 ## Next steps
 
 - [Inference](/pixano/getting_started/inference/) — connect a model server
