@@ -202,4 +202,4 @@ Two things enforce them:
 
 - 2026-11-18: first version, with the rules about specs, the template and the index ([#862](https://github.com/pixano/pixano/pull/862)).
 - 2026-11-22: a rule that the code does not follow yet is a target rule, marked `(target)`, with a `_Today:_` line (SPEC-14) ([#866](https://github.com/pixano/pixano/pull/866)).
-- 2026-11-25: `jobs.md` replaces `docs/specs/backend-processing.md` and `docs/specs/writing-a-job-kind.md` for what it covers, and the job-kind contract is a section of `jobs.md`, not a spec of its own (#TBD).
+- 2026-11-25: `jobs.md` replaces `docs/specs/backend-processing.md` and `docs/specs/writing-a-job-kind.md` for what it covers, and the job-kind contract is a section of `jobs.md`, not a spec of its own ([#878](https://github.com/pixano/pixano/pull/878)).

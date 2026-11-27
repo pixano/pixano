@@ -897,6 +897,6 @@ How to add a kind, in the order of the work. The rules of [The job-kind contract
 
 ## Decision log
 
-- 2026-11-24: the six choices of the tracking job's boxes (JOB-123 to JOB-125), made while implementing on 2026-11-19, confirmed by @vmulet-benzo; the approval of this spec PR confirms them (#TBD).
-- 2026-11-25: the worker registers no demonstration kind (JOB-30, target), decided by the team (#TBD).
-- 2026-11-25: first version, moved from docs/specs/backend-processing.md and docs/specs/writing-a-job-kind.md, where these decisions were written from 2026-09-14 on, with the job entries of docs/OPEN_QUESTIONS.md. The job-kind contract is a section of this spec, not a spec of its own (#TBD).
+- 2026-11-24: the six choices of the tracking job's boxes (JOB-123 to JOB-125), made while implementing on 2026-11-19, confirmed by @vmulet-benzo; the approval of this spec PR confirms them ([#878](https://github.com/pixano/pixano/pull/878)).
+- 2026-11-25: the worker registers no demonstration kind (JOB-30, target), decided by the team ([#878](https://github.com/pixano/pixano/pull/878)).
+- 2026-11-25: first version, moved from docs/specs/backend-processing.md and docs/specs/writing-a-job-kind.md, where these decisions were written from 2026-09-14 on, with the job entries of docs/OPEN_QUESTIONS.md. The job-kind contract is a section of this spec, not a spec of its own ([#878](https://github.com/pixano/pixano/pull/878)).
