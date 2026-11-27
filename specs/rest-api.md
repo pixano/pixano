@@ -602,4 +602,4 @@ The app reads these variables of the environment (`src/pixano/api/settings.py`).
 
 ## Decision log
 
-- 2026-11-26: first draft: the rules the old docs/ held (`FRONTEND_ARCHITECTURE.md`, `backend-processing.md`, `writing-a-job-kind.md`, `OPEN_QUESTIONS.md`, `data-import-export.md`, `running-by-hand.md`), checked against the code, and the routes and contracts of the code that clients rely on (#TBD).
+- 2026-11-26: first draft: the rules the old docs/ held (`FRONTEND_ARCHITECTURE.md`, `backend-processing.md`, `writing-a-job-kind.md`, `OPEN_QUESTIONS.md`, `data-import-export.md`, `running-by-hand.md`), checked against the code, and the routes and contracts of the code that clients rely on ([#877](https://github.com/pixano/pixano/pull/877)).
